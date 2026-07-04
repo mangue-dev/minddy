@@ -26,6 +26,7 @@ import {
 import { CategoryPicker } from "@/components/category-picker";
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { IssueTimeline } from "@/components/issue-timeline";
+import { Markdown } from "@/components/markdown";
 import { useAuth } from "@/lib/auth-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type {
@@ -84,6 +85,7 @@ export function IssueSidePanel({
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [descEditing, setDescEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Sync editable fields when a different issue opens (not on every realtime tick).
@@ -91,6 +93,7 @@ export function IssueSidePanel({
     if (issue) {
       setTitle(issue.title);
       setDescription(issue.description ?? "");
+      setDescEditing(false);
     }
   }, [issue?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -151,14 +154,37 @@ export function IssueSidePanel({
               placeholder="Titre"
             />
 
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={commitDescription}
-              placeholder="Ajoute une description…"
-              rows={5}
-              className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
+            {descEditing ? (
+              <textarea
+                autoFocus
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => {
+                  commitDescription();
+                  setDescEditing(false);
+                }}
+                placeholder="Ajoute une description… (markdown supporté)"
+                rows={5}
+                className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setDescription(issue.description ?? "");
+                  setDescEditing(true);
+                }}
+                className="w-full rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-muted/40"
+              >
+                {issue.description ? (
+                  <Markdown>{issue.description}</Markdown>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    Ajoute une description…
+                  </span>
+                )}
+              </button>
+            )}
 
             <div className="border-t border-border pt-2">
               <FieldRow label="Statut">

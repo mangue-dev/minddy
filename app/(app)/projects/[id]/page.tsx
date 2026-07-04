@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { Plus, ListTodo } from "lucide-react";
@@ -32,6 +32,7 @@ import type { Issue, Onglet, View, ViewConfig } from "@/lib/types";
 function ProjectBoard() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const router = useRouter();
   const searchParams = useSearchParams();
   const objectiveParam = searchParams.get("objective");
   const issueParam = searchParams.get("issue");
@@ -314,7 +315,11 @@ function ProjectBoard() {
         issue={openIssue}
         open={!!openIssue}
         onOpenChange={(next) => {
-          if (!next) setOpenIssueId(null);
+          if (!next) {
+            setOpenIssueId(null);
+            // Strip the deep-link param so re-opening the same issue works.
+            if (issueParam) router.replace(`/projects/${projectId}`);
+          }
         }}
         projectKey={project.key}
         members={members}

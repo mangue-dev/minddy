@@ -6,6 +6,7 @@ import { Pencil, Trash2, Check, X } from "lucide-react";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { describeEvent, type EventContext } from "@/lib/describe-event";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
+import { Markdown } from "@/components/markdown";
 import type { Comment, Member } from "@/lib/types";
 
 function fmt(at: string): string {
@@ -112,7 +113,7 @@ function CommentItem({
             </div>
           </div>
         ) : (
-          <p className="mt-0.5 text-sm whitespace-pre-wrap">{comment.body}</p>
+          <Markdown className="mt-0.5">{comment.body}</Markdown>
         )}
       </div>
     </div>

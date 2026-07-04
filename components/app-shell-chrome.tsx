@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   AppShell,
   Sidebar,
@@ -18,11 +19,14 @@ import {
   DropdownMenuSeparator,
   useTheme,
   type NavSection,
+  type CommandMenuGroup,
 } from "mangue-ui";
 import { Home, Moon, Sun, LogOut, ChevronsUpDown, Plus, Folder, Inbox } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useNotifications } from "@/lib/use-notifications";
+import { fetchIssuesApi } from "@/lib/issues-api";
+import { issueIdentifier } from "@/lib/issue-constants";
 
 function projectIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/projects\/([^/]+)/);
@@ -65,11 +69,59 @@ function AccountMenu() {
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { open, setOpen } = useCommandMenu();
   const { projects, openCreateProject } = useProjects();
   const { unreadCount } = useNotifications();
 
   const currentProjectId = projectIdFromPath(pathname);
+  const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
+
+  // Shares the ["issues", projectId] cache with the board (no extra realtime
+  // bridge) so ⌘K can search the current project's issues.
+  const { data: projectIssues } = useQuery({
+    queryKey: ["issues", currentProjectId ?? ""],
+    queryFn: () => fetchIssuesApi(currentProjectId as string),
+    enabled: !!currentProjectId,
+  });
+
+  const commandGroups = useMemo<CommandMenuGroup[]>(() => {
+    const groups: CommandMenuGroup[] = [
+      {
+        heading: "Aller à",
+        items: [
+          { key: "go-home", label: "Home", icon: Home, onSelect: () => router.push("/home") },
+          { key: "go-inbox", label: "Inbox", icon: Inbox, onSelect: () => router.push("/inbox") },
+          { key: "cmd-new-project", label: "Nouveau Projet", icon: Plus, onSelect: openCreateProject },
+        ],
+      },
+    ];
+    if (projects.length > 0) {
+      groups.push({
+        heading: "Projets",
+        items: projects.map((p) => ({
+          key: `cmd-project-${p.id}`,
+          label: p.name,
+          icon: Folder,
+          keywords: [p.key],
+          onSelect: () => router.push(`/projects/${p.id}`),
+        })),
+      });
+    }
+    if (currentProject && projectIssues && projectIssues.length > 0) {
+      groups.push({
+        heading: "Issues",
+        items: projectIssues.map((i) => ({
+          key: `cmd-issue-${i.id}`,
+          label: i.title,
+          keywords: [issueIdentifier(currentProject.key, i.number), String(i.number)],
+          onSelect: () =>
+            router.push(`/projects/${currentProject.id}?issue=${i.id}`),
+        })),
+      });
+    }
+    return groups;
+  }, [projects, currentProject, projectIssues, router, openCreateProject]);
   const activeKey = pathname.startsWith("/home")
     ? "home"
     : pathname.startsWith("/inbox")
@@ -149,9 +201,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       <CommandMenu
         open={open}
         onOpenChange={setOpen}
-        groups={[]}
-        placeholder="Rechercher…"
-        emptyMessage="La recherche arrivera avec les issues."
+        groups={commandGroups}
+        placeholder="Rechercher une issue, un projet…"
+        emptyMessage="Aucun résultat."
       />
     </>
   );
