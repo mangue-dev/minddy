@@ -93,4 +93,5 @@ export interface IssueUpdateInput {
   effort?: IssueEffort | null;
   assignee_id?: string | null;
   due_date?: string | null;
+  position?: number;
 }

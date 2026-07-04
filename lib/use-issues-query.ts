@@ -76,6 +76,32 @@ export function useIssuesQuery(projectId: string | null) {
     [invalidate]
   );
 
+  /**
+   * Optimistic move for drag & drop: patch the cache immediately (so the card
+   * jumps instantly), persist, and revert on failure. Realtime reconciles the
+   * final state across clients.
+   */
+  const moveIssue = useCallback(
+    async (
+      issueId: string,
+      patch: { status?: Issue["status"]; position: number }
+    ) => {
+      if (!projectId) return;
+      const key = issuesKey(projectId);
+      const previous = queryClient.getQueryData<Issue[]>(key);
+      queryClient.setQueryData<Issue[]>(key, (old) =>
+        (old ?? []).map((i) => (i.id === issueId ? { ...i, ...patch } : i))
+      );
+      try {
+        await updateIssueApi(issueId, patch);
+      } catch (err) {
+        queryClient.setQueryData(key, previous);
+        throw err;
+      }
+    },
+    [projectId, queryClient]
+  );
+
   return {
     issues: (data ?? []) as Issue[],
     loading: isLoading,
@@ -83,5 +109,6 @@ export function useIssuesQuery(projectId: string | null) {
     createIssue,
     updateIssue,
     deleteIssue,
+    moveIssue,
   };
 }

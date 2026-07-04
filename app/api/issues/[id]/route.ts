@@ -80,6 +80,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
     updates.due_date = input.due_date;
   }
+  if ("position" in input) {
+    if (typeof input.position !== "number" || !Number.isFinite(input.position)) {
+      return NextResponse.json({ error: "Position invalide." }, { status: 400 });
+    }
+    updates.position = input.position;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Aucun champ à mettre à jour." }, { status: 400 });

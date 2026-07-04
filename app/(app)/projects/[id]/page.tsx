@@ -11,7 +11,7 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { ProjectSettingsDialog } from "@/components/project-settings-dialog";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import { IssueList } from "@/components/issue-list";
+import { KanbanBoard } from "@/components/kanban-board";
 import type { Issue } from "@/lib/types";
 
 export default function ProjectPage() {
@@ -20,8 +20,14 @@ export default function ProjectPage() {
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
 
-  const { issues, loading: issuesLoading, createIssue, updateIssue, deleteIssue } =
-    useIssuesQuery(projectId);
+  const {
+    issues,
+    loading: issuesLoading,
+    createIssue,
+    updateIssue,
+    deleteIssue,
+    moveIssue,
+  } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -74,8 +80,8 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8">
-      <div className="mb-8 flex items-center justify-between gap-4">
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-8 pb-4">
         <div className="flex items-center gap-3">
           <span
             className="flex size-9 items-center justify-center rounded-lg font-mono text-xs font-semibold"
@@ -107,30 +113,33 @@ export default function ProjectPage() {
         </div>
       </div>
 
-      {issuesLoading ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 rounded-lg" />
-          ))}
-        </div>
-      ) : issues.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-            <ListTodo className="size-6" />
+      <div className="min-h-0 flex-1 px-6 pb-6">
+        {issuesLoading ? (
+          <div className="flex gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />
+            ))}
           </div>
-          <p className="max-w-xs text-sm text-muted-foreground">
-            Aucune issue. Crée la première avec « Nouvelle issue » ou la touche{" "}
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">C</kbd>.
-          </p>
-        </div>
-      ) : (
-        <IssueList
-          issues={issues}
-          projectKey={project.key}
-          members={members}
-          onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
-        />
-      )}
+        ) : issues.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+              <ListTodo className="size-6" />
+            </div>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              Aucune issue. Crée la première avec « Nouvelle issue » ou la touche{" "}
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">C</kbd>.
+            </p>
+          </div>
+        ) : (
+          <KanbanBoard
+            issues={issues}
+            projectKey={project.key}
+            members={members}
+            onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
+            onMove={moveIssue}
+          />
+        )}
+      </div>
 
       <CreateIssueDialog
         open={createOpen}
