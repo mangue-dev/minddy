@@ -1,3 +1,5 @@
+import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants";
+
 export interface Project {
   id: string;
   owner_id: string;
@@ -53,4 +55,42 @@ export interface MyInvitation {
   inviter_email: string | null;
   inviter_name: string | null;
   created_at: string;
+}
+
+export interface Issue {
+  id: string;
+  project_id: string;
+  number: number;
+  title: string;
+  description: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  effort: IssueEffort | null;
+  assignee_id: string | null;
+  due_date: string | null;
+  position: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface CreateIssueInput {
+  title: string;
+  description?: string | null;
+  status?: IssueStatus;
+  priority?: IssuePriority;
+  effort?: IssueEffort | null;
+  assignee_id?: string | null;
+  due_date?: string | null;
+}
+
+export interface IssueUpdateInput {
+  title?: string;
+  description?: string | null;
+  status?: IssueStatus;
+  priority?: IssuePriority;
+  effort?: IssueEffort | null;
+  assignee_id?: string | null;
+  due_date?: string | null;
 }
