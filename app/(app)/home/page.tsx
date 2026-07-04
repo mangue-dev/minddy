@@ -4,12 +4,15 @@ import { Button, Skeleton } from "mangue-ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectCard } from "@/components/project-card";
+import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 
 export default function HomePage() {
   const { projects, loading, openCreateProject } = useProjects();
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
+      <PendingInvitationsBanner />
+
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">
           Mes Projets
