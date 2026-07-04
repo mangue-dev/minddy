@@ -79,6 +79,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     updates.objective_id =
       typeof input.objective_id === "string" ? input.objective_id : null;
   }
+  if ("parent_id" in input) {
+    // The one-level / same-project invariant is enforced by a DB trigger; a
+    // violation surfaces below as a friendly 400 (P0001).
+    updates.parent_id =
+      typeof input.parent_id === "string" ? input.parent_id : null;
+  }
   if ("due_date" in input) {
     if (!isDateOrNull(input.due_date)) {
       return NextResponse.json({ error: "Date invalide." }, { status: 400 });
@@ -104,6 +110,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     .maybeSingle();
 
   if (error) {
+    // Trigger-raised invariant (sub-issue nesting) → friendly 400.
+    if (error.code === "P0001") {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("[api/issues/:id] update failed:", error.message);
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }

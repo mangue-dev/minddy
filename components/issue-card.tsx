@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge, cn } from "mangue-ui";
+import { GitMerge } from "lucide-react";
 import {
   PRIORITY_MAP,
   EFFORT_MAP,
@@ -10,6 +11,8 @@ import {
 } from "@/lib/issue-constants";
 import { CategoryPill } from "@/components/category-pill";
 import type { Category, Issue, Member } from "@/lib/types";
+
+export type SubProgress = { done: number; total: number };
 
 function formatDue(due: string): string {
   return new Date(due + "T00:00:00").toLocaleDateString("fr-FR", {
@@ -24,12 +27,14 @@ export function IssueCardBody({
   projectKey,
   assignee,
   categoryMap,
+  subProgress,
   dragging,
 }: {
   issue: Issue;
   projectKey: string;
   assignee: Member | null;
   categoryMap: Map<string, Category>;
+  subProgress?: SubProgress | null;
   dragging?: boolean;
 }) {
   const priority = PRIORITY_MAP[issue.priority];
@@ -60,8 +65,14 @@ export function IssueCardBody({
           ))}
         </div>
       )}
-      {(issue.effort || issue.due_date || assignee) && (
+      {(issue.effort || issue.due_date || assignee || (subProgress && subProgress.total > 0)) && (
         <div className="flex items-center gap-2">
+          {subProgress && subProgress.total > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+              <GitMerge className="size-3" />
+              {subProgress.done}/{subProgress.total}
+            </span>
+          )}
           {issue.effort && (
             <Badge variant="outline" className="font-mono text-[10px]">
               {EFFORT_MAP[issue.effort].label}
@@ -91,12 +102,14 @@ export function IssueCard({
   projectKey,
   assignee,
   categoryMap,
+  subProgress,
   onOpen,
 }: {
   issue: Issue;
   projectKey: string;
   assignee: Member | null;
   categoryMap: Map<string, Category>;
+  subProgress?: SubProgress | null;
   onOpen: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -116,6 +129,7 @@ export function IssueCard({
         projectKey={projectKey}
         assignee={assignee}
         categoryMap={categoryMap}
+        subProgress={subProgress}
       />
     </div>
   );

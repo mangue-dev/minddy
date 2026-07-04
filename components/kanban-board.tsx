@@ -17,7 +17,7 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type { Category, Issue, Member, ViewSort } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { KanbanColumn } from "@/components/kanban-column";
-import { IssueCardBody } from "@/components/issue-card";
+import { IssueCardBody, type SubProgress } from "@/components/issue-card";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 
@@ -38,6 +38,7 @@ export function KanbanBoard({
   projectKey,
   members,
   categories,
+  subProgress,
   onOpenIssue,
   onMove,
 }: {
@@ -47,6 +48,7 @@ export function KanbanBoard({
   projectKey: string;
   members: Member[];
   categories: Category[];
+  subProgress: Map<string, SubProgress>;
   onOpenIssue: (issue: Issue) => void;
   onMove: (
     issueId: string,
@@ -145,6 +147,7 @@ export function KanbanBoard({
             projectKey={projectKey}
             memberMap={memberMap}
             categoryMap={categoryMap}
+            subProgressMap={subProgress}
             onOpenIssue={onOpenIssue}
           />
         ))}
@@ -162,6 +165,7 @@ export function KanbanBoard({
                   : null
               }
               categoryMap={categoryMap}
+              subProgress={subProgress.get(activeIssue.id) ?? null}
               dragging
             />
           </div>

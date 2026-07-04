@@ -118,6 +118,7 @@ export interface Issue {
   effort: IssueEffort | null;
   assignee_id: string | null;
   objective_id: string | null;
+  parent_id: string | null;
   due_date: string | null;
   position: number;
   created_by: string | null;
@@ -135,6 +136,7 @@ export interface CreateIssueInput {
   effort?: IssueEffort | null;
   assignee_id?: string | null;
   objective_id?: string | null;
+  parent_id?: string | null;
   due_date?: string | null;
   category_ids?: string[];
 }
@@ -147,6 +149,7 @@ export interface IssueUpdateInput {
   effort?: IssueEffort | null;
   assignee_id?: string | null;
   objective_id?: string | null;
+  parent_id?: string | null;
   due_date?: string | null;
   position?: number;
 }

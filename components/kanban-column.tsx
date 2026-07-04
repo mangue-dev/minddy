@@ -5,7 +5,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { cn } from "mangue-ui";
 import type { StatusMeta } from "@/lib/issue-constants";
 import type { Category, Issue, Member } from "@/lib/types";
-import { IssueCard } from "@/components/issue-card";
+import { IssueCard, type SubProgress } from "@/components/issue-card";
 
 export function KanbanColumn({
   status,
@@ -13,6 +13,7 @@ export function KanbanColumn({
   projectKey,
   memberMap,
   categoryMap,
+  subProgressMap,
   onOpenIssue,
 }: {
   status: StatusMeta;
@@ -20,6 +21,7 @@ export function KanbanColumn({
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
+  subProgressMap: Map<string, SubProgress>;
   onOpenIssue: (issue: Issue) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
@@ -53,6 +55,7 @@ export function KanbanColumn({
                 issue.assignee_id ? memberMap.get(issue.assignee_id) ?? null : null
               }
               categoryMap={categoryMap}
+              subProgress={subProgressMap.get(issue.id) ?? null}
               onOpen={() => onOpenIssue(issue)}
             />
           ))}

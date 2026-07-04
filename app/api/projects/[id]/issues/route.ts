@@ -75,6 +75,28 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (isDateOrNull(input.due_date)) row.due_date = input.due_date;
 
   const service = getServiceClient();
+
+  // Sub-issue: validate the parent (same project, top-level) and, unless an
+  // objective was explicitly set, inherit the parent's objective (plan §4).
+  if (typeof input.parent_id === "string") {
+    const { data: parent } = await service
+      .from("issues")
+      .select("id, project_id, parent_id, objective_id")
+      .eq("id", input.parent_id)
+      .maybeSingle();
+    if (!parent || parent.project_id !== id) {
+      return NextResponse.json({ error: "Issue parente introuvable." }, { status: 400 });
+    }
+    if (parent.parent_id) {
+      return NextResponse.json(
+        { error: "Imbrication limitée à un niveau." },
+        { status: 400 }
+      );
+    }
+    row.parent_id = input.parent_id;
+    if (!("objective_id" in input)) row.objective_id = parent.objective_id;
+  }
+
   const { data: number, error: counterError } = await service.rpc("next_issue_number", {
     p_project_id: id,
   });
@@ -91,6 +113,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     .single();
 
   if (error) {
+    if (error.code === "P0001") {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("[api/issues] create failed:", error.message);
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }

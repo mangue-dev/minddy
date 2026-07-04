@@ -13,19 +13,22 @@ import {
   SidePanelTitle,
   toast,
 } from "mangue-ui";
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import {
   AssigneePicker,
   DueDateField,
   EffortPicker,
   ObjectivePicker,
+  ParentPicker,
   PriorityPicker,
   StatusPicker,
 } from "@/components/issue-fields";
 import { CategoryPicker } from "@/components/category-picker";
+import { SubIssuesSection } from "@/components/sub-issues-section";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type {
   Category,
+  CreateIssueInput,
   Issue,
   IssueUpdateInput,
   Member,
@@ -55,9 +58,12 @@ export function IssueSidePanel({
   members,
   categories,
   objectives,
+  allIssues,
   onUpdate,
   onDelete,
   onSetCategories,
+  onCreate,
+  onOpenIssue,
 }: {
   issue: Issue | null;
   open: boolean;
@@ -66,9 +72,12 @@ export function IssueSidePanel({
   members: Member[];
   categories: Category[];
   objectives: Objective[];
+  allIssues: Issue[];
   onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
   onDelete: (issueId: string) => Promise<void>;
   onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
+  onCreate: (input: CreateIssueInput) => Promise<unknown>;
+  onOpenIssue: (id: string) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -91,6 +100,15 @@ export function IssueSidePanel({
       toast.error((err as Error).message);
     }
   };
+
+  const hasChildren = allIssues.some((i) => i.parent_id === issue.id);
+  const parent = issue.parent_id
+    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
+    : null;
+  const isChild = !!issue.parent_id;
+  const eligibleParents = allIssues.filter(
+    (i) => i.parent_id === null && i.id !== issue.id
+  );
 
   const commitTitle = () => {
     const trimmed = title.trim();
@@ -190,7 +208,50 @@ export function IssueSidePanel({
                   }}
                 />
               </FieldRow>
+              {!hasChildren && (
+                <FieldRow label="Parent">
+                  {isChild && parent ? (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenIssue(parent.id)}
+                      >
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {issueIdentifier(projectKey, parent.number)}
+                        </span>
+                        <span className="max-w-40 truncate">{parent.title}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Détacher du parent"
+                        onClick={() => void patch({ parent_id: null })}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ) : (
+                    <ParentPicker
+                      value={null}
+                      onChange={(pid) => void patch({ parent_id: pid })}
+                      options={eligibleParents}
+                      projectKey={projectKey}
+                    />
+                  )}
+                </FieldRow>
+              )}
             </div>
+
+            {!isChild && (
+              <SubIssuesSection
+                issue={issue}
+                allIssues={allIssues}
+                projectKey={projectKey}
+                onOpenIssue={onOpenIssue}
+                onCreate={onCreate}
+              />
+            )}
           </SidePanelBody>
 
           <SidePanelFooter>

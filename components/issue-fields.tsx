@@ -9,7 +9,7 @@ import {
   Input,
   cn,
 } from "mangue-ui";
-import { Check, UserCircle2, CalendarDays, Gauge, Target } from "lucide-react";
+import { Check, UserCircle2, CalendarDays, Gauge, Target, GitMerge } from "lucide-react";
 import {
   STATUSES,
   STATUS_MAP,
@@ -17,11 +17,12 @@ import {
   PRIORITY_MAP,
   EFFORTS,
   EFFORT_MAP,
+  issueIdentifier,
   type IssueStatus,
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import type { Member, Objective } from "@/lib/types";
+import type { Issue, Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
   return m.full_name || m.email || "Utilisateur";
@@ -205,6 +206,50 @@ export function AssigneePicker({
             </span>
             <span className="truncate">{memberLabel(m)}</span>
             {m.user_id === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function ParentPicker({
+  value,
+  onChange,
+  options,
+  projectKey,
+  size = "sm",
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  /** Eligible parents (top-level issues, excluding self). */
+  options: Issue[];
+  projectKey: string;
+  size?: "sm" | "default";
+}) {
+  const current = options.find((o) => o.id === value) ?? null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size={size}>
+          <GitMerge className="text-muted-foreground" />
+          {current
+            ? issueIdentifier(projectKey, current.number)
+            : "Aucun parent"}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
+        <DropdownMenuItem onSelect={() => onChange(null)}>
+          Aucun parent
+          {value === null && <Check className="ml-auto size-4" />}
+        </DropdownMenuItem>
+        {options.map((o) => (
+          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)}>
+            <span className="font-mono text-xs text-muted-foreground">
+              {issueIdentifier(projectKey, o.number)}
+            </span>
+            <span className="truncate">{o.title}</span>
+            {o.id === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
