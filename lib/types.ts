@@ -14,6 +14,26 @@ export interface Objective {
   updated_at: string;
 }
 
+export interface Comment {
+  id: string;
+  issue_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IssueEvent {
+  id: string;
+  issue_id: string;
+  actor_id: string | null;
+  type: string;
+  field: string | null;
+  from_value: string | null;
+  to_value: string | null;
+  created_at: string;
+}
+
 export interface CreateObjectiveInput {
   name: string;
   description?: string | null;

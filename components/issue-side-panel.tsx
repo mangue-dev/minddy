@@ -25,6 +25,8 @@ import {
 } from "@/components/issue-fields";
 import { CategoryPicker } from "@/components/category-picker";
 import { SubIssuesSection } from "@/components/sub-issues-section";
+import { IssueTimeline } from "@/components/issue-timeline";
+import { useAuth } from "@/lib/auth-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type {
   Category,
@@ -79,6 +81,7 @@ export function IssueSidePanel({
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
   onOpenIssue: (id: string) => void;
 }) {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -252,6 +255,18 @@ export function IssueSidePanel({
                 onCreate={onCreate}
               />
             )}
+
+            <IssueTimeline
+              issueId={issue.id}
+              currentUserId={user?.id ?? null}
+              ctx={{
+                members,
+                objectives,
+                categories,
+                issues: allIssues,
+                projectKey,
+              }}
+            />
           </SidePanelBody>
 
           <SidePanelFooter>

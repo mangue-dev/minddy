@@ -4,6 +4,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { insertEvents, type EventRow } from "@/lib/server/issue-events";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -138,6 +139,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         .insert(categoryIds.map((category_id) => ({ issue_id: data.id, category_id })));
     }
   }
+
+  // Activity: creation + "sub-issue added" on the parent.
+  const events: EventRow[] = [
+    { issue_id: data.id, actor_id: auth.user.id, type: "created" },
+  ];
+  if (data.parent_id) {
+    events.push({
+      issue_id: data.parent_id,
+      actor_id: auth.user.id,
+      type: "sub_issue_added",
+      to_value: data.id,
+    });
+  }
+  await insertEvents(service, events);
 
   return NextResponse.json({ ...data, category_ids: categoryIds }, { status: 201 });
 }

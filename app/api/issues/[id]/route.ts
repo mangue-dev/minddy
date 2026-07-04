@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import {
+  buildFieldChangeEvents,
+  insertEvents,
+  type EventRow,
+} from "@/lib/server/issue-events";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -102,6 +108,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Aucun champ à mettre à jour." }, { status: 400 });
   }
 
+  // Snapshot before the change so we can diff it into activity events.
+  const { data: before } = await auth.supabase
+    .from("issues")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
   const { data, error } = await auth.supabase
     .from("issues")
     .update(updates)
@@ -118,6 +131,40 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
+
+  // Activity log (best-effort, service client).
+  if (before) {
+    const service = getServiceClient();
+    const events = buildFieldChangeEvents(id, auth.user.id, before, updates);
+    if ("parent_id" in updates && (updates.parent_id ?? null) !== (before.parent_id ?? null)) {
+      events.push({
+        issue_id: id,
+        actor_id: auth.user.id,
+        type: "updated",
+        field: "parent",
+        from_value: (before.parent_id as string) ?? null,
+        to_value: (updates.parent_id as string) ?? null,
+      });
+      if (before.parent_id) {
+        events.push({
+          issue_id: before.parent_id as string,
+          actor_id: auth.user.id,
+          type: "sub_issue_removed",
+          to_value: id,
+        });
+      }
+      if (updates.parent_id) {
+        events.push({
+          issue_id: updates.parent_id as string,
+          actor_id: auth.user.id,
+          type: "sub_issue_added",
+          to_value: id,
+        });
+      }
+    }
+    await insertEvents(service, events as EventRow[]);
+  }
+
   return NextResponse.json(mapIssueRow(data));
 }
 

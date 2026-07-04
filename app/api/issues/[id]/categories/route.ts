@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { getServiceClient } from "@/lib/supabase-service";
+import { insertEvents, type EventRow } from "@/lib/server/issue-events";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,6 +43,13 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     valid = (cats ?? []).map((c) => c.id as string);
   }
 
+  // Snapshot the current set so we can log which categories were added/removed.
+  const { data: currentRows } = await auth.supabase
+    .from("issue_categories")
+    .select("category_id")
+    .eq("issue_id", id);
+  const current = new Set((currentRows ?? []).map((r) => r.category_id as string));
+
   const { error: delError } = await auth.supabase
     .from("issue_categories")
     .delete()
@@ -59,6 +68,21 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
     }
   }
+
+  // Activity: one event per added / removed category.
+  const nextSet = new Set(valid);
+  const events: EventRow[] = [];
+  for (const cid of valid) {
+    if (!current.has(cid)) {
+      events.push({ issue_id: id, actor_id: auth.user.id, type: "category_added", to_value: cid });
+    }
+  }
+  for (const cid of current) {
+    if (!nextSet.has(cid)) {
+      events.push({ issue_id: id, actor_id: auth.user.id, type: "category_removed", from_value: cid });
+    }
+  }
+  await insertEvents(getServiceClient(), events);
 
   return NextResponse.json({ category_ids: valid });
 }
