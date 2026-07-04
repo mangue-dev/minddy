@@ -13,7 +13,10 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 
 const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico"]);
-const PUBLIC_PREFIXES = ["/auth/", "/_next/"];
+// `/api/` is excluded from middleware auth on purpose: route handlers
+// authenticate themselves (getAuthedUser) and must return JSON 401 — never an
+// HTML redirect to /login.
+const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/"];
 
 function isSupabaseGetSessionWarning(args: unknown[]): boolean {
   return args.some(

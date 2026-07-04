@@ -1,48 +1,58 @@
 "use client";
 
-import { Button, Skeleton, toast } from "mangue-ui";
-import { FolderPlus } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { Button, Skeleton } from "mangue-ui";
+import { FolderPlus, Plus } from "lucide-react";
+import { useProjects } from "@/lib/projects-context";
+import { ProjectCard } from "@/components/project-card";
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="mx-auto flex h-full max-w-2xl flex-col justify-center gap-4 px-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-72" />
-        <Skeleton className="h-10 w-40" />
-      </div>
-    );
-  }
+  const { projects, loading, openCreateProject } = useProjects();
 
   return (
-    <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-        <FolderPlus className="size-7" />
-      </div>
-      <div className="space-y-1.5">
+    <div className="mx-auto w-full max-w-5xl px-6 py-10">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">
-          Aucun Projet pour l&apos;instant
+          Mes Projets
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Un Projet est ton espace de travail : issues, membres et catégories y
-          vivent. Crée ton premier Projet pour commencer.
-        </p>
+        {projects.length > 0 && (
+          <Button onClick={openCreateProject}>
+            <Plus />
+            Nouveau Projet
+          </Button>
+        )}
       </div>
-      <Button
-        onClick={() =>
-          toast("La création de Projet arrive au prochain chantier.", {
-            description: "Fondations posées — Projets (CRUD + clé) juste après.",
-          })
-        }
-      >
-        <FolderPlus />
-        Nouveau Projet
-      </Button>
-      {user?.email && (
-        <p className="text-xs text-muted-foreground">Connecté en tant que {user.email}</p>
+
+      {loading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[104px] rounded-xl" />
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border py-16 text-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <FolderPlus className="size-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="font-display text-xl font-semibold tracking-tight">
+              Aucun Projet pour l&apos;instant
+            </h2>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Un Projet est ton espace de travail : issues, membres et catégories
+              y vivent. Crée ton premier Projet pour commencer.
+            </p>
+          </div>
+          <Button onClick={openCreateProject}>
+            <FolderPlus />
+            Nouveau Projet
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
       )}
     </div>
   );

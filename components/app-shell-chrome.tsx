@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,18 +19,13 @@ import {
   useTheme,
   type NavSection,
 } from "mangue-ui";
-import { Home, Moon, Sun, LogOut, ChevronsUpDown } from "lucide-react";
+import { Home, Moon, Sun, LogOut, ChevronsUpDown, Plus, Folder } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useProjects } from "@/lib/projects-context";
 
-const SECTIONS: NavSection[] = [
-  {
-    items: [{ key: "home", label: "Home", icon: Home, href: "/home" }],
-  },
-];
-
-function activeKeyFor(pathname: string): string | undefined {
-  if (pathname.startsWith("/home")) return "home";
-  return undefined;
+function projectIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/projects\/([^/]+)/);
+  return match ? match[1] : null;
 }
 
 function SidebarBrand() {
@@ -68,15 +64,49 @@ function AccountMenu() {
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const activeKey = activeKeyFor(pathname);
   const { open, setOpen } = useCommandMenu();
+  const { projects, openCreateProject } = useProjects();
+
+  const currentProjectId = projectIdFromPath(pathname);
+  const activeKey = pathname.startsWith("/home")
+    ? "home"
+    : currentProjectId
+      ? `project-${currentProjectId}`
+      : undefined;
+
+  const sections = useMemo<NavSection[]>(
+    () => [
+      { items: [{ key: "home", label: "Home", icon: Home, href: "/home" }] },
+      {
+        label: "Projets",
+        items: [
+          ...projects.map((p) => ({
+            key: `project-${p.id}`,
+            label: p.name,
+            icon: Folder,
+            href: `/projects/${p.id}`,
+            badge: (
+              <span className="font-mono text-[10px] text-muted-foreground">{p.key}</span>
+            ),
+          })),
+          {
+            key: "new-project",
+            label: "Nouveau Projet",
+            icon: Plus,
+            onClick: openCreateProject,
+          },
+        ],
+      },
+    ],
+    [projects, openCreateProject]
+  );
 
   return (
     <>
       <AppShell
         sidebar={
           <Sidebar
-            sections={SECTIONS}
+            sections={sections}
             activeKey={activeKey}
             linkComponent={Link}
             header={<SidebarBrand />}
@@ -90,7 +120,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           />
         }
         mobileNav={
-          <MobileNav sections={SECTIONS} activeKey={activeKey} linkComponent={Link} />
+          <MobileNav sections={sections} activeKey={activeKey} linkComponent={Link} />
         }
       >
         {children}
