@@ -70,8 +70,8 @@ export function useIssueTimeline(issueId: string | null) {
   }, [comments, events]);
 
   const addComment = useCallback(
-    async (body: string) => {
-      await addCommentApi(issueId as string, body);
+    async (body: string, mentionedUserIds: string[] = []) => {
+      await addCommentApi(issueId as string, body, mentionedUserIds);
       void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
     },
     [issueId, queryClient]

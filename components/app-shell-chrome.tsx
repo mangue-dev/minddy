@@ -19,9 +19,10 @@ import {
   useTheme,
   type NavSection,
 } from "mangue-ui";
-import { Home, Moon, Sun, LogOut, ChevronsUpDown, Plus, Folder } from "lucide-react";
+import { Home, Moon, Sun, LogOut, ChevronsUpDown, Plus, Folder, Inbox } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useNotifications } from "@/lib/use-notifications";
 
 function projectIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/projects\/([^/]+)/);
@@ -66,17 +67,36 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { open, setOpen } = useCommandMenu();
   const { projects, openCreateProject } = useProjects();
+  const { unreadCount } = useNotifications();
 
   const currentProjectId = projectIdFromPath(pathname);
   const activeKey = pathname.startsWith("/home")
     ? "home"
-    : currentProjectId
-      ? `project-${currentProjectId}`
-      : undefined;
+    : pathname.startsWith("/inbox")
+      ? "inbox"
+      : currentProjectId
+        ? `project-${currentProjectId}`
+        : undefined;
 
   const sections = useMemo<NavSection[]>(
     () => [
-      { items: [{ key: "home", label: "Home", icon: Home, href: "/home" }] },
+      {
+        items: [
+          { key: "home", label: "Home", icon: Home, href: "/home" },
+          {
+            key: "inbox",
+            label: "Inbox",
+            icon: Inbox,
+            href: "/inbox",
+            badge:
+              unreadCount > 0 ? (
+                <span className="flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                  {unreadCount}
+                </span>
+              ) : undefined,
+          },
+        ],
+      },
       {
         label: "Projets",
         items: [
@@ -98,7 +118,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         ],
       },
     ],
-    [projects, openCreateProject]
+    [projects, openCreateProject, unreadCount]
   );
 
   return (

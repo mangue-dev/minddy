@@ -26,12 +26,16 @@ export async function fetchEventsApi(issueId: string): Promise<IssueEvent[]> {
   return parseJson<IssueEvent[]>(await fetch(`/api/issues/${issueId}/events`));
 }
 
-export async function addCommentApi(issueId: string, body: string): Promise<Comment> {
+export async function addCommentApi(
+  issueId: string,
+  body: string,
+  mentionedUserIds: string[] = []
+): Promise<Comment> {
   return parseJson<Comment>(
     await fetch(`/api/issues/${issueId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, mentioned_user_ids: mentionedUserIds }),
     })
   );
 }

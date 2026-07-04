@@ -34,6 +34,7 @@ function ProjectBoard() {
   const projectId = params.id;
   const searchParams = useSearchParams();
   const objectiveParam = searchParams.get("objective");
+  const issueParam = searchParams.get("issue");
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -158,6 +159,11 @@ function ProjectBoard() {
       setConfig(DEFAULT_CONFIG);
     }
   }, [showMyTab, onglet]);
+
+  // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
+  useEffect(() => {
+    if (issueParam) setOpenIssueId(issueParam);
+  }, [issueParam]);
 
   // `C` opens the quick-create dialog (unless typing or a dialog is already open).
   useEffect(() => {

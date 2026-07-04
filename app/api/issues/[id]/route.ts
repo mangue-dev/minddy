@@ -8,6 +8,7 @@ import {
   insertEvents,
   type EventRow,
 } from "@/lib/server/issue-events";
+import { insertNotifications } from "@/lib/server/notifications";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -163,6 +164,25 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       }
     }
     await insertEvents(service, events as EventRow[]);
+
+    // Notify a newly-assigned user (never on self-assign).
+    const newAssignee = updates.assignee_id as string | undefined;
+    if (
+      "assignee_id" in updates &&
+      newAssignee &&
+      newAssignee !== before.assignee_id &&
+      newAssignee !== auth.user.id
+    ) {
+      await insertNotifications(service, [
+        {
+          user_id: newAssignee,
+          project_id: (before.project_id as string) ?? null,
+          type: "assigned",
+          issue_id: id,
+          actor_id: auth.user.id,
+        },
+      ]);
+    }
   }
 
   return NextResponse.json(mapIssueRow(data));

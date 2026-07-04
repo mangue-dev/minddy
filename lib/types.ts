@@ -23,6 +23,22 @@ export interface Comment {
   updated_at: string;
 }
 
+export type NotificationType = "assigned" | "mention" | "comment";
+
+/** A notification enriched for the Inbox UI. */
+export interface MyNotification {
+  id: string;
+  type: NotificationType;
+  read_at: string | null;
+  created_at: string;
+  issue_id: string | null;
+  issue_number: number | null;
+  issue_title: string | null;
+  project_id: string | null;
+  project_key: string | null;
+  actor_name: string | null;
+}
+
 export interface IssueEvent {
   id: string;
   issue_id: string;

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Spinner, cn, toast } from "mangue-ui";
+import { Button, Spinner, toast } from "mangue-ui";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { describeEvent, type EventContext } from "@/lib/describe-event";
+import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
 import type { Comment, Member } from "@/lib/types";
 
 function fmt(at: string): string {
@@ -136,7 +137,7 @@ export function IssueTimeline({
     if (!body) return;
     setPosting(true);
     try {
-      await addComment(body);
+      await addComment(body, extractMentions(draft, ctx.members));
       setDraft("");
     } catch (e) {
       toast.error((e as Error).message);
@@ -176,20 +177,12 @@ export function IssueTimeline({
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
-        <textarea
+        <MentionTextarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              void submit();
-            }
-          }}
-          placeholder="Écrire un commentaire… (⌘⏎ pour envoyer)"
-          rows={3}
-          className={cn(
-            "w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          )}
+          onChange={setDraft}
+          members={ctx.members}
+          onSubmit={() => void submit()}
+          placeholder="Écrire un commentaire… (@ pour mentionner · ⌘⏎ pour envoyer)"
         />
         <div className="flex justify-end">
           <Button size="sm" disabled={posting || !draft.trim()} onClick={() => void submit()}>
