@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Badge, Button, Skeleton, toast } from "mangue-ui";
-import { Settings2, Plus, ListTodo } from "lucide-react";
+import { Button, Skeleton, toast } from "mangue-ui";
+import { Plus, ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useViewsQuery } from "@/lib/use-views-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
+import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import {
   DEFAULT_CONFIG,
   configsEqual,
@@ -18,16 +19,22 @@ import {
   viewConfigOf,
   visibleStatuses,
 } from "@/lib/view-filter";
-import { ProjectSettingsDialog } from "@/components/project-settings-dialog";
+import { STATUSES } from "@/lib/issue-constants";
+import { ProjectHeader } from "@/components/project-header";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
+import { ObjectiveBanner } from "@/components/objective-banner";
+import { ObjectiveDialog } from "@/components/objective-dialog";
 import type { Issue, Onglet, View, ViewConfig } from "@/lib/types";
 
-export default function ProjectPage() {
+function ProjectBoard() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const searchParams = useSearchParams();
+  const objectiveParam = searchParams.get("objective");
+
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
 
@@ -42,13 +49,14 @@ export default function ProjectPage() {
   } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
+  const { objectives, createObjective, updateObjective } = useObjectivesQuery(projectId);
   const { views, createView, updateView, deleteView } = useViewsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
 
   // Views & onglets state.
   const [onglet, setOnglet] = useState<Onglet>("all");
@@ -64,11 +72,26 @@ export default function ProjectPage() {
   const baseline = activeView ? viewConfigOf(activeView) : DEFAULT_CONFIG;
   const dirty = !configsEqual(config, baseline);
 
-  const filteredIssues = useMemo(
+  // Objective mode: the board is filtered to a single objective (plan §6).
+  const activeObjective = objectiveParam
+    ? objectives.find((o) => o.id === objectiveParam) ?? null
+    : null;
+
+  const normalIssues = useMemo(
     () => filterIssues(issues, config, { onglet, myUserId }),
     [issues, config, onglet, myUserId]
   );
-  const statuses = useMemo(() => visibleStatuses(config), [config]);
+  const objectiveIssues = useMemo(
+    () =>
+      activeObjective
+        ? issues.filter((i) => i.objective_id === activeObjective.id)
+        : [],
+    [issues, activeObjective]
+  );
+
+  const boardIssues = activeObjective ? objectiveIssues : normalIssues;
+  const statuses = activeObjective ? STATUSES : visibleStatuses(config);
+  const sort = activeObjective ? "manual" : config.sort;
 
   const selectOnglet = (next: Onglet) => {
     setOnglet(next);
@@ -115,7 +138,6 @@ export default function ProjectPage() {
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
 
-  // If the project is no longer shared, fall back to the All onglet.
   useEffect(() => {
     if (!showMyTab && onglet === "my") {
       setOnglet("all");
@@ -135,25 +157,24 @@ export default function ProjectPage() {
         (el.tagName === "INPUT" ||
           el.tagName === "TEXTAREA" ||
           el.isContentEditable);
-      if (typing || settingsOpen || createOpen || openIssueId) return;
+      if (typing || createOpen || openIssueId || objectiveEditOpen) return;
       e.preventDefault();
       setCreateOpen(true);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [settingsOpen, createOpen, openIssueId]);
+  }, [createOpen, openIssueId, objectiveEditOpen]);
 
   if (projectsLoading && !project) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-6 py-10">
+      <div className="px-6 py-10">
         <Skeleton className="h-8 w-64" />
       </div>
     );
   }
-
   if (!project) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-3 px-6 py-20 text-center">
+      <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
         <h1 className="font-display text-xl font-semibold">Projet introuvable</h1>
         <p className="text-sm text-muted-foreground">
           Ce Projet n&apos;existe pas ou tu n&apos;y as pas accès.
@@ -167,40 +188,19 @@ export default function ProjectPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-8 pb-4">
-        <div className="flex items-center gap-3">
-          <span
-            className="flex size-9 items-center justify-center rounded-lg font-mono text-xs font-semibold"
-            style={{
-              backgroundColor: project.color ?? "var(--muted)",
-              color: project.color ? "#fff" : "var(--muted-foreground)",
-            }}
-            aria-hidden
-          >
-            {project.key.slice(0, 2)}
-          </span>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-xl font-semibold tracking-tight">
-              {project.name}
-            </h1>
-            <Badge variant="secondary" className="font-mono">
-              {project.key}
-            </Badge>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" aria-label="Paramètres" onClick={() => setSettingsOpen(true)}>
-            <Settings2 />
-          </Button>
+      <ProjectHeader
+        project={project}
+        active="issues"
+        right={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus />
             Nouvelle issue
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {issuesLoading ? (
-        <div className="min-h-0 flex-1 px-6 pb-6">
+        <div className="min-h-0 flex-1 px-6 pt-4">
           <div className="flex gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />
@@ -208,7 +208,7 @@ export default function ProjectPage() {
           </div>
         </div>
       ) : issues.length === 0 ? (
-        <div className="min-h-0 flex-1 px-6 pb-6">
+        <div className="min-h-0 flex-1 px-6 pt-4">
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
               <ListTodo className="size-6" />
@@ -221,37 +221,55 @@ export default function ProjectPage() {
         </div>
       ) : (
         <>
-          <div className="shrink-0 px-6 pb-3">
-            <BoardToolbar
-              onglet={onglet}
-              onOngletChange={selectOnglet}
-              showMyTab={showMyTab}
-              views={ongletViews}
-              activeViewId={activeViewId}
-              onSelectView={selectView}
-              config={config}
-              onConfigChange={setConfig}
-              members={members}
-              categories={categories}
-              dirty={dirty}
-              onCreateView={handleCreateView}
-              onUpdateActiveView={handleUpdateActiveView}
-              onRenameView={handleRenameView}
-              onDeleteView={handleDeleteView}
-            />
+          <div className="shrink-0 px-6 pt-4">
+            {activeObjective ? (
+              <ObjectiveBanner
+                objective={activeObjective}
+                projectId={project.id}
+                progress={objectiveProgress(activeObjective.id, issues)}
+                lead={
+                  activeObjective.lead_user_id
+                    ? members.find((m) => m.user_id === activeObjective.lead_user_id) ??
+                      null
+                    : null
+                }
+                onEdit={() => setObjectiveEditOpen(true)}
+              />
+            ) : (
+              <BoardToolbar
+                onglet={onglet}
+                onOngletChange={selectOnglet}
+                showMyTab={showMyTab}
+                views={ongletViews}
+                activeViewId={activeViewId}
+                onSelectView={selectView}
+                config={config}
+                onConfigChange={setConfig}
+                members={members}
+                categories={categories}
+                objectives={objectives}
+                dirty={dirty}
+                onCreateView={handleCreateView}
+                onUpdateActiveView={handleUpdateActiveView}
+                onRenameView={handleRenameView}
+                onDeleteView={handleDeleteView}
+              />
+            )}
           </div>
-          <div className="min-h-0 flex-1 px-6 pb-6">
-            {filteredIssues.length === 0 ? (
+          <div className="min-h-0 flex-1 px-6 pt-3 pb-6">
+            {boardIssues.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
                 <p className="text-sm text-muted-foreground">
-                  Aucune issue ne correspond à cette vue.
+                  {activeObjective
+                    ? "Aucune issue dans cet objectif."
+                    : "Aucune issue ne correspond à cette vue."}
                 </p>
               </div>
             ) : (
               <KanbanBoard
-                issues={filteredIssues}
+                issues={boardIssues}
                 statuses={statuses}
-                sort={config.sort}
+                sort={sort}
                 projectKey={project.key}
                 members={members}
                 categories={categories}
@@ -268,6 +286,7 @@ export default function ProjectPage() {
         onOpenChange={setCreateOpen}
         members={members}
         categories={categories}
+        objectives={objectives}
         onCreate={createIssue}
       />
 
@@ -280,16 +299,30 @@ export default function ProjectPage() {
         projectKey={project.key}
         members={members}
         categories={categories}
+        objectives={objectives}
         onUpdate={updateIssue}
         onDelete={deleteIssue}
         onSetCategories={setCategories}
       />
 
-      <ProjectSettingsDialog
-        project={project}
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-      />
+      {activeObjective && (
+        <ObjectiveDialog
+          open={objectiveEditOpen}
+          onOpenChange={setObjectiveEditOpen}
+          members={members}
+          objective={activeObjective}
+          onCreate={createObjective}
+          onUpdate={updateObjective}
+        />
+      )}
     </div>
+  );
+}
+
+export default function ProjectPage() {
+  return (
+    <Suspense fallback={<div className="px-6 py-10"><Skeleton className="h-8 w-64" /></div>}>
+      <ProjectBoard />
+    </Suspense>
   );
 }

@@ -9,7 +9,7 @@ import {
   Input,
   cn,
 } from "mangue-ui";
-import { Check, UserCircle2, CalendarDays, Gauge } from "lucide-react";
+import { Check, UserCircle2, CalendarDays, Gauge, Target } from "lucide-react";
 import {
   STATUSES,
   STATUS_MAP,
@@ -21,10 +21,51 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import type { Member } from "@/lib/types";
+import type { Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
   return m.full_name || m.email || "Utilisateur";
+}
+
+export function ObjectivePicker({
+  value,
+  onChange,
+  objectives,
+  size = "sm",
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  objectives: Objective[];
+  size?: "sm" | "default";
+}) {
+  const current = objectives.find((o) => o.id === value) ?? null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size={size}>
+          <Target className="text-muted-foreground" />
+          {current ? current.name : "Aucun objectif"}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-52">
+        <DropdownMenuItem onSelect={() => onChange(null)}>
+          Aucun objectif
+          {value === null && <Check className="ml-auto size-4" />}
+        </DropdownMenuItem>
+        {objectives.map((o) => (
+          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)}>
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
+              aria-hidden
+            />
+            <span className="truncate">{o.name}</span>
+            {o.id === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function StatusPicker({
@@ -135,11 +176,13 @@ export function AssigneePicker({
   onChange,
   members,
   size = "sm",
+  emptyLabel = "Non assigné",
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
   members: Member[];
   size?: "sm" | "default";
+  emptyLabel?: string;
 }) {
   const current = members.find((m) => m.user_id === value) ?? null;
   return (
@@ -147,12 +190,12 @@ export function AssigneePicker({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <UserCircle2 className="text-muted-foreground" />
-          {current ? memberLabel(current) : "Non assigné"}
+          {current ? memberLabel(current) : emptyLabel}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-52">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Non assigné
+          {emptyLabel}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {members.map((m) => (

@@ -75,6 +75,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     updates.assignee_id =
       typeof input.assignee_id === "string" ? input.assignee_id : null;
   }
+  if ("objective_id" in input) {
+    updates.objective_id =
+      typeof input.objective_id === "string" ? input.objective_id : null;
+  }
   if ("due_date" in input) {
     if (!isDateOrNull(input.due_date)) {
       return NextResponse.json({ error: "Date invalide." }, { status: 400 });

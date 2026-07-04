@@ -16,6 +16,7 @@ import {
   AssigneePicker,
   DueDateField,
   EffortPicker,
+  ObjectivePicker,
   PriorityPicker,
   StatusPicker,
 } from "@/components/issue-fields";
@@ -25,13 +26,14 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
-import type { Category, CreateIssueInput, Member } from "@/lib/types";
+import type { Category, CreateIssueInput, Member, Objective } from "@/lib/types";
 
 const DEFAULTS = {
   status: "backlog" as IssueStatus,
   priority: "none" as IssuePriority,
   effort: null as IssueEffort | null,
   assignee_id: null as string | null,
+  objective_id: null as string | null,
   due_date: null as string | null,
 };
 
@@ -40,12 +42,14 @@ export function CreateIssueDialog({
   onOpenChange,
   members,
   categories,
+  objectives,
   onCreate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
   categories: Category[];
+  objectives: Objective[];
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
 }) {
   const [title, setTitle] = useState("");
@@ -145,6 +149,11 @@ export function CreateIssueDialog({
             <EffortPicker
               value={fields.effort}
               onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+            />
+            <ObjectivePicker
+              value={fields.objective_id}
+              onChange={(objective_id) => setFields((f) => ({ ...f, objective_id }))}
+              objectives={objectives}
             />
           </div>
 

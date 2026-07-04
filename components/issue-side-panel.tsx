@@ -18,12 +18,19 @@ import {
   AssigneePicker,
   DueDateField,
   EffortPicker,
+  ObjectivePicker,
   PriorityPicker,
   StatusPicker,
 } from "@/components/issue-fields";
 import { CategoryPicker } from "@/components/category-picker";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
+import type {
+  Category,
+  Issue,
+  IssueUpdateInput,
+  Member,
+  Objective,
+} from "@/lib/types";
 
 function FieldRow({
   label,
@@ -47,6 +54,7 @@ export function IssueSidePanel({
   projectKey,
   members,
   categories,
+  objectives,
   onUpdate,
   onDelete,
   onSetCategories,
@@ -57,6 +65,7 @@ export function IssueSidePanel({
   projectKey: string;
   members: Member[];
   categories: Category[];
+  objectives: Objective[];
   onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
   onDelete: (issueId: string) => Promise<void>;
   onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
@@ -148,6 +157,13 @@ export function IssueSidePanel({
                   value={issue.assignee_id}
                   onChange={(assignee_id) => void patch({ assignee_id })}
                   members={members}
+                />
+              </FieldRow>
+              <FieldRow label="Objectif">
+                <ObjectivePicker
+                  value={issue.objective_id}
+                  onChange={(objective_id) => void patch({ objective_id })}
+                  objectives={objectives}
                 />
               </FieldRow>
               <FieldRow label="Effort">

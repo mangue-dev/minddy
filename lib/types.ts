@@ -1,4 +1,36 @@
 import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants";
+import type { ObjectiveStatus } from "./objective-constants";
+
+export interface Objective {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  status: ObjectiveStatus;
+  lead_user_id: string | null;
+  target_date: string | null;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateObjectiveInput {
+  name: string;
+  description?: string | null;
+  status?: ObjectiveStatus;
+  lead_user_id?: string | null;
+  target_date?: string | null;
+  color?: string | null;
+}
+
+export interface ObjectiveUpdateInput {
+  name?: string;
+  description?: string | null;
+  status?: ObjectiveStatus;
+  lead_user_id?: string | null;
+  target_date?: string | null;
+  color?: string | null;
+}
 
 export interface Project {
   id: string;
@@ -85,6 +117,7 @@ export interface Issue {
   priority: IssuePriority;
   effort: IssueEffort | null;
   assignee_id: string | null;
+  objective_id: string | null;
   due_date: string | null;
   position: number;
   created_by: string | null;
@@ -101,6 +134,7 @@ export interface CreateIssueInput {
   priority?: IssuePriority;
   effort?: IssueEffort | null;
   assignee_id?: string | null;
+  objective_id?: string | null;
   due_date?: string | null;
   category_ids?: string[];
 }
@@ -112,6 +146,7 @@ export interface IssueUpdateInput {
   priority?: IssuePriority;
   effort?: IssueEffort | null;
   assignee_id?: string | null;
+  objective_id?: string | null;
   due_date?: string | null;
   position?: number;
 }
@@ -125,6 +160,7 @@ export interface ViewFilters {
   assignee?: (string | null)[]; // null = unassigned
   effort?: IssueEffort[];
   category?: string[];
+  objective?: (string | null)[]; // null = no objective
 }
 
 export interface ViewDisplay {

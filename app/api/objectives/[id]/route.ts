@@ -1,0 +1,117 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { getAuthedUser } from "@/lib/server/api-auth";
+import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+const isDateOrNull = (v: unknown): v is string | null =>
+  v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v));
+
+/** GET /api/objectives/[id] — a single objective (RLS: project access). */
+export async function GET(request: NextRequest, { params }: RouteContext) {
+  const { id } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  const { data, error } = await auth.supabase
+    .from("objectives")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[api/objectives/:id] get failed:", error.message);
+    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: "Objectif introuvable" }, { status: 404 });
+  return NextResponse.json(data);
+}
+
+/** PATCH /api/objectives/[id] — update fields (RLS: project access). */
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
+  const { id } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+  }
+  const input = (body ?? {}) as Record<string, unknown>;
+  const updates: Record<string, unknown> = {};
+
+  if (typeof input.name === "string") {
+    const name = input.name.trim();
+    if (!name) {
+      return NextResponse.json({ error: "Le nom est obligatoire." }, { status: 400 });
+    }
+    updates.name = name;
+  }
+  if ("description" in input) {
+    updates.description =
+      typeof input.description === "string" ? input.description : null;
+  }
+  if ("status" in input) {
+    if (
+      typeof input.status !== "string" ||
+      !OBJECTIVE_STATUS_VALUES.includes(input.status as never)
+    ) {
+      return NextResponse.json({ error: "Statut invalide." }, { status: 400 });
+    }
+    updates.status = input.status;
+  }
+  if ("lead_user_id" in input) {
+    updates.lead_user_id =
+      typeof input.lead_user_id === "string" ? input.lead_user_id : null;
+  }
+  if ("target_date" in input) {
+    if (!isDateOrNull(input.target_date)) {
+      return NextResponse.json({ error: "Date invalide." }, { status: 400 });
+    }
+    updates.target_date = input.target_date;
+  }
+  if ("color" in input) {
+    updates.color = typeof input.color === "string" ? input.color : null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Aucun champ à mettre à jour." }, { status: 400 });
+  }
+
+  const { data, error } = await auth.supabase
+    .from("objectives")
+    .update(updates)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[api/objectives/:id] update failed:", error.message);
+    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: "Objectif introuvable" }, { status: 404 });
+  return NextResponse.json(data);
+}
+
+/** DELETE /api/objectives/[id] — removes it; linked issues are detached (SET NULL). */
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  const { id } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  const { data, error } = await auth.supabase
+    .from("objectives")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[api/objectives/:id] delete failed:", error.message);
+    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: "Objectif introuvable" }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}

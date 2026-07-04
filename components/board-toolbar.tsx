@@ -44,6 +44,7 @@ import { activeFilterCount } from "@/lib/view-filter";
 import type {
   Category,
   Member,
+  Objective,
   Onglet,
   View,
   ViewConfig,
@@ -93,11 +94,13 @@ function FiltersPopover({
   onChange,
   members,
   categories,
+  objectives,
 }: {
   config: ViewConfig;
   onChange: (config: ViewConfig) => void;
   members: Member[];
   categories: Category[];
+  objectives: Objective[];
 }) {
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
@@ -215,6 +218,39 @@ function FiltersPopover({
           </>
         )}
 
+        {objectives.length > 0 && (
+          <>
+            <Separator className="my-1.5" />
+            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              Objectif
+            </p>
+            <ToggleRow
+              active={!!f.objective?.includes(null)}
+              onClick={() =>
+                setFilters({ ...f, objective: toggle(f.objective, null) })
+              }
+            >
+              Sans objectif
+            </ToggleRow>
+            {objectives.map((o) => (
+              <ToggleRow
+                key={o.id}
+                active={!!f.objective?.includes(o.id)}
+                onClick={() =>
+                  setFilters({ ...f, objective: toggle(f.objective, o.id) })
+                }
+              >
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
+                  aria-hidden
+                />
+                <span className="truncate">{o.name}</span>
+              </ToggleRow>
+            ))}
+          </>
+        )}
+
         <Separator className="my-1.5" />
         <ToggleRow
           active={!!config.display.hideDone}
@@ -305,6 +341,7 @@ export function BoardToolbar({
   onConfigChange,
   members,
   categories,
+  objectives,
   dirty,
   onCreateView,
   onUpdateActiveView,
@@ -321,6 +358,7 @@ export function BoardToolbar({
   onConfigChange: (config: ViewConfig) => void;
   members: Member[];
   categories: Category[];
+  objectives: Objective[];
   dirty: boolean;
   onCreateView: (name: string) => Promise<void>;
   onUpdateActiveView: () => Promise<void>;
@@ -411,6 +449,7 @@ export function BoardToolbar({
             onChange={onConfigChange}
             members={members}
             categories={categories}
+            objectives={objectives}
           />
 
           {activeView && (

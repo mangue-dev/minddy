@@ -69,6 +69,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (typeof input.assignee_id === "string" || input.assignee_id === null) {
     row.assignee_id = input.assignee_id ?? null;
   }
+  if (typeof input.objective_id === "string" || input.objective_id === null) {
+    row.objective_id = input.objective_id ?? null;
+  }
   if (isDateOrNull(input.due_date)) row.due_date = input.due_date;
 
   const service = getServiceClient();

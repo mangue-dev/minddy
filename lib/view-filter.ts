@@ -42,6 +42,7 @@ export function normalizeConfig(c: ViewConfig): string {
     assignee: norm(f.assignee),
     effort: norm(f.effort),
     category: norm(f.category),
+    objective: norm(f.objective),
     sort: c.sort,
     hideDone: !!c.display.hideDone,
   });
@@ -60,6 +61,7 @@ export function activeFilterCount(config: ViewConfig): number {
   if (f.assignee?.length) n++;
   if (f.effort?.length) n++;
   if (f.category?.length) n++;
+  if (f.objective?.length) n++;
   if (config.display.hideDone) n++;
   return n;
 }
@@ -89,6 +91,7 @@ export function filterIssues(
       return false;
     if (f.category?.length && !f.category.some((c) => i.category_ids.includes(c)))
       return false;
+    if (f.objective?.length && !f.objective.includes(i.objective_id)) return false;
     return true;
   });
 }
