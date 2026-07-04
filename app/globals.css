@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@import "mangue-ui/tokens.css";
+@source "../node_modules/mangue-ui/src";
+
+/* ── Your theme ───────────────────────────────────────────────────────────────
+   This file is yours. Override any mangue-ui token here — your values win by
+   cascade (they come after the @import). The whole library recolors from
+   --primary, and your own `bg-primary` / `text-foreground` utilities use the
+   same variables. Change or delete the block below to make it your own. */
+:root {
+  --primary: #FF438E; /* minddy green — proves the override works */
+}
+.dark {
+  --primary: #bf336b;
+}
+
+/* Add your own tokens and reuse mangue-ui's anywhere. */
+:root {
+  --ticket-urgent: oklch(0.62 0.24 25);
+}

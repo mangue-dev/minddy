@@ -1,0 +1,15 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const dir = path.dirname(fileURLToPath(import.meta.url));
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Pin the workspace root to this app so Turbopack doesn't walk up into the
+  // sibling mangue-ui monorepo (mangue-ui is a `file:` dependency).
+  turbopack: { root: dir },
+  // mangue-ui ships TS/TSX source (no build) — Next must transpile it.
+  transpilePackages: ["mangue-ui"],
+};
+
+export default nextConfig;
