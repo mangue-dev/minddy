@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Badge, Button, Skeleton } from "mangue-ui";
+import { Badge, Button, Skeleton, toast } from "mangue-ui";
 import { Settings2, Plus, ListTodo } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { useViewsQuery } from "@/lib/use-views-query";
+import {
+  DEFAULT_CONFIG,
+  configsEqual,
+  filterIssues,
+  viewConfigOf,
+  visibleStatuses,
+} from "@/lib/view-filter";
 import { ProjectSettingsDialog } from "@/components/project-settings-dialog";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
-import type { Issue } from "@/lib/types";
+import { BoardToolbar } from "@/components/board-toolbar";
+import type { Issue, Onglet, View, ViewConfig } from "@/lib/types";
 
 export default function ProjectPage() {
   const params = useParams<{ id: string }>();
@@ -29,14 +39,87 @@ export default function ProjectPage() {
     moveIssue,
   } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
+  const { views, createView, updateView, deleteView } = useViewsQuery(projectId);
+  const { user } = useAuth();
+  const myUserId = user?.id ?? null;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
 
+  // Views & onglets state.
+  const [onglet, setOnglet] = useState<Onglet>("all");
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
+
+  const showMyTab = members.length > 1; // owner + at least one member = shared
+  const ongletViews = useMemo(
+    () => views.filter((v) => v.onglet === onglet),
+    [views, onglet]
+  );
+  const activeView = ongletViews.find((v) => v.id === activeViewId) ?? null;
+  const baseline = activeView ? viewConfigOf(activeView) : DEFAULT_CONFIG;
+  const dirty = !configsEqual(config, baseline);
+
+  const filteredIssues = useMemo(
+    () => filterIssues(issues, config, { onglet, myUserId }),
+    [issues, config, onglet, myUserId]
+  );
+  const statuses = useMemo(() => visibleStatuses(config), [config]);
+
+  const selectOnglet = (next: Onglet) => {
+    setOnglet(next);
+    setActiveViewId(null);
+    setConfig(DEFAULT_CONFIG);
+  };
+  const selectView = (id: string | null) => {
+    setActiveViewId(id);
+    const v = id ? ongletViews.find((x) => x.id === id) : null;
+    setConfig(v ? viewConfigOf(v) : DEFAULT_CONFIG);
+  };
+  const handleCreateView = async (name: string) => {
+    const view = await createView({ onglet, name, ...config });
+    setActiveViewId(view.id);
+    toast.success(`Vue « ${name} » créée.`);
+  };
+  const handleUpdateActiveView = async () => {
+    if (!activeView) return;
+    try {
+      await updateView(activeView.id, {
+        filters: config.filters,
+        sort: config.sort,
+        display: config.display,
+      });
+      toast.success("Vue mise à jour.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+  const handleRenameView = async (view: View, name: string) => {
+    await updateView(view.id, { name });
+  };
+  const handleDeleteView = async (view: View) => {
+    try {
+      await deleteView(view.id);
+      if (view.id === activeViewId) selectView(null);
+      toast.success("Vue supprimée.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   const openIssue = openIssueId
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
+
+  // If the project is no longer shared, fall back to the All onglet.
+  useEffect(() => {
+    if (!showMyTab && onglet === "my") {
+      setOnglet("all");
+      setActiveViewId(null);
+      setConfig(DEFAULT_CONFIG);
+    }
+  }, [showMyTab, onglet]);
 
   // `C` opens the quick-create dialog (unless typing or a dialog is already open).
   useEffect(() => {
@@ -113,14 +196,16 @@ export default function ProjectPage() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 px-6 pb-6">
-        {issuesLoading ? (
+      {issuesLoading ? (
+        <div className="min-h-0 flex-1 px-6 pb-6">
           <div className="flex gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />
             ))}
           </div>
-        ) : issues.length === 0 ? (
+        </div>
+      ) : issues.length === 0 ? (
+        <div className="min-h-0 flex-1 px-6 pb-6">
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
               <ListTodo className="size-6" />
@@ -130,16 +215,48 @@ export default function ProjectPage() {
               <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">C</kbd>.
             </p>
           </div>
-        ) : (
-          <KanbanBoard
-            issues={issues}
-            projectKey={project.key}
-            members={members}
-            onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
-            onMove={moveIssue}
-          />
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="shrink-0 px-6 pb-3">
+            <BoardToolbar
+              onglet={onglet}
+              onOngletChange={selectOnglet}
+              showMyTab={showMyTab}
+              views={ongletViews}
+              activeViewId={activeViewId}
+              onSelectView={selectView}
+              config={config}
+              onConfigChange={setConfig}
+              members={members}
+              dirty={dirty}
+              onCreateView={handleCreateView}
+              onUpdateActiveView={handleUpdateActiveView}
+              onRenameView={handleRenameView}
+              onDeleteView={handleDeleteView}
+            />
+          </div>
+          <div className="min-h-0 flex-1 px-6 pb-6">
+            {filteredIssues.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Aucune issue ne correspond à cette vue.
+                </p>
+              </div>
+            ) : (
+              <KanbanBoard
+                issues={filteredIssues}
+                statuses={statuses}
+                sort={config.sort}
+                projectKey={project.key}
+                members={members}
+                onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
+                onMove={moveIssue}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       <CreateIssueDialog
         open={createOpen}

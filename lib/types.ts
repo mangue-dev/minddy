@@ -95,3 +95,53 @@ export interface IssueUpdateInput {
   due_date?: string | null;
   position?: number;
 }
+
+export type Onglet = "my" | "all";
+export type ViewSort = "manual" | "priority" | "created" | "updated" | "due";
+
+export interface ViewFilters {
+  status?: IssueStatus[];
+  priority?: IssuePriority[];
+  assignee?: (string | null)[]; // null = unassigned
+  effort?: IssueEffort[];
+}
+
+export interface ViewDisplay {
+  hideDone?: boolean;
+}
+
+/** The filter/sort/display triple a view applies (also the live "working" state). */
+export interface ViewConfig {
+  filters: ViewFilters;
+  sort: ViewSort;
+  display: ViewDisplay;
+}
+
+export interface View {
+  id: string;
+  project_id: string;
+  onglet: Onglet;
+  user_id: string | null; // NULL = shared
+  name: string;
+  filters: ViewFilters;
+  sort: ViewSort;
+  display: ViewDisplay;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateViewInput {
+  onglet: Onglet;
+  name: string;
+  filters: ViewFilters;
+  sort: ViewSort;
+  display: ViewDisplay;
+}
+
+export interface ViewUpdateInput {
+  name?: string;
+  filters?: ViewFilters;
+  sort?: ViewSort;
+  display?: ViewDisplay;
+}

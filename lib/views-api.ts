@@ -1,0 +1,59 @@
+"use client";
+
+import type { CreateViewInput, View, ViewUpdateInput } from "./types";
+
+async function parseJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    const message =
+      (data as { error?: string } | null)?.error || text.trim() || "Requête échouée";
+    throw new Error(message);
+  }
+  return data as T;
+}
+
+export async function fetchViewsApi(projectId: string): Promise<View[]> {
+  return parseJson<View[]>(await fetch(`/api/projects/${projectId}/views`));
+}
+
+export async function createViewApi(
+  projectId: string,
+  input: CreateViewInput
+): Promise<View> {
+  return parseJson<View>(
+    await fetch(`/api/projects/${projectId}/views`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+  );
+}
+
+export async function updateViewApi(
+  viewId: string,
+  updates: ViewUpdateInput
+): Promise<View> {
+  return parseJson<View>(
+    await fetch(`/api/views/${viewId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    })
+  );
+}
+
+export async function deleteViewApi(viewId: string): Promise<void> {
+  const response = await fetch(`/api/views/${viewId}`, { method: "DELETE" });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      (data as { error?: string } | null)?.error || "Suppression échouée"
+    );
+  }
+}

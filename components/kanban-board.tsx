@@ -12,9 +12,10 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { toast } from "mangue-ui";
-import { STATUSES } from "@/lib/issue-constants";
+import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { Issue, Member } from "@/lib/types";
+import type { Issue, Member, ViewSort } from "@/lib/types";
+import { issueComparator } from "@/lib/view-filter";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 
@@ -32,12 +33,16 @@ function computePosition(items: Issue[], index: number): number {
 
 export function KanbanBoard({
   issues,
+  statuses,
+  sort,
   projectKey,
   members,
   onOpenIssue,
   onMove,
 }: {
   issues: Issue[];
+  statuses: StatusMeta[];
+  sort: ViewSort;
   projectKey: string;
   members: Member[];
   onOpenIssue: (issue: Issue) => void;
@@ -51,16 +56,13 @@ export function KanbanBoard({
     [members]
   );
 
-  const columns = useMemo(
-    () =>
-      STATUSES.map((status) => ({
-        status,
-        items: issues
-          .filter((i) => i.status === status.value)
-          .sort((a, b) => a.position - b.position),
-      })),
-    [issues]
-  );
+  const columns = useMemo(() => {
+    const cmp = issueComparator(sort);
+    return statuses.map((status) => ({
+      status,
+      items: issues.filter((i) => i.status === status.value).sort(cmp),
+    }));
+  }, [issues, statuses, sort]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeIssue = activeId ? issues.find((i) => i.id === activeId) ?? null : null;
@@ -92,18 +94,28 @@ export function KanbanBoard({
       targetStatus = overIssue.status;
     }
 
-    const targetItems = issues
-      .filter((i) => i.status === targetStatus && i.id !== dragged.id)
-      .sort((a, b) => a.position - b.position);
+    const sameColumn = targetStatus === dragged.status;
+    // With a non-manual sort the column order is field-derived — no reordering.
+    if (sameColumn && sort !== "manual") return;
 
-    let index = overIssue
-      ? targetItems.findIndex((i) => i.id === overIssue!.id)
-      : targetItems.length;
-    if (index < 0) index = targetItems.length;
+    const patch: { status?: IssueStatus; position: number } = {
+      position: dragged.position,
+    };
+    if (!sameColumn) patch.status = targetStatus;
 
-    const position = computePosition(targetItems, index);
-    const patch: { status?: IssueStatus; position: number } = { position };
-    if (targetStatus !== dragged.status) patch.status = targetStatus;
+    if (sort === "manual") {
+      const targetItems = issues
+        .filter((i) => i.status === targetStatus && i.id !== dragged.id)
+        .sort((a, b) => a.position - b.position);
+      let index = overIssue
+        ? targetItems.findIndex((i) => i.id === overIssue!.id)
+        : targetItems.length;
+      if (index < 0) index = targetItems.length;
+      patch.position = computePosition(targetItems, index);
+    } else {
+      // Field-sorted cross-column move: position is cosmetic — land at the end.
+      patch.position = Date.now();
+    }
 
     void onMove(dragged.id, patch).catch((err) =>
       toast.error((err as Error).message)
