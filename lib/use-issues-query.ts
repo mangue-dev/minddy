@@ -9,6 +9,7 @@ import {
   fetchIssuesApi,
   updateIssueApi,
 } from "./issues-api";
+import { setIssueCategoriesApi } from "./categories-api";
 import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
 
 const issuesKey = (projectId: string) => ["issues", projectId] as const;
@@ -102,6 +103,14 @@ export function useIssuesQuery(projectId: string | null) {
     [projectId, queryClient]
   );
 
+  const setCategories = useCallback(
+    async (issueId: string, categoryIds: string[]) => {
+      await setIssueCategoriesApi(issueId, categoryIds);
+      invalidate();
+    },
+    [invalidate]
+  );
+
   return {
     issues: (data ?? []) as Issue[],
     loading: isLoading,
@@ -110,5 +119,6 @@ export function useIssuesQuery(projectId: string | null) {
     updateIssue,
     deleteIssue,
     moveIssue,
+    setCategories,
   };
 }

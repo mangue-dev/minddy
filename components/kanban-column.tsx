@@ -4,7 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
 import type { StatusMeta } from "@/lib/issue-constants";
-import type { Issue, Member } from "@/lib/types";
+import type { Category, Issue, Member } from "@/lib/types";
 import { IssueCard } from "@/components/issue-card";
 
 export function KanbanColumn({
@@ -12,12 +12,14 @@ export function KanbanColumn({
   issues,
   projectKey,
   memberMap,
+  categoryMap,
   onOpenIssue,
 }: {
   status: StatusMeta;
   issues: Issue[];
   projectKey: string;
   memberMap: Map<string, Member>;
+  categoryMap: Map<string, Category>;
   onOpenIssue: (issue: Issue) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
@@ -50,6 +52,7 @@ export function KanbanColumn({
               assignee={
                 issue.assignee_id ? memberMap.get(issue.assignee_id) ?? null : null
               }
+              categoryMap={categoryMap}
               onOpen={() => onOpenIssue(issue)}
             />
           ))}

@@ -25,6 +25,7 @@ import { useProjects } from "@/lib/projects-context";
 import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectMembers } from "@/components/project-members";
+import { ProjectCategories } from "@/components/project-categories";
 import type { Project } from "@/lib/types";
 
 export function ProjectSettingsDialog({
@@ -118,6 +119,7 @@ export function ProjectSettingsDialog({
           <Tabs defaultValue="general">
             <TabsList>
               <TabsTrigger value="general">Général</TabsTrigger>
+              <TabsTrigger value="categories">Catégories</TabsTrigger>
               <TabsTrigger value="members">Membres</TabsTrigger>
             </TabsList>
 
@@ -209,6 +211,10 @@ export function ProjectSettingsDialog({
                   </div>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="categories" className="pt-4">
+              <ProjectCategories projectId={project.id} />
             </TabsContent>
 
             <TabsContent value="members" className="pt-4">

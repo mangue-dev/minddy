@@ -8,7 +8,8 @@ import {
   EFFORT_MAP,
   issueIdentifier,
 } from "@/lib/issue-constants";
-import type { Issue, Member } from "@/lib/types";
+import { CategoryPill } from "@/components/category-pill";
+import type { Category, Issue, Member } from "@/lib/types";
 
 function formatDue(due: string): string {
   return new Date(due + "T00:00:00").toLocaleDateString("fr-FR", {
@@ -22,15 +23,20 @@ export function IssueCardBody({
   issue,
   projectKey,
   assignee,
+  categoryMap,
   dragging,
 }: {
   issue: Issue;
   projectKey: string;
   assignee: Member | null;
+  categoryMap: Map<string, Category>;
   dragging?: boolean;
 }) {
   const priority = PRIORITY_MAP[issue.priority];
   const PriorityIcon = priority.icon;
+  const cats = issue.category_ids
+    .map((id) => categoryMap.get(id))
+    .filter((c): c is Category => !!c);
   return (
     <div
       className={cn(
@@ -47,6 +53,13 @@ export function IssueCardBody({
         )}
       </div>
       <p className="line-clamp-3 text-sm">{issue.title}</p>
+      {cats.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {cats.map((c) => (
+            <CategoryPill key={c.id} category={c} />
+          ))}
+        </div>
+      )}
       {(issue.effort || issue.due_date || assignee) && (
         <div className="flex items-center gap-2">
           {issue.effort && (
@@ -77,11 +90,13 @@ export function IssueCard({
   issue,
   projectKey,
   assignee,
+  categoryMap,
   onOpen,
 }: {
   issue: Issue;
   projectKey: string;
   assignee: Member | null;
+  categoryMap: Map<string, Category>;
   onOpen: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -96,7 +111,12 @@ export function IssueCard({
       onClick={onOpen}
       className={cn("cursor-grab touch-none", isDragging && "opacity-40")}
     >
-      <IssueCardBody issue={issue} projectKey={projectKey} assignee={assignee} />
+      <IssueCardBody
+        issue={issue}
+        projectKey={projectKey}
+        assignee={assignee}
+        categoryMap={categoryMap}
+      />
     </div>
   );
 }

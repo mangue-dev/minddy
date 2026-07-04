@@ -57,6 +57,24 @@ export interface MyInvitation {
   created_at: string;
 }
 
+export interface Category {
+  id: string;
+  project_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface CreateCategoryInput {
+  name: string;
+  color: string;
+}
+
+export interface CategoryUpdateInput {
+  name?: string;
+  color?: string;
+}
+
 export interface Issue {
   id: string;
   project_id: string;
@@ -73,6 +91,7 @@ export interface Issue {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  category_ids: string[];
 }
 
 export interface CreateIssueInput {
@@ -83,6 +102,7 @@ export interface CreateIssueInput {
   effort?: IssueEffort | null;
   assignee_id?: string | null;
   due_date?: string | null;
+  category_ids?: string[];
 }
 
 export interface IssueUpdateInput {
@@ -104,6 +124,7 @@ export interface ViewFilters {
   priority?: IssuePriority[];
   assignee?: (string | null)[]; // null = unassigned
   effort?: IssueEffort[];
+  category?: string[];
 }
 
 export interface ViewDisplay {

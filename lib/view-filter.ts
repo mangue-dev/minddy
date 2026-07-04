@@ -41,6 +41,7 @@ export function normalizeConfig(c: ViewConfig): string {
     priority: norm(f.priority),
     assignee: norm(f.assignee),
     effort: norm(f.effort),
+    category: norm(f.category),
     sort: c.sort,
     hideDone: !!c.display.hideDone,
   });
@@ -58,6 +59,7 @@ export function activeFilterCount(config: ViewConfig): number {
   if (f.priority?.length) n++;
   if (f.assignee?.length) n++;
   if (f.effort?.length) n++;
+  if (f.category?.length) n++;
   if (config.display.hideDone) n++;
   return n;
 }
@@ -84,6 +86,8 @@ export function filterIssues(
     if (f.priority?.length && !f.priority.includes(i.priority)) return false;
     if (f.assignee?.length && !f.assignee.includes(i.assignee_id)) return false;
     if (f.effort?.length && (i.effort === null || !f.effort.includes(i.effort)))
+      return false;
+    if (f.category?.length && !f.category.some((c) => i.category_ids.includes(c)))
       return false;
     return true;
   });

@@ -14,7 +14,7 @@ import {
 import { toast } from "mangue-ui";
 import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { Issue, Member, ViewSort } from "@/lib/types";
+import type { Category, Issue, Member, ViewSort } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
@@ -37,6 +37,7 @@ export function KanbanBoard({
   sort,
   projectKey,
   members,
+  categories,
   onOpenIssue,
   onMove,
 }: {
@@ -45,6 +46,7 @@ export function KanbanBoard({
   sort: ViewSort;
   projectKey: string;
   members: Member[];
+  categories: Category[];
   onOpenIssue: (issue: Issue) => void;
   onMove: (
     issueId: string,
@@ -54,6 +56,10 @@ export function KanbanBoard({
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),
     [members]
+  );
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c])),
+    [categories]
   );
 
   const columns = useMemo(() => {
@@ -138,6 +144,7 @@ export function KanbanBoard({
             issues={items}
             projectKey={projectKey}
             memberMap={memberMap}
+            categoryMap={categoryMap}
             onOpenIssue={onOpenIssue}
           />
         ))}
@@ -154,6 +161,7 @@ export function KanbanBoard({
                   ? memberMap.get(activeIssue.assignee_id) ?? null
                   : null
               }
+              categoryMap={categoryMap}
               dragging
             />
           </div>

@@ -10,6 +10,7 @@ import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useViewsQuery } from "@/lib/use-views-query";
+import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
   DEFAULT_CONFIG,
   configsEqual,
@@ -37,8 +38,10 @@ export default function ProjectPage() {
     updateIssue,
     deleteIssue,
     moveIssue,
+    setCategories,
   } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
+  const { categories } = useCategoriesQuery(projectId);
   const { views, createView, updateView, deleteView } = useViewsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
@@ -229,6 +232,7 @@ export default function ProjectPage() {
               config={config}
               onConfigChange={setConfig}
               members={members}
+              categories={categories}
               dirty={dirty}
               onCreateView={handleCreateView}
               onUpdateActiveView={handleUpdateActiveView}
@@ -250,6 +254,7 @@ export default function ProjectPage() {
                 sort={config.sort}
                 projectKey={project.key}
                 members={members}
+                categories={categories}
                 onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
                 onMove={moveIssue}
               />
@@ -262,6 +267,7 @@ export default function ProjectPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         members={members}
+        categories={categories}
         onCreate={createIssue}
       />
 
@@ -273,8 +279,10 @@ export default function ProjectPage() {
         }}
         projectKey={project.key}
         members={members}
+        categories={categories}
         onUpdate={updateIssue}
         onDelete={deleteIssue}
+        onSetCategories={setCategories}
       />
 
       <ProjectSettingsDialog

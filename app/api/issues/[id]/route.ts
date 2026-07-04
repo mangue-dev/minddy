@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
+import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const { data, error } = await auth.supabase
     .from("issues")
-    .select("*")
+    .select(ISSUE_SELECT)
     .eq("id", id)
     .maybeSingle();
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
-  return NextResponse.json(data);
+  return NextResponse.json(mapIssueRow(data));
 }
 
 /** PATCH /api/issues/[id] — update fields (RLS enforces project access). */
@@ -95,7 +96,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     .from("issues")
     .update(updates)
     .eq("id", id)
-    .select("*")
+    .select(ISSUE_SELECT)
     .maybeSingle();
 
   if (error) {
@@ -103,7 +104,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
-  return NextResponse.json(data);
+  return NextResponse.json(mapIssueRow(data));
 }
 
 /** DELETE /api/issues/[id] — hard delete (RLS enforces project access). */

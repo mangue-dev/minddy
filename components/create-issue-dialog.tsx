@@ -19,12 +19,13 @@ import {
   PriorityPicker,
   StatusPicker,
 } from "@/components/issue-fields";
+import { CategoryPicker } from "@/components/category-picker";
 import type {
   IssueStatus,
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
-import type { CreateIssueInput, Member } from "@/lib/types";
+import type { Category, CreateIssueInput, Member } from "@/lib/types";
 
 const DEFAULTS = {
   status: "backlog" as IssueStatus,
@@ -38,22 +39,26 @@ export function CreateIssueDialog({
   open,
   onOpenChange,
   members,
+  categories,
   onCreate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
+  categories: Category[];
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
     setTitle("");
     setDescription("");
     setFields(DEFAULTS);
+    setCategoryIds([]);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -70,6 +75,7 @@ export function CreateIssueDialog({
         title: trimmed,
         description: description.trim() || null,
         ...fields,
+        category_ids: categoryIds,
       });
       toast.success("Issue créée.");
       if (keepOpen) {
@@ -142,11 +148,18 @@ export function CreateIssueDialog({
             />
           </div>
 
-          <DueDateField
-            value={fields.due_date}
-            onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
-            className="w-44"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <DueDateField
+              value={fields.due_date}
+              onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
+              className="w-44"
+            />
+            <CategoryPicker
+              categories={categories}
+              value={categoryIds}
+              onChange={setCategoryIds}
+            />
+          </div>
 
           <DialogFooter className="items-center">
             <span className="mr-auto text-xs text-muted-foreground">

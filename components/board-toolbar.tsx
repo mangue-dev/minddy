@@ -42,6 +42,7 @@ import {
 } from "@/lib/issue-constants";
 import { activeFilterCount } from "@/lib/view-filter";
 import type {
+  Category,
   Member,
   Onglet,
   View,
@@ -91,10 +92,12 @@ function FiltersPopover({
   config,
   onChange,
   members,
+  categories,
 }: {
   config: ViewConfig;
   onChange: (config: ViewConfig) => void;
   members: Member[];
+  categories: Category[];
 }) {
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
@@ -187,6 +190,31 @@ function FiltersPopover({
           </ToggleRow>
         ))}
 
+        {categories.length > 0 && (
+          <>
+            <Separator className="my-1.5" />
+            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              Catégorie
+            </p>
+            {categories.map((c) => (
+              <ToggleRow
+                key={c.id}
+                active={!!f.category?.includes(c.id)}
+                onClick={() =>
+                  setFilters({ ...f, category: toggle<string>(f.category, c.id) })
+                }
+              >
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: c.color }}
+                  aria-hidden
+                />
+                <span className="truncate">{c.name}</span>
+              </ToggleRow>
+            ))}
+          </>
+        )}
+
         <Separator className="my-1.5" />
         <ToggleRow
           active={!!config.display.hideDone}
@@ -276,6 +304,7 @@ export function BoardToolbar({
   config,
   onConfigChange,
   members,
+  categories,
   dirty,
   onCreateView,
   onUpdateActiveView,
@@ -291,6 +320,7 @@ export function BoardToolbar({
   config: ViewConfig;
   onConfigChange: (config: ViewConfig) => void;
   members: Member[];
+  categories: Category[];
   dirty: boolean;
   onCreateView: (name: string) => Promise<void>;
   onUpdateActiveView: () => Promise<void>;
@@ -376,7 +406,12 @@ export function BoardToolbar({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <FiltersPopover config={config} onChange={onConfigChange} members={members} />
+          <FiltersPopover
+            config={config}
+            onChange={onConfigChange}
+            members={members}
+            categories={categories}
+          />
 
           {activeView && (
             <DropdownMenu>

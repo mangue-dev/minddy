@@ -3,6 +3,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
+import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // number gives a stable per-column order.
   const { data, error } = await auth.supabase
     .from("issues")
-    .select("*")
+    .select(ISSUE_SELECT)
     .eq("project_id", id)
     .order("position", { ascending: true })
     .order("number", { ascending: true });
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/issues] list failed:", error.message);
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json((data ?? []).map(mapIssueRow));
 }
 
 /** POST /api/projects/[id]/issues — create an issue (assigns CLÉ-number atomically). */
@@ -90,5 +91,25 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     console.error("[api/issues] create failed:", error.message);
     return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
   }
-  return NextResponse.json(data, { status: 201 });
+
+  // Attach categories (only those that belong to this project).
+  let categoryIds: string[] = [];
+  const requested = Array.isArray(input.category_ids)
+    ? input.category_ids.filter((v): v is string => typeof v === "string")
+    : [];
+  if (requested.length > 0) {
+    const { data: cats } = await service
+      .from("categories")
+      .select("id")
+      .eq("project_id", id)
+      .in("id", requested);
+    categoryIds = (cats ?? []).map((c) => c.id as string);
+    if (categoryIds.length > 0) {
+      await service
+        .from("issue_categories")
+        .insert(categoryIds.map((category_id) => ({ issue_id: data.id, category_id })));
+    }
+  }
+
+  return NextResponse.json({ ...data, category_ids: categoryIds }, { status: 201 });
 }

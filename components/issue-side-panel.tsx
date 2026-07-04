@@ -21,8 +21,9 @@ import {
   PriorityPicker,
   StatusPicker,
 } from "@/components/issue-fields";
+import { CategoryPicker } from "@/components/category-picker";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { Issue, IssueUpdateInput, Member } from "@/lib/types";
+import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
 
 function FieldRow({
   label,
@@ -45,16 +46,20 @@ export function IssueSidePanel({
   onOpenChange,
   projectKey,
   members,
+  categories,
   onUpdate,
   onDelete,
+  onSetCategories,
 }: {
   issue: Issue | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectKey: string;
   members: Member[];
+  categories: Category[];
   onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
   onDelete: (issueId: string) => Promise<void>;
+  onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -156,6 +161,17 @@ export function IssueSidePanel({
                   value={issue.due_date}
                   onChange={(due_date) => void patch({ due_date })}
                   className="w-44"
+                />
+              </FieldRow>
+              <FieldRow label="Catégories">
+                <CategoryPicker
+                  categories={categories}
+                  value={issue.category_ids}
+                  onChange={(ids) => {
+                    void onSetCategories(issue.id, ids).catch((err) =>
+                      toast.error((err as Error).message)
+                    );
+                  }}
                 />
               </FieldRow>
             </div>
