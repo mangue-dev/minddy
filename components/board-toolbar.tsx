@@ -367,11 +367,6 @@ export function BoardToolbar({
       <div className="flex flex-wrap items-center gap-2">
         {/* Views bar */}
         <div className="flex flex-wrap items-center gap-1">
-          <ViewChip
-            label="Toutes"
-            active={activeViewId === null}
-            onClick={() => onSelectView(null)}
-          />
           {views.map((v) => (
             <ViewChip
               key={v.id}
@@ -392,13 +387,13 @@ export function BoardToolbar({
 
         <div className="ml-auto flex items-center gap-2">
           {dirty && activeView && (
-            <Button variant="outline" size="sm" onClick={() => void onUpdateActiveView()}>
+            <Button size="sm" onClick={() => void onUpdateActiveView()}>
               <Save />
               Enregistrer
             </Button>
           )}
           {dirty && !activeView && (
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Save />
               Enregistrer comme vue
             </Button>
@@ -446,6 +441,7 @@ export function BoardToolbar({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   variant="destructive"
+                  disabled={views.length <= 1}
                   onSelect={() => void onDeleteView(activeView)}
                 >
                   <Trash2 />

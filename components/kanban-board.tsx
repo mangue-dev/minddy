@@ -40,6 +40,7 @@ export function KanbanBoard({
   categories,
   subProgress,
   onOpenIssue,
+  onCreateIssue,
   onMove,
 }: {
   issues: Issue[];
@@ -50,6 +51,7 @@ export function KanbanBoard({
   categories: Category[];
   subProgress: Map<string, SubProgress>;
   onOpenIssue: (issue: Issue) => void;
+  onCreateIssue: (status: IssueStatus) => void;
   onMove: (
     issueId: string,
     patch: { status?: IssueStatus; position: number }
@@ -149,13 +151,14 @@ export function KanbanBoard({
             categoryMap={categoryMap}
             subProgressMap={subProgress}
             onOpenIssue={onOpenIssue}
+            onCreateIssue={onCreateIssue}
           />
         ))}
       </div>
 
       <DragOverlay>
         {activeIssue ? (
-          <div className="w-64">
+          <div className="w-[21rem]">
             <IssueCardBody
               issue={activeIssue}
               projectKey={projectKey}

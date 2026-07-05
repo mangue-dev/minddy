@@ -3,7 +3,8 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
-import type { StatusMeta } from "@/lib/issue-constants";
+import { Plus } from "lucide-react";
+import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
 import type { Category, Issue, Member } from "@/lib/types";
 import { IssueCard, type SubProgress } from "@/components/issue-card";
 
@@ -15,6 +16,7 @@ export function KanbanColumn({
   categoryMap,
   subProgressMap,
   onOpenIssue,
+  onCreateIssue,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -23,12 +25,13 @@ export function KanbanColumn({
   categoryMap: Map<string, Category>;
   subProgressMap: Map<string, SubProgress>;
   onOpenIssue: (issue: Issue) => void;
+  onCreateIssue: (status: IssueStatus) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const Icon = status.icon;
 
   return (
-    <div className="flex w-72 shrink-0 flex-col">
+    <div className="flex w-[22rem] shrink-0 flex-col">
       <div className="mb-2 flex items-center gap-2 px-1">
         <Icon className={cn("size-4", status.color)} />
         <h2 className="text-sm font-semibold">{status.label}</h2>
@@ -38,8 +41,8 @@ export function KanbanColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl bg-muted/40 p-2 transition-colors",
-          isOver && "bg-muted"
+          "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
+          isOver && "bg-muted/50"
         )}
       >
         <SortableContext
@@ -60,6 +63,15 @@ export function KanbanColumn({
             />
           ))}
         </SortableContext>
+
+        <button
+          type="button"
+          onClick={() => onCreateIssue(status.value)}
+          className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+        >
+          <Plus className="size-4" />
+          Nouvelle issue
+        </button>
       </div>
     </div>
   );

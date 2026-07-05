@@ -1,19 +1,159 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "mangue-ui";
+import {
+  Plus,
+  MoreHorizontal,
+  CircleDot,
+  CircleUser,
+  CheckCircle2,
+  Target,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { fetchIssuesApi } from "@/lib/issues-api";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
 
-export function ProjectCard({ project }: { project: Project }) {
+/** One quick stat: icon then value, with a tooltip explaining what it is. */
+function Stat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  value: number;
+  label: string;
+}) {
   return (
-    <Link
-      href={`/projects/${project.id}`}
-      className="group flex flex-col gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:ring-foreground/25"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="flex items-center gap-1.5 text-sm tabular-nums text-muted-foreground"
+          aria-label={label}
+        >
+          <Icon className="size-3.5 shrink-0" />
+          <span className="font-medium text-foreground/80">{value}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function ProjectCard({ project }: { project: Project }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const myUserId = user?.id ?? null;
+
+  // Reuse the ["issues", projectId] cache (shared with the board + header
+  // search); no realtime bridge here — a home overview count can be lazy.
+  const { data } = useQuery({
+    queryKey: ["issues", project.id],
+    queryFn: () => fetchIssuesApi(project.id),
+  });
+  const issues = data ?? [];
+  const isOpen = (status: string) => status !== "done" && status !== "canceled";
+  const openCount = issues.filter((i) => isOpen(i.status)).length;
+  const mineCount = myUserId
+    ? issues.filter((i) => i.assignee_id === myUserId && isOpen(i.status)).length
+    : 0;
+  const doneCount = issues.filter((i) => !isOpen(i.status)).length;
+
+  const open = () => router.push(`/projects/${project.id}`);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
+        }
+      }}
+      className="group flex h-full min-h-[160px] cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground outline-none transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50"
     >
-      <ProjectOrb seed={project.id} className="size-9 rounded-[10px]" />
-      <div className="min-w-0">
-        <p className="truncate font-medium group-hover:underline">{project.name}</p>
+      {/* Top row: orb + name + more-options menu */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <ProjectOrb seed={project.id} className="size-9 rounded-[10px]" />
+          <h3 className="truncate text-base font-medium tracking-tight">
+            {project.name}
+          </h3>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Options du projet"
+              onClick={(e) => e.stopPropagation()}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => router.push(`/projects/${project.id}/objectives`)}
+            >
+              <Target />
+              Objectifs
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => router.push(`/projects/${project.id}/settings`)}
+            >
+              <Settings />
+              Paramètres
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </Link>
+
+      {/* Quick indicators — right-aligned, always shown (even at zero) */}
+      <div className="mt-auto flex flex-col items-end gap-1 pt-1">
+        <Stat icon={CircleDot} value={openCount} label="Issues ouvertes" />
+        <Stat icon={CircleUser} value={mineCount} label="Mes issues ouvertes" />
+        <Stat icon={CheckCircle2} value={doneCount} label="Issues terminées" />
+      </div>
+    </div>
+  );
+}
+
+/** Dashed "create" tile at the end of the project grid (mirrors AutoKap). */
+export function NewProjectCard({ onClick }: { onClick: () => void }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="flex h-full min-h-[160px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border outline-none transition-colors hover:border-foreground/25 hover:bg-muted/30 focus-visible:border-foreground/25 focus-visible:bg-muted/30"
+    >
+      <div className="flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <Plus className="size-4" />
+      </div>
+      <span className="text-sm font-medium text-muted-foreground">
+        Nouveau Projet
+      </span>
+    </div>
   );
 }

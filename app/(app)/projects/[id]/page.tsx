@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   useParams,
   usePathname,
@@ -24,7 +24,7 @@ import {
   viewConfigOf,
   visibleStatuses,
 } from "@/lib/view-filter";
-import { STATUSES } from "@/lib/issue-constants";
+import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -32,6 +32,29 @@ import { BoardToolbar } from "@/components/board-toolbar";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import type { Issue, Onglet, View, ViewConfig } from "@/lib/types";
+
+/** Where the last-selected view is remembered (per project + onglet). */
+const viewStorageKey = (projectId: string, onglet: Onglet) =>
+  `minddy:view:${projectId}:${onglet}`;
+
+function readStoredView(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredView(key: string, id: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (id) window.localStorage.setItem(key, id);
+    else window.localStorage.removeItem(key);
+  } catch {
+    /* localStorage unavailable (private mode / disabled) — ignore. */
+  }
+}
 
 function ProjectBoard() {
   const params = useParams<{ id: string }>();
@@ -61,17 +84,42 @@ function ProjectBoard() {
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives, createObjective, updateObjective } = useObjectivesQuery(projectId);
-  const { views, createView, updateView, deleteView } = useViewsQuery(projectId);
+  const {
+    views,
+    loading: viewsLoading,
+    createView,
+    updateView,
+    deleteView,
+  } = useViewsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
+
+  // Open the create dialog, optionally preset to a column's status.
+  const openCreate = (status?: IssueStatus) => {
+    setCreateStatus(status);
+    setCreateOpen(true);
+  };
 
   // Saved-view state (the My/All onglet now comes from the route).
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
+  const storageKey = viewStorageKey(projectId, onglet);
+  const restoredKeyRef = useRef<string | null>(null);
+
+  // Reset the working view state the instant the project or onglet (route)
+  // changes — during render, so no frame shows the previous board's view before
+  // the restore effect runs. `storageKey` encodes both project id and onglet.
+  const [prevKey, setPrevKey] = useState(storageKey);
+  if (prevKey !== storageKey) {
+    setPrevKey(storageKey);
+    setActiveViewId(null);
+    setConfig(DEFAULT_CONFIG);
+  }
 
   const ongletViews = useMemo(
     () => views.filter((v) => v.onglet === onglet),
@@ -119,10 +167,12 @@ function ProjectBoard() {
     setActiveViewId(id);
     const v = id ? ongletViews.find((x) => x.id === id) : null;
     setConfig(v ? viewConfigOf(v) : DEFAULT_CONFIG);
+    writeStoredView(storageKey, id);
   };
   const handleCreateView = async (name: string) => {
     const view = await createView({ onglet, name, ...config });
     setActiveViewId(view.id);
+    writeStoredView(storageKey, view.id);
     toast.success(`Vue « ${name} » créée.`);
   };
   const handleUpdateActiveView = async () => {
@@ -142,9 +192,17 @@ function ProjectBoard() {
     await updateView(view.id, { name });
   };
   const handleDeleteView = async (view: View) => {
+    if (ongletViews.length <= 1) {
+      toast.error("Il faut au moins une vue.");
+      return;
+    }
     try {
       await deleteView(view.id);
-      if (view.id === activeViewId) selectView(null);
+      if (view.id === activeViewId) {
+        // Fall back to another view — never leave the onglet without a selection.
+        const next = ongletViews.find((v) => v.id !== view.id);
+        if (next) selectView(next.id);
+      }
       toast.success("Vue supprimée.");
     } catch (err) {
       toast.error((err as Error).message);
@@ -155,11 +213,38 @@ function ProjectBoard() {
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
 
-  // Switching onglet (route change) resets the saved-view selection.
+  // Ensure every onglet always has at least one real view: seed a default
+  // "Toutes" (empty config) when it has none. The old "Toutes" was virtual — now
+  // every view is real, so it can be renamed/deleted like the others. Seed only
+  // when empty, so deleting "Toutes" (with others present) doesn't recreate it.
+  const seededKeyRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    setActiveViewId(null);
-    setConfig(DEFAULT_CONFIG);
-  }, [onglet]);
+    if (viewsLoading || ongletViews.length > 0) return;
+    if (seededKeyRef.current.has(storageKey)) return;
+    seededKeyRef.current.add(storageKey);
+    void createView({
+      onglet,
+      name: "Toutes",
+      filters: {},
+      sort: "manual",
+      display: {},
+    }).catch(() => seededKeyRef.current.delete(storageKey));
+  }, [viewsLoading, ongletViews, onglet, storageKey, createView]);
+
+  // Restore the last-selected view for this project + onglet once its views have
+  // loaded (falling back to the first view), so a saved view — its filters and
+  // sort — survives a page reload. Runs once per onglet.
+  useEffect(() => {
+    if (viewsLoading || ongletViews.length === 0) return;
+    if (restoredKeyRef.current === storageKey) return;
+    restoredKeyRef.current = storageKey;
+    const savedId = readStoredView(storageKey);
+    const view =
+      (savedId ? ongletViews.find((v) => v.id === savedId) : undefined) ??
+      ongletViews[0];
+    setActiveViewId(view.id);
+    setConfig(viewConfigOf(view));
+  }, [storageKey, viewsLoading, ongletViews]);
 
   // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
   useEffect(() => {
@@ -169,6 +254,7 @@ function ProjectBoard() {
   // Header "Nouveau → Nouvelle issue": /projects/[id]?new=issue opens the dialog.
   useEffect(() => {
     if (newParam === "issue") {
+      setCreateStatus(undefined);
       setCreateOpen(true);
       router.replace(pathname);
     }
@@ -187,6 +273,7 @@ function ProjectBoard() {
           el.isContentEditable);
       if (typing || createOpen || openIssueId || objectiveEditOpen) return;
       e.preventDefault();
+      setCreateStatus(undefined);
       setCreateOpen(true);
     };
     window.addEventListener("keydown", onKeyDown);
@@ -289,6 +376,7 @@ function ProjectBoard() {
                 categories={categories}
                 subProgress={subProgress}
                 onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
+                onCreateIssue={openCreate}
                 onMove={moveIssue}
               />
             )}
@@ -303,6 +391,8 @@ function ProjectBoard() {
         categories={categories}
         objectives={objectives}
         onCreate={createIssue}
+        initialStatus={createStatus}
+        initialObjectiveId={activeObjective?.id ?? null}
       />
 
       <IssueSidePanel

@@ -52,7 +52,7 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
+    <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">Inbox</h1>
         {unreadCount > 0 && (

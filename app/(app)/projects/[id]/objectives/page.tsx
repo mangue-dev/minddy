@@ -92,16 +92,10 @@ function ObjectivesInner() {
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <h1 className="font-display text-xl font-semibold tracking-tight">
-              Objectifs
-            </h1>
-            <Button onClick={openCreate}>
-              <Plus />
-              Nouvel objectif
-            </Button>
-          </div>
+        <div className="mx-auto max-w-5xl">
+          <h1 className="mb-5 font-display text-xl font-semibold tracking-tight">
+            Objectifs
+          </h1>
           {loading ? (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 3 }).map((_, i) => (

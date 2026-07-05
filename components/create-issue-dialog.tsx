@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Dialog,
@@ -44,6 +44,8 @@ export function CreateIssueDialog({
   categories,
   objectives,
   onCreate,
+  initialStatus,
+  initialObjectiveId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,12 +53,27 @@ export function CreateIssueDialog({
   categories: Category[];
   objectives: Objective[];
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
+  /** Preset the status column the issue lands in (e.g. from a column's "+"). */
+  initialStatus?: IssueStatus;
+  /** Preset the objective (when creating from an objective-filtered board). */
+  initialObjectiveId?: string | null;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Apply the presets each time the dialog opens (a column's "+" reopens it with
+  // that column's status; objective mode reopens it with the objective set).
+  useEffect(() => {
+    if (!open) return;
+    setFields((f) => ({
+      ...f,
+      status: initialStatus ?? DEFAULTS.status,
+      objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+    }));
+  }, [open, initialStatus, initialObjectiveId]);
 
   const reset = () => {
     setTitle("");
