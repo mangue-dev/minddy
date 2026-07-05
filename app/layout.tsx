@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk, Instrument_Serif } from "next/font/google";
+import { Inter, Instrument_Serif } from "next/font/google";
 import { ThemeProvider, Toaster } from "mangue-ui";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  display: "swap",
-});
 const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
   subsets: ["latin"],
@@ -28,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${spaceGrotesk.variable} ${instrumentSerif.variable} antialiased`}
+        className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
         <ThemeProvider defaultTheme="dark">
           {children}

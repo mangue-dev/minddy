@@ -1,10 +1,15 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import Link from "next/link";
 import { Button, Skeleton, toast } from "mangue-ui";
-import { Plus, ListTodo } from "lucide-react";
+import { ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -20,7 +25,6 @@ import {
   visibleStatuses,
 } from "@/lib/view-filter";
 import { STATUSES } from "@/lib/issue-constants";
-import { ProjectHeader } from "@/components/project-header";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -33,9 +37,14 @@ function ProjectBoard() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const objectiveParam = searchParams.get("objective");
   const issueParam = searchParams.get("issue");
+  const newParam = searchParams.get("new");
+
+  // The onglet is the route: /projects/[id] = all, /projects/[id]/my = mine.
+  const onglet: Onglet = pathname.endsWith("/my") ? "my" : "all";
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -60,12 +69,10 @@ function ProjectBoard() {
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
 
-  // Views & onglets state.
-  const [onglet, setOnglet] = useState<Onglet>("all");
+  // Saved-view state (the My/All onglet now comes from the route).
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
 
-  const showMyTab = members.length > 1; // owner + at least one member = shared
   const ongletViews = useMemo(
     () => views.filter((v) => v.onglet === onglet),
     [views, onglet]
@@ -108,11 +115,6 @@ function ProjectBoard() {
     return map;
   }, [issues]);
 
-  const selectOnglet = (next: Onglet) => {
-    setOnglet(next);
-    setActiveViewId(null);
-    setConfig(DEFAULT_CONFIG);
-  };
   const selectView = (id: string | null) => {
     setActiveViewId(id);
     const v = id ? ongletViews.find((x) => x.id === id) : null;
@@ -153,18 +155,24 @@ function ProjectBoard() {
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
 
+  // Switching onglet (route change) resets the saved-view selection.
   useEffect(() => {
-    if (!showMyTab && onglet === "my") {
-      setOnglet("all");
-      setActiveViewId(null);
-      setConfig(DEFAULT_CONFIG);
-    }
-  }, [showMyTab, onglet]);
+    setActiveViewId(null);
+    setConfig(DEFAULT_CONFIG);
+  }, [onglet]);
 
   // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
   useEffect(() => {
     if (issueParam) setOpenIssueId(issueParam);
   }, [issueParam]);
+
+  // Header "Nouveau → Nouvelle issue": /projects/[id]?new=issue opens the dialog.
+  useEffect(() => {
+    if (newParam === "issue") {
+      setCreateOpen(true);
+      router.replace(pathname);
+    }
+  }, [newParam, pathname, router]);
 
   // `C` opens the quick-create dialog (unless typing or a dialog is already open).
   useEffect(() => {
@@ -208,17 +216,6 @@ function ProjectBoard() {
 
   return (
     <div className="flex h-full flex-col">
-      <ProjectHeader
-        project={project}
-        active="issues"
-        right={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus />
-            Nouvelle issue
-          </Button>
-        }
-      />
-
       {issuesLoading ? (
         <div className="min-h-0 flex-1 px-6 pt-4">
           <div className="flex gap-3">
@@ -257,9 +254,6 @@ function ProjectBoard() {
               />
             ) : (
               <BoardToolbar
-                onglet={onglet}
-                onOngletChange={selectOnglet}
-                showMyTab={showMyTab}
                 views={ongletViews}
                 activeViewId={activeViewId}
                 onSelectView={selectView}
@@ -318,7 +312,7 @@ function ProjectBoard() {
           if (!next) {
             setOpenIssueId(null);
             // Strip the deep-link param so re-opening the same issue works.
-            if (issueParam) router.replace(`/projects/${projectId}`);
+            if (issueParam) router.replace(pathname);
           }
         }}
         projectKey={project.key}

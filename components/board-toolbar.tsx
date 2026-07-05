@@ -17,7 +17,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  SegmentedControl,
   Separator,
   cn,
   toast,
@@ -45,7 +44,6 @@ import type {
   Category,
   Member,
   Objective,
-  Onglet,
   View,
   ViewConfig,
   ViewFilters,
@@ -331,9 +329,6 @@ function ViewNameDialog({
 }
 
 export function BoardToolbar({
-  onglet,
-  onOngletChange,
-  showMyTab,
   views,
   activeViewId,
   onSelectView,
@@ -348,9 +343,6 @@ export function BoardToolbar({
   onRenameView,
   onDeleteView,
 }: {
-  onglet: Onglet;
-  onOngletChange: (onglet: Onglet) => void;
-  showMyTab: boolean;
   views: View[];
   activeViewId: string | null;
   onSelectView: (id: string | null) => void;
@@ -372,18 +364,6 @@ export function BoardToolbar({
 
   return (
     <div className="flex flex-col gap-3">
-      {showMyTab && (
-        <SegmentedControl<Onglet>
-          value={onglet}
-          onChange={onOngletChange}
-          ariaLabel="Onglet"
-          options={[
-            { value: "my", label: "My issues" },
-            { value: "all", label: "All issues" },
-          ]}
-        />
-      )}
-
       <div className="flex flex-wrap items-center gap-2">
         {/* Views bar */}
         <div className="flex flex-wrap items-center gap-1">

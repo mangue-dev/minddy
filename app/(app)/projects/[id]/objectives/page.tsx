@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import Link from "next/link";
 import {
   Button,
@@ -20,13 +25,17 @@ import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-quer
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
-import { ProjectHeader } from "@/components/project-header";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import type { Objective } from "@/lib/types";
 
-export default function ObjectivesPage() {
+function ObjectivesInner() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const newParam = searchParams.get("new");
+
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
 
@@ -43,6 +52,15 @@ export default function ObjectivesPage() {
     () => new Map(members.map((m) => [m.user_id, m])),
     [members]
   );
+
+  // Header "Nouveau → Nouvel objectif": ?new=1 opens the create dialog.
+  useEffect(() => {
+    if (newParam === "1") {
+      setEditing(null);
+      setDialogOpen(true);
+      router.replace(pathname);
+    }
+  }, [newParam, pathname, router]);
 
   if (projectsLoading && !project) {
     return (
@@ -73,19 +91,17 @@ export default function ObjectivesPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <ProjectHeader
-        project={project}
-        active="objectives"
-        right={
-          <Button onClick={openCreate}>
-            <Plus />
-            Nouvel objectif
-          </Button>
-        }
-      />
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-3xl">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h1 className="font-display text-xl font-semibold tracking-tight">
+              Objectifs
+            </h1>
+            <Button onClick={openCreate}>
+              <Plus />
+              Nouvel objectif
+            </Button>
+          </div>
           {loading ? (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -206,5 +222,19 @@ export default function ObjectivesPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function ObjectivesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="px-6 py-10">
+          <Skeleton className="h-8 w-64" />
+        </div>
+      }
+    >
+      <ObjectivesInner />
+    </Suspense>
   );
 }

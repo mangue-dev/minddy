@@ -14,6 +14,32 @@
   --primary: #bf336b;
 }
 
+/* ── Shell surfaces ────────────────────────────────────────────────────────────
+   White chrome (sidebar + header) over a light-gray content area. The AppShell
+   root uses --background (gray) and shows through the transparent <main>; the
+   sidebar uses --sidebar and the header is forced to bg-sidebar. Cards/popovers
+   stay white so they pop on the gray content. */
+:root {
+  --background: oklch(0.967 0.003 264); /* content area — light gray */
+  --sidebar: oklch(1 0 0);              /* chrome — white */
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
+  --sidebar-border: oklch(0.912 0.008 264);
+}
+.dark {
+  --background: oklch(0.165 0.004 264); /* content — darkest */
+  --sidebar: oklch(0.214 0.005 264);    /* chrome — elevated */
+  --card: oklch(0.214 0.005 264);
+  --popover: oklch(0.214 0.005 264);
+  --sidebar-border: oklch(0.27 0.006 264);
+}
+
+/* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
+   `font-display` utility (mangue-ui points it at --font-space-grotesk). */
+@theme inline {
+  --font-display: var(--font-inter);
+}
+
 /* Add your own tokens and reuse mangue-ui's anywhere. */
 :root {
   --ticket-urgent: oklch(0.62 0.24 25);
