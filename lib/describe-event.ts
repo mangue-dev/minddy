@@ -24,6 +24,8 @@ export interface EventTranslators {
   tStatus: LabelT;
   /** "Priority" namespace (value → label). */
   tPriority: LabelT;
+  /** Render a stored due-date value (ISO datetime or legacy date) for display. */
+  formatDue: (value: string | null) => string;
 }
 
 function memberName(ctx: EventContext, tr: EventTranslators, id: string | null): string {
@@ -55,7 +57,7 @@ export function describeEvent(
   ctx: EventContext,
   tr: EventTranslators
 ): string {
-  const { t, tStatus, tPriority } = tr;
+  const { t, tStatus, tPriority, formatDue } = tr;
   if (e.type === "created") return t("created");
   if (e.type === "category_added")
     return t("categoryAdded", { name: categoryName(ctx, tr, e.to_value) });
@@ -99,8 +101,8 @@ export function describeEvent(
         });
       case "due_date":
         return t("dueDateChanged", {
-          from: e.from_value ?? emptyDash,
-          to: e.to_value ?? emptyDash,
+          from: formatDue(e.from_value),
+          to: formatDue(e.to_value),
         });
       case "parent":
         return e.to_value

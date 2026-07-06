@@ -23,6 +23,9 @@ export const isPriority = (v: unknown): v is IssuePriorityValue =>
 export const isEffort = (v: unknown): v is IssueEffortValue =>
   typeof v === "string" && (ISSUE_EFFORTS as readonly string[]).includes(v);
 
-/** ISO date (YYYY-MM-DD) or null. */
+/** An ISO date ("YYYY-MM-DD") or datetime ("…THH:MM[:SS][Z|±hh:mm]"), or null.
+ *  Échéances carry a time now, so plain dates and full timestamps are both ok. */
 export const isDateOrNull = (v: unknown): v is string | null =>
-  v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v));
+  v === null ||
+  (typeof v === "string" &&
+    /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/.test(v));

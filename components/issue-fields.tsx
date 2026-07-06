@@ -7,10 +7,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  Input,
-  cn,
 } from "mangue-ui";
-import { Check, UserCircle2, CalendarDays, Triangle, Target, GitMerge } from "lucide-react";
+import { Check, UserCircle2, Triangle, Target, GitMerge } from "lucide-react";
+import { DateTimePicker } from "@/components/date-time-picker";
 import {
   STATUSES,
   PRIORITIES,
@@ -264,20 +263,24 @@ export function DueDateField({
   value,
   onChange,
   className,
+  placeholder,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
   className?: string;
+  /** Trigger label when empty (defaults to "Échéance"; objectives pass their own). */
+  placeholder?: string;
 }) {
+  const tField = useTranslations("Field");
+  const empty = placeholder ?? tField("dueDate");
   return (
-    <div className={cn("relative", className)}>
-      <CalendarDays className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        type="date"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}
-        className="pl-8"
-      />
-    </div>
+    <DateTimePicker
+      variant="field"
+      value={value}
+      onChange={onChange}
+      placeholder={empty}
+      ariaLabel={empty}
+      className={className}
+    />
   );
 }

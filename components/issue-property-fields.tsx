@@ -1,17 +1,14 @@
 "use client";
 
-import { useTranslations, useFormatter } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  cn,
 } from "mangue-ui";
 import { Check } from "lucide-react";
+import { DateTimePicker } from "@/components/date-time-picker";
 import {
   STATUSES,
   PRIORITIES,
@@ -273,40 +270,14 @@ export function DueDateValue({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
-  const format = useFormatter();
-  const formatDue = (due: string) =>
-    format.dateTime(new Date(due + "T00:00:00"), {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button type="button" aria-label={t("changeDueDateAria")} className={TRIGGER}>
-          {value ? formatDue(value) : <span className="text-muted-foreground">{t("noneFem")}</span>}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto p-2">
-        <div className="flex flex-col gap-2">
-          <input
-            type="date"
-            value={value ?? ""}
-            onChange={(e) => onChange(e.target.value || null)}
-            className="rounded-md border border-input bg-transparent px-2 py-1 text-sm outline-none focus-visible:border-ring"
-          />
-          {value && (
-            <button
-              type="button"
-              onClick={() => onChange(null)}
-              className="text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t("removeDueDate")}
-            </button>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <DateTimePicker
+      variant="value"
+      value={value}
+      onChange={onChange}
+      placeholder={t("noneFem")}
+      ariaLabel={t("changeDueDateAria")}
+    />
   );
 }
 

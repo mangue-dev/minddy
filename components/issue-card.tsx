@@ -8,9 +8,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -34,6 +31,8 @@ import {
   EffortIndicator,
 } from "@/components/issue-indicators";
 import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 
 /** Strip common markdown so the description preview reads as plain text. */
 function plainPreview(md: string): string {
@@ -384,56 +383,28 @@ function DueDatePick({
   onChange?: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
   const format = useFormatter();
-  const display = (
-    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-      <Calendar className="size-3 shrink-0" />
-      {format.dateTime(new Date(value + "T00:00:00"), { day: "numeric", month: "short" })}
-    </span>
-  );
-  if (!onChange) return display;
+  const parsed = parseDueDate(value);
+  if (!parsed) return null;
+
+  // Read-only (e.g. inside the drag overlay): plain label, no picker.
+  if (!onChange) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+        <Calendar className="size-3 shrink-0" />
+        {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
+      </span>
+    );
+  }
+
   return (
-    <Popover>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("changeDueDateAria")}
-              onClick={stop}
-              onPointerDown={stop}
-              className="-m-1 flex items-center rounded-md p-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
-            >
-              {display}
-            </button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tField("dueDate")}</TooltipContent>
-      </Tooltip>
-      <PopoverContent
-        align="end"
-        className="w-auto p-2"
-        onClick={stop}
-        onPointerDown={stop}
-      >
-        <div className="flex flex-col gap-2">
-          <input
-            type="date"
-            value={value}
-            onChange={(e) => onChange(e.target.value || null)}
-            className="rounded-md border border-input bg-transparent px-2 py-1 text-sm outline-none focus-visible:border-ring"
-          />
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {t("removeDueDate")}
-          </button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <DateTimePicker
+      variant="chip"
+      value={value}
+      onChange={onChange}
+      ariaLabel={t("changeDueDateAria")}
+      stopPropagation
+    />
   );
 }
 

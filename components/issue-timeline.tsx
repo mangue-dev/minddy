@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
   Spinner,
@@ -22,6 +22,7 @@ import { MentionTextarea, extractMentions } from "@/components/mention-textarea"
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { Member } from "@/lib/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
@@ -57,11 +58,16 @@ function useEventTranslators(): EventTranslators {
   const tActivity = useTranslations("Activity");
   const tStatus = useTranslations("Status");
   const tPriority = useTranslations("Priority");
+  const format = useFormatter();
   return {
     t: (key, values) =>
       tActivity(key as Parameters<typeof tActivity>[0], values as never),
     tStatus: (v) => tStatus(v as Parameters<typeof tStatus>[0]),
     tPriority: (v) => tPriority(v as Parameters<typeof tPriority>[0]),
+    formatDue: (value) => {
+      const d = parseDueDate(value);
+      return d ? format.dateTime(d, dueDateFormat(d)) : "—";
+    },
   };
 }
 

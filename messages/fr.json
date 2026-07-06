@@ -135,6 +135,13 @@
     "yes": "Oui",
     "no": "Non"
   },
+  "DatePicker": {
+    "placeholder": "Choisir une date",
+    "addTime": "Ajouter une heure",
+    "time": "Heure",
+    "today": "Aujourd'hui",
+    "clear": "Effacer"
+  },
   "Field": {
     "title": "Titre",
     "description": "Description",
@@ -267,6 +274,7 @@
     "deletedToast": "Objectif supprimé.",
     "completed": "{done}/{total} terminées",
     "targetDate": "Cible :",
+    "targetDatePlaceholder": "Date cible",
     "closeFilter": "Fermer le filtre",
     "noColor": "Aucune couleur",
     "colorAria": "Couleur {color}",

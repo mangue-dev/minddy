@@ -2,11 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
+import { isDateOrNull } from "@/lib/issue-validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-const isDateOrNull = (v: unknown): v is string | null =>
-  v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v));
 
 /** GET /api/objectives/[id] — a single objective (RLS: project access). */
 export async function GET(request: NextRequest, { params }: RouteContext) {

@@ -7,6 +7,7 @@ import { Pencil, X } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
+import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { Member, Objective } from "@/lib/types";
 
 /** Header banner shown when the board is filtered to a single objective (plan §6). */
@@ -29,6 +30,7 @@ export function ObjectiveBanner({
   const format = useFormatter();
   const status = OBJECTIVE_STATUS_MAP[objective.status];
   const StatusIcon = status.icon;
+  const targetDate = parseDueDate(objective.target_date);
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card px-4 py-3">
@@ -52,14 +54,9 @@ export function ObjectiveBanner({
         </span>
       </div>
 
-      {objective.target_date && (
+      {targetDate && (
         <span className="text-xs text-muted-foreground">
-          {t("targetDate")}{" "}
-          {format.dateTime(new Date(objective.target_date + "T00:00:00"), {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
+          {t("targetDate")} {format.dateTime(targetDate, dueDateFormat(targetDate))}
         </span>
       )}
       {lead && (

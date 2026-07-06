@@ -223,6 +223,7 @@ export function ObjectiveDialog({
             <DueDateField
               value={form.target_date}
               onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
+              placeholder={t("targetDatePlaceholder")}
               className="w-44"
             />
           </div>
