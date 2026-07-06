@@ -2,27 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
+import {
+  fetchAuthUsersById,
+  findAuthUserByEmail,
+  toNamed,
+} from "@/lib/server/auth-users";
 import type { Invitation, Member } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-interface ProfileRow {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-}
-
-async function hydrateProfiles(ids: string[]): Promise<Map<string, ProfileRow>> {
-  const map = new Map<string, ProfileRow>();
-  const unique = [...new Set(ids)].filter(Boolean);
-  if (unique.length === 0) return map;
-  const { data } = await getServiceClient()
-    .from("profiles")
-    .select("id, email, full_name")
-    .in("id", unique);
-  for (const row of (data ?? []) as ProfileRow[]) map.set(row.id, row);
-  return map;
-}
 
 /** GET /api/projects/[id]/members — members + pending invitations (any accessible user). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -50,30 +37,24 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order("created_at", { ascending: false }),
   ]);
 
-  const profiles = await hydrateProfiles([
+  const usersById = await fetchAuthUsersById(service, [
     access.project.owner_id,
     ...(memberRows ?? []).map((m) => m.user_id as string),
   ]);
 
-  const ownerProfile = profiles.get(access.project.owner_id);
   const members: Member[] = [
     {
       user_id: access.project.owner_id,
-      email: ownerProfile?.email ?? null,
-      full_name: ownerProfile?.full_name ?? null,
+      ...toNamed(usersById.get(access.project.owner_id)),
       role: "owner",
       is_owner: true,
     },
-    ...(memberRows ?? []).map((m) => {
-      const p = profiles.get(m.user_id as string);
-      return {
-        user_id: m.user_id as string,
-        email: p?.email ?? null,
-        full_name: p?.full_name ?? null,
-        role: "member" as const,
-        is_owner: false,
-      };
-    }),
+    ...(memberRows ?? []).map((m) => ({
+      user_id: m.user_id as string,
+      ...toNamed(usersById.get(m.user_id as string)),
+      role: "member" as const,
+      is_owner: false,
+    })),
   ];
 
   return NextResponse.json({
@@ -114,20 +95,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const service = getServiceClient();
 
-  // Resolve the email to an existing minddy account.
-  const { data: profile } = await service
-    .from("profiles")
-    .select("id, email")
-    .ilike("email", normalized)
-    .maybeSingle();
+  // Resolve the email to an existing minddy account — live, via Supabase Auth.
+  const memberUser = await findAuthUserByEmail(service, normalized);
 
-  if (!profile) {
+  if (!memberUser) {
     return NextResponse.json(
       { error: "Aucun compte minddy avec cet email." },
       { status: 404 }
     );
   }
-  if (profile.id === access.project.owner_id) {
+  if (memberUser.id === access.project.owner_id) {
     return NextResponse.json(
       { error: "Tu es déjà le propriétaire de ce Projet." },
       { status: 409 }
@@ -138,7 +115,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     .from("project_members")
     .select("user_id")
     .eq("project_id", id)
-    .eq("user_id", profile.id)
+    .eq("user_id", memberUser.id)
     .maybeSingle();
   if (existingMember) {
     return NextResponse.json(
@@ -152,7 +129,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     .insert({
       project_id: id,
       invited_email: normalized,
-      invited_user_id: profile.id,
+      invited_user_id: memberUser.id,
       invited_by: auth.user.id,
       status: "pending",
     })

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
@@ -29,26 +30,23 @@ export async function GET(request: NextRequest) {
   const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
   const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
 
-  const [{ data: issues }, { data: projects }, { data: profiles }] = await Promise.all([
+  const [{ data: issues }, { data: projects }, actorsById] = await Promise.all([
     issueIds.length
       ? service.from("issues").select("id, number, title").in("id", issueIds)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
-    actorIds.length
-      ? service.from("profiles").select("id, email, full_name").in("id", actorIds)
-      : Promise.resolve({ data: [] as { id: string; email: string | null; full_name: string | null }[] }),
+    fetchAuthUsersById(service, actorIds),
   ]);
 
   const issueMap = new Map((issues ?? []).map((i) => [i.id, i]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
   const result: MyNotification[] = notifs.map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
-    const actor = n.actor_id ? profileMap.get(n.actor_id) : undefined;
+    const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
     return {
       id: n.id,
       type: n.type,
@@ -59,7 +57,7 @@ export async function GET(request: NextRequest) {
       issue_title: issue?.title ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
-      actor_name: actor ? displayName(actor) : null,
+      actor_name: actor ? displayName(toNamed(actor)) : null,
     };
   });
 

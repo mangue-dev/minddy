@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import type { MyInvitation } from "@/lib/types";
 
@@ -26,33 +27,28 @@ export async function GET(request: NextRequest) {
   }
 
   // Hydrate project name/key + inviter identity (both need service-side reads:
-  // the invitee can't yet SELECT the project or other users' profiles).
+  // the invitee can't yet SELECT the project, and user names come from auth).
   const projectIds = [...new Set(invites.map((i) => i.project_id as string))];
   const inviterIds = [...new Set(invites.map((i) => i.invited_by as string))];
 
-  const [{ data: projects }, { data: profiles }] = await Promise.all([
+  const [{ data: projects }, invitersById] = await Promise.all([
     service.from("projects").select("id, name, key").in("id", projectIds),
-    service.from("profiles").select("id, email, full_name").in("id", inviterIds),
+    fetchAuthUsersById(service, inviterIds),
   ]);
 
   const projectMap = new Map((projects ?? []).map((p) => [p.id as string, p]));
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id as string, p]));
 
   const result: MyInvitation[] = invites.map((i) => {
     const project = projectMap.get(i.project_id as string);
-    const inviter = profileMap.get(i.invited_by as string);
+    const inviter = invitersById.get(i.invited_by as string);
+    const named = toNamed(inviter);
     return {
       id: i.id as string,
       project_id: i.project_id as string,
       project_name: (project?.name as string) ?? "Projet",
       project_key: (project?.key as string) ?? "",
-      inviter_email: (inviter?.email as string) ?? null,
-      inviter_name: inviter
-        ? displayName({
-            full_name: (inviter.full_name as string | null) ?? null,
-            email: (inviter.email as string | null) ?? null,
-          })
-        : null,
+      inviter_email: named.email,
+      inviter_name: inviter ? displayName(named) : null,
       created_at: i.created_at as string,
     };
   });

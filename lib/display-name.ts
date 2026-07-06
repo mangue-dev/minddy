@@ -2,9 +2,9 @@
  * Shared display-name resolution — the single source of truth for how a user is
  * named across the app (activity, mentions, assignees, cards, notifications…).
  *
- * Prefer the account's display name (mirrored from the Supabase auth metadata
- * into `profiles.full_name`). Never surface the raw email: fall back to its
- * local-part as a handle, then to a generic label.
+ * Prefer the account's Supabase Auth display name (resolved server-side from
+ * auth.users metadata via lib/server/auth-users.ts). Never surface the raw
+ * email: fall back to its local-part as a handle, then to a generic label.
  *
  * Pure (no "use client") so both client components and API routes can use it.
  */
