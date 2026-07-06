@@ -4,15 +4,16 @@ import { useState } from "react";
 import { Badge, Button, Input, Spinner, toast } from "mangue-ui";
 import { UserPlus, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { initials as toInitials } from "@/lib/avatar";
+import { displayName as resolveDisplayName } from "@/lib/display-name";
 import type { Member } from "@/lib/types";
 
 function initials(m: Member): string {
-  const base = m.full_name || m.email || "?";
-  return base.slice(0, 2).toUpperCase();
+  return toInitials(resolveDisplayName(m, "?"));
 }
 
 function displayName(m: Member): string {
-  return m.full_name || m.email || "Utilisateur";
+  return resolveDisplayName(m);
 }
 
 export function ProjectMembers({

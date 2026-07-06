@@ -45,6 +45,7 @@ import {
   type IssueEffort,
 } from "@/lib/issue-constants";
 import { activeFilterCount } from "@/lib/view-filter";
+import { displayName } from "@/lib/display-name";
 import type {
   Category,
   Member,
@@ -172,7 +173,7 @@ function FiltersPopover({
               setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) })
             }
           >
-            <span className="truncate">{m.full_name || m.email || "Utilisateur"}</span>
+            <span className="truncate">{displayName(m)}</span>
           </ToggleRow>
         ))}
 

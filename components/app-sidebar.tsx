@@ -152,12 +152,13 @@ function SidebarNav({
 
 /* ─── Footer ───────────────────────────────────────────────────────── */
 
-/** The user's first name: first token of full_name, else the email local-part. */
+/** The user's first name: first token of the Supabase auth display name
+    (display_name / full_name / name), else the email local-part. */
 function firstNameOf(user: User | null): string {
   const meta = user?.user_metadata as
-    | { full_name?: string; name?: string }
+    | { display_name?: string; full_name?: string; name?: string }
     | undefined;
-  const full = meta?.full_name || meta?.name;
+  const full = meta?.display_name || meta?.full_name || meta?.name;
   if (full) return full.trim().split(/\s+/)[0];
   const local = user?.email?.split("@")[0];
   return local || "Compte";

@@ -54,7 +54,7 @@ export function SubIssuesSection({
   };
 
   return (
-    <div className="border-t border-border pt-3">
+    <div>
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-medium">Sous-issues</span>
         {total > 0 && (

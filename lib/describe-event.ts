@@ -7,6 +7,7 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "./issue-constants";
+import { displayName } from "./display-name";
 import type { Category, Issue, IssueEvent, Member, Objective } from "./types";
 
 export interface EventContext {
@@ -20,7 +21,7 @@ export interface EventContext {
 function memberName(ctx: EventContext, id: string | null): string {
   if (!id) return "personne";
   const m = ctx.members.find((x) => x.user_id === id);
-  return m?.full_name || m?.email || "un utilisateur";
+  return displayName(m, "un utilisateur");
 }
 function objectiveName(ctx: EventContext, id: string | null): string {
   if (!id) return "aucun";

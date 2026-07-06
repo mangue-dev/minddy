@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
 /** GET /api/notifications — the caller's notifications, hydrated for the Inbox. */
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       issue_title: issue?.title ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
-      actor_name: actor?.full_name || actor?.email || null,
+      actor_name: actor ? displayName(actor) : null,
     };
   });
 

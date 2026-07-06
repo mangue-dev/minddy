@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { displayName } from "@/lib/display-name";
 import type { MyInvitation } from "@/lib/types";
 
 /** GET /api/projects/invitations — the caller's own pending invitations (Home banner). */
@@ -46,7 +47,12 @@ export async function GET(request: NextRequest) {
       project_name: (project?.name as string) ?? "Projet",
       project_key: (project?.key as string) ?? "",
       inviter_email: (inviter?.email as string) ?? null,
-      inviter_name: (inviter?.full_name as string) ?? null,
+      inviter_name: inviter
+        ? displayName({
+            full_name: (inviter.full_name as string | null) ?? null,
+            email: (inviter.email as string | null) ?? null,
+          })
+        : null,
       created_at: i.created_at as string,
     };
   });

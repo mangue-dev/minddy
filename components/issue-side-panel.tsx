@@ -2,32 +2,32 @@
 
 import { useEffect, useState } from "react";
 import {
-  Badge,
   Button,
   ConfirmDeleteDialog,
   SidePanel,
   SidePanelBody,
+  SidePanelClose,
   SidePanelContent,
   SidePanelFooter,
-  SidePanelHeader,
   SidePanelTitle,
   toast,
 } from "mangue-ui";
 import { Trash2, X } from "lucide-react";
 import {
-  AssigneePicker,
-  DueDateField,
-  EffortPicker,
-  ObjectivePicker,
-  ParentPicker,
-  PriorityPicker,
-  StatusPicker,
-} from "@/components/issue-fields";
-import { CategoryPicker } from "@/components/category-picker";
+  AssigneeValue,
+  CategoryValue,
+  DueDateValue,
+  EffortValue,
+  ObjectiveValue,
+  PriorityValue,
+  PropertyRow,
+  StatusValue,
+} from "@/components/issue-property-fields";
 import { SubIssuesSection } from "@/components/sub-issues-section";
-import { IssueTimeline } from "@/components/issue-timeline";
-import { Markdown } from "@/components/markdown";
+import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { useAuth } from "@/lib/auth-context";
+import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type {
@@ -38,21 +38,6 @@ import type {
   Member,
   Objective,
 } from "@/lib/types";
-
-function FieldRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 py-1.5">
-      <span className="w-24 shrink-0 text-sm text-muted-foreground">{label}</span>
-      <div className="min-w-0">{children}</div>
-    </div>
-  );
-}
 
 export function IssueSidePanel({
   issue,
@@ -85,17 +70,13 @@ export function IssueSidePanel({
 }) {
   const { user } = useAuth();
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [descEditing, setDescEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Sync editable fields when a different issue opens (not on every realtime tick).
+  const { items, addComment } = useIssueTimeline(issue?.id ?? null);
+
+  // Sync the editable title when a different issue opens (not on every tick).
   useEffect(() => {
-    if (issue) {
-      setTitle(issue.title);
-      setDescription(issue.description ?? "");
-      setDescEditing(false);
-    }
+    if (issue) setTitle(issue.title);
   }, [issue?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!issue) return null;
@@ -108,14 +89,7 @@ export function IssueSidePanel({
     }
   };
 
-  const hasChildren = allIssues.some((i) => i.parent_id === issue.id);
-  const parent = issue.parent_id
-    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
-    : null;
   const isChild = !!issue.parent_id;
-  const eligibleParents = allIssues.filter(
-    (i) => i.parent_id === null && i.id !== issue.id
-  );
 
   const commitTitle = () => {
     const trimmed = title.trim();
@@ -123,8 +97,8 @@ export function IssueSidePanel({
     else if (!trimmed) setTitle(issue.title);
   };
 
-  const commitDescription = () => {
-    const next = description.trim() || null;
+  const commitDescription = (markdown: string) => {
+    const next = markdown.trim() || null;
     if (next !== (issue.description ?? null)) void patch({ description: next });
   };
 
@@ -138,97 +112,83 @@ export function IssueSidePanel({
     <>
       <SidePanel open={open} onOpenChange={onOpenChange}>
         <SidePanelContent onInteractOutside={keepOverlayOpenForPopper}>
-          <SidePanelHeader>
+          {/* Header: identifier · delete · close */}
+          <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <SidePanelTitle asChild>
-              <Badge variant="secondary" className="font-mono">
+              <span className="text-lg font-semibold tracking-tight">
                 {issueIdentifier(projectKey, issue.number)}
-              </Badge>
+              </span>
             </SidePanelTitle>
-          </SidePanelHeader>
-
-          <SidePanelBody className="flex flex-col gap-4">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={commitTitle}
-              className="w-full bg-transparent text-lg font-semibold outline-none"
-              placeholder="Titre"
-            />
-
-            {descEditing ? (
-              <textarea
-                autoFocus
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                onBlur={() => {
-                  commitDescription();
-                  setDescEditing(false);
-                }}
-                placeholder="Ajoute une description… (markdown supporté)"
-                rows={5}
-                className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setDescription(issue.description ?? "");
-                  setDescEditing(true);
-                }}
-                className="w-full rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-muted/40"
+            <div className="-mr-1.5 flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Supprimer l'issue"
+                className="rounded-full text-destructive hover:text-destructive"
+                onClick={() => setConfirmDelete(true)}
               >
-                {issue.description ? (
-                  <Markdown>{issue.description}</Markdown>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    Ajoute une description…
-                  </span>
-                )}
-              </button>
-            )}
+                <Trash2 />
+              </Button>
+              <SidePanelClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Fermer"
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <X />
+                </Button>
+              </SidePanelClose>
+            </div>
+          </div>
 
-            <div className="border-t border-border pt-2">
-              <FieldRow label="Statut">
-                <StatusPicker
+          <SidePanelBody className="flex flex-col gap-6 pt-0">
+            {/* Title + description */}
+            <div className="flex flex-col gap-2">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={commitTitle}
+                className="w-full bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+                placeholder="Titre de l'issue"
+              />
+              <MarkdownEditor
+                key={issue.id}
+                value={issue.description ?? ""}
+                onCommit={commitDescription}
+                placeholder="Ajoute une description…"
+              />
+            </div>
+
+            {/* Key/value properties — borderless, like the issue cards */}
+            <div className="flex flex-col">
+              <PropertyRow label="Statut">
+                <StatusValue
                   value={issue.status}
                   onChange={(status) => void patch({ status })}
                 />
-              </FieldRow>
-              <FieldRow label="Priorité">
-                <PriorityPicker
+              </PropertyRow>
+              <PropertyRow label="Priorité">
+                <PriorityValue
                   value={issue.priority}
                   onChange={(priority) => void patch({ priority })}
                 />
-              </FieldRow>
-              <FieldRow label="Assigné">
-                <AssigneePicker
-                  value={issue.assignee_id}
-                  onChange={(assignee_id) => void patch({ assignee_id })}
-                  members={members}
-                />
-              </FieldRow>
-              <FieldRow label="Objectif">
-                <ObjectivePicker
-                  value={issue.objective_id}
-                  onChange={(objective_id) => void patch({ objective_id })}
-                  objectives={objectives}
-                />
-              </FieldRow>
-              <FieldRow label="Effort">
-                <EffortPicker
+              </PropertyRow>
+              <PropertyRow label="Effort">
+                <EffortValue
                   value={issue.effort}
                   onChange={(effort) => void patch({ effort })}
                 />
-              </FieldRow>
-              <FieldRow label="Échéance">
-                <DueDateField
-                  value={issue.due_date}
-                  onChange={(due_date) => void patch({ due_date })}
-                  className="w-44"
+              </PropertyRow>
+              <PropertyRow label="Assigné">
+                <AssigneeValue
+                  value={issue.assignee_id}
+                  members={members}
+                  onChange={(assignee_id) => void patch({ assignee_id })}
                 />
-              </FieldRow>
-              <FieldRow label="Catégories">
-                <CategoryPicker
+              </PropertyRow>
+              <PropertyRow label="Catégories">
+                <CategoryValue
                   categories={categories}
                   value={issue.category_ids}
                   onChange={(ids) => {
@@ -237,40 +197,20 @@ export function IssueSidePanel({
                     );
                   }}
                 />
-              </FieldRow>
-              {!hasChildren && (
-                <FieldRow label="Parent">
-                  {isChild && parent ? (
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onOpenIssue(parent.id)}
-                      >
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {issueIdentifier(projectKey, parent.number)}
-                        </span>
-                        <span className="max-w-40 truncate">{parent.title}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Détacher du parent"
-                        onClick={() => void patch({ parent_id: null })}
-                      >
-                        <X />
-                      </Button>
-                    </div>
-                  ) : (
-                    <ParentPicker
-                      value={null}
-                      onChange={(pid) => void patch({ parent_id: pid })}
-                      options={eligibleParents}
-                      projectKey={projectKey}
-                    />
-                  )}
-                </FieldRow>
-              )}
+              </PropertyRow>
+              <PropertyRow label="Date d'échéance">
+                <DueDateValue
+                  value={issue.due_date}
+                  onChange={(due_date) => void patch({ due_date })}
+                />
+              </PropertyRow>
+              <PropertyRow label="Objectif lié">
+                <ObjectiveValue
+                  value={issue.objective_id}
+                  objectives={objectives}
+                  onChange={(objective_id) => void patch({ objective_id })}
+                />
+              </PropertyRow>
             </div>
 
             {!isChild && (
@@ -283,9 +223,8 @@ export function IssueSidePanel({
               />
             )}
 
-            <IssueTimeline
-              issueId={issue.id}
-              currentUserId={user?.id ?? null}
+            <IssueActivity
+              items={items}
               ctx={{
                 members,
                 objectives,
@@ -296,16 +235,8 @@ export function IssueSidePanel({
             />
           </SidePanelBody>
 
-          <SidePanelFooter>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive"
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 />
-              Supprimer l&apos;issue
-            </Button>
+          <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
+            <CommentComposer members={members} onSubmit={addComment} />
           </SidePanelFooter>
         </SidePanelContent>
       </SidePanel>

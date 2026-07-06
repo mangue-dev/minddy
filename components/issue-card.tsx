@@ -23,6 +23,7 @@ import {
   type IssueEffort,
 } from "@/lib/issue-constants";
 import { avatarColor, initials } from "@/lib/avatar";
+import { displayName } from "@/lib/display-name";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -285,9 +286,9 @@ function AssigneePick({
     <span
       className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
       style={{ backgroundColor: avatarColor(assignee.user_id) }}
-      title={assignee.full_name || assignee.email || undefined}
+      title={displayName(assignee)}
     >
-      {initials(assignee.full_name || assignee.email || "?")}
+      {initials(displayName(assignee))}
     </span>
   ) : (
     <span
@@ -328,11 +329,9 @@ function AssigneePick({
               style={{ backgroundColor: avatarColor(m.user_id) }}
               aria-hidden
             >
-              {initials(m.full_name || m.email || "?")}
+              {initials(displayName(m))}
             </span>
-            <span className="truncate">
-              {m.full_name || m.email || "Utilisateur"}
-            </span>
+            <span className="truncate">{displayName(m)}</span>
             {m.user_id === assignee?.user_id && (
               <Check className="ml-auto size-4" />
             )}

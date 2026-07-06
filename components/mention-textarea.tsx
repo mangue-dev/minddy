@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { cn } from "mangue-ui";
+import { displayName } from "@/lib/display-name";
 import type { Member } from "@/lib/types";
 
 function memberLabel(m: Member): string {
-  return m.full_name || m.email || "Utilisateur";
+  return displayName(m);
 }
 
 /** userIds mentioned in `text` as "@Display Name" tokens (matched against members). */
@@ -36,6 +37,7 @@ export function MentionTextarea({
   placeholder,
   rows = 3,
   className,
+  dropUp = false,
 }: {
   value: string;
   onChange: (text: string) => void;
@@ -44,6 +46,8 @@ export function MentionTextarea({
   placeholder?: string;
   rows?: number;
   className?: string;
+  /** Open the suggestion list above the field (for composers pinned to the bottom). */
+  dropUp?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [mention, setMention] = useState<{ at: number; query: string } | null>(null);
@@ -119,7 +123,12 @@ export function MentionTextarea({
         )}
       />
       {open && (
-        <div className="absolute z-50 mt-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md">
+        <div
+          className={cn(
+            "absolute left-0 z-50 max-h-56 w-64 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md",
+            dropUp ? "bottom-full mb-1" : "top-full mt-1"
+          )}
+        >
           {suggestions.map((m) => (
             <button
               key={m.user_id}

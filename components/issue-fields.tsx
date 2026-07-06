@@ -23,10 +23,12 @@ import {
   type IssueEffort,
 } from "@/lib/issue-constants";
 import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
+import { initials } from "@/lib/avatar";
+import { displayName } from "@/lib/display-name";
 import type { Issue, Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
-  return m.full_name || m.email || "Utilisateur";
+  return displayName(m);
 }
 
 export function ObjectivePicker({
@@ -195,7 +197,7 @@ export function AssigneePicker({
         {members.map((m) => (
           <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
             <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-              {(m.full_name || m.email || "?").slice(0, 2).toUpperCase()}
+              {initials(displayName(m))}
             </span>
             <span className="truncate">{memberLabel(m)}</span>
             {m.user_id === value && <Check className="ml-auto size-4" />}

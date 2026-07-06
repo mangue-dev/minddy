@@ -25,6 +25,8 @@ import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-quer
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
+import { initials } from "@/lib/avatar";
+import { displayName } from "@/lib/display-name";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import type { Objective } from "@/lib/types";
 
@@ -153,9 +155,9 @@ function ObjectivesInner() {
                       {lead && (
                         <span
                           className="hidden size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground sm:flex"
-                          title={lead.full_name || lead.email || undefined}
+                          title={displayName(lead)}
                         >
-                          {(lead.full_name || lead.email || "?").slice(0, 2).toUpperCase()}
+                          {initials(displayName(lead))}
                         </span>
                       )}
                     </Link>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Button, Progress } from "mangue-ui";
 import { Pencil, X } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
+import { initials } from "@/lib/avatar";
+import { displayName } from "@/lib/display-name";
 import type { Member, Objective } from "@/lib/types";
 
 function formatDate(d: string): string {
@@ -61,9 +63,9 @@ export function ObjectiveBanner({
       {lead && (
         <span
           className="flex size-7 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground"
-          title={lead.full_name || lead.email || undefined}
+          title={displayName(lead)}
         >
-          {(lead.full_name || lead.email || "?").slice(0, 2).toUpperCase()}
+          {initials(displayName(lead))}
         </span>
       )}
 
