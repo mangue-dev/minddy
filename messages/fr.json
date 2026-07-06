@@ -287,6 +287,10 @@
     "updatedToast": "Objectif mis à jour.",
     "createdToast": "Objectif créé."
   },
+  "Picker": {
+    "search": "Rechercher…",
+    "noResults": "Aucun résultat"
+  },
   "Priority": {
     "none": "Aucune",
     "urgent": "Urgent",

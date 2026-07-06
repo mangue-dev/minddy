@@ -6,7 +6,7 @@ import { cn } from "mangue-ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
-import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
+import type { Category, Issue, IssueUpdateInput, Member, Objective } from "@/lib/types";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 
@@ -16,6 +16,7 @@ export function KanbanColumn({
   projectKey,
   memberMap,
   categoryMap,
+  objectiveMap,
   onOpenIssue,
   onCreateIssue,
   onUpdateIssue,
@@ -26,6 +27,7 @@ export function KanbanColumn({
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
+  objectiveMap?: Map<string, Objective>;
   onOpenIssue: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
@@ -61,6 +63,7 @@ export function KanbanColumn({
               projectKey={projectKey}
               memberMap={memberMap}
               categoryMap={categoryMap}
+              objectiveMap={objectiveMap}
               onOpen={() => onOpenIssue(issue)}
               onUpdateIssue={onUpdateIssue}
               onSetCategories={onSetCategories}

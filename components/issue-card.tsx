@@ -4,16 +4,12 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   cn,
 } from "mangue-ui";
-import { Calendar, Check, Triangle, User } from "lucide-react";
+import { Calendar, Triangle, User } from "lucide-react";
 import {
   STATUSES,
   PRIORITIES,
@@ -30,8 +26,13 @@ import {
   PriorityIndicator,
   EffortIndicator,
 } from "@/components/issue-indicators";
-import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
+import type { Category, Issue, IssueUpdateInput, Member, Objective } from "@/lib/types";
 import { DateTimePicker } from "@/components/date-time-picker";
+import {
+  SearchSelect,
+  SearchMultiSelect,
+  type PickerOption,
+} from "@/components/search-select";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 
 /** Strip common markdown so the description preview reads as plain text. */
@@ -74,39 +75,31 @@ function StatusPick({
   const tField = useTranslations("Field");
   const tStatus = useTranslations("Status");
   if (!onChange) return <StatusIndicator status={value} />;
+  const options: PickerOption[] = STATUSES.map((s) => ({
+    value: s.value,
+    label: tStatus(s.value),
+    icon: <StatusIndicator status={s.value} className="size-4" />,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("changeStatusAria")}
-              onClick={stop}
-              onPointerDown={stop}
-              className={TRIGGER_CLASS}
-            >
-              <StatusIndicator status={value} />
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tField("status")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        className="w-44"
-        onClick={stop}
-        onPointerDown={stop}
-      >
-        {STATUSES.map((s) => (
-          <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
-            <StatusIndicator status={s.value} className="size-4" />
-            {tStatus(s.value)}
-            {s.value === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as IssueStatus)}
+      options={options}
+      align="start"
+      tooltip={tField("status")}
+      stopPropagation
+      trigger={
+        <button
+          type="button"
+          aria-label={t("changeStatusAria")}
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS}
+        >
+          <StatusIndicator status={value} />
+        </button>
+      }
+    />
   );
 }
 
@@ -121,39 +114,31 @@ function PriorityPick({
   const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
   if (!onChange) return <PriorityIndicator priority={value} />;
+  const options: PickerOption[] = PRIORITIES.map((p) => ({
+    value: p.value,
+    label: tPriority(p.value),
+    icon: <PriorityIndicator priority={p.value} className="size-4" />,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("changePriorityAria")}
-              onClick={stop}
-              onPointerDown={stop}
-              className={TRIGGER_CLASS_LG}
-            >
-              <PriorityIndicator priority={value} />
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tField("priority")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        className="w-44"
-        onClick={stop}
-        onPointerDown={stop}
-      >
-        {PRIORITIES.map((p) => (
-          <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
-            <PriorityIndicator priority={p.value} className="size-4" />
-            {tPriority(p.value)}
-            {p.value === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as IssuePriority)}
+      options={options}
+      align="start"
+      tooltip={tField("priority")}
+      stopPropagation
+      trigger={
+        <button
+          type="button"
+          aria-label={t("changePriorityAria")}
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS_LG}
+        >
+          <PriorityIndicator priority={value} />
+        </button>
+      }
+    />
   );
 }
 
@@ -176,39 +161,31 @@ function EffortPick({
     </span>
   );
   if (!onChange) return display;
+  const options: PickerOption[] = EFFORTS.map((e) => ({
+    value: e.value,
+    label: e.label,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("changeEffortAria")}
-              onClick={stop}
-              onPointerDown={stop}
-              className={TRIGGER_CLASS_LG}
-            >
-              {display}
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tField("effort")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        className="w-40"
-        onClick={stop}
-        onPointerDown={stop}
-      >
-        <DropdownMenuItem onSelect={() => onChange(null)}>{tCommon("none")}</DropdownMenuItem>
-        {EFFORTS.map((e) => (
-          <DropdownMenuItem key={e.value} onSelect={() => onChange(e.value)}>
-            {e.label}
-            {e.value === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as IssueEffort | null)}
+      options={options}
+      noneOption={{ label: tCommon("none") }}
+      align="start"
+      tooltip={tField("effort")}
+      stopPropagation
+      trigger={
+        <button
+          type="button"
+          aria-label={t("changeEffortAria")}
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS_LG}
+        >
+          {display}
+        </button>
+      }
+    />
   );
 }
 
@@ -240,63 +217,38 @@ function CategoryPick({
     <span className="text-xs text-muted-foreground/60">{t("noneFem")}</span>
   );
   if (!onChange) return display;
-
-  const toggle = (id: string) =>
-    onChange(
-      selectedIds.includes(id)
-        ? selectedIds.filter((x) => x !== id)
-        : [...selectedIds, id]
-    );
-
+  const options: PickerOption[] = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+    icon: (
+      <span
+        className="size-2.5 shrink-0 rounded-full"
+        style={{ backgroundColor: c.color }}
+        aria-hidden
+      />
+    ),
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("editCategoriesAria")}
-              onClick={stop}
-              onPointerDown={stop}
-              className={TRIGGER_CLASS_LG}
-            >
-              {display}
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tField("categories")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="end"
-        className="w-52"
-        onClick={stop}
-        onPointerDown={stop}
-      >
-        {categories.length === 0 ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">
-            {t("noCategoriesHint")}
-          </div>
-        ) : (
-          categories.map((c) => (
-            <DropdownMenuItem
-              key={c.id}
-              onSelect={(e) => {
-                e.preventDefault();
-                toggle(c.id);
-              }}
-            >
-              <span
-                className="size-2.5 rounded-full"
-                style={{ backgroundColor: c.color }}
-                aria-hidden
-              />
-              <span className="truncate">{c.name}</span>
-              {selectedIds.includes(c.id) && <Check className="ml-auto size-4" />}
-            </DropdownMenuItem>
-          ))
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SearchMultiSelect
+      values={selectedIds}
+      onChange={onChange}
+      options={options}
+      align="end"
+      tooltip={tField("categories")}
+      stopPropagation
+      emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
+      trigger={
+        <button
+          type="button"
+          aria-label={t("editCategoriesAria")}
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS_LG}
+        >
+          {display}
+        </button>
+      }
+    />
   );
 }
 
@@ -328,50 +280,40 @@ function AssigneePick({
     </span>
   );
   if (!onChange) return avatar;
+  const options: PickerOption[] = members.map((m) => ({
+    value: m.user_id,
+    label: displayName(m),
+    keywords: m.email ? [m.email] : undefined,
+    icon: (
+      <UserAvatar
+        url={m.avatar_url}
+        name={displayName(m)}
+        seed={m.user_id}
+        className="size-5 text-[9px]"
+      />
+    ),
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("changeAssigneeAria")}
-              onClick={stop}
-              onPointerDown={stop}
-              className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
-            >
-              {avatar}
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tField("assignee")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="end"
-        className="w-52"
-        onClick={stop}
-        onPointerDown={stop}
-      >
-        <DropdownMenuItem onSelect={() => onChange(null)}>
-          {tField("unassigned")}
-          {!assignee && <Check className="ml-auto size-4" />}
-        </DropdownMenuItem>
-        {members.map((m) => (
-          <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
-            <UserAvatar
-              url={m.avatar_url}
-              name={displayName(m)}
-              seed={m.user_id}
-              className="size-5 text-[9px]"
-            />
-            <span className="truncate">{displayName(m)}</span>
-            {m.user_id === assignee?.user_id && (
-              <Check className="ml-auto size-4" />
-            )}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SearchSelect
+      value={assignee?.user_id ?? null}
+      onChange={onChange}
+      options={options}
+      noneOption={{ label: tField("unassigned") }}
+      align="end"
+      tooltip={tField("assignee")}
+      stopPropagation
+      trigger={
+        <button
+          type="button"
+          aria-label={t("changeAssigneeAria")}
+          onClick={stop}
+          onPointerDown={stop}
+          className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
+        >
+          {avatar}
+        </button>
+      }
+    />
   );
 }
 
@@ -408,12 +350,34 @@ function DueDatePick({
   );
 }
 
+/** Read-only objective indicator on the card — colored dot + name, shown on the
+    bottom line (mirrors how the category is displayed). */
+function ObjectiveIndicator({ objective }: { objective: Objective }) {
+  const tField = useTranslations("Field");
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span
+            className="size-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
+            aria-hidden
+          />
+          <span className="truncate">{objective.name}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{tField("objectiveLinked")}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Presentational card body — shared by the sortable card and the drag overlay. */
 export function IssueCardBody({
   issue,
   projectKey,
   memberMap,
   categoryMap,
+  objectiveMap,
   onUpdate,
   onSetCategories,
   dragging,
@@ -422,6 +386,8 @@ export function IssueCardBody({
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
+  /** Objectives by id — the linked one shows as a bottom-line indicator. */
+  objectiveMap?: Map<string, Objective>;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
   onUpdate?: (patch: IssueUpdateInput) => void;
   /** When set, the category indicator becomes an inline multi-select picker. */
@@ -431,6 +397,10 @@ export function IssueCardBody({
   const assignee = issue.assignee_id
     ? memberMap.get(issue.assignee_id) ?? null
     : null;
+  const objective =
+    issue.objective_id && objectiveMap
+      ? objectiveMap.get(issue.objective_id) ?? null
+      : null;
   const description = issue.description ? plainPreview(issue.description) : "";
 
   const setStatus = onUpdate
@@ -492,10 +462,17 @@ export function IssueCardBody({
         />
       </div>
 
-      {/* Due date — its own line, right-aligned (no empty state) */}
-      {issue.due_date && (
-        <div className="flex items-center justify-end pt-0.5">
-          <DueDatePick value={issue.due_date} onChange={setDueDate} />
+      {/* Bottom line — linked objective (left) + due date (right) */}
+      {(objective || issue.due_date) && (
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <div className="flex min-w-0 flex-1 items-center">
+            {objective && <ObjectiveIndicator objective={objective} />}
+          </div>
+          {issue.due_date && (
+            <div className="shrink-0">
+              <DueDatePick value={issue.due_date} onChange={setDueDate} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -507,6 +484,7 @@ export function IssueCard({
   projectKey,
   memberMap,
   categoryMap,
+  objectiveMap,
   onOpen,
   onUpdateIssue,
   onSetCategories,
@@ -515,6 +493,7 @@ export function IssueCard({
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
+  objectiveMap?: Map<string, Objective>;
   onOpen: () => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
@@ -536,6 +515,7 @@ export function IssueCard({
         projectKey={projectKey}
         memberMap={memberMap}
         categoryMap={categoryMap}
+        objectiveMap={objectiveMap}
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />

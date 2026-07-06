@@ -363,6 +363,7 @@ function ProjectBoard() {
                 projectKey={project.key}
                 members={members}
                 categories={categories}
+                objectives={objectives}
                 onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
                 onCreateIssue={openCreate}
                 onUpdateIssue={(id, patch) =>

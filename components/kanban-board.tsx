@@ -14,7 +14,7 @@ import {
 import { toast } from "mangue-ui";
 import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { Category, Issue, IssueUpdateInput, Member, ViewSort } from "@/lib/types";
+import type { Category, Issue, IssueUpdateInput, Member, Objective, ViewSort } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
@@ -38,6 +38,7 @@ export function KanbanBoard({
   projectKey,
   members,
   categories,
+  objectives,
   onOpenIssue,
   onCreateIssue,
   onUpdateIssue,
@@ -50,6 +51,7 @@ export function KanbanBoard({
   projectKey: string;
   members: Member[];
   categories: Category[];
+  objectives: Objective[];
   onOpenIssue: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
@@ -66,6 +68,10 @@ export function KanbanBoard({
   const categoryMap = useMemo(
     () => new Map(categories.map((c) => [c.id, c])),
     [categories]
+  );
+  const objectiveMap = useMemo(
+    () => new Map((objectives ?? []).map((o) => [o.id, o])),
+    [objectives]
   );
 
   const columns = useMemo(() => {
@@ -151,6 +157,7 @@ export function KanbanBoard({
             projectKey={projectKey}
             memberMap={memberMap}
             categoryMap={categoryMap}
+            objectiveMap={objectiveMap}
             onOpenIssue={onOpenIssue}
             onCreateIssue={onCreateIssue}
             onUpdateIssue={onUpdateIssue}
@@ -167,6 +174,7 @@ export function KanbanBoard({
               projectKey={projectKey}
               memberMap={memberMap}
               categoryMap={categoryMap}
+              objectiveMap={objectiveMap}
               dragging
             />
           </div>

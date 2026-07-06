@@ -35,6 +35,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { MinddyLogo } from "@/components/minddy-logo";
 import { transitions } from "@/lib/motion";
 
 const EXPANDED_WIDTH = 256;
@@ -48,9 +49,10 @@ function SidebarBrand() {
   return (
     <Link
       href="/home"
-      className="px-1 font-display text-lg font-semibold tracking-tight"
+      aria-label="minddy"
+      className="inline-flex items-center px-1 text-sidebar-foreground"
     >
-      minddy
+      <MinddyLogo className="h-6 w-auto" />
     </Link>
   );
 }
@@ -63,7 +65,9 @@ function SidebarRow({ item, collapsed }: { item: NavItem; collapsed: boolean }) 
 
   const rowClass = cn(
     "group relative flex h-9 items-center gap-3 rounded-lg px-3.5 text-sm font-medium transition-colors",
-    collapsed && "justify-center gap-0 px-0",
+    // Collapsed: a fixed-width, left-anchored icon box so the icon keeps a
+    // constant position while the sidebar width animates (no drift to center).
+    collapsed && "w-9 justify-center gap-0 px-0",
     active
       ? "bg-sidebar-accent text-sidebar-accent-foreground"
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
@@ -99,7 +103,7 @@ function SidebarRow({ item, collapsed }: { item: NavItem; collapsed: boolean }) 
         type="button"
         onClick={item.onClick}
         disabled={item.disabled}
-        className={cn(rowClass, "w-full text-left")}
+        className={cn(rowClass, "text-left", !collapsed && "w-full")}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}
       >
@@ -130,7 +134,7 @@ function SidebarNav({
     <nav
       className={cn(
         "flex-1 overflow-x-hidden overflow-y-auto pt-3 pb-2",
-        collapsed ? "px-2" : "px-3.5",
+        collapsed ? "px-2.5" : "px-3.5",
       )}
     >
       {sections.map((section, index) => (
@@ -252,7 +256,7 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
       <DropdownMenuTrigger
         className={cn(
           "flex h-10 items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
-          collapsed ? "w-10 justify-center" : "w-full gap-3 px-3.5 text-left",
+          collapsed ? "w-9 justify-center" : "w-full gap-3 px-3.5 text-left",
         )}
       >
         <UserAvatar avatarUrl={avatarUrl} name={firstName} seed={seed} />
@@ -332,7 +336,7 @@ function FooterRow({
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   return (
-    <div className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+    <div className="flex flex-col gap-0.5">
       <FooterRow
         icon={BarChart3}
         label={t("statistics")}
@@ -384,27 +388,40 @@ export function AppSidebar({
       {/* Brand + collapse toggle */}
       <div
         className={cn(
-          "flex h-[60px] items-center gap-2",
-          collapsed ? "justify-center px-0" : "px-3.5",
+          "flex h-[60px] items-center",
+          collapsed ? "justify-center px-0" : "justify-between px-3.5",
         )}
       >
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
+        {collapsed ? (
+          // Collapsed: the logo sits where the reopen button would be and
+          // cross-fades to it on hover (mirrors AutoKap).
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            aria-label={t("expandSidebar")}
+            title={t("expandSidebar")}
+            className="group relative flex size-8 items-center justify-center"
+          >
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sidebar-foreground transition-opacity duration-150 group-hover:opacity-0">
+              <MinddyLogo className="h-6 w-auto" />
+            </span>
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sidebar-foreground/60 opacity-0 transition-opacity duration-150 group-hover:text-sidebar-foreground group-hover:opacity-100">
+              <PanelLeftOpen className="h-[18px] w-[18px]" />
+            </span>
+          </button>
+        ) : (
+          <>
             <SidebarBrand />
-          </div>
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              aria-label={t("collapseSidebar")}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
+              <PanelLeftClose className="h-[18px] w-[18px]" />
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="h-[18px] w-[18px]" />
-          ) : (
-            <PanelLeftClose className="h-[18px] w-[18px]" />
-          )}
-        </button>
       </div>
 
       {/* Nav — animated swap between home and project modes */}
@@ -426,7 +443,7 @@ export function AppSidebar({
       )}
 
       {/* Footer */}
-      <div className={cn("pt-2 pb-4", collapsed ? "px-2" : "px-3.5")}>
+      <div className={cn("pt-2 pb-4", collapsed ? "px-2.5" : "px-3.5")}>
         <SidebarFooter collapsed={collapsed} />
       </div>
     </motion.aside>

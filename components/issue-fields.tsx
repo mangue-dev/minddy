@@ -1,15 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "mangue-ui";
-import { Check, UserCircle2, Triangle, Target, GitMerge } from "lucide-react";
-import { DateTimePicker } from "@/components/date-time-picker";
+import { Button } from "mangue-ui";
+import { UserCircle2, Triangle, Target, GitMerge } from "lucide-react";
 import {
   STATUSES,
   PRIORITIES,
@@ -23,10 +16,23 @@ import {
 import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { SearchSelect, type PickerOption } from "@/components/search-select";
 import type { Issue, Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
   return displayName(m);
+}
+
+/** A small round color dot used for objective/category-style options. */
+function Dot({ color }: { color: string | null | undefined }) {
+  return (
+    <span
+      className="size-2.5 shrink-0 rounded-full"
+      style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
+      aria-hidden
+    />
+  );
 }
 
 export function ObjectivePicker({
@@ -42,32 +48,24 @@ export function ObjectivePicker({
 }) {
   const tField = useTranslations("Field");
   const current = objectives.find((o) => o.id === value) ?? null;
+  const options: PickerOption[] = objectives.map((o) => ({
+    value: o.id,
+    label: o.name,
+    icon: <Dot color={o.color} />,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <SearchSelect
+      value={value}
+      onChange={onChange}
+      options={options}
+      noneOption={{ label: tField("noObjective") }}
+      trigger={
         <Button variant="outline" size={size}>
           <Target className="text-muted-foreground" />
           {current ? current.name : tField("noObjective")}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        <DropdownMenuItem onSelect={() => onChange(null)}>
-          {tField("noObjective")}
-          {value === null && <Check className="ml-auto size-4" />}
-        </DropdownMenuItem>
-        {objectives.map((o) => (
-          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)}>
-            <span
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
-              aria-hidden
-            />
-            <span className="truncate">{o.name}</span>
-            {o.id === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+    />
   );
 }
 
@@ -81,24 +79,23 @@ export function StatusPicker({
   size?: "sm" | "default";
 }) {
   const tStatus = useTranslations("Status");
+  const options: PickerOption[] = STATUSES.map((s) => ({
+    value: s.value,
+    label: tStatus(s.value),
+    icon: <StatusIndicator status={s.value} className="size-4" />,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as IssueStatus)}
+      options={options}
+      trigger={
         <Button variant="outline" size={size}>
           <StatusIndicator status={value} className="size-4" />
           {tStatus(value)}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
-        {STATUSES.map((s) => (
-          <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
-            <StatusIndicator status={s.value} className="size-4" />
-            {tStatus(s.value)}
-            {s.value === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+    />
   );
 }
 
@@ -112,24 +109,23 @@ export function PriorityPicker({
   size?: "sm" | "default";
 }) {
   const tPriority = useTranslations("Priority");
+  const options: PickerOption[] = PRIORITIES.map((p) => ({
+    value: p.value,
+    label: tPriority(p.value),
+    icon: <PriorityIndicator priority={p.value} className="size-4" />,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as IssuePriority)}
+      options={options}
+      trigger={
         <Button variant="outline" size={size}>
           <PriorityIndicator priority={value} className="size-4" />
           {tPriority(value)}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-44">
-        {PRIORITIES.map((p) => (
-          <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
-            <PriorityIndicator priority={p.value} className="size-4" />
-            {tPriority(p.value)}
-            {p.value === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+    />
   );
 }
 
@@ -144,27 +140,23 @@ export function EffortPicker({
 }) {
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
+  const options: PickerOption[] = EFFORTS.map((e) => ({
+    value: e.value,
+    label: e.label,
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as IssueEffort | null)}
+      options={options}
+      noneOption={{ label: tCommon("none") }}
+      trigger={
         <Button variant="outline" size={size}>
           <Triangle className="text-muted-foreground" />
           {value ? EFFORT_MAP[value].label : tField("effort")}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-40">
-        <DropdownMenuItem onSelect={() => onChange(null)}>
-          {tCommon("none")}
-          {value === null && <Check className="ml-auto size-4" />}
-        </DropdownMenuItem>
-        {EFFORTS.map((e) => (
-          <DropdownMenuItem key={e.value} onSelect={() => onChange(e.value)}>
-            {e.label}
-            {e.value === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+    />
   );
 }
 
@@ -184,33 +176,32 @@ export function AssigneePicker({
   const tField = useTranslations("Field");
   const current = members.find((m) => m.user_id === value) ?? null;
   const empty = emptyLabel ?? tField("unassigned");
+  const options: PickerOption[] = members.map((m) => ({
+    value: m.user_id,
+    label: displayName(m),
+    keywords: m.email ? [m.email] : undefined,
+    icon: (
+      <UserAvatar
+        url={m.avatar_url}
+        name={displayName(m)}
+        seed={m.user_id}
+        className="size-5 text-[9px]"
+      />
+    ),
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <SearchSelect
+      value={value}
+      onChange={onChange}
+      options={options}
+      noneOption={{ label: empty }}
+      trigger={
         <Button variant="outline" size={size}>
           <UserCircle2 className="text-muted-foreground" />
           {current ? memberLabel(current) : empty}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        <DropdownMenuItem onSelect={() => onChange(null)}>
-          {empty}
-          {value === null && <Check className="ml-auto size-4" />}
-        </DropdownMenuItem>
-        {members.map((m) => (
-          <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
-            <UserAvatar
-              url={m.avatar_url}
-              name={displayName(m)}
-              seed={m.user_id}
-              className="size-5 text-[9px]"
-            />
-            <span className="truncate">{memberLabel(m)}</span>
-            {m.user_id === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+    />
   );
 }
 
@@ -230,32 +221,31 @@ export function ParentPicker({
 }) {
   const tField = useTranslations("Field");
   const current = options.find((o) => o.id === value) ?? null;
+  const pickerOptions: PickerOption[] = options.map((o) => ({
+    value: o.id,
+    label: o.title,
+    keywords: [issueIdentifier(projectKey, o.number)],
+    icon: (
+      <span className="font-mono text-xs text-muted-foreground">
+        {issueIdentifier(projectKey, o.number)}
+      </span>
+    ),
+  }));
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <SearchSelect
+      value={value}
+      onChange={onChange}
+      options={pickerOptions}
+      noneOption={{ label: tField("noParent") }}
+      trigger={
         <Button variant="outline" size={size}>
           <GitMerge className="text-muted-foreground" />
           {current
             ? issueIdentifier(projectKey, current.number)
             : tField("noParent")}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
-        <DropdownMenuItem onSelect={() => onChange(null)}>
-          {tField("noParent")}
-          {value === null && <Check className="ml-auto size-4" />}
-        </DropdownMenuItem>
-        {options.map((o) => (
-          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)}>
-            <span className="font-mono text-xs text-muted-foreground">
-              {issueIdentifier(projectKey, o.number)}
-            </span>
-            <span className="truncate">{o.title}</span>
-            {o.id === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+    />
   );
 }
 
