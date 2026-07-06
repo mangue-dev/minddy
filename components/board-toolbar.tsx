@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -12,12 +11,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
   Popover,
   PopoverContent,
   PopoverTrigger,
   Separator,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -31,6 +34,7 @@ import {
   Pencil,
   Trash2,
   Triangle,
+  Eye,
 } from "lucide-react";
 import {
   StatusIndicator,
@@ -113,17 +117,16 @@ function FiltersPopover({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm">
-          <ListFilter />
-          Filtres
-          {count > 0 && (
-            <Badge variant="secondary" className="ml-1">
-              {count}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon-sm" aria-label="Filtres">
+              <ListFilter className={cn(count > 0 && "text-primary")} />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Filtres</TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="max-h-[70vh] w-64 overflow-y-auto p-2">
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Statut</p>
         {STATUSES.map((s) => (
@@ -359,7 +362,7 @@ export function BoardToolbar({
   onDeleteView: (view: View) => Promise<void>;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
-  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<View | null>(null);
 
   const activeView = views.find((v) => v.id === activeViewId) ?? null;
 
@@ -371,22 +374,30 @@ export function BoardToolbar({
           {views.map((v) => (
             <ViewChip
               key={v.id}
-              label={v.name}
+              view={v}
               active={v.id === activeViewId}
-              onClick={() => onSelectView(v.id)}
+              canDelete={views.length > 1}
+              onSelect={() => onSelectView(v.id)}
+              onRename={() => setRenameTarget(v)}
+              onDelete={() => void onDeleteView(v)}
             />
           ))}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Nouvelle vue"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Nouvelle vue"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Nouvelle vue</TooltipContent>
+          </Tooltip>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5">
           {dirty && activeView && (
             <Button size="sm" onClick={() => void onUpdateActiveView()}>
               <Save />
@@ -400,13 +411,20 @@ export function BoardToolbar({
             </Button>
           )}
 
+          {/* Order — icon only, accent-coloured when a non-default sort is active */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ArrowUpDown />
-                {SORT_LABELS[config.sort]}
-              </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon-sm" aria-label="Ordre">
+                    <ArrowUpDown
+                      className={cn(config.sort !== "manual" && "text-primary")}
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Ordre</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align="end">
               {SORTS.map((s) => (
                 <DropdownMenuItem
@@ -420,6 +438,7 @@ export function BoardToolbar({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Filters — icon only, accent-coloured when any filter is active */}
           <FiltersPopover
             config={config}
             onChange={onConfigChange}
@@ -427,30 +446,6 @@ export function BoardToolbar({
             categories={categories}
             objectives={objectives}
           />
-
-          {activeView && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Gérer la vue">
-                  <MoreHorizontal />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
-                  <Pencil />
-                  Renommer
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  disabled={views.length <= 1}
-                  onSelect={() => void onDeleteView(activeView)}
-                >
-                  <Trash2 />
-                  Supprimer
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       </div>
 
@@ -461,40 +456,91 @@ export function BoardToolbar({
         initialName=""
         onSubmit={onCreateView}
       />
-      {activeView && (
-        <ViewNameDialog
-          open={renameOpen}
-          onOpenChange={setRenameOpen}
-          title="Renommer la vue"
-          initialName={activeView.name}
-          onSubmit={(name) => onRenameView(activeView, name)}
-        />
-      )}
+      <ViewNameDialog
+        open={renameTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRenameTarget(null);
+        }}
+        title="Renommer la vue"
+        initialName={renameTarget?.name ?? ""}
+        onSubmit={(name) =>
+          renameTarget ? onRenameView(renameTarget, name) : Promise.resolve()
+        }
+      />
     </div>
   );
 }
 
 function ViewChip({
-  label,
+  view,
   active,
-  onClick,
+  canDelete,
+  onSelect,
+  onRename,
+  onDelete,
 }: {
-  label: string;
+  view: View;
   active: boolean;
-  onClick: () => void;
+  canDelete: boolean;
+  onSelect: () => void;
+  onRename: () => void;
+  onDelete: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={cn(
-        "rounded-full px-3 py-1 text-sm transition-colors",
-        active
-          ? "bg-foreground text-background"
-          : "text-muted-foreground hover:bg-muted"
+        "group relative rounded-full transition-colors",
+        active ? "bg-foreground" : "hover:bg-muted"
       )}
     >
-      {label}
-    </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          "rounded-full px-3 py-1 text-sm transition-colors",
+          active ? "text-background" : "text-muted-foreground"
+        )}
+      >
+        {view.name}
+      </button>
+
+      {/* Per-view actions — revealed on hover, overlaid on the pill's right edge
+          (matching bg covers the name) so the layout never shifts. */}
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Options de « ${view.name} »`}
+            className={cn(
+              "absolute inset-y-0 right-0 flex items-center rounded-r-full pr-1.5 pl-2.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+              menuOpen && "opacity-100",
+              active ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+            )}
+          >
+            <MoreHorizontal className="size-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={onSelect}>
+            <Eye />
+            Ouvrir la vue
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={onRename}>
+            <Pencil />
+            Renommer
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={!canDelete}
+            onSelect={onDelete}
+          >
+            <Trash2 />
+            Supprimer
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

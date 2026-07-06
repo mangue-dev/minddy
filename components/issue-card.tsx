@@ -10,6 +10,9 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { Calendar, Check, Triangle, User } from "lucide-react";
@@ -77,17 +80,22 @@ function StatusPick({
   if (!onChange) return <StatusIndicator status={value} />;
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Changer le statut"
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS}
-        >
-          <StatusIndicator status={value} />
-        </button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Changer le statut"
+              onClick={stop}
+              onPointerDown={stop}
+              className={TRIGGER_CLASS}
+            >
+              <StatusIndicator status={value} />
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Statut</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="start"
         className="w-44"
@@ -116,17 +124,22 @@ function PriorityPick({
   if (!onChange) return <PriorityIndicator priority={value} />;
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Changer la priorité"
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS_LG}
-        >
-          <PriorityIndicator priority={value} />
-        </button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Changer la priorité"
+              onClick={stop}
+              onPointerDown={stop}
+              className={TRIGGER_CLASS_LG}
+            >
+              <PriorityIndicator priority={value} />
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Priorité</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="start"
         className="w-44"
@@ -163,17 +176,22 @@ function EffortPick({
   if (!onChange) return display;
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Changer l'effort"
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS_LG}
-        >
-          {display}
-        </button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Changer l'effort"
+              onClick={stop}
+              onPointerDown={stop}
+              className={TRIGGER_CLASS_LG}
+            >
+              {display}
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Effort</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="start"
         className="w-40"
@@ -228,17 +246,22 @@ function CategoryPick({
 
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Modifier les catégories"
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS_LG}
-        >
-          {display}
-        </button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Modifier les catégories"
+              onClick={stop}
+              onPointerDown={stop}
+              className={TRIGGER_CLASS_LG}
+            >
+              {display}
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Catégories</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="end"
         className="w-52"
@@ -301,17 +324,22 @@ function AssigneePick({
   if (!onChange) return avatar;
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Changer l'assigné"
-          onClick={stop}
-          onPointerDown={stop}
-          className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
-        >
-          {avatar}
-        </button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Changer l'assigné"
+              onClick={stop}
+              onPointerDown={stop}
+              className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
+            >
+              {avatar}
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Assigné</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="end"
         className="w-52"
@@ -357,17 +385,22 @@ function DueDatePick({
   if (!onChange) return display;
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Changer l'échéance"
-          onClick={stop}
-          onPointerDown={stop}
-          className="-m-1 flex items-center rounded-md p-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
-        >
-          {display}
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Changer l'échéance"
+              onClick={stop}
+              onPointerDown={stop}
+              className="-m-1 flex items-center rounded-md p-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+            >
+              {display}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Échéance</TooltipContent>
+      </Tooltip>
       <PopoverContent
         align="end"
         className="w-auto p-2"
