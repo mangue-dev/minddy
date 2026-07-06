@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Button,
   ConfirmDeleteDialog,
@@ -70,6 +71,9 @@ export function IssueSidePanel({
   onOpenIssue: (id: string) => void;
 }) {
   const { user } = useAuth();
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const tCommon = useTranslations("Common");
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -105,7 +109,7 @@ export function IssueSidePanel({
 
   const handleDelete = async () => {
     await onDelete(issue.id);
-    toast.success("Issue supprimée.");
+    toast.success(t("issueDeletedToast"));
     onOpenChange(false);
   };
 
@@ -124,7 +128,7 @@ export function IssueSidePanel({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label="Supprimer l'issue"
+                aria-label={t("deleteAriaLabel")}
                 className="rounded-full text-destructive hover:text-destructive"
                 onClick={() => setConfirmDelete(true)}
               >
@@ -134,7 +138,7 @@ export function IssueSidePanel({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Fermer"
+                  aria-label={tCommon("close")}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
                   <X />
@@ -157,44 +161,44 @@ export function IssueSidePanel({
                   }
                 }}
                 className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
-                placeholder="Titre de l'issue"
+                placeholder={t("titlePlaceholder")}
               />
               <MarkdownEditor
                 key={issue.id}
                 value={issue.description ?? ""}
                 onCommit={commitDescription}
-                placeholder="Ajoute une description…"
+                placeholder={t("descriptionPlaceholder")}
               />
             </div>
 
             {/* Key/value properties — borderless, like the issue cards */}
             <div className="flex flex-col">
-              <PropertyRow label="Statut">
+              <PropertyRow label={tField("status")}>
                 <StatusValue
                   value={issue.status}
                   onChange={(status) => void patch({ status })}
                 />
               </PropertyRow>
-              <PropertyRow label="Priorité">
+              <PropertyRow label={tField("priority")}>
                 <PriorityValue
                   value={issue.priority}
                   onChange={(priority) => void patch({ priority })}
                 />
               </PropertyRow>
-              <PropertyRow label="Effort">
+              <PropertyRow label={tField("effort")}>
                 <EffortValue
                   value={issue.effort}
                   onChange={(effort) => void patch({ effort })}
                 />
               </PropertyRow>
-              <PropertyRow label="Assigné">
+              <PropertyRow label={tField("assignee")}>
                 <AssigneeValue
                   value={issue.assignee_id}
                   members={members}
                   onChange={(assignee_id) => void patch({ assignee_id })}
                 />
               </PropertyRow>
-              <PropertyRow label="Catégories">
+              <PropertyRow label={tField("categories")}>
                 <CategoryValue
                   categories={categories}
                   value={issue.category_ids}
@@ -205,13 +209,13 @@ export function IssueSidePanel({
                   }}
                 />
               </PropertyRow>
-              <PropertyRow label="Date d'échéance">
+              <PropertyRow label={tField("dueDate")}>
                 <DueDateValue
                   value={issue.due_date}
                   onChange={(due_date) => void patch({ due_date })}
                 />
               </PropertyRow>
-              <PropertyRow label="Objectif lié">
+              <PropertyRow label={tField("objectiveLinked")}>
                 <ObjectiveValue
                   value={issue.objective_id}
                   objectives={objectives}
@@ -251,9 +255,9 @@ export function IssueSidePanel({
       <ConfirmDeleteDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Supprimer l'issue ?"
-        description="Cette action est définitive."
-        confirmLabel="Supprimer"
+        title={t("deleteDialogTitle")}
+        description={t("deleteDialogDescription")}
+        confirmLabel={tCommon("delete")}
         onConfirm={handleDelete}
       />
     </>

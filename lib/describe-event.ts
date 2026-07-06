@@ -1,15 +1,13 @@
-import {
-  STATUS_MAP,
-  PRIORITY_MAP,
-  EFFORT_MAP,
-  issueIdentifier,
-  type IssueStatus,
-  type IssuePriority,
-  type IssueEffort,
-} from "./issue-constants";
+import { EFFORT_MAP, issueIdentifier, type IssueEffort } from "./issue-constants";
 import { displayName } from "./display-name";
 import type { Category, Issue, IssueEvent, Member, Objective } from "./types";
 
+/** Translator scoped to the "Activity" namespace (next-intl useTranslations). */
+type ActivityT = (key: string, values?: Record<string, string | number>) => string;
+/** Translator that maps an enum value to its localized label. */
+type LabelT = (value: string) => string;
+
+/** Data the activity feed needs; passed by the caller (issue-side-panel). */
 export interface EventContext {
   members: Member[];
   objectives: Objective[];
@@ -18,68 +16,99 @@ export interface EventContext {
   projectKey: string;
 }
 
-function memberName(ctx: EventContext, id: string | null): string {
-  if (!id) return "personne";
-  const m = ctx.members.find((x) => x.user_id === id);
-  return displayName(m, "un utilisateur");
+/** Translators the caller resolves via useTranslations and passes in. */
+export interface EventTranslators {
+  /** "Activity" namespace. */
+  t: ActivityT;
+  /** "Status" namespace (value → label). */
+  tStatus: LabelT;
+  /** "Priority" namespace (value → label). */
+  tPriority: LabelT;
 }
-function objectiveName(ctx: EventContext, id: string | null): string {
-  if (!id) return "aucun";
-  return ctx.objectives.find((o) => o.id === id)?.name ?? "un objectif";
-}
-function categoryName(ctx: EventContext, id: string | null): string {
-  if (!id) return "une catégorie";
-  return ctx.categories.find((c) => c.id === id)?.name ?? "une catégorie";
-}
-function issueRef(ctx: EventContext, id: string | null): string {
-  if (!id) return "une issue";
-  const i = ctx.issues.find((x) => x.id === id);
-  return i ? issueIdentifier(ctx.projectKey, i.number) : "une issue";
-}
-const statusLabel = (v: string | null) =>
-  v ? STATUS_MAP[v as IssueStatus]?.label ?? v : "—";
-const priorityLabel = (v: string | null) =>
-  v ? PRIORITY_MAP[v as IssuePriority]?.label ?? v : "—";
-const effortLabel = (v: string | null) =>
-  v ? EFFORT_MAP[v as IssueEffort]?.label ?? v : "—";
 
-/** Human-readable French description of an activity event (without the actor). */
-export function describeEvent(e: IssueEvent, ctx: EventContext): string {
-  if (e.type === "created") return "a créé l'issue";
+function memberName(ctx: EventContext, tr: EventTranslators, id: string | null): string {
+  if (!id) return tr.t("memberNobody");
+  const m = ctx.members.find((x) => x.user_id === id);
+  return displayName(m, tr.t("memberSomeone"));
+}
+function objectiveName(ctx: EventContext, tr: EventTranslators, id: string | null): string {
+  if (!id) return tr.t("objectiveNone");
+  return ctx.objectives.find((o) => o.id === id)?.name ?? tr.t("objectiveSome");
+}
+function categoryName(ctx: EventContext, tr: EventTranslators, id: string | null): string {
+  if (!id) return tr.t("categorySome");
+  return ctx.categories.find((c) => c.id === id)?.name ?? tr.t("categorySome");
+}
+function issueRef(ctx: EventContext, tr: EventTranslators, id: string | null): string {
+  if (!id) return tr.t("issueSome");
+  const i = ctx.issues.find((x) => x.id === id);
+  return i ? issueIdentifier(ctx.projectKey, i.number) : tr.t("issueSome");
+}
+const emptyDash = "—";
+const effortLabel = (v: string | null) =>
+  v ? EFFORT_MAP[v as IssueEffort]?.label ?? v : emptyDash;
+
+/** Localized description of an activity event (without the actor). The caller
+    supplies the translators (from useTranslations). */
+export function describeEvent(
+  e: IssueEvent,
+  ctx: EventContext,
+  tr: EventTranslators
+): string {
+  const { t, tStatus, tPriority } = tr;
+  if (e.type === "created") return t("created");
   if (e.type === "category_added")
-    return `a ajouté la catégorie « ${categoryName(ctx, e.to_value)} »`;
+    return t("categoryAdded", { name: categoryName(ctx, tr, e.to_value) });
   if (e.type === "category_removed")
-    return `a retiré la catégorie « ${categoryName(ctx, e.from_value)} »`;
+    return t("categoryRemoved", { name: categoryName(ctx, tr, e.from_value) });
   if (e.type === "sub_issue_added")
-    return `a ajouté la sous-issue ${issueRef(ctx, e.to_value)}`;
+    return t("subIssueAdded", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_removed")
-    return `a retiré la sous-issue ${issueRef(ctx, e.to_value)}`;
+    return t("subIssueRemoved", { ref: issueRef(ctx, tr, e.to_value) });
 
   if (e.type === "updated") {
     switch (e.field) {
       case "title":
-        return "a renommé l'issue";
+        return t("titleChanged");
       case "description":
-        return "a modifié la description";
+        return t("descriptionChanged");
       case "status":
-        return `a changé le statut : ${statusLabel(e.from_value)} → ${statusLabel(e.to_value)}`;
+        return t("statusChanged", {
+          from: e.from_value ? tStatus(e.from_value) : emptyDash,
+          to: e.to_value ? tStatus(e.to_value) : emptyDash,
+        });
       case "priority":
-        return `a changé la priorité : ${priorityLabel(e.from_value)} → ${priorityLabel(e.to_value)}`;
+        return t("priorityChanged", {
+          from: e.from_value ? tPriority(e.from_value) : emptyDash,
+          to: e.to_value ? tPriority(e.to_value) : emptyDash,
+        });
       case "effort":
-        return `a changé l'effort : ${effortLabel(e.from_value)} → ${effortLabel(e.to_value)}`;
+        return t("effortChanged", {
+          from: effortLabel(e.from_value),
+          to: effortLabel(e.to_value),
+        });
       case "assignee_id":
-        return `a réassigné : ${memberName(ctx, e.from_value)} → ${memberName(ctx, e.to_value)}`;
+        return t("assigneeChanged", {
+          from: memberName(ctx, tr, e.from_value),
+          to: memberName(ctx, tr, e.to_value),
+        });
       case "objective_id":
-        return `a changé l'objectif : ${objectiveName(ctx, e.from_value)} → ${objectiveName(ctx, e.to_value)}`;
+        return t("objectiveChanged", {
+          from: objectiveName(ctx, tr, e.from_value),
+          to: objectiveName(ctx, tr, e.to_value),
+        });
       case "due_date":
-        return `a changé l'échéance : ${e.from_value ?? "—"} → ${e.to_value ?? "—"}`;
+        return t("dueDateChanged", {
+          from: e.from_value ?? emptyDash,
+          to: e.to_value ?? emptyDash,
+        });
       case "parent":
         return e.to_value
-          ? `a rattaché l'issue à ${issueRef(ctx, e.to_value)}`
-          : "a détaché l'issue de son parent";
+          ? t("parentAttached", { ref: issueRef(ctx, tr, e.to_value) })
+          : t("parentDetached");
       default:
-        return "a mis à jour l'issue";
+        return t("updated");
     }
   }
-  return "a mis à jour l'issue";
+  return t("updated");
 }

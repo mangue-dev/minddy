@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Command } from "cmdk";
+import { useTranslations } from "next-intl";
 import {
   Popover,
   PopoverAnchor,
@@ -16,6 +17,8 @@ import { Search } from "lucide-react";
  * compact pill, opening a results popover. Focused by pressing F or ⌘K.
  */
 export function HeaderSearchPill({ groups }: { groups: CommandMenuGroup[] }) {
+  const t = useTranslations("Nav");
+  const tc = useTranslations("Common");
   const inputRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -42,7 +45,7 @@ export function HeaderSearchPill({ groups }: { groups: CommandMenuGroup[] }) {
   }, []);
 
   return (
-    <Command shouldFilter loop label="Rechercher">
+    <Command shouldFilter loop label={tc("search")}>
       <Popover
         open={open}
         onOpenChange={(o) => {
@@ -77,7 +80,7 @@ export function HeaderSearchPill({ groups }: { groups: CommandMenuGroup[] }) {
                   inputRef.current?.blur();
                 }
               }}
-              placeholder="Rechercher…"
+              placeholder={t("searchPlaceholder")}
               className="hidden w-24 bg-transparent outline-none transition-[width] duration-200 ease-out placeholder:text-muted-foreground focus:w-56 sm:inline-block"
             />
             <Kbd className="ml-1 hidden opacity-60 sm:inline-flex">F</Kbd>
@@ -94,7 +97,7 @@ export function HeaderSearchPill({ groups }: { groups: CommandMenuGroup[] }) {
         >
           <Command.List className="max-h-[360px] overflow-y-auto p-1">
             <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-              Aucun résultat.
+              {t("noResults")}
             </Command.Empty>
             {groups.map((group) => (
               <Command.Group

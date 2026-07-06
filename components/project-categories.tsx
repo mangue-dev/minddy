@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-ui";
 import { Pencil, Plus, Trash2, Check, X } from "lucide-react";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
@@ -14,6 +15,7 @@ function Swatches({
   value: string;
   onChange: (color: string) => void;
 }) {
+  const t = useTranslations("Categories");
   return (
     <div className="flex flex-wrap gap-1.5">
       {CATEGORY_COLORS.map((c) => (
@@ -21,7 +23,7 @@ function Swatches({
           key={c}
           type="button"
           onClick={() => onChange(c)}
-          aria-label={`Couleur ${c}`}
+          aria-label={t("colorSwatchAria", { color: c })}
           className={cn(
             "size-5 rounded-full ring-offset-2 ring-offset-background transition-shadow",
             value === c && "ring-2 ring-ring"
@@ -42,6 +44,8 @@ function CategoryRow({
   onUpdate: (updates: { name?: string; color?: string }) => Promise<unknown>;
   onDelete: () => void;
 }) {
+  const t = useTranslations("Categories");
+  const tc = useTranslations("Common");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
   const [color, setColor] = useState(category.color);
@@ -70,7 +74,7 @@ function CategoryRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Annuler"
+            aria-label={tc("cancel")}
             onClick={() => {
               setEditing(false);
               setName(category.name);
@@ -79,7 +83,7 @@ function CategoryRow({
           >
             <X />
           </Button>
-          <Button size="icon-sm" aria-label="Enregistrer" disabled={saving} onClick={save}>
+          <Button size="icon-sm" aria-label={tc("save")} disabled={saving} onClick={save}>
             {saving ? <Spinner /> : <Check />}
           </Button>
         </div>
@@ -98,12 +102,12 @@ function CategoryRow({
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label="Modifier"
+        aria-label={tc("edit")}
         onClick={() => setEditing(true)}
       >
         <Pencil />
       </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="Supprimer" onClick={onDelete}>
+      <Button variant="ghost" size="icon-sm" aria-label={tc("delete")} onClick={onDelete}>
         <Trash2 />
       </Button>
     </div>
@@ -111,6 +115,10 @@ function CategoryRow({
 }
 
 export function ProjectCategories({ projectId }: { projectId: string }) {
+  const t = useTranslations("Categories");
+  const tc = useTranslations("Common");
+  const tf = useTranslations("Field");
+  const ti = useTranslations("Issue");
   const { categories, createCategory, updateCategory, deleteCategory } =
     useCategoriesQuery(projectId);
 
@@ -141,18 +149,18 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
         <div className="flex items-end gap-2">
           <div className="flex flex-1 flex-col gap-1.5">
             <label htmlFor="category-name" className="text-sm font-medium">
-              Nouvelle catégorie
+              {t("newCategoryLabel")}
             </label>
             <Input
               id="category-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Bug, Feature, Design…"
+              placeholder={t("newCategoryPlaceholder")}
             />
           </div>
           <Button type="submit" disabled={creating || !name.trim()}>
             {creating ? <Spinner /> : <Plus />}
-            Ajouter
+            {tc("add")}
           </Button>
         </div>
         <Swatches value={color} onChange={setColor} />
@@ -161,7 +169,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
       <div className="flex flex-col divide-y divide-border">
         {categories.length === 0 ? (
           <p className="py-2 text-sm text-muted-foreground">
-            Aucune catégorie pour l&apos;instant.
+            {t("emptyState", { noCategories: tf("noCategories") })}
           </p>
         ) : (
           categories.map((c) => (
@@ -180,14 +188,14 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
         onOpenChange={(next) => {
           if (!next) setToDelete(null);
         }}
-        title={toDelete ? `Supprimer « ${toDelete.name} » ?` : ""}
-        description="La catégorie est retirée de toutes les issues qui la portent."
-        confirmLabel="Supprimer"
+        title={toDelete ? t("deleteCategoryTitle", { name: toDelete.name }) : ""}
+        description={t("deleteCategoryDescription", { entityPlural: ti("entityPlural") })}
+        confirmLabel={tc("delete")}
         onConfirm={async () => {
           if (!toDelete) return;
           try {
             await deleteCategory(toDelete.id);
-            toast.success("Catégorie supprimée.");
+            toast.success(t("categoryDeleted"));
             setToDelete(null);
           } catch (err) {
             toast.error((err as Error).message);

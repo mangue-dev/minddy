@@ -3,18 +3,18 @@ import { CircleDashed, CircleDot, CheckCircle2, XCircle, type LucideIcon } from 
 // Objective status is FIXED (plan.md §6).
 export type ObjectiveStatus = "planned" | "in_progress" | "done" | "canceled";
 
+// Labels are i18n'd — resolve via useTranslations("ObjectiveStatus")(value).
 export interface ObjectiveStatusMeta {
   value: ObjectiveStatus;
-  label: string;
   icon: LucideIcon;
   color: string;
 }
 
 export const OBJECTIVE_STATUSES: ObjectiveStatusMeta[] = [
-  { value: "planned", label: "Planifié", icon: CircleDashed, color: "text-muted-foreground" },
-  { value: "in_progress", label: "En cours", icon: CircleDot, color: "text-amber-500" },
-  { value: "done", label: "Terminé", icon: CheckCircle2, color: "text-emerald-500" },
-  { value: "canceled", label: "Annulé", icon: XCircle, color: "text-muted-foreground" },
+  { value: "planned", icon: CircleDashed, color: "text-muted-foreground" },
+  { value: "in_progress", icon: CircleDot, color: "text-amber-500" },
+  { value: "done", icon: CheckCircle2, color: "text-emerald-500" },
+  { value: "canceled", icon: XCircle, color: "text-muted-foreground" },
 ];
 
 export const OBJECTIVE_STATUS_MAP: Record<ObjectiveStatus, ObjectiveStatusMeta> =

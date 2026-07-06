@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Skeleton } from "mangue-ui";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectCard, NewProjectCard } from "@/components/project-card";
@@ -13,6 +14,7 @@ const GRID_STYLE = {
 } as const;
 
 export default function HomePage() {
+  const t = useTranslations("Home");
   const { projects, loading, openCreateProject } = useProjects();
 
   return (
@@ -20,7 +22,7 @@ export default function HomePage() {
       <PendingInvitationsBanner />
 
       <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">
-        Mes Projets
+        {t("title")}
       </h1>
 
       {loading ? (

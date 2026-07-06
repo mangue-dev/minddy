@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const { data, error } = await auth.supabase
     .from("issues")
@@ -26,9 +28,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/issues/:id] get failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  if (!data) return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
+  if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
   return NextResponse.json(mapIssueRow(data));
 }
 
@@ -37,12 +39,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as Record<string, unknown>;
   const updates: Record<string, unknown> = {};
@@ -50,7 +53,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (typeof input.title === "string") {
     const title = input.title.trim();
     if (!title) {
-      return NextResponse.json({ error: "Le titre est obligatoire." }, { status: 400 });
+      return NextResponse.json({ error: t("titleRequired") }, { status: 400 });
     }
     updates.title = title;
   }
@@ -60,7 +63,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
   if ("status" in input) {
     if (!isStatus(input.status)) {
-      return NextResponse.json({ error: "Statut invalide." }, { status: 400 });
+      return NextResponse.json({ error: t("invalidStatus") }, { status: 400 });
     }
     updates.status = input.status;
     // Keep completed_at in sync with the done state.
@@ -68,13 +71,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
   if ("priority" in input) {
     if (!isPriority(input.priority)) {
-      return NextResponse.json({ error: "Priorité invalide." }, { status: 400 });
+      return NextResponse.json({ error: t("invalidPriority") }, { status: 400 });
     }
     updates.priority = input.priority;
   }
   if ("effort" in input) {
     if (input.effort !== null && !isEffort(input.effort)) {
-      return NextResponse.json({ error: "Effort invalide." }, { status: 400 });
+      return NextResponse.json({ error: t("invalidEffort") }, { status: 400 });
     }
     updates.effort = input.effort ?? null;
   }
@@ -94,19 +97,19 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
   if ("due_date" in input) {
     if (!isDateOrNull(input.due_date)) {
-      return NextResponse.json({ error: "Date invalide." }, { status: 400 });
+      return NextResponse.json({ error: t("invalidDate") }, { status: 400 });
     }
     updates.due_date = input.due_date;
   }
   if ("position" in input) {
     if (typeof input.position !== "number" || !Number.isFinite(input.position)) {
-      return NextResponse.json({ error: "Position invalide." }, { status: 400 });
+      return NextResponse.json({ error: t("invalidPosition") }, { status: 400 });
     }
     updates.position = input.position;
   }
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "Aucun champ à mettre à jour." }, { status: 400 });
+    return NextResponse.json({ error: t("noFieldsToUpdate") }, { status: 400 });
   }
 
   // Snapshot before the change so we can diff it into activity events.
@@ -129,9 +132,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("[api/issues/:id] update failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  if (!data) return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
+  if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
 
   // Activity log (best-effort, service client).
   if (before) {
@@ -193,6 +196,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const { data, error } = await auth.supabase
     .from("issues")
@@ -203,8 +207,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/issues/:id] delete failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  if (!data) return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
+  if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

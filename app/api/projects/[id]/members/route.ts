@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -16,10 +17,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const access = await getProjectAccess(auth.user.id, id);
   if (!access) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
   const service = getServiceClient();
@@ -69,14 +71,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const access = await getProjectAccess(auth.user.id, id);
   if (!access) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
   if (!access.isOwner) {
     return NextResponse.json(
-      { error: "Seul le propriétaire peut inviter." },
+      { error: t("ownerOnlyInvite") },
       { status: 403 }
     );
   }
@@ -85,12 +88,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const email = ((body as { email?: unknown })?.email ?? "");
   const normalized = typeof email === "string" ? email.trim().toLowerCase() : "";
   if (!normalized || !normalized.includes("@")) {
-    return NextResponse.json({ error: "Email invalide." }, { status: 400 });
+    return NextResponse.json({ error: t("invalidEmail") }, { status: 400 });
   }
 
   const service = getServiceClient();
@@ -100,13 +103,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   if (!memberUser) {
     return NextResponse.json(
-      { error: "Aucun compte minddy avec cet email." },
+      { error: t("noAccountForEmail") },
       { status: 404 }
     );
   }
   if (memberUser.id === access.project.owner_id) {
     return NextResponse.json(
-      { error: "Tu es déjà le propriétaire de ce Projet." },
+      { error: t("alreadyOwner") },
       { status: 409 }
     );
   }
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     .maybeSingle();
   if (existingMember) {
     return NextResponse.json(
-      { error: "Cette personne est déjà membre." },
+      { error: t("alreadyMember") },
       { status: 409 }
     );
   }
@@ -139,12 +142,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (error) {
     if (error.code === "23505") {
       return NextResponse.json(
-        { error: "Une invitation est déjà en attente pour cet email." },
+        { error: t("invitationAlreadyPending") },
         { status: 409 }
       );
     }
     console.error("[api/members] invite failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
   return NextResponse.json(invitation, { status: 201 });
@@ -155,10 +158,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const access = await getProjectAccess(auth.user.id, id);
   if (!access) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -169,7 +173,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   // Cancel a pending invitation (owner only).
   if (invitationId) {
     if (!access.isOwner) {
-      return NextResponse.json({ error: "Réservé au propriétaire." }, { status: 403 });
+      return NextResponse.json({ error: t("ownerOnly") }, { status: 403 });
     }
     const { error } = await service
       .from("project_invitations")
@@ -179,7 +183,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       .eq("status", "pending");
     if (error) {
       console.error("[api/members] cancel invite failed:", error.message);
-      return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
   }
@@ -188,7 +192,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (userId) {
     const isSelfLeave = userId === auth.user.id;
     if (!access.isOwner && !isSelfLeave) {
-      return NextResponse.json({ error: "Réservé au propriétaire." }, { status: 403 });
+      return NextResponse.json({ error: t("ownerOnly") }, { status: 403 });
     }
     const { error } = await service
       .from("project_members")
@@ -197,10 +201,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       .eq("user_id", userId);
     if (error) {
       console.error("[api/members] remove member failed:", error.message);
-      return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
   }
 
-  return NextResponse.json({ error: "Paramètre manquant." }, { status: 400 });
+  return NextResponse.json({ error: t("missingParameter") }, { status: 400 });
 }

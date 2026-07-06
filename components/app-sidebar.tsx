@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -156,14 +157,14 @@ function SidebarNav({
 
 /** The user's first name: first token of the Supabase auth display name
     (display_name / full_name / name), else the email local-part. */
-function firstNameOf(user: User | null): string {
+function firstNameOf(user: User | null, fallback: string): string {
   const meta = user?.user_metadata as
     | { display_name?: string; full_name?: string; name?: string }
     | undefined;
   const full = meta?.display_name || meta?.full_name || meta?.name;
   if (full) return full.trim().split(/\s+/)[0];
   const local = user?.email?.split("@")[0];
-  return local || "Compte";
+  return local || fallback;
 }
 
 /** 1–2 letter initials for the avatar fallback (mirrors AutoKap). */
@@ -235,9 +236,10 @@ function ThemeItem({
 }
 
 function AccountButton({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations("Nav");
   const { user, signOut } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
-  const firstName = firstNameOf(user);
+  const firstName = firstNameOf(user, t("accountFallback"));
   const meta = user?.user_metadata as
     | { avatar_url?: string; picture?: string }
     | undefined;
@@ -274,16 +276,16 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
         )}
         <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
           <UserRound />
-          Profil
+          {t("profile")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <ThemeItem value="light" icon={Sun} label="Clair" />
-        <ThemeItem value="dark" icon={Moon} label="Sombre" />
-        <ThemeItem value="system" icon={Monitor} label="Système" />
+        <ThemeItem value="light" icon={Sun} label={t("themeLight")} />
+        <ThemeItem value="dark" icon={Moon} label={t("themeDark")} />
+        <ThemeItem value="system" icon={Monitor} label={t("themeSystem")} />
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
           <LogOut />
-          Se déconnecter
+          {t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -328,19 +330,20 @@ function FooterRow({
 }
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations("Nav");
   return (
     <div className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
       <FooterRow
         icon={BarChart3}
-        label="Statistiques"
+        label={t("statistics")}
         collapsed={collapsed}
-        onClick={() => toast("Les statistiques arriveront bientôt.")}
+        onClick={() => toast(t("statisticsComingSoon"))}
       />
       <FooterRow
         icon={Megaphone}
-        label="Partager un retour"
+        label={t("shareFeedback")}
         collapsed={collapsed}
-        onClick={() => toast("Les retours arriveront bientôt.")}
+        onClick={() => toast(t("feedbackComingSoon"))}
       />
       <AccountButton collapsed={collapsed} />
     </div>
@@ -363,6 +366,7 @@ export function AppSidebar({
   sections: NavSection[];
   modeKey: string;
 }) {
+  const t = useTranslations("Nav");
   const [collapsed, setCollapsed] = useState(false);
   const reduce = useReducedMotion();
   const dx = modeKey === "home" ? -16 : 16;
@@ -392,7 +396,7 @@ export function AppSidebar({
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          aria-label={collapsed ? "Déplier la barre latérale" : "Replier la barre latérale"}
+          aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
           {collapsed ? (

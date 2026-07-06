@@ -102,6 +102,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Cross-device locale: if no NEXT_LOCALE cookie yet, seed it from the user's
+  // saved preference so the UI language follows the account, not the browser.
+  if (!request.cookies.get("NEXT_LOCALE")?.value) {
+    const metaLocale = session.user.user_metadata?.locale;
+    if (typeof metaLocale === "string") {
+      response.cookies.set("NEXT_LOCALE", metaLocale, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
+  }
+
   return response;
 }
 

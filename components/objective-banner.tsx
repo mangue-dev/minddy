@@ -1,20 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations, useFormatter } from "next-intl";
 import { Button, Progress } from "mangue-ui";
 import { Pencil, X } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
 import type { Member, Objective } from "@/lib/types";
-
-function formatDate(d: string): string {
-  return new Date(d + "T00:00:00").toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /** Header banner shown when the board is filtered to a single objective (plan §6). */
 export function ObjectiveBanner({
@@ -30,6 +23,10 @@ export function ObjectiveBanner({
   lead: Member | null;
   onEdit: () => void;
 }) {
+  const t = useTranslations("Objectives");
+  const tCommon = useTranslations("Common");
+  const tStatus = useTranslations("ObjectiveStatus");
+  const format = useFormatter();
   const status = OBJECTIVE_STATUS_MAP[objective.status];
   const StatusIcon = status.icon;
 
@@ -44,20 +41,25 @@ export function ObjectiveBanner({
         <p className="truncate font-medium">{objective.name}</p>
         <div className="mt-0.5 flex items-center gap-1.5">
           <StatusIcon className={`size-3.5 ${status.color}`} />
-          <span className="text-xs text-muted-foreground">{status.label}</span>
+          <span className="text-xs text-muted-foreground">{tStatus(status.value)}</span>
         </div>
       </div>
 
       <div className="flex w-40 flex-col gap-1">
         <Progress value={progress.percent} />
         <span className="text-xs text-muted-foreground">
-          {progress.done}/{progress.total} terminées
+          {t("completed", { done: progress.done, total: progress.total })}
         </span>
       </div>
 
       {objective.target_date && (
         <span className="text-xs text-muted-foreground">
-          Cible : {formatDate(objective.target_date)}
+          {t("targetDate")}{" "}
+          {format.dateTime(new Date(objective.target_date + "T00:00:00"), {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
         </span>
       )}
       {lead && (
@@ -72,9 +74,9 @@ export function ObjectiveBanner({
       <div className="ml-auto flex items-center gap-1">
         <Button variant="outline" size="sm" onClick={onEdit}>
           <Pencil />
-          Éditer
+          {tCommon("edit")}
         </Button>
-        <Button asChild variant="ghost" size="icon-sm" aria-label="Fermer le filtre">
+        <Button asChild variant="ghost" size="icon-sm" aria-label={t("closeFilter")}>
           <Link href={`/projects/${projectId}`}>
             <X />
           </Link>

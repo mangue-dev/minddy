@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { ListTodo } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -57,6 +58,7 @@ function writeStoredView(key: string, id: string | null) {
 }
 
 function ProjectBoard() {
+  const t = useTranslations("Board");
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const router = useRouter();
@@ -160,7 +162,7 @@ function ProjectBoard() {
     const view = await createView({ onglet, name, ...config });
     setActiveViewId(view.id);
     writeStoredView(storageKey, view.id);
-    toast.success(`Vue « ${name} » créée.`);
+    toast.success(t("viewCreated", { name }));
   };
   const handleUpdateActiveView = async () => {
     if (!activeView) return;
@@ -170,7 +172,7 @@ function ProjectBoard() {
         sort: config.sort,
         display: config.display,
       });
-      toast.success("Vue mise à jour.");
+      toast.success(t("viewUpdated"));
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -180,7 +182,7 @@ function ProjectBoard() {
   };
   const handleDeleteView = async (view: View) => {
     if (ongletViews.length <= 1) {
-      toast.error("Il faut au moins une vue.");
+      toast.error(t("needOneView"));
       return;
     }
     try {
@@ -190,7 +192,7 @@ function ProjectBoard() {
         const next = ongletViews.find((v) => v.id !== view.id);
         if (next) selectView(next.id);
       }
-      toast.success("Vue supprimée.");
+      toast.success(t("viewDeleted"));
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -211,12 +213,12 @@ function ProjectBoard() {
     seededKeyRef.current.add(storageKey);
     void createView({
       onglet,
-      name: "Toutes",
+      name: t("defaultViewName"),
       filters: {},
       sort: "manual",
       display: {},
     }).catch(() => seededKeyRef.current.delete(storageKey));
-  }, [viewsLoading, ongletViews, onglet, storageKey, createView]);
+  }, [viewsLoading, ongletViews, onglet, storageKey, createView, t]);
 
   // Restore the last-selected view for this project + onglet once its views have
   // loaded (falling back to the first view), so a saved view — its filters and
@@ -277,12 +279,12 @@ function ProjectBoard() {
   if (!project) {
     return (
       <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">Projet introuvable</h1>
+        <h1 className="font-display text-xl font-semibold">{t("projectNotFoundTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Ce Projet n&apos;existe pas ou tu n&apos;y as pas accès.
+          {t("projectNotFoundDescription")}
         </p>
         <Button asChild variant="outline">
-          <Link href="/home">Retour à l&apos;accueil</Link>
+          <Link href="/home">{t("backToHome")}</Link>
         </Button>
       </div>
     );
@@ -305,7 +307,7 @@ function ProjectBoard() {
               <ListTodo className="size-6" />
             </div>
             <p className="max-w-xs text-sm text-muted-foreground">
-              Aucune issue. Crée la première avec « Nouvelle issue » ou la touche{" "}
+              {t("noIssuesYet")}{" "}
               <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">C</kbd>.
             </p>
           </div>
@@ -349,8 +351,8 @@ function ProjectBoard() {
               <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
                 <p className="text-sm text-muted-foreground">
                   {activeObjective
-                    ? "Aucune issue dans cet objectif."
-                    : "Aucune issue ne correspond à cette vue."}
+                    ? t("noIssuesInObjective")
+                    : t("noIssuesMatchView")}
                 </p>
               </div>
             ) : (

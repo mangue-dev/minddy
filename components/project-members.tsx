@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Badge, Button, Input, Spinner, toast } from "mangue-ui";
 import { UserPlus, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -23,6 +24,8 @@ export function ProjectMembers({
   projectId: string;
   enabled: boolean;
 }) {
+  const t = useTranslations("Members");
+  const tc = useTranslations("Common");
   const { members, invitations, isOwner, loading, invite, cancelInvitation, removeMember } =
     useMembersQuery(projectId, enabled);
 
@@ -37,7 +40,7 @@ export function ProjectMembers({
     setInviting(true);
     try {
       await invite(value);
-      toast.success(`Invitation envoyée à ${value}.`);
+      toast.success(t("invitationSent", { email: value }));
       setEmail("");
     } catch (err) {
       toast.error((err as Error).message);
@@ -63,33 +66,32 @@ export function ProjectMembers({
         <form onSubmit={handleInvite} className="flex items-end gap-2">
           <div className="flex flex-1 flex-col gap-1.5">
             <label htmlFor="invite-email" className="text-sm font-medium">
-              Inviter par email
+              {t("inviteByEmail")}
             </label>
             <Input
               id="invite-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="collegue@exemple.com"
+              placeholder={t("invitePlaceholder")}
             />
           </div>
           <Button type="submit" disabled={inviting}>
             {inviting ? <Spinner /> : <UserPlus />}
-            Inviter
+            {t("invite")}
           </Button>
         </form>
       )}
       {isOwner && (
         <p className="-mt-2 text-xs text-muted-foreground">
-          L&apos;invité doit déjà avoir un compte minddy ; il verra l&apos;invitation
-          sur sa page d&apos;accueil.
+          {t("inviteHint")}
         </p>
       )}
 
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">Membres</p>
+        <p className="text-sm font-medium">{t("membersLabel")}</p>
         {loading ? (
-          <p className="py-2 text-sm text-muted-foreground">Chargement…</p>
+          <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {members.map((m) => (
@@ -104,14 +106,14 @@ export function ProjectMembers({
                   )}
                 </div>
                 {m.is_owner ? (
-                  <Badge variant="secondary">Propriétaire</Badge>
+                  <Badge variant="secondary">{t("owner")}</Badge>
                 ) : (
                   isOwner && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label="Retirer le membre"
+                      aria-label={t("removeMemberAria")}
                       disabled={busyId === m.user_id}
                       onClick={() =>
                         withBusy(m.user_id, () => removeMember(m.user_id))
@@ -129,19 +131,19 @@ export function ProjectMembers({
 
       {isOwner && invitations.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">Invitations en attente</p>
+          <p className="text-sm font-medium">{t("pendingInvitations")}</p>
           <ul className="flex flex-col divide-y divide-border">
             {invitations.map((inv) => (
               <li key={inv.id} className="flex items-center gap-3 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{inv.invited_email}</p>
                 </div>
-                <Badge variant="outline">En attente</Badge>
+                <Badge variant="outline">{t("pending")}</Badge>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Annuler l'invitation"
+                  aria-label={t("cancelInvitationAria")}
                   disabled={busyId === inv.id}
                   onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
                 >

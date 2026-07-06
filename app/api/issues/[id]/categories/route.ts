@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents, type EventRow } from "@/lib/server/issue-events";
@@ -10,12 +11,13 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const raw = (body as { category_ids?: unknown })?.category_ids;
   const requested = Array.isArray(raw)
@@ -29,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     .eq("id", id)
     .maybeSingle();
   if (!issue) {
-    return NextResponse.json({ error: "Issue introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
   }
 
   // Keep only categories that actually belong to this issue's project.
@@ -56,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     .eq("issue_id", id);
   if (delError) {
     console.error("[api/issues/:id/categories] clear failed:", delError.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
   if (valid.length > 0) {
@@ -71,7 +73,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       });
     if (insError) {
       console.error("[api/issues/:id/categories] set failed:", insError.message);
-      return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Badge,
   Button,
@@ -25,6 +26,8 @@ import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 
 export default function ProjectSettingsPage() {
+  const t = useTranslations("Settings");
+  const tc = useTranslations("Common");
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -64,9 +67,9 @@ export default function ProjectSettingsPage() {
   if (!project) {
     return (
       <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">Projet introuvable</h1>
+        <h1 className="font-display text-xl font-semibold">{t("projectNotFound")}</h1>
         <Button asChild variant="outline">
-          <Link href="/home">Retour à l&apos;accueil</Link>
+          <Link href="/home">{t("backToHome")}</Link>
         </Button>
       </div>
     );
@@ -81,17 +84,17 @@ export default function ProjectSettingsPage() {
     const trimmedName = name.trim();
     const finalKey = normalizeKey(key);
     if (!trimmedName) {
-      setError("Le nom est obligatoire.");
+      setError(t("nameRequired"));
       return;
     }
     if (!isValidKey(finalKey)) {
-      setError("La clé doit faire 2 à 5 lettres (A–Z).");
+      setError(t("keyInvalid"));
       return;
     }
     setSaving(true);
     try {
       await updateProject(project.id, { name: trimmedName, key: finalKey });
-      toast.success("Projet mis à jour.");
+      toast.success(t("projectUpdated"));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -101,7 +104,7 @@ export default function ProjectSettingsPage() {
 
   const handleDelete = async () => {
     await deleteProject(project.id);
-    toast.success(`Projet « ${project.name} » supprimé.`);
+    toast.success(t("projectDeleted", { name: project.name }));
     router.push("/home");
   };
 
@@ -110,7 +113,7 @@ export default function ProjectSettingsPage() {
     setLeaving(true);
     try {
       await removeMemberApi(project.id, user.id);
-      toast.success(`Tu as quitté « ${project.name} ».`);
+      toast.success(t("leftProject", { name: project.name }));
       refetch();
       router.push("/home");
     } catch (err) {
@@ -123,14 +126,14 @@ export default function ProjectSettingsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-8">
       <h1 className="mb-6 font-display text-xl font-semibold tracking-tight">
-        Paramètres
+        {t("title")}
       </h1>
 
       <Tabs defaultValue="general">
         <TabsList>
-          <TabsTrigger value="general">Général</TabsTrigger>
-          <TabsTrigger value="categories">Catégories</TabsTrigger>
-          <TabsTrigger value="members">Membres</TabsTrigger>
+          <TabsTrigger value="general">{t("generalTab")}</TabsTrigger>
+          <TabsTrigger value="categories">{t("categoriesTab")}</TabsTrigger>
+          <TabsTrigger value="members">{t("membersTab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="pt-4">
@@ -139,7 +142,7 @@ export default function ProjectSettingsPage() {
               <form onSubmit={handleSave} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="settings-name" className="text-sm font-medium">
-                    Nom
+                    {t("nameLabel")}
                   </label>
                   <Input
                     id="settings-name"
@@ -150,7 +153,7 @@ export default function ProjectSettingsPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="settings-key" className="text-sm font-medium">
-                    Clé
+                    {t("keyLabel")}
                   </label>
                   <Input
                     id="settings-key"
@@ -165,16 +168,16 @@ export default function ProjectSettingsPage() {
                 <div>
                   <Button type="submit" disabled={saving || !dirty}>
                     {saving && <Spinner />}
-                    Enregistrer
+                    {tc("save")}
                   </Button>
                 </div>
               </form>
 
               <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
                 <div className="text-sm">
-                  <p className="font-medium">Supprimer le Projet</p>
+                  <p className="font-medium">{t("deleteProjectLabel")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Le Projet est archivé et sa clé se libère.
+                    {t("deleteProjectHint")}
                   </p>
                 </div>
                 <Button
@@ -184,7 +187,7 @@ export default function ProjectSettingsPage() {
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 />
-                  Supprimer
+                  {tc("delete")}
                 </Button>
               </div>
             </div>
@@ -199,13 +202,13 @@ export default function ProjectSettingsPage() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Seul le propriétaire peut renommer ou supprimer ce Projet.
+                {t("ownerOnlyHint")}
               </p>
               <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
                 <div className="text-sm">
-                  <p className="font-medium">Quitter le Projet</p>
+                  <p className="font-medium">{t("leaveProjectLabel")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Tu n&apos;y auras plus accès.
+                    {t("leaveProjectHint")}
                   </p>
                 </div>
                 <Button
@@ -216,7 +219,7 @@ export default function ProjectSettingsPage() {
                   onClick={handleLeave}
                 >
                   {leaving ? <Spinner /> : <LogOut />}
-                  Quitter
+                  {t("leave")}
                 </Button>
               </div>
             </div>
@@ -235,9 +238,9 @@ export default function ProjectSettingsPage() {
       <ConfirmDeleteDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Supprimer « ${project.name} » ?`}
-        description="Cette action archive le Projet. Tu ne pourras plus y accéder."
-        confirmLabel="Supprimer le Projet"
+        title={t("deleteProjectTitle", { name: project.name })}
+        description={t("deleteProjectDescription")}
+        confirmLabel={t("deleteProjectLabel")}
         onConfirm={handleDelete}
       />
     </div>

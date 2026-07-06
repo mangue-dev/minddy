@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   // RLS issues_select scopes to accessible projects; ordering by position then
   // number gives a stable per-column order.
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/issues] list failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json((data ?? []).map(mapIssueRow));
 }
@@ -35,23 +37,24 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const access = await getProjectAccess(auth.user.id, id);
   if (!access) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as Record<string, unknown>;
 
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
-    return NextResponse.json({ error: "Le titre est obligatoire." }, { status: 400 });
+    return NextResponse.json({ error: t("titleRequired") }, { status: 400 });
   }
 
   const row: Record<string, unknown> = {
@@ -86,11 +89,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .eq("id", input.parent_id)
       .maybeSingle();
     if (!parent || parent.project_id !== id) {
-      return NextResponse.json({ error: "Issue parente introuvable." }, { status: 400 });
+      return NextResponse.json({ error: t("parentIssueNotFound") }, { status: 400 });
     }
     if (parent.parent_id) {
       return NextResponse.json(
-        { error: "Imbrication limitée à un niveau." },
+        { error: t("nestingLimitedToOneLevel") },
         { status: 400 }
       );
     }
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   });
   if (counterError || typeof number !== "number") {
     console.error("[api/issues] counter failed:", counterError?.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   row.number = number;
 
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("[api/issues] create failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
   // Attach categories (only those that belong to this project).

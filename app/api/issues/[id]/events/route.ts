@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -8,6 +9,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const { data, error } = await auth.supabase
     .from("issue_events")
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/events] list failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json(data);
 }

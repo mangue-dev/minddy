@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Spinner, toast } from "mangue-ui";
 import { Mail } from "lucide-react";
 import { useMyInvitations } from "@/lib/use-invitations-query";
 
 export function PendingInvitationsBanner() {
+  const t = useTranslations("Projects");
   const { invitations, respond } = useMyInvitations();
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -16,7 +18,7 @@ export function PendingInvitationsBanner() {
     try {
       await respond(invitationId, action);
       toast.success(
-        action === "accept" ? "Invitation acceptée." : "Invitation refusée."
+        action === "accept" ? t("invitationAccepted") : t("invitationRejected")
       );
     } catch (err) {
       toast.error((err as Error).message);
@@ -28,7 +30,7 @@ export function PendingInvitationsBanner() {
   return (
     <div className="mb-6 flex flex-col gap-2">
       {invitations.map((inv) => {
-        const inviter = inv.inviter_name || inv.inviter_email || "Quelqu'un";
+        const inviter = inv.inviter_name || inv.inviter_email || t("someone");
         const busy = busyId === inv.id;
         return (
           <div
@@ -37,8 +39,8 @@ export function PendingInvitationsBanner() {
           >
             <Mail className="size-5 shrink-0 text-muted-foreground" />
             <p className="min-w-0 flex-1 text-sm">
-              <span className="font-medium">{inviter}</span> t&apos;invite à rejoindre
-              le Projet <span className="font-medium">{inv.project_name}</span>
+              <span className="font-medium">{inviter}</span> {t("inviteText")}{" "}
+              <span className="font-medium">{inv.project_name}</span>
               {inv.project_key && (
                 <span className="ml-1 font-mono text-xs text-muted-foreground">
                   {inv.project_key}
@@ -52,11 +54,11 @@ export function PendingInvitationsBanner() {
                 disabled={busy}
                 onClick={() => handle(inv.id, "reject")}
               >
-                Refuser
+                {t("reject")}
               </Button>
               <Button size="sm" disabled={busy} onClick={() => handle(inv.id, "accept")}>
                 {busy && <Spinner />}
-                Rejoindre
+                {t("join")}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
 import { Button, Skeleton, cn } from "mangue-ui";
 import { Inbox, UserPlus, AtSign, MessageSquare } from "lucide-react";
 import { useNotifications } from "@/lib/use-notifications";
@@ -12,37 +13,34 @@ const ICONS: Record<NotificationType, typeof Inbox> = {
   comment: MessageSquare,
 };
 
-function verb(type: NotificationType): string {
-  switch (type) {
-    case "assigned":
-      return "t'a assigné";
-    case "mention":
-      return "t'a mentionné dans";
-    case "comment":
-      return "a commenté";
-  }
-}
-
-function issueRef(n: MyNotification): string {
-  if (n.project_key && n.issue_number != null) {
-    return `${n.project_key}-${n.issue_number}`;
-  }
-  return "une issue";
-}
-
-function fmt(at: string): string {
-  return new Date(at).toLocaleString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const VERB_KEYS: Record<NotificationType, string> = {
+  assigned: "verbAssigned",
+  mention: "verbMention",
+  comment: "verbComment",
+};
 
 export default function InboxPage() {
   const router = useRouter();
+  const t = useTranslations("Inbox");
+  const tIssue = useTranslations("Issue");
+  const format = useFormatter();
   const { notifications, unreadCount, loading, markRead, markAllRead } =
     useNotifications();
+
+  const issueRef = (n: MyNotification): string => {
+    if (n.project_key && n.issue_number != null) {
+      return `${n.project_key}-${n.issue_number}`;
+    }
+    return t("someIssueFallback", { entity: tIssue("entity").toLowerCase() });
+  };
+
+  const fmt = (at: string): string =>
+    format.dateTime(new Date(at), {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   const open = (n: MyNotification) => {
     if (!n.read_at) void markRead([n.id]);
@@ -54,10 +52,10 @@ export default function InboxPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Inbox</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{t("title")}</h1>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={() => void markAllRead()}>
-            Tout marquer comme lu
+            {t("markAllRead")}
           </Button>
         )}
       </div>
@@ -73,7 +71,7 @@ export default function InboxPage() {
           <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Inbox className="size-6" />
           </div>
-          <p className="text-sm text-muted-foreground">Rien de neuf. Tu es à jour.</p>
+          <p className="text-sm text-muted-foreground">{t("emptyMessage")}</p>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
@@ -97,8 +95,8 @@ export default function InboxPage() {
                 <Icon className="size-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">
-                    <span className="font-medium">{n.actor_name ?? "Quelqu'un"}</span>{" "}
-                    {verb(n.type)}{" "}
+                    <span className="font-medium">{n.actor_name ?? t("someone")}</span>{" "}
+                    {t(VERB_KEYS[n.type] as Parameters<typeof t>[0])}{" "}
                     <span className="font-mono text-xs text-muted-foreground">
                       {issueRef(n)}
                     </span>

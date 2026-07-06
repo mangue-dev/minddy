@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -15,12 +16,8 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  auth_callback_failed:
-    "Le lien de confirmation est invalide ou expiré. Réessaie de te connecter.",
-};
-
 function LoginForm() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signInWithPassword, signUpWithPassword } = useAuth();
@@ -32,8 +29,11 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const authErrorMessages: Record<string, string> = {
+    auth_callback_failed: t("callbackFailed"),
+  };
   const [error, setError] = useState<string | null>(
-    AUTH_ERROR_MESSAGES[searchParams.get("error") ?? ""] ?? null
+    authErrorMessages[searchParams.get("error") ?? ""] ?? null
   );
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ function LoginForm() {
     setNotice(null);
 
     if (isSignUp && password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("passwordMismatch"));
       return;
     }
 
@@ -61,9 +61,7 @@ function LoginForm() {
           { redirectAfter: redirectTo }
         );
         if (requiresEmailConfirmation) {
-          setNotice(
-            `On t'a envoyé un lien de confirmation à ${email}. Clique dessus pour activer ton compte.`
-          );
+          setNotice(t("confirmationSent", { email }));
           setIsSignUp(false);
           setPassword("");
           setConfirmPassword("");
@@ -91,14 +89,14 @@ function LoginForm() {
       <CardHeader>
         <CardTitle className="font-display text-2xl tracking-tight">minddy</CardTitle>
         <CardDescription>
-          {isSignUp ? "Crée ton compte pour commencer." : "Connecte-toi à ton compte."}
+          {isSignUp ? t("signupSubtitle") : t("loginSubtitle")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              {t("email")}
             </label>
             <Input
               id="email"
@@ -107,13 +105,13 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="toi@exemple.com"
+              placeholder={t("emailPlaceholder")}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium">
-              Mot de passe
+              {t("password")}
             </label>
             <Input
               id="password"
@@ -130,7 +128,7 @@ function LoginForm() {
           {isSignUp && (
             <div className="flex flex-col gap-1.5">
               <label htmlFor="confirm-password" className="text-sm font-medium">
-                Confirme le mot de passe
+                {t("confirmPassword")}
               </label>
               <Input
                 id="confirm-password"
@@ -150,18 +148,18 @@ function LoginForm() {
 
           <Button type="submit" disabled={loading} className="mt-1 w-full">
             {loading && <Spinner />}
-            {isSignUp ? "Créer mon compte" : "Se connecter"}
+            {isSignUp ? t("createAccount") : t("signIn")}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          {isSignUp ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
+          {isSignUp ? t("alreadyHaveAccount") : t("noAccountYet")}{" "}
           <button
             type="button"
             onClick={toggleMode}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
-            {isSignUp ? "Se connecter" : "Créer un compte"}
+            {isSignUp ? t("signIn") : t("createAccountLink")}
           </button>
         </p>
       </CardContent>

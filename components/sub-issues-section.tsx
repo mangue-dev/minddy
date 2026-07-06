@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Input, Progress, Spinner, cn, toast } from "mangue-ui";
 import { Plus } from "lucide-react";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -21,6 +22,9 @@ export function SubIssuesSection({
   onOpenIssue: (id: string) => void;
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
 }) {
+  const t = useTranslations("IssueUI");
+  const tIssue = useTranslations("Issue");
+  const tCommon = useTranslations("Common");
   const children = useMemo(
     () =>
       allIssues
@@ -56,7 +60,7 @@ export function SubIssuesSection({
   return (
     <div>
       <div className="mb-2 flex items-center gap-2">
-        <span className="text-sm font-medium">Sous-issues</span>
+        <span className="text-sm font-medium">{tIssue("subEntityPlural")}</span>
         {total > 0 && (
           <span className="text-xs text-muted-foreground">
             {done}/{total}
@@ -97,10 +101,10 @@ export function SubIssuesSection({
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ajouter une sous-issue…"
+          placeholder={t("addSubIssuePlaceholder")}
           className="h-8"
         />
-        <Button type="submit" size="icon-sm" disabled={adding || !title.trim()} aria-label="Ajouter">
+        <Button type="submit" size="icon-sm" disabled={adding || !title.trim()} aria-label={tCommon("add")}>
           {adding ? <Spinner /> : <Plus />}
         </Button>
       </form>

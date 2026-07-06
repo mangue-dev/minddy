@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, useFormatter } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -50,14 +51,6 @@ export function PropertyRow({
   );
 }
 
-function formatDue(due: string): string {
-  return new Date(due + "T00:00:00").toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export function StatusValue({
   value,
   onChange,
@@ -65,10 +58,12 @@ export function StatusValue({
   value: IssueStatus;
   onChange: (v: IssueStatus) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tStatus = useTranslations("Status");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Changer le statut" className={TRIGGER}>
+        <button type="button" aria-label={t("changeStatusAria")} className={TRIGGER}>
           <StatusIndicator status={value} />
         </button>
       </DropdownMenuTrigger>
@@ -76,7 +71,7 @@ export function StatusValue({
         {STATUSES.map((s) => (
           <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
             <StatusIndicator status={s.value} className="size-4" />
-            {s.label}
+            {tStatus(s.value)}
             {s.value === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
@@ -92,10 +87,12 @@ export function PriorityValue({
   value: IssuePriority;
   onChange: (v: IssuePriority) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tPriority = useTranslations("Priority");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Changer la priorité" className={TRIGGER}>
+        <button type="button" aria-label={t("changePriorityAria")} className={TRIGGER}>
           <PriorityIndicator priority={value} />
         </button>
       </DropdownMenuTrigger>
@@ -103,7 +100,7 @@ export function PriorityValue({
         {PRIORITIES.map((p) => (
           <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
             <PriorityIndicator priority={p.value} className="size-4" />
-            {p.label}
+            {tPriority(p.value)}
             {p.value === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
@@ -119,20 +116,22 @@ export function EffortValue({
   value: IssueEffort | null;
   onChange: (v: IssueEffort | null) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tCommon = useTranslations("Common");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Changer l'effort" className={TRIGGER}>
+        <button type="button" aria-label={t("changeEffortAria")} className={TRIGGER}>
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
-            <span className="text-muted-foreground">Aucun</span>
+            <span className="text-muted-foreground">{tCommon("none")}</span>
           )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Aucun
+          {tCommon("none")}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {EFFORTS.map((e) => (
@@ -155,11 +154,13 @@ export function AssigneeValue({
   members: Member[];
   onChange: (v: string | null) => void;
 }) {
+  const tField = useTranslations("Field");
+  const t = useTranslations("IssueUI");
   const current = members.find((m) => m.user_id === value) ?? null;
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Changer l'assigné" className={TRIGGER}>
+        <button type="button" aria-label={t("changeAssigneeAria")} className={TRIGGER}>
           {current ? (
             <>
               <UserAvatar
@@ -171,13 +172,13 @@ export function AssigneeValue({
               <span className="truncate">{displayName(current)}</span>
             </>
           ) : (
-            <span className="text-muted-foreground">Non assigné</span>
+            <span className="text-muted-foreground">{tField("unassigned")}</span>
           )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Non assigné
+          {tField("unassigned")}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {members.map((m) => (
@@ -206,6 +207,7 @@ export function CategoryValue({
   value: string[];
   onChange: (ids: string[]) => void;
 }) {
+  const t = useTranslations("IssueUI");
   const selected = categories.filter((c) => value.includes(c.id));
   const first = selected[0];
   const extra = selected.length - 1;
@@ -216,7 +218,7 @@ export function CategoryValue({
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Modifier les catégories" className={TRIGGER}>
+        <button type="button" aria-label={t("editCategoriesAria")} className={TRIGGER}>
           {first ? (
             <>
               <span
@@ -230,14 +232,14 @@ export function CategoryValue({
               )}
             </>
           ) : (
-            <span className="text-muted-foreground">Aucune</span>
+            <span className="text-muted-foreground">{t("noneFem")}</span>
           )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         {categories.length === 0 ? (
           <div className="px-2 py-1.5 text-sm text-muted-foreground">
-            Aucune catégorie. Crée-en dans les Paramètres.
+            {t("noCategoriesHint")}
           </div>
         ) : (
           categories.map((c) => (
@@ -270,11 +272,19 @@ export function DueDateValue({
   value: string | null;
   onChange: (v: string | null) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const format = useFormatter();
+  const formatDue = (due: string) =>
+    format.dateTime(new Date(due + "T00:00:00"), {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" aria-label="Changer l'échéance" className={TRIGGER}>
-          {value ? formatDue(value) : <span className="text-muted-foreground">Aucune</span>}
+        <button type="button" aria-label={t("changeDueDateAria")} className={TRIGGER}>
+          {value ? formatDue(value) : <span className="text-muted-foreground">{t("noneFem")}</span>}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto p-2">
@@ -291,7 +301,7 @@ export function DueDateValue({
               onClick={() => onChange(null)}
               className="text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              Retirer l&apos;échéance
+              {t("removeDueDate")}
             </button>
           )}
         </div>
@@ -309,11 +319,13 @@ export function ObjectiveValue({
   objectives: Objective[];
   onChange: (v: string | null) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tCommon = useTranslations("Common");
   const current = objectives.find((o) => o.id === value) ?? null;
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Changer l'objectif" className={TRIGGER}>
+        <button type="button" aria-label={t("changeObjectiveAria")} className={TRIGGER}>
           {current ? (
             <>
               <span
@@ -324,13 +336,13 @@ export function ObjectiveValue({
               <span className="truncate">{current.name}</span>
             </>
           ) : (
-            <span className="text-muted-foreground">Aucun</span>
+            <span className="text-muted-foreground">{tCommon("none")}</span>
           )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Aucun
+          {tCommon("none")}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {objectives.map((o) => (

@@ -18,10 +18,12 @@ export function emailLocalPart(email: string | null | undefined): string | null 
   return local || null;
 }
 
-/** Best display name for a user: display name → email handle → fallback. */
+/** Best display name for a user: display name → email handle → fallback.
+    The fallback is a last resort (user has neither name nor email); pass a
+    localized string for user-visible call sites. */
 export function displayName(
   user: NamedUser | null | undefined,
-  fallback = "Utilisateur"
+  fallback = "User"
 ): string {
   const name = user?.full_name?.trim();
   if (name) return name;

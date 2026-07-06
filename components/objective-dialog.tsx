@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Dialog,
@@ -40,6 +41,7 @@ function StatusSelect({
   value: ObjectiveStatus;
   onChange: (v: ObjectiveStatus) => void;
 }) {
+  const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
   const Icon = meta.icon;
   return (
@@ -47,7 +49,7 @@ function StatusSelect({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
           <Icon className={meta.color} />
-          {meta.label}
+          {tStatus(meta.value)}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -56,7 +58,7 @@ function StatusSelect({
           return (
             <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
               <SIcon className={s.color} />
-              {s.label}
+              {tStatus(s.value)}
               {s.value === value && <Check className="ml-auto size-4" />}
             </DropdownMenuItem>
           );
@@ -73,12 +75,13 @@ function ColorPicker({
   value: string | null;
   onChange: (v: string | null) => void;
 }) {
+  const t = useTranslations("Objectives");
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <button
         type="button"
         onClick={() => onChange(null)}
-        aria-label="Aucune couleur"
+        aria-label={t("noColor")}
         className={cn(
           "flex size-5 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
           value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
@@ -91,7 +94,7 @@ function ColorPicker({
           key={c}
           type="button"
           onClick={() => onChange(c)}
-          aria-label={`Couleur ${c}`}
+          aria-label={t("colorAria", { color: c })}
           className={cn(
             "size-5 rounded-full ring-offset-2 ring-offset-background",
             value === c && "ring-2 ring-ring"
@@ -128,6 +131,8 @@ export function ObjectiveDialog({
   onCreate: (input: CreateObjectiveInput) => Promise<unknown>;
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
 }) {
+  const t = useTranslations("Objectives");
+  const tCommon = useTranslations("Common");
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
 
@@ -163,7 +168,7 @@ export function ObjectiveDialog({
     try {
       if (objective) await onUpdate(objective.id, payload);
       else await onCreate(payload);
-      toast.success(objective ? "Objectif mis à jour." : "Objectif créé.");
+      toast.success(objective ? t("updatedToast") : t("createdToast"));
       onOpenChange(false);
     } catch (err) {
       toast.error((err as Error).message);
@@ -179,12 +184,12 @@ export function ObjectiveDialog({
         onInteractOutside={keepOverlayOpenForPopper}
       >
         <DialogHeader>
-          <DialogTitle>{objective ? "Modifier l'objectif" : "Nouvel objectif"}</DialogTitle>
+          <DialogTitle>{objective ? t("editObjectiveTitle") : t("newObjective")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="objective-name" className="text-sm font-medium">
-              Nom
+              {t("nameLabel")}
             </label>
             <Input
               id="objective-name"
@@ -192,14 +197,14 @@ export function ObjectiveDialog({
               required
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Refactor UI"
+              placeholder={t("namePlaceholder")}
             />
           </div>
 
           <textarea
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="Description (optionnelle)"
+            placeholder={t("descriptionPlaceholder")}
             rows={3}
             className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
@@ -213,7 +218,7 @@ export function ObjectiveDialog({
               value={form.lead_user_id}
               onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
               members={members}
-              emptyLabel="Sans lead"
+              emptyLabel={t("noLead")}
             />
             <DueDateField
               value={form.target_date}
@@ -223,7 +228,7 @@ export function ObjectiveDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Couleur</span>
+            <span className="text-sm font-medium">{t("colorFieldLabel")}</span>
             <ColorPicker
               value={form.color}
               onChange={(color) => setForm((f) => ({ ...f, color }))}
@@ -237,11 +242,11 @@ export function ObjectiveDialog({
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
-              Annuler
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={submitting || !form.name.trim()}>
               {submitting && <Spinner />}
-              {objective ? "Enregistrer" : "Créer"}
+              {objective ? tCommon("save") : tCommon("create")}
             </Button>
           </DialogFooter>
         </form>

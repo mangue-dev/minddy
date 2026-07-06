@@ -12,7 +12,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   }
   if (!response.ok) {
     const message =
-      (data as { error?: string } | null)?.error || text.trim() || "Requête échouée";
+      (data as { error?: string } | null)?.error || text.trim() || "Request failed";
     throw new Error(message);
   }
   return data as T;
@@ -53,7 +53,7 @@ export async function deleteCategoryApi(categoryId: string): Promise<void> {
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(
-      (data as { error?: string } | null)?.error || "Suppression échouée"
+      (data as { error?: string } | null)?.error || "Delete failed"
     );
   }
 }

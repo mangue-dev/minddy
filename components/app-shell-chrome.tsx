@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   AppShell,
   Header,
@@ -41,6 +42,8 @@ function projectIdFromPath(pathname: string): string | null {
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("Nav");
+  const ti = useTranslations("Issue");
   const pathname = usePathname();
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
@@ -61,17 +64,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const commandGroups = useMemo<CommandMenuGroup[]>(() => {
     const groups: CommandMenuGroup[] = [
       {
-        heading: "Aller à",
+        heading: t("goTo"),
         items: [
-          { key: "go-home", label: "Accueil", icon: Home, onSelect: () => router.push("/home") },
-          { key: "go-inbox", label: "Inbox", icon: Inbox, onSelect: () => router.push("/inbox") },
-          { key: "cmd-new-project", label: "Nouveau Projet", icon: Plus, onSelect: openCreateProject },
+          { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
+          { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+          { key: "cmd-new-project", label: t("newProject"), icon: Plus, onSelect: openCreateProject },
         ],
       },
     ];
     if (projects.length > 0) {
       groups.push({
-        heading: "Projets",
+        heading: t("projects"),
         items: projects.map((p) => ({
           key: `cmd-project-${p.id}`,
           label: p.name,
@@ -83,7 +86,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
     if (currentProject && projectIssues && projectIssues.length > 0) {
       groups.push({
-        heading: "Issues",
+        heading: ti("entityPlural"),
         items: projectIssues.map((i) => ({
           key: `cmd-issue-${i.id}`,
           label: i.title,
@@ -93,11 +96,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       });
     }
     return groups;
-  }, [projects, currentProject, projectIssues, router, openCreateProject]);
+  }, [projects, currentProject, projectIssues, router, openCreateProject, t, ti]);
 
   const inboxItem: NavItem = {
     key: "inbox",
-    label: "Inbox",
+    label: t("inbox"),
     icon: Inbox,
     href: "/inbox",
     active: isInbox,
@@ -116,41 +119,41 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         {
           items: [
             inboxItem,
-            { key: "home-back", label: "Accueil", icon: ChevronLeft, href: "/home" },
+            { key: "home-back", label: t("home"), icon: ChevronLeft, href: "/home" },
           ],
         },
         {
           items: [
             {
               key: "my",
-              label: "Mes tickets",
+              label: t("myIssues"),
               icon: CircleUser,
               href: `${base}/my`,
               active: pathname === `${base}/my`,
             },
             {
               key: "all",
-              label: "Tous les tickets",
+              label: t("allIssues"),
               icon: LayoutGrid,
               href: base,
               active: pathname === base,
             },
             {
               key: "objectives",
-              label: "Objectifs",
+              label: t("objectives"),
               icon: Target,
               href: `${base}/objectives`,
               active: pathname.startsWith(`${base}/objectives`),
             },
             {
               key: "triage",
-              label: "Triage",
+              label: t("triage"),
               icon: Filter,
-              onClick: () => toast("Le Triage arrive en v2."),
+              onClick: () => toast(t("triageComingSoon")),
             },
             {
               key: "settings",
-              label: "Paramètres du projet",
+              label: t("projectSettings"),
               icon: Settings,
               href: `${base}/settings`,
               active: pathname.startsWith(`${base}/settings`),
@@ -163,7 +166,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       {
         items: [
           inboxItem,
-          { key: "home", label: "Accueil", icon: Home, href: "/home", active: pathname.startsWith("/home") },
+          { key: "home", label: t("home"), icon: Home, href: "/home", active: pathname.startsWith("/home") },
         ],
       },
       {
@@ -176,7 +179,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           })),
           {
             key: "new-project",
-            label: "Nouveau Projet",
+            label: t("newProject"),
             icon: Plus,
             onClick: openCreateProject,
           },
@@ -184,7 +187,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, openCreateProject]);
+  }, [currentProject, pathname, projects, unreadCount, openCreateProject, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

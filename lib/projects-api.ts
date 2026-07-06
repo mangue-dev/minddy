@@ -14,10 +14,10 @@ async function parseJson<T>(response: Response): Promise<T> {
     const message =
       (data as { error?: string } | null)?.error ||
       text.trim() ||
-      "La requête a échoué";
+      "Request failed";
     throw new Error(message);
   }
-  if (data == null) throw new Error("Réponse vide");
+  if (data == null) throw new Error("Empty response");
   return data as T;
 }
 
@@ -53,7 +53,7 @@ export async function deleteProjectApi(id: string): Promise<void> {
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(
-      (data as { error?: string } | null)?.error || "Suppression échouée"
+      (data as { error?: string } | null)?.error || "Delete failed"
     );
   }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Dialog,
@@ -25,6 +26,9 @@ export function CreateProjectDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("Projects");
+  const tCommon = useTranslations("Common");
+  const tIssue = useTranslations("Issue");
   const { createProject } = useProjects();
 
   const [name, setName] = useState("");
@@ -58,18 +62,18 @@ export function CreateProjectDialog({
     const trimmedName = name.trim();
     const finalKey = normalizeKey(key);
     if (!trimmedName) {
-      setError("Le nom est obligatoire.");
+      setError(t("nameRequired"));
       return;
     }
     if (!isValidKey(finalKey)) {
-      setError("La clé doit faire 2 à 5 lettres (A–Z).");
+      setError(t("keyInvalid"));
       return;
     }
 
     setSubmitting(true);
     try {
       const project = await createProject({ name: trimmedName, key: finalKey });
-      toast.success(`Projet « ${project.name} » créé.`);
+      toast.success(t("projectCreated", { name: project.name }));
       handleOpenChange(false);
       router.push(`/projects/${project.id}`);
     } catch (err) {
@@ -82,17 +86,19 @@ export function CreateProjectDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nouveau Projet</DialogTitle>
+          <DialogTitle>{t("newProject")}</DialogTitle>
           <DialogDescription>
-            Un Projet est ton espace de travail. La clé préfixe les identifiants
-            d&apos;issues (ex. {key || "MIND"}-42).
+            {t("dialogDescription", {
+              entityPlural: tIssue("entityPlural").toLowerCase(),
+              key: key || "MIND",
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="project-name" className="text-sm font-medium">
-              Nom
+              {t("nameLabel")}
             </label>
             <Input
               id="project-name"
@@ -100,13 +106,13 @@ export function CreateProjectDialog({
               required
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Mon Projet"
+              placeholder={t("namePlaceholder")}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="project-key" className="text-sm font-medium">
-              Clé
+              {t("keyLabel")}
             </label>
             <Input
               id="project-key"
@@ -120,9 +126,7 @@ export function CreateProjectDialog({
               className="w-28 font-mono uppercase tracking-wide"
               maxLength={5}
             />
-            <p className="text-xs text-muted-foreground">
-              2 à 5 lettres, unique dans ton compte.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("keyHint")}</p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -134,11 +138,11 @@ export function CreateProjectDialog({
               onClick={() => handleOpenChange(false)}
               disabled={submitting}
             >
-              Annuler
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={submitting}>
               {submitting && <Spinner />}
-              Créer le Projet
+              {t("createProjectButton")}
             </Button>
           </DialogFooter>
         </form>

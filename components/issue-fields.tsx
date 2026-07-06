@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
@@ -12,9 +13,7 @@ import {
 import { Check, UserCircle2, CalendarDays, Triangle, Target, GitMerge } from "lucide-react";
 import {
   STATUSES,
-  STATUS_MAP,
   PRIORITIES,
-  PRIORITY_MAP,
   EFFORTS,
   EFFORT_MAP,
   issueIdentifier,
@@ -42,18 +41,19 @@ export function ObjectivePicker({
   objectives: Objective[];
   size?: "sm" | "default";
 }) {
+  const tField = useTranslations("Field");
   const current = objectives.find((o) => o.id === value) ?? null;
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <Target className="text-muted-foreground" />
-          {current ? current.name : "Aucun objectif"}
+          {current ? current.name : tField("noObjective")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-52">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Aucun objectif
+          {tField("noObjective")}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {objectives.map((o) => (
@@ -81,20 +81,20 @@ export function StatusPicker({
   onChange: (v: IssueStatus) => void;
   size?: "sm" | "default";
 }) {
-  const meta = STATUS_MAP[value];
+  const tStatus = useTranslations("Status");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <StatusIndicator status={value} className="size-4" />
-          {meta.label}
+          {tStatus(value)}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         {STATUSES.map((s) => (
           <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
             <StatusIndicator status={s.value} className="size-4" />
-            {s.label}
+            {tStatus(s.value)}
             {s.value === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
@@ -112,20 +112,20 @@ export function PriorityPicker({
   onChange: (v: IssuePriority) => void;
   size?: "sm" | "default";
 }) {
-  const meta = PRIORITY_MAP[value];
+  const tPriority = useTranslations("Priority");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <PriorityIndicator priority={value} className="size-4" />
-          {meta.label}
+          {tPriority(value)}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         {PRIORITIES.map((p) => (
           <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
             <PriorityIndicator priority={p.value} className="size-4" />
-            {p.label}
+            {tPriority(p.value)}
             {p.value === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
@@ -143,17 +143,19 @@ export function EffortPicker({
   onChange: (v: IssueEffort | null) => void;
   size?: "sm" | "default";
 }) {
+  const tField = useTranslations("Field");
+  const tCommon = useTranslations("Common");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <Triangle className="text-muted-foreground" />
-          {value ? EFFORT_MAP[value].label : "Effort"}
+          {value ? EFFORT_MAP[value].label : tField("effort")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-40">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Aucun
+          {tCommon("none")}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {EFFORTS.map((e) => (
@@ -172,7 +174,7 @@ export function AssigneePicker({
   onChange,
   members,
   size = "sm",
-  emptyLabel = "Non assigné",
+  emptyLabel,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
@@ -180,18 +182,20 @@ export function AssigneePicker({
   size?: "sm" | "default";
   emptyLabel?: string;
 }) {
+  const tField = useTranslations("Field");
   const current = members.find((m) => m.user_id === value) ?? null;
+  const empty = emptyLabel ?? tField("unassigned");
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <UserCircle2 className="text-muted-foreground" />
-          {current ? memberLabel(current) : emptyLabel}
+          {current ? memberLabel(current) : empty}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-52">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          {emptyLabel}
+          {empty}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {members.map((m) => (
@@ -225,6 +229,7 @@ export function ParentPicker({
   projectKey: string;
   size?: "sm" | "default";
 }) {
+  const tField = useTranslations("Field");
   const current = options.find((o) => o.id === value) ?? null;
   return (
     <DropdownMenu modal={false}>
@@ -233,12 +238,12 @@ export function ParentPicker({
           <GitMerge className="text-muted-foreground" />
           {current
             ? issueIdentifier(projectKey, current.number)
-            : "Aucun parent"}
+            : tField("noParent")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Aucun parent
+          {tField("noParent")}
           {value === null && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {options.map((o) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Dialog,
@@ -60,14 +61,7 @@ import type {
   ViewSort,
 } from "@/lib/types";
 
-const SORT_LABELS: Record<ViewSort, string> = {
-  manual: "Manuel",
-  priority: "Priorité",
-  created: "Création",
-  updated: "Mise à jour",
-  due: "Échéance",
-};
-const SORTS = Object.keys(SORT_LABELS) as ViewSort[];
+const SORTS: ViewSort[] = ["manual", "priority", "created", "updated", "due"];
 
 function toggle<T>(arr: T[] | undefined, value: T): T[] {
   const set = new Set(arr ?? []);
@@ -114,21 +108,26 @@ function FiltersPopover({
   const setFilters = (next: ViewFilters) =>
     onChange({ ...config, filters: next });
   const count = activeFilterCount(config);
+  const t = useTranslations("Board");
+  const tc = useTranslations("Common");
+  const tf = useTranslations("Field");
+  const ts = useTranslations("Status");
+  const tp = useTranslations("Priority");
 
   return (
     <Popover>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon-sm" aria-label="Filtres">
+            <Button variant="outline" size="icon-sm" aria-label={tc("filters")}>
               <ListFilter className={cn(count > 0 && "text-primary")} />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent>Filtres</TooltipContent>
+        <TooltipContent>{tc("filters")}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="max-h-[70vh] w-64 overflow-y-auto p-2">
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Statut</p>
+        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("status")}</p>
         {STATUSES.map((s) => (
           <ToggleRow
             key={s.value}
@@ -138,12 +137,12 @@ function FiltersPopover({
             }
           >
             <StatusIndicator status={s.value} className="size-4" />
-            {s.label}
+            {ts(s.value)}
           </ToggleRow>
         ))}
 
         <Separator className="my-1.5" />
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Priorité</p>
+        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("priority")}</p>
         {PRIORITIES.map((p) => (
           <ToggleRow
             key={p.value}
@@ -156,17 +155,17 @@ function FiltersPopover({
             }
           >
             <PriorityIndicator priority={p.value} className="size-4" />
-            {p.label}
+            {tp(p.value)}
           </ToggleRow>
         ))}
 
         <Separator className="my-1.5" />
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Assigné</p>
+        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("assignee")}</p>
         <ToggleRow
           active={!!f.assignee?.includes(null)}
           onClick={() => setFilters({ ...f, assignee: toggle(f.assignee, null) })}
         >
-          Non assigné
+          {tf("unassigned")}
         </ToggleRow>
         {members.map((m) => (
           <ToggleRow
@@ -181,7 +180,7 @@ function FiltersPopover({
         ))}
 
         <Separator className="my-1.5" />
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Effort</p>
+        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("effort")}</p>
         {EFFORTS.map((e) => (
           <ToggleRow
             key={e.value}
@@ -199,7 +198,7 @@ function FiltersPopover({
           <>
             <Separator className="my-1.5" />
             <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              Catégorie
+              {tf("categories")}
             </p>
             {categories.map((c) => (
               <ToggleRow
@@ -224,7 +223,7 @@ function FiltersPopover({
           <>
             <Separator className="my-1.5" />
             <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              Objectif
+              {tf("objective")}
             </p>
             <ToggleRow
               active={!!f.objective?.includes(null)}
@@ -232,7 +231,7 @@ function FiltersPopover({
                 setFilters({ ...f, objective: toggle(f.objective, null) })
               }
             >
-              Sans objectif
+              {tf("noObjective")}
             </ToggleRow>
             {objectives.map((o) => (
               <ToggleRow
@@ -263,7 +262,7 @@ function FiltersPopover({
             })
           }
         >
-          Masquer les terminées
+          {t("hideDone")}
         </ToggleRow>
       </PopoverContent>
     </Popover>
@@ -285,6 +284,8 @@ function ViewNameDialog({
 }) {
   const [name, setName] = useState(initialName);
   const [busy, setBusy] = useState(false);
+  const tc = useTranslations("Common");
+  const t = useTranslations("Board");
 
   return (
     <Dialog
@@ -319,11 +320,11 @@ function ViewNameDialog({
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Nom de la vue"
+            placeholder={t("viewNamePlaceholder")}
           />
           <DialogFooter>
             <Button type="submit" disabled={busy || !name.trim()}>
-              Enregistrer
+              {tc("save")}
             </Button>
           </DialogFooter>
         </form>
@@ -363,6 +364,10 @@ export function BoardToolbar({
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
+  const t = useTranslations("Board");
+  const tc = useTranslations("Common");
+  const tf = useTranslations("Field");
+  const tSort = useTranslations("Sort");
 
   const activeView = views.find((v) => v.id === activeViewId) ?? null;
 
@@ -387,13 +392,13 @@ export function BoardToolbar({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label="Nouvelle vue"
+                aria-label={t("newView")}
                 onClick={() => setCreateOpen(true)}
               >
                 <Plus />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Nouvelle vue</TooltipContent>
+            <TooltipContent>{t("newView")}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -401,13 +406,13 @@ export function BoardToolbar({
           {dirty && activeView && (
             <Button size="sm" onClick={() => void onUpdateActiveView()}>
               <Save />
-              Enregistrer
+              {tc("save")}
             </Button>
           )}
           {dirty && !activeView && (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Save />
-              Enregistrer comme vue
+              {t("saveAsView")}
             </Button>
           )}
 
@@ -416,14 +421,14 @@ export function BoardToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon-sm" aria-label="Ordre">
+                  <Button variant="outline" size="icon-sm" aria-label={tf("order")}>
                     <ArrowUpDown
                       className={cn(config.sort !== "manual" && "text-primary")}
                     />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>Ordre</TooltipContent>
+              <TooltipContent>{tf("order")}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">
               {SORTS.map((s) => (
@@ -431,7 +436,7 @@ export function BoardToolbar({
                   key={s}
                   onSelect={() => onConfigChange({ ...config, sort: s })}
                 >
-                  {SORT_LABELS[s]}
+                  {tSort(s)}
                   {config.sort === s && <Check className="ml-auto size-4" />}
                 </DropdownMenuItem>
               ))}
@@ -452,7 +457,7 @@ export function BoardToolbar({
       <ViewNameDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Nouvelle vue"
+        title={t("newView")}
         initialName=""
         onSubmit={onCreateView}
       />
@@ -461,7 +466,7 @@ export function BoardToolbar({
         onOpenChange={(open) => {
           if (!open) setRenameTarget(null);
         }}
-        title="Renommer la vue"
+        title={t("renameViewTitle")}
         initialName={renameTarget?.name ?? ""}
         onSubmit={(name) =>
           renameTarget ? onRenameView(renameTarget, name) : Promise.resolve()
@@ -487,6 +492,8 @@ function ViewChip({
   onDelete: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const t = useTranslations("Board");
+  const tc = useTranslations("Common");
   return (
     <div
       className={cn(
@@ -511,7 +518,7 @@ function ViewChip({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label={`Options de « ${view.name} »`}
+            aria-label={t("viewOptions", { name: view.name })}
             className={cn(
               "absolute inset-y-0 right-0 flex items-center rounded-r-full pr-1.5 pl-2.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
               menuOpen && "opacity-100",
@@ -524,12 +531,12 @@ function ViewChip({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={onSelect}>
             <Eye />
-            Ouvrir la vue
+            {t("openView")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={onRename}>
             <Pencil />
-            Renommer
+            {tc("rename")}
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
@@ -537,7 +544,7 @@ function ViewChip({
             onSelect={onDelete}
           >
             <Trash2 />
-            Supprimer
+            {tc("delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

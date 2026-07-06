@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -9,6 +10,7 @@ import type { MyNotification } from "@/lib/types";
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   // RLS scopes to the caller's own notifications.
   const { data: notifs, error } = await auth.supabase
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("[api/notifications] list failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!notifs || notifs.length === 0) return NextResponse.json([]);
 
@@ -68,12 +70,13 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const { ids, all } = (body ?? {}) as { ids?: unknown; all?: unknown };
   const now = new Date().toISOString();
@@ -85,13 +88,13 @@ export async function PATCH(request: NextRequest) {
   } else if (Array.isArray(ids) && ids.length > 0) {
     query = query.in("id", ids.filter((v): v is string => typeof v === "string"));
   } else {
-    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
   const { error } = await query;
   if (error) {
     console.error("[api/notifications] mark read failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

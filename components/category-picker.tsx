@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
 } from "mangue-ui";
 import { Check, Tag } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { CategoryPill } from "@/components/category-pill";
 import type { Category } from "@/lib/types";
 
@@ -25,6 +26,9 @@ export function CategoryPicker({
   onChange: (ids: string[]) => void;
 }) {
   const selected = categories.filter((c) => value.includes(c.id));
+  const t = useTranslations("Board");
+  const tc = useTranslations("Common");
+  const tf = useTranslations("Field");
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -39,13 +43,13 @@ export function CategoryPicker({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             <Tag />
-            {selected.length === 0 ? "Catégories" : "Ajouter"}
+            {selected.length === 0 ? tf("categories") : tc("add")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52">
           {categories.length === 0 ? (
             <div className="px-2 py-1.5 text-sm text-muted-foreground">
-              Aucune catégorie. Crée-en dans les Paramètres.
+              {tf("noCategories")} {t("createInSettings")}
             </div>
           ) : (
             categories.map((c) => (

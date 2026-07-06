@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider, Toaster } from "mangue-ui";
 import "./globals.css";
 
@@ -12,22 +14,29 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "minddy",
-  description: "Ticketing app built on mangue-ui.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Meta");
+  return {
+    title: "minddy",
+    description: t("description"),
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
         <ThemeProvider defaultTheme="dark">
-          {children}
-          <Toaster />
+          <NextIntlClientProvider messages={messages}>
+            {children}
+            <Toaster />
+          </NextIntlClientProvider>
         </ThemeProvider>
       </body>
     </html>

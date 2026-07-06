@@ -8,6 +8,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Button,
   ConfirmDeleteDialog,
@@ -31,6 +32,10 @@ import { ObjectiveDialog } from "@/components/objective-dialog";
 import type { Objective } from "@/lib/types";
 
 function ObjectivesInner() {
+  const t = useTranslations("Objectives");
+  const tCommon = useTranslations("Common");
+  const tIssue = useTranslations("Issue");
+  const tStatus = useTranslations("ObjectiveStatus");
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const pathname = usePathname();
@@ -74,9 +79,9 @@ function ObjectivesInner() {
   if (!project) {
     return (
       <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">Projet introuvable</h1>
+        <h1 className="font-display text-xl font-semibold">{t("projectNotFound")}</h1>
         <Button asChild variant="outline">
-          <Link href="/home">Retour à l&apos;accueil</Link>
+          <Link href="/home">{t("backToHome")}</Link>
         </Button>
       </div>
     );
@@ -96,7 +101,7 @@ function ObjectivesInner() {
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-5xl">
           <h1 className="mb-5 font-display text-xl font-semibold tracking-tight">
-            Objectifs
+            {t("title")}
           </h1>
           {loading ? (
             <div className="flex flex-col gap-2">
@@ -110,11 +115,11 @@ function ObjectivesInner() {
                 <Target className="size-6" />
               </div>
               <p className="max-w-xs text-sm text-muted-foreground">
-                Aucun objectif. Regroupe des issues autour d&apos;un but commun.
+                {t("emptyState", { issues: tIssue("entityPlural").toLowerCase() })}
               </p>
               <Button onClick={openCreate}>
                 <Plus />
-                Nouvel objectif
+                {t("newObjective")}
               </Button>
             </div>
           ) : (
@@ -142,7 +147,7 @@ function ObjectivesInner() {
                         <div className="mt-1 flex items-center gap-2">
                           <StatusIcon className={`size-3.5 ${status.color}`} />
                           <span className="text-xs text-muted-foreground">
-                            {status.label}
+                            {tStatus(status.value)}
                           </span>
                         </div>
                       </div>
@@ -163,21 +168,21 @@ function ObjectivesInner() {
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" aria-label="Gérer">
+                        <Button variant="ghost" size="icon-sm" aria-label={tCommon("manage")}>
                           <MoreHorizontal />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={() => openEdit(obj)}>
                           <Pencil />
-                          Modifier
+                          {tCommon("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           variant="destructive"
                           onSelect={() => setToDelete(obj)}
                         >
                           <Trash2 />
-                          Supprimer
+                          {tCommon("delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -203,14 +208,16 @@ function ObjectivesInner() {
         onOpenChange={(next) => {
           if (!next) setToDelete(null);
         }}
-        title={toDelete ? `Supprimer « ${toDelete.name} » ?` : ""}
-        description="Les issues liées ne sont pas supprimées : elles sont détachées de l'objectif."
-        confirmLabel="Supprimer"
+        title={toDelete ? t("deleteConfirmTitle", { name: toDelete.name }) : ""}
+        description={t("deleteConfirmDescription", {
+          issues: tIssue("entityPlural").toLowerCase(),
+        })}
+        confirmLabel={tCommon("delete")}
         onConfirm={async () => {
           if (!toDelete) return;
           try {
             await deleteObjective(toDelete.id);
-            toast.success("Objectif supprimé.");
+            toast.success(t("deletedToast"));
             setToDelete(null);
           } catch (err) {
             toast.error((err as Error).message);

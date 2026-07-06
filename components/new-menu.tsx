@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
@@ -18,6 +19,8 @@ function projectIdFromPath(pathname: string): string | null {
 
 /** Header "Nouveau" primary button → create dropdown (issue / project / objective). */
 export function NewMenu() {
+  const t = useTranslations("Nav");
+  const ti = useTranslations("Issue");
   const pathname = usePathname();
   const router = useRouter();
   const { openCreateProject } = useProjects();
@@ -28,7 +31,7 @@ export function NewMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="sm" className="group gap-1.5">
-          Nouveau
+          {t("new")}
           <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
         </Button>
       </DropdownMenuTrigger>
@@ -38,7 +41,7 @@ export function NewMenu() {
           onSelect={() => projectId && router.push(`/projects/${projectId}?new=issue`)}
         >
           <ListTodo />
-          Nouvelle issue
+          {t("newIssue", { entity: ti("entity") })}
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!projectId}
@@ -47,11 +50,11 @@ export function NewMenu() {
           }
         >
           <Target />
-          Nouvel objectif
+          {t("newObjective")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={openCreateProject}>
           <FolderPlus />
-          Nouveau Projet
+          {t("newProject")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

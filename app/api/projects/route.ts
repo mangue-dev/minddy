@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 
@@ -6,6 +7,7 @@ import { isValidKey, normalizeKey } from "@/lib/project-key";
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   // RLS "projects_select" already scopes this to owner ∪ member.
   const { data, error } = await auth.supabase
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("[api/projects] list failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json(data);
 }
@@ -25,12 +27,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as Record<string, unknown>;
 
@@ -39,11 +42,11 @@ export async function POST(request: NextRequest) {
   const color = typeof input.color === "string" ? input.color : null;
 
   if (!name) {
-    return NextResponse.json({ error: "Le nom est obligatoire." }, { status: 400 });
+    return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
   }
   if (!isValidKey(key)) {
     return NextResponse.json(
-      { error: "La clé doit faire 2 à 5 lettres (A–Z)." },
+      { error: t("invalidProjectKey") },
       { status: 400 }
     );
   }
@@ -57,12 +60,12 @@ export async function POST(request: NextRequest) {
   if (error) {
     if (error.code === "23505") {
       return NextResponse.json(
-        { error: `Tu as déjà un Projet avec la clé ${key}.` },
+        { error: t("projectKeyTaken", { key }) },
         { status: 409 }
       );
     }
     console.error("[api/projects] create failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json(data, { status: 201 });
 }

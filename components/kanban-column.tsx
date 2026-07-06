@@ -4,6 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
 import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
 import { IssueCard } from "@/components/issue-card";
@@ -31,12 +32,14 @@ export function KanbanColumn({
   onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
+  const t = useTranslations("Board");
+  const ts = useTranslations("Status");
 
   return (
     <div className="flex w-[22rem] shrink-0 flex-col">
       <div className="mb-2 flex items-center gap-2 px-1">
         <StatusIndicator status={status.value} className="size-4" />
-        <h2 className="text-sm font-semibold">{status.label}</h2>
+        <h2 className="text-sm font-semibold">{ts(status.value)}</h2>
         <span className="text-xs text-muted-foreground">{issues.length}</span>
       </div>
 
@@ -71,7 +74,7 @@ export function KanbanColumn({
           className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
         >
           <Plus className="size-4" />
-          Nouvelle issue
+          {t("newIssue")}
         </button>
       </div>
     </div>

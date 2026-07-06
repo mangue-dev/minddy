@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslations, useFormatter } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -33,13 +34,6 @@ import {
   EffortIndicator,
 } from "@/components/issue-indicators";
 import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
-
-function formatDue(due: string): string {
-  return new Date(due + "T00:00:00").toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-  });
-}
 
 /** Strip common markdown so the description preview reads as plain text. */
 function plainPreview(md: string): string {
@@ -77,6 +71,9 @@ function StatusPick({
   value: IssueStatus;
   onChange?: (v: IssueStatus) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const tStatus = useTranslations("Status");
   if (!onChange) return <StatusIndicator status={value} />;
   return (
     <DropdownMenu modal={false}>
@@ -85,7 +82,7 @@ function StatusPick({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Changer le statut"
+              aria-label={t("changeStatusAria")}
               onClick={stop}
               onPointerDown={stop}
               className={TRIGGER_CLASS}
@@ -94,7 +91,7 @@ function StatusPick({
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Statut</TooltipContent>
+        <TooltipContent>{tField("status")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent
         align="start"
@@ -105,7 +102,7 @@ function StatusPick({
         {STATUSES.map((s) => (
           <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
             <StatusIndicator status={s.value} className="size-4" />
-            {s.label}
+            {tStatus(s.value)}
             {s.value === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
@@ -121,6 +118,9 @@ function PriorityPick({
   value: IssuePriority;
   onChange?: (v: IssuePriority) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const tPriority = useTranslations("Priority");
   if (!onChange) return <PriorityIndicator priority={value} />;
   return (
     <DropdownMenu modal={false}>
@@ -129,7 +129,7 @@ function PriorityPick({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Changer la priorité"
+              aria-label={t("changePriorityAria")}
               onClick={stop}
               onPointerDown={stop}
               className={TRIGGER_CLASS_LG}
@@ -138,7 +138,7 @@ function PriorityPick({
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Priorité</TooltipContent>
+        <TooltipContent>{tField("priority")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent
         align="start"
@@ -149,7 +149,7 @@ function PriorityPick({
         {PRIORITIES.map((p) => (
           <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
             <PriorityIndicator priority={p.value} className="size-4" />
-            {p.label}
+            {tPriority(p.value)}
             {p.value === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
@@ -165,6 +165,9 @@ function EffortPick({
   value: IssueEffort | null;
   onChange?: (v: IssueEffort | null) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const tCommon = useTranslations("Common");
   const display = value ? (
     <EffortIndicator effort={value} />
   ) : (
@@ -181,7 +184,7 @@ function EffortPick({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Changer l'effort"
+              aria-label={t("changeEffortAria")}
               onClick={stop}
               onPointerDown={stop}
               className={TRIGGER_CLASS_LG}
@@ -190,7 +193,7 @@ function EffortPick({
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Effort</TooltipContent>
+        <TooltipContent>{tField("effort")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent
         align="start"
@@ -198,7 +201,7 @@ function EffortPick({
         onClick={stop}
         onPointerDown={stop}
       >
-        <DropdownMenuItem onSelect={() => onChange(null)}>Aucun</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onChange(null)}>{tCommon("none")}</DropdownMenuItem>
         {EFFORTS.map((e) => (
           <DropdownMenuItem key={e.value} onSelect={() => onChange(e.value)}>
             {e.label}
@@ -219,6 +222,8 @@ function CategoryPick({
   selectedIds: string[];
   onChange?: (ids: string[]) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const selected = categories.filter((c) => selectedIds.includes(c.id));
   const first = selected[0];
   const extra = Math.max(0, selected.length - 1);
@@ -233,7 +238,7 @@ function CategoryPick({
       {extra > 0 && <span className="shrink-0 text-muted-foreground">+{extra}</span>}
     </span>
   ) : (
-    <span className="text-xs text-muted-foreground/60">Aucun</span>
+    <span className="text-xs text-muted-foreground/60">{t("noneFem")}</span>
   );
   if (!onChange) return display;
 
@@ -251,7 +256,7 @@ function CategoryPick({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Modifier les catégories"
+              aria-label={t("editCategoriesAria")}
               onClick={stop}
               onPointerDown={stop}
               className={TRIGGER_CLASS_LG}
@@ -260,7 +265,7 @@ function CategoryPick({
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Catégories</TooltipContent>
+        <TooltipContent>{tField("categories")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent
         align="end"
@@ -270,7 +275,7 @@ function CategoryPick({
       >
         {categories.length === 0 ? (
           <div className="px-2 py-1.5 text-sm text-muted-foreground">
-            Aucune catégorie. Crée-en dans les Paramètres.
+            {t("noCategoriesHint")}
           </div>
         ) : (
           categories.map((c) => (
@@ -305,6 +310,8 @@ function AssigneePick({
   members: Member[];
   onChange?: (id: string | null) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const avatar = assignee ? (
     <UserAvatar
       url={assignee.avatar_url}
@@ -316,7 +323,7 @@ function AssigneePick({
   ) : (
     <span
       className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
-      title="Non assigné"
+      title={tField("unassigned")}
     >
       <User className="size-3.5" />
     </span>
@@ -329,7 +336,7 @@ function AssigneePick({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Changer l'assigné"
+              aria-label={t("changeAssigneeAria")}
               onClick={stop}
               onPointerDown={stop}
               className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
@@ -338,7 +345,7 @@ function AssigneePick({
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Assigné</TooltipContent>
+        <TooltipContent>{tField("assignee")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent
         align="end"
@@ -347,7 +354,7 @@ function AssigneePick({
         onPointerDown={stop}
       >
         <DropdownMenuItem onSelect={() => onChange(null)}>
-          Non assigné
+          {tField("unassigned")}
           {!assignee && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {members.map((m) => (
@@ -376,10 +383,13 @@ function DueDatePick({
   value: string;
   onChange?: (v: string | null) => void;
 }) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const format = useFormatter();
   const display = (
     <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
       <Calendar className="size-3 shrink-0" />
-      {formatDue(value)}
+      {format.dateTime(new Date(value + "T00:00:00"), { day: "numeric", month: "short" })}
     </span>
   );
   if (!onChange) return display;
@@ -390,7 +400,7 @@ function DueDatePick({
           <PopoverTrigger asChild>
             <button
               type="button"
-              aria-label="Changer l'échéance"
+              aria-label={t("changeDueDateAria")}
               onClick={stop}
               onPointerDown={stop}
               className="-m-1 flex items-center rounded-md p-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
@@ -399,7 +409,7 @@ function DueDatePick({
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent>Échéance</TooltipContent>
+        <TooltipContent>{tField("dueDate")}</TooltipContent>
       </Tooltip>
       <PopoverContent
         align="end"
@@ -419,7 +429,7 @@ function DueDatePick({
             onClick={() => onChange(null)}
             className="text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Retirer l&apos;échéance
+            {t("removeDueDate")}
           </button>
         </div>
       </PopoverContent>

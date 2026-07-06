@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Dialog,
@@ -59,6 +60,8 @@ export function CreateIssueDialog({
   /** Preset the objective (when creating from an objective-filtered board). */
   initialObjectiveId?: string | null;
 }) {
+  const t = useTranslations("IssueUI");
+  const tCommon = useTranslations("Common");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
@@ -99,7 +102,7 @@ export function CreateIssueDialog({
         ...fields,
         category_ids: categoryIds,
       });
-      toast.success("Issue créée.");
+      toast.success(t("issueCreatedToast"));
       if (keepOpen) {
         // Rapid entry: keep the same field defaults, clear the title.
         setTitle("");
@@ -121,7 +124,7 @@ export function CreateIssueDialog({
         onInteractOutside={keepOverlayOpenForPopper}
       >
         <DialogHeader>
-          <DialogTitle>Nouvelle issue</DialogTitle>
+          <DialogTitle>{t("newIssueTitle")}</DialogTitle>
         </DialogHeader>
 
         <form
@@ -142,13 +145,13 @@ export function CreateIssueDialog({
                 void submit(true);
               }
             }}
-            placeholder="Titre de l'issue"
+            placeholder={t("titlePlaceholder")}
             className="h-11 border-0 px-0 text-base shadow-none focus-visible:ring-0 md:text-base"
           />
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description (optionnelle)"
+            placeholder={t("descriptionOptionalPlaceholder")}
             rows={3}
             className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
@@ -193,7 +196,7 @@ export function CreateIssueDialog({
 
           <DialogFooter className="items-center">
             <span className="mr-auto text-xs text-muted-foreground">
-              ⏎ pour créer · ⇧⏎ pour en enchaîner
+              {t("createShortcutsHint")}
             </span>
             <Button
               type="button"
@@ -201,11 +204,11 @@ export function CreateIssueDialog({
               onClick={() => handleOpenChange(false)}
               disabled={submitting}
             >
-              Annuler
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={submitting || !title.trim()}>
               {submitting && <Spinner />}
-              Créer
+              {tCommon("create")}
             </Button>
           </DialogFooter>
         </form>

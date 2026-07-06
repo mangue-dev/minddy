@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const { data, error } = await auth.supabase
     .from("comments")
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/comments] list failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json(data);
 }
@@ -33,17 +35,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as { body?: unknown; mentioned_user_ids?: unknown };
   const text = typeof input.body === "string" ? input.body.trim() : "";
   if (!text) {
-    return NextResponse.json({ error: "Le commentaire est vide." }, { status: 400 });
+    return NextResponse.json({ error: t("commentEmpty") }, { status: 400 });
   }
   const mentioned = Array.isArray(input.mentioned_user_ids)
     ? input.mentioned_user_ids.filter((v): v is string => typeof v === "string")
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/comments] create failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
   // Notifications: @mentions + "comment on an issue I own/am assigned".

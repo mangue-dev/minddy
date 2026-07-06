@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 
@@ -9,6 +10,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const { data, error } = await auth.supabase
     .from("projects")
@@ -19,10 +21,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/projects/:id] get failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
   return NextResponse.json(data);
 }
@@ -32,12 +34,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as Record<string, unknown>;
 
@@ -45,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (typeof input.name === "string") {
     const name = input.name.trim();
     if (!name) {
-      return NextResponse.json({ error: "Le nom est obligatoire." }, { status: 400 });
+      return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
     }
     updates.name = name;
   }
@@ -53,7 +56,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const key = normalizeKey(input.key);
     if (!isValidKey(key)) {
       return NextResponse.json(
-        { error: "La clé doit faire 2 à 5 lettres (A–Z)." },
+        { error: t("invalidProjectKey") },
         { status: 400 }
       );
     }
@@ -64,7 +67,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "Aucun champ à mettre à jour." }, { status: 400 });
+    return NextResponse.json({ error: t("noFieldsToUpdate") }, { status: 400 });
   }
 
   const { data, error } = await auth.supabase
@@ -78,16 +81,16 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (error) {
     if (error.code === "23505") {
       return NextResponse.json(
-        { error: `Tu as déjà un Projet avec cette clé.` },
+        { error: t("projectKeyAlreadyUsed") },
         { status: 409 }
       );
     }
     console.error("[api/projects/:id] update failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   // No row → not found, or RLS blocked it (not the owner).
   if (!data) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
   return NextResponse.json(data);
 }
@@ -97,6 +100,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const { data, error } = await auth.supabase
     .from("projects")
@@ -108,10 +112,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   if (error) {
     console.error("[api/projects/:id] delete failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) {
-    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
   return NextResponse.json({ ok: true });
 }

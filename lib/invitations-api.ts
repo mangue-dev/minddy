@@ -12,7 +12,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   }
   if (!response.ok) {
     const message =
-      (data as { error?: string } | null)?.error || text.trim() || "Requête échouée";
+      (data as { error?: string } | null)?.error || text.trim() || "Request failed";
     throw new Error(message);
   }
   return data as T;

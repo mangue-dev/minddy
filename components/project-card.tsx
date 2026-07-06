@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
@@ -54,6 +55,8 @@ function Stat({
 
 export function ProjectCard({ project }: { project: Project }) {
   const router = useRouter();
+  const t = useTranslations("Projects");
+  const tIssue = useTranslations("Issue");
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
 
@@ -99,7 +102,7 @@ export function ProjectCard({ project }: { project: Project }) {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Options du projet"
+              aria-label={t("projectOptions")}
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -116,13 +119,13 @@ export function ProjectCard({ project }: { project: Project }) {
               onSelect={() => router.push(`/projects/${project.id}/objectives`)}
             >
               <Target />
-              Objectifs
+              {t("objectives")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}/settings`)}
             >
               <Settings />
-              Paramètres
+              {t("settings")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -130,9 +133,21 @@ export function ProjectCard({ project }: { project: Project }) {
 
       {/* Quick indicators — right-aligned, always shown (even at zero) */}
       <div className="mt-auto flex flex-col items-end gap-1 pt-1">
-        <Stat icon={CircleDot} value={openCount} label="Issues ouvertes" />
-        <Stat icon={CircleUser} value={mineCount} label="Mes issues ouvertes" />
-        <Stat icon={CheckCircle2} value={doneCount} label="Issues terminées" />
+        <Stat
+          icon={CircleDot}
+          value={openCount}
+          label={t("openIssues", { entityPlural: tIssue("entityPlural") })}
+        />
+        <Stat
+          icon={CircleUser}
+          value={mineCount}
+          label={t("myOpenIssues", { entityPlural: tIssue("entityPlural") })}
+        />
+        <Stat
+          icon={CheckCircle2}
+          value={doneCount}
+          label={t("doneIssues", { entityPlural: tIssue("entityPlural") })}
+        />
       </div>
     </div>
   );
@@ -140,6 +155,7 @@ export function ProjectCard({ project }: { project: Project }) {
 
 /** Dashed "create" tile at the end of the project grid (mirrors AutoKap). */
 export function NewProjectCard({ onClick }: { onClick: () => void }) {
+  const t = useTranslations("Projects");
   return (
     <div
       role="button"
@@ -157,7 +173,7 @@ export function NewProjectCard({ onClick }: { onClick: () => void }) {
         <Plus className="size-4" />
       </div>
       <span className="text-sm font-medium text-muted-foreground">
-        Nouveau Projet
+        {t("newProject")}
       </span>
     </div>
   );

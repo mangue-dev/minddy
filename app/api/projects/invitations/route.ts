@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -9,6 +10,7 @@ import type { MyInvitation } from "@/lib/types";
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   const service = getServiceClient();
   const { data: invites, error } = await service
@@ -20,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("[api/invitations] list failed:", error.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!invites || invites.length === 0) {
     return NextResponse.json([]);
@@ -60,19 +62,20 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const { invitationId, action } = (body ?? {}) as {
     invitationId?: string;
     action?: string;
   };
   if (!invitationId || (action !== "accept" && action !== "reject")) {
-    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
   const service = getServiceClient();
@@ -83,10 +86,10 @@ export async function PATCH(request: NextRequest) {
     .maybeSingle();
 
   if (!invitation || invitation.status !== "pending") {
-    return NextResponse.json({ error: "Invitation introuvable." }, { status: 404 });
+    return NextResponse.json({ error: t("invitationNotFound") }, { status: 404 });
   }
   if (invitation.invited_user_id !== auth.user.id) {
-    return NextResponse.json({ error: "Cette invitation ne t'est pas destinée." }, { status: 403 });
+    return NextResponse.json({ error: t("invitationNotForYou") }, { status: 403 });
   }
 
   const now = new Date().toISOString();
@@ -105,7 +108,7 @@ export async function PATCH(request: NextRequest) {
       );
     if (memberError) {
       console.error("[api/invitations] add member failed:", memberError.message);
-      return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
 
@@ -118,7 +121,7 @@ export async function PATCH(request: NextRequest) {
     .eq("id", invitationId);
   if (updateError) {
     console.error("[api/invitations] respond failed:", updateError.message);
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
   return NextResponse.json({

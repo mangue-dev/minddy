@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,14 +21,14 @@ function projectIdFromPath(pathname: string): string | null {
   return match ? match[1] : null;
 }
 
-/** The section label for the current project route (drives the last crumb). */
-function sectionFor(pathname: string): string | null {
+/** The section translation key for the current project route (drives the last crumb). */
+function sectionKeyFor(pathname: string): string | null {
   if (!/^\/projects\/[^/]+/.test(pathname)) return null;
-  if (pathname.endsWith("/my")) return "Mes tickets";
-  if (pathname.includes("/objectives")) return "Objectifs";
-  if (pathname.includes("/settings")) return "Paramètres";
-  if (pathname.includes("/triage")) return "Triage";
-  return "Tous les tickets";
+  if (pathname.endsWith("/my")) return "myIssues";
+  if (pathname.includes("/objectives")) return "objectives";
+  if (pathname.includes("/settings")) return "settings";
+  if (pathname.includes("/triage")) return "triage";
+  return "allIssues";
 }
 
 function ProjectChip({ project, className }: { project: Project; className?: string }) {
@@ -35,6 +36,7 @@ function ProjectChip({ project, className }: { project: Project; className?: str
 }
 
 function ProjectSwitcher({ project }: { project: Project }) {
+  const t = useTranslations("Nav");
   const router = useRouter();
   const { projects } = useProjects();
 
@@ -63,7 +65,7 @@ function ProjectSwitcher({ project }: { project: Project }) {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label="Changer de Projet"
+            aria-label={t("switchProject")}
             className="flex h-full items-center self-stretch border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-accent/50"
           >
             <ChevronsUpDown className="size-3.5" />
@@ -132,12 +134,14 @@ function BreadcrumbLevel({
 }
 
 export function AppBreadcrumb() {
+  const t = useTranslations("Nav");
   const pathname = usePathname();
   const { projects } = useProjects();
 
   const currentProjectId = projectIdFromPath(pathname);
   const project = projects.find((p) => p.id === currentProjectId) ?? null;
-  const section = sectionFor(pathname);
+  const sectionKey = sectionKeyFor(pathname);
+  const section = sectionKey ? t(sectionKey as Parameters<typeof t>[0]) : null;
   const isHome = pathname.startsWith("/home");
   const isInbox = pathname.startsWith("/inbox");
 
@@ -150,11 +154,11 @@ export function AppBreadcrumb() {
           isHome ? "text-foreground" : "text-muted-foreground hover:text-foreground"
         )}
       >
-        Accueil
+        {t("home")}
       </Link>
 
       <BreadcrumbLevel show={isInbox} levelKey="inbox">
-        <span className="text-sm font-medium text-foreground">Inbox</span>
+        <span className="text-sm font-medium text-foreground">{t("inbox")}</span>
       </BreadcrumbLevel>
 
       <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
@@ -163,7 +167,7 @@ export function AppBreadcrumb() {
 
       <BreadcrumbLevel
         show={!!(project && section)}
-        levelKey={`section-${section ?? ""}`}
+        levelKey={`section-${sectionKey ?? ""}`}
       >
         <span className="truncate text-sm font-medium text-foreground">
           {section}

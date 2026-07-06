@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
@@ -9,6 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Spinner,
   toast,
 } from "mangue-ui";
@@ -18,6 +25,13 @@ import { getSupabase } from "@/lib/supabase";
 import { emailLocalPart } from "@/lib/display-name";
 import { avatarColor, initials } from "@/lib/avatar";
 import { compressImage } from "@/lib/image-compress";
+import { setLocaleCookie } from "@/lib/set-locale";
+import { locales, type Locale } from "@/i18n/config";
+
+const LANGUAGE_LABELS: Record<Locale, string> = {
+  fr: "Français",
+  en: "English",
+};
 
 // Anything under this is accepted and compressed down to fit; above it we ask
 // for a smaller file (avoids loading a huge image into a canvas).
@@ -40,6 +54,12 @@ export function ProfileDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { user, updateUser } = useAuth();
+  const t = useTranslations("Profile");
+  const tCommon = useTranslations("Common");
+  const tLang = useTranslations("Language");
+  const currentLocale = useLocale() as Locale;
+  const router = useRouter();
+  const [switchingLocale, setSwitchingLocale] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -76,11 +96,11 @@ export function ProfileDialog({
   const pickFile = (f: File | null) => {
     if (!f) return;
     if (!f.type.startsWith("image/")) {
-      toast.error("Choisis un fichier image.");
+      toast.error(t("imageOnly"));
       return;
     }
     if (f.size > HARD_CAP) {
-      toast.error("Image trop lourde (25 Mo max).");
+      toast.error(t("imageTooLarge"));
       return;
     }
     setPreview((prev) => {
@@ -91,11 +111,25 @@ export function ProfileDialog({
     setRemoveAvatar(false);
   };
 
+  const switchLocale = async (locale: Locale) => {
+    if (locale === currentLocale || switchingLocale) return;
+    setSwitchingLocale(true);
+    try {
+      await setLocaleCookie(locale);
+      if (user) await updateUser({ data: { ...meta, locale } });
+      router.refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSwitchingLocale(false);
+    }
+  };
+
   const save = async () => {
     if (!user) return;
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Le nom ne peut pas être vide.");
+      toast.error(t("nameEmpty"));
       return;
     }
     setBusy(true);
@@ -129,7 +163,7 @@ export function ProfileDialog({
           ...(avatarUrl !== undefined ? { avatar_url: avatarUrl } : {}),
         },
       });
-      toast.success("Profil mis à jour.");
+      toast.success(t("updated"));
       onOpenChange(false);
     } catch (e) {
       toast.error((e as Error).message);
@@ -142,7 +176,7 @@ export function ProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Profil</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-5 py-1">
@@ -173,7 +207,7 @@ export function ProfileDialog({
                   onClick={() => fileRef.current?.click()}
                 >
                   <Upload />
-                  Changer la photo
+                  {t("changePhoto")}
                 </Button>
                 {shownAvatar && (
                   <Button
@@ -189,13 +223,11 @@ export function ProfileDialog({
                       setRemoveAvatar(true);
                     }}
                   >
-                    Retirer
+                    {t("removePhoto")}
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG ou GIF — compressée automatiquement.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("photoHint")}</p>
             </div>
 
             <input
@@ -213,27 +245,50 @@ export function ProfileDialog({
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="profile-name" className="text-sm font-medium">
-              Nom
+              {t("nameLabel")}
             </label>
             <Input
               id="profile-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ton nom"
+              placeholder={t("namePlaceholder")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && name.trim()) void save();
               }}
             />
           </div>
+
+          {/* Language */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="profile-language" className="text-sm font-medium">
+              {tLang("title")}
+            </label>
+            <Select
+              value={currentLocale}
+              onValueChange={(value) => void switchLocale(value as Locale)}
+              disabled={switchingLocale}
+            >
+              <SelectTrigger id="profile-language" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {locales.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {LANGUAGE_LABELS[code]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-            Annuler
+            {tCommon("cancel")}
           </Button>
           <Button onClick={() => void save()} disabled={busy || !name.trim()}>
             {busy && <Spinner />}
-            Enregistrer
+            {tCommon("save")}
           </Button>
         </DialogFooter>
       </DialogContent>
