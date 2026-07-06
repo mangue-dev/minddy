@@ -22,8 +22,8 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import { avatarColor, initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -283,13 +283,13 @@ function AssigneePick({
   onChange?: (id: string | null) => void;
 }) {
   const avatar = assignee ? (
-    <span
-      className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-      style={{ backgroundColor: avatarColor(assignee.user_id) }}
+    <UserAvatar
+      url={assignee.avatar_url}
+      name={displayName(assignee)}
+      seed={assignee.user_id}
       title={displayName(assignee)}
-    >
-      {initials(displayName(assignee))}
-    </span>
+      className="size-6 text-[10px]"
+    />
   ) : (
     <span
       className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
@@ -324,13 +324,12 @@ function AssigneePick({
         </DropdownMenuItem>
         {members.map((m) => (
           <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
-            <span
-              className="flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-              style={{ backgroundColor: avatarColor(m.user_id) }}
-              aria-hidden
-            >
-              {initials(displayName(m))}
-            </span>
+            <UserAvatar
+              url={m.avatar_url}
+              name={displayName(m)}
+              seed={m.user_id}
+              className="size-5 text-[9px]"
+            />
             <span className="truncate">{displayName(m)}</span>
             {m.user_id === assignee?.user_id && (
               <Check className="ml-auto size-4" />

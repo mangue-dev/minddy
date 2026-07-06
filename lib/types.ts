@@ -95,6 +95,7 @@ export interface Member {
   user_id: string;
   email: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: "owner" | "member";
   is_owner: boolean;
 }

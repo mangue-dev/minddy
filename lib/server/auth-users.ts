@@ -11,23 +11,26 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
  * `{ email, full_name }` shape to `displayName()` from lib/display-name.ts.
  */
 
-/** Supabase Auth display name: display_name → full_name → name, else null. */
-function pickDisplayName(meta: Record<string, unknown>): string | null {
-  for (const key of ["display_name", "full_name", "name"]) {
+/** First non-empty string among the given metadata keys, else null. */
+function pickString(meta: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
     const v = meta[key];
     if (typeof v === "string" && v.trim()) return v.trim();
   }
   return null;
 }
 
-/** Map an auth user to minddy's { email, full_name } display shape. */
+/** Map an auth user to minddy's { email, full_name, avatar_url } display shape.
+    Name: display_name → full_name → name. Avatar: avatar_url → picture. */
 export function toNamed(
   user: User | null | undefined
-): { email: string | null; full_name: string | null } {
-  if (!user) return { email: null, full_name: null };
+): { email: string | null; full_name: string | null; avatar_url: string | null } {
+  if (!user) return { email: null, full_name: null, avatar_url: null };
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   return {
     email: user.email ?? null,
-    full_name: pickDisplayName((user.user_metadata ?? {}) as Record<string, unknown>),
+    full_name: pickString(meta, ["display_name", "full_name", "name"]),
+    avatar_url: pickString(meta, ["avatar_url", "picture"]),
   };
 }
 

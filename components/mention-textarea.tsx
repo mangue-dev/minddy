@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { cn } from "mangue-ui";
 import { displayName } from "@/lib/display-name";
+import { useAutosize } from "@/lib/use-autosize";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Member } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -35,7 +37,7 @@ export function MentionTextarea({
   members,
   onSubmit,
   placeholder,
-  rows = 3,
+  rows = 1,
   className,
   dropUp = false,
 }: {
@@ -51,6 +53,7 @@ export function MentionTextarea({
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [mention, setMention] = useState<{ at: number; query: string } | null>(null);
+  useAutosize(ref, value);
 
   const suggestions = mention
     ? members
@@ -118,7 +121,7 @@ export function MentionTextarea({
         placeholder={placeholder}
         rows={rows}
         className={cn(
-          "w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          "max-h-48 w-full resize-none overflow-y-auto rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           className
         )}
       />
@@ -139,9 +142,12 @@ export function MentionTextarea({
               }}
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
             >
-              <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-                {memberLabel(m).slice(0, 2).toUpperCase()}
-              </span>
+              <UserAvatar
+                url={m.avatar_url}
+                name={memberLabel(m)}
+                seed={m.user_id}
+                className="size-5 text-[9px]"
+              />
               <span className="truncate">{memberLabel(m)}</span>
             </button>
           ))}

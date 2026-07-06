@@ -3,8 +3,8 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "mangue-ui";
-import { avatarColor, initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Member } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -77,13 +77,12 @@ function MentionBadge({ userId, members }: { userId: string; members: Member[] }
   const name = m ? memberLabel(m) : "Utilisateur";
   return (
     <span className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pr-1.5 pl-0.5 align-baseline text-[0.9em] font-medium text-primary">
-      <span
-        className="flex size-4 items-center justify-center rounded-full text-[8px] font-semibold text-white"
-        style={{ backgroundColor: avatarColor(userId) }}
-        aria-hidden
-      >
-        {initials(name)}
-      </span>
+      <UserAvatar
+        url={m?.avatar_url ?? null}
+        name={name}
+        seed={userId}
+        className="size-4 text-[8px]"
+      />
       @{name}
     </span>
   );

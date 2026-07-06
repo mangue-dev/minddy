@@ -24,8 +24,8 @@ import {
   PriorityIndicator,
   EffortIndicator,
 } from "@/components/issue-indicators";
-import { avatarColor, initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Category, Member, Objective } from "@/lib/types";
 
 /* Borderless key/value fields for the issue panel — the value control has no
@@ -162,13 +162,12 @@ export function AssigneeValue({
         <button type="button" aria-label="Changer l'assigné" className={TRIGGER}>
           {current ? (
             <>
-              <span
-                className="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-                style={{ backgroundColor: avatarColor(current.user_id) }}
-                aria-hidden
-              >
-                {initials(displayName(current))}
-              </span>
+              <UserAvatar
+                url={current.avatar_url}
+                name={displayName(current)}
+                seed={current.user_id}
+                className="size-5 text-[9px]"
+              />
               <span className="truncate">{displayName(current)}</span>
             </>
           ) : (
@@ -183,13 +182,12 @@ export function AssigneeValue({
         </DropdownMenuItem>
         {members.map((m) => (
           <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
-            <span
-              className="flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-              style={{ backgroundColor: avatarColor(m.user_id) }}
-              aria-hidden
-            >
-              {initials(displayName(m))}
-            </span>
+            <UserAvatar
+              url={m.avatar_url}
+              name={displayName(m)}
+              seed={m.user_id}
+              className="size-5 text-[9px]"
+            />
             <span className="truncate">{displayName(m)}</span>
             {m.user_id === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>

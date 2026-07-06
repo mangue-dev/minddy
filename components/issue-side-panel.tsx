@@ -26,6 +26,7 @@ import {
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { AutoTextarea } from "@/components/auto-textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
@@ -145,11 +146,17 @@ export function IssueSidePanel({
           <SidePanelBody className="flex flex-col gap-6 pt-0">
             {/* Title + description */}
             <div className="flex flex-col gap-2">
-              <input
+              <AutoTextarea
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={commitTitle}
-                className="w-full bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
                 placeholder="Titre de l'issue"
               />
               <MarkdownEditor

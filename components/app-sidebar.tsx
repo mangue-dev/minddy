@@ -29,9 +29,11 @@ import {
   MoreHorizontal,
   Megaphone,
   BarChart3,
+  UserRound,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
+import { ProfileDialog } from "@/components/profile-dialog";
 import { transitions } from "@/lib/motion";
 
 const EXPANDED_WIDTH = 256;
@@ -234,6 +236,7 @@ function ThemeItem({
 
 function AccountButton({ collapsed }: { collapsed: boolean }) {
   const { user, signOut } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
   const firstName = firstNameOf(user);
   const meta = user?.user_metadata as
     | { avatar_url?: string; picture?: string }
@@ -242,6 +245,7 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
   const seed = user?.email || firstName;
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
@@ -268,6 +272,11 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuSeparator />
           </>
         )}
+        <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
+          <UserRound />
+          Profil
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <ThemeItem value="light" icon={Sun} label="Clair" />
         <ThemeItem value="dark" icon={Moon} label="Sombre" />
         <ThemeItem value="system" icon={Monitor} label="Système" />
@@ -278,6 +287,8 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
+    </>
   );
 }
 

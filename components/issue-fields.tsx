@@ -23,8 +23,8 @@ import {
   type IssueEffort,
 } from "@/lib/issue-constants";
 import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
-import { initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Issue, Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -196,9 +196,12 @@ export function AssigneePicker({
         </DropdownMenuItem>
         {members.map((m) => (
           <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
-            <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-              {initials(displayName(m))}
-            </span>
+            <UserAvatar
+              url={m.avatar_url}
+              name={displayName(m)}
+              seed={m.user_id}
+              className="size-5 text-[9px]"
+            />
             <span className="truncate">{memberLabel(m)}</span>
             {m.user_id === value && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>

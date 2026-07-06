@@ -15,8 +15,8 @@ import { describeEvent, type EventContext } from "@/lib/describe-event";
 import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
 import { Markdown } from "@/components/markdown";
-import { avatarColor, initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Member } from "@/lib/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
@@ -46,15 +46,27 @@ function actorName(members: Member[], id: string | null): string {
   return displayName(m, "Un utilisateur");
 }
 
-function Avatar({ seed, name }: { seed: string | null; name: string }) {
+/** Actor avatar (real photo when available, else colored initials), resolved
+    from the members list by id. */
+function ActorAvatar({
+  members,
+  id,
+  name,
+  className,
+}: {
+  members: Member[];
+  id: string | null;
+  name: string;
+  className?: string;
+}) {
+  const url = id ? members.find((m) => m.user_id === id)?.avatar_url ?? null : null;
   return (
-    <span
-      className="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-      style={{ backgroundColor: avatarColor(seed ?? name) }}
-      aria-hidden
-    >
-      {initials(name)}
-    </span>
+    <UserAvatar
+      url={url}
+      name={name}
+      seed={id ?? name}
+      className={cn("size-5 text-[9px]", className)}
+    />
   );
 }
 
@@ -93,7 +105,7 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
   const summary = describeEvent(item.event, ctx);
   return (
     <li className="flex items-center gap-2.5">
-      <Avatar seed={item.event.actor_id} name={name} />
+      <ActorAvatar members={ctx.members} id={item.event.actor_id} name={name} />
       <OneLine full={`${name} ${summary}`}>
         <span className="font-medium text-foreground">{name}</span>{" "}
         <span className="text-muted-foreground">{summary}</span>
@@ -109,9 +121,12 @@ function CommentRow({ item, ctx }: { item: CommentItem; ctx: EventContext }) {
   const name = actorName(ctx.members, item.comment.author_id);
   return (
     <li className="flex items-start gap-2.5">
-      <span className="mt-0.5">
-        <Avatar seed={item.comment.author_id} name={name} />
-      </span>
+      <ActorAvatar
+        members={ctx.members}
+        id={item.comment.author_id}
+        name={name}
+        className="mt-0.5"
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2">
           <OneLine full={`${name} a laissé un commentaire`}>
@@ -271,7 +286,7 @@ export function CommentComposer({
         onSubmit={() => void submit()}
         placeholder="Ajouter un commentaire, @ pour mentionner"
         dropUp
-        className="rounded-none border-0 bg-transparent px-3.5 py-3 focus-visible:border-0 focus-visible:ring-0"
+        className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />
       <div className="flex justify-end px-2.5 pb-2.5">
         <Button
