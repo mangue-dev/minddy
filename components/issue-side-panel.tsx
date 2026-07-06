@@ -28,6 +28,7 @@ import { SubIssuesSection } from "@/components/sub-issues-section";
 import { IssueTimeline } from "@/components/issue-timeline";
 import { Markdown } from "@/components/markdown";
 import { useAuth } from "@/lib/auth-context";
+import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type {
   Category,
@@ -136,7 +137,7 @@ export function IssueSidePanel({
   return (
     <>
       <SidePanel open={open} onOpenChange={onOpenChange}>
-        <SidePanelContent>
+        <SidePanelContent onInteractOutside={keepOverlayOpenForPopper}>
           <SidePanelHeader>
             <SidePanelTitle asChild>
               <Badge variant="secondary" className="font-mono">

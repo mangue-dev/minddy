@@ -21,6 +21,7 @@ import {
   StatusPicker,
 } from "@/components/issue-fields";
 import { CategoryPicker } from "@/components/category-picker";
+import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import type {
   IssueStatus,
   IssuePriority,
@@ -115,7 +116,10 @@ export function CreateIssueDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent
+        className="sm:max-w-xl"
+        onInteractOutside={keepOverlayOpenForPopper}
+      >
         <DialogHeader>
           <DialogTitle>Nouvelle issue</DialogTitle>
         </DialogHeader>

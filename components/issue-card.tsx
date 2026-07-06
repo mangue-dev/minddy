@@ -2,17 +2,33 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Badge, cn } from "mangue-ui";
-import { GitMerge } from "lucide-react";
 import {
-  PRIORITY_MAP,
-  EFFORT_MAP,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  cn,
+} from "mangue-ui";
+import { Calendar, Check, Triangle, User } from "lucide-react";
+import {
+  STATUSES,
+  PRIORITIES,
+  EFFORTS,
   issueIdentifier,
+  type IssueStatus,
+  type IssuePriority,
+  type IssueEffort,
 } from "@/lib/issue-constants";
-import { CategoryPill } from "@/components/category-pill";
-import type { Category, Issue, Member } from "@/lib/types";
-
-export type SubProgress = { done: number; total: number };
+import { avatarColor, initials } from "@/lib/avatar";
+import {
+  StatusIndicator,
+  PriorityIndicator,
+  EffortIndicator,
+} from "@/components/issue-indicators";
+import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
 
 function formatDue(due: string): string {
   return new Date(due + "T00:00:00").toLocaleDateString("fr-FR", {
@@ -21,76 +37,453 @@ function formatDue(due: string): string {
   });
 }
 
+/** Strip common markdown so the description preview reads as plain text. */
+function plainPreview(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/[*_~>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/* ── Inline indicator pickers ────────────────────────────────────────────
+   Each indicator on the card is a dropdown trigger: clicking it edits the
+   field in place. `stop` keeps the click/drag from bubbling to the card (which
+   would open the side panel or start a drag). Without an `onChange` the picker
+   renders the plain indicator (e.g. inside the drag overlay). */
+
+const TRIGGER_CLASS =
+  "-m-0.5 flex items-center rounded-md p-0.5 outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+
+// Roomier hit area for the smaller indicators (priority / effort / category).
+const TRIGGER_CLASS_LG =
+  "-m-1.5 flex min-w-0 items-center rounded-md p-1.5 outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+
+const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+function StatusPick({
+  value,
+  onChange,
+}: {
+  value: IssueStatus;
+  onChange?: (v: IssueStatus) => void;
+}) {
+  if (!onChange) return <StatusIndicator status={value} />;
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Changer le statut"
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS}
+        >
+          <StatusIndicator status={value} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-44"
+        onClick={stop}
+        onPointerDown={stop}
+      >
+        {STATUSES.map((s) => (
+          <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
+            <StatusIndicator status={s.value} className="size-4" />
+            {s.label}
+            {s.value === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function PriorityPick({
+  value,
+  onChange,
+}: {
+  value: IssuePriority;
+  onChange?: (v: IssuePriority) => void;
+}) {
+  if (!onChange) return <PriorityIndicator priority={value} />;
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Changer la priorité"
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS_LG}
+        >
+          <PriorityIndicator priority={value} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-44"
+        onClick={stop}
+        onPointerDown={stop}
+      >
+        {PRIORITIES.map((p) => (
+          <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
+            <PriorityIndicator priority={p.value} className="size-4" />
+            {p.label}
+            {p.value === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function EffortPick({
+  value,
+  onChange,
+}: {
+  value: IssueEffort | null;
+  onChange?: (v: IssueEffort | null) => void;
+}) {
+  const display = value ? (
+    <EffortIndicator effort={value} />
+  ) : (
+    <span className="inline-flex items-center gap-1 text-muted-foreground/60">
+      <Triangle className="size-3.5 shrink-0" />
+      <span className="text-xs font-medium leading-none">–</span>
+    </span>
+  );
+  if (!onChange) return display;
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Changer l'effort"
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS_LG}
+        >
+          {display}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-40"
+        onClick={stop}
+        onPointerDown={stop}
+      >
+        <DropdownMenuItem onSelect={() => onChange(null)}>Aucun</DropdownMenuItem>
+        {EFFORTS.map((e) => (
+          <DropdownMenuItem key={e.value} onSelect={() => onChange(e.value)}>
+            {e.label}
+            {e.value === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function CategoryPick({
+  categories,
+  selectedIds,
+  onChange,
+}: {
+  categories: Category[];
+  selectedIds: string[];
+  onChange?: (ids: string[]) => void;
+}) {
+  const selected = categories.filter((c) => selectedIds.includes(c.id));
+  const first = selected[0];
+  const extra = Math.max(0, selected.length - 1);
+  const display = first ? (
+    <span className="flex min-w-0 items-center gap-1.5 text-xs">
+      <span
+        className="size-2.5 shrink-0 rounded-full"
+        style={{ backgroundColor: first.color }}
+        aria-hidden
+      />
+      <span className="truncate">{first.name}</span>
+      {extra > 0 && <span className="shrink-0 text-muted-foreground">+{extra}</span>}
+    </span>
+  ) : (
+    <span className="text-xs text-muted-foreground/60">Aucun</span>
+  );
+  if (!onChange) return display;
+
+  const toggle = (id: string) =>
+    onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id]
+    );
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Modifier les catégories"
+          onClick={stop}
+          onPointerDown={stop}
+          className={TRIGGER_CLASS_LG}
+        >
+          {display}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-52"
+        onClick={stop}
+        onPointerDown={stop}
+      >
+        {categories.length === 0 ? (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">
+            Aucune catégorie. Crée-en dans les Paramètres.
+          </div>
+        ) : (
+          categories.map((c) => (
+            <DropdownMenuItem
+              key={c.id}
+              onSelect={(e) => {
+                e.preventDefault();
+                toggle(c.id);
+              }}
+            >
+              <span
+                className="size-2.5 rounded-full"
+                style={{ backgroundColor: c.color }}
+                aria-hidden
+              />
+              <span className="truncate">{c.name}</span>
+              {selectedIds.includes(c.id) && <Check className="ml-auto size-4" />}
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function AssigneePick({
+  assignee,
+  members,
+  onChange,
+}: {
+  assignee: Member | null;
+  members: Member[];
+  onChange?: (id: string | null) => void;
+}) {
+  const avatar = assignee ? (
+    <span
+      className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+      style={{ backgroundColor: avatarColor(assignee.user_id) }}
+      title={assignee.full_name || assignee.email || undefined}
+    >
+      {initials(assignee.full_name || assignee.email || "?")}
+    </span>
+  ) : (
+    <span
+      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
+      title="Non assigné"
+    >
+      <User className="size-3.5" />
+    </span>
+  );
+  if (!onChange) return avatar;
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Changer l'assigné"
+          onClick={stop}
+          onPointerDown={stop}
+          className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
+        >
+          {avatar}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-52"
+        onClick={stop}
+        onPointerDown={stop}
+      >
+        <DropdownMenuItem onSelect={() => onChange(null)}>
+          Non assigné
+          {!assignee && <Check className="ml-auto size-4" />}
+        </DropdownMenuItem>
+        {members.map((m) => (
+          <DropdownMenuItem key={m.user_id} onSelect={() => onChange(m.user_id)}>
+            <span
+              className="flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white"
+              style={{ backgroundColor: avatarColor(m.user_id) }}
+              aria-hidden
+            >
+              {initials(m.full_name || m.email || "?")}
+            </span>
+            <span className="truncate">
+              {m.full_name || m.email || "Utilisateur"}
+            </span>
+            {m.user_id === assignee?.user_id && (
+              <Check className="ml-auto size-4" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function DueDatePick({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange?: (v: string | null) => void;
+}) {
+  const display = (
+    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+      <Calendar className="size-3 shrink-0" />
+      {formatDue(value)}
+    </span>
+  );
+  if (!onChange) return display;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Changer l'échéance"
+          onClick={stop}
+          onPointerDown={stop}
+          className="-m-1 flex items-center rounded-md p-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+        >
+          {display}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-auto p-2"
+        onClick={stop}
+        onPointerDown={stop}
+      >
+        <div className="flex flex-col gap-2">
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value || null)}
+            className="rounded-md border border-input bg-transparent px-2 py-1 text-sm outline-none focus-visible:border-ring"
+          />
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Retirer l&apos;échéance
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /** Presentational card body — shared by the sortable card and the drag overlay. */
 export function IssueCardBody({
   issue,
   projectKey,
-  assignee,
+  memberMap,
   categoryMap,
-  subProgress,
+  onUpdate,
+  onSetCategories,
   dragging,
 }: {
   issue: Issue;
   projectKey: string;
-  assignee: Member | null;
+  memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
-  subProgress?: SubProgress | null;
+  /** When set, the status/priority/effort/assignee/due indicators become pickers. */
+  onUpdate?: (patch: IssueUpdateInput) => void;
+  /** When set, the category indicator becomes an inline multi-select picker. */
+  onSetCategories?: (ids: string[]) => void;
   dragging?: boolean;
 }) {
-  const priority = PRIORITY_MAP[issue.priority];
-  const PriorityIcon = priority.icon;
-  const cats = issue.category_ids
-    .map((id) => categoryMap.get(id))
-    .filter((c): c is Category => !!c);
+  const assignee = issue.assignee_id
+    ? memberMap.get(issue.assignee_id) ?? null
+    : null;
+  const description = issue.description ? plainPreview(issue.description) : "";
+
+  const setStatus = onUpdate
+    ? (status: IssueStatus) => onUpdate({ status })
+    : undefined;
+  const setPriority = onUpdate
+    ? (priority: IssuePriority) => onUpdate({ priority })
+    : undefined;
+  const setEffort = onUpdate
+    ? (effort: IssueEffort | null) => onUpdate({ effort })
+    : undefined;
+  const setAssignee = onUpdate
+    ? (id: string | null) => onUpdate({ assignee_id: id })
+    : undefined;
+  const setDueDate = onUpdate
+    ? (date: string | null) => onUpdate({ due_date: date })
+    : undefined;
+
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 text-left shadow-sm",
+        "flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm",
         dragging && "cursor-grabbing shadow-lg"
       )}
     >
-      <div className="flex items-center gap-2">
+      {/* Identifier + assignee */}
+      <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[11px] text-muted-foreground">
           {issueIdentifier(projectKey, issue.number)}
         </span>
-        {issue.priority !== "none" && (
-          <PriorityIcon className={cn("ml-auto size-3.5", priority.color)} />
+        <AssigneePick
+          assignee={assignee}
+          members={[...memberMap.values()]}
+          onChange={setAssignee}
+        />
+      </div>
+
+      {/* Title + description (tight spacing between them, and to the row above) */}
+      <div className="-mt-1 flex flex-col gap-0.5">
+        <p className="line-clamp-2 text-sm font-semibold leading-snug">
+          {issue.title}
+        </p>
+        {description && (
+          <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+            {description}
+          </p>
         )}
       </div>
-      <p className="line-clamp-3 text-sm">{issue.title}</p>
-      {cats.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {cats.map((c) => (
-            <CategoryPill key={c.id} category={c} />
-          ))}
-        </div>
-      )}
-      {(issue.effort || issue.due_date || assignee || (subProgress && subProgress.total > 0)) && (
-        <div className="flex items-center gap-2">
-          {subProgress && subProgress.total > 0 && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-              <GitMerge className="size-3" />
-              {subProgress.done}/{subProgress.total}
-            </span>
-          )}
-          {issue.effort && (
-            <Badge variant="outline" className="font-mono text-[10px]">
-              {EFFORT_MAP[issue.effort].label}
-            </Badge>
-          )}
-          {issue.due_date && (
-            <span className="text-[11px] text-muted-foreground">
-              {formatDue(issue.due_date)}
-            </span>
-          )}
-          {assignee && (
-            <span
-              className="ml-auto flex size-5 items-center justify-center rounded-full bg-muted text-[9px] font-medium text-muted-foreground"
-              title={assignee.full_name || assignee.email || undefined}
-            >
-              {(assignee.full_name || assignee.email || "?").slice(0, 2).toUpperCase()}
-            </span>
-          )}
+
+      {/* Indicators — spread edge-to-edge: status · priority · effort · category */}
+      <div className="flex items-center justify-between pt-0.5">
+        <StatusPick value={issue.status} onChange={setStatus} />
+        <PriorityPick value={issue.priority} onChange={setPriority} />
+        <EffortPick value={issue.effort} onChange={setEffort} />
+        <CategoryPick
+          categories={[...categoryMap.values()]}
+          selectedIds={issue.category_ids}
+          onChange={onSetCategories}
+        />
+      </div>
+
+      {/* Due date — its own line, right-aligned (no empty state) */}
+      {issue.due_date && (
+        <div className="flex items-center justify-end pt-0.5">
+          <DueDatePick value={issue.due_date} onChange={setDueDate} />
         </div>
       )}
     </div>
@@ -100,17 +493,19 @@ export function IssueCardBody({
 export function IssueCard({
   issue,
   projectKey,
-  assignee,
+  memberMap,
   categoryMap,
-  subProgress,
   onOpen,
+  onUpdateIssue,
+  onSetCategories,
 }: {
   issue: Issue;
   projectKey: string;
-  assignee: Member | null;
+  memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
-  subProgress?: SubProgress | null;
   onOpen: () => void;
+  onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
+  onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
@@ -122,14 +517,15 @@ export function IssueCard({
       {...attributes}
       {...listeners}
       onClick={onOpen}
-      className={cn("cursor-grab touch-none", isDragging && "opacity-40")}
+      className={cn("cursor-pointer touch-none", isDragging && "opacity-40")}
     >
       <IssueCardBody
         issue={issue}
         projectKey={projectKey}
-        assignee={assignee}
+        memberMap={memberMap}
         categoryMap={categoryMap}
-        subProgress={subProgress}
+        onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
+        onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />
     </div>
   );

@@ -35,7 +35,7 @@ export function CategoryPicker({
           onRemove={() => onChange(value.filter((id) => id !== c.id))}
         />
       ))}
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             <Tag />

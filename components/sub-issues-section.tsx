@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Button, Input, Progress, Spinner, cn, toast } from "mangue-ui";
 import { Plus } from "lucide-react";
-import { STATUS_MAP, issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { StatusIndicator } from "@/components/issue-indicators";
 import type { CreateIssueInput, Issue } from "@/lib/types";
 
 /** Parent-side view of its children: progress + list + inline add (plan §4). */
@@ -67,8 +68,6 @@ export function SubIssuesSection({
       {children.length > 0 && (
         <div className="mb-2 flex flex-col">
           {children.map((child) => {
-            const status = STATUS_MAP[child.status];
-            const Icon = status.icon;
             return (
               <button
                 key={child.id}
@@ -76,7 +75,7 @@ export function SubIssuesSection({
                 onClick={() => onOpenIssue(child.id)}
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
               >
-                <Icon className={cn("size-4 shrink-0", status.color)} />
+                <StatusIndicator status={child.status} className="size-4 shrink-0" />
                 <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
                   {issueIdentifier(projectKey, child.number)}
                 </span>

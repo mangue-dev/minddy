@@ -60,9 +60,15 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
 
   if (valid.length > 0) {
+    // upsert + ignoreDuplicates: tolerate a concurrent request having already
+    // inserted the same (issue_id, category_id) pair, so it can't 500 on the
+    // join table's primary key.
     const { error: insError } = await auth.supabase
       .from("issue_categories")
-      .insert(valid.map((category_id) => ({ issue_id: id, category_id })));
+      .upsert(valid.map((category_id) => ({ issue_id: id, category_id })), {
+        onConflict: "issue_id,category_id",
+        ignoreDuplicates: true,
+      });
     if (insError) {
       console.error("[api/issues/:id/categories] set failed:", insError.message);
       return NextResponse.json({ error: "Erreur base de données" }, { status: 500 });

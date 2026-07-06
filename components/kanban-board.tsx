@@ -14,10 +14,10 @@ import {
 import { toast } from "mangue-ui";
 import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { Category, Issue, Member, ViewSort } from "@/lib/types";
+import type { Category, Issue, IssueUpdateInput, Member, ViewSort } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { KanbanColumn } from "@/components/kanban-column";
-import { IssueCardBody, type SubProgress } from "@/components/issue-card";
+import { IssueCardBody } from "@/components/issue-card";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 
@@ -38,9 +38,10 @@ export function KanbanBoard({
   projectKey,
   members,
   categories,
-  subProgress,
   onOpenIssue,
   onCreateIssue,
+  onUpdateIssue,
+  onSetCategories,
   onMove,
 }: {
   issues: Issue[];
@@ -49,9 +50,10 @@ export function KanbanBoard({
   projectKey: string;
   members: Member[];
   categories: Category[];
-  subProgress: Map<string, SubProgress>;
   onOpenIssue: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
+  onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
+  onSetCategories: (issueId: string, ids: string[]) => void;
   onMove: (
     issueId: string,
     patch: { status?: IssueStatus; position: number }
@@ -149,9 +151,10 @@ export function KanbanBoard({
             projectKey={projectKey}
             memberMap={memberMap}
             categoryMap={categoryMap}
-            subProgressMap={subProgress}
             onOpenIssue={onOpenIssue}
             onCreateIssue={onCreateIssue}
+            onUpdateIssue={onUpdateIssue}
+            onSetCategories={onSetCategories}
           />
         ))}
       </div>
@@ -162,13 +165,8 @@ export function KanbanBoard({
             <IssueCardBody
               issue={activeIssue}
               projectKey={projectKey}
-              assignee={
-                activeIssue.assignee_id
-                  ? memberMap.get(activeIssue.assignee_id) ?? null
-                  : null
-              }
+              memberMap={memberMap}
               categoryMap={categoryMap}
-              subProgress={subProgress.get(activeIssue.id) ?? null}
               dragging
             />
           </div>

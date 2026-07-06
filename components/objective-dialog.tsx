@@ -19,6 +19,7 @@ import {
 } from "mangue-ui";
 import { Check } from "lucide-react";
 import { AssigneePicker, DueDateField } from "@/components/issue-fields";
+import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import {
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_MAP,
@@ -42,7 +43,7 @@ function StatusSelect({
   const meta = OBJECTIVE_STATUS_MAP[value];
   const Icon = meta.icon;
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
           <Icon className={meta.color} />
@@ -173,7 +174,10 @@ export function ObjectiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onInteractOutside={keepOverlayOpenForPopper}
+      >
         <DialogHeader>
           <DialogTitle>{objective ? "Modifier l'objectif" : "Nouvel objectif"}</DialogTitle>
         </DialogHeader>

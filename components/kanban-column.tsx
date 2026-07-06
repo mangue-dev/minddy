@@ -5,8 +5,9 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { cn } from "mangue-ui";
 import { Plus } from "lucide-react";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
-import type { Category, Issue, Member } from "@/lib/types";
-import { IssueCard, type SubProgress } from "@/components/issue-card";
+import type { Category, Issue, IssueUpdateInput, Member } from "@/lib/types";
+import { IssueCard } from "@/components/issue-card";
+import { StatusIndicator } from "@/components/issue-indicators";
 
 export function KanbanColumn({
   status,
@@ -14,26 +15,27 @@ export function KanbanColumn({
   projectKey,
   memberMap,
   categoryMap,
-  subProgressMap,
   onOpenIssue,
   onCreateIssue,
+  onUpdateIssue,
+  onSetCategories,
 }: {
   status: StatusMeta;
   issues: Issue[];
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
-  subProgressMap: Map<string, SubProgress>;
   onOpenIssue: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
+  onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
+  onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
-  const Icon = status.icon;
 
   return (
     <div className="flex w-[22rem] shrink-0 flex-col">
       <div className="mb-2 flex items-center gap-2 px-1">
-        <Icon className={cn("size-4", status.color)} />
+        <StatusIndicator status={status.value} className="size-4" />
         <h2 className="text-sm font-semibold">{status.label}</h2>
         <span className="text-xs text-muted-foreground">{issues.length}</span>
       </div>
@@ -54,12 +56,11 @@ export function KanbanColumn({
               key={issue.id}
               issue={issue}
               projectKey={projectKey}
-              assignee={
-                issue.assignee_id ? memberMap.get(issue.assignee_id) ?? null : null
-              }
+              memberMap={memberMap}
               categoryMap={categoryMap}
-              subProgress={subProgressMap.get(issue.id) ?? null}
               onOpen={() => onOpenIssue(issue)}
+              onUpdateIssue={onUpdateIssue}
+              onSetCategories={onSetCategories}
             />
           ))}
         </SortableContext>

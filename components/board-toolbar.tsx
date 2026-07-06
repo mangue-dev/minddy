@@ -30,7 +30,12 @@ import {
   Save,
   Pencil,
   Trash2,
+  Triangle,
 } from "lucide-react";
+import {
+  StatusIndicator,
+  PriorityIndicator,
+} from "@/components/issue-indicators";
 import {
   STATUSES,
   PRIORITIES,
@@ -120,42 +125,36 @@ function FiltersPopover({
       </PopoverTrigger>
       <PopoverContent align="end" className="max-h-[70vh] w-64 overflow-y-auto p-2">
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Statut</p>
-        {STATUSES.map((s) => {
-          const Icon = s.icon;
-          return (
-            <ToggleRow
-              key={s.value}
-              active={!!f.status?.includes(s.value)}
-              onClick={() =>
-                setFilters({ ...f, status: toggle<IssueStatus>(f.status, s.value) })
-              }
-            >
-              <Icon className={cn("size-4", s.color)} />
-              {s.label}
-            </ToggleRow>
-          );
-        })}
+        {STATUSES.map((s) => (
+          <ToggleRow
+            key={s.value}
+            active={!!f.status?.includes(s.value)}
+            onClick={() =>
+              setFilters({ ...f, status: toggle<IssueStatus>(f.status, s.value) })
+            }
+          >
+            <StatusIndicator status={s.value} className="size-4" />
+            {s.label}
+          </ToggleRow>
+        ))}
 
         <Separator className="my-1.5" />
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Priorité</p>
-        {PRIORITIES.map((p) => {
-          const Icon = p.icon;
-          return (
-            <ToggleRow
-              key={p.value}
-              active={!!f.priority?.includes(p.value)}
-              onClick={() =>
-                setFilters({
-                  ...f,
-                  priority: toggle<IssuePriority>(f.priority, p.value),
-                })
-              }
-            >
-              <Icon className={cn("size-4", p.color)} />
-              {p.label}
-            </ToggleRow>
-          );
-        })}
+        {PRIORITIES.map((p) => (
+          <ToggleRow
+            key={p.value}
+            active={!!f.priority?.includes(p.value)}
+            onClick={() =>
+              setFilters({
+                ...f,
+                priority: toggle<IssuePriority>(f.priority, p.value),
+              })
+            }
+          >
+            <PriorityIndicator priority={p.value} className="size-4" />
+            {p.label}
+          </ToggleRow>
+        ))}
 
         <Separator className="my-1.5" />
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Assigné</p>
@@ -187,6 +186,7 @@ function FiltersPopover({
               setFilters({ ...f, effort: toggle<IssueEffort>(f.effort, e.value) })
             }
           >
+            <Triangle className="size-3.5 text-muted-foreground" />
             {e.label}
           </ToggleRow>
         ))}

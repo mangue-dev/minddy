@@ -9,7 +9,7 @@ import {
   Input,
   cn,
 } from "mangue-ui";
-import { Check, UserCircle2, CalendarDays, Gauge, Target, GitMerge } from "lucide-react";
+import { Check, UserCircle2, CalendarDays, Triangle, Target, GitMerge } from "lucide-react";
 import {
   STATUSES,
   STATUS_MAP,
@@ -22,6 +22,7 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
+import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
 import type { Issue, Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -41,7 +42,7 @@ export function ObjectivePicker({
 }) {
   const current = objectives.find((o) => o.id === value) ?? null;
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <Target className="text-muted-foreground" />
@@ -79,26 +80,22 @@ export function StatusPicker({
   size?: "sm" | "default";
 }) {
   const meta = STATUS_MAP[value];
-  const Icon = meta.icon;
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
-          <Icon className={meta.color} />
+          <StatusIndicator status={value} className="size-4" />
           {meta.label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
-        {STATUSES.map((s) => {
-          const SIcon = s.icon;
-          return (
-            <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
-              <SIcon className={s.color} />
-              {s.label}
-              {s.value === value && <Check className="ml-auto size-4" />}
-            </DropdownMenuItem>
-          );
-        })}
+        {STATUSES.map((s) => (
+          <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
+            <StatusIndicator status={s.value} className="size-4" />
+            {s.label}
+            {s.value === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -114,26 +111,22 @@ export function PriorityPicker({
   size?: "sm" | "default";
 }) {
   const meta = PRIORITY_MAP[value];
-  const Icon = meta.icon;
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
-          <Icon className={meta.color} />
+          <PriorityIndicator priority={value} className="size-4" />
           {meta.label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
-        {PRIORITIES.map((p) => {
-          const PIcon = p.icon;
-          return (
-            <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
-              <PIcon className={p.color} />
-              {p.label}
-              {p.value === value && <Check className="ml-auto size-4" />}
-            </DropdownMenuItem>
-          );
-        })}
+        {PRIORITIES.map((p) => (
+          <DropdownMenuItem key={p.value} onSelect={() => onChange(p.value)}>
+            <PriorityIndicator priority={p.value} className="size-4" />
+            {p.label}
+            {p.value === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -149,10 +142,10 @@ export function EffortPicker({
   size?: "sm" | "default";
 }) {
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
-          <Gauge className="text-muted-foreground" />
+          <Triangle className="text-muted-foreground" />
           {value ? EFFORT_MAP[value].label : "Effort"}
         </Button>
       </DropdownMenuTrigger>
@@ -187,7 +180,7 @@ export function AssigneePicker({
 }) {
   const current = members.find((m) => m.user_id === value) ?? null;
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <UserCircle2 className="text-muted-foreground" />
@@ -229,7 +222,7 @@ export function ParentPicker({
 }) {
   const current = options.find((o) => o.id === value) ?? null;
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={size}>
           <GitMerge className="text-muted-foreground" />

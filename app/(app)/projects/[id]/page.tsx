@@ -150,19 +150,6 @@ function ProjectBoard() {
   const statuses = activeObjective ? STATUSES : visibleStatuses(config);
   const sort = activeObjective ? "manual" : config.sort;
 
-  // Sub-issue progress per parent (from ALL issues, ignoring the active filter).
-  const subProgress = useMemo(() => {
-    const map = new Map<string, { done: number; total: number }>();
-    for (const i of issues) {
-      if (!i.parent_id) continue;
-      const e = map.get(i.parent_id) ?? { done: 0, total: 0 };
-      e.total++;
-      if (i.status === "done") e.done++;
-      map.set(i.parent_id, e);
-    }
-    return map;
-  }, [issues]);
-
   const selectView = (id: string | null) => {
     setActiveViewId(id);
     const v = id ? ongletViews.find((x) => x.id === id) : null;
@@ -374,9 +361,18 @@ function ProjectBoard() {
                 projectKey={project.key}
                 members={members}
                 categories={categories}
-                subProgress={subProgress}
                 onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
                 onCreateIssue={openCreate}
+                onUpdateIssue={(id, patch) =>
+                  void updateIssue(id, patch).catch((err) =>
+                    toast.error((err as Error).message)
+                  )
+                }
+                onSetCategories={(id, ids) =>
+                  void setCategories(id, ids).catch((err) =>
+                    toast.error((err as Error).message)
+                  )
+                }
                 onMove={moveIssue}
               />
             )}
