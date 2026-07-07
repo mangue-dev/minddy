@@ -29,6 +29,7 @@ import {
   StatusCompact,
 } from "@/components/issue-compact-fields";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
+import { useIssueDictation } from "@/lib/use-issue-dictation";
 import type {
   IssueStatus,
   IssuePriority,
@@ -51,17 +52,6 @@ const DEFAULTS = {
   objective_id: null as string | null,
   due_date: null as string | null,
 };
-
-type DictateTurn = { role: "user" | "assistant"; content: string };
-
-/** Numo emits due dates as naive local datetimes ("2026-07-10T00:00:00") —
- *  interpret them in the browser's timezone and store the usual ISO instant
- *  (local midnight = date-only, matching the DateTimePicker convention). */
-function normalizeDueDate(value: string | null): string | null {
-  if (value === null) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
 
 export function CreateIssueDialog({
   open,
@@ -113,13 +103,8 @@ export function CreateIssueDialog({
   // Live emptiness of the editor — `description` alone would miss text that was
   // typed but not yet committed (commit happens on blur) when the dialog closes.
   const editorNonEmptyRef = useRef(false);
-  const [numoBusy, setNumoBusy] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const createMoreId = useId();
-  // Throwaway dictation session — history feeds Numo's follow-up commands and
-  // dies with the dialog (nothing persisted).
-  const dictateHistoryRef = useRef<DictateTurn[]>([]);
-  const dictateAbortRef = useRef<AbortController | null>(null);
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
   // that column's status; objective mode reopens it with the objective set).
@@ -144,10 +129,7 @@ export function CreateIssueDialog({
     setCategoryIds([]);
     setCreateMore(false);
     editorNonEmptyRef.current = false;
-    dictateHistoryRef.current = [];
-    dictateAbortRef.current?.abort();
-    dictateAbortRef.current = null;
-    setNumoBusy(false);
+    resetDictation();
   };
 
   const closeAndReset = () => {
@@ -219,7 +201,7 @@ export function CreateIssueDialog({
       }
       // The dictation session is about the issue that was just created — a
       // follow-up recording starts fresh.
-      dictateHistoryRef.current = [];
+      clearDictationHistory();
       if (keepOpen) {
         // Rapid entry: keep the same field values, clear title + description.
         clearContent();
@@ -255,61 +237,28 @@ export function CreateIssueDialog({
       ...(patch.objective_id !== undefined
         ? { objective_id: patch.objective_id }
         : {}),
-      ...(patch.due_date !== undefined
-        ? { due_date: normalizeDueDate(patch.due_date) }
-        : {}),
+      ...(patch.due_date !== undefined ? { due_date: patch.due_date } : {}),
     }));
     if (Array.isArray(patch.category_ids)) setCategoryIds(patch.category_ids);
   };
 
-  const handleDictation = async (transcript: string) => {
-    setNumoBusy(true);
-    const controller = new AbortController();
-    dictateAbortRef.current = controller;
-    try {
-      const res = await fetch(`/api/projects/${projectId}/dictate-issue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transcript,
-          draft: { title, description, ...fields, category_ids: categoryIds },
-          history: dictateHistoryRef.current,
-          // Numo returns naive local datetimes; we normalize them here, in the
-          // browser's timezone (see applyPatch).
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new Error(t("dictateFailed"));
-      const data = (await res.json()) as {
-        patch: IssueDraftPatch;
-        reply: string;
-      };
-      applyPatch(data.patch);
-      dictateHistoryRef.current = [
-        ...dictateHistoryRef.current,
-        { role: "user" as const, content: transcript },
-        { role: "assistant" as const, content: data.reply },
-      ].slice(-12);
-      // Fields moving are the feedback; surface Numo's reply only when nothing
-      // visibly changed (unknown name, unclear command…).
-      if (Object.keys(data.patch).length === 0 && data.reply)
-        toast.info(data.reply);
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") toast.error(t("dictateFailed"));
-    } finally {
-      if (dictateAbortRef.current === controller) {
-        dictateAbortRef.current = null;
-        setNumoBusy(false);
-      }
-    }
-  };
-  // The DictateButton captures its callback when recording starts; route the
-  // call through a ref so it always reads the current form state (a mic click
-  // also blurs the description editor, committing it just before recording).
-  const handleDictationRef = useRef(handleDictation);
-  useEffect(() => {
-    handleDictationRef.current = handleDictation;
+  // Throwaway dictation session — history feeds Numo's follow-up commands and
+  // dies with the dialog (nothing persisted).
+  const {
+    busy: numoBusy,
+    onTranscript,
+    clearHistory: clearDictationHistory,
+    reset: resetDictation,
+  } = useIssueDictation({
+    projectId,
+    mode: "create",
+    getDraft: () => ({
+      title,
+      description,
+      ...fields,
+      category_ids: categoryIds,
+    }),
+    applyPatch,
   });
 
   return (
@@ -407,9 +356,7 @@ export function CreateIssueDialog({
                 </span>
               ) : (
                 <DictateButton
-                  onTranscription={(text) =>
-                    void handleDictationRef.current(text)
-                  }
+                  onTranscription={onTranscript}
                   disabled={submitting}
                   className="-ml-2"
                 />

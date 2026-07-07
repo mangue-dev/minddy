@@ -21,11 +21,16 @@ import type { IssueDraftPatch } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-// Numo fills the CREATE-ISSUE FORM from a voice transcript: the client sends
-// the transcript + the current draft, a short agentic loop turns it into a
-// validated field patch, the client applies it. Nothing is written to the DB —
-// creating the issue stays a manual click. The dictation session is throwaway:
-// history lives on the client and dies with the dialog.
+// Numo edits ISSUE FIELDS from a voice transcript: the client sends the
+// transcript + the current draft, a short agentic loop turns it into a
+// validated field patch, the client applies it. The route itself never writes
+// to the DB. Two modes:
+// - "create": the draft is the new-issue form — the patch stays a client-side
+//   draft, creating the issue remains a manual click.
+// - "edit": the draft is an existing issue's current values — the client saves
+//   the patch to the issue immediately.
+// The dictation session is throwaway: history lives on the client and dies
+// with the dialog / when the panel switches issue.
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
@@ -117,7 +122,7 @@ function sanitizePatch(
   }
   if (raw.status !== undefined) {
     if (isStatus(raw.status) && raw.status !== "duplicate") patch.status = raw.status;
-    else rejected.push(`status: invalid value (duplicate is not allowed on a draft)`);
+    else rejected.push(`status: invalid value (duplicate cannot be set by dictation)`);
   }
   if (raw.priority !== undefined) {
     if (isPriority(raw.priority)) patch.priority = raw.priority;
@@ -184,12 +189,14 @@ function formatNow(timeZone: string): string {
 function buildDictatePrompt({
   ctx,
   draft,
+  mode,
   locale,
   userId,
   timeZone,
 }: {
   ctx: PromptProjectContext;
   draft: Draft;
+  mode: "create" | "edit";
   locale: string;
   userId: string;
   timeZone: string;
@@ -204,9 +211,26 @@ function buildDictatePrompt({
   const categoryLines =
     ctx.categories.map((c) => `- "${c.name}" (id: ${c.id})`).join("\n") || "None yet.";
 
-  return `You are Numo, the minddy assistant, operating the "New issue" form of project "${ctx.name}".
+  const intro =
+    mode === "create"
+      ? `You are Numo, the minddy assistant, operating the "New issue" form of project "${ctx.name}".
 The user speaks; you fill or edit the DRAFT of the issue being created by calling update_draft.
-This edits a form on screen — nothing is saved until the user clicks the Create button. You cannot create the issue yourself.
+This edits a form on screen — nothing is saved until the user clicks the Create button. You cannot create the issue yourself.`
+      : `You are Numo, the minddy assistant, editing an EXISTING issue of project "${ctx.name}" from its side panel.
+The user speaks; you edit the issue's fields by calling update_draft.
+Every change you emit is saved to the issue IMMEDIATELY — be conservative: change exactly what was asked, nothing more.`;
+
+  const modeRules =
+    mode === "create"
+      ? `- FIRST dictation describing a problem or idea (draft mostly empty): fill as much as the words reasonably support — a concise title (≤ 80 chars, imperative, Linear-style), a clean markdown description faithful to what was said (structure it; NEVER invent facts, steps or details that were not said), and every field the words imply: "je m'en occupe" / "assigne-moi" → assignee = current user, a person's name → that member, deadlines → due_date, category/objective names → their ids. On a first dictation ALWAYS set priority AND effort, even when not stated: estimate priority from the urgency/impact wording and effort (t-shirt size) from the apparent scope and complexity of the work — a reasoned estimate beats leaving the defaults. Leave the other unstated fields untouched.
+- FOLLOW-UP commands ("passe-la en urgent", "attribue-moi le ticket", "enlève l'échéance"): apply EXACTLY the requested change(s), nothing else. Do not rewrite title or description unless asked.
+- Additional context dictated later ("ajoute que…") extends the description without losing what's there.
+- Title and description are written in the language the user dictates in.`
+      : `- Apply EXACTLY the requested change(s) ("passe-le en urgent", "attribue-moi le ticket", "enlève l'échéance") — NEVER touch a field the user did not mention. Do not estimate or fill unstated fields.
+- Additional context dictated ("ajoute que…") extends the description without losing what's there. Do not rewrite or restructure the existing title or description unless explicitly asked.
+- New text follows the language of the issue's existing content (falling back to the language the user dictates in).`;
+
+  return `${intro}
 
 ## Now
 ${formatNow(timeZone)} (user's local time) — resolve relative dates ("demain", "vendredi", "next week") against this. Express due_date as a NAIVE local datetime, NO timezone offset, e.g. "2026-07-10T00:00:00" — midnight when no time was stated.
@@ -228,14 +252,11 @@ ${categoryLines}
 - priority: ${ISSUE_PRIORITIES.join(", ")}
 - effort (t-shirt): ${ISSUE_EFFORTS.join(", ")}, or null
 
-## Current draft (ground truth — includes the user's manual edits)
+## ${mode === "create" ? "Current draft (ground truth — includes the user's manual edits)" : "Current issue (ground truth — its saved state)"}
 ${JSON.stringify(draft, null, 1)}
 
 ## Rules
-- FIRST dictation describing a problem or idea (draft mostly empty): fill as much as the words reasonably support — a concise title (≤ 80 chars, imperative, Linear-style), a clean markdown description faithful to what was said (structure it; NEVER invent facts, steps or details that were not said), and every field the words imply: "je m'en occupe" / "assigne-moi" → assignee = current user, a person's name → that member, deadlines → due_date, category/objective names → their ids. On a first dictation ALWAYS set priority AND effort, even when not stated: estimate priority from the urgency/impact wording and effort (t-shirt size) from the apparent scope and complexity of the work — a reasoned estimate beats leaving the defaults. Leave the other unstated fields untouched.
-- FOLLOW-UP commands ("passe-la en urgent", "attribue-moi le ticket", "enlève l'échéance"): apply EXACTLY the requested change(s), nothing else. Do not rewrite title or description unless asked.
-- Additional context dictated later ("ajoute que…") extends the description without losing what's there.
-- Title and description are written in the language the user dictates in.
+${modeRules}
 - Only pass ids listed above. If something matches nothing (unknown member, category…), do not guess — say so in your reply instead.
 - After your tool call(s), reply with ONE short plain sentence in ${locale === "fr" ? "French (with proper accents; an issue is « ticket »)" : "English"} summarizing what you changed, or explaining why you changed nothing. No markdown, no emoji, no ids.`;
 }
@@ -271,6 +292,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   let body: {
     transcript?: unknown;
+    mode?: unknown;
     draft?: unknown;
     history?: unknown;
     timeZone?: unknown;
@@ -280,6 +302,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  const mode = body.mode === "edit" ? ("edit" as const) : ("create" as const);
 
   const transcript =
     typeof body.transcript === "string"
@@ -294,8 +318,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       : "UTC";
 
   // The draft is display-only prompt context (prompt-only trust): every id the
-  // model can emit back is re-validated in sanitizePatch, and the patch never
-  // touches the DB.
+  // model can emit back is re-validated in sanitizePatch, and this route never
+  // writes to the DB (in edit mode the client persists through the usual
+  // authorized issue-update APIs).
   const rawDraft = (body.draft ?? {}) as Record<string, unknown>;
   const str = (v: unknown, max: number) =>
     typeof v === "string" ? v.slice(0, max) : "";
@@ -358,6 +383,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       content: buildDictatePrompt({
         ctx,
         draft,
+        mode,
         locale,
         userId: auth.user.id,
         timeZone,
