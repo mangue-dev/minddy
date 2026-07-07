@@ -20,6 +20,9 @@ import { DictateWaveform } from "./dictate-waveform";
 
 const MAX_DURATION_MS = 90_000;
 const NEAR_LIMIT_MS = 10_000;
+// Peak deviation from the analyser's 128 midline that counts as speech —
+// ambient room noise stays well under this, actual speech peaks far above.
+const SPEECH_PEAK_THRESHOLD = 20;
 
 type DictateStatus = "idle" | "starting" | "recording" | "processing";
 
@@ -77,6 +80,10 @@ export function DictateButton({
   const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recorderMimeRef = useRef<string>("audio/webm");
   const isMountedRef = useRef(true);
+  // Speech gate: flips to true the first time a recording frame crosses
+  // SPEECH_PEAK_THRESHOLD. Stopping while still false means a silent take.
+  const speechDetectedRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const cleanupStream = useCallback(() => {
     if (tickIntervalRef.current) {
@@ -91,6 +98,8 @@ export function DictateButton({
       current?.getTracks().forEach((track) => track.stop());
       return null;
     });
+    audioContextRef.current?.close().catch(() => {});
+    audioContextRef.current = null;
     mediaRecorderRef.current = null;
   }, []);
 
@@ -133,7 +142,9 @@ export function DictateButton({
         const data = (await res.json()) as { text?: string };
         const text = (data.text ?? "").trim();
         if (!isMountedRef.current) return;
-        if (text) onTranscription(text);
+        // A transcript with no letter or digit ("...", "♪") is Whisper's
+        // silence filler — treat it as an empty transcription.
+        if (/[\p{L}\p{N}]/u.test(text)) onTranscription(text);
         else toast.error(t("emptyResult"));
       } catch (err) {
         if (!isMountedRef.current) return;
@@ -199,6 +210,39 @@ export function DictateButton({
     recorderMimeRef.current = recorder.mimeType || mimeType || "audio/webm";
     chunksRef.current = [];
 
+    // Speech gate — watch the mic's time-domain peaks while recording so a
+    // silent take is dropped without an API round-trip (on silence, Whisper
+    // hallucinates filler text instead of returning an empty transcript).
+    speechDetectedRef.current = false;
+    let detectSpeech: (() => void) | null = null;
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (AudioCtx) {
+        const audioContext = new AudioCtx();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        audioContext.createMediaStreamSource(mediaStream).connect(analyser);
+        audioContextRef.current = audioContext;
+        void audioContext.resume().catch(() => {});
+        const samples = new Uint8Array(analyser.fftSize);
+        detectSpeech = () => {
+          if (speechDetectedRef.current) return;
+          analyser.getByteTimeDomainData(samples);
+          for (const value of samples) {
+            if (Math.abs(value - 128) >= SPEECH_PEAK_THRESHOLD) {
+              speechDetectedRef.current = true;
+              return;
+            }
+          }
+        };
+      }
+    } catch {
+      // No analyser — the gate stays open (see the onstop check).
+    }
+
     recorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) {
         chunksRef.current.push(event.data);
@@ -209,8 +253,19 @@ export function DictateButton({
       const chunks = chunksRef.current;
       chunksRef.current = [];
       const blob = new Blob(chunks, { type: recorderMimeRef.current });
+      // Trust the "no speech" verdict only if the analyser actually ran — no
+      // AudioContext or a suspended one reads as flat silence regardless of
+      // what the mic picked up.
+      const silent =
+        !speechDetectedRef.current &&
+        audioContextRef.current?.state === "running";
       cleanupStream();
       if (blob.size === 0) {
+        setStatus("idle");
+        return;
+      }
+      if (silent) {
+        toast.error(t("emptyResult"));
         setStatus("idle");
         return;
       }
@@ -227,6 +282,7 @@ export function DictateButton({
 
     tickIntervalRef.current = setInterval(() => {
       setElapsedMs(Date.now() - startedAtRef.current);
+      detectSpeech?.();
     }, 200);
 
     autoStopRef.current = setTimeout(() => {

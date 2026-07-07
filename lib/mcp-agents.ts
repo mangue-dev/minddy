@@ -38,8 +38,11 @@ export const MCP_AGENTS: McpAgent[] = [
     label: "Claude Code",
     kind: "command",
     logo: "/agents/claude.svg",
+    // --scope user : sans lui, le serveur est enregistré en scope LOCAL (lié
+    // au dossier où la commande a été lancée) et n'apparaît ni dans
+    // l'extension VS Code ni dans l'app desktop ouvertes ailleurs.
     build: (endpoint, key) =>
-      `claude mcp add --transport http ${MCP_SERVER_NAME} ${endpoint} --header "Authorization: ${bearer(key)}"`,
+      `claude mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint} --header "Authorization: ${bearer(key)}"`,
   },
   {
     id: "codex",
@@ -71,8 +74,10 @@ export const MCP_AGENTS: McpAgent[] = [
     label: "Gemini CLI",
     kind: "command",
     logo: "/agents/gemini.svg",
+    // --scope user : même logique que Claude Code — le défaut (project) lie
+    // le serveur au dossier courant au lieu du compte.
     build: (endpoint, key) =>
-      `gemini mcp add --transport http ${MCP_SERVER_NAME} ${endpoint} --header "Authorization: ${bearer(key)}"`,
+      `gemini mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint} --header "Authorization: ${bearer(key)}"`,
   },
   {
     id: "vscode",

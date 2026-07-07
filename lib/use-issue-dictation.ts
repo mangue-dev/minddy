@@ -58,6 +58,8 @@ export function useIssueDictation({
   const abortRef = useRef<AbortController | null>(null);
 
   const dictate = async (transcript: string) => {
+    // An empty transcript carries no instruction — never enter the Numo step.
+    if (!transcript.trim()) return;
     setBusy(true);
     const controller = new AbortController();
     abortRef.current = controller;
