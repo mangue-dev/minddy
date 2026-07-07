@@ -72,9 +72,19 @@ export interface ShortcutMenuState {
  * `<IssueShortcutMenu state={menuState} onClose={closeMenu} … />` inside it.
  *
  * @param enabled Extra gate on top of hover (e.g. the panel being open).
+ * @param actions Extra key → callback shortcuts that fire the callback directly
+ *   instead of opening a picker. Keys are lowercased, optionally prefixed with
+ *   `shift+` (e.g. `"shift+p"` to copy the prompt). Field shortcuts (S/P/E/…)
+ *   only ever fire without Shift, so a Shift combo never collides with them.
  */
-export function useIssueFieldShortcuts(enabled = true) {
+export function useIssueFieldShortcuts(
+  enabled = true,
+  actions?: Record<string, () => void>
+) {
   const posRef = React.useRef<{ x: number; y: number } | null>(null);
+  // Latest actions without re-subscribing the listener each render.
+  const actionsRef = React.useRef(actions);
+  actionsRef.current = actions;
   const [hovered, setHovered] = React.useState(false);
   const [menuState, setMenuState] = React.useState<ShortcutMenuState | null>(null);
 
@@ -91,13 +101,27 @@ export function useIssueFieldShortcuts(enabled = true) {
           el.isContentEditable)
       )
         return;
-      const field = SHORTCUT_KEYS[e.key.toLowerCase()];
+      const key = e.key.toLowerCase();
+      const action =
+        actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
+      if (action) {
+        // Capture phase + stopImmediatePropagation: while hovering, this owns
+        // the combo — e.g. Shift+P copies here without touching the P picker.
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        action();
+        return;
+      }
+      // Field pickers are unmodified single keys only.
+      if (e.shiftKey) return;
+      const field = SHORTCUT_KEYS[key];
       if (!field || !posRef.current) return;
       e.preventDefault();
+      e.stopImmediatePropagation();
       setMenuState({ field, position: posRef.current });
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [enabled, hovered]);
 
   const track = (e: React.MouseEvent) => {

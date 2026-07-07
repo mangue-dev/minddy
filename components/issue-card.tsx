@@ -621,14 +621,18 @@ export function IssueCard({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
     null
   );
-  // Raccourcis clavier au survol (S/P/E/A/L/D/O) — ouvrent le picker au curseur.
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(!isDragging);
-
   const copyPrompt = async () => {
     const prompt = buildIssuePrompt({ issue, projectId, projectKey });
     await navigator.clipboard.writeText(prompt);
     toast.success(t("promptCopied"));
   };
+
+  // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
+  // Shift+P copie le prompt.
+  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
+    !isDragging,
+    { "shift+p": () => void copyPrompt() }
+  );
 
   const menuActions: ContextMenuAction[] = [
     {
@@ -636,6 +640,7 @@ export function IssueCard({
       label: t("copyAsPrompt"),
       keywords: ["copy", "prompt", "agent", "copier"],
       icon: <ClipboardCopy className="size-4" />,
+      shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
   ];

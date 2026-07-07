@@ -15,6 +15,8 @@ export interface ContextMenuAction {
   /** Termes de recherche additionnels (synonymes, anglais/français…). */
   keywords?: string[];
   icon?: React.ReactNode;
+  /** Touche du raccourci correspondant, affichée en indice (ex. "C"). */
+  shortcut?: string;
   onSelect: () => void;
 }
 
@@ -43,6 +45,11 @@ export function IssueContextMenu({
           >
             {action.icon}
             <span className="truncate">{action.label}</span>
+            {action.shortcut && (
+              <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+                {action.shortcut}
+              </kbd>
+            )}
           </CommandItem>
         ))}
       </CommandGroup>
