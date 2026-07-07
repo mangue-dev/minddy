@@ -77,7 +77,9 @@ export function IssueSidePanel({
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const { items, addComment } = useIssueTimeline(issue?.id ?? null);
+  const { items, addComment, updateComment, deleteComment } = useIssueTimeline(
+    issue?.id ?? null
+  );
 
   // Sync the editable title when a different issue opens (not on every tick).
   useEffect(() => {
@@ -243,6 +245,10 @@ export function IssueSidePanel({
                 issues: allIssues,
                 projectKey,
               }}
+              currentUserId={user?.id ?? null}
+              onReply={(parentId, body, mentions) => addComment(body, mentions, parentId)}
+              onEditComment={updateComment}
+              onDeleteComment={deleteComment}
             />
           </SidePanelBody>
 

@@ -13,7 +13,7 @@ import {
 import type { Comment, IssueEvent } from "./types";
 
 export type TimelineItem =
-  | { kind: "comment"; at: string; comment: Comment }
+  | { kind: "comment"; at: string; comment: Comment; replies: Comment[] }
   | { kind: "event"; at: string; event: IssueEvent };
 
 const commentsKey = (issueId: string) => ["comments", issueId] as const;
@@ -61,17 +61,37 @@ export function useIssueTimeline(issueId: string | null) {
   }, [queryClient, issueId, channelId]);
 
   const items = useMemo<TimelineItem[]>(() => {
+    // Threads: replies (parent_id = root comment) attach under their root;
+    // a thread card stays anchored at the root's created_at.
+    const all = comments ?? [];
+    const rootIds = new Set(all.filter((c) => !c.parent_id).map((c) => c.id));
+    const repliesByRoot = new Map<string, Comment[]>();
+    for (const c of all) {
+      if (c.parent_id && rootIds.has(c.parent_id)) {
+        const list = repliesByRoot.get(c.parent_id) ?? [];
+        list.push(c);
+        repliesByRoot.set(c.parent_id, list);
+      }
+    }
     const merged: TimelineItem[] = [
       ...(events ?? []).map((e) => ({ kind: "event" as const, at: e.created_at, event: e })),
-      ...(comments ?? []).map((c) => ({ kind: "comment" as const, at: c.created_at, comment: c })),
+      ...all
+        // Orphan replies (missing root) are promoted to roots, defensively.
+        .filter((c) => !c.parent_id || !rootIds.has(c.parent_id))
+        .map((c) => ({
+          kind: "comment" as const,
+          at: c.created_at,
+          comment: c,
+          replies: repliesByRoot.get(c.id) ?? [],
+        })),
     ];
     merged.sort((a, b) => a.at.localeCompare(b.at));
     return merged;
   }, [comments, events]);
 
   const addComment = useCallback(
-    async (body: string, mentionedUserIds: string[] = []) => {
-      await addCommentApi(issueId as string, body, mentionedUserIds);
+    async (body: string, mentionedUserIds: string[] = [], parentId: string | null = null) => {
+      await addCommentApi(issueId as string, body, mentionedUserIds, parentId);
       void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
     },
     [issueId, queryClient]

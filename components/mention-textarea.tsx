@@ -36,20 +36,25 @@ export function MentionTextarea({
   onChange,
   members,
   onSubmit,
+  onEscape,
   placeholder,
   rows = 1,
   className,
   dropUp = false,
+  autoFocus = false,
 }: {
   value: string;
   onChange: (text: string) => void;
   members: Member[];
   onSubmit?: () => void;
+  /** Called on Escape when the mention suggestions are closed. */
+  onEscape?: () => void;
   placeholder?: string;
   rows?: number;
   className?: string;
   /** Open the suggestion list above the field (for composers pinned to the bottom). */
   dropUp?: boolean;
+  autoFocus?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [mention, setMention] = useState<{ at: number; query: string } | null>(null);
@@ -112,6 +117,10 @@ export function MentionTextarea({
             setMention(null);
             return;
           }
+          if (!open && e.key === "Escape") {
+            onEscape?.();
+            return;
+          }
           if (!open && e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             onSubmit?.();
@@ -120,6 +129,7 @@ export function MentionTextarea({
         onBlur={() => setTimeout(() => setMention(null), 120)}
         placeholder={placeholder}
         rows={rows}
+        autoFocus={autoFocus}
         className={cn(
           "max-h-48 w-full resize-none overflow-y-auto rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           className

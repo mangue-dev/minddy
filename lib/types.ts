@@ -18,6 +18,8 @@ export interface Comment {
   id: string;
   issue_id: string;
   author_id: string | null;
+  /** Root comment of the thread when this is a reply (depth ≤ 1). */
+  parent_id: string | null;
   body: string;
   created_at: string;
   updated_at: string;

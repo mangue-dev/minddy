@@ -76,7 +76,7 @@ function MentionBadge({ userId, members }: { userId: string; members: Member[] }
   const m = members.find((x) => x.user_id === userId);
   const name = m ? memberLabel(m) : "Utilisateur";
   return (
-    <span className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pr-1.5 pl-0.5 align-baseline text-[0.9em] font-medium text-primary">
+    <span className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pr-1.5 pl-1 align-middle text-[0.9em] font-medium text-primary">
       <UserAvatar
         url={m?.avatar_url ?? null}
         name={name}

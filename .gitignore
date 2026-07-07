@@ -27,3 +27,5 @@ yarn-error.log*
 .vercel
 
 assets/figma
+# supabase CLI link artifacts
+supabase/.temp/
