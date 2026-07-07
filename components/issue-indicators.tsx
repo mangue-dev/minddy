@@ -47,6 +47,13 @@ export function StatusIndicator({
 }) {
   const base = cn("size-[19px] shrink-0", className);
   switch (status) {
+    case "triage":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" className={base}>
+          <circle cx="8" cy="8" r="6" stroke="#FA8028" strokeWidth="1.5" strokeDasharray="2 2" />
+          <circle cx="8" cy="8" r="2.5" fill="#FA8028" />
+        </svg>
+      );
     case "backlog":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={cn(base, "text-muted-foreground")}>
@@ -75,6 +82,13 @@ export function StatusIndicator({
         <svg viewBox="0 0 16 16" fill="none" className={base}>
           <circle cx="8" cy="8" r="6.5" fill="#D62115" />
           <path d="M5.8 5.8 10.2 10.2M10.2 5.8 5.8 10.2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+    case "duplicate":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" className={base}>
+          <circle cx="8" cy="8" r="6.5" fill="#8E8E93" />
+          <path d="M5.5 6.6h5M5.5 9.4h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       );
   }

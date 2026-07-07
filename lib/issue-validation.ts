@@ -2,12 +2,14 @@
 // so route handlers can use them). Mirrors lib/issue-constants.ts.
 
 export const ISSUE_STATUSES = [
+  "triage",
   "backlog",
   "todo",
   "in_progress",
   "in_review",
   "done",
   "canceled",
+  "duplicate",
 ] as const;
 export const ISSUE_PRIORITIES = ["none", "urgent", "high", "medium", "low"] as const;
 export const ISSUE_EFFORTS = ["xs", "s", "m", "l", "xl"] as const;

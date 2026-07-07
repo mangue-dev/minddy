@@ -11,7 +11,7 @@ import {
 } from "mangue-ui";
 import { Calendar, Triangle, User } from "lucide-react";
 import {
-  STATUSES,
+  ALL_STATUSES,
   PRIORITIES,
   EFFORTS,
   issueIdentifier,
@@ -75,7 +75,7 @@ function StatusPick({
   const tField = useTranslations("Field");
   const tStatus = useTranslations("Status");
   if (!onChange) return <StatusIndicator status={value} />;
-  const options: PickerOption[] = STATUSES.map((s) => ({
+  const options: PickerOption[] = ALL_STATUSES.map((s) => ({
     value: s.value,
     label: tStatus(s.value),
     icon: <StatusIndicator status={s.value} className="size-4" />,

@@ -67,7 +67,8 @@ export function ProjectCard({ project }: { project: Project }) {
     queryFn: () => fetchIssuesApi(project.id),
   });
   const issues = data ?? [];
-  const isOpen = (status: string) => status !== "done" && status !== "canceled";
+  const isOpen = (status: string) =>
+    status !== "done" && status !== "canceled" && status !== "duplicate";
   const openCount = issues.filter((i) => isOpen(i.status)).length;
   const mineCount = myUserId
     ? issues.filter((i) => i.assignee_id === myUserId && isOpen(i.status)).length

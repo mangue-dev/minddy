@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { UserCircle2, Triangle, Target, GitMerge } from "lucide-react";
 import {
-  STATUSES,
+  ALL_STATUSES,
   PRIORITIES,
   EFFORTS,
   EFFORT_MAP,
@@ -79,7 +79,7 @@ export function StatusPicker({
   size?: "sm" | "default";
 }) {
   const tStatus = useTranslations("Status");
-  const options: PickerOption[] = STATUSES.map((s) => ({
+  const options: PickerOption[] = ALL_STATUSES.map((s) => ({
     value: s.value,
     label: tStatus(s.value),
     icon: <StatusIndicator status={s.value} className="size-4" />,

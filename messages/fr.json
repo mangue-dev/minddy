@@ -36,7 +36,6 @@
     "projectNotFound": "Projet introuvable",
     "commentEmpty": "Le commentaire est vide.",
     "commentNotFound": "Commentaire introuvable",
-    "triageItemNotFound": "Élément de triage introuvable",
     "ownerOnlyInvite": "Seul le propriétaire peut inviter.",
     "invalidEmail": "Email invalide.",
     "noAccountForEmail": "Aucun compte minddy avec cet email.",
@@ -367,12 +366,14 @@
     "due": "Échéance"
   },
   "Status": {
+    "triage": "Triage",
     "backlog": "Backlog",
     "todo": "À faire",
     "in_progress": "En cours",
     "in_review": "En revue",
     "done": "Terminé",
-    "canceled": "Annulé"
+    "canceled": "Annulé",
+    "duplicate": "Doublon"
   },
   "Timeline": {
     "activity": "Activité",
@@ -401,12 +402,14 @@
     "projectNotFound": "Projet introuvable",
     "backToHome": "Retour à l'accueil",
     "title": "Triage",
-    "emptyState": "Rien à trier. Les tickets venus de Numo et d'autres sources arriveront ici pour validation.",
+    "emptyState": "Rien à trier. Les tickets créés hors de minddy (bientôt Numo) arriveront ici pour validation.",
     "accept": "Accepter",
-    "reject": "Rejeter",
-    "rejectConfirmTitle": "Rejeter « {title} » ?",
-    "rejectConfirmDescription": "L'élément est retiré du triage. Aucun ticket ne sera créé.",
-    "rejectedToast": "Élément rejeté.",
-    "sourceLabel": "via {source}"
+    "markDuplicate": "Doublon",
+    "decline": "Refuser",
+    "acceptedToast": "Ticket accepté et envoyé au backlog.",
+    "declinedToast": "Ticket refusé (annulé).",
+    "duplicateToast": "Marqué comme doublon de {id}.",
+    "noSelection": "Sélectionne un ticket pour le trier.",
+    "backToList": "Retour à la liste"
   }
 }

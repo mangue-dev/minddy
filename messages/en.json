@@ -36,7 +36,6 @@
     "projectNotFound": "Project not found",
     "commentEmpty": "Comment cannot be empty.",
     "commentNotFound": "Comment not found",
-    "triageItemNotFound": "Triage item not found",
     "ownerOnlyInvite": "Only the owner can invite.",
     "invalidEmail": "Invalid email.",
     "noAccountForEmail": "No minddy account with this email.",
@@ -367,12 +366,14 @@
     "due": "Due date"
   },
   "Status": {
+    "triage": "Triage",
     "backlog": "Backlog",
     "todo": "Todo",
     "in_progress": "In Progress",
     "in_review": "In Review",
     "done": "Done",
-    "canceled": "Canceled"
+    "canceled": "Canceled",
+    "duplicate": "Duplicate"
   },
   "Timeline": {
     "activity": "Activity",
@@ -401,12 +402,14 @@
     "projectNotFound": "Project not found",
     "backToHome": "Back to home",
     "title": "Triage",
-    "emptyState": "Nothing to triage. Issues from Numo and other sources will land here for review.",
+    "emptyState": "Nothing to triage. Issues created outside minddy (Numo, soon) will land here for review.",
     "accept": "Accept",
-    "reject": "Reject",
-    "rejectConfirmTitle": "Reject \"{title}\"?",
-    "rejectConfirmDescription": "The item is removed from triage. No issue is created.",
-    "rejectedToast": "Item rejected.",
-    "sourceLabel": "via {source}"
+    "markDuplicate": "Duplicate",
+    "decline": "Decline",
+    "acceptedToast": "Issue accepted and moved to the backlog.",
+    "declinedToast": "Issue declined (canceled).",
+    "duplicateToast": "Marked as duplicate of {id}.",
+    "noSelection": "Select an issue to triage it.",
+    "backToList": "Back to the list"
   }
 }

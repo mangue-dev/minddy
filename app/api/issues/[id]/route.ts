@@ -95,6 +95,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     updates.parent_id =
       typeof input.parent_id === "string" ? input.parent_id : null;
   }
+  if ("duplicate_of_id" in input) {
+    updates.duplicate_of_id =
+      typeof input.duplicate_of_id === "string" ? input.duplicate_of_id : null;
+  }
   if ("due_date" in input) {
     if (!isDateOrNull(input.due_date)) {
       return NextResponse.json({ error: t("invalidDate") }, { status: 400 });

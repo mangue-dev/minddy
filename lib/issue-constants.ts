@@ -2,8 +2,10 @@ import {
   CircleDashed,
   Circle,
   CircleDot,
+  Copy,
   Eye,
   CheckCircle2,
+  Filter,
   XCircle,
   Minus,
   SignalLow,
@@ -16,12 +18,14 @@ import {
 // All three axes are FIXED (plan.md §4) — not customizable per project.
 
 export type IssueStatus =
+  | "triage"
   | "backlog"
   | "todo"
   | "in_progress"
   | "in_review"
   | "done"
-  | "canceled";
+  | "canceled"
+  | "duplicate";
 export type IssuePriority = "none" | "urgent" | "high" | "medium" | "low";
 export type IssueEffort = "xs" | "s" | "m" | "l" | "xl";
 
@@ -33,7 +37,8 @@ export interface StatusMeta {
   color: string;
 }
 
-// Order = kanban column order (plan.md §4).
+// Order = kanban column order (plan.md §4). Board columns ONLY — triage and
+// duplicate issues are deliberately absent from the kanban.
 export const STATUSES: StatusMeta[] = [
   { value: "backlog", icon: CircleDashed, color: "text-muted-foreground" },
   { value: "todo", icon: Circle, color: "text-muted-foreground" },
@@ -43,8 +48,16 @@ export const STATUSES: StatusMeta[] = [
   { value: "canceled", icon: XCircle, color: "text-muted-foreground" },
 ];
 
+// Full status list for pickers: triage first (arrival zone), duplicate last
+// (closed as a duplicate of another issue).
+export const ALL_STATUSES: StatusMeta[] = [
+  { value: "triage", icon: Filter, color: "text-orange-500" },
+  ...STATUSES,
+  { value: "duplicate", icon: Copy, color: "text-muted-foreground" },
+];
+
 export const STATUS_MAP: Record<IssueStatus, StatusMeta> = Object.fromEntries(
-  STATUSES.map((s) => [s.value, s])
+  ALL_STATUSES.map((s) => [s.value, s])
 ) as Record<IssueStatus, StatusMeta>;
 
 // Labels are i18n'd — resolve via useTranslations("Priority")(value).

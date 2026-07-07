@@ -158,6 +158,7 @@ export interface Issue {
   assignee_id: string | null;
   objective_id: string | null;
   parent_id: string | null;
+  duplicate_of_id: string | null;
   due_date: string | null;
   position: number;
   created_by: string | null;
@@ -189,31 +190,9 @@ export interface IssueUpdateInput {
   assignee_id?: string | null;
   objective_id?: string | null;
   parent_id?: string | null;
+  duplicate_of_id?: string | null;
   due_date?: string | null;
   position?: number;
-}
-
-export type TriageStatus = "pending" | "accepted" | "rejected";
-
-/** Proto-issue in the arrival zone (plan §8): title + description, no workflow fields. */
-export interface TriageItem {
-  id: string;
-  project_id: string;
-  title: string;
-  description: string | null;
-  source: string;
-  status: TriageStatus;
-  issue_id: string | null;
-  processed_by: string | null;
-  processed_at: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
-export interface CreateTriageItemInput {
-  title: string;
-  description?: string | null;
-  source?: string;
 }
 
 export type Onglet = "my" | "all";

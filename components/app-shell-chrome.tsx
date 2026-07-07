@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useNotifications } from "@/lib/use-notifications";
-import { useTriageQuery } from "@/lib/use-triage-query";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
@@ -76,10 +75,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
   const isInbox = pathname.startsWith("/inbox");
 
-  // Pending proto-issues of the current project — shares the ["triage",
-  // projectId] cache (and realtime bridge) with the triage page.
-  const { count: triageCount } = useTriageQuery(currentProjectId);
-
   // Shares the ["issues", projectId] cache with the board (no extra realtime
   // bridge) so search can list the current project's issues.
   const { data: projectIssues } = useQuery({
@@ -87,6 +82,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     queryFn: () => fetchIssuesApi(currentProjectId as string),
     enabled: !!currentProjectId,
   });
+
+  // Triage is a hidden issue status — the sidebar counter derives from the
+  // same issues cache the board and search already keep fresh.
+  const triageCount = (projectIssues ?? []).filter((i) => i.status === "triage").length;
 
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
