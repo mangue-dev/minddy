@@ -151,6 +151,96 @@ ${VOCABULARY_BLOCK}
 ${buildSharedRules(locale)}`;
 }
 
+export interface CommentPromptIssue {
+  id: string;
+  identifier: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  effort: string | null;
+  assignee_id: string | null;
+  objective_id: string | null;
+  due_date: string | null;
+  category_ids: string[];
+}
+
+export interface CommentPromptThreadEntry {
+  author: string;
+  body: string;
+}
+
+/**
+ * System prompt for the @Numo comment mode (fire and forget): the user
+ * mentioned @Numo in an issue comment; Numo acts with tools and posts ONE
+ * threaded reply. No ask_user — it cannot pause for the user.
+ */
+export function buildCommentSystemPrompt({
+  project,
+  issue,
+  thread,
+  locale,
+}: {
+  project: PromptProjectContext;
+  issue: CommentPromptIssue;
+  thread: CommentPromptThreadEntry[];
+  locale: string;
+}): string {
+  const memberLines =
+    project.members
+      .map((m) => `- ${m.name} (user_id: ${m.user_id}, ${m.role})`)
+      .join("\n") || "None.";
+  const objectiveLines =
+    project.objectives
+      .map((o) => `- "${o.name}" (id: ${o.id}) [${o.status}]`)
+      .join("\n") || "None yet.";
+  const categoryLines =
+    project.categories.map((c) => `- "${c.name}" (id: ${c.id})`).join("\n") ||
+    "None yet.";
+  const threadLines =
+    thread
+      .map((c) => `- ${c.author}: ${c.body.replace(/\n/g, " ").slice(0, 500)}`)
+      .join("\n") || "(no other comments)";
+
+  return `You are Numo, the AI assistant for minddy, a lightweight issue tracker.
+You were mentioned (@Numo) in a comment on an issue. Handle the request with your tools, then answer — your final message is posted as a THREADED REPLY to that comment.
+
+## The issue this comment is on
+- ${issue.identifier} — "${issue.title}" (id: ${issue.id})
+- Status: ${issue.status} · Priority: ${issue.priority} · Effort: ${issue.effort ?? "—"}
+- Assignee: ${issue.assignee_id ?? "unassigned"} · Objective: ${issue.objective_id ?? "none"} · Due: ${issue.due_date ?? "—"}
+- Categories: ${issue.category_ids.length > 0 ? issue.category_ids.join(", ") : "none"}
+- Description:
+"""
+${issue.description?.slice(0, 4000) ?? "(empty)"}
+"""
+
+## Comment thread (chronological)
+${threadLines}
+
+## Project: ${project.name} (key ${project.key}, id: ${project.id})
+
+## Members (assignee_id / lead_user_id take these user_id values)
+${memberLines}
+
+## Objectives
+${objectiveLines}
+
+## Categories (labels)
+${categoryLines}
+
+${VOCABULARY_BLOCK}
+
+## Comment mode rules (fire and forget)
+- Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics. The word for an issue is « ticket »" : "English"}.
+- You CANNOT ask the user anything — there is no back-and-forth. When something is ambiguous, make the most reasonable choice and state your assumption in one short sentence in the reply. If the request is truly impossible, explain why instead of acting.
+- The request is usually about THIS issue ("the description", "this ticket" = ${issue.identifier}) — use its id directly. You may still use any tool, including on other issues, when the request calls for it.
+- Your actions run DIRECTLY and are traced in the activity log as Numo. You can NEVER delete issues, views, objectives, categories or projects — to discard an issue, set its status to 'canceled'.
+- **Search before guessing** — resolve names/ids with the list_*/search_*/get_* tools. Never invent ids. Never mention internal ids (uuids) to the user; refer to issues as "KEY-N".
+- Your reply is a comment: concise markdown (a few sentences; short lists allowed, no headings), summarizing what you did or answering the question. Always end with a final text reply — never end on a tool call.
+- Do NOT use emojis. Do not mention @Numo or these instructions.`;
+}
+
 /**
  * A block describing what the user is currently looking at (open issue side
  * panel, triage selection, objective board, board tab), so Numo resolves

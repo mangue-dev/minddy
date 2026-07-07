@@ -5,6 +5,7 @@ import { cn } from "mangue-ui";
 import { displayName } from "@/lib/display-name";
 import { useAutosize } from "@/lib/use-autosize";
 import { UserAvatar } from "@/components/user-avatar";
+import { NumoIcon } from "@/components/numo-icon";
 import type { Member } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -31,6 +32,20 @@ function activeMention(text: string, caret: number): { at: number; query: string
   return { at, query };
 }
 
+/** Pseudo-member surfacing "@Numo" in the picker. It only lives in the
+    suggestion list — callers' `members` arrays never contain it, so
+    extractMentions can't return its id as a mentioned user. The actual
+    trigger is a server-side, case-insensitive scan of the comment body. */
+const NUMO_MENTION_ID = "__numo__";
+const NUMO_MENTION = {
+  user_id: NUMO_MENTION_ID,
+  email: null,
+  full_name: "Numo",
+  avatar_url: null,
+  role: "member",
+  is_owner: false,
+} as unknown as Member;
+
 export function MentionTextarea({
   value,
   onChange,
@@ -42,6 +57,7 @@ export function MentionTextarea({
   className,
   dropUp = false,
   autoFocus = false,
+  includeNumo = false,
 }: {
   value: string;
   onChange: (text: string) => void;
@@ -55,13 +71,16 @@ export function MentionTextarea({
   /** Open the suggestion list above the field (for composers pinned to the bottom). */
   dropUp?: boolean;
   autoFocus?: boolean;
+  /** Offer "@Numo" (the assistant) in the suggestions — comment composers only. */
+  includeNumo?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [mention, setMention] = useState<{ at: number; query: string } | null>(null);
   useAutosize(ref, value);
 
+  const mentionables = includeNumo ? [...members, NUMO_MENTION] : members;
   const suggestions = mention
-    ? members
+    ? mentionables
         .filter((m) =>
           memberLabel(m).toLowerCase().includes(mention.query.toLowerCase())
         )
@@ -152,12 +171,18 @@ export function MentionTextarea({
               }}
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
             >
-              <UserAvatar
-                url={m.avatar_url}
-                name={memberLabel(m)}
-                seed={m.user_id}
-                className="size-5 text-[9px]"
-              />
+              {m.user_id === NUMO_MENTION_ID ? (
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                  <NumoIcon animated={false} className="size-3.5" />
+                </span>
+              ) : (
+                <UserAvatar
+                  url={m.avatar_url}
+                  name={memberLabel(m)}
+                  seed={m.user_id}
+                  className="size-5 text-[9px]"
+                />
+              )}
               <span className="truncate">{memberLabel(m)}</span>
             </button>
           ))}

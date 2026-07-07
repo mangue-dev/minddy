@@ -100,7 +100,9 @@
     "contextObjective": "Objective in context",
     "contextBoard": "Board in context",
     "contextBoardMy": "My issues",
-    "contextBoardAll": "All issues"
+    "contextBoardAll": "All issues",
+    "working": "Working…",
+    "commentError": "Numo couldn't complete this request."
   },
   "Auth": {
     "callbackFailed": "The confirmation link is invalid or has expired. Try signing in again.",

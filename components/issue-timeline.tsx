@@ -24,6 +24,7 @@ import {
 } from "@/lib/describe-event";
 import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
+import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
@@ -190,8 +191,18 @@ function CommentBlock({
 }) {
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
+  const tAssistant = useTranslations("Assistant");
+  const tToolCall = useTranslations("ToolCall");
   const viaNumo = !!comment.via_assistant;
   const name = viaNumo ? "Numo" : actorName(ctx.members, comment.author_id, t);
+  // Live @Numo reply: 'working' comments update in place (current tool, then
+  // streaming text) via Realtime until only the final message remains. A
+  // 'working' row older than 5 minutes is an orphan (server died) → error.
+  const stale =
+    comment.assistant_status === "working" &&
+    Date.now() - new Date(comment.created_at).getTime() > 5 * 60_000;
+  const working = comment.assistant_status === "working" && !stale;
+  const failed = comment.assistant_status === "error" || stale;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -228,11 +239,11 @@ function CommentBlock({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {timeAgo(comment.created_at, t)}
         </span>
-        {edited && (
+        {edited && !viaNumo && (
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
         <span className="min-w-0 flex-1" />
-        {mine && !editing && (
+        {mine && !editing && !working && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -262,7 +273,37 @@ function CommentBlock({
           </DropdownMenu>
         )}
       </div>
-      {editing ? (
+      {working ? (
+        // One live line at a time: the current tool, else the text being
+        // written, else a plain "Working…" — each update replaces the previous.
+        comment.assistant_tool ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="size-3.5 shrink-0" />
+            <span className="min-w-0 truncate italic">
+              {toolRunningLabel(comment.assistant_tool, tToolCall)}
+            </span>
+          </div>
+        ) : comment.body ? (
+          <div className="flex flex-col gap-1.5">
+            <Markdown className="text-foreground" members={ctx.members}>
+              {comment.body}
+            </Markdown>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Spinner className="size-3 shrink-0" />
+              <span className="italic">{tAssistant("working")}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="size-3.5 shrink-0" />
+            <span className="italic">{tAssistant("working")}</span>
+          </div>
+        )
+      ) : failed ? (
+        <p className="text-sm italic text-muted-foreground">
+          {tAssistant("commentError")}
+        </p>
+      ) : editing ? (
         <div className="flex flex-col gap-2">
           <MentionTextarea
             value={draft}
@@ -611,6 +652,7 @@ export function CommentComposer({
         onSubmit={() => void submit()}
         placeholder={t("commentPlaceholder")}
         dropUp
+        includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />
       <div className="flex justify-end px-2.5 pb-2.5">

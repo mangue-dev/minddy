@@ -100,7 +100,9 @@
     "contextObjective": "Objectif en contexte",
     "contextBoard": "Board en contexte",
     "contextBoardMy": "Mes tickets",
-    "contextBoardAll": "Tous les tickets"
+    "contextBoardAll": "Tous les tickets",
+    "working": "Travaille…",
+    "commentError": "Numo n'a pas pu aboutir."
   },
   "Auth": {
     "callbackFailed": "Le lien de confirmation est invalide ou expiré. Réessaie de te connecter.",

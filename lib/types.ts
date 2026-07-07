@@ -23,6 +23,11 @@ export interface Comment {
   body: string;
   /** True when posted through Numo — the timeline shows "Numo" as the author. */
   via_assistant?: boolean;
+  /** Lifecycle of an @Numo comment reply: 'working' while generating (body and
+      assistant_tool update live), then 'done' or 'error'. Null = normal comment. */
+  assistant_status?: "working" | "done" | "error" | null;
+  /** Tool currently executing while assistant_status='working' (shown live). */
+  assistant_tool?: string | null;
   created_at: string;
   updated_at: string;
 }

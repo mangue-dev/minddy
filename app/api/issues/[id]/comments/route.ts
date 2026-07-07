@@ -1,7 +1,18 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { NextResponse, after, type NextRequest } from "next/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { addCommentToIssue } from "@/lib/server/add-comment";
+import { getServiceClient } from "@/lib/supabase-service";
+import {
+  mentionsNumo,
+  replyTargetsNumo,
+  runCommentMention,
+} from "@/lib/server/assistant/comment-agent";
+
+// @Numo replies run in after() once the response is sent — give them the same
+// window as the assistant chat route so the agent loop isn't cut mid-flight.
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,5 +68,38 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
     return NextResponse.json({ error: message }, { status: result.status });
   }
+
+  // @Numo → fire-and-forget agent reply, after the response is sent. Triggers:
+  // an explicit @numo mention, or (Linear-style continuation) a reply posted
+  // right under a Numo comment — no re-mention needed. Human-only (Numo's own
+  // comments go through the lib, not this route).
+  const commentBody = typeof input.body === "string" ? input.body : "";
+  const service = getServiceClient();
+  const created = result.comment as {
+    id: string;
+    issue_id: string;
+    parent_id: string | null;
+  };
+  const trigger = mentionsNumo(commentBody)
+    ? "mention"
+    : (await replyTargetsNumo(service, created))
+      ? "reply"
+      : null;
+  if (trigger) {
+    const locale = await getLocale();
+    const { user, supabase } = auth;
+    after(() =>
+      runCommentMention({
+        supabase,
+        service,
+        issueId: id,
+        actorId: user.id,
+        triggerCommentId: created.id,
+        locale,
+        trigger,
+      })
+    );
+  }
+
   return NextResponse.json(result.comment, { status: 201 });
 }

@@ -255,6 +255,14 @@ function getDefaultLabel(status: string, t: TranslateFn): string {
   return t("done");
 }
 
+/** Localized "running" label for a tool (used by the @Numo live comment to
+    show the current step). `t` = useTranslations("ToolCall"). */
+export function toolRunningLabel(name: string, t: TranslateFn): string {
+  const meta = TOOL_META[name];
+  if (!meta) return t("processing");
+  return meta.getLabel({}, undefined, true, "running", t);
+}
+
 function getToolView(item: ToolCallItem, t: TranslateFn) {
   const meta = TOOL_META[item.name];
   const Icon = meta?.icon ?? DEFAULT_ICON;
