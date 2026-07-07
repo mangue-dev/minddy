@@ -15,6 +15,9 @@ export interface EventRow {
   /** True when the action was triggered through Numo (the assistant); the
       timeline then shows "Numo" as the actor instead of the user. */
   via_assistant?: boolean;
+  /** True when the action came through the MCP endpoint (external AI agent
+      holding the user's API key); the timeline shows "user (via agent)". */
+  via_mcp?: boolean;
   /** Set when the action comes from a project integration (Feedback API); the
       timeline then shows the integration's name as the actor. */
   integration_id?: string | null;
@@ -24,6 +27,12 @@ export interface EventRow {
 export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): EventRow[] {
   if (!viaAssistant) return rows;
   return rows.map((r) => ({ ...r, via_assistant: true }));
+}
+
+/** Stamp a batch of events as MCP-triggered (no-op when false). */
+export function stampViaMcp(rows: EventRow[], viaMcp: boolean): EventRow[] {
+  if (!viaMcp) return rows;
+  return rows.map((r) => ({ ...r, via_mcp: true }));
 }
 
 /** Stamp a batch of events as integration-triggered (no-op when falsy). */

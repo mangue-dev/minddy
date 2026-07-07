@@ -23,6 +23,9 @@ export interface Comment {
   body: string;
   /** True when posted through Numo — the timeline shows "Numo" as the author. */
   via_assistant?: boolean;
+  /** True when posted through the MCP endpoint (external AI agent) — the
+      timeline shows the author with a "via agent" marker. */
+  via_mcp?: boolean;
   /** Lifecycle of an @Numo comment reply: 'working' while generating (body and
       assistant_tool update live), then 'done' or 'error'. Null = normal comment. */
   assistant_status?: "working" | "done" | "error" | null;
@@ -58,6 +61,9 @@ export interface IssueEvent {
   to_value: string | null;
   /** True when triggered through Numo — the timeline shows "Numo" as the actor. */
   via_assistant?: boolean;
+  /** True when triggered through the MCP endpoint (external AI agent) — the
+      timeline shows the actor with a "via agent" marker. */
+  via_mcp?: boolean;
   /** Set when the event comes from a project integration (Feedback API) — the
       timeline shows the integration's name as the actor. */
   integration_id?: string | null;
@@ -204,6 +210,16 @@ export interface Integration {
   webhook_scope: IntegrationWebhookScope;
   webhook_last_status: string | null;
   webhook_last_at: string | null;
+}
+
+/** Clé API personnelle (endpoint MCP) — scopée à l'utilisateur, pas au projet. */
+export interface ApiKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
 }
 
 export interface CreateIssueInput {

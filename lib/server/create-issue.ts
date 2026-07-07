@@ -7,6 +7,7 @@ import {
   insertEvents,
   stampIntegration,
   stampViaAssistant,
+  stampViaMcp,
   type EventRow,
 } from "@/lib/server/issue-events";
 
@@ -40,6 +41,7 @@ export async function createIssueForProject({
   actorId,
   input,
   viaAssistant = false,
+  viaMcp = false,
   integrationId = null,
 }: {
   projectId: string;
@@ -48,6 +50,8 @@ export async function createIssueForProject({
   input: Record<string, unknown>;
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
+  /** Marks the resulting activity events as triggered through the MCP endpoint. */
+  viaMcp?: boolean;
   /** Attributes the issue and its events to a project integration. */
   integrationId?: string | null;
 }): Promise<CreateIssueResult> {
@@ -160,7 +164,10 @@ export async function createIssueForProject({
   }
   await insertEvents(
     service,
-    stampIntegration(stampViaAssistant(events, viaAssistant), integrationId)
+    stampIntegration(
+      stampViaMcp(stampViaAssistant(events, viaAssistant), viaMcp),
+      integrationId
+    )
   );
 
   return { ok: true, issue: { ...data, category_ids: categoryIds } };

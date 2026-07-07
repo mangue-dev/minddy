@@ -169,14 +169,20 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
   const viaNumo = !!item.event.via_assistant;
-  const viaIntegration = !viaNumo && !!item.event.integration_id;
+  const viaMcp = !viaNumo && !!item.event.via_mcp;
+  const viaIntegration = !viaNumo && !viaMcp && !!item.event.integration_id;
+  // via_mcp : l'acteur reste l'utilisateur (avatar inclus), seul le libellé
+  // porte le marqueur « via agent ».
+  const actor = actorName(ctx.members, item.event.actor_id, t);
   const name = viaNumo
     ? "Numo"
     : viaIntegration
       ? t("integrationActor", {
           name: item.event.integration_name ?? t("integrationFallback"),
         })
-      : actorName(ctx.members, item.event.actor_id, t);
+      : viaMcp
+        ? t("mcpActor", { name: actor })
+        : actor;
   const summary = describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
@@ -185,7 +191,7 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
       ) : viaIntegration ? (
         <IntegrationAvatar />
       ) : (
-        <ActorAvatar members={ctx.members} id={item.event.actor_id} name={name} />
+        <ActorAvatar members={ctx.members} id={item.event.actor_id} name={actor} />
       )}
       <OneLine full={`${name} ${summary}`}>
         <span className="font-medium text-foreground">{name}</span>{" "}
@@ -220,7 +226,11 @@ function CommentBlock({
   const tAssistant = useTranslations("Assistant");
   const tToolCall = useTranslations("ToolCall");
   const viaNumo = !!comment.via_assistant;
-  const name = viaNumo ? "Numo" : actorName(ctx.members, comment.author_id, t);
+  const viaMcp = !viaNumo && !!comment.via_mcp;
+  const author = actorName(ctx.members, comment.author_id, t);
+  // via_mcp : le commentaire reste celui de l'utilisateur (avatar, édition,
+  // suppression), seul le libellé porte le marqueur « via agent ».
+  const name = viaNumo ? "Numo" : viaMcp ? t("mcpActor", { name: author }) : author;
   // Live @Numo reply: 'working' comments update in place (current tool, then
   // streaming text) via Realtime until only the final message remains. A
   // 'working' row older than 5 minutes is an orphan (server died) → error.
@@ -259,7 +269,7 @@ function CommentBlock({
         {viaNumo ? (
           <NumoAvatar />
         ) : (
-          <ActorAvatar members={ctx.members} id={comment.author_id} name={name} />
+          <ActorAvatar members={ctx.members} id={comment.author_id} name={author} />
         )}
         <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
         <span className="shrink-0 text-xs text-muted-foreground/80">

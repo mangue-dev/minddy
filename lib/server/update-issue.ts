@@ -9,6 +9,7 @@ import {
   buildPlanChangeEvents,
   insertEvents,
   stampViaAssistant,
+  stampViaMcp,
   type EventRow,
 } from "@/lib/server/issue-events";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
@@ -49,12 +50,15 @@ export async function updateIssueFields({
   actorId,
   input,
   viaAssistant = false,
+  viaMcp = false,
 }: {
   issueId: string;
   actorId: string;
   input: Record<string, unknown>;
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
+  /** Marks the resulting activity events as triggered through the MCP endpoint. */
+  viaMcp?: boolean;
 }): Promise<UpdateIssueResult> {
   const updates: Record<string, unknown> = {};
 
@@ -205,7 +209,10 @@ export async function updateIssueFields({
       });
     }
   }
-  await insertEvents(service, stampViaAssistant(events as EventRow[], viaAssistant));
+  await insertEvents(
+    service,
+    stampViaMcp(stampViaAssistant(events as EventRow[], viaAssistant), viaMcp)
+  );
 
   // Notify a newly-assigned user (never on self-assign).
   const newAssignee = updates.assignee_id as string | undefined;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { SlidersHorizontal, User } from "lucide-react";
+import { KeyRound, SlidersHorizontal, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   SettingsShell,
@@ -9,6 +9,7 @@ import {
 } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
+import { AccountApiKeysSection } from "@/components/settings/account-api-keys-section";
 
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
@@ -29,6 +30,12 @@ export default function AccountSettingsPage() {
       label: t("preferencesTab"),
       icon: SlidersHorizontal,
       content: <AccountPreferencesSection />,
+    },
+    {
+      value: "api-keys",
+      label: t("apiKeysTab"),
+      icon: KeyRound,
+      content: <AccountApiKeysSection />,
     },
   ];
 
