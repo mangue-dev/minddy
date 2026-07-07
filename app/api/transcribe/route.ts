@@ -1,0 +1,125 @@
+import { NextRequest } from "next/server";
+import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAppConfigValues } from "@/lib/server/app-config";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import {
+  transcribeAudio,
+  type TranscribeAudioFormat,
+} from "@/lib/server/openrouter-transcribe";
+
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_AUDIO_SECONDS = 90;
+const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
+const FALLBACK_MODEL = "openai/whisper-large-v3";
+
+function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | null {
+  const lower = mimeType.toLowerCase();
+  if (lower.includes("webm")) return "webm";
+  if (lower.includes("ogg")) return "ogg";
+  if (lower.includes("wav")) return "wav";
+  if (lower.includes("mpeg") || lower.includes("mp3")) return "mp3";
+  if (lower.includes("flac")) return "flac";
+  if (lower.includes("m4a") || lower.includes("mp4")) return "m4a";
+  if (lower.includes("aac")) return "aac";
+  return null;
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+  const { user } = auth;
+
+  const rateLimit = checkSessionRateLimit(user.id, "transcribe", RATE_LIMIT);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      { error: "Too many requests", retry_after: rateLimit.retryAfter },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfter) },
+      },
+    );
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return Response.json({ error: "Invalid form data" }, { status: 400 });
+  }
+
+  const audio = formData.get("audio");
+  if (!(audio instanceof Blob)) {
+    return Response.json({ error: "audio field is required" }, { status: 400 });
+  }
+  if (audio.size === 0) {
+    return Response.json({ error: "audio is empty" }, { status: 400 });
+  }
+  if (audio.size > MAX_AUDIO_BYTES) {
+    return Response.json(
+      { error: "audio too large", max_bytes: MAX_AUDIO_BYTES },
+      { status: 413 },
+    );
+  }
+
+  const format = resolveAudioFormat(audio.type || "audio/webm");
+  if (!format) {
+    return Response.json(
+      { error: `Unsupported audio mime type: ${audio.type}` },
+      { status: 400 },
+    );
+  }
+
+  const langRaw = formData.get("lang");
+  const language =
+    typeof langRaw === "string" && langRaw.trim() ? langRaw.trim() : undefined;
+
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    console.error("[/api/transcribe] OPENROUTER_API_KEY not configured");
+    return Response.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
+  // Model is DB-configured (app_config), like the assistant model.
+  const cfg = await getAppConfigValues([
+    "transcription_model",
+    "transcription_model_provider",
+  ]);
+  const model = cfg.transcription_model?.trim() || FALLBACK_MODEL;
+  let provider: Record<string, unknown> | undefined;
+  if (cfg.transcription_model_provider?.trim()) {
+    try {
+      provider = JSON.parse(cfg.transcription_model_provider);
+    } catch {
+      console.warn(
+        "[/api/transcribe] transcription_model_provider is not valid JSON, ignoring",
+      );
+    }
+  }
+
+  const arrayBuffer = await audio.arrayBuffer();
+  const audioBase64 = Buffer.from(arrayBuffer).toString("base64");
+
+  try {
+    const result = await transcribeAudio(model, audioBase64, format, apiKey, {
+      language,
+      provider,
+      title: "minddy Dictate",
+    });
+
+    if (result.seconds > MAX_AUDIO_SECONDS) {
+      console.warn(
+        `[/api/transcribe] audio length ${result.seconds}s exceeds ${MAX_AUDIO_SECONDS}s limit (user ${user.id})`,
+      );
+    }
+
+    return Response.json({
+      text: result.text,
+      model,
+      durationSeconds: result.seconds,
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Transcription failed";
+    console.error("[/api/transcribe]", message);
+    return Response.json({ error: message }, { status: 500 });
+  }
+}

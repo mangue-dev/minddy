@@ -25,6 +25,7 @@ import {
 import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
 import { toolRunningLabel } from "@/components/assistant/tool-call-display";
+import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
@@ -243,7 +244,9 @@ function CommentBlock({
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
         <span className="min-w-0 flex-1" />
-        {mine && !editing && !working && (
+        {/* Numo's comments are read-only for users (no edit, no delete — RLS
+            enforces both); deleting one's own thread root still cascades. */}
+        {mine && !editing && !working && !viaNumo && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -419,9 +422,10 @@ function ReplyComposer({
         }}
         placeholder={t("replyPlaceholder")}
         autoFocus
+        includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />
-      <div className="flex justify-end gap-2 px-2.5 pb-2.5">
+      <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5">
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
         </Button>
@@ -434,6 +438,13 @@ function ReplyComposer({
           {posting && <Spinner />}
           {t("reply")}
         </Button>
+        {/* Dictate at the far right of the reply row (spec). */}
+        <DictateButton
+          onTranscription={(text) =>
+            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+          }
+          disabled={posting}
+        />
       </div>
     </div>
   );
@@ -655,16 +666,26 @@ export function CommentComposer({
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />
-      <div className="flex justify-end px-2.5 pb-2.5">
-        <Button
-          size="sm"
-          className="rounded-full px-4"
-          disabled={posting || !draft.trim()}
-          onClick={() => void submit()}
-        >
-          {posting && <Spinner />}
-          {t("comment")}
-        </Button>
+      {/* Dictate sits where the Comment button lives while the composer is
+          empty, and slides to its left once there is text to post. */}
+      <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
+        <DictateButton
+          onTranscription={(text) =>
+            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+          }
+          disabled={posting}
+        />
+        {(draft.trim() || posting) && (
+          <Button
+            size="sm"
+            className="rounded-full px-4"
+            disabled={posting || !draft.trim()}
+            onClick={() => void submit()}
+          >
+            {posting && <Spinner />}
+            {t("comment")}
+          </Button>
+        )}
       </div>
     </div>
   );

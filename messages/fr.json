@@ -187,6 +187,22 @@
     "today": "Aujourd'hui",
     "clear": "Effacer"
   },
+  "Dictate": {
+    "start": "Dictée vocale",
+    "stop": "Arrêter",
+    "starting": "Connexion au micro…",
+    "hint": "Re-clic pour stop",
+    "maxDuration": "1:30 max",
+    "maxReached": "Limite de 1:30 atteinte, transcription en cours…",
+    "permissionDenied": "Accès micro refusé. Autorisez-le dans votre navigateur ou vos préférences système.",
+    "noDevice": "Aucun micro détecté. Branchez-en un et réessayez.",
+    "deviceBusy": "Le micro est utilisé par une autre app. Fermez-la et réessayez.",
+    "notSupported": "La dictée vocale n'est pas supportée sur ce navigateur.",
+    "rateLimitReached": "Quota de dictée atteint. Réessayez dans {minutes} min.",
+    "tooLarge": "L'enregistrement est trop long. Restez sous 90 secondes.",
+    "error": "Échec de la transcription.",
+    "emptyResult": "Aucune voix détectée."
+  },
   "Field": {
     "title": "Titre",
     "description": "Description",

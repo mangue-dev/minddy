@@ -187,6 +187,22 @@
     "today": "Today",
     "clear": "Clear"
   },
+  "Dictate": {
+    "start": "Voice dictation",
+    "stop": "Stop",
+    "starting": "Connecting to microphone…",
+    "hint": "Click again to stop",
+    "maxDuration": "1:30 max",
+    "maxReached": "1:30 limit reached, transcribing…",
+    "permissionDenied": "Microphone access denied. Allow it in your browser or system settings.",
+    "noDevice": "No microphone detected. Plug one in and try again.",
+    "deviceBusy": "Microphone is in use by another app. Close it and try again.",
+    "notSupported": "Voice dictation isn't supported on this browser.",
+    "rateLimitReached": "Dictation quota reached. Try again in {minutes} min.",
+    "tooLarge": "Recording is too large. Keep it under 90 seconds.",
+    "error": "Transcription failed.",
+    "emptyResult": "No speech was detected."
+  },
   "Field": {
     "title": "Title",
     "description": "Description",

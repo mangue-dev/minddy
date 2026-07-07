@@ -1,0 +1,87 @@
+import "server-only";
+
+/**
+ * OpenRouter speech-to-text helper (ported from AutoKap).
+ * Calls /api/v1/audio/transcriptions with base64-encoded audio.
+ */
+
+export type TranscribeAudioFormat =
+  | "wav"
+  | "mp3"
+  | "flac"
+  | "m4a"
+  | "ogg"
+  | "webm"
+  | "aac";
+
+export interface TranscribeAudioOptions {
+  language?: string;
+  temperature?: number;
+  provider?: Record<string, unknown>;
+  title?: string;
+}
+
+export interface TranscribeAudioResult {
+  text: string;
+  /** Duration of the input audio in seconds, as reported by OpenRouter. */
+  seconds: number;
+  /** Cost in USD reported by OpenRouter (may be 0 for some providers). */
+  cost: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export async function transcribeAudio(
+  model: string,
+  audioBase64: string,
+  format: TranscribeAudioFormat,
+  apiKey: string,
+  options?: TranscribeAudioOptions,
+): Promise<TranscribeAudioResult> {
+  const body: Record<string, unknown> = {
+    model,
+    input_audio: { data: audioBase64, format },
+  };
+  if (options?.language) body.language = options.language;
+  if (options?.temperature !== undefined) body.temperature = options.temperature;
+  if (options?.provider && Object.keys(options.provider).length > 0) {
+    body.provider = options.provider;
+  }
+
+  const res = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://minddy.app",
+      "X-Title": options?.title ?? "minddy",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(
+      `OpenRouter STT error ${res.status}: ${text.slice(0, 300)}`,
+    );
+  }
+
+  const data = (await res.json()) as {
+    text?: string;
+    usage?: {
+      cost?: number;
+      input_tokens?: number;
+      output_tokens?: number;
+      seconds?: number;
+    };
+  };
+
+  return {
+    text: data.text ?? "",
+    seconds: data.usage?.seconds ?? 0,
+    cost: data.usage?.cost ?? 0,
+    inputTokens: data.usage?.input_tokens ?? 0,
+    outputTokens: data.usage?.output_tokens ?? 0,
+  };
+}

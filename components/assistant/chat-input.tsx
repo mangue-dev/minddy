@@ -11,6 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Button, SendButtonWithCost, cn } from "mangue-ui";
 import { Square } from "lucide-react";
+import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { PageContextBadge } from "@/components/assistant/page-context-badge";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 
@@ -117,6 +118,25 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
       if (empty && el.innerHTML !== "") {
         el.innerHTML = "";
+      }
+    }, []);
+
+    // Dictated text is additive: appended after the existing content, caret at
+    // the end (same behavior as AutoKap's composer).
+    const appendDictated = useCallback((text: string) => {
+      const el = editorRef.current;
+      if (!el) return;
+      const current = (el.textContent ?? "").trim();
+      el.textContent = current ? `${current} ${text}` : text;
+      setIsEmpty(false);
+      el.focus();
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
       }
     }, []);
 
@@ -227,16 +247,22 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   <Square className="h-3 w-3" />
                 </Button>
               ) : (
-                !isEmpty && (
-                  <SendButtonWithCost
-                    cost={null}
-                    isLoading={false}
-                    disabled={disabled ?? false}
-                    onClick={handleSubmit}
-                    ariaLabel={t("send")}
-                    tooltipLabel={t("send")}
+                <>
+                  <DictateButton
+                    onTranscription={appendDictated}
+                    disabled={disabled}
                   />
-                )
+                  {!isEmpty && (
+                    <SendButtonWithCost
+                      cost={null}
+                      isLoading={false}
+                      disabled={disabled ?? false}
+                      onClick={handleSubmit}
+                      ariaLabel={t("send")}
+                      tooltipLabel={t("send")}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
