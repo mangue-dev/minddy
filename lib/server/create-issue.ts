@@ -2,7 +2,12 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
-import { insertEvents, stampViaAssistant, type EventRow } from "@/lib/server/issue-events";
+import {
+  insertEvents,
+  stampIntegration,
+  stampViaAssistant,
+  type EventRow,
+} from "@/lib/server/issue-events";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
@@ -33,12 +38,16 @@ export async function createIssueForProject({
   actorId,
   input,
   viaAssistant = false,
+  integrationId = null,
 }: {
   projectId: string;
-  actorId: string;
+  /** NULL when the issue comes from an integration (no user behind it). */
+  actorId: string | null;
   input: Record<string, unknown>;
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
+  /** Attributes the issue and its events to a project integration. */
+  integrationId?: string | null;
 }): Promise<CreateIssueResult> {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
@@ -51,6 +60,7 @@ export async function createIssueForProject({
     created_by: actorId,
     position: Date.now(),
   };
+  if (integrationId) row.integration_id = integrationId;
   if (typeof input.description === "string") row.description = input.description;
   if (isStatus(input.status)) {
     row.status = input.status;
@@ -140,7 +150,10 @@ export async function createIssueForProject({
       to_value: data.id,
     });
   }
-  await insertEvents(service, stampViaAssistant(events, viaAssistant));
+  await insertEvents(
+    service,
+    stampIntegration(stampViaAssistant(events, viaAssistant), integrationId)
+  );
 
   return { ok: true, issue: { ...data, category_ids: categoryIds } };
 }

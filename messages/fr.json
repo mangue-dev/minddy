@@ -59,7 +59,9 @@
     "invalidPriority": "Priorité invalide.",
     "invalidEffort": "Effort invalide.",
     "invalidPosition": "Position invalide.",
-    "issueNotFound": "Ticket introuvable"
+    "issueNotFound": "Ticket introuvable",
+    "integrationNameRequired": "Le nom de l'intégration est requis (60 caractères max).",
+    "integrationNotFound": "Intégration introuvable."
   },
   "Assistant": {
     "title": "Demander à Numo",
@@ -440,7 +442,27 @@
     "ownerOnlyHint": "Seul le propriétaire peut renommer ou supprimer ce Projet.",
     "leaveProjectLabel": "Quitter le Projet",
     "leaveProjectHint": "Tu n'y auras plus accès.",
-    "leave": "Quitter"
+    "leave": "Quitter",
+    "integrationsTab": "Intégrations",
+    "integrationsSectionDesc": "Des clés API nommées qui permettent à votre propre app d'envoyer du feedback directement dans le triage de ce projet.",
+    "integrationsEmpty": "Aucune intégration pour le moment.",
+    "newIntegration": "Nouvelle intégration",
+    "integrationNameLabel": "Nom",
+    "integrationNamePlaceholder": "Mon app iOS",
+    "createIntegration": "Créer",
+    "integrationCreatedTitle": "Intégration créée",
+    "integrationKeyNotice": "Copiez cette clé maintenant — elle ne sera plus jamais affichée.",
+    "copyKey": "Copier la clé",
+    "keyCopied": "Clé copiée",
+    "integrationKeyDone": "Terminé",
+    "integrationLastUsed": "Dernière utilisation {date}",
+    "integrationNeverUsed": "Jamais utilisée",
+    "integrationRevokedBadge": "Révoquée",
+    "integrationRevoke": "Révoquer",
+    "integrationRevokeTitle": "Révoquer l'intégration {name} ?",
+    "integrationRevokeDescription": "Sa clé API cessera de fonctionner immédiatement. Les tickets qu'elle a créés gardent leur attribution.",
+    "integrationRevokedToast": "L'intégration {name} a été révoquée.",
+    "integrationsOwnerOnlyHint": "Seul le propriétaire du projet peut gérer les intégrations."
   },
   "Sort": {
     "manual": "Manuel",
@@ -480,7 +502,9 @@
     "daysAgo": "Il y a {d}j",
     "weeksAgo": "Il y a {w} sem",
     "monthsAgo": "Il y a {mo} mois",
-    "yearsAgo": "{y, plural, one {Il y a # an} other {Il y a # ans}}"
+    "yearsAgo": "{y, plural, one {Il y a # an} other {Il y a # ans}}",
+    "integrationActor": "L'intégration {name}",
+    "integrationFallback": "inconnue"
   },
   "ToolCall": {
     "loadingProjects": "Chargement des projets…",
@@ -561,6 +585,7 @@
     "declinedToast": "Ticket refusé (annulé).",
     "duplicateToast": "Marqué comme doublon de {id}.",
     "noSelection": "Sélectionne un ticket pour le trier.",
-    "backToList": "Retour à la liste"
+    "backToList": "Retour à la liste",
+    "fromIntegration": "Créé via une intégration"
   }
 }

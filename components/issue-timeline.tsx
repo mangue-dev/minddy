@@ -16,7 +16,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ChevronDown, ChevronRight, Ellipsis, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Ellipsis, Pencil, Plug, Trash2 } from "lucide-react";
 import {
   describeEvent,
   type EventContext,
@@ -119,6 +119,22 @@ function NumoAvatar({ className }: { className?: string }) {
   );
 }
 
+/** Avatar for issues submitted through a project integration (Feedback API) —
+    a plug instead of a user's initials, so external submissions stand out. */
+function IntegrationAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      <Plug className="size-3.5" />
+    </span>
+  );
+}
+
 /** One-line text that ellipsises and reveals the full text in a tooltip only
     when it actually overflows. */
 function OneLine({ full, children }: { full: string; children: React.ReactNode }) {
@@ -153,12 +169,21 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
   const viaNumo = !!item.event.via_assistant;
-  const name = viaNumo ? "Numo" : actorName(ctx.members, item.event.actor_id, t);
+  const viaIntegration = !viaNumo && !!item.event.integration_id;
+  const name = viaNumo
+    ? "Numo"
+    : viaIntegration
+      ? t("integrationActor", {
+          name: item.event.integration_name ?? t("integrationFallback"),
+        })
+      : actorName(ctx.members, item.event.actor_id, t);
   const summary = describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
       {viaNumo ? (
         <NumoAvatar />
+      ) : viaIntegration ? (
+        <IntegrationAvatar />
       ) : (
         <ActorAvatar members={ctx.members} id={item.event.actor_id} name={name} />
       )}

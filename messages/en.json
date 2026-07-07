@@ -59,7 +59,9 @@
     "invalidPriority": "Invalid priority.",
     "invalidEffort": "Invalid effort.",
     "invalidPosition": "Invalid position.",
-    "issueNotFound": "Issue not found"
+    "issueNotFound": "Issue not found",
+    "integrationNameRequired": "Integration name is required (max 60 characters).",
+    "integrationNotFound": "Integration not found."
   },
   "Assistant": {
     "title": "Ask Numo",
@@ -440,7 +442,27 @@
     "ownerOnlyHint": "Only the owner can rename or delete this project.",
     "leaveProjectLabel": "Leave project",
     "leaveProjectHint": "You'll no longer have access to it.",
-    "leave": "Leave"
+    "leave": "Leave",
+    "integrationsTab": "Integrations",
+    "integrationsSectionDesc": "Named API keys that let your own app submit feedback straight into this project's triage.",
+    "integrationsEmpty": "No integrations yet.",
+    "newIntegration": "New integration",
+    "integrationNameLabel": "Name",
+    "integrationNamePlaceholder": "My iOS app",
+    "createIntegration": "Create",
+    "integrationCreatedTitle": "Integration created",
+    "integrationKeyNotice": "Copy this key now — it will never be shown again.",
+    "copyKey": "Copy key",
+    "keyCopied": "Key copied",
+    "integrationKeyDone": "Done",
+    "integrationLastUsed": "Last used {date}",
+    "integrationNeverUsed": "Never used",
+    "integrationRevokedBadge": "Revoked",
+    "integrationRevoke": "Revoke",
+    "integrationRevokeTitle": "Revoke integration {name}?",
+    "integrationRevokeDescription": "Its API key will stop working immediately. Issues it created keep their attribution.",
+    "integrationRevokedToast": "Integration {name} revoked.",
+    "integrationsOwnerOnlyHint": "Only the project owner can manage integrations."
   },
   "Sort": {
     "manual": "Manual",
@@ -480,7 +502,9 @@
     "daysAgo": "{d}d ago",
     "weeksAgo": "{w}w ago",
     "monthsAgo": "{mo}mo ago",
-    "yearsAgo": "{y, plural, one {# year ago} other {# years ago}}"
+    "yearsAgo": "{y, plural, one {# year ago} other {# years ago}}",
+    "integrationActor": "Integration {name}",
+    "integrationFallback": "unknown"
   },
   "ToolCall": {
     "loadingProjects": "Loading projects…",
@@ -561,6 +585,7 @@
     "declinedToast": "Issue declined (canceled).",
     "duplicateToast": "Marked as duplicate of {id}.",
     "noSelection": "Select an issue to triage it.",
-    "backToList": "Back to the list"
+    "backToList": "Back to the list",
+    "fromIntegration": "Created via an integration"
   }
 }

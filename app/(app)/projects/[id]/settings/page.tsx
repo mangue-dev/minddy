@@ -14,13 +14,14 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { LogOut, Settings2, Tags, Trash2, Users } from "lucide-react";
+import { LogOut, Plug, Settings2, Tags, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
+import { ProjectIntegrations } from "@/components/project-integrations";
 import {
   SettingsShell,
   SettingsSection,
@@ -265,6 +266,19 @@ export default function ProjectSettingsPage() {
           description={t("membersSectionDesc")}
         >
           <ProjectMembers projectId={project.id} enabled />
+        </SettingsSection>
+      ),
+    },
+    {
+      value: "integrations",
+      label: t("integrationsTab"),
+      icon: Plug,
+      content: (
+        <SettingsSection
+          title={t("integrationsTab")}
+          description={t("integrationsSectionDesc")}
+        >
+          <ProjectIntegrations projectId={project.id} isOwner={isOwner} />
         </SettingsSection>
       ),
     },

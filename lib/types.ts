@@ -58,6 +58,10 @@ export interface IssueEvent {
   to_value: string | null;
   /** True when triggered through Numo — the timeline shows "Numo" as the actor. */
   via_assistant?: boolean;
+  /** Set when the event comes from a project integration (Feedback API) — the
+      timeline shows the integration's name as the actor. */
+  integration_id?: string | null;
+  integration_name?: string | null;
   created_at: string;
 }
 
@@ -171,10 +175,21 @@ export interface Issue {
   due_date: string | null;
   position: number;
   created_by: string | null;
+  /** Set when the issue was created through a project integration (Feedback API). */
+  integration_id?: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
   category_ids: string[];
+}
+
+export interface Integration {
+  id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
 }
 
 export interface CreateIssueInput {

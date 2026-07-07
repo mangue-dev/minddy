@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const { data, error } = await auth.supabase
     .from("issue_events")
-    .select("*")
+    .select("*, integration:integrations(name)")
     .eq("issue_id", id)
     .order("created_at", { ascending: true });
 
@@ -21,5 +21,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/events] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
+  // Flatten the embedded integration into integration_name for the timeline.
+  return NextResponse.json(
+    (data ?? []).map(({ integration, ...event }) => ({
+      ...event,
+      integration_name:
+        (integration as { name: string } | null)?.name ?? null,
+    }))
+  );
 }

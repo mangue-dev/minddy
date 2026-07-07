@@ -4,7 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface EventRow {
   issue_id: string;
-  actor_id: string;
+  /** NULL when the action comes from an integration (no user behind it). */
+  actor_id: string | null;
   type: string;
   field?: string | null;
   from_value?: string | null;
@@ -12,12 +13,24 @@ export interface EventRow {
   /** True when the action was triggered through Numo (the assistant); the
       timeline then shows "Numo" as the actor instead of the user. */
   via_assistant?: boolean;
+  /** Set when the action comes from a project integration (Feedback API); the
+      timeline then shows the integration's name as the actor. */
+  integration_id?: string | null;
 }
 
 /** Stamp a batch of events as assistant-triggered (no-op when false). */
 export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): EventRow[] {
   if (!viaAssistant) return rows;
   return rows.map((r) => ({ ...r, via_assistant: true }));
+}
+
+/** Stamp a batch of events as integration-triggered (no-op when falsy). */
+export function stampIntegration(
+  rows: EventRow[],
+  integrationId: string | null | undefined
+): EventRow[] {
+  if (!integrationId) return rows;
+  return rows.map((r) => ({ ...r, integration_id: integrationId }));
 }
 
 const s = (v: unknown): string | null =>
