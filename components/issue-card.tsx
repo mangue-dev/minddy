@@ -157,8 +157,8 @@ function EffortPick({
     <EffortIndicator effort={value} />
   ) : (
     <span className="inline-flex items-center gap-1 text-muted-foreground/60">
-      <Triangle className="size-3.5 shrink-0" />
-      <span className="text-xs font-medium leading-none">–</span>
+      <Triangle className="size-[18px] shrink-0" />
+      <span className="text-sm font-medium leading-none">–</span>
     </span>
   );
   if (!onChange) return display;

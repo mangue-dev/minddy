@@ -38,15 +38,23 @@ const PROSE = cn(
 export function MarkdownEditor({
   value,
   onCommit,
+  onEmptyChange,
   placeholder = "Ajoute une description…",
   className,
 }: {
   value: string;
   onCommit: (markdown: string) => void;
+  /** Live emptiness signal (fires on mount and on each edit) — lets callers see
+      typed-but-uncommitted content, since onCommit only fires on blur. */
+  onEmptyChange?: (empty: boolean) => void;
   placeholder?: string;
   className?: string;
 }) {
   const [empty, setEmpty] = useState(value.trim() === "");
+  const syncEmpty = (next: boolean) => {
+    setEmpty(next);
+    onEmptyChange?.(next);
+  };
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -61,8 +69,8 @@ export function MarkdownEditor({
     ],
     content: value,
     editorProps: { attributes: { class: PROSE } },
-    onCreate: ({ editor }) => setEmpty(editor.isEmpty),
-    onUpdate: ({ editor }) => setEmpty(editor.isEmpty),
+    onCreate: ({ editor }) => syncEmpty(editor.isEmpty),
+    onUpdate: ({ editor }) => syncEmpty(editor.isEmpty),
     // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
     onBlur: ({ editor }) =>
       onCommit(
@@ -70,7 +78,7 @@ export function MarkdownEditor({
           editor.storage as unknown as {
             markdown: { getMarkdown(): string };
           }
-        ).markdown.getMarkdown()
+        ).markdown.getMarkdown(),
       ),
   });
 

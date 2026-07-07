@@ -273,6 +273,10 @@
     "createTicket": "Créer le ticket",
     "dictateFailed": "Numo n'a pas pu traiter la dictée.",
     "numoWorking": "Numo remplit le ticket…",
+    "discardDraftTitle": "Abandonner le brouillon ?",
+    "discardDraftDescription": "Le ticket en cours de rédaction sera perdu.",
+    "discardDraftConfirm": "Abandonner",
+    "discardDraftKeepEditing": "Continuer la rédaction",
     "addSubIssuePlaceholder": "Ajouter un sous-ticket…",
     "createdByIntegration": "Créé via l'intégration {name}",
     "createdByIntegrationGeneric": "Créé via une intégration"

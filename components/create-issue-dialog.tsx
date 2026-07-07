@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
+  ConfirmDeleteDialog,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -88,8 +89,12 @@ export function CreateIssueDialog({
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   // Remount the markdown editor to swap its content (it only commits on blur).
   const [editorKey, setEditorKey] = useState(0);
+  // Live emptiness of the editor — `description` alone would miss text that was
+  // typed but not yet committed (commit happens on blur) when the dialog closes.
+  const editorNonEmptyRef = useRef(false);
   const [numoBusy, setNumoBusy] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const createMoreId = useId();
@@ -120,13 +125,29 @@ export function CreateIssueDialog({
     setFields(DEFAULTS);
     setCategoryIds([]);
     setCreateMore(false);
+    editorNonEmptyRef.current = false;
     dictateHistoryRef.current = [];
     dictateAbortRef.current?.abort();
     dictateAbortRef.current = null;
     setNumoBusy(false);
   };
 
+  const closeAndReset = () => {
+    reset();
+    onOpenChange(false);
+  };
+
+  // Typed text is the only thing worth guarding — pickers are two clicks to redo.
+  const draftHasContent = () =>
+    title.trim() !== "" ||
+    description.trim() !== "" ||
+    editorNonEmptyRef.current;
+
   const handleOpenChange = (next: boolean) => {
+    if (!next && draftHasContent()) {
+      setConfirmDiscard(true);
+      return;
+    }
     if (!next) reset();
     onOpenChange(next);
   };
@@ -151,7 +172,8 @@ export function CreateIssueDialog({
         clearContent();
         titleRef.current?.focus();
       } else {
-        handleOpenChange(false);
+        // Direct close — the draft just became an issue, nothing to guard.
+        closeAndReset();
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -171,7 +193,9 @@ export function CreateIssueDialog({
       ...(patch.status !== undefined ? { status: patch.status } : {}),
       ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
       ...(patch.effort !== undefined ? { effort: patch.effort } : {}),
-      ...(patch.assignee_id !== undefined ? { assignee_id: patch.assignee_id } : {}),
+      ...(patch.assignee_id !== undefined
+        ? { assignee_id: patch.assignee_id }
+        : {}),
       ...(patch.objective_id !== undefined
         ? { objective_id: patch.objective_id }
         : {}),
@@ -201,7 +225,10 @@ export function CreateIssueDialog({
         signal: controller.signal,
       });
       if (!res.ok) throw new Error(t("dictateFailed"));
-      const data = (await res.json()) as { patch: IssueDraftPatch; reply: string };
+      const data = (await res.json()) as {
+        patch: IssueDraftPatch;
+        reply: string;
+      };
       applyPatch(data.patch);
       dictateHistoryRef.current = [
         ...dictateHistoryRef.current,
@@ -210,7 +237,8 @@ export function CreateIssueDialog({
       ].slice(-12);
       // Fields moving are the feedback; surface Numo's reply only when nothing
       // visibly changed (unknown name, unclear command…).
-      if (Object.keys(data.patch).length === 0 && data.reply) toast.info(data.reply);
+      if (Object.keys(data.patch).length === 0 && data.reply)
+        toast.info(data.reply);
     } catch (err) {
       if ((err as Error).name !== "AbortError") toast.error(t("dictateFailed"));
     } finally {
@@ -229,126 +257,149 @@ export function CreateIssueDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="p-8 sm:max-w-2xl"
-        showCloseButton={false}
-        onInteractOutside={keepOverlayOpenForPopper}
-      >
-        <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit(createMore);
-          }}
-          className="flex flex-col"
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="p-8 sm:max-w-2xl"
+          showCloseButton={false}
+          onInteractOutside={keepOverlayOpenForPopper}
         >
-          <AutoTextarea
-            ref={titleRef}
-            autoFocus
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
+          <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
+
+          <form
+            onSubmit={(e) => {
               e.preventDefault();
-              void submit(e.shiftKey || createMore);
+              void submit(createMore);
             }}
-            placeholder={t("titlePlaceholder")}
-            className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
-          />
-          <MarkdownEditor
-            key={editorKey}
-            value={description}
-            onCommit={setDescription}
-            placeholder={t("createDescriptionPlaceholder")}
-            className="mt-2 min-h-16"
-          />
+            className="flex flex-col"
+          >
+            <AutoTextarea
+              ref={titleRef}
+              autoFocus
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                void submit(e.shiftKey || createMore);
+              }}
+              placeholder={t("titlePlaceholder")}
+              className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+            />
+            <MarkdownEditor
+              key={editorKey}
+              value={description}
+              onCommit={setDescription}
+              onEmptyChange={(empty) => {
+                editorNonEmptyRef.current = !empty;
+              }}
+              placeholder={t("createDescriptionPlaceholder")}
+              className="mt-2 min-h-16"
+            />
 
-          {/* Options — one compact inline row, like the Figma mockup */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <StatusCompact
-              value={fields.status}
-              onChange={(status) => setFields((f) => ({ ...f, status }))}
-            />
-            <PriorityCompact
-              value={fields.priority}
-              onChange={(priority) => setFields((f) => ({ ...f, priority }))}
-            />
-            <EffortCompact
-              value={fields.effort}
-              onChange={(effort) => setFields((f) => ({ ...f, effort }))}
-            />
-            <CategoriesCompact
-              categories={categories}
-              value={categoryIds}
-              onChange={setCategoryIds}
-            />
-            <AssigneeCompact
-              value={fields.assignee_id}
-              onChange={(assignee_id) => setFields((f) => ({ ...f, assignee_id }))}
-              members={members}
-            />
-            <DueDateCompact
-              value={fields.due_date}
-              onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
-            />
-            <ObjectiveCompact
-              value={fields.objective_id}
-              onChange={(objective_id) => setFields((f) => ({ ...f, objective_id }))}
-              objectives={objectives}
-            />
-          </div>
-
-          {/* Bottom bar — voice dictation at left, create controls at right */}
-          <div className="mt-8 flex items-center gap-3">
-            {numoBusy ? (
-              <span
-                className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
-                aria-hidden
-              >
-                <NumoIcon
-                  state="thinking"
-                  className="size-6 text-primary animate-in fade-in duration-300"
-                />
-              </span>
-            ) : (
-              <DictateButton
-                onTranscription={(text) => void handleDictationRef.current(text)}
-                disabled={submitting}
-                className="-ml-2"
+            {/* Options — one compact inline row, like the Figma mockup */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <StatusCompact
+                value={fields.status}
+                onChange={(status) => setFields((f) => ({ ...f, status }))}
               />
-            )}
-            {numoBusy && (
-              <span className="sr-only" role="status">
-                {t("numoWorking")}
-              </span>
-            )}
-            <div className="ml-auto flex items-center gap-4">
-              <label
-                htmlFor={createMoreId}
-                className="cursor-pointer text-sm text-foreground"
-              >
-                {t("createMore")}
-              </label>
-              <Switch
-                id={createMoreId}
-                checked={createMore}
-                onCheckedChange={setCreateMore}
+              <PriorityCompact
+                value={fields.priority}
+                onChange={(priority) => setFields((f) => ({ ...f, priority }))}
               />
-              <Button
-                type="submit"
-                className="rounded-full px-4"
-                disabled={submitting || numoBusy || !title.trim()}
-              >
-                {submitting && <Spinner />}
-                {t("createTicket")}
-              </Button>
+              <EffortCompact
+                value={fields.effort}
+                onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+              />
+              <CategoriesCompact
+                categories={categories}
+                value={categoryIds}
+                onChange={setCategoryIds}
+              />
+              <AssigneeCompact
+                value={fields.assignee_id}
+                onChange={(assignee_id) =>
+                  setFields((f) => ({ ...f, assignee_id }))
+                }
+                members={members}
+              />
+              <DueDateCompact
+                value={fields.due_date}
+                onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
+              />
+              <ObjectiveCompact
+                value={fields.objective_id}
+                onChange={(objective_id) =>
+                  setFields((f) => ({ ...f, objective_id }))
+                }
+                objectives={objectives}
+              />
             </div>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+            {/* Bottom bar — voice dictation at left, create controls at right */}
+            <div className="mt-8 flex items-center gap-3">
+              {numoBusy ? (
+                <span
+                  className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
+                  aria-hidden
+                >
+                  <NumoIcon
+                    state="thinking"
+                    className="size-6 text-primary animate-in fade-in duration-300"
+                  />
+                </span>
+              ) : (
+                <DictateButton
+                  onTranscription={(text) =>
+                    void handleDictationRef.current(text)
+                  }
+                  disabled={submitting}
+                  className="-ml-2"
+                />
+              )}
+              {numoBusy && (
+                <span className="sr-only" role="status">
+                  {t("numoWorking")}
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-4">
+                <label
+                  htmlFor={createMoreId}
+                  className="cursor-pointer text-sm text-foreground"
+                >
+                  {t("createMore")}
+                </label>
+                <Switch
+                  id={createMoreId}
+                  checked={createMore}
+                  onCheckedChange={setCreateMore}
+                />
+                <Button
+                  type="submit"
+                  className="rounded-full px-4"
+                  disabled={submitting || numoBusy || !title.trim()}
+                >
+                  {submitting && <Spinner />}
+                  {t("createTicket")}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dismissing a non-empty draft asks first — Escape / outside click / any
+        close path funnels through handleOpenChange above. */}
+      <ConfirmDeleteDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        title={t("discardDraftTitle")}
+        description={t("discardDraftDescription")}
+        confirmLabel={t("discardDraftConfirm")}
+        cancelLabel={t("discardDraftKeepEditing")}
+        onConfirm={closeAndReset}
+      />
+    </>
   );
 }

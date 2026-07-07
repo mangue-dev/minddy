@@ -273,6 +273,10 @@
     "createTicket": "Create issue",
     "dictateFailed": "Numo couldn't process the dictation.",
     "numoWorking": "Numo is filling the issue…",
+    "discardDraftTitle": "Discard this draft?",
+    "discardDraftDescription": "The issue you're drafting will be lost.",
+    "discardDraftConfirm": "Discard",
+    "discardDraftKeepEditing": "Keep editing",
     "addSubIssuePlaceholder": "Add a sub-issue…",
     "createdByIntegration": "Created via the {name} integration",
     "createdByIntegrationGeneric": "Created via an integration"

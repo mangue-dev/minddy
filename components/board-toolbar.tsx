@@ -193,7 +193,7 @@ function FiltersPopover({
               setFilters({ ...f, effort: toggle<IssueEffort>(f.effort, e.value) })
             }
           >
-            <Triangle className="size-3.5 text-muted-foreground" />
+            <Triangle className="size-4 text-muted-foreground" />
             {e.label}
           </ToggleRow>
         ))}

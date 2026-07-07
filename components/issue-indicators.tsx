@@ -106,7 +106,11 @@ export function StatusIndicator({
 
 /* ── Priority ────────────────────────────────────────────────────────────
    Signal bars filled from the bottom (none = all grey, per design); urgent is
-   a red rounded square with a "!". */
+   a red rounded square with a "!". The 14×14 glyph is inset in a padded
+   viewBox: a solid block reads heavier than the status ring's outline, so it
+   needs to be optically smaller at the same box size. */
+
+const PRIORITY_VIEWBOX = "-1.25 -1.25 16.5 16.5";
 
 const PRIORITY_BARS: Record<
   Exclude<IssuePriority, "urgent">,
@@ -127,7 +131,7 @@ export function PriorityIndicator({
 }) {
   if (priority === "urgent") {
     return (
-      <svg viewBox="0 0 14 14" className={cn("size-[17px] shrink-0", className)}>
+      <svg viewBox={PRIORITY_VIEWBOX} className={cn("size-[17px] shrink-0", className)}>
         <rect width="14" height="14" rx="2" fill="#FA2828" />
         <rect x="6.25" y="3" width="1.5" height="5" rx="0.75" fill="#fff" />
         <circle cx="7" cy="10.2" r="0.9" fill="#fff" />
@@ -136,21 +140,24 @@ export function PriorityIndicator({
   }
   const { filled, color } = PRIORITY_BARS[priority];
   return (
-    <svg
-      viewBox="0 0 14 14"
-      className={cn("size-[17px] shrink-0 text-foreground/20", className)}
-    >
-      {[0, 1, 2, 3].map((i) => (
-        <rect
-          key={i}
-          x="0"
-          y={i * 3.75}
-          width="14"
-          height="2.75"
-          rx="1"
-          fill={filled > 0 && i >= 4 - filled ? color : "currentColor"}
-        />
-      ))}
+    <svg viewBox={PRIORITY_VIEWBOX} className={cn("size-[17px] shrink-0", className)}>
+      {[0, 1, 2, 3].map((i) => {
+        const on = filled > 0 && i >= 4 - filled;
+        return (
+          <rect
+            key={i}
+            x="0"
+            y={i * 3.75}
+            width="14"
+            height="2.75"
+            rx="1"
+            fill={on ? color : undefined}
+            // fill-* (not currentColor) so hovered dropdown rows — which repaint
+            // svg `color` via CommandItem's data-selected rule — can't tint them.
+            className={on ? undefined : "fill-foreground/20"}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -169,8 +176,8 @@ export function EffortIndicator({
     <span
       className={cn("inline-flex items-center gap-1 text-muted-foreground", className)}
     >
-      <Triangle className="size-3.5 shrink-0" />
-      <span className="text-xs font-medium leading-none">
+      <Triangle className="size-[18px] shrink-0" />
+      <span className="text-sm font-medium leading-none">
         {EFFORT_MAP[effort].label}
       </span>
     </span>

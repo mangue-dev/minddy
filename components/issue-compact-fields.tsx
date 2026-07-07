@@ -123,7 +123,7 @@ export function EffortCompact({
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
-            <Triangle className="size-3.5 shrink-0 text-muted-foreground" />
+            <Triangle className="size-[18px] shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -168,7 +168,7 @@ export function CategoriesCompact({
               )}
             </>
           ) : (
-            <Tag className="size-4 shrink-0 text-muted-foreground" />
+            <Tag className="size-[17px] shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -218,7 +218,10 @@ export function AssigneeCompact({
               className="size-6 text-[10px]"
             />
           ) : (
-            <UserCircle2 className="size-5 shrink-0 text-muted-foreground" />
+            <UserCircle2
+              strokeWidth={1.75}
+              className="size-[18px] shrink-0 text-muted-foreground"
+            />
           )}
         </button>
       }
