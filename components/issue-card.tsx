@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
@@ -8,8 +9,16 @@ import {
   TooltipContent,
   TooltipTrigger,
   cn,
+  toast,
 } from "mangue-ui";
-import { Calendar, ChevronRight, Triangle, User } from "lucide-react";
+import {
+  Calendar,
+  ChevronRight,
+  ClipboardCopy,
+  ListChecks,
+  Triangle,
+  User,
+} from "lucide-react";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -34,7 +43,13 @@ import {
   SearchMultiSelect,
   type PickerOption,
 } from "@/components/search-select";
+import {
+  IssueContextMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
+import { buildIssuePrompt } from "@/lib/issue-prompt";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
+import { planProgress, type PlanProgress } from "@/lib/plan";
 
 /** Strip common markdown so the description preview reads as plain text. */
 function plainPreview(md: string): string {
@@ -372,6 +387,53 @@ function ObjectiveIndicator({ objective }: { objective: Objective }) {
   );
 }
 
+/** Compact plan progress on the card header: checklist icon + "done/total".
+    Clicking it opens the side panel straight on the plan tab. Read-only (plain
+    span, no handler) inside the drag overlay. Shown only when the plan has tasks. */
+function PlanPick({
+  progress,
+  onOpen,
+}: {
+  progress: PlanProgress;
+  onOpen?: () => void;
+}) {
+  const t = useTranslations("IssueUI");
+  const content = (
+    <>
+      <ListChecks className="size-3.5 shrink-0" />
+      <span className="tabular-nums">
+        {progress.done}/{progress.total}
+      </span>
+    </>
+  );
+  if (!onOpen) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+        {content}
+      </span>
+    );
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("viewPlanAria")}
+          onClick={(e) => {
+            stop(e);
+            onOpen();
+          }}
+          onPointerDown={stop}
+          className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted"
+        >
+          {content}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t("viewPlanAria")}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Presentational card body — shared by the sortable card and the drag overlay. */
 export function IssueCardBody({
   issue,
@@ -381,6 +443,7 @@ export function IssueCardBody({
   objectiveMap,
   parentNumber,
   onOpenParent,
+  onOpenPlan,
   onUpdate,
   onSetCategories,
   dragging,
@@ -396,6 +459,8 @@ export function IssueCardBody({
   parentNumber?: number;
   /** Opens the parent's side panel (clicking the parent identifier). */
   onOpenParent?: () => void;
+  /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
+  onOpenPlan?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
   onUpdate?: (patch: IssueUpdateInput) => void;
   /** When set, the category indicator becomes an inline multi-select picker. */
@@ -403,6 +468,7 @@ export function IssueCardBody({
   dragging?: boolean;
 }) {
   const t = useTranslations("IssueUI");
+  const plan = planProgress(issue.plan);
   const assignee = issue.assignee_id
     ? memberMap.get(issue.assignee_id) ?? null
     : null;
@@ -466,11 +532,14 @@ export function IssueCardBody({
             ))}
           <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
         </span>
-        <AssigneePick
-          assignee={assignee}
-          members={[...memberMap.values()]}
-          onChange={setAssignee}
-        />
+        <span className="flex shrink-0 items-center gap-1.5">
+          {plan.total > 0 && <PlanPick progress={plan} onOpen={onOpenPlan} />}
+          <AssigneePick
+            assignee={assignee}
+            members={[...memberMap.values()]}
+            onChange={setAssignee}
+          />
+        </span>
       </div>
 
       {/* Title + description (tight spacing between them, and to the row above) */}
@@ -516,29 +585,54 @@ export function IssueCardBody({
 
 export function IssueCard({
   issue,
+  projectId,
   projectKey,
   memberMap,
   categoryMap,
   objectiveMap,
   parentNumber,
   onOpenParent,
+  onOpenPlan,
   onOpen,
   onUpdateIssue,
   onSetCategories,
 }: {
   issue: Issue;
+  projectId: string;
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
   parentNumber?: number;
   onOpenParent?: () => void;
+  onOpenPlan?: () => void;
   onOpen: () => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
+  const t = useTranslations("IssueUI");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
+  // Menu contextuel (clic droit) — position viewport du pointeur, null = fermé.
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
+    null
+  );
+
+  const copyPrompt = async () => {
+    const prompt = buildIssuePrompt({ issue, projectId, projectKey });
+    await navigator.clipboard.writeText(prompt);
+    toast.success(t("promptCopied"));
+  };
+
+  const menuActions: ContextMenuAction[] = [
+    {
+      id: "copy-prompt",
+      label: t("copyAsPrompt"),
+      keywords: ["copy", "prompt", "agent", "copier"],
+      icon: <ClipboardCopy className="size-4" />,
+      onSelect: () => void copyPrompt(),
+    },
+  ];
 
   return (
     <div
@@ -547,6 +641,11 @@ export function IssueCard({
       {...attributes}
       {...listeners}
       onClick={onOpen}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setMenuPosition({ x: e.clientX, y: e.clientY });
+      }}
       className={cn("cursor-pointer touch-none", isDragging && "opacity-40")}
     >
       <IssueCardBody
@@ -557,8 +656,14 @@ export function IssueCard({
         objectiveMap={objectiveMap}
         parentNumber={parentNumber}
         onOpenParent={onOpenParent}
+        onOpenPlan={onOpenPlan}
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+      />
+      <IssueContextMenu
+        position={menuPosition}
+        onClose={() => setMenuPosition(null)}
+        actions={menuActions}
       />
     </div>
   );

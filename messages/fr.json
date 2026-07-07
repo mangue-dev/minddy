@@ -292,8 +292,11 @@
     "discardDraftKeepEditing": "Continuer la rédaction",
     "addSubIssuePlaceholder": "Ajouter un sous-ticket…",
     "openParentAria": "Ouvrir le ticket parent {id}",
+    "viewPlanAria": "Voir le plan",
     "createdByIntegration": "Créé via l'intégration {name}",
-    "createdByIntegrationGeneric": "Créé via une intégration"
+    "createdByIntegrationGeneric": "Créé via une intégration",
+    "copyAsPrompt": "Copier le prompt",
+    "promptCopied": "Prompt copié — colle-le à ton agent."
   },
   "Language": {
     "title": "Langue",

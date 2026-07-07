@@ -14,11 +14,13 @@ export function KanbanColumn({
   status,
   issues,
   issueMap,
+  projectId,
   projectKey,
   memberMap,
   categoryMap,
   objectiveMap,
   onOpenIssue,
+  onOpenPlan,
   onCreateIssue,
   onUpdateIssue,
   onSetCategories,
@@ -27,11 +29,13 @@ export function KanbanColumn({
   issues: Issue[];
   /** All project issues by id — used to resolve a sub-issue's parent. */
   issueMap: Map<string, Issue>;
+  projectId: string;
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
   onOpenIssue: (issue: Issue) => void;
+  onOpenPlan: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
@@ -67,12 +71,14 @@ export function KanbanColumn({
               <IssueCard
                 key={issue.id}
                 issue={issue}
+                projectId={projectId}
                 projectKey={projectKey}
                 memberMap={memberMap}
                 categoryMap={categoryMap}
                 objectiveMap={objectiveMap}
                 parentNumber={parent?.number}
                 onOpenParent={parent ? () => onOpenIssue(parent) : undefined}
+                onOpenPlan={() => onOpenPlan(issue)}
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={onUpdateIssue}
                 onSetCategories={onSetCategories}

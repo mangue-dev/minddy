@@ -62,6 +62,7 @@ export function IssueSidePanel({
   onSetCategories,
   onCreate,
   onOpenIssue,
+  initialTab = "description",
 }: {
   issue: Issue | null;
   open: boolean;
@@ -76,6 +77,8 @@ export function IssueSidePanel({
   onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
   onOpenIssue: (id: string) => void;
+  /** Tab to show when the panel (re)opens on a new issue. */
+  initialTab?: "description" | "plan";
 }) {
   const { user } = useAuth();
   const t = useTranslations("IssueUI");
@@ -84,17 +87,18 @@ export function IssueSidePanel({
   const tPlan = useTranslations("Plan");
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<"description" | "plan">("description");
+  const [tab, setTab] = useState<"description" | "plan">(initialTab);
 
   const { items, addComment, updateComment, deleteComment } = useIssueTimeline(
     issue?.id ?? null
   );
 
-  // Sync the editable title when a different issue opens (not on every tick).
+  // Sync the editable title when a different issue opens (not on every tick),
+  // and land on the tab the opener asked for (plan indicator → plan tab).
   useEffect(() => {
     if (issue) setTitle(issue.title);
-    setTab("description");
-  }, [issue?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setTab(initialTab);
+  }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = useMemo(() => planProgress(issue?.plan), [issue?.plan]);
 

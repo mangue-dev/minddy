@@ -35,11 +35,13 @@ export function KanbanBoard({
   issues,
   statuses,
   sort,
+  projectId,
   projectKey,
   members,
   categories,
   objectives,
   onOpenIssue,
+  onOpenPlan,
   onCreateIssue,
   onUpdateIssue,
   onSetCategories,
@@ -48,11 +50,13 @@ export function KanbanBoard({
   issues: Issue[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  projectId: string;
   projectKey: string;
   members: Member[];
   categories: Category[];
   objectives: Objective[];
   onOpenIssue: (issue: Issue) => void;
+  onOpenPlan: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
@@ -161,11 +165,13 @@ export function KanbanBoard({
             status={status}
             issues={items}
             issueMap={issueMap}
+            projectId={projectId}
             projectKey={projectKey}
             memberMap={memberMap}
             categoryMap={categoryMap}
             objectiveMap={objectiveMap}
             onOpenIssue={onOpenIssue}
+            onOpenPlan={onOpenPlan}
             onCreateIssue={onCreateIssue}
             onUpdateIssue={onUpdateIssue}
             onSetCategories={onSetCategories}

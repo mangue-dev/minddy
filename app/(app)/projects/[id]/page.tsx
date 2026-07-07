@@ -104,6 +104,10 @@ function ProjectBoard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  // Which tab the side panel shows when it (re)opens on an issue.
+  const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
+    "description"
+  );
   const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
 
   // Open the create dialog, optionally preset to a column's status.
@@ -280,7 +284,10 @@ function ProjectBoard() {
 
   // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
   useEffect(() => {
-    if (issueParam) setOpenIssueId(issueParam);
+    if (issueParam) {
+      setOpenIssueId(issueParam);
+      setOpenIssueTab("description");
+    }
   }, [issueParam]);
 
   // Header "Nouveau → Nouvelle issue": /projects/[id]?new=issue opens the dialog.
@@ -404,11 +411,19 @@ function ProjectBoard() {
                 issues={boardIssues}
                 statuses={statuses}
                 sort={sort}
+                projectId={project.id}
                 projectKey={project.key}
                 members={members}
                 categories={categories}
                 objectives={objectives}
-                onOpenIssue={(issue: Issue) => setOpenIssueId(issue.id)}
+                onOpenIssue={(issue: Issue) => {
+                  setOpenIssueId(issue.id);
+                  setOpenIssueTab("description");
+                }}
+                onOpenPlan={(issue: Issue) => {
+                  setOpenIssueId(issue.id);
+                  setOpenIssueTab("plan");
+                }}
                 onCreateIssue={openCreate}
                 onUpdateIssue={(id, patch) =>
                   void updateIssue(id, patch).catch((err) =>
@@ -460,7 +475,11 @@ function ProjectBoard() {
         onDelete={deleteIssue}
         onSetCategories={setCategories}
         onCreate={createIssue}
-        onOpenIssue={(id) => setOpenIssueId(id)}
+        onOpenIssue={(id) => {
+          setOpenIssueId(id);
+          setOpenIssueTab("description");
+        }}
+        initialTab={openIssueTab}
       />
 
       {activeObjective && (

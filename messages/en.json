@@ -292,8 +292,11 @@
     "discardDraftKeepEditing": "Keep editing",
     "addSubIssuePlaceholder": "Add a sub-issue…",
     "openParentAria": "Open parent issue {id}",
+    "viewPlanAria": "View plan",
     "createdByIntegration": "Created via the {name} integration",
-    "createdByIntegrationGeneric": "Created via an integration"
+    "createdByIntegrationGeneric": "Created via an integration",
+    "copyAsPrompt": "Copy as prompt",
+    "promptCopied": "Prompt copied — paste it to your agent."
   },
   "Language": {
     "title": "Language",
