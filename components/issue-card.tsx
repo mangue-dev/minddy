@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
   cn,
 } from "mangue-ui";
-import { Calendar, Triangle, User } from "lucide-react";
+import { Calendar, ChevronRight, Triangle, User } from "lucide-react";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -379,6 +379,8 @@ export function IssueCardBody({
   memberMap,
   categoryMap,
   objectiveMap,
+  parentNumber,
+  onOpenParent,
   onUpdate,
   onSetCategories,
   dragging,
@@ -389,12 +391,18 @@ export function IssueCardBody({
   categoryMap: Map<string, Category>;
   /** Objectives by id — the linked one shows as a bottom-line indicator. */
   objectiveMap?: Map<string, Objective>;
+  /** Parent issue's number — when set, the card is a sub-issue and shows the
+      parent identifier + chevron before its own identifier. */
+  parentNumber?: number;
+  /** Opens the parent's side panel (clicking the parent identifier). */
+  onOpenParent?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
   onUpdate?: (patch: IssueUpdateInput) => void;
   /** When set, the category indicator becomes an inline multi-select picker. */
   onSetCategories?: (ids: string[]) => void;
   dragging?: boolean;
 }) {
+  const t = useTranslations("IssueUI");
   const assignee = issue.assignee_id
     ? memberMap.get(issue.assignee_id) ?? null
     : null;
@@ -429,11 +437,34 @@ export function IssueCardBody({
     >
       {/* Identifier (préfixé de l'icône intégration le cas échéant) + assignee */}
       <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
           <IntegrationIndicator issue={issue} iconClassName="size-3" />
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {issueIdentifier(projectKey, issue.number)}
-          </span>
+          {parentNumber != null &&
+            (onOpenParent ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    stop(e);
+                    onOpenParent();
+                  }}
+                  onPointerDown={stop}
+                  aria-label={t("openParentAria", {
+                    id: issueIdentifier(projectKey, parentNumber),
+                  })}
+                  className="rounded-sm transition-colors hover:text-foreground hover:underline"
+                >
+                  {issueIdentifier(projectKey, parentNumber)}
+                </button>
+                <ChevronRight className="size-3 shrink-0" aria-hidden />
+              </>
+            ) : (
+              <>
+                <span>{issueIdentifier(projectKey, parentNumber)}</span>
+                <ChevronRight className="size-3 shrink-0" aria-hidden />
+              </>
+            ))}
+          <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
         </span>
         <AssigneePick
           assignee={assignee}
@@ -489,6 +520,8 @@ export function IssueCard({
   memberMap,
   categoryMap,
   objectiveMap,
+  parentNumber,
+  onOpenParent,
   onOpen,
   onUpdateIssue,
   onSetCategories,
@@ -498,6 +531,8 @@ export function IssueCard({
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
+  parentNumber?: number;
+  onOpenParent?: () => void;
   onOpen: () => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
@@ -520,6 +555,8 @@ export function IssueCard({
         memberMap={memberMap}
         categoryMap={categoryMap}
         objectiveMap={objectiveMap}
+        parentNumber={parentNumber}
+        onOpenParent={onOpenParent}
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />

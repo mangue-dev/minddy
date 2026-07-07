@@ -11,6 +11,7 @@ import {
   type ReadContext,
 } from "@/lib/server/issue-reads";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { MAX_PLAN_LENGTH, PLAN_TASK_STATES, parsePlan, setTaskState } from "@/lib/plan";
 import {
@@ -113,6 +114,57 @@ function mcpReadCtx(access: ProjectAccess): ReadContext {
     projectId: access.project.id,
     projectKey: access.project.key,
   };
+}
+
+/** Les 20 derniers événements d'activité d'un ticket, acteurs résolus en
+    libellés lisibles (membre, « Numo », « clé (mcp) », intégration) — ordre
+    chronologique, pour répondre à « qu'est-ce qui s'est passé ici ? ». */
+async function recentActivity(issueId: string): Promise<Array<Record<string, unknown>>> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("issue_events")
+    .select(
+      "type, field, from_value, to_value, actor_id, via_assistant, via_mcp, api_key_id, integration_id, created_at"
+    )
+    .eq("issue_id", issueId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const events = (data ?? []).reverse();
+  if (events.length === 0) return [];
+
+  const [users, keyActors, { data: integrations }] = await Promise.all([
+    fetchAuthUsersById(
+      service,
+      events.map((e) => e.actor_id).filter((v): v is string => typeof v === "string")
+    ),
+    resolveApiKeyActors(events.map((e) => e.api_key_id as string | null)),
+    service
+      .from("integrations")
+      .select("id, name")
+      .in("id", [
+        ...new Set(
+          events
+            .map((e) => e.integration_id)
+            .filter((v): v is string => typeof v === "string")
+        ),
+      ]),
+  ]);
+  const integrationNames = new Map((integrations ?? []).map((i) => [i.id, i.name]));
+
+  return events.map((e) => ({
+    actor: e.via_assistant
+      ? "Numo"
+      : e.via_mcp
+        ? `${keyActors.get(e.api_key_id as string)?.name ?? "Agent"} (mcp)`
+        : e.integration_id
+          ? `${integrationNames.get(e.integration_id) ?? "Integration"} (integration)`
+          : displayName(toNamed(users.get(e.actor_id as string)), "User"),
+    type: e.type,
+    field: e.field,
+    from_value: e.from_value,
+    to_value: e.to_value,
+    created_at: e.created_at,
+  }));
 }
 
 /** Mode detailed de minddy_list_issues : noms (assigné, objectif, catégories)
@@ -299,7 +351,8 @@ export function registerMinddyTools(server: McpServer): void {
         "effort, assignee, objective, due date, parent), its implementation plan " +
         "(raw markdown plus parsed plan_tasks with stable task_index for " +
         "minddy_update_plan_task, and plan_progress), comments with author names, " +
-        "and sub-issues.",
+        "sub-issues, and the last activity events (status changes, reassignments…) " +
+        "with resolved actors — 'what happened on this issue?'.",
       inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
       annotations: READ_ONLY,
     },
@@ -312,10 +365,13 @@ export function registerMinddyTools(server: McpServer): void {
       const r = await getIssue(mcpReadCtx(scope.access), { issue_id: ref.issue.id });
       if ("error" in r) return fail("issue_not_found", r.error);
 
+      const activity = await recentActivity(ref.issue.id);
+
       const plan = r.issue.plan;
       const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
       return ok({
         ...r,
+        activity,
         ...(parsed
           ? {
               plan_tasks: parsed.tasks.map((t) => ({
@@ -381,7 +437,9 @@ export function registerMinddyTools(server: McpServer): void {
       title: "List objectives",
       description:
         "List a project's objectives (issue groups with a shared goal): id, name, " +
-        "status (planned/in_progress/done/canceled), lead, target date.",
+        "status (planned/in_progress/done/canceled), lead, target date, and " +
+        "progress — { done, total, percent } computed from linked issues " +
+        "(status 'done' / all linked), same as the UI's progress bar.",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
     },
@@ -389,12 +447,32 @@ export function registerMinddyTools(server: McpServer): void {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       const service = getServiceClient();
-      const { data, error } = await service
-        .from("objectives")
-        .select("id, name, status, lead_user_id, target_date, color")
-        .eq("project_id", scope.access.project.id)
-        .order("created_at", { ascending: true });
+      const [{ data, error }, { data: linkedIssues, error: issuesError }] =
+        await Promise.all([
+          service
+            .from("objectives")
+            .select("id, name, status, lead_user_id, target_date, color")
+            .eq("project_id", scope.access.project.id)
+            .order("created_at", { ascending: true }),
+          service
+            .from("issues")
+            .select("objective_id, status")
+            .eq("project_id", scope.access.project.id)
+            .not("objective_id", "is", null),
+        ]);
       if (error) return fail("database_error", error.message);
+      if (issuesError) return fail("database_error", issuesError.message);
+
+      // Progression = issues done / total des issues liées (plan §6, même
+      // calcul que objectiveProgress dans lib/use-objectives-query.ts).
+      const progress = new Map<string, { done: number; total: number }>();
+      for (const issue of linkedIssues ?? []) {
+        const id = issue.objective_id as string;
+        const entry = progress.get(id) ?? { done: 0, total: 0 };
+        entry.total += 1;
+        if (issue.status === "done") entry.done += 1;
+        progress.set(id, entry);
+      }
 
       const leads = await fetchAuthUsersById(
         service,
@@ -403,12 +481,20 @@ export function registerMinddyTools(server: McpServer): void {
           .filter((v): v is string => typeof v === "string")
       );
       return ok({
-        objectives: (data ?? []).map((o) => ({
-          ...o,
-          lead_name: o.lead_user_id
-            ? displayName(toNamed(leads.get(o.lead_user_id)), "User")
-            : null,
-        })),
+        objectives: (data ?? []).map((o) => {
+          const p = progress.get(o.id as string) ?? { done: 0, total: 0 };
+          return {
+            ...o,
+            lead_name: o.lead_user_id
+              ? displayName(toNamed(leads.get(o.lead_user_id)), "User")
+              : null,
+            progress: {
+              done: p.done,
+              total: p.total,
+              percent: p.total === 0 ? 0 : Math.round((p.done / p.total) * 100),
+            },
+          };
+        }),
       });
     }
   );
@@ -425,7 +511,9 @@ export function registerMinddyTools(server: McpServer): void {
         "you). Set parent to make a sub-issue (one level max; it inherits the " +
         "parent's objective unless objective_id is set). description = WHAT/WHY " +
         "(the problem or feature); plan = HOW (the full implementation plan — see " +
-        "the plan field spec). Returns the created issue with its identifier.",
+        "the plan field spec). Pass sub_issues to split the work into sub-tickets " +
+        "in the same call (the 'plan a feature and break it down' workflow). " +
+        "Returns the created issue (and sub-issues) with identifiers.",
       inputSchema: {
         project_id: PROJECT_ID,
         title: z.string().min(1),
@@ -442,6 +530,27 @@ export function registerMinddyTools(server: McpServer): void {
         parent: ISSUE_REF.optional().describe("Parent issue → creates a sub-issue."),
         due_date: z.string().optional().describe("ISO 8601 date or datetime."),
         category_ids: z.array(z.string().uuid()).optional(),
+        sub_issues: z
+          .array(
+            z.object({
+              title: z.string().min(1),
+              description: z.string().optional(),
+              plan: PLAN_FIELD.optional(),
+              status: z.enum(ISSUE_STATUSES).optional(),
+              priority: z.enum(ISSUE_PRIORITIES).optional(),
+              effort: z.enum(ISSUE_EFFORTS).optional(),
+              assignee_id: z.string().optional(),
+              due_date: z.string().optional(),
+              category_ids: z.array(z.string().uuid()).optional(),
+            })
+          )
+          .min(1)
+          .max(50)
+          .optional()
+          .describe(
+            "Sub-issues created under the new issue, in order. They inherit its " +
+              "objective. Incompatible with parent (nesting is one level max)."
+          ),
       },
       annotations: WRITE,
     },
@@ -451,27 +560,63 @@ export function registerMinddyTools(server: McpServer): void {
 
       let parentId: string | undefined;
       if (args.parent) {
+        if (args.sub_issues?.length) {
+          return fail(
+            "invalid_params",
+            "sub_issues can't be combined with parent — nesting is limited to one level."
+          );
+        }
         const parent = await resolveIssueRef(scope.access, args.parent);
         if ("error" in parent) return parent.error;
         parentId = parent.issue.id;
       }
 
+      const { sub_issues: subInputs, ...issueArgs } = args;
       const result = await createIssueForProject({
         projectId: scope.access.project.id,
         actorId: scope.userId,
-        input: { ...args, ...(parentId ? { parent_id: parentId } : {}) },
+        input: { ...issueArgs, ...(parentId ? { parent_id: parentId } : {}) },
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
+      const identifier = issueIdentifier(
+        scope.access.project.key,
+        result.issue.number as number
+      );
+
+      // Sous-tickets : créés dans l'ordre, échecs remontés individuellement —
+      // le parent existe déjà, on ne le rollback pas.
+      const subIssues: Array<Record<string, unknown>> = [];
+      const subIssuesFailed: Array<{ title: string; error: string }> = [];
+      for (const sub of subInputs ?? []) {
+        const subResult = await createIssueForProject({
+          projectId: scope.access.project.id,
+          actorId: scope.userId,
+          input: { ...sub, parent_id: result.issue.id },
+          mcpKeyId: scope.keyId,
+        });
+        if (subResult.ok) {
+          subIssues.push({
+            id: subResult.issue.id,
+            identifier: issueIdentifier(
+              scope.access.project.key,
+              subResult.issue.number as number
+            ),
+            title: subResult.issue.title,
+          });
+        } else {
+          subIssuesFailed.push({
+            title: sub.title,
+            error: subResult.rawMessage ?? subResult.errorKey ?? "create failed",
+          });
+        }
+      }
 
       return ok({
-        issue: {
-          ...result.issue,
-          identifier: issueIdentifier(
-            scope.access.project.key,
-            result.issue.number as number
-          ),
-        },
+        issue: { ...result.issue, identifier },
+        ...(subInputs?.length
+          ? { sub_issues: subIssues, sub_issues_failed: subIssuesFailed }
+          : {}),
       });
     }
   );
@@ -584,18 +729,28 @@ export function registerMinddyTools(server: McpServer): void {
   server.registerTool(
     "minddy_update_plan_task",
     {
-      title: "Update plan task",
+      title: "Update plan tasks",
       description:
-        "Flip ONE task of an issue's implementation plan to a new state without " +
-        "resending the plan markdown. task_index comes from minddy_get_issue's " +
-        "plan_tasks (0-based, in document order). States: pending ('- [ ]'), " +
-        "in_progress ('- [~]'), completed ('- [x]'), cancelled ('- [-]'). Returns " +
-        "the refreshed plan_tasks and plan_progress.",
+        "Flip one or several tasks of an issue's implementation plan to new states " +
+        "without resending the plan markdown — e.g. mark the finished tasks '- [x]' " +
+        "and the next one '- [~]' in a single call at the end of a work session. " +
+        "task_index comes from minddy_get_issue's plan_tasks (0-based, in document " +
+        "order; indexes are stable — state flips don't renumber). States: pending " +
+        "('- [ ]'), in_progress ('- [~]'), completed ('- [x]'), cancelled ('- [-]'). " +
+        "All-or-nothing: an invalid index rejects the whole batch. Returns the " +
+        "refreshed plan_tasks and plan_progress.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
-        task_index: z.number().int().min(0),
-        state: z.enum(PLAN_TASK_STATES),
+        tasks: z
+          .array(
+            z.object({
+              task_index: z.number().int().min(0),
+              state: z.enum(PLAN_TASK_STATES),
+            })
+          )
+          .min(1)
+          .max(50),
       },
       annotations: WRITE_IDEMPOTENT,
     },
@@ -613,19 +768,31 @@ export function registerMinddyTools(server: McpServer): void {
       if (error) return fail("database_error", error.message);
       const plan = typeof row?.plan === "string" ? row.plan : "";
       const parsed = parsePlan(plan);
-      const task = parsed.tasks[args.task_index];
-      if (!task) {
+
+      // Tout-ou-rien : valider chaque index avant de toucher au markdown.
+      const invalid = args.tasks
+        .map((t) => t.task_index)
+        .filter((i) => !parsed.tasks[i]);
+      if (invalid.length > 0) {
         return fail(
           "plan_task_not_found",
-          `No plan task at index ${args.task_index} — ${ref.issue.identifier} has ` +
-            `${parsed.tasks.length} task(s). Fetch minddy_get_issue for plan_tasks.`
+          `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — ` +
+            `${ref.issue.identifier} has ${parsed.tasks.length} task(s). ` +
+            "Fetch minddy_get_issue for plan_tasks."
         );
+      }
+
+      // Les numéros de ligne restent stables : setTaskState ne réécrit que le
+      // marqueur d'état, jamais la structure du document.
+      let nextPlan = plan;
+      for (const t of args.tasks) {
+        nextPlan = setTaskState(nextPlan, parsed.tasks[t.task_index].line, t.state);
       }
 
       const result = await updateIssueFields({
         issueId: ref.issue.id,
         actorId: scope.userId,
-        input: { plan: setTaskState(plan, task.line, args.state) },
+        input: { plan: nextPlan },
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
@@ -649,8 +816,8 @@ export function registerMinddyTools(server: McpServer): void {
       title: "Add comment",
       description:
         "Post a markdown comment on an issue — e.g. to report progress or leave a " +
-        "note for the team. The comment is attributed to the key's owner with a " +
-        "'via agent' marker in the timeline.",
+        "note for the team. The timeline shows the agent as the author (this API " +
+        "key's name with an '(mcp)' marker), not the key's owner.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,

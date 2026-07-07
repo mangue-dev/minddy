@@ -73,6 +73,10 @@ export function KanbanBoard({
     () => new Map((objectives ?? []).map((o) => [o.id, o])),
     [objectives]
   );
+  const issueMap = useMemo(
+    () => new Map(issues.map((i) => [i.id, i])),
+    [issues]
+  );
 
   const columns = useMemo(() => {
     const cmp = issueComparator(sort);
@@ -84,6 +88,8 @@ export function KanbanBoard({
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeIssue = activeId ? issues.find((i) => i.id === activeId) ?? null : null;
+  const activeParent =
+    activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -154,6 +160,7 @@ export function KanbanBoard({
             key={status.value}
             status={status}
             issues={items}
+            issueMap={issueMap}
             projectKey={projectKey}
             memberMap={memberMap}
             categoryMap={categoryMap}
@@ -175,6 +182,7 @@ export function KanbanBoard({
               memberMap={memberMap}
               categoryMap={categoryMap}
               objectiveMap={objectiveMap}
+              parentNumber={activeParent?.number}
               dragging
             />
           </div>

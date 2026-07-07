@@ -291,6 +291,7 @@
     "discardDraftConfirm": "Abandonner",
     "discardDraftKeepEditing": "Continuer la rédaction",
     "addSubIssuePlaceholder": "Ajouter un sous-ticket…",
+    "openParentAria": "Ouvrir le ticket parent {id}",
     "createdByIntegration": "Créé via l'intégration {name}",
     "createdByIntegrationGeneric": "Créé via une intégration"
   },

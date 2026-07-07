@@ -13,6 +13,7 @@ import { StatusIndicator } from "@/components/issue-indicators";
 export function KanbanColumn({
   status,
   issues,
+  issueMap,
   projectKey,
   memberMap,
   categoryMap,
@@ -24,6 +25,8 @@ export function KanbanColumn({
 }: {
   status: StatusMeta;
   issues: Issue[];
+  /** All project issues by id — used to resolve a sub-issue's parent. */
+  issueMap: Map<string, Issue>;
   projectKey: string;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
@@ -56,19 +59,26 @@ export function KanbanColumn({
           items={issues.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
         >
-          {issues.map((issue) => (
-            <IssueCard
-              key={issue.id}
-              issue={issue}
-              projectKey={projectKey}
-              memberMap={memberMap}
-              categoryMap={categoryMap}
-              objectiveMap={objectiveMap}
-              onOpen={() => onOpenIssue(issue)}
-              onUpdateIssue={onUpdateIssue}
-              onSetCategories={onSetCategories}
-            />
-          ))}
+          {issues.map((issue) => {
+            const parent = issue.parent_id
+              ? issueMap.get(issue.parent_id) ?? null
+              : null;
+            return (
+              <IssueCard
+                key={issue.id}
+                issue={issue}
+                projectKey={projectKey}
+                memberMap={memberMap}
+                categoryMap={categoryMap}
+                objectiveMap={objectiveMap}
+                parentNumber={parent?.number}
+                onOpenParent={parent ? () => onOpenIssue(parent) : undefined}
+                onOpen={() => onOpenIssue(issue)}
+                onUpdateIssue={onUpdateIssue}
+                onSetCategories={onSetCategories}
+              />
+            );
+          })}
         </SortableContext>
 
         <button

@@ -291,6 +291,7 @@
     "discardDraftConfirm": "Discard",
     "discardDraftKeepEditing": "Keep editing",
     "addSubIssuePlaceholder": "Add a sub-issue…",
+    "openParentAria": "Open parent issue {id}",
     "createdByIntegration": "Created via the {name} integration",
     "createdByIntegrationGeneric": "Created via an integration"
   },

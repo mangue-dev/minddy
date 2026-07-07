@@ -17,7 +17,7 @@ import {
   TabsTrigger,
   toast,
 } from "mangue-ui";
-import { Trash2, X } from "lucide-react";
+import { ChevronRight, Trash2, X } from "lucide-react";
 import {
   AssigneeValue,
   CategoryValue,
@@ -109,6 +109,9 @@ export function IssueSidePanel({
   };
 
   const isChild = !!issue.parent_id;
+  const parent = issue.parent_id
+    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
+    : null;
 
   const commitTitle = () => {
     const trimmed = title.trim();
@@ -134,8 +137,26 @@ export function IssueSidePanel({
           {/* Header: identifier · delete · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <SidePanelTitle asChild>
-              <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+              <span className="flex items-center gap-1.5 text-lg font-semibold tracking-tight">
                 <IntegrationIndicator issue={issue} iconClassName="size-4" />
+                {parent && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onOpenIssue(parent.id)}
+                      aria-label={t("openParentAria", {
+                        id: issueIdentifier(projectKey, parent.number),
+                      })}
+                      className="rounded font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:outline-none"
+                    >
+                      {issueIdentifier(projectKey, parent.number)}
+                    </button>
+                    <ChevronRight
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                  </>
+                )}
                 {issueIdentifier(projectKey, issue.number)}
               </span>
             </SidePanelTitle>
