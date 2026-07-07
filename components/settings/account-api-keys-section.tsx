@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,11 +15,17 @@ import {
   DialogTitle,
   Input,
   Spinner,
+  cn,
   toast,
 } from "mangue-ui";
-import { Check, Copy, KeyRound, Plus } from "lucide-react";
-import { createApiKeyApi, revokeApiKeyApi } from "@/lib/api-keys-api";
+import { Check, Copy, ExternalLink, KeyRound, Plus } from "lucide-react";
+import {
+  connectAgentKeyApi,
+  createApiKeyApi,
+  revokeApiKeyApi,
+} from "@/lib/api-keys-api";
 import { apiKeysQueryKey, useApiKeysQuery } from "@/lib/use-api-keys-query";
+import { MCP_AGENTS, getMcpAgent, isMcpAgentId, type McpAgent } from "@/lib/mcp-agents";
 import { SettingsSection } from "@/components/settings-shell";
 import type { ApiKey } from "@/lib/types";
 
@@ -131,33 +137,149 @@ function CreateApiKeyDialog({
   );
 }
 
-/** How-to block: the MCP endpoint URL + the one-liner to plug an agent in. */
-function McpConnectHint() {
+/** Logo d'un agent, avec bascule light/dark quand une variante existe. */
+function AgentLogo({ agent, className }: { agent: McpAgent; className?: string }) {
+  if (!agent.logoDark) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={agent.logo} alt="" aria-hidden className={className} />;
+  }
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={agent.logo} alt="" aria-hidden className={cn(className, "dark:hidden")} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={agent.logoDark}
+        alt=""
+        aria-hidden
+        className={cn(className, "hidden dark:block")}
+      />
+    </>
+  );
+}
+
+/** Clé masquée pour l'aperçu — latin-1 uniquement (btoa du deeplink Cursor). */
+const MASKED_KEY = "mdyk_····························";
+
+/** « Connecter un agent » : choisir son agent, copier la commande clé en main.
+    La clé est générée au premier clic et gardée en mémoire pour la session ;
+    si elle existe déjà côté serveur (plaintext irrécupérable), un dialog
+    demande confirmation avant de la régénérer (l'ancienne est révoquée). */
+function McpConnect() {
   const t = useTranslations("Account");
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState(MCP_AGENTS[0]);
+  const [busy, setBusy] = useState(false);
+  const [regenFor, setRegenFor] = useState<McpAgent | null>(null);
+  // Plaintexts obtenus pendant la session — re-copier ne régénère pas.
+  const keyCache = useRef(new Map<string, string>());
+
   // window n'existe qu'au client ; rendu après mount pour éviter tout mismatch.
   const [origin, setOrigin] = useState<string | null>(null);
   useEffect(() => setOrigin(window.location.origin), []);
   if (!origin) return null;
+  const endpoint = `${origin}/api/mcp`;
 
-  const command = `claude mcp add --transport http minddy ${origin}/api/mcp --header "Authorization: Bearer mdyk_…"`;
-
-  const copyCommand = async () => {
-    await navigator.clipboard.writeText(command);
-    toast.success(t("keyCopied"));
+  const deliver = async (agent: McpAgent, key: string) => {
+    const artifact = agent.build(endpoint, key);
+    if (agent.kind === "deeplink") {
+      window.location.href = artifact;
+      toast.success(t("openingAgent", { name: agent.label }));
+      return;
+    }
+    await navigator.clipboard.writeText(artifact);
+    toast.success(agent.kind === "config" ? t("configCopied") : t("commandCopied"));
   };
 
+  const connect = async (agent: McpAgent, regenerate: boolean) => {
+    const cached = keyCache.current.get(agent.id);
+    if (cached && !regenerate) {
+      await deliver(agent, cached);
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await connectAgentKeyApi(agent.id, regenerate);
+      if (result.exists) {
+        setRegenFor(agent);
+        return;
+      }
+      keyCache.current.set(agent.id, result.key);
+      void queryClient.invalidateQueries({ queryKey: apiKeysQueryKey });
+      await deliver(agent, result.key);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const actionLabel =
+    selected.kind === "deeplink"
+      ? t("installIn", { name: selected.label })
+      : selected.kind === "config"
+        ? t("copyInstallConfig")
+        : t("copyInstallCommand");
+  const hint =
+    selected.kind === "deeplink"
+      ? t("mcpHintCursor")
+      : selected.kind === "config"
+        ? t("mcpHintWindsurf")
+        : t("mcpHintCommand");
+
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3">
-      <p className="text-xs text-muted-foreground">{t("mcpConnectHint")}</p>
-      <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-md border border-border bg-background px-3 py-2 font-mono text-xs">
-          {command}
-        </code>
-        <Button type="button" variant="outline" size="icon" onClick={copyCommand}>
-          <Copy />
-          <span className="sr-only">{t("copyKey")}</span>
-        </Button>
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3">
+      <p className="text-xs text-muted-foreground">{t("mcpConnectDesc")}</p>
+
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("mcpAgentPicker")}>
+        {MCP_AGENTS.map((agent) => {
+          const active = agent.id === selected.id;
+          return (
+            <button
+              key={agent.id}
+              type="button"
+              onClick={() => setSelected(agent)}
+              aria-pressed={active}
+              className={cn(
+                "flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors",
+                active
+                  ? "border-brand/40 bg-brand/10 text-foreground"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <AgentLogo agent={agent} className="size-4" />
+              {agent.label}
+            </button>
+          );
+        })}
       </div>
+
+      {selected.kind !== "deeplink" && (
+        <code className="max-h-40 overflow-auto whitespace-pre rounded-md border border-border bg-background px-3 py-2 font-mono text-xs">
+          {selected.build(endpoint, MASKED_KEY)}
+        </code>
+      )}
+
+      <div className="flex items-center gap-3">
+        <Button type="button" disabled={busy} onClick={() => void connect(selected, false)}>
+          {busy ? <Spinner /> : selected.kind === "deeplink" ? <ExternalLink /> : <Copy />}
+          {actionLabel}
+        </Button>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+
+      <ConfirmDeleteDialog
+        open={!!regenFor}
+        onOpenChange={(open) => !open && setRegenFor(null)}
+        title={t("mcpRegenTitle", { name: regenFor?.label ?? "" })}
+        description={t("mcpRegenDescription")}
+        confirmLabel={t("mcpRegenConfirm")}
+        onConfirm={() => {
+          const agent = regenFor;
+          setRegenFor(null);
+          if (agent) void connect(agent, true);
+        }}
+      />
     </div>
   );
 }
@@ -203,7 +325,7 @@ export function AccountApiKeysSection() {
       description={t("apiKeysSectionDesc")}
     >
       <div className="flex flex-col gap-4">
-        <McpConnectHint />
+        <McpConnect />
 
         <div>
           <Button type="button" onClick={() => setCreateOpen(true)}>
@@ -221,7 +343,11 @@ export function AccountApiKeysSection() {
             {apiKeys.map((apiKey) => (
               <li key={apiKey.id} className="flex items-center gap-3 py-2">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                  <KeyRound className="size-4" />
+                  {isMcpAgentId(apiKey.agent) ? (
+                    <AgentLogo agent={getMcpAgent(apiKey.agent)} className="size-4" />
+                  ) : (
+                    <KeyRound className="size-4" />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

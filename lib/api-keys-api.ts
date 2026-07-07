@@ -42,3 +42,23 @@ export async function revokeApiKeyApi(keyId: string): Promise<void> {
     })
   );
 }
+
+export type ConnectAgentKeyResponse =
+  | { exists: true; apiKey: ApiKey }
+  | { exists: false; apiKey: ApiKey; key: string };
+
+/** Clé clé-en-main du flow « connecter un agent ». Sans regenerate, une clé
+    active existante (plaintext irrécupérable) revient en { exists: true } —
+    à confirmer avant de rappeler avec regenerate: true. */
+export async function connectAgentKeyApi(
+  agent: string,
+  regenerate = false
+): Promise<ConnectAgentKeyResponse> {
+  return parseJson(
+    await fetch("/api/account/api-keys/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent, regenerate }),
+    })
+  );
+}

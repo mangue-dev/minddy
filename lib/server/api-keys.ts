@@ -24,12 +24,14 @@ export function generateApiKey(): { key: string; hash: string; prefix: string } 
 }
 
 export const API_KEY_SUMMARY_SELECT =
-  "id, name, key_prefix, created_at, last_used_at, revoked_at";
+  "id, name, key_prefix, agent, created_at, last_used_at, revoked_at";
 
 export interface ApiKeySummary {
   id: string;
   name: string;
   key_prefix: string;
+  /** Agent cible du flow « connecter un agent » ; NULL = clé manuelle. */
+  agent: string | null;
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
@@ -113,6 +115,71 @@ export async function revokeApiKey({
     return { ok: false, status: 404, errorKey: "apiKeyNotFound" };
   }
   return { ok: true };
+}
+
+/**
+ * Flow « connecter un agent » : garantit une clé ACTIVE par (user, agent) dont
+ * le plaintext n'est délivré qu'à la création. Si une clé active existe déjà,
+ * son plaintext est irrécupérable → on la signale (`exists`) pour que l'UI
+ * demande confirmation avant de la révoquer et d'en régénérer une.
+ */
+export async function connectAgentKey({
+  userId,
+  agent,
+  name,
+  regenerate,
+}: {
+  userId: string;
+  agent: string;
+  /** Nom d'affichage de la clé (label de l'agent, ex. "Claude Code"). */
+  name: string;
+  regenerate: boolean;
+}): Promise<
+  | { ok: true; exists: true; apiKey: ApiKeySummary }
+  | { ok: true; exists: false; apiKey: ApiKeySummary; key: string }
+  | { ok: false; status: number; errorKey: "databaseError" }
+> {
+  const service = getServiceClient();
+
+  const { data: existing, error: findError } = await service
+    .from("api_keys")
+    .select(API_KEY_SUMMARY_SELECT)
+    .eq("user_id", userId)
+    .eq("agent", agent)
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (findError) {
+    console.error("[api-keys] agent lookup failed:", findError.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  if (existing && !regenerate) {
+    return { ok: true, exists: true, apiKey: existing as unknown as ApiKeySummary };
+  }
+  if (existing) {
+    const revoked = await revokeApiKey({ userId, keyId: existing.id as string });
+    if (!revoked.ok && revoked.errorKey === "databaseError") {
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  }
+
+  const { key, hash, prefix } = generateApiKey();
+  const { data, error } = await service
+    .from("api_keys")
+    .insert({
+      user_id: userId,
+      name,
+      agent,
+      key_hash: hash,
+      key_prefix: prefix,
+    })
+    .select(API_KEY_SUMMARY_SELECT)
+    .single();
+  if (error) {
+    console.error("[api-keys] agent create failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return { ok: true, exists: false, apiKey: data as unknown as ApiKeySummary, key };
 }
 
 /**
