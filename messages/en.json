@@ -303,6 +303,7 @@
     "triage": "Triage",
     "projectSettings": "Project settings",
     "settings": "Settings",
+    "accountSettings": "Account settings",
     "switchProject": "Switch project",
     "accountFallback": "Account",
     "profile": "Profile",
@@ -375,6 +376,18 @@
     "nameEmpty": "Name can't be empty.",
     "updated": "Profile updated."
   },
+  "Account": {
+    "title": "Account settings",
+    "subtitle": "Manage your profile and preferences.",
+    "profileTab": "Profile",
+    "preferencesTab": "Preferences",
+    "profileSectionTitle": "Profile",
+    "profileSectionDesc": "Your photo and name, visible to other members.",
+    "emailLabel": "Email",
+    "emailHint": "Your address can't be changed here.",
+    "themeTitle": "Theme",
+    "themeDesc": "Choose how the interface looks."
+  },
   "Projects": {
     "newProject": "New Project",
     "projectOptions": "Project options",
@@ -400,10 +413,17 @@
     "someone": "Someone"
   },
   "Settings": {
-    "title": "Settings",
+    "title": "Project settings",
+    "subtitle": "Manage this project, its categories and its members.",
     "generalTab": "General",
     "categoriesTab": "Categories",
     "membersTab": "Members",
+    "generalSectionTitle": "General",
+    "generalSectionDesc": "Your project's name and key.",
+    "dangerZoneTitle": "Danger zone",
+    "dangerZoneDesc": "Irreversible actions on this project.",
+    "categoriesSectionDesc": "Organize your tickets with colored categories.",
+    "membersSectionDesc": "Invite collaborators and manage their access.",
     "projectNotFound": "Project not found",
     "backToHome": "Back to home",
     "nameLabel": "Name",

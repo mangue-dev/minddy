@@ -140,6 +140,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       items: [
         { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+        {
+          key: "go-account-settings",
+          label: t("accountSettings"),
+          icon: Settings,
+          onSelect: () => router.push("/settings"),
+        },
       ],
     });
 

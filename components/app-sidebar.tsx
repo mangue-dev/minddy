@@ -30,11 +30,10 @@ import {
   MoreHorizontal,
   Megaphone,
   BarChart3,
-  UserRound,
+  Settings,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
-import { ProfileDialog } from "@/components/profile-dialog";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { transitions } from "@/lib/motion";
 
@@ -242,7 +241,6 @@ function ThemeItem({
 function AccountButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const { user, signOut } = useAuth();
-  const [profileOpen, setProfileOpen] = useState(false);
   const firstName = firstNameOf(user, t("accountFallback"));
   const meta = user?.user_metadata as
     | { avatar_url?: string; picture?: string }
@@ -251,7 +249,6 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
   const seed = user?.email || firstName;
 
   return (
-    <>
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
@@ -278,9 +275,11 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
-          <UserRound />
-          {t("profile")}
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+            <Settings />
+            {t("accountSettings")}
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <ThemeItem value="light" icon={Sun} label={t("themeLight")} />
@@ -293,8 +292,6 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
-    </>
   );
 }
 

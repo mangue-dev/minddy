@@ -303,6 +303,7 @@
     "triage": "Triage",
     "projectSettings": "Paramètres du projet",
     "settings": "Paramètres",
+    "accountSettings": "Paramètres du compte",
     "switchProject": "Changer de Projet",
     "accountFallback": "Compte",
     "profile": "Profil",
@@ -375,6 +376,18 @@
     "nameEmpty": "Le nom ne peut pas être vide.",
     "updated": "Profil mis à jour."
   },
+  "Account": {
+    "title": "Paramètres du compte",
+    "subtitle": "Gère ton profil et tes préférences.",
+    "profileTab": "Profil",
+    "preferencesTab": "Préférences",
+    "profileSectionTitle": "Profil",
+    "profileSectionDesc": "Ta photo et ton nom, visibles par les autres membres.",
+    "emailLabel": "E-mail",
+    "emailHint": "Ton adresse ne peut pas être modifiée ici.",
+    "themeTitle": "Thème",
+    "themeDesc": "Choisis l'apparence de l'interface."
+  },
   "Projects": {
     "newProject": "Nouveau Projet",
     "projectOptions": "Options du projet",
@@ -400,10 +413,17 @@
     "someone": "Quelqu'un"
   },
   "Settings": {
-    "title": "Paramètres",
+    "title": "Paramètres du projet",
+    "subtitle": "Gère ce Projet, ses catégories et ses membres.",
     "generalTab": "Général",
     "categoriesTab": "Catégories",
     "membersTab": "Membres",
+    "generalSectionTitle": "Général",
+    "generalSectionDesc": "Le nom et la clé de ton Projet.",
+    "dangerZoneTitle": "Zone sensible",
+    "dangerZoneDesc": "Actions irréversibles sur ce Projet.",
+    "categoriesSectionDesc": "Organise tes tickets avec des catégories colorées.",
+    "membersSectionDesc": "Invite des collaborateurs et gère leurs accès.",
     "projectNotFound": "Projet introuvable",
     "backToHome": "Retour à l'accueil",
     "nameLabel": "Nom",

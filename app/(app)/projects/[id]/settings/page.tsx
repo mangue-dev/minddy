@@ -9,21 +9,23 @@ import {
   Button,
   ConfirmDeleteDialog,
   Input,
+  Separator,
   Skeleton,
   Spinner,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   toast,
 } from "mangue-ui";
-import { LogOut, Trash2 } from "lucide-react";
+import { LogOut, Settings2, Tags, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
+import {
+  SettingsShell,
+  SettingsSection,
+  type SettingsTab,
+} from "@/components/settings-shell";
 
 export default function ProjectSettingsPage() {
   const t = useTranslations("Settings");
@@ -58,7 +60,7 @@ export default function ProjectSettingsPage() {
 
   if (projectsLoading && !project) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-6 py-8">
+      <div className="mx-auto w-full max-w-[1080px] p-4 md:p-8">
         <Skeleton className="h-8 w-64" />
       </div>
     );
@@ -67,7 +69,9 @@ export default function ProjectSettingsPage() {
   if (!project) {
     return (
       <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">{t("projectNotFound")}</h1>
+        <h1 className="font-display text-xl font-semibold">
+          {t("projectNotFound")}
+        </h1>
         <Button asChild variant="outline">
           <Link href="/home">{t("backToHome")}</Link>
         </Button>
@@ -123,117 +127,157 @@ export default function ProjectSettingsPage() {
     }
   };
 
-  return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-8">
-      <h1 className="mb-6 font-display text-xl font-semibold tracking-tight">
-        {t("title")}
-      </h1>
+  const generalContent = isOwner ? (
+    <>
+      <SettingsSection
+        title={t("generalSectionTitle")}
+        description={t("generalSectionDesc")}
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="settings-name" className="text-sm font-medium">
+              {t("nameLabel")}
+            </label>
+            <Input
+              id="settings-name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="settings-key" className="text-sm font-medium">
+              {t("keyLabel")}
+            </label>
+            <Input
+              id="settings-key"
+              required
+              value={key}
+              onChange={(e) => setKey(normalizeKey(e.target.value))}
+              className="w-28 font-mono uppercase tracking-wide"
+              maxLength={5}
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <div>
+            <Button type="submit" disabled={saving || !dirty}>
+              {saving && <Spinner />}
+              {tc("save")}
+            </Button>
+          </div>
+        </form>
+      </SettingsSection>
 
-      <Tabs defaultValue="general">
-        <TabsList>
-          <TabsTrigger value="general">{t("generalTab")}</TabsTrigger>
-          <TabsTrigger value="categories">{t("categoriesTab")}</TabsTrigger>
-          <TabsTrigger value="members">{t("membersTab")}</TabsTrigger>
-        </TabsList>
+      <Separator />
 
-        <TabsContent value="general" className="pt-4">
-          {isOwner ? (
-            <div className="flex flex-col gap-4">
-              <form onSubmit={handleSave} className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="settings-name" className="text-sm font-medium">
-                    {t("nameLabel")}
-                  </label>
-                  <Input
-                    id="settings-name"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="settings-key" className="text-sm font-medium">
-                    {t("keyLabel")}
-                  </label>
-                  <Input
-                    id="settings-key"
-                    required
-                    value={key}
-                    onChange={(e) => setKey(normalizeKey(e.target.value))}
-                    className="w-28 font-mono uppercase tracking-wide"
-                    maxLength={5}
-                  />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <div>
-                  <Button type="submit" disabled={saving || !dirty}>
-                    {saving && <Spinner />}
-                    {tc("save")}
-                  </Button>
-                </div>
-              </form>
+      <SettingsSection
+        title={t("dangerZoneTitle")}
+        description={t("dangerZoneDesc")}
+        destructive
+      >
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+          <div className="text-sm">
+            <p className="font-medium">{t("deleteProjectLabel")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("deleteProjectHint")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 />
+            {tc("delete")}
+          </Button>
+        </div>
+      </SettingsSection>
+    </>
+  ) : (
+    <>
+      <SettingsSection
+        title={t("generalSectionTitle")}
+        description={t("ownerOnlyHint")}
+      >
+        <div className="flex items-center gap-3">
+          <div>
+            <p className="text-sm font-medium">{project.name}</p>
+            <Badge variant="secondary" className="mt-1 font-mono">
+              {project.key}
+            </Badge>
+          </div>
+        </div>
+      </SettingsSection>
 
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-                <div className="text-sm">
-                  <p className="font-medium">{t("deleteProjectLabel")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("deleteProjectHint")}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  <Trash2 />
-                  {tc("delete")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-sm font-medium">{project.name}</p>
-                  <Badge variant="secondary" className="mt-1 font-mono">
-                    {project.key}
-                  </Badge>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {t("ownerOnlyHint")}
-              </p>
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-                <div className="text-sm">
-                  <p className="font-medium">{t("leaveProjectLabel")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("leaveProjectHint")}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={leaving}
-                  onClick={handleLeave}
-                >
-                  {leaving ? <Spinner /> : <LogOut />}
-                  {t("leave")}
-                </Button>
-              </div>
-            </div>
-          )}
-        </TabsContent>
+      <Separator />
 
-        <TabsContent value="categories" className="pt-4">
+      <SettingsSection title={t("leaveProjectLabel")}>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+          <div className="text-sm">
+            <p className="font-medium">{t("leaveProjectLabel")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("leaveProjectHint")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={leaving}
+            onClick={handleLeave}
+          >
+            {leaving ? <Spinner /> : <LogOut />}
+            {t("leave")}
+          </Button>
+        </div>
+      </SettingsSection>
+    </>
+  );
+
+  const tabs: SettingsTab[] = [
+    {
+      value: "general",
+      label: t("generalTab"),
+      icon: Settings2,
+      content: generalContent,
+    },
+    {
+      value: "categories",
+      label: t("categoriesTab"),
+      icon: Tags,
+      content: (
+        <SettingsSection
+          title={t("categoriesTab")}
+          description={t("categoriesSectionDesc")}
+        >
           <ProjectCategories projectId={project.id} />
-        </TabsContent>
-
-        <TabsContent value="members" className="pt-4">
+        </SettingsSection>
+      ),
+    },
+    {
+      value: "members",
+      label: t("membersTab"),
+      icon: Users,
+      content: (
+        <SettingsSection
+          title={t("membersTab")}
+          description={t("membersSectionDesc")}
+        >
           <ProjectMembers projectId={project.id} enabled />
-        </TabsContent>
-      </Tabs>
+        </SettingsSection>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <SettingsShell
+        title={t("title")}
+        description={t("subtitle")}
+        defaultTab="general"
+        tabs={tabs}
+      />
 
       <ConfirmDeleteDialog
         open={confirmDelete}
@@ -243,6 +287,6 @@ export default function ProjectSettingsPage() {
         confirmLabel={t("deleteProjectLabel")}
         onConfirm={handleDelete}
       />
-    </div>
+    </>
   );
 }

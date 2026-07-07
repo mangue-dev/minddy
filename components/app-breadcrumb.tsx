@@ -144,6 +144,7 @@ export function AppBreadcrumb() {
   const section = sectionKey ? t(sectionKey as Parameters<typeof t>[0]) : null;
   const isHome = pathname.startsWith("/home");
   const isInbox = pathname.startsWith("/inbox");
+  const isAccountSettings = pathname.startsWith("/settings");
 
   return (
     <nav className="flex min-w-0 items-center gap-2">
@@ -159,6 +160,12 @@ export function AppBreadcrumb() {
 
       <BreadcrumbLevel show={isInbox} levelKey="inbox">
         <span className="text-sm font-medium text-foreground">{t("inbox")}</span>
+      </BreadcrumbLevel>
+
+      <BreadcrumbLevel show={isAccountSettings} levelKey="account-settings">
+        <span className="text-sm font-medium text-foreground">
+          {t("accountSettings")}
+        </span>
       </BreadcrumbLevel>
 
       <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
