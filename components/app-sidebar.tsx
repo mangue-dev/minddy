@@ -35,6 +35,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { ShareFeedbackDialog } from "@/components/share-feedback-dialog";
 import { transitions } from "@/lib/motion";
 
 const EXPANDED_WIDTH = 256;
@@ -332,6 +333,7 @@ function FooterRow({
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   return (
     <div className="flex flex-col gap-0.5">
       <FooterRow
@@ -344,8 +346,9 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         icon={Megaphone}
         label={t("shareFeedback")}
         collapsed={collapsed}
-        onClick={() => toast(t("feedbackComingSoon"))}
+        onClick={() => setFeedbackOpen(true)}
       />
+      <ShareFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <AccountButton collapsed={collapsed} />
     </div>
   );

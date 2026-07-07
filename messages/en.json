@@ -61,7 +61,9 @@
     "invalidPosition": "Invalid position.",
     "issueNotFound": "Issue not found",
     "integrationNameRequired": "Integration name is required (max 60 characters).",
-    "integrationNotFound": "Integration not found."
+    "integrationNotFound": "Integration not found.",
+    "feedbackMessageRequired": "A feedback message is required.",
+    "feedbackUnavailable": "Feedback is not available right now."
   },
   "Assistant": {
     "title": "Ask Numo",
@@ -316,7 +318,6 @@
     "statistics": "Statistics",
     "statisticsComingSoon": "Statistics are coming soon.",
     "shareFeedback": "Share feedback",
-    "feedbackComingSoon": "Feedback is coming soon.",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "new": "New",
@@ -587,5 +588,13 @@
     "noSelection": "Select an issue to triage it.",
     "backToList": "Back to the list",
     "fromIntegration": "Created via an integration"
+  },
+  "Feedback": {
+    "title": "Share feedback",
+    "description": "A bug, an idea, something missing? Tell us — your feedback goes straight to the minddy team.",
+    "placeholder": "What's on your mind?",
+    "send": "Send",
+    "sent": "Thanks for your feedback!",
+    "sendFailed": "Could not send your feedback. Please try again."
   }
 }

@@ -61,7 +61,9 @@
     "invalidPosition": "Position invalide.",
     "issueNotFound": "Ticket introuvable",
     "integrationNameRequired": "Le nom de l'intégration est requis (60 caractères max).",
-    "integrationNotFound": "Intégration introuvable."
+    "integrationNotFound": "Intégration introuvable.",
+    "feedbackMessageRequired": "Le message du retour est requis.",
+    "feedbackUnavailable": "Les retours sont indisponibles pour le moment."
   },
   "Assistant": {
     "title": "Demander à Numo",
@@ -316,7 +318,6 @@
     "statistics": "Statistiques",
     "statisticsComingSoon": "Les statistiques arriveront bientôt.",
     "shareFeedback": "Partager un retour",
-    "feedbackComingSoon": "Les retours arriveront bientôt.",
     "expandSidebar": "Déplier la barre latérale",
     "collapseSidebar": "Replier la barre latérale",
     "new": "Nouveau",
@@ -587,5 +588,13 @@
     "noSelection": "Sélectionne un ticket pour le trier.",
     "backToList": "Retour à la liste",
     "fromIntegration": "Créé via une intégration"
+  },
+  "Feedback": {
+    "title": "Partager un retour",
+    "description": "Un bug, une idée, un manque ? Dites-nous tout — votre retour part directement à l'équipe minddy.",
+    "placeholder": "Qu'avez-vous en tête ?",
+    "send": "Envoyer",
+    "sent": "Merci pour votre retour !",
+    "sendFailed": "Impossible d'envoyer votre retour. Réessayez."
   }
 }

@@ -48,7 +48,14 @@ export async function authenticateIntegration(
 ): Promise<IntegrationAuthResult> {
   const header = request.headers.get("authorization") ?? "";
   const match = header.match(/^Bearer\s+(\S+)$/i);
-  const key = match?.[1];
+  return authenticateIntegrationKey(match?.[1]);
+}
+
+/** Key-only variant, for server code that holds a key without an incoming
+    Bearer header (e.g. minddy's own share-feedback relay). */
+export async function authenticateIntegrationKey(
+  key: string | null | undefined
+): Promise<IntegrationAuthResult> {
   if (!key || !key.startsWith(INTEGRATION_KEY_PREFIX)) {
     return { ok: false, response: invalidKey() };
   }

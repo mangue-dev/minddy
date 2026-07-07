@@ -35,7 +35,7 @@ const ISSUE_FIELD_PROPERTIES = {
     type: "string",
     enum: [...ISSUE_STATUSES],
     description:
-      "Issue status. 'triage' is the arrival zone (not on the kanban); 'duplicate' requires duplicate_of_id.",
+      "Issue status. ONLY pass this when the user explicitly asked for a status change — never on your own initiative. 'triage' is the arrival zone (not on the kanban); 'duplicate' requires duplicate_of_id.",
   },
   priority: {
     type: "string",
@@ -439,7 +439,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "triage_decision",
       description:
-        "Process an issue that sits in triage: accept it onto the board (→ backlog), decline it (→ canceled), or mark it as a duplicate of another issue. Optionally leaves a comment explaining the decision.",
+        "Process an issue that sits in triage: accept it onto the board (→ backlog), decline it (→ canceled), or mark it as a duplicate of another issue. Optionally leaves a comment explaining the decision. ONLY call this when the user explicitly asked for that triage decision — never accept or decline triage issues on your own initiative.",
       parameters: {
         type: "object",
         properties: {
