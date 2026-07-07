@@ -174,6 +174,15 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "list_integrations",
+      description:
+        "List the project's integrations (external apps submitting feedback through the API): id, name, revoked_at. Issues created by one carry its integration_id; the view filter filters.integration takes these ids.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_views",
       description:
         "List the saved kanban views: id, name, onglet ('my' personal / 'all' shared), filters, sort, display.",
@@ -281,7 +290,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view. The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives first); null inside assignee/objective means 'unassigned'/'no objective'.",
+        "Create a saved kanban view. The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'.",
       parameters: {
         type: "object",
         properties: {
@@ -321,6 +330,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
                 type: "array",
                 items: { type: "string" },
                 description: "category ids.",
+              },
+              integration: {
+                type: "array",
+                items: { type: ["string", "null"] },
+                description:
+                  "integration ids (from list_integrations); null = not created by an integration.",
               },
             },
             description: "Filter config. Omit a key to not filter on it.",

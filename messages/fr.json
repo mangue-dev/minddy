@@ -63,7 +63,9 @@
     "integrationNameRequired": "Le nom de l'intégration est requis (60 caractères max).",
     "integrationNotFound": "Intégration introuvable.",
     "feedbackMessageRequired": "Le message du retour est requis.",
-    "feedbackUnavailable": "Les retours sont indisponibles pour le moment."
+    "feedbackUnavailable": "Les retours sont indisponibles pour le moment.",
+    "webhookInvalidUrl": "URL de webhook invalide.",
+    "webhookInvalidConfig": "Configuration de webhook invalide."
   },
   "Assistant": {
     "title": "Demander à Numo",
@@ -224,7 +226,9 @@
     "noObjective": "Aucun objectif",
     "parent": "Parent",
     "noParent": "Aucun parent",
-    "order": "Ordre"
+    "order": "Ordre",
+    "integration": "Intégration",
+    "noIntegration": "Sans intégration"
   },
   "Home": {
     "title": "Mes Projets"
@@ -269,7 +273,9 @@
     "createTicket": "Créer le ticket",
     "dictateFailed": "Numo n'a pas pu traiter la dictée.",
     "numoWorking": "Numo remplit le ticket…",
-    "addSubIssuePlaceholder": "Ajouter un sous-ticket…"
+    "addSubIssuePlaceholder": "Ajouter un sous-ticket…",
+    "createdByIntegration": "Créé via l'intégration {name}",
+    "createdByIntegrationGeneric": "Créé via une intégration"
   },
   "Language": {
     "title": "Langue",
@@ -463,7 +469,24 @@
     "integrationRevokeTitle": "Révoquer l'intégration {name} ?",
     "integrationRevokeDescription": "Sa clé API cessera de fonctionner immédiatement. Les tickets qu'elle a créés gardent leur attribution.",
     "integrationRevokedToast": "L'intégration {name} a été révoquée.",
-    "integrationsOwnerOnlyHint": "Seul le propriétaire du projet peut gérer les intégrations."
+    "integrationsOwnerOnlyHint": "Seul le propriétaire du projet peut gérer les intégrations.",
+    "webhookButton": "Webhook",
+    "webhookTitle": "Webhook — {name}",
+    "webhookDescription": "minddy enverra un POST JSON signé à votre endpoint à chaque événement suivi.",
+    "webhookUrlLabel": "URL de l'endpoint",
+    "webhookUrlHint": "Laissez vide pour désactiver le webhook.",
+    "webhookEventsLabel": "Événements suivis",
+    "webhookEvent_issue_created": "Ticket créé",
+    "webhookEvent_issue_status_changed": "Changement de statut",
+    "webhookEvent_issue_updated": "Champs mis à jour",
+    "webhookScopeLabel": "Périmètre",
+    "webhookScopeIntegration": "Seulement les tickets créés par cette intégration",
+    "webhookScopeAll": "Tous les tickets du projet",
+    "webhookSignatureHint": "Chaque livraison est signée : X-Minddy-Signature = HMAC-SHA256 du corps, avec pour secret l'empreinte SHA-256 (hex) de votre clé API.",
+    "webhookSave": "Enregistrer",
+    "webhookSaved": "Webhook enregistré.",
+    "webhookLastDelivery": "Dernière livraison : {status} — {date}",
+    "webhookNoDelivery": "Aucune livraison pour le moment"
   },
   "Sort": {
     "manual": "Manuel",
@@ -586,8 +609,7 @@
     "declinedToast": "Ticket refusé (annulé).",
     "duplicateToast": "Marqué comme doublon de {id}.",
     "noSelection": "Sélectionne un ticket pour le trier.",
-    "backToList": "Retour à la liste",
-    "fromIntegration": "Créé via une intégration"
+    "backToList": "Retour à la liste"
   },
   "Feedback": {
     "title": "Partager un retour",

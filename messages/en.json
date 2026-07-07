@@ -63,7 +63,9 @@
     "integrationNameRequired": "Integration name is required (max 60 characters).",
     "integrationNotFound": "Integration not found.",
     "feedbackMessageRequired": "A feedback message is required.",
-    "feedbackUnavailable": "Feedback is not available right now."
+    "feedbackUnavailable": "Feedback is not available right now.",
+    "webhookInvalidUrl": "Invalid webhook URL.",
+    "webhookInvalidConfig": "Invalid webhook configuration."
   },
   "Assistant": {
     "title": "Ask Numo",
@@ -224,7 +226,9 @@
     "noObjective": "No objective",
     "parent": "Parent",
     "noParent": "No parent",
-    "order": "Order"
+    "order": "Order",
+    "integration": "Integration",
+    "noIntegration": "No integration"
   },
   "Home": {
     "title": "My Projects"
@@ -269,7 +273,9 @@
     "createTicket": "Create issue",
     "dictateFailed": "Numo couldn't process the dictation.",
     "numoWorking": "Numo is filling the issue…",
-    "addSubIssuePlaceholder": "Add a sub-issue…"
+    "addSubIssuePlaceholder": "Add a sub-issue…",
+    "createdByIntegration": "Created via the {name} integration",
+    "createdByIntegrationGeneric": "Created via an integration"
   },
   "Language": {
     "title": "Language",
@@ -463,7 +469,24 @@
     "integrationRevokeTitle": "Revoke integration {name}?",
     "integrationRevokeDescription": "Its API key will stop working immediately. Issues it created keep their attribution.",
     "integrationRevokedToast": "Integration {name} revoked.",
-    "integrationsOwnerOnlyHint": "Only the project owner can manage integrations."
+    "integrationsOwnerOnlyHint": "Only the project owner can manage integrations.",
+    "webhookButton": "Webhook",
+    "webhookTitle": "Webhook — {name}",
+    "webhookDescription": "minddy will POST a signed JSON payload to your endpoint whenever a followed event happens.",
+    "webhookUrlLabel": "Endpoint URL",
+    "webhookUrlHint": "Leave empty to disable the webhook.",
+    "webhookEventsLabel": "Followed events",
+    "webhookEvent_issue_created": "Issue created",
+    "webhookEvent_issue_status_changed": "Status changed",
+    "webhookEvent_issue_updated": "Fields updated",
+    "webhookScopeLabel": "Scope",
+    "webhookScopeIntegration": "Only issues created by this integration",
+    "webhookScopeAll": "All project issues",
+    "webhookSignatureHint": "Each delivery is signed: X-Minddy-Signature = HMAC-SHA256 of the body, keyed with the SHA-256 hex digest of your API key.",
+    "webhookSave": "Save",
+    "webhookSaved": "Webhook saved.",
+    "webhookLastDelivery": "Last delivery: {status} — {date}",
+    "webhookNoDelivery": "No delivery yet"
   },
   "Sort": {
     "manual": "Manual",
@@ -586,8 +609,7 @@
     "declinedToast": "Issue declined (canceled).",
     "duplicateToast": "Marked as duplicate of {id}.",
     "noSelection": "Select an issue to triage it.",
-    "backToList": "Back to the list",
-    "fromIntegration": "Created via an integration"
+    "backToList": "Back to the list"
   },
   "Feedback": {
     "title": "Share feedback",

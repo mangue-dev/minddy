@@ -138,6 +138,15 @@ export async function executeTool(
         if (error) return toolError(error.message);
         return { result: { categories: data ?? [] }, success: true };
       }
+      case "list_integrations": {
+        const { data, error } = await ctx.supabase
+          .from("integrations")
+          .select("id, name, revoked_at")
+          .eq("project_id", projectId)
+          .order("name", { ascending: true });
+        if (error) return toolError(error.message);
+        return { result: { integrations: data ?? [] }, success: true };
+      }
       case "list_views": {
         let query = ctx.supabase
           .from("views")

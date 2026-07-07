@@ -13,13 +13,11 @@ import {
   DialogTitle,
   Skeleton,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, Copy, Filter, Plug, X } from "lucide-react";
+import { Check, ChevronLeft, Copy, Filter, X } from "lucide-react";
+import { IntegrationIndicator } from "@/components/integration-indicator";
 import {
   AssigneeValue,
   CategoryValue,
@@ -282,14 +280,8 @@ export default function TriagePage() {
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">
                     {issueIdentifier(project.key, issue.number)}
                   </span>
-                  {issue.integration_id && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Plug className="size-3.5 shrink-0 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>{t("fromIntegration")}</TooltipContent>
-                    </Tooltip>
-                  )}
+                  <IntegrationIndicator issue={issue} />
+
                   <span className="ml-auto flex shrink-0 items-center gap-1.5">
                     {issue.priority !== "none" && (
                       <PriorityIndicator priority={issue.priority} className="size-3.5" />

@@ -21,6 +21,7 @@ import {
 } from "@/lib/issue-constants";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import { IntegrationIndicator } from "@/components/integration-indicator";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -426,10 +427,13 @@ export function IssueCardBody({
         dragging && "cursor-grabbing shadow-lg"
       )}
     >
-      {/* Identifier + assignee */}
+      {/* Identifier (préfixé de l'icône intégration le cas échéant) + assignee */}
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {issueIdentifier(projectKey, issue.number)}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <IntegrationIndicator issue={issue} iconClassName="size-3" />
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {issueIdentifier(projectKey, issue.number)}
+          </span>
         </span>
         <AssigneePick
           assignee={assignee}

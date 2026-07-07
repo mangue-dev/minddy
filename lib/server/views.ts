@@ -171,6 +171,11 @@ export function sanitizeViewConfig(input: {
             if (kept) filters.category = kept;
             break;
           }
+          case "integration": {
+            const kept = keepIdOrNullValues(key, value, invalid);
+            if (kept) filters.integration = kept;
+            break;
+          }
           default:
             invalid.push(`filters.${key}: unknown key, dropped`);
         }

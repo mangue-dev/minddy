@@ -183,6 +183,12 @@ export interface Issue {
   category_ids: string[];
 }
 
+export type IntegrationWebhookEvent =
+  | "issue.created"
+  | "issue.status_changed"
+  | "issue.updated";
+export type IntegrationWebhookScope = "integration" | "all";
+
 export interface Integration {
   id: string;
   name: string;
@@ -190,6 +196,12 @@ export interface Integration {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  /** NULL = webhook désactivé (events/scope conservés pour réactivation). */
+  webhook_url: string | null;
+  webhook_events: IntegrationWebhookEvent[];
+  webhook_scope: IntegrationWebhookScope;
+  webhook_last_status: string | null;
+  webhook_last_at: string | null;
 }
 
 export interface CreateIssueInput {
@@ -243,6 +255,7 @@ export interface ViewFilters {
   effort?: IssueEffort[];
   category?: string[];
   objective?: (string | null)[]; // null = no objective
+  integration?: (string | null)[]; // null = not created by an integration
 }
 
 export interface ViewDisplay {

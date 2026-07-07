@@ -1,6 +1,10 @@
 "use client";
 
-import type { Integration } from "./types";
+import type {
+  Integration,
+  IntegrationWebhookEvent,
+  IntegrationWebhookScope,
+} from "./types";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -42,6 +46,27 @@ export async function createIntegrationApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     })
+  );
+}
+
+export async function updateIntegrationWebhookApi(
+  projectId: string,
+  integrationId: string,
+  config: {
+    webhook_url: string | null;
+    webhook_events: IntegrationWebhookEvent[];
+    webhook_scope: IntegrationWebhookScope;
+  }
+): Promise<{ integration: Integration }> {
+  return parseJson(
+    await fetch(
+      `/api/projects/${projectId}/integrations/${encodeURIComponent(integrationId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      }
+    )
   );
 }
 

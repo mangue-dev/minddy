@@ -30,6 +30,7 @@ import {
   ListFilter,
   ArrowUpDown,
   MoreHorizontal,
+  Plug,
   Plus,
   Save,
   Pencil,
@@ -53,6 +54,7 @@ import { activeFilterCount } from "@/lib/view-filter";
 import { displayName } from "@/lib/display-name";
 import type {
   Category,
+  Integration,
   Member,
   Objective,
   View,
@@ -97,12 +99,14 @@ function FiltersPopover({
   members,
   categories,
   objectives,
+  integrations,
 }: {
   config: ViewConfig;
   onChange: (config: ViewConfig) => void;
   members: Member[];
   categories: Category[];
   objectives: Objective[];
+  integrations: Integration[];
 }) {
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
@@ -252,6 +256,35 @@ function FiltersPopover({
           </>
         )}
 
+        {integrations.length > 0 && (
+          <>
+            <Separator className="my-1.5" />
+            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              {tf("integration")}
+            </p>
+            <ToggleRow
+              active={!!f.integration?.includes(null)}
+              onClick={() =>
+                setFilters({ ...f, integration: toggle(f.integration, null) })
+              }
+            >
+              {tf("noIntegration")}
+            </ToggleRow>
+            {integrations.map((i) => (
+              <ToggleRow
+                key={i.id}
+                active={!!f.integration?.includes(i.id)}
+                onClick={() =>
+                  setFilters({ ...f, integration: toggle(f.integration, i.id) })
+                }
+              >
+                <Plug className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
+                <span className="truncate">{i.name}</span>
+              </ToggleRow>
+            ))}
+          </>
+        )}
+
         <Separator className="my-1.5" />
         <ToggleRow
           active={!!config.display.hideDone}
@@ -342,6 +375,7 @@ export function BoardToolbar({
   members,
   categories,
   objectives,
+  integrations,
   dirty,
   onCreateView,
   onUpdateActiveView,
@@ -356,6 +390,7 @@ export function BoardToolbar({
   members: Member[];
   categories: Category[];
   objectives: Objective[];
+  integrations: Integration[];
   dirty: boolean;
   onCreateView: (name: string) => Promise<void>;
   onUpdateActiveView: () => Promise<void>;
@@ -450,6 +485,7 @@ export function BoardToolbar({
             members={members}
             categories={categories}
             objectives={objectives}
+            integrations={integrations}
           />
         </div>
       </div>

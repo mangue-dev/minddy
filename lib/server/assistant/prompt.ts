@@ -50,10 +50,13 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 
 ## Saved views (kanban)
 - The kanban ALWAYS groups by status. A view only FILTERS (status, priority, effort,
-  assignee, category, objective), SORTS (manual | priority | created | updated | due) and can
-  hide done issues (display.hideDone).
-- Filters take IDS only — resolve names with list_members / list_categories / list_objectives
-  before creating or updating a view. null inside assignee/objective means "unassigned"/"no objective".
+  assignee, category, objective, integration), SORTS (manual | priority | created | updated | due)
+  and can hide done issues (display.hideDone).
+- Filters take IDS only — resolve names with list_members / list_categories / list_objectives /
+  list_integrations before creating or updating a view. null inside assignee/objective/integration
+  means "unassigned"/"no objective"/"not created by an integration".
+- filters.integration matches issues submitted by an external app through the project's
+  Feedback API (they carry an integration_id).
 - onglet 'my' = personal view (My issues tab, implicitly filtered on the current user);
   onglet 'all' = shared view visible to the whole project.`;
 

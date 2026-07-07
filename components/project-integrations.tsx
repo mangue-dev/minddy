@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
   Button,
+  Checkbox,
   ConfirmDeleteDialog,
   Dialog,
   DialogContent,
@@ -14,18 +15,33 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Spinner,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  cn,
   toast,
 } from "mangue-ui";
-import { Check, Copy, Plug, Plus } from "lucide-react";
+import { Check, Copy, Plug, Plus, Webhook } from "lucide-react";
 import {
   createIntegrationApi,
-  fetchIntegrationsApi,
   revokeIntegrationApi,
+  updateIntegrationWebhookApi,
 } from "@/lib/integrations-api";
-import type { Integration } from "@/lib/types";
-
-const integrationsKey = (projectId: string) => ["integrations", projectId] as const;
+import {
+  integrationsQueryKey,
+  useIntegrationsQuery,
+} from "@/lib/use-integrations-query";
+import type {
+  Integration,
+  IntegrationWebhookEvent,
+  IntegrationWebhookScope,
+} from "@/lib/types";
 
 /** Create dialog: a name form that, once submitted, swaps to the one-time key
     panel — the only moment the plaintext key is ever visible. */
@@ -137,6 +153,184 @@ function CreateIntegrationDialog({
   );
 }
 
+const WEBHOOK_EVENTS: IntegrationWebhookEvent[] = [
+  "issue.created",
+  "issue.status_changed",
+  "issue.updated",
+];
+
+/** Per-integration outgoing-webhook config: URL, followed events, scope.
+    An empty URL disables the webhook (events/scope are kept for later). */
+function WebhookDialog({
+  projectId,
+  integration,
+  onOpenChange,
+  onSaved,
+}: {
+  projectId: string;
+  integration: Integration | null;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+}) {
+  const t = useTranslations("Settings");
+  const [url, setUrl] = useState("");
+  const [events, setEvents] = useState<IntegrationWebhookEvent[]>([]);
+  const [scope, setScope] = useState<IntegrationWebhookScope>("integration");
+  const [saving, setSaving] = useState(false);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  // Charger la config de l'intégration à l'ouverture (render-time, pas d'effet).
+  if (integration && loadedFor !== integration.id) {
+    setLoadedFor(integration.id);
+    setUrl(integration.webhook_url ?? "");
+    setEvents(
+      integration.webhook_events?.length
+        ? integration.webhook_events
+        : ["issue.status_changed"]
+    );
+    setScope(integration.webhook_scope ?? "integration");
+  }
+
+  const toggleEvent = (event: IntegrationWebhookEvent, checked: boolean) =>
+    setEvents((prev) =>
+      checked ? [...new Set([...prev, event])] : prev.filter((e) => e !== event)
+    );
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!integration) return;
+    setSaving(true);
+    try {
+      await updateIntegrationWebhookApi(projectId, integration.id, {
+        webhook_url: url.trim() || null,
+        webhook_events: events,
+        webhook_scope: scope,
+      });
+      toast.success(t("webhookSaved"));
+      onSaved();
+      onOpenChange(false);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={!!integration}
+      onOpenChange={(next) => {
+        if (!next) setLoadedFor(null);
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Webhook className="size-4 text-brand" />
+              {t("webhookTitle", { name: integration?.name ?? "" })}
+            </DialogTitle>
+            <DialogDescription>{t("webhookDescription")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="webhook-url" className="text-sm font-medium">
+              {t("webhookUrlLabel")}
+            </label>
+            <Input
+              id="webhook-url"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/minddy-webhook"
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">{t("webhookUrlHint")}</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">{t("webhookEventsLabel")}</p>
+            {WEBHOOK_EVENTS.map((event) => (
+              <label key={event} className="flex items-center gap-2.5 text-sm">
+                <Checkbox
+                  checked={events.includes(event)}
+                  onCheckedChange={(checked) => toggleEvent(event, checked === true)}
+                />
+                <span>{t(`webhookEvent_${event.replace(".", "_")}` as Parameters<typeof t>[0])}</span>
+                <code className="ml-auto font-mono text-xs text-muted-foreground">
+                  {event}
+                </code>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">{t("webhookScopeLabel")}</label>
+            <Select
+              value={scope}
+              onValueChange={(v) => setScope(v as IntegrationWebhookScope)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="integration">{t("webhookScopeIntegration")}</SelectItem>
+                <SelectItem value="all">{t("webhookScopeAll")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <p className="text-xs text-muted-foreground">{t("webhookSignatureHint")}</p>
+
+          <DialogFooter>
+            <Button type="submit" disabled={saving || (!!url.trim() && events.length === 0)}>
+              {saving && <Spinner />}
+              {t("webhookSave")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Pastille d'état de la dernière livraison webhook (vert 2xx, rouge sinon). */
+function WebhookStatusDot({ integration }: { integration: Integration }) {
+  const t = useTranslations("Settings");
+  const format = useFormatter();
+  if (!integration.webhook_url) return null;
+  const status = integration.webhook_last_status;
+  const healthy = !!status && /^2/.test(status);
+  const label = status
+    ? t("webhookLastDelivery", {
+        status,
+        date: integration.webhook_last_at
+          ? format.dateTime(new Date(integration.webhook_last_at), {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : "—",
+      })
+    : t("webhookNoDelivery");
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Webhook className="size-3.5" />
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              !status ? "bg-muted-foreground/40" : healthy ? "bg-green-500" : "bg-destructive"
+            )}
+          />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function ProjectIntegrations({
   projectId,
   isOwner,
@@ -149,17 +343,14 @@ export function ProjectIntegrations({
   const format = useFormatter();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
-    queryKey: integrationsKey(projectId),
-    queryFn: () => fetchIntegrationsApi(projectId),
-  });
-  const integrations = data?.integrations ?? [];
+  const { integrations, loading } = useIntegrationsQuery(projectId);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [toRevoke, setToRevoke] = useState<Integration | null>(null);
+  const [webhookFor, setWebhookFor] = useState<Integration | null>(null);
 
   const invalidate = () =>
-    void queryClient.invalidateQueries({ queryKey: integrationsKey(projectId) });
+    void queryClient.invalidateQueries({ queryKey: integrationsQueryKey(projectId) });
 
   const handleRevoke = async () => {
     if (!toRevoke) return;
@@ -197,7 +388,7 @@ export function ProjectIntegrations({
         </p>
       )}
 
-      {isLoading ? (
+      {loading ? (
         <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
       ) : integrations.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">{t("integrationsEmpty")}</p>
@@ -226,15 +417,27 @@ export function ProjectIntegrations({
                   {lastUsed(integration)}
                 </p>
               </div>
+              <WebhookStatusDot integration={integration} />
               {isOwner && !integration.revoked_at && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setToRevoke(integration)}
-                >
-                  {t("integrationRevoke")}
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWebhookFor(integration)}
+                  >
+                    <Webhook />
+                    {t("webhookButton")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setToRevoke(integration)}
+                  >
+                    {t("integrationRevoke")}
+                  </Button>
+                </>
               )}
             </li>
           ))}
@@ -246,6 +449,13 @@ export function ProjectIntegrations({
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={invalidate}
+      />
+
+      <WebhookDialog
+        projectId={projectId}
+        integration={webhookFor}
+        onOpenChange={(open) => !open && setWebhookFor(null)}
+        onSaved={invalidate}
       />
 
       <ConfirmDeleteDialog

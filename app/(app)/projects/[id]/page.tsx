@@ -18,6 +18,7 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useViewsQuery } from "@/lib/use-views-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
+import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
   DEFAULT_CONFIG,
   configsEqual,
@@ -87,6 +88,7 @@ function ProjectBoard() {
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives, createObjective, updateObjective } = useObjectivesQuery(projectId);
+  const { integrations } = useIntegrationsQuery(projectId);
   const {
     views,
     loading: viewsLoading,
@@ -362,6 +364,7 @@ function ProjectBoard() {
                 members={members}
                 categories={categories}
                 objectives={objectives}
+                integrations={integrations}
                 dirty={dirty}
                 onCreateView={handleCreateView}
                 onUpdateActiveView={handleUpdateActiveView}

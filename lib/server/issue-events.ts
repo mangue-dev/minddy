@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { dispatchWebhooksForEvents } from "@/lib/server/webhooks";
 
 export interface EventRow {
   issue_id: string;
@@ -101,5 +102,11 @@ export async function insertEvents(
 ): Promise<void> {
   if (rows.length === 0) return;
   const { error } = await service.from("issue_events").insert(rows);
-  if (error) console.error("[issue-events] insert failed:", error.message);
+  if (error) {
+    console.error("[issue-events] insert failed:", error.message);
+    return;
+  }
+  // insertEvents est l'entonnoir unique des événements d'issue : c'est le
+  // point de dispatch des webhooks d'intégration (non bloquant, via after()).
+  dispatchWebhooksForEvents(service, rows);
 }

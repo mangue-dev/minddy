@@ -32,6 +32,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { IntegrationIndicator } from "@/components/integration-indicator";
 import type {
   Category,
   CreateIssueInput,
@@ -122,7 +123,8 @@ export function IssueSidePanel({
           {/* Header: identifier · delete · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <SidePanelTitle asChild>
-              <span className="text-lg font-semibold tracking-tight">
+              <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                <IntegrationIndicator issue={issue} iconClassName="size-4" />
                 {issueIdentifier(projectKey, issue.number)}
               </span>
             </SidePanelTitle>
