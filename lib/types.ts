@@ -190,6 +190,20 @@ export interface CreateIssueInput {
   category_ids?: string[];
 }
 
+/** Field changes Numo applies to the create-issue form via voice dictation.
+ *  A patch on the client-side draft — nothing touches the database. */
+export interface IssueDraftPatch {
+  title?: string;
+  description?: string;
+  status?: IssueStatus;
+  priority?: IssuePriority;
+  effort?: IssueEffort | null;
+  assignee_id?: string | null;
+  objective_id?: string | null;
+  due_date?: string | null;
+  category_ids?: string[];
+}
+
 export interface IssueUpdateInput {
   title?: string;
   description?: string | null;

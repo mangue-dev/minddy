@@ -1,6 +1,13 @@
 "use client";
 
+// Compact pickers for the create-issue dialog — the options read as one inline
+// row (Figma: assets/figma/New issue minddy.png). Icon-representable fields
+// show just their indicator (status/priority, effort triangle, category dot,
+// avatar); due date and objective render as bordered pills. Same value/onChange
+// contracts as the side-panel fields in issue-property-fields.tsx.
+
 import { useTranslations } from "next-intl";
+import { Tag, Target, Triangle, UserCircle2 } from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -20,43 +27,17 @@ import {
   PriorityIndicator,
   EffortIndicator,
 } from "@/components/issue-indicators";
+import { Dot } from "@/components/issue-property-fields";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import type { Category, Member, Objective } from "@/lib/types";
 
-/* Borderless key/value fields for the issue panel — the value control has no
-   button chrome (matches the inline pickers on the issue cards). Right-aligned;
-   opens a searchable dropdown on click. */
+const BARE =
+  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+const PILL =
+  "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring";
 
-const TRIGGER =
-  "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
-
-export function Dot({ color }: { color: string | null | undefined }) {
-  return (
-    <span
-      className="size-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
-      aria-hidden
-    />
-  );
-}
-
-export function PropertyRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-h-9 items-center justify-between gap-3">
-      <span className="shrink-0 text-sm text-foreground">{label}</span>
-      <div className="flex min-w-0 flex-1 items-center justify-end">{children}</div>
-    </div>
-  );
-}
-
-export function StatusValue({
+export function StatusCompact({
   value,
   onChange,
 }: {
@@ -64,6 +45,7 @@ export function StatusValue({
   onChange: (v: IssueStatus) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tStatus = useTranslations("Status");
   const options: PickerOption[] = ALL_STATUSES.map((s) => ({
     value: s.value,
@@ -75,9 +57,9 @@ export function StatusValue({
       value={value}
       onChange={(v) => onChange(v as IssueStatus)}
       options={options}
-      align="end"
+      tooltip={tField("status")}
       trigger={
-        <button type="button" aria-label={t("changeStatusAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("changeStatusAria")} className={BARE}>
           <StatusIndicator status={value} />
         </button>
       }
@@ -85,7 +67,7 @@ export function StatusValue({
   );
 }
 
-export function PriorityValue({
+export function PriorityCompact({
   value,
   onChange,
 }: {
@@ -93,6 +75,7 @@ export function PriorityValue({
   onChange: (v: IssuePriority) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
   const options: PickerOption[] = PRIORITIES.map((p) => ({
     value: p.value,
@@ -104,9 +87,9 @@ export function PriorityValue({
       value={value}
       onChange={(v) => onChange(v as IssuePriority)}
       options={options}
-      align="end"
+      tooltip={tField("priority")}
       trigger={
-        <button type="button" aria-label={t("changePriorityAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("changePriorityAria")} className={BARE}>
           <PriorityIndicator priority={value} />
         </button>
       }
@@ -114,7 +97,7 @@ export function PriorityValue({
   );
 }
 
-export function EffortValue({
+export function EffortCompact({
   value,
   onChange,
 }: {
@@ -122,6 +105,7 @@ export function EffortValue({
   onChange: (v: IssueEffort | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
@@ -133,13 +117,13 @@ export function EffortValue({
       onChange={(v) => onChange(v as IssueEffort | null)}
       options={options}
       noneOption={{ label: tCommon("none") }}
-      align="end"
+      tooltip={tField("effort")}
       trigger={
-        <button type="button" aria-label={t("changeEffortAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("changeEffortAria")} className={BARE}>
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
-            <span className="text-muted-foreground">{tCommon("none")}</span>
+            <Triangle className="size-3.5 shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -147,7 +131,52 @@ export function EffortValue({
   );
 }
 
-export function AssigneeValue({
+export function CategoriesCompact({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: Category[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const selected = categories.filter((c) => value.includes(c.id));
+  const first = selected[0];
+  const extra = selected.length - 1;
+  const options: PickerOption[] = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+    icon: <Dot color={c.color} />,
+  }));
+  return (
+    <SearchMultiSelect
+      values={value}
+      onChange={onChange}
+      options={options}
+      tooltip={tField("categories")}
+      emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
+      trigger={
+        <button type="button" aria-label={t("editCategoriesAria")} className={BARE}>
+          {first ? (
+            <>
+              <Dot color={first.color} />
+              <span className="max-w-36 truncate">{first.name}</span>
+              {extra > 0 && (
+                <span className="shrink-0 text-muted-foreground">+{extra}</span>
+              )}
+            </>
+          ) : (
+            <Tag className="size-4 shrink-0 text-muted-foreground" />
+          )}
+        </button>
+      }
+    />
+  );
+}
+
+export function AssigneeCompact({
   value,
   members,
   onChange,
@@ -156,8 +185,8 @@ export function AssigneeValue({
   members: Member[];
   onChange: (v: string | null) => void;
 }) {
-  const tField = useTranslations("Field");
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const current = members.find((m) => m.user_id === value) ?? null;
   const options: PickerOption[] = members.map((m) => ({
     value: m.user_id,
@@ -178,21 +207,18 @@ export function AssigneeValue({
       onChange={onChange}
       options={options}
       noneOption={{ label: tField("unassigned") }}
-      align="end"
+      tooltip={tField("assignee")}
       trigger={
-        <button type="button" aria-label={t("changeAssigneeAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("changeAssigneeAria")} className={BARE}>
           {current ? (
-            <>
-              <UserAvatar
-                url={current.avatar_url}
-                name={displayName(current)}
-                seed={current.user_id}
-                className="size-5 text-[9px]"
-              />
-              <span className="truncate">{displayName(current)}</span>
-            </>
+            <UserAvatar
+              url={current.avatar_url}
+              name={displayName(current)}
+              seed={current.user_id}
+              className="size-6 text-[10px]"
+            />
           ) : (
-            <span className="text-muted-foreground">{tField("unassigned")}</span>
+            <UserCircle2 className="size-5 shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -200,51 +226,7 @@ export function AssigneeValue({
   );
 }
 
-export function CategoryValue({
-  categories,
-  value,
-  onChange,
-}: {
-  categories: Category[];
-  value: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const selected = categories.filter((c) => value.includes(c.id));
-  const first = selected[0];
-  const extra = selected.length - 1;
-  const options: PickerOption[] = categories.map((c) => ({
-    value: c.id,
-    label: c.name,
-    icon: <Dot color={c.color} />,
-  }));
-  return (
-    <SearchMultiSelect
-      values={value}
-      onChange={onChange}
-      options={options}
-      align="end"
-      emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
-      trigger={
-        <button type="button" aria-label={t("editCategoriesAria")} className={TRIGGER}>
-          {first ? (
-            <>
-              <Dot color={first.color} />
-              <span className="truncate">{first.name}</span>
-              {extra > 0 && (
-                <span className="shrink-0 text-muted-foreground">+{extra}</span>
-              )}
-            </>
-          ) : (
-            <span className="text-muted-foreground">{t("noneFem")}</span>
-          )}
-        </button>
-      }
-    />
-  );
-}
-
-export function DueDateValue({
+export function DueDateCompact({
   value,
   onChange,
 }: {
@@ -252,18 +234,20 @@ export function DueDateValue({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   return (
     <DateTimePicker
-      variant="value"
+      variant="field"
       value={value}
       onChange={onChange}
-      placeholder={t("noneFem")}
+      placeholder={tField("dueDate")}
       ariaLabel={t("changeDueDateAria")}
+      className="h-8 rounded-full"
     />
   );
 }
 
-export function ObjectiveValue({
+export function ObjectiveCompact({
   value,
   objectives,
   onChange,
@@ -273,6 +257,7 @@ export function ObjectiveValue({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const current = objectives.find((o) => o.id === value) ?? null;
   const options: PickerOption[] = objectives.map((o) => ({
@@ -286,16 +271,19 @@ export function ObjectiveValue({
       onChange={onChange}
       options={options}
       noneOption={{ label: tCommon("none") }}
-      align="end"
+      tooltip={tField("objective")}
       trigger={
-        <button type="button" aria-label={t("changeObjectiveAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("changeObjectiveAria")} className={PILL}>
           {current ? (
             <>
               <Dot color={current.color} />
-              <span className="truncate">{current.name}</span>
+              <span className="max-w-40 truncate">{current.name}</span>
             </>
           ) : (
-            <span className="text-muted-foreground">{tCommon("none")}</span>
+            <>
+              <Target className="size-4 shrink-0 text-muted-foreground" />
+              <span className="text-muted-foreground">{tField("objective")}</span>
+            </>
           )}
         </button>
       }

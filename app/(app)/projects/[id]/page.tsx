@@ -410,6 +410,7 @@ function ProjectBoard() {
       <CreateIssueDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        projectId={projectId}
         members={members}
         categories={categories}
         objectives={objectives}

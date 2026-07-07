@@ -195,7 +195,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_issue",
       description:
-        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — the issue then lands in 'triage' for human validation. Resolve assignee/objective/category ids via the list_* tools first.",
+        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — the issue then lands in 'triage' for human validation. Fill every other field you can: ALWAYS pass an estimated priority and effort (inferred from the description when not stated), and the matching category_ids. Resolve assignee/objective/category ids via the list_* tools first.",
       parameters: {
         type: "object",
         properties: {

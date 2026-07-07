@@ -9,13 +9,18 @@ import { useAutosize } from "@/lib/use-autosize";
 export function AutoTextarea({
   value,
   className,
+  ref: refProp,
   ...props
 }: React.ComponentProps<"textarea"> & { value: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useAutosize(ref, value);
   return (
     <textarea
-      ref={ref}
+      ref={(el) => {
+        ref.current = el;
+        if (typeof refProp === "function") refProp(el);
+        else if (refProp) refProp.current = el;
+      }}
       value={value}
       rows={1}
       className={cn("resize-none", className)}

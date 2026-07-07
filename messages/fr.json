@@ -260,8 +260,11 @@
     "changeObjectiveAria": "Changer l'objectif",
     "issueCreatedToast": "Ticket créé.",
     "newIssueTitle": "Nouveau ticket",
-    "descriptionOptionalPlaceholder": "Description (optionnelle)",
-    "createShortcutsHint": "⏎ pour créer · ⇧⏎ pour en enchaîner",
+    "createDescriptionPlaceholder": "Description du ticket",
+    "createMore": "En créer plusieurs",
+    "createTicket": "Créer le ticket",
+    "dictateFailed": "Numo n'a pas pu traiter la dictée.",
+    "numoWorking": "Numo remplit le ticket…",
     "addSubIssuePlaceholder": "Ajouter un sous-ticket…"
   },
   "Language": {

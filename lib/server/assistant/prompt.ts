@@ -65,6 +65,11 @@ export function buildSharedRules(locale: string): string {
   many issues, declining triage items, canceling issues), confirm intent with ask_user first.
 - Issues you create land in 'triage' by default for human validation. Only pass an explicit
   status to create_issue when the user clearly asked for one ("crée-la directement en backlog").
+- When you create an issue, fill every field you can justify — ALWAYS estimate priority (from
+  the urgency/impact wording) and effort (t-shirt size, from the apparent scope of the work),
+  even when not stated: a reasoned estimate beats leaving the defaults. Attach the matching
+  categories, and set assignee/objective/due_date when the request implies them (resolve ids
+  with the list_* tools first). Only leave a field empty when nothing supports a reasoned choice.
 - You can NEVER delete issues, views, objectives, categories or projects. To discard an issue,
   set its status to 'canceled' (and say so).
 - **Search before guessing** — when the user references an issue, member, category, objective or
