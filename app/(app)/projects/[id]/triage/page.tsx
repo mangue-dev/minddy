@@ -4,7 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Button, Skeleton, cn, toast } from "mangue-ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Skeleton,
+  Spinner,
+  cn,
+  toast,
+} from "mangue-ui";
 import { Check, ChevronLeft, Copy, Filter, X } from "lucide-react";
 import {
   AssigneeValue,
@@ -20,7 +31,9 @@ import { PriorityIndicator } from "@/components/issue-indicators";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
+import { addCommentApi } from "@/lib/comments-api";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -38,6 +51,7 @@ export default function TriagePage() {
   const t = useTranslations("Triage");
   const tField = useTranslations("Field");
   const tIssueUI = useTranslations("IssueUI");
+  const tCommon = useTranslations("Common");
   const format = useFormatter();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
@@ -66,6 +80,14 @@ export default function TriagePage() {
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
 
   const [title, setTitle] = useState("");
+  // Accept/decline go through a confirmation dialog with an optional message
+  // (posted as a comment on the issue, à la Linear).
+  const [confirming, setConfirming] = useState<{
+    action: "accept" | "decline";
+    issue: Issue;
+  } | null>(null);
+  const [message, setMessage] = useState("");
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const { items: timelineItems, addComment, updateComment, deleteComment } =
     useIssueTimeline(selected?.id ?? null);
@@ -112,16 +134,32 @@ export default function TriagePage() {
     }
   };
 
-  const accept = async (issue: Issue) => {
-    await patch(issue, { status: "backlog" });
-    toast.success(t("acceptedToast"));
-    setMobileDetail(false);
+  const openConfirm = (action: "accept" | "decline", issue: Issue) => {
+    setMessage("");
+    setConfirming({ action, issue });
   };
 
-  const decline = async (issue: Issue) => {
-    await patch(issue, { status: "canceled" });
-    toast.success(t("declinedToast"));
-    setMobileDetail(false);
+  const runConfirm = async () => {
+    if (!confirming) return;
+    const { action, issue } = confirming;
+    setConfirmBusy(true);
+    try {
+      // Post the message first so it lands while the issue is still selected;
+      // then flip the status (the issue leaves the triage list).
+      const body = message.trim();
+      if (body) await addCommentApi(issue.id, body, extractMentions(message, members));
+      await updateIssue(issue.id, {
+        status: action === "accept" ? "backlog" : "canceled",
+      });
+      toast.success(action === "accept" ? t("acceptedToast") : t("declinedToast"));
+      setConfirming(null);
+      setMessage("");
+      setMobileDetail(false);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setConfirmBusy(false);
+    }
   };
 
   const markDuplicate = async (issue: Issue, canonicalId: string) => {
@@ -266,7 +304,7 @@ export default function TriagePage() {
                 {issueIdentifier(project.key, selected.number)}
               </span>
               <div className="ml-auto flex items-center gap-1.5">
-                <Button size="sm" onClick={() => void accept(selected)}>
+                <Button size="sm" onClick={() => openConfirm("accept", selected)}>
                   <Check />
                   {t("accept")}
                 </Button>
@@ -285,10 +323,9 @@ export default function TriagePage() {
                   }
                 />
                 <Button
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => void decline(selected)}
+                  onClick={() => openConfirm("decline", selected)}
                 >
                   <X />
                   {t("decline")}
@@ -406,6 +443,63 @@ export default function TriagePage() {
           </div>
         )}
       </div>
+
+      {/* Accept / decline confirmation, with an optional message posted as a comment */}
+      <Dialog
+        open={!!confirming}
+        onOpenChange={(next) => {
+          if (!next && !confirmBusy) setConfirming(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirming &&
+                t(
+                  confirming.action === "accept"
+                    ? "acceptConfirmTitle"
+                    : "declineConfirmTitle",
+                  { id: issueIdentifier(project.key, confirming.issue.number) }
+                )}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {confirming &&
+              t(
+                confirming.action === "accept"
+                  ? "acceptConfirmDescription"
+                  : "declineConfirmDescription"
+              )}
+          </p>
+          <MentionTextarea
+            value={message}
+            onChange={setMessage}
+            members={members}
+            placeholder={t("messagePlaceholder")}
+            rows={3}
+            autoFocus
+            className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus-visible:border-ring"
+            onSubmit={() => void runConfirm()}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={confirmBusy}
+              onClick={() => setConfirming(null)}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              variant={confirming?.action === "decline" ? "destructive" : "default"}
+              disabled={confirmBusy}
+              onClick={() => void runConfirm()}
+            >
+              {confirmBusy && <Spinner />}
+              {confirming?.action === "accept" ? t("accept") : t("decline")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
