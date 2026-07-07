@@ -1,12 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { updateView } from "@/lib/server/views";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const SORTS = ["manual", "priority", "created", "updated", "due"];
-
-/** PATCH /api/views/[id] — update a view (RLS: shared or your own personal). */
+/** PATCH /api/views/[id] — update a view (access enforced in updateView). */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -19,42 +18,17 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const input = (body ?? {}) as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
 
-  if (typeof input.name === "string") {
-    const name = input.name.trim();
-    if (!name) {
-      return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
-    }
-    updates.name = name;
+  const result = await updateView({
+    viewId: id,
+    actorId: auth.user.id,
+    input: (body ?? {}) as Record<string, unknown>,
+  });
+  if (!result.ok) {
+    const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
+    return NextResponse.json({ error: message }, { status: result.status });
   }
-  if ("filters" in input) updates.filters = input.filters ?? {};
-  if ("display" in input) updates.display = input.display ?? {};
-  if ("sort" in input) {
-    if (typeof input.sort !== "string" || !SORTS.includes(input.sort)) {
-      return NextResponse.json({ error: t("invalidSort") }, { status: 400 });
-    }
-    updates.sort = input.sort;
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: t("noFieldsToUpdate") }, { status: 400 });
-  }
-
-  const { data, error } = await auth.supabase
-    .from("views")
-    .update(updates)
-    .eq("id", id)
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/views/:id] update failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  if (!data) return NextResponse.json({ error: t("viewNotFound") }, { status: 404 });
-  return NextResponse.json(data);
+  return NextResponse.json(result.view);
 }
 
 /** DELETE /api/views/[id] — delete a view (RLS enforces ownership/sharing). */

@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { createView } from "@/lib/server/views";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-const SORTS = ["manual", "priority", "created", "updated", "due"];
 
 /** GET /api/projects/[id]/views — shared + own personal views (RLS scopes it). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -40,36 +39,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const input = (body ?? {}) as Record<string, unknown>;
-
-  const onglet = input.onglet;
-  if (onglet !== "my" && onglet !== "all") {
-    return NextResponse.json({ error: t("invalidTab") }, { status: 400 });
+  const result = await createView({
+    projectId: id,
+    actorId: auth.user.id,
+    input: (body ?? {}) as Record<string, unknown>,
+  });
+  if (!result.ok) {
+    const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
+    return NextResponse.json({ error: message }, { status: result.status });
   }
-  const name = typeof input.name === "string" ? input.name.trim() : "";
-  if (!name) {
-    return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
-  }
-  const sort = typeof input.sort === "string" && SORTS.includes(input.sort) ? input.sort : "manual";
-
-  const { data, error } = await auth.supabase
-    .from("views")
-    .insert({
-      project_id: id,
-      onglet,
-      // 'my' → personal (owned by me); 'all' → shared (NULL). RLS re-checks this.
-      user_id: onglet === "my" ? auth.user.id : null,
-      name,
-      filters: input.filters ?? {},
-      sort,
-      display: input.display ?? {},
-    })
-    .select("*")
-    .single();
-
-  if (error) {
-    console.error("[api/views] create failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(result.view, { status: 201 });
 }

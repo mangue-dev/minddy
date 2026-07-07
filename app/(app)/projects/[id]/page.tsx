@@ -25,7 +25,8 @@ import {
   viewConfigOf,
   visibleStatuses,
 } from "@/lib/view-filter";
-import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
+import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -201,6 +202,29 @@ function ProjectBoard() {
   const openIssue = openIssueId
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
+
+  // Publish what this board is showing to Numo (open issue > objective > tab),
+  // so "ce ticket" / "cet objectif" resolve without searching.
+  useAssistantContext(
+    project
+      ? openIssue
+        ? {
+            projectId,
+            onglet,
+            issueId: openIssue.id,
+            issueIdentifier: issueIdentifier(project.key, openIssue.number),
+            issueTitle: openIssue.title,
+          }
+        : activeObjective
+          ? {
+              projectId,
+              onglet,
+              objectiveId: activeObjective.id,
+              objectiveName: activeObjective.name,
+            }
+          : { projectId, onglet }
+      : null
+  );
 
   // Ensure every onglet always has at least one real view: seed a default
   // "Toutes" (empty config) when it has none. The old "Toutes" was virtual — now

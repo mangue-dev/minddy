@@ -42,6 +42,7 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import type { Issue, IssueUpdateInput } from "@/lib/types";
 
 /** Linear-style triage: pending issues on the left, full issue view on the
@@ -78,6 +79,20 @@ export default function TriagePage() {
   // to the detail; md+ always shows both.
   const [mobileDetail, setMobileDetail] = useState(false);
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
+
+  // Publish the selected triage issue to Numo so "accepte ce ticket" resolves.
+  useAssistantContext(
+    project
+      ? selected
+        ? {
+            projectId,
+            issueId: selected.id,
+            issueIdentifier: issueIdentifier(project.key, selected.number),
+            issueTitle: selected.title,
+          }
+        : { projectId }
+      : null
+  );
 
   const [title, setTitle] = useState("");
   // Accept/decline go through a confirmation dialog with an optional message

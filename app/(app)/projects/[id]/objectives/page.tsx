@@ -22,6 +22,7 @@ import {
 } from "mangue-ui";
 import { Plus, MoreHorizontal, Pencil, Trash2, Target } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -54,6 +55,15 @@ function ObjectivesInner() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Objective | null>(null);
   const [toDelete, setToDelete] = useState<Objective | null>(null);
+
+  // Publish the objective being edited (else just the project) to Numo.
+  useAssistantContext(
+    project
+      ? editing
+        ? { projectId, objectiveId: editing.id, objectiveName: editing.name }
+        : { projectId }
+      : null
+  );
 
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),

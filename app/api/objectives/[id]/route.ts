@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
-import { isDateOrNull } from "@/lib/issue-validation";
+import { updateObjective } from "@/lib/server/objectives";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -27,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(data);
 }
 
-/** PATCH /api/objectives/[id] — update fields (RLS: project access). */
+/** PATCH /api/objectives/[id] — update fields (access enforced in updateObjective). */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -40,60 +39,17 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const input = (body ?? {}) as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
 
-  if (typeof input.name === "string") {
-    const name = input.name.trim();
-    if (!name) {
-      return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
-    }
-    updates.name = name;
+  const result = await updateObjective({
+    objectiveId: id,
+    actorId: auth.user.id,
+    input: (body ?? {}) as Record<string, unknown>,
+  });
+  if (!result.ok) {
+    const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
+    return NextResponse.json({ error: message }, { status: result.status });
   }
-  if ("description" in input) {
-    updates.description =
-      typeof input.description === "string" ? input.description : null;
-  }
-  if ("status" in input) {
-    if (
-      typeof input.status !== "string" ||
-      !OBJECTIVE_STATUS_VALUES.includes(input.status as never)
-    ) {
-      return NextResponse.json({ error: t("invalidStatus") }, { status: 400 });
-    }
-    updates.status = input.status;
-  }
-  if ("lead_user_id" in input) {
-    updates.lead_user_id =
-      typeof input.lead_user_id === "string" ? input.lead_user_id : null;
-  }
-  if ("target_date" in input) {
-    if (!isDateOrNull(input.target_date)) {
-      return NextResponse.json({ error: t("invalidDate") }, { status: 400 });
-    }
-    updates.target_date = input.target_date;
-  }
-  if ("color" in input) {
-    updates.color = typeof input.color === "string" ? input.color : null;
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: t("noFieldsToUpdate") }, { status: 400 });
-  }
-
-  const { data, error } = await auth.supabase
-    .from("objectives")
-    .update(updates)
-    .eq("id", id)
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/objectives/:id] update failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  if (!data) return NextResponse.json({ error: t("objectiveNotFound") }, { status: 404 });
-  return NextResponse.json(data);
+  return NextResponse.json(result.objective);
 }
 
 /** DELETE /api/objectives/[id] — removes it; linked issues are detached (SET NULL). */

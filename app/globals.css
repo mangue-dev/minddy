@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "mangue-ui/tokens.css";
+@import "streamdown/styles.css";
 @source "../node_modules/mangue-ui/src";
+/* Streamdown (rendu markdown de Numo) : sans ces @source, Tailwind ne génère pas
+   les classes utilisées par les composants et tout rend en boîtes sans style. */
+@source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
 
 /* ── Your theme ───────────────────────────────────────────────────────────────
    This file is yours. Override any mangue-ui token here — your values win by
@@ -43,4 +48,58 @@
 /* Add your own tokens and reuse mangue-ui's anywhere. */
 :root {
   --ticket-urgent: oklch(0.62 0.24 25);
+}
+
+/* ─── Numo (assistant) ──────────────────────────────────────────────── */
+
+/* Numo compact ⇄ expanded morph. The panel keeps right/bottom anchoring
+   (top/left auto) in BOTH modes, so toggling between the compact widget size
+   and the expanded modal size interpolates these properties from px to px:
+   the surface grows AND slides toward center in one fluid motion. Declared in
+   @layer utilities so it overrides SheetContent's base `transition` utility
+   (which doesn't include width/height/inset). The open/close keyframes
+   (animate-in/out on transform+opacity) are independent and unaffected. */
+@layer utilities {
+  [data-slot="sheet-content"].assistant-panel-morph {
+    transition-property: width, height, right, bottom, border-radius;
+    transition-duration: 280ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* Shiki dual-theme support — !important needed to override inline styles */
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* ─── Streamdown chrome trim (Numo assistant markdown) ───────────────────
+   By default Streamdown wraps the code/table box inside a SECOND, sidebar-
+   coloured frame (border + bg-sidebar + p-2) and adds a 1rem vertical margin,
+   so blocks float in an oversized double-framed container. We flatten that
+   redundant outer frame and tighten the margin; the inner code/table box (the
+   part that already looks fine) is untouched, and header/copy-button heights
+   are left intact so the floating actions stay aligned. */
+.streamdown-compact :is(
+    [data-streamdown="code-block"],
+    [data-streamdown="table-wrapper"]
+  ) {
+  margin-block: 0.5rem;
+  padding: 0;
+  gap: 0.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* The table's scroll area pads the (already bordered) table with a wide band —
+   drop it so the table fills the width instead of sitting inside empty space. */
+.streamdown-compact
+  [data-streamdown="table-wrapper"]
+  div:has(> [data-streamdown="table"]) {
+  padding: 0;
 }

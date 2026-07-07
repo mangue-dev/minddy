@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
-import { isDateOrNull } from "@/lib/issue-validation";
+import { createObjective } from "@/lib/server/objectives";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,38 +38,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const input = (body ?? {}) as Record<string, unknown>;
-
-  const name = typeof input.name === "string" ? input.name.trim() : "";
-  if (!name) {
-    return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
+  const result = await createObjective({
+    projectId: id,
+    actorId: auth.user.id,
+    input: (body ?? {}) as Record<string, unknown>,
+  });
+  if (!result.ok) {
+    const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
+    return NextResponse.json({ error: message }, { status: result.status });
   }
-
-  const row: Record<string, unknown> = { project_id: id, name };
-  if (typeof input.description === "string") row.description = input.description;
-  if (
-    typeof input.status === "string" &&
-    OBJECTIVE_STATUS_VALUES.includes(input.status as never)
-  ) {
-    row.status = input.status;
-  }
-  if (typeof input.lead_user_id === "string" || input.lead_user_id === null) {
-    row.lead_user_id = input.lead_user_id ?? null;
-  }
-  if (isDateOrNull(input.target_date)) row.target_date = input.target_date;
-  if (typeof input.color === "string" || input.color === null) {
-    row.color = input.color ?? null;
-  }
-
-  const { data, error } = await auth.supabase
-    .from("objectives")
-    .insert(row)
-    .select("*")
-    .single();
-
-  if (error) {
-    console.error("[api/objectives] create failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(result.objective, { status: 201 });
 }
