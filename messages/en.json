@@ -15,6 +15,11 @@
     "dueDateChanged": "changed due date: {from} → {to}",
     "parentAttached": "linked the issue to {ref}",
     "parentDetached": "detached the issue from its parent",
+    "planChanged": "edited the plan",
+    "planTaskCompleted": "completed task “{text}”",
+    "planTaskStarted": "started task “{text}”",
+    "planTaskCancelled": "cancelled task “{text}”",
+    "planTaskReopened": "reopened task “{text}”",
     "updated": "updated the issue",
     "memberNobody": "nobody",
     "memberSomeone": "a user",
@@ -59,6 +64,7 @@
     "invalidPriority": "Invalid priority.",
     "invalidEffort": "Invalid effort.",
     "invalidPosition": "Invalid position.",
+    "planTooLong": "The plan is too long (64 KB max).",
     "issueNotFound": "Issue not found",
     "integrationNameRequired": "Integration name is required (max 60 characters).",
     "integrationNotFound": "Integration not found.",
@@ -369,6 +375,21 @@
   "Picker": {
     "search": "Search…",
     "noResults": "No results"
+  },
+  "Plan": {
+    "tabDescription": "Description",
+    "tabPlan": "Plan",
+    "emptyTitle": "No plan for this issue yet",
+    "emptyHint": "An implementation plan in markdown, with tracked tasks: `- [ ]` to do, `- [~]` in progress, `- [x]` completed, `- [-]` cancelled.",
+    "addPlan": "Add a plan",
+    "editAriaLabel": "Edit the plan",
+    "editorPlaceholder": "## Approach\n\n- [ ] First task\n- [ ] Second task",
+    "markPending": "Mark as to do",
+    "markInProgress": "Mark as in progress",
+    "markCompleted": "Mark as completed",
+    "cancelTask": "Cancel task",
+    "taskMenuAria": "Change task state",
+    "taskCheckboxAria": "Toggle task “{text}”"
   },
   "Priority": {
     "none": "None",

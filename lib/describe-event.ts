@@ -67,6 +67,15 @@ export function describeEvent(
     return t("subIssueAdded", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_removed")
     return t("subIssueRemoved", { ref: issueRef(ctx, tr, e.to_value) });
+  // Plan task transitions: to_value carries the task text.
+  if (e.type === "plan_task_completed")
+    return t("planTaskCompleted", { text: e.to_value ?? "" });
+  if (e.type === "plan_task_started")
+    return t("planTaskStarted", { text: e.to_value ?? "" });
+  if (e.type === "plan_task_cancelled")
+    return t("planTaskCancelled", { text: e.to_value ?? "" });
+  if (e.type === "plan_task_reopened")
+    return t("planTaskReopened", { text: e.to_value ?? "" });
 
   if (e.type === "updated") {
     switch (e.field) {
@@ -74,6 +83,8 @@ export function describeEvent(
         return t("titleChanged");
       case "description":
         return t("descriptionChanged");
+      case "plan":
+        return t("planChanged");
       case "status":
         return t("statusChanged", {
           from: e.from_value ? tStatus(e.from_value) : emptyDash,

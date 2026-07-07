@@ -6,10 +6,12 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import {
   buildFieldChangeEvents,
+  buildPlanChangeEvents,
   insertEvents,
   stampViaAssistant,
   type EventRow,
 } from "@/lib/server/issue-events";
+import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
 
 /**
@@ -34,6 +36,7 @@ export type UpdateIssueResult =
         | "invalidEffort"
         | "invalidDate"
         | "invalidPosition"
+        | "planTooLong"
         | "noFieldsToUpdate"
         | "issueNotFound"
         | "databaseError";
@@ -65,6 +68,13 @@ export async function updateIssueFields({
   if ("description" in input) {
     updates.description =
       typeof input.description === "string" ? input.description : null;
+  }
+  if ("plan" in input) {
+    const plan = typeof input.plan === "string" ? input.plan : null;
+    if (plan && plan.length > MAX_PLAN_LENGTH) {
+      return { ok: false, status: 400, errorKey: "planTooLong" };
+    }
+    updates.plan = plan && plan.trim() ? plan : null;
   }
   if ("status" in input) {
     if (!isStatus(input.status)) {
@@ -159,6 +169,16 @@ export async function updateIssueFields({
 
   // Activity log (best-effort, service client).
   const events = buildFieldChangeEvents(issueId, actorId, before, updates);
+  if ("plan" in updates && (updates.plan ?? null) !== (before.plan ?? null)) {
+    events.push(
+      ...buildPlanChangeEvents(
+        issueId,
+        actorId,
+        (before.plan as string) ?? null,
+        (updates.plan as string) ?? null
+      )
+    );
+  }
   if ("parent_id" in updates && (updates.parent_id ?? null) !== (before.parent_id ?? null)) {
     events.push({
       issue_id: issueId,

@@ -165,6 +165,8 @@ export interface Issue {
   number: number;
   title: string;
   description: string | null;
+  /** Implementation plan (markdown with task checkboxes — see lib/plan.ts). */
+  plan: string | null;
   status: IssueStatus;
   priority: IssuePriority;
   effort: IssueEffort | null;
@@ -207,6 +209,7 @@ export interface Integration {
 export interface CreateIssueInput {
   title: string;
   description?: string | null;
+  plan?: string | null;
   status?: IssueStatus;
   priority?: IssuePriority;
   effort?: IssueEffort | null;
@@ -234,6 +237,7 @@ export interface IssueDraftPatch {
 export interface IssueUpdateInput {
   title?: string;
   description?: string | null;
+  plan?: string | null;
   status?: IssueStatus;
   priority?: IssuePriority;
   effort?: IssueEffort | null;

@@ -43,7 +43,8 @@ function mapRow(row: EventRow): { event: WebhookEvent; change: Change | null } |
   if (row.type === "created") return { event: "issue.created", change: null };
   if (row.type === "updated") {
     const change: Change = { field: row.field ?? "unknown" };
-    if (row.field !== "description") {
+    // description/plan record no diff — their change entry carries no values.
+    if (row.field !== "description" && row.field !== "plan") {
       change.from = row.from_value ?? null;
       change.to = row.to_value ?? null;
     }

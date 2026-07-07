@@ -31,6 +31,11 @@ const ISSUE_FIELD_PROPERTIES = {
     type: "string",
     description: "Issue description, markdown.",
   },
+  plan: {
+    type: ["string", "null"],
+    description:
+      "Implementation plan, markdown, separate from the description. Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled. ALWAYS send the FULL plan markdown (never a fragment) — task state changes are diffed and logged server-side. null clears the plan.",
+  },
   status: {
     type: "string",
     enum: [...ISSUE_STATUSES],

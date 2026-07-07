@@ -15,6 +15,11 @@
     "dueDateChanged": "a changé l'échéance : {from} → {to}",
     "parentAttached": "a rattaché le ticket à {ref}",
     "parentDetached": "a détaché le ticket de son parent",
+    "planChanged": "a modifié le plan",
+    "planTaskCompleted": "a terminé la tâche « {text} »",
+    "planTaskStarted": "a commencé la tâche « {text} »",
+    "planTaskCancelled": "a annulé la tâche « {text} »",
+    "planTaskReopened": "a rouvert la tâche « {text} »",
     "updated": "a mis à jour le ticket",
     "memberNobody": "personne",
     "memberSomeone": "un utilisateur",
@@ -59,6 +64,7 @@
     "invalidPriority": "Priorité invalide.",
     "invalidEffort": "Effort invalide.",
     "invalidPosition": "Position invalide.",
+    "planTooLong": "Le plan est trop long (64 Ko max).",
     "issueNotFound": "Ticket introuvable",
     "integrationNameRequired": "Le nom de l'intégration est requis (60 caractères max).",
     "integrationNotFound": "Intégration introuvable.",
@@ -369,6 +375,21 @@
   "Picker": {
     "search": "Rechercher…",
     "noResults": "Aucun résultat"
+  },
+  "Plan": {
+    "tabDescription": "Description",
+    "tabPlan": "Plan",
+    "emptyTitle": "Aucun plan pour ce ticket",
+    "emptyHint": "Un plan d'implémentation en markdown, avec des tâches suivies : `- [ ]` à faire, `- [~]` en cours, `- [x]` terminée, `- [-]` annulée.",
+    "addPlan": "Ajouter un plan",
+    "editAriaLabel": "Modifier le plan",
+    "editorPlaceholder": "## Approche\n\n- [ ] Première tâche\n- [ ] Deuxième tâche",
+    "markPending": "Marquer à faire",
+    "markInProgress": "Marquer en cours",
+    "markCompleted": "Marquer terminée",
+    "cancelTask": "Annuler la tâche",
+    "taskMenuAria": "Changer l'état de la tâche",
+    "taskCheckboxAria": "Basculer la tâche « {text} »"
   },
   "Priority": {
     "none": "Aucune",

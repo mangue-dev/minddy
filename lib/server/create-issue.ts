@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
+import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
   insertEvents,
   stampIntegration,
@@ -28,6 +29,7 @@ export type CreateIssueResult =
         | "titleRequired"
         | "parentIssueNotFound"
         | "nestingLimitedToOneLevel"
+        | "planTooLong"
         | "databaseError";
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
@@ -62,6 +64,12 @@ export async function createIssueForProject({
   };
   if (integrationId) row.integration_id = integrationId;
   if (typeof input.description === "string") row.description = input.description;
+  if (typeof input.plan === "string" && input.plan.trim()) {
+    if (input.plan.length > MAX_PLAN_LENGTH) {
+      return { ok: false, status: 400, errorKey: "planTooLong" };
+    }
+    row.plan = input.plan;
+  }
   if (isStatus(input.status)) {
     row.status = input.status;
     if (input.status === "done") row.completed_at = new Date().toISOString();

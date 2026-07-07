@@ -47,6 +47,12 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - due_date: ISO 8601 timestamp.
 - Sub-issues: parent_id, max ONE level deep (a sub-issue cannot have children).
 - Issues are referenced as "KEY-N" (project key + number), e.g. "MIND-42".
+- Implementation plan: issues can carry a markdown plan (field \`plan\`), separate from the
+  description, with trackable task lines: "- [ ]" pending, "- [~]" in progress, "- [x]" done,
+  "- [-]" cancelled. Read it via get_issue; write it via update_issues { fields: { plan } },
+  ALWAYS sending the complete updated markdown (task state changes are diffed and logged
+  server-side). When you work through a plan, keep task states current: mark the task you
+  start "- [~]" and finished ones "- [x]".
 
 ## Saved views (kanban)
 - The kanban ALWAYS groups by status. A view only FILTERS (status, priority, effort,

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dispatchWebhooksForEvents } from "@/lib/server/webhooks";
+import { diffPlanTasks, stripTaskStates, type PlanTaskState } from "@/lib/plan";
 
 export interface EventRow {
   issue_id: string;
@@ -92,6 +93,57 @@ export function buildFieldChangeEvents(
         to_value: s(updates[f]),
       });
     }
+  }
+  return events;
+}
+
+const PLAN_TASK_EVENT_TYPES: Record<PlanTaskState, string> = {
+  pending: "plan_task_reopened",
+  in_progress: "plan_task_started",
+  completed: "plan_task_completed",
+  cancelled: "plan_task_cancelled",
+};
+
+/** Above this many state flips in one save (agent rewrote everything), the
+ *  per-task events would flood the timeline — collapse to one "plan" event. */
+const MAX_TASK_TRANSITION_EVENTS = 20;
+
+/**
+ * Events for a plan change: one plan_task_* event per state transition
+ * (to_value = task text, from_value = previous state), plus a bare
+ * `field: "plan"` event — the description precedent, no diff — only when the
+ * content itself changed (not for pure checkbox flips).
+ */
+export function buildPlanChangeEvents(
+  issueId: string,
+  actorId: string,
+  beforePlan: string | null,
+  afterPlan: string | null
+): EventRow[] {
+  const events: EventRow[] = [];
+  const transitions = diffPlanTasks(beforePlan, afterPlan);
+  const contentChanged =
+    stripTaskStates(beforePlan) !== stripTaskStates(afterPlan);
+
+  if (transitions.length <= MAX_TASK_TRANSITION_EVENTS) {
+    for (const t of transitions) {
+      events.push({
+        issue_id: issueId,
+        actor_id: actorId,
+        type: PLAN_TASK_EVENT_TYPES[t.to],
+        field: "plan",
+        from_value: t.from,
+        to_value: t.text.slice(0, 200),
+      });
+    }
+  }
+  if (contentChanged || events.length === 0) {
+    events.push({
+      issue_id: issueId,
+      actor_id: actorId,
+      type: "updated",
+      field: "plan",
+    });
   }
   return events;
 }
