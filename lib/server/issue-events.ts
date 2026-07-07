@@ -9,6 +9,15 @@ export interface EventRow {
   field?: string | null;
   from_value?: string | null;
   to_value?: string | null;
+  /** True when the action was triggered through Numo (the assistant); the
+      timeline then shows "Numo" as the actor instead of the user. */
+  via_assistant?: boolean;
+}
+
+/** Stamp a batch of events as assistant-triggered (no-op when false). */
+export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): EventRow[] {
+  if (!viaAssistant) return rows;
+  return rows.map((r) => ({ ...r, via_assistant: true }));
 }
 
 const s = (v: unknown): string | null =>

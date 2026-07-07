@@ -21,6 +21,8 @@ export interface Comment {
   /** Root comment of the thread when this is a reply (depth ≤ 1). */
   parent_id: string | null;
   body: string;
+  /** True when posted through Numo — the timeline shows "Numo" as the author. */
+  via_assistant?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +51,8 @@ export interface IssueEvent {
   field: string | null;
   from_value: string | null;
   to_value: string | null;
+  /** True when triggered through Numo — the timeline shows "Numo" as the actor. */
+  via_assistant?: boolean;
   created_at: string;
 }
 

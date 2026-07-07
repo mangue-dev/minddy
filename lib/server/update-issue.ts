@@ -7,6 +7,7 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import {
   buildFieldChangeEvents,
   insertEvents,
+  stampViaAssistant,
   type EventRow,
 } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -44,10 +45,13 @@ export async function updateIssueFields({
   issueId,
   actorId,
   input,
+  viaAssistant = false,
 }: {
   issueId: string;
   actorId: string;
   input: Record<string, unknown>;
+  /** Marks the resulting activity events as triggered through Numo. */
+  viaAssistant?: boolean;
 }): Promise<UpdateIssueResult> {
   const updates: Record<string, unknown> = {};
 
@@ -181,7 +185,7 @@ export async function updateIssueFields({
       });
     }
   }
-  await insertEvents(service, events as EventRow[]);
+  await insertEvents(service, stampViaAssistant(events as EventRow[], viaAssistant));
 
   // Notify a newly-assigned user (never on self-assign).
   const newAssignee = updates.assignee_id as string | undefined;

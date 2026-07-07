@@ -170,6 +170,7 @@ export async function executeTool(
           projectId,
           actorId: ctx.userId,
           input: { ...args, status },
+          viaAssistant: true,
         });
         if (!result.ok) return libError(result);
         return {
@@ -213,6 +214,7 @@ export async function executeTool(
             issueId,
             actorId: ctx.userId,
             input: fields,
+            viaAssistant: true,
           });
           if (result.ok) updated++;
           else
@@ -238,6 +240,7 @@ export async function executeTool(
           issueId,
           actorId: ctx.userId,
           categoryIds,
+          viaAssistant: true,
         });
         if (!result.ok) return libError(result);
         return { result: { category_ids: result.categoryIds }, success: true };
@@ -252,6 +255,7 @@ export async function executeTool(
           issueId,
           actorId: ctx.userId,
           body,
+          viaAssistant: true,
         });
         if (!result.ok) return libError(result);
         return { result: { comment: result.comment }, success: true };
@@ -373,6 +377,7 @@ export async function executeTool(
             issueId,
             actorId: ctx.userId,
             body: args.comment,
+            viaAssistant: true,
           });
           if (!commented.ok) return libError(commented);
         }
@@ -387,6 +392,7 @@ export async function executeTool(
           issueId,
           actorId: ctx.userId,
           input,
+          viaAssistant: true,
         });
         if (!result.ok) return libError(result);
         return {
@@ -567,7 +573,7 @@ async function getIssue(
   const [{ data: comments }, { data: subIssues }] = await Promise.all([
     ctx.supabase
       .from("comments")
-      .select("id, author_id, body, parent_id, created_at")
+      .select("id, author_id, body, parent_id, via_assistant, created_at")
       .eq("issue_id", issue.id)
       .order("created_at", { ascending: true }),
     ctx.supabase
@@ -584,7 +590,7 @@ async function getIssue(
     const named = toNamed(users.get(c.author_id as string));
     return {
       id: c.id,
-      author: displayName(named, "User"),
+      author: c.via_assistant ? "Numo" : displayName(named, "User"),
       body: c.body,
       parent_id: c.parent_id,
       created_at: c.created_at,

@@ -2,7 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { insertEvents, type EventRow } from "@/lib/server/issue-events";
+import { insertEvents, stampViaAssistant, type EventRow } from "@/lib/server/issue-events";
 
 /**
  * Shared category-assignment core: replaces the issue's category set (full
@@ -29,10 +29,13 @@ export async function setIssueCategories({
   issueId,
   actorId,
   categoryIds,
+  viaAssistant = false,
 }: {
   issueId: string;
   actorId: string;
   categoryIds: string[];
+  /** Marks the resulting activity events as triggered through Numo. */
+  viaAssistant?: boolean;
 }): Promise<SetCategoriesResult> {
   const requested = categoryIds.filter((v): v is string => typeof v === "string");
 
@@ -107,7 +110,7 @@ export async function setIssueCategories({
       events.push({ issue_id: issueId, actor_id: actorId, type: "category_removed", from_value: cid });
     }
   }
-  await insertEvents(service, events);
+  await insertEvents(service, stampViaAssistant(events, viaAssistant));
 
   return { ok: true, categoryIds: valid };
 }

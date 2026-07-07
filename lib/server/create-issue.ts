@@ -2,7 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
-import { insertEvents, type EventRow } from "@/lib/server/issue-events";
+import { insertEvents, stampViaAssistant, type EventRow } from "@/lib/server/issue-events";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
@@ -32,10 +32,13 @@ export async function createIssueForProject({
   projectId,
   actorId,
   input,
+  viaAssistant = false,
 }: {
   projectId: string;
   actorId: string;
   input: Record<string, unknown>;
+  /** Marks the resulting activity events as triggered through Numo. */
+  viaAssistant?: boolean;
 }): Promise<CreateIssueResult> {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
@@ -137,7 +140,7 @@ export async function createIssueForProject({
       to_value: data.id,
     });
   }
-  await insertEvents(service, events);
+  await insertEvents(service, stampViaAssistant(events, viaAssistant));
 
   return { ok: true, issue: { ...data, category_ids: categoryIds } };
 }

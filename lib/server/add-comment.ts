@@ -35,12 +35,15 @@ export async function addCommentToIssue({
   body,
   parentId,
   mentionedUserIds,
+  viaAssistant = false,
 }: {
   issueId: string;
   actorId: string;
   body: string;
   parentId?: string | null;
   mentionedUserIds?: string[];
+  /** Marks the comment as posted through Numo (shown as "Numo" in the timeline). */
+  viaAssistant?: boolean;
 }): Promise<AddCommentResult> {
   const text = body.trim();
   if (!text) {
@@ -94,7 +97,13 @@ export async function addCommentToIssue({
 
   const { data, error } = await service
     .from("comments")
-    .insert({ issue_id: issueId, author_id: actorId, body: text, parent_id: rootId })
+    .insert({
+      issue_id: issueId,
+      author_id: actorId,
+      body: text,
+      parent_id: rootId,
+      via_assistant: viaAssistant,
+    })
     .select("*")
     .single();
 

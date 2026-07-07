@@ -27,6 +27,7 @@ import { MentionTextarea, extractMentions } from "@/components/mention-textarea"
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import { NumoIcon } from "@/components/numo-icon";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { Comment, Member } from "@/lib/types";
 
@@ -100,6 +101,22 @@ function ActorAvatar({
   );
 }
 
+/** Avatar for actions triggered through Numo — the assistant's face instead of
+    the user's initials, so agent actions read as Numo's in the timeline. */
+function NumoAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      <NumoIcon animated={false} className="size-3.5" />
+    </span>
+  );
+}
+
 /** One-line text that ellipsises and reveals the full text in a tooltip only
     when it actually overflows. */
 function OneLine({ full, children }: { full: string; children: React.ReactNode }) {
@@ -133,11 +150,16 @@ function OneLine({ full, children }: { full: string; children: React.ReactNode }
 function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
-  const name = actorName(ctx.members, item.event.actor_id, t);
+  const viaNumo = !!item.event.via_assistant;
+  const name = viaNumo ? "Numo" : actorName(ctx.members, item.event.actor_id, t);
   const summary = describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
-      <ActorAvatar members={ctx.members} id={item.event.actor_id} name={name} />
+      {viaNumo ? (
+        <NumoAvatar />
+      ) : (
+        <ActorAvatar members={ctx.members} id={item.event.actor_id} name={name} />
+      )}
       <OneLine full={`${name} ${summary}`}>
         <span className="font-medium text-foreground">{name}</span>{" "}
         <span className="text-muted-foreground">{summary}</span>
@@ -168,7 +190,8 @@ function CommentBlock({
 }) {
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
-  const name = actorName(ctx.members, comment.author_id, t);
+  const viaNumo = !!comment.via_assistant;
+  const name = viaNumo ? "Numo" : actorName(ctx.members, comment.author_id, t);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -196,7 +219,11 @@ function CommentBlock({
   return (
     <div className="group/comment flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
-        <ActorAvatar members={ctx.members} id={comment.author_id} name={name} />
+        {viaNumo ? (
+          <NumoAvatar />
+        ) : (
+          <ActorAvatar members={ctx.members} id={comment.author_id} name={name} />
+        )}
         <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {timeAgo(comment.created_at, t)}
