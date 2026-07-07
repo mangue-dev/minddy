@@ -9,8 +9,9 @@ import {
 
 /* ── Status ─────────────────────────────────────────────────────────────
    Linear-style ring: dashed (backlog), empty (todo), a pie fill for progress
-   (in_progress / in_review), a solid check (done) or cross (canceled). Colors
-   come from the Figma design. */
+   (in_progress / in_review). done / canceled / duplicate are filled discs with
+   the glyph (check / cross / equals) knocked out as a real hole via an SVG mask,
+   so the background shows through. Colors come from the Figma design. */
 
 /** Pie slice from 12 o'clock, clockwise, covering `fraction` of the circle. */
 function piePath(cx: number, cy: number, r: number, fraction: number): string {
@@ -73,22 +74,31 @@ export function StatusIndicator({
     case "done":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>
-          <circle cx="8" cy="8" r="6.5" fill="#1DD82C" />
-          <path d="M5 8.2 7 10.2 11 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <mask id="status-hole-done">
+            <circle cx="8" cy="8" r="6.5" fill="#fff" />
+            <path d="M5 8.2 7 10.2 11 6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </mask>
+          <circle cx="8" cy="8" r="6.5" fill="#1DD82C" mask="url(#status-hole-done)" />
         </svg>
       );
     case "canceled":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>
-          <circle cx="8" cy="8" r="6.5" fill="#D62115" />
-          <path d="M5.8 5.8 10.2 10.2M10.2 5.8 5.8 10.2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+          <mask id="status-hole-canceled">
+            <circle cx="8" cy="8" r="6.5" fill="#fff" />
+            <path d="M5.8 5.8 10.2 10.2M10.2 5.8 5.8 10.2" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
+          </mask>
+          <circle cx="8" cy="8" r="6.5" fill="#D62115" mask="url(#status-hole-canceled)" />
         </svg>
       );
     case "duplicate":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>
-          <circle cx="8" cy="8" r="6.5" fill="#8E8E93" />
-          <path d="M5.5 6.6h5M5.5 9.4h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+          <mask id="status-hole-duplicate">
+            <circle cx="8" cy="8" r="6.5" fill="#fff" />
+            <path d="M5.5 6.6h5M5.5 9.4h5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
+          </mask>
+          <circle cx="8" cy="8" r="6.5" fill="#8E8E93" mask="url(#status-hole-duplicate)" />
         </svg>
       );
   }
