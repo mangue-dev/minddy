@@ -23,9 +23,15 @@ const handler = createMcpHandler(
       "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +
       "none, urgent, high, medium, low. Efforts (t-shirt): xs, s, m, l, xl. An issue " +
-      "can carry an implementation plan: a markdown document whose checkbox lines are " +
-      "tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' " +
-      "cancelled. Start with minddy_list_projects to discover project ids.",
+      "can carry an implementation plan (field 'plan'): a REAL engineering plan in " +
+      "markdown — like your plan mode output — with a short context (goal, approach), " +
+      "ordered checkbox tasks naming the actual code to touch (exact file paths, " +
+      "components, functions, migrations), and a verification step. Checkbox lines are " +
+      "trackable tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' completed, " +
+      "'- [-]' cancelled. When asked to plan work, write the full plan into the issue " +
+      "(create/update); while executing one, keep task states current with " +
+      "minddy_update_plan_task (mark the task you start '- [~]', finished '- [x]'). " +
+      "Start with minddy_list_projects to discover project ids.",
   },
   { basePath: "/api", disableSse: true, maxDuration: 60 }
 );

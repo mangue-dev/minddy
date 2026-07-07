@@ -16,8 +16,11 @@ export interface EventRow {
       timeline then shows "Numo" as the actor instead of the user. */
   via_assistant?: boolean;
   /** True when the action came through the MCP endpoint (external AI agent
-      holding the user's API key); the timeline shows "user (via agent)". */
+      holding the user's API key); paired with api_key_id, the timeline shows
+      the agent — "Claude Code (mcp)" — instead of the user. */
   via_mcp?: boolean;
+  /** The API key behind an MCP action — its name is the displayed actor. */
+  api_key_id?: string | null;
   /** Set when the action comes from a project integration (Feedback API); the
       timeline then shows the integration's name as the actor. */
   integration_id?: string | null;
@@ -29,10 +32,14 @@ export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): Even
   return rows.map((r) => ({ ...r, via_assistant: true }));
 }
 
-/** Stamp a batch of events as MCP-triggered (no-op when false). */
-export function stampViaMcp(rows: EventRow[], viaMcp: boolean): EventRow[] {
-  if (!viaMcp) return rows;
-  return rows.map((r) => ({ ...r, via_mcp: true }));
+/** Stamp a batch of events as MCP-triggered, attributed to the acting API key
+    (no-op when falsy). */
+export function stampMcpKey(
+  rows: EventRow[],
+  mcpKeyId: string | null | undefined
+): EventRow[] {
+  if (!mcpKeyId) return rows;
+  return rows.map((r) => ({ ...r, via_mcp: true, api_key_id: mcpKeyId }));
 }
 
 /** Stamp a batch of events as integration-triggered (no-op when falsy). */

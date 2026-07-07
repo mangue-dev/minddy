@@ -5,7 +5,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import {
   insertEvents,
   stampViaAssistant,
-  stampViaMcp,
+  stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
 
@@ -35,15 +35,15 @@ export async function setIssueCategories({
   actorId,
   categoryIds,
   viaAssistant = false,
-  viaMcp = false,
+  mcpKeyId = null,
 }: {
   issueId: string;
   actorId: string;
   categoryIds: string[];
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
-  /** Marks the resulting activity events as triggered through the MCP endpoint. */
-  viaMcp?: boolean;
+  /** Attributes the resulting activity events to an MCP API key (agent actor). */
+  mcpKeyId?: string | null;
 }): Promise<SetCategoriesResult> {
   const requested = categoryIds.filter((v): v is string => typeof v === "string");
 
@@ -118,7 +118,7 @@ export async function setIssueCategories({
       events.push({ issue_id: issueId, actor_id: actorId, type: "category_removed", from_value: cid });
     }
   }
-  await insertEvents(service, stampViaMcp(stampViaAssistant(events, viaAssistant), viaMcp));
+  await insertEvents(service, stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId));
 
   return { ok: true, categoryIds: valid };
 }

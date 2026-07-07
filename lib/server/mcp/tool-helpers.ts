@@ -44,10 +44,16 @@ export function getUserId(extra: ToolExtra): string | null {
 
 const RATE_LIMIT = { limit: 120, windowMs: 60_000 };
 
-/** Garde combinée auth + rate limit, à appeler en tête de chaque tool. */
-export function requireUser(extra: ToolExtra): { userId: string } | { error: ToolResult } {
+/** Garde combinée auth + rate limit, à appeler en tête de chaque tool.
+    keyId = la clé API qui agit — les écritures l'enregistrent comme acteur
+    (la timeline affiche « nom de la clé (mcp) », pas l'utilisateur). */
+export function requireUser(
+  extra: ToolExtra
+): { userId: string; keyId: string | null } | { error: ToolResult } {
   const userId = getUserId(extra);
   if (!userId) return { error: fail("unauthorized", "Missing or invalid API key.") };
+  const rawKeyId = extra.authInfo?.extra?.keyId;
+  const keyId = typeof rawKeyId === "string" ? rawKeyId : null;
   const rate = checkSessionRateLimit(userId, "mcp", RATE_LIMIT);
   if (!rate.allowed) {
     return {
@@ -57,7 +63,7 @@ export function requireUser(extra: ToolExtra): { userId: string } | { error: Too
       ),
     };
   }
-  return { userId };
+  return { userId, keyId };
 }
 
 export async function resolveProject(

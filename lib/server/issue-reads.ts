@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus } from "@/lib/issue-validation";
@@ -231,7 +232,9 @@ export async function getIssue(
   const [{ data: comments }, { data: subIssues }] = await Promise.all([
     ctx.db
       .from("comments")
-      .select("id, author_id, body, parent_id, via_assistant, via_mcp, created_at")
+      .select(
+        "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
+      )
       .eq("issue_id", issue.id)
       .order("created_at", { ascending: true }),
     ctx.db
@@ -241,15 +244,19 @@ export async function getIssue(
       .order("number", { ascending: true }),
   ]);
 
-  // Resolve author display names (auth admin — best effort).
+  // Resolve author display names (auth admin — best effort). MCP comments are
+  // attributed to their acting API key (agent), not the key's owner.
   const authorIds = (comments ?? []).map((c) => c.author_id as string);
-  const users = await fetchAuthUsersById(ctx.service, authorIds);
+  const [users, keyActors] = await Promise.all([
+    fetchAuthUsersById(ctx.service, authorIds),
+    resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
+  ]);
   const commentRows = (comments ?? []).map((c) => {
     const named = toNamed(users.get(c.author_id as string));
     const author = c.via_assistant
       ? "Numo"
       : c.via_mcp
-        ? `${displayName(named, "User")} (via agent)`
+        ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
         : displayName(named, "User");
     return {
       id: c.id,

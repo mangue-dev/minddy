@@ -594,7 +594,8 @@
     "monthsAgo": "Il y a {mo} mois",
     "yearsAgo": "{y, plural, one {Il y a # an} other {Il y a # ans}}",
     "integrationActor": "L'intégration {name}",
-    "mcpActor": "{name} (via agent)",
+    "mcpActor": "{name} (mcp)",
+    "mcpFallback": "Agent",
     "integrationFallback": "inconnue"
   },
   "ToolCall": {

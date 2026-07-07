@@ -66,10 +66,17 @@ const PLAN_FIELD = z
   .string()
   .max(MAX_PLAN_LENGTH)
   .describe(
-    "Implementation plan — FULL markdown document. Checkbox lines are tasks: " +
-      "'- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled. " +
-      "Prose between task blocks is allowed. To flip ONE task's state, prefer " +
-      "minddy_update_plan_task instead of resending the whole plan."
+    "Implementation plan — FULL markdown document, and a REAL engineering plan " +
+      "(the kind a coding agent's plan mode produces), not a vague todo list. " +
+      "Structure: a short context section (goal, approach, constraints), then " +
+      "ordered checkbox tasks where EACH task names the actual code to touch — " +
+      "exact file paths, components, functions, migrations, routes — and a final " +
+      "verification step (how to test end-to-end). 'Add POST handler in " +
+      "app/api/foo/route.ts with zod validation' is a good task; 'do the backend' " +
+      "is not. Checkbox states: '- [ ]' pending, '- [~]' in progress, '- [x]' " +
+      "completed, '- [-]' cancelled. Prose between task blocks is allowed. To " +
+      "flip ONE task's state while executing, prefer minddy_update_plan_task " +
+      "instead of resending the whole plan."
   );
 
 const PROJECT_ID = z
@@ -87,12 +94,15 @@ const ISSUE_REF = z
 async function requireProject(
   extra: ToolExtra,
   projectId: unknown
-): Promise<{ userId: string; access: ProjectAccess } | { error: ToolResult }> {
+): Promise<
+  | { userId: string; keyId: string | null; access: ProjectAccess }
+  | { error: ToolResult }
+> {
   const auth = requireUser(extra);
   if ("error" in auth) return auth;
   const project = await resolveProject(auth.userId, projectId);
   if ("error" in project) return project;
-  return { userId: auth.userId, access: project.access };
+  return { userId: auth.userId, keyId: auth.keyId, access: project.access };
 }
 
 function mcpReadCtx(access: ProjectAccess): ReadContext {
@@ -413,8 +423,9 @@ export function registerMinddyTools(server: McpServer): void {
         "Create an issue in a project. Only title is required; status defaults to " +
         "'backlog' (the issue lands directly on the board — the human is driving " +
         "you). Set parent to make a sub-issue (one level max; it inherits the " +
-        "parent's objective unless objective_id is set). Returns the created issue " +
-        "with its identifier.",
+        "parent's objective unless objective_id is set). description = WHAT/WHY " +
+        "(the problem or feature); plan = HOW (the full implementation plan — see " +
+        "the plan field spec). Returns the created issue with its identifier.",
       inputSchema: {
         project_id: PROJECT_ID,
         title: z.string().min(1),
@@ -449,7 +460,7 @@ export function registerMinddyTools(server: McpServer): void {
         projectId: scope.access.project.id,
         actorId: scope.userId,
         input: { ...args, ...(parentId ? { parent_id: parentId } : {}) },
-        viaMcp: true,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
 
@@ -538,7 +549,7 @@ export function registerMinddyTools(server: McpServer): void {
             issueId: resolved.issue.id,
             actorId: scope.userId,
             input: fields,
-            viaMcp: true,
+            mcpKeyId: scope.keyId,
           });
           if (!result.ok) {
             failed.push({
@@ -553,7 +564,7 @@ export function registerMinddyTools(server: McpServer): void {
             issueId: resolved.issue.id,
             actorId: scope.userId,
             categoryIds: category_ids,
-            viaMcp: true,
+            mcpKeyId: scope.keyId,
           });
           if (!result.ok) {
             failed.push({
@@ -615,7 +626,7 @@ export function registerMinddyTools(server: McpServer): void {
         issueId: ref.issue.id,
         actorId: scope.userId,
         input: { plan: setTaskState(plan, task.line, args.state) },
-        viaMcp: true,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
 
@@ -657,7 +668,7 @@ export function registerMinddyTools(server: McpServer): void {
         issueId: ref.issue.id,
         actorId: scope.userId,
         body: args.body,
-        viaMcp: true,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });

@@ -2,6 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { addCommentToIssue } from "@/lib/server/add-comment";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   mentionsNumo,
@@ -33,7 +34,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/comments] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
+
+  // Commentaires MCP : résoudre la clé actrice (nom + agent) — service client,
+  // la policy RLS d'api_keys est owner-only (voir api-key-actors.ts).
+  const keyActors = await resolveApiKeyActors(
+    (data ?? []).map((c) => c.api_key_id as string | null)
+  );
+  return NextResponse.json(
+    (data ?? []).map((comment) => ({
+      ...comment,
+      api_key_name: keyActors.get(comment.api_key_id as string)?.name ?? null,
+      api_key_agent: keyActors.get(comment.api_key_id as string)?.agent ?? null,
+    }))
+  );
 }
 
 /** POST /api/issues/[id]/comments — add a comment (author = caller). */

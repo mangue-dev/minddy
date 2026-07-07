@@ -36,7 +36,7 @@ export async function addCommentToIssue({
   parentId,
   mentionedUserIds,
   viaAssistant = false,
-  viaMcp = false,
+  mcpKeyId = null,
 }: {
   issueId: string;
   actorId: string;
@@ -45,8 +45,9 @@ export async function addCommentToIssue({
   mentionedUserIds?: string[];
   /** Marks the comment as posted through Numo (shown as "Numo" in the timeline). */
   viaAssistant?: boolean;
-  /** Marks the comment as posted through the MCP endpoint ("user (via agent)"). */
-  viaMcp?: boolean;
+  /** Attributes the comment to an MCP API key (agent actor) — shown as
+      "key name (mcp)" in the timeline instead of the user. */
+  mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
   const text = body.trim();
   if (!text) {
@@ -106,7 +107,8 @@ export async function addCommentToIssue({
       body: text,
       parent_id: rootId,
       via_assistant: viaAssistant,
-      via_mcp: viaMcp,
+      via_mcp: !!mcpKeyId,
+      api_key_id: mcpKeyId,
     })
     .select("*")
     .single();

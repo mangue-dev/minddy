@@ -34,7 +34,7 @@ const ISSUE_FIELD_PROPERTIES = {
   plan: {
     type: ["string", "null"],
     description:
-      "Implementation plan, markdown, separate from the description. Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled. ALWAYS send the FULL plan markdown (never a fragment) — task state changes are diffed and logged server-side. null clears the plan.",
+      "Implementation plan, markdown, separate from the description — a REAL engineering plan, like a coding agent's plan mode output: a short context (goal, approach), then ordered checkbox tasks each naming the ACTUAL code to touch (exact file paths, components, functions, migrations, routes), ending with a verification step (how to test). 'Add POST handler in app/api/foo/route.ts with zod validation' is a good task; 'do the backend' is not. Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. ALWAYS send the FULL plan markdown (never a fragment) — task state changes are diffed and logged server-side. null clears the plan.",
   },
   status: {
     type: "string",

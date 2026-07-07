@@ -16,7 +16,8 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ChevronDown, ChevronRight, Ellipsis, Pencil, Plug, Trash2 } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, Ellipsis, Pencil, Plug, Trash2 } from "lucide-react";
+import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import {
   describeEvent,
   type EventContext,
@@ -119,6 +120,38 @@ function NumoAvatar({ className }: { className?: string }) {
   );
 }
 
+/** Avatar for actions performed through the MCP endpoint — the acting agent's
+    logo (Claude Code, Cursor…) when the key is tied to a known agent, else a
+    generic bot. The actor is the AGENT, never the user. */
+function McpAvatar({ agent, className }: { agent: string | null | undefined; className?: string }) {
+  const known = isMcpAgentId(agent) ? getMcpAgent(agent) : null;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      {known ? (
+        known.logoDark ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={known.logo} alt="" className="size-3 dark:hidden" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={known.logoDark} alt="" className="hidden size-3 dark:block" />
+          </>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={known.logo} alt="" className="size-3" />
+        )
+      ) : (
+        <Bot className="size-3.5" />
+      )}
+    </span>
+  );
+}
+
 /** Avatar for issues submitted through a project integration (Feedback API) —
     a plug instead of a user's initials, so external submissions stand out. */
 function IntegrationAvatar({ className }: { className?: string }) {
@@ -171,8 +204,8 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
   const viaNumo = !!item.event.via_assistant;
   const viaMcp = !viaNumo && !!item.event.via_mcp;
   const viaIntegration = !viaNumo && !viaMcp && !!item.event.integration_id;
-  // via_mcp : l'acteur reste l'utilisateur (avatar inclus), seul le libellé
-  // porte le marqueur « via agent ».
+  // via_mcp : l'acteur affiché est l'AGENT (nom de la clé API + logo), pas
+  // l'utilisateur — l'action peut venir d'un workflow automatisé.
   const actor = actorName(ctx.members, item.event.actor_id, t);
   const name = viaNumo
     ? "Numo"
@@ -181,13 +214,15 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
           name: item.event.integration_name ?? t("integrationFallback"),
         })
       : viaMcp
-        ? t("mcpActor", { name: actor })
+        ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
         : actor;
   const summary = describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
       {viaNumo ? (
         <NumoAvatar />
+      ) : viaMcp ? (
+        <McpAvatar agent={item.event.api_key_agent} />
       ) : viaIntegration ? (
         <IntegrationAvatar />
       ) : (
@@ -228,9 +263,13 @@ function CommentBlock({
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
   const author = actorName(ctx.members, comment.author_id, t);
-  // via_mcp : le commentaire reste celui de l'utilisateur (avatar, édition,
-  // suppression), seul le libellé porte le marqueur « via agent ».
-  const name = viaNumo ? "Numo" : viaMcp ? t("mcpActor", { name: author }) : author;
+  // via_mcp : l'auteur affiché est l'AGENT (nom de la clé API + logo), pas
+  // l'utilisateur ; le propriétaire (author_id) garde édition et suppression.
+  const name = viaNumo
+    ? "Numo"
+    : viaMcp
+      ? t("mcpActor", { name: comment.api_key_name ?? t("mcpFallback") })
+      : author;
   // Live @Numo reply: 'working' comments update in place (current tool, then
   // streaming text) via Realtime until only the final message remains. A
   // 'working' row older than 5 minutes is an orphan (server died) → error.
@@ -268,6 +307,8 @@ function CommentBlock({
       <div className="flex items-center gap-2">
         {viaNumo ? (
           <NumoAvatar />
+        ) : viaMcp ? (
+          <McpAvatar agent={comment.api_key_agent} />
         ) : (
           <ActorAvatar members={ctx.members} id={comment.author_id} name={author} />
         )}

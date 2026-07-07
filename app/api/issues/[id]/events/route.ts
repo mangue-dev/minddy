@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -21,12 +22,22 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/events] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
+
+  // Actions MCP : résoudre la clé (nom + agent) via le service client — la
+  // policy RLS d'api_keys est owner-only, un membre du projet ne verrait pas
+  // le nom de la clé d'un autre membre par jointure.
+  const keyActors = await resolveApiKeyActors(
+    (data ?? []).map((e) => e.api_key_id as string | null)
+  );
+
   // Flatten the embedded integration into integration_name for the timeline.
   return NextResponse.json(
     (data ?? []).map(({ integration, ...event }) => ({
       ...event,
       integration_name:
         (integration as { name: string } | null)?.name ?? null,
+      api_key_name: keyActors.get(event.api_key_id as string)?.name ?? null,
+      api_key_agent: keyActors.get(event.api_key_id as string)?.agent ?? null,
     }))
   );
 }
