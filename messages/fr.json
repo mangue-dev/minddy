@@ -36,6 +36,7 @@
     "projectNotFound": "Projet introuvable",
     "commentEmpty": "Le commentaire est vide.",
     "commentNotFound": "Commentaire introuvable",
+    "triageItemNotFound": "Élément de triage introuvable",
     "ownerOnlyInvite": "Seul le propriétaire peut inviter.",
     "invalidEmail": "Email invalide.",
     "noAccountForEmail": "Aucun compte minddy avec cet email.",
@@ -227,6 +228,8 @@
   },
   "Nav": {
     "goTo": "Aller à",
+    "create": "Créer",
+    "pages": "Pages",
     "home": "Accueil",
     "inbox": "Inbox",
     "newProject": "Nouveau Projet",
@@ -235,7 +238,6 @@
     "allIssues": "Tous les tickets",
     "objectives": "Objectifs",
     "triage": "Triage",
-    "triageComingSoon": "Le Triage arrive en v2.",
     "projectSettings": "Paramètres du projet",
     "settings": "Paramètres",
     "switchProject": "Changer de Projet",
@@ -394,5 +396,17 @@
     "weeksAgo": "Il y a {w} sem",
     "monthsAgo": "Il y a {mo} mois",
     "yearsAgo": "{y, plural, one {Il y a # an} other {Il y a # ans}}"
+  },
+  "Triage": {
+    "projectNotFound": "Projet introuvable",
+    "backToHome": "Retour à l'accueil",
+    "title": "Triage",
+    "emptyState": "Rien à trier. Les tickets venus de Numo et d'autres sources arriveront ici pour validation.",
+    "accept": "Accepter",
+    "reject": "Rejeter",
+    "rejectConfirmTitle": "Rejeter « {title} » ?",
+    "rejectConfirmDescription": "L'élément est retiré du triage. Aucun ticket ne sera créé.",
+    "rejectedToast": "Élément rejeté.",
+    "sourceLabel": "via {source}"
   }
 }

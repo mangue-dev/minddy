@@ -48,6 +48,8 @@ export function CreateIssueDialog({
   onCreate,
   initialStatus,
   initialObjectiveId,
+  initialTitle,
+  initialDescription,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +61,9 @@ export function CreateIssueDialog({
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
   initialObjectiveId?: string | null;
+  /** Prefill title/description (accepting a triage item). */
+  initialTitle?: string;
+  initialDescription?: string;
 }) {
   const t = useTranslations("IssueUI");
   const tCommon = useTranslations("Common");
@@ -69,15 +74,18 @@ export function CreateIssueDialog({
   const [submitting, setSubmitting] = useState(false);
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
-  // that column's status; objective mode reopens it with the objective set).
+  // that column's status; objective mode reopens it with the objective set;
+  // triage accept reopens it with the proto-issue's title/description).
   useEffect(() => {
     if (!open) return;
+    setTitle(initialTitle ?? "");
+    setDescription(initialDescription ?? "");
     setFields((f) => ({
       ...f,
       status: initialStatus ?? DEFAULTS.status,
       objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
     }));
-  }, [open, initialStatus, initialObjectiveId]);
+  }, [open, initialStatus, initialObjectiveId, initialTitle, initialDescription]);
 
   const reset = () => {
     setTitle("");

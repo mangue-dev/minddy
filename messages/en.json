@@ -36,6 +36,7 @@
     "projectNotFound": "Project not found",
     "commentEmpty": "Comment cannot be empty.",
     "commentNotFound": "Comment not found",
+    "triageItemNotFound": "Triage item not found",
     "ownerOnlyInvite": "Only the owner can invite.",
     "invalidEmail": "Invalid email.",
     "noAccountForEmail": "No minddy account with this email.",
@@ -227,6 +228,8 @@
   },
   "Nav": {
     "goTo": "Go to",
+    "create": "Create",
+    "pages": "Pages",
     "home": "Home",
     "inbox": "Inbox",
     "newProject": "New Project",
@@ -235,7 +238,6 @@
     "allIssues": "All Issues",
     "objectives": "Objectives",
     "triage": "Triage",
-    "triageComingSoon": "Triage is coming in v2.",
     "projectSettings": "Project settings",
     "settings": "Settings",
     "switchProject": "Switch project",
@@ -394,5 +396,17 @@
     "weeksAgo": "{w}w ago",
     "monthsAgo": "{mo}mo ago",
     "yearsAgo": "{y, plural, one {# year ago} other {# years ago}}"
+  },
+  "Triage": {
+    "projectNotFound": "Project not found",
+    "backToHome": "Back to home",
+    "title": "Triage",
+    "emptyState": "Nothing to triage. Issues from Numo and other sources will land here for review.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "rejectConfirmTitle": "Reject \"{title}\"?",
+    "rejectConfirmDescription": "The item is removed from triage. No issue is created.",
+    "rejectedToast": "Item rejected.",
+    "sourceLabel": "via {source}"
   }
 }

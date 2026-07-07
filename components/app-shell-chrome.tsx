@@ -9,36 +9,59 @@ import {
   AppShell,
   Header,
   MobileNav,
-  toast,
   type NavSection,
   type NavItem,
-  type CommandMenuGroup,
 } from "mangue-ui";
 import {
   Home,
   ChevronLeft,
   Plus,
-  Folder,
   Inbox,
   LayoutGrid,
   CircleUser,
   Target,
   Filter,
   Settings,
+  ListTodo,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useNotifications } from "@/lib/use-notifications";
+import { useTriageQuery } from "@/lib/use-triage-query";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { HeaderSearchPill } from "@/components/header-search-pill";
+import {
+  HeaderSearchPill,
+  type PaletteGroup,
+  type PaletteItem,
+} from "@/components/header-search-pill";
 import { NewMenu } from "@/components/new-menu";
-import { projectOrbIcon } from "@/components/project-orb";
+import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import { AppSidebar } from "@/components/app-sidebar";
+import type { Project } from "@/lib/types";
 
 function projectIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/projects\/([^/]+)/);
   return match ? match[1] : null;
+}
+
+/** Right-aligned project tag shown on palette rows (orb + name), à la AutoKap. */
+function projectChip(project: Project) {
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
+      <ProjectOrb seed={project.id} className="size-3.5" />
+      <span className="max-w-[9rem] truncate">{project.name}</span>
+    </span>
+  );
+}
+
+/** Muted monospace identifier badge, e.g. "MIND-42". */
+function identifierBadge(id: string) {
+  return (
+    <span className="font-mono text-[0.7rem] font-medium tabular-nums text-muted-foreground/70">
+      {id}
+    </span>
+  );
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
@@ -53,6 +76,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
   const isInbox = pathname.startsWith("/inbox");
 
+  // Pending proto-issues of the current project — shares the ["triage",
+  // projectId] cache (and realtime bridge) with the triage page.
+  const { count: triageCount } = useTriageQuery(currentProjectId);
+
   // Shares the ["issues", projectId] cache with the board (no extra realtime
   // bridge) so search can list the current project's issues.
   const { data: projectIssues } = useQuery({
@@ -61,40 +88,146 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     enabled: !!currentProjectId,
   });
 
-  const commandGroups = useMemo<CommandMenuGroup[]>(() => {
-    const groups: CommandMenuGroup[] = [
-      {
-        heading: t("goTo"),
-        items: [
-          { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
-          { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
-          { key: "cmd-new-project", label: t("newProject"), icon: Plus, onSelect: openCreateProject },
-        ],
-      },
-    ];
+  const commandGroups = useMemo<PaletteGroup[]>(() => {
+    const groups: PaletteGroup[] = [];
+    const createKw = ["create", "créer", "new", "nouveau"];
+
+    // ── Create (issue-first) ──────────────────────────────────────────
+    // New issue is always the leading option. Inside a project it targets that
+    // project; from anywhere else you pick which project to create it in.
+    const createItems: PaletteItem[] = [];
+    if (currentProject) {
+      createItems.push({
+        key: "create-issue",
+        label: t("newIssue"),
+        icon: ListTodo,
+        keywords: [...createKw, ti("entity"), currentProject.name, currentProject.key],
+        meta: projectChip(currentProject),
+        onSelect: () => router.push(`/projects/${currentProject.id}?new=issue`),
+      });
+      createItems.push({
+        key: "create-objective",
+        label: t("newObjective"),
+        icon: Target,
+        keywords: [...createKw, currentProject.name, currentProject.key],
+        meta: projectChip(currentProject),
+        onSelect: () => router.push(`/projects/${currentProject.id}/objectives?new=1`),
+      });
+    } else {
+      for (const p of projects) {
+        createItems.push({
+          key: `create-issue-${p.id}`,
+          label: t("newIssue"),
+          icon: ListTodo,
+          keywords: [...createKw, ti("entity"), p.name, p.key],
+          meta: projectChip(p),
+          onSelect: () => router.push(`/projects/${p.id}?new=issue`),
+        });
+      }
+    }
+    createItems.push({
+      key: "create-project",
+      label: t("newProject"),
+      icon: Plus,
+      keywords: createKw,
+      onSelect: openCreateProject,
+    });
+    groups.push({ key: "create", heading: t("create"), items: createItems });
+
+    // ── Go to (global) ────────────────────────────────────────────────
+    groups.push({
+      key: "goto",
+      heading: t("goTo"),
+      items: [
+        { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
+        { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+      ],
+    });
+
     if (projects.length > 0) {
+      // ── Projects (quick switch) ─────────────────────────────────────
       groups.push({
+        key: "projects",
         heading: t("projects"),
         items: projects.map((p) => ({
-          key: `cmd-project-${p.id}`,
+          key: `project-${p.id}`,
           label: p.name,
-          icon: Folder,
+          icon: projectOrbIcon(p.id),
           keywords: [p.key],
           onSelect: () => router.push(`/projects/${p.id}`),
         })),
       });
+
+      // ── Pages (per-project navigation) ──────────────────────────────
+      const pageItems: PaletteItem[] = [];
+      for (const p of projects) {
+        const base = `/projects/${p.id}`;
+        const chip = projectChip(p);
+        const kw = [p.name, p.key];
+        pageItems.push(
+          {
+            key: `pg-all-${p.id}`,
+            label: t("allIssues"),
+            icon: LayoutGrid,
+            keywords: kw,
+            meta: chip,
+            onSelect: () => router.push(base),
+          },
+          {
+            key: `pg-my-${p.id}`,
+            label: t("myIssues"),
+            icon: CircleUser,
+            keywords: kw,
+            meta: chip,
+            onSelect: () => router.push(`${base}/my`),
+          },
+          {
+            key: `pg-obj-${p.id}`,
+            label: t("objectives"),
+            icon: Target,
+            keywords: kw,
+            meta: chip,
+            onSelect: () => router.push(`${base}/objectives`),
+          },
+          {
+            key: `pg-triage-${p.id}`,
+            label: t("triage"),
+            icon: Filter,
+            keywords: kw,
+            meta: chip,
+            onSelect: () => router.push(`${base}/triage`),
+          },
+          {
+            key: `pg-set-${p.id}`,
+            label: t("projectSettings"),
+            icon: Settings,
+            keywords: kw,
+            meta: chip,
+            onSelect: () => router.push(`${base}/settings`),
+          },
+        );
+      }
+      groups.push({ key: "pages", heading: t("pages"), items: pageItems });
     }
+
+    // ── Issues (current project, tagged with identifier) ──────────────
     if (currentProject && projectIssues && projectIssues.length > 0) {
       groups.push({
+        key: "issues",
         heading: ti("entityPlural"),
-        items: projectIssues.map((i) => ({
-          key: `cmd-issue-${i.id}`,
-          label: i.title,
-          keywords: [issueIdentifier(currentProject.key, i.number), String(i.number)],
-          onSelect: () => router.push(`/projects/${currentProject.id}?issue=${i.id}`),
-        })),
+        items: projectIssues.map((i) => {
+          const id = issueIdentifier(currentProject.key, i.number);
+          return {
+            key: `issue-${i.id}`,
+            label: i.title,
+            keywords: [id, String(i.number)],
+            meta: identifierBadge(id),
+            onSelect: () => router.push(`/projects/${currentProject.id}?issue=${i.id}`),
+          };
+        }),
       });
     }
+
     return groups;
   }, [projects, currentProject, projectIssues, router, openCreateProject, t, ti]);
 
@@ -149,7 +282,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               key: "triage",
               label: t("triage"),
               icon: Filter,
-              onClick: () => toast(t("triageComingSoon")),
+              href: `${base}/triage`,
+              active: pathname.startsWith(`${base}/triage`),
+              badge:
+                triageCount > 0 ? (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {triageCount}
+                  </span>
+                ) : undefined,
             },
             {
               key: "settings",
@@ -187,7 +327,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, openCreateProject, t]);
+  }, [currentProject, pathname, projects, unreadCount, triageCount, openCreateProject, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

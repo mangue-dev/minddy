@@ -1,22 +1,38 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { Command } from "cmdk";
 import { useTranslations } from "next-intl";
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  Kbd,
-  type CommandMenuGroup,
-} from "mangue-ui";
+import { Popover, PopoverAnchor, PopoverContent, Kbd } from "mangue-ui";
 import { Search } from "lucide-react";
+
+/**
+ * A single command-palette row. Superset of mangue-ui's `CommandMenuItem`: adds
+ * a `meta` slot rendered right-aligned (e.g. an issue identifier badge or a
+ * project chip), mirroring how AutoKap tags each result with its project.
+ */
+export interface PaletteItem {
+  key: string;
+  label: string;
+  icon?: ComponentType<{ className?: string }>;
+  /** Extra terms to match against when searching (identifier, project name…). */
+  keywords?: string[];
+  /** Right-aligned trailing content — identifier badge or project chip. */
+  meta?: ReactNode;
+  onSelect?: () => void;
+}
+
+export interface PaletteGroup {
+  key?: string;
+  heading?: string;
+  items: PaletteItem[];
+}
 
 /**
  * Inline search pill (recreated from AutoKap): a cmdk command anchored to a
  * compact pill, opening a results popover. Focused by pressing F or ⌘K.
  */
-export function HeaderSearchPill({ groups }: { groups: CommandMenuGroup[] }) {
+export function HeaderSearchPill({ groups }: { groups: PaletteGroup[] }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -119,7 +135,10 @@ export function HeaderSearchPill({ groups }: { groups: CommandMenuGroup[] }) {
                       className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm data-[selected=true]:bg-accent"
                     >
                       {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
-                      <span className="truncate">{item.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      {item.meta && (
+                        <span className="ml-2 flex shrink-0 items-center">{item.meta}</span>
+                      )}
                     </Command.Item>
                   );
                 })}
