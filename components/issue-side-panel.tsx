@@ -29,6 +29,10 @@ import {
   StatusValue,
 } from "@/components/issue-property-fields";
 import { SubIssuesSection } from "@/components/sub-issues-section";
+import {
+  IssueShortcutMenu,
+  useIssueFieldShortcuts,
+} from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { IssuePlan } from "@/components/issue-plan";
 import { MarkdownEditor } from "@/components/markdown-editor";
@@ -101,6 +105,10 @@ export function IssueSidePanel({
   }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = useMemo(() => planProgress(issue?.plan), [issue?.plan]);
+
+  // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
+  // body; the picker opens at the cursor, in the key/value section.
+  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(open);
 
   if (!issue) return null;
 
@@ -187,7 +195,7 @@ export function IssueSidePanel({
             </div>
           </div>
 
-          <SidePanelBody className="flex flex-col gap-4 pt-0">
+          <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
             <AutoTextarea
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -318,6 +326,21 @@ export function IssueSidePanel({
               </TabsContent>
             </Tabs>
           </SidePanelBody>
+
+          <IssueShortcutMenu
+            state={menuState}
+            onClose={closeMenu}
+            issue={issue}
+            members={members}
+            categories={categories}
+            objectives={objectives}
+            onUpdate={(updates) => void patch(updates)}
+            onSetCategories={(ids) =>
+              void onSetCategories(issue.id, ids).catch((err) =>
+                toast.error((err as Error).message)
+              )
+            }
+          />
 
           <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
             <CommentComposer members={members} onSubmit={addComment} />

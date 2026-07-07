@@ -9,7 +9,14 @@
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { enUS, fr } from "react-day-picker/locale";
-import { Popover, PopoverContent, PopoverTrigger, Switch, cn } from "mangue-ui";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+  Switch,
+  cn,
+} from "mangue-ui";
 import { CalendarDays } from "lucide-react";
 import { Calendar } from "@/components/calendar";
 import { dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
@@ -17,7 +24,9 @@ import { dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
 /** Default time applied when the time toggle is switched on. */
 const DEFAULT_HOUR = 9;
 
-type Variant = "field" | "value" | "chip";
+// "anchored" has no visible trigger: it opens (controlled) at `anchor`, the
+// mouse position — used by the keyboard field shortcuts (issue-field-shortcuts).
+type Variant = "field" | "value" | "chip" | "anchored";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -33,6 +42,9 @@ export function DateTimePicker({
   ariaLabel,
   /** Stop pointer/click from bubbling to a draggable/clickable ancestor (cards). */
   stopPropagation = false,
+  open: controlledOpen,
+  onOpenChange,
+  anchor,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
@@ -41,13 +53,23 @@ export function DateTimePicker({
   className?: string;
   ariaLabel?: string;
   stopPropagation?: boolean;
+  /** Controlled open state (required for the "anchored" variant). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Viewport coordinates the "anchored" variant opens at (the mouse pointer). */
+  anchor?: { x: number; y: number } | null;
 }) {
   const t = useTranslations("DatePicker");
   const format = useFormatter();
   const locale = useLocale();
   const dfLocale = locale === "fr" ? fr : enUS;
 
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    onOpenChange?.(next);
+    if (controlledOpen === undefined) setUncontrolledOpen(next);
+  };
   const timeId = React.useId();
   const switchId = React.useId();
   const selected = parseDueDate(value);
@@ -135,7 +157,7 @@ export function DateTimePicker({
         <span>{label ?? placeholderText}</span>
       </button>
     );
-  } else {
+  } else if (variant === "field") {
     trigger = (
       <button
         type="button"
@@ -152,12 +174,22 @@ export function DateTimePicker({
       </button>
     );
   }
+  // variant === "anchored": no trigger — opens (controlled) at `anchor`.
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      {variant === "anchored" ? (
+        <PopoverAnchor asChild>
+          <span
+            aria-hidden
+            style={{ position: "fixed", left: anchor?.x ?? 0, top: anchor?.y ?? 0 }}
+          />
+        </PopoverAnchor>
+      ) : (
+        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      )}
       <PopoverContent
-        align={variant === "field" ? "start" : "end"}
+        align={variant === "field" || variant === "anchored" ? "start" : "end"}
         className="w-auto p-3"
         onClick={stop}
         onPointerDown={stop}

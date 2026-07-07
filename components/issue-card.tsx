@@ -47,6 +47,10 @@ import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
+import {
+  IssueShortcutMenu,
+  useIssueFieldShortcuts,
+} from "@/components/issue-field-shortcuts";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { planProgress, type PlanProgress } from "@/lib/plan";
@@ -617,6 +621,8 @@ export function IssueCard({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
     null
   );
+  // Raccourcis clavier au survol (S/P/E/A/L/D/O) — ouvrent le picker au curseur.
+  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(!isDragging);
 
   const copyPrompt = async () => {
     const prompt = buildIssuePrompt({ issue, projectId, projectKey });
@@ -640,6 +646,7 @@ export function IssueCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
+      {...containerProps}
       onClick={onOpen}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -664,6 +671,16 @@ export function IssueCard({
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
         actions={menuActions}
+      />
+      <IssueShortcutMenu
+        state={menuState}
+        onClose={closeMenu}
+        issue={issue}
+        members={[...memberMap.values()]}
+        categories={[...categoryMap.values()]}
+        objectives={objectiveMap ? [...objectiveMap.values()] : []}
+        onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
+        onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />
     </div>
   );
