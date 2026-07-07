@@ -8,7 +8,9 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DropdownMenuItem,
   Spinner,
+  SplitButton,
   Switch,
   toast,
 } from "mangue-ui";
@@ -16,6 +18,7 @@ import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
+import { ProjectOrb } from "@/components/project-orb";
 import {
   AssigneeCompact,
   CategoriesCompact,
@@ -37,6 +40,7 @@ import type {
   IssueDraftPatch,
   Member,
   Objective,
+  Project,
 } from "@/lib/types";
 
 const DEFAULTS = {
@@ -63,20 +67,29 @@ export function CreateIssueDialog({
   open,
   onOpenChange,
   projectId,
+  projects,
   members,
   categories,
   objectives,
   onCreate,
+  onCreateInProject,
   initialStatus,
   initialObjectiveId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  /** All the user's projects — powers the "create in another project" menu. */
+  projects: Project[];
   members: Member[];
   categories: Category[];
   objectives: Objective[];
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
+  /** Create in an arbitrary project (the split-button dropdown targets). */
+  onCreateInProject: (
+    targetProjectId: string,
+    input: CreateIssueInput,
+  ) => Promise<unknown>;
   /** Preset the status column the issue lands in (e.g. from a column's "+"). */
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
@@ -90,6 +103,11 @@ export function CreateIssueDialog({
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // Closing the discard confirmation lets the dismissing pointer/click fall
+  // through to this dialog below it and read as an outside click — which would
+  // immediately re-open the confirmation just dismissed. This ref muffles the
+  // dialog's close signal for the brief window right after the confirm closes.
+  const ignoreCloseAfterConfirmRef = useRef(false);
   // Remount the markdown editor to swap its content (it only commits on blur).
   const [editorKey, setEditorKey] = useState(0);
   // Live emptiness of the editor — `description` alone would miss text that was
@@ -144,6 +162,10 @@ export function CreateIssueDialog({
     editorNonEmptyRef.current;
 
   const handleOpenChange = (next: boolean) => {
+    // Swallow close signals while the confirmation owns the decision (it's up),
+    // and for the brief window right after it closes — that window is the
+    // fall-through click that would otherwise re-open the confirmation in a loop.
+    if (!next && (confirmDiscard || ignoreCloseAfterConfirmRef.current)) return;
     if (!next && draftHasContent()) {
       setConfirmDiscard(true);
       return;
@@ -152,18 +174,49 @@ export function CreateIssueDialog({
     onOpenChange(next);
   };
 
-  const submit = async (keepOpen: boolean) => {
+  // Route the confirmation's own open/close through here so we can arm the
+  // fall-through guard the instant it closes (keep-editing, Escape, or after
+  // confirming). "Abandonner" still closes the dialog via closeAndReset, which
+  // calls onOpenChange directly and bypasses handleOpenChange's guard.
+  const handleConfirmOpenChange = (open: boolean) => {
+    setConfirmDiscard(open);
+    if (!open) {
+      ignoreCloseAfterConfirmRef.current = true;
+      window.setTimeout(() => {
+        ignoreCloseAfterConfirmRef.current = false;
+      }, 300);
+    }
+  };
+
+  // `target` is set only when creating in a different project (dropdown item).
+  const submit = async (keepOpen: boolean, target?: Project) => {
     const trimmed = title.trim();
     if (!trimmed) return;
+    const other = target && target.id !== projectId ? target : null;
     setSubmitting(true);
     try {
-      await onCreate({
-        title: trimmed,
-        description: description.trim() || null,
-        ...fields,
-        category_ids: categoryIds,
-      });
-      toast.success(t("issueCreatedToast"));
+      if (other) {
+        // Cross-project: assignee / objective / categories reference THIS
+        // project's entities and don't exist in the target — only the portable
+        // fields travel. (Statuses, priority, effort are global constants.)
+        await onCreateInProject(other.id, {
+          title: trimmed,
+          description: description.trim() || null,
+          status: fields.status,
+          priority: fields.priority,
+          effort: fields.effort,
+          due_date: fields.due_date,
+        });
+        toast.success(t("issueCreatedInProjectToast", { project: other.name }));
+      } else {
+        await onCreate({
+          title: trimmed,
+          description: description.trim() || null,
+          ...fields,
+          category_ids: categoryIds,
+        });
+        toast.success(t("issueCreatedToast"));
+      }
       // The dictation session is about the issue that was just created — a
       // follow-up recording starts fresh.
       dictateHistoryRef.current = [];
@@ -181,6 +234,9 @@ export function CreateIssueDialog({
       setSubmitting(false);
     }
   };
+
+  const currentProject = projects.find((p) => p.id === projectId) ?? null;
+  const otherProjects = projects.filter((p) => p.id !== projectId);
 
   const applyPatch = (patch: IssueDraftPatch) => {
     if (typeof patch.title === "string") setTitle(patch.title);
@@ -375,14 +431,38 @@ export function CreateIssueDialog({
                   checked={createMore}
                   onCheckedChange={setCreateMore}
                 />
-                <Button
-                  type="submit"
-                  className="rounded-full px-4"
-                  disabled={submitting || numoBusy || !title.trim()}
-                >
-                  {submitting && <Spinner />}
-                  {t("createTicket")}
-                </Button>
+                {otherProjects.length > 0 && currentProject ? (
+                  <SplitButton
+                    type="submit"
+                    disabled={submitting || numoBusy || !title.trim()}
+                    actionClassName="rounded-l-full pl-4"
+                    triggerClassName="rounded-r-full"
+                    menuLabel={t("createInOtherProject")}
+                    menu={otherProjects.map((p) => (
+                      <DropdownMenuItem
+                        key={p.id}
+                        onSelect={() => void submit(createMore, p)}
+                      >
+                        <ProjectOrb seed={p.id} className="size-4" />
+                        <span className="truncate">{p.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  >
+                    {submitting && <Spinner />}
+                    <span className="max-w-[14rem] truncate">
+                      {t("createInProject", { project: currentProject.name })}
+                    </span>
+                  </SplitButton>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="rounded-full px-4"
+                    disabled={submitting || numoBusy || !title.trim()}
+                  >
+                    {submitting && <Spinner />}
+                    {t("createTicket")}
+                  </Button>
+                )}
               </div>
             </div>
           </form>
@@ -393,7 +473,7 @@ export function CreateIssueDialog({
         close path funnels through handleOpenChange above. */}
       <ConfirmDeleteDialog
         open={confirmDiscard}
-        onOpenChange={setConfirmDiscard}
+        onOpenChange={handleConfirmOpenChange}
         title={t("discardDraftTitle")}
         description={t("discardDraftDescription")}
         confirmLabel={t("discardDraftConfirm")}

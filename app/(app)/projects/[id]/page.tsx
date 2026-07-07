@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useParams,
   usePathname,
@@ -34,7 +35,8 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveDialog } from "@/components/objective-dialog";
-import type { Issue, Onglet, View, ViewConfig } from "@/lib/types";
+import { createIssueApi } from "@/lib/issues-api";
+import type { CreateIssueInput, Issue, Onglet, View, ViewConfig } from "@/lib/types";
 
 /** Where the last-selected view is remembered (per project + onglet). */
 const viewStorageKey = (projectId: string, onglet: Onglet) =>
@@ -109,6 +111,21 @@ function ProjectBoard() {
     setCreateStatus(status);
     setCreateOpen(true);
   };
+
+  // Create in an arbitrary project (the create dialog's "create in another
+  // project" dropdown). Refresh that project's board cache so the issue shows
+  // the next time it's viewed. `useIssuesQuery` above only owns the current one.
+  const queryClient = useQueryClient();
+  const createIssueInProject = useCallback(
+    async (targetProjectId: string, input: CreateIssueInput) => {
+      const issue = await createIssueApi(targetProjectId, input);
+      void queryClient.invalidateQueries({
+        queryKey: ["issues", targetProjectId],
+      });
+      return issue;
+    },
+    [queryClient],
+  );
 
   // Saved-view state (the My/All onglet now comes from the route).
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -414,10 +431,12 @@ function ProjectBoard() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         projectId={projectId}
+        projects={projects}
         members={members}
         categories={categories}
         objectives={objectives}
         onCreate={createIssue}
+        onCreateInProject={createIssueInProject}
         initialStatus={createStatus}
         initialObjectiveId={activeObjective?.id ?? null}
       />
