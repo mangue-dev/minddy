@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { KeyRound, SlidersHorizontal, User } from "lucide-react";
+import { Plug, SlidersHorizontal, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   SettingsShell,
@@ -9,7 +9,7 @@ import {
 } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
-import { AccountApiKeysSection } from "@/components/settings/account-api-keys-section";
+import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 
 export default function AccountSettingsPage() {
@@ -33,12 +33,12 @@ export default function AccountSettingsPage() {
       content: <AccountPreferencesSection />,
     },
     {
-      value: "api-keys",
-      label: t("apiKeysTab"),
-      icon: KeyRound,
+      value: "mcp",
+      label: t("mcpTab"),
+      icon: Plug,
       content: (
         <>
-          <AccountApiKeysSection />
+          <AccountMcpSection />
           <AccountConnectedAppsSection />
         </>
       ),

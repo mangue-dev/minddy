@@ -15,8 +15,8 @@ import { mapClientNameToAgent } from "@/lib/mcp-agents";
  * Grants OAuth : une ligne active par (user × client), tokens opaques
  * rotationnés sur place. Chaque grant est adossé à une ligne api_keys
  * « acteur » (name = client_name, agent mappé) dont le key_hash est le
- * sha256 d'un secret aléatoire JAMAIS révélé — inutilisable comme clé mdyk_,
- * mais porteur de l'attribution timeline existante (api_key_id).
+ * sha256 d'un secret aléatoire JAMAIS révélé (satisfait NOT NULL + UNIQUE),
+ * porteur de l'attribution timeline existante (api_key_id).
  */
 
 const ACCESS_TTL_MS = 3600_000; // 1 h

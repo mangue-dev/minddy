@@ -1,9 +1,10 @@
 /**
  * Registry des agents IA connectables au serveur MCP de minddy (settings du
- * compte → Clés API). Chaque agent définit comment produire son artefact
- * d'installation clé en main — commande shell à coller, bloc de config, ou
- * deeplink — avec la clé API embarquée. Importable côté client (build des
- * commandes) et côté serveur (validation de l'id).
+ * compte → MCP). Auth OAuth 2.1 uniquement : les commandes d'installation ne
+ * contiennent AUCUN secret — le client découvre le flux OAuth via les
+ * metadata well-known et ouvre le navigateur pour le consentement à la
+ * première utilisation. Importable côté client (build des commandes) et côté
+ * serveur (mapping client_name → agent pour les logos/attribution).
  */
 
 export const MCP_SERVER_NAME = "minddy";
@@ -27,10 +28,8 @@ export interface McpAgent {
   /** Logo pour thème clair (public/) ; logoDark = variante thème sombre. */
   logo: string;
   logoDark?: string;
-  build: (endpoint: string, key: string) => string;
+  build: (endpoint: string) => string;
 }
-
-const bearer = (key: string) => `Bearer ${key}`;
 
 export const MCP_AGENTS: McpAgent[] = [
   {
@@ -41,8 +40,9 @@ export const MCP_AGENTS: McpAgent[] = [
     // --scope user : sans lui, le serveur est enregistré en scope LOCAL (lié
     // au dossier où la commande a été lancée) et n'apparaît ni dans
     // l'extension VS Code ni dans l'app desktop ouvertes ailleurs.
-    build: (endpoint, key) =>
-      `claude mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint} --header "Authorization: ${bearer(key)}"`,
+    // L'authentification se fait ensuite via /mcp (navigateur).
+    build: (endpoint) =>
+      `claude mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint}`,
   },
   {
     id: "codex",
@@ -50,10 +50,9 @@ export const MCP_AGENTS: McpAgent[] = [
     kind: "command",
     logo: "/agents/codex-light.svg",
     logoDark: "/agents/codex-dark.svg",
-    // Pas de header littéral dans `codex mcp add` (env var uniquement) — on
-    // écrit le bloc [mcp_servers.*] avec http_headers, supporté par config.toml.
-    build: (endpoint, key) =>
-      `printf '\\n[mcp_servers.${MCP_SERVER_NAME}]\\nurl = "${endpoint}"\\nhttp_headers = { "Authorization" = "${bearer(key)}" }\\n' >> ~/.codex/config.toml`,
+    // Serveur streamable HTTP natif + login OAuth dédié.
+    build: (endpoint) =>
+      `codex mcp add ${MCP_SERVER_NAME} --url ${endpoint} && codex mcp login ${MCP_SERVER_NAME}`,
   },
   {
     id: "cursor",
@@ -61,11 +60,9 @@ export const MCP_AGENTS: McpAgent[] = [
     kind: "deeplink",
     logo: "/agents/cursor-light.svg",
     logoDark: "/agents/cursor-dark.svg",
-    build: (endpoint, key) => {
-      const config = JSON.stringify({
-        url: endpoint,
-        headers: { Authorization: bearer(key) },
-      });
+    // Cursor gère l'OAuth nativement (bouton « Needs login » sur le serveur).
+    build: (endpoint) => {
+      const config = JSON.stringify({ url: endpoint });
       return `cursor://anysphere.cursor-deeplink/mcp/install?name=${MCP_SERVER_NAME}&config=${btoa(config)}`;
     },
   },
@@ -74,22 +71,21 @@ export const MCP_AGENTS: McpAgent[] = [
     label: "Gemini CLI",
     kind: "command",
     logo: "/agents/gemini.svg",
-    // --scope user : même logique que Claude Code — le défaut (project) lie
-    // le serveur au dossier courant au lieu du compte.
-    build: (endpoint, key) =>
-      `gemini mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint} --header "Authorization: ${bearer(key)}"`,
+    // --scope user : le défaut (project) lie le serveur au dossier courant.
+    // L'authentification OAuth se fait via /mcp auth.
+    build: (endpoint) =>
+      `gemini mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint}`,
   },
   {
     id: "vscode",
     label: "VS Code",
     kind: "command",
     logo: "/agents/vscode.svg",
-    build: (endpoint, key) =>
+    build: (endpoint) =>
       `code --add-mcp '${JSON.stringify({
         name: MCP_SERVER_NAME,
         type: "http",
         url: endpoint,
-        headers: { Authorization: bearer(key) },
       })}'`,
   },
   {
@@ -99,16 +95,9 @@ export const MCP_AGENTS: McpAgent[] = [
     logo: "/agents/windsurf-light.svg",
     logoDark: "/agents/windsurf-dark.svg",
     // Pas de CLI — bloc à coller dans ~/.codeium/windsurf/mcp_config.json.
-    build: (endpoint, key) =>
+    build: (endpoint) =>
       JSON.stringify(
-        {
-          mcpServers: {
-            [MCP_SERVER_NAME]: {
-              serverUrl: endpoint,
-              headers: { Authorization: bearer(key) },
-            },
-          },
-        },
+        { mcpServers: { [MCP_SERVER_NAME]: { serverUrl: endpoint } } },
         null,
         2
       ),

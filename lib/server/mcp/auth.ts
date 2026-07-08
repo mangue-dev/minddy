@@ -1,30 +1,24 @@
 import "server-only";
 
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import { API_KEY_PREFIX, verifyApiKey } from "@/lib/server/api-keys";
 import { ACCESS_TOKEN_PREFIX } from "@/lib/server/oauth/crypto";
 import { verifyOAuthAccessToken } from "@/lib/server/oauth/grants";
 
 /**
- * Vérification du Bearer pour withMcpAuth — dual auth :
- * - mdyk_…  : clé API personnelle (settings → Clés API) ;
- * - mdyat_… : access token OAuth 2.1 (consentement navigateur).
- * `undefined` → 401 avec WWW-Authenticate + resource_metadata (découverte
- * OAuth gérée par mcp-handler). Les deux chemins produisent le même AuthInfo
- * ({userId, keyId}) : rate limit, accès projets et attribution timeline
- * (api_key_id → « Claude (mcp) » + logo) fonctionnent à l'identique.
+ * Vérification du Bearer pour withMcpAuth — OAuth 2.1 uniquement (mdyat_…,
+ * consentement navigateur ; les anciennes clés mdyk_ sont retirées).
+ * `undefined` → 401 avec WWW-Authenticate + resource_metadata : le client
+ * découvre le flux OAuth tout seul. keyId = la ligne api_keys « acteur » du
+ * grant → rate limit, accès projets et attribution timeline
+ * (« Claude (mcp) » + logo) inchangés.
  */
 export async function verifyMcpToken(
   _req: Request,
   bearerToken?: string
 ): Promise<AuthInfo | undefined> {
-  if (!bearerToken) return undefined;
+  if (!bearerToken?.startsWith(ACCESS_TOKEN_PREFIX)) return undefined;
 
-  const verified = bearerToken.startsWith(API_KEY_PREFIX)
-    ? await verifyApiKey(bearerToken)
-    : bearerToken.startsWith(ACCESS_TOKEN_PREFIX)
-      ? await verifyOAuthAccessToken(bearerToken)
-      : null;
+  const verified = await verifyOAuthAccessToken(bearerToken);
   if (!verified) return undefined;
 
   return {
