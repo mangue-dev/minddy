@@ -33,7 +33,10 @@ export const maxDuration = 120;
 // with the dialog / when the panel switches issue.
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
+// Modèle dédié à l'étape agentique post-dictée (transcript → patch d'issue).
+// Rapide et pas cher, distinct du modèle global de Numo (assistant_model).
+// Surchargeable en base via la clé app_config `dictate_model`.
+const DICTATE_DEFAULT_MODEL = "google/gemini-3.1-flash-lite";
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;
@@ -369,13 +372,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const service = getServiceClient();
   const [ctx, modelCfg, locale] = await Promise.all([
     gatherProjectPromptContext({ supabase: auth.supabase, service, project }),
-    getAppConfigValues(["assistant_model", "fallback_model"]),
+    getAppConfigValues(["dictate_model"]),
     getLocale(),
   ]);
-  const model =
-    modelCfg["assistant_model"]?.trim() ||
-    modelCfg["fallback_model"]?.trim() ||
-    DEFAULT_MODEL;
+  const model = modelCfg["dictate_model"]?.trim() || DICTATE_DEFAULT_MODEL;
 
   const messages: OpenRouterMessage[] = [
     {

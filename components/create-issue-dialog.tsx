@@ -124,6 +124,16 @@ export function CreateIssueDialog({
       ? user.id
       : DEFAULTS.assignee_id;
 
+  // The field values a freshly-opened dialog starts from: base defaults plus the
+  // same presets the open effect applies (column status, objective, auto-assign).
+  // Used both to seed on open and to reset after a "create more" submit.
+  const freshFields = () => ({
+    ...DEFAULTS,
+    status: initialStatus ?? DEFAULTS.status,
+    objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+    assignee_id: defaultAssigneeId,
+  });
+
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
   // that column's status; objective mode reopens it with the objective set;
   // the auto-assign preference seeds the assignee). Re-seeding on
@@ -252,8 +262,12 @@ export function CreateIssueDialog({
       // follow-up recording starts fresh.
       clearDictationHistory();
       if (keepOpen) {
-        // Rapid entry: keep the same field values, clear title + description.
+        // Rapid entry: reset the whole draft to a blank slate (title, description
+        // AND every property), exactly as if the dialog had just been reopened.
         clearContent();
+        setFields(freshFields());
+        setCategoryIds([]);
+        setOpenPicker(null);
         titleRef.current?.focus();
       } else {
         // Direct close — the draft just became an issue, nothing to guard.
