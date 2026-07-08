@@ -28,6 +28,10 @@ import {
   PriorityCompact,
   StatusCompact,
 } from "@/components/issue-compact-fields";
+import {
+  SHORTCUT_KEYS,
+  type ShortcutField,
+} from "@/components/issue-field-shortcuts";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
@@ -53,6 +57,12 @@ const DEFAULTS = {
   objective_id: null as string | null,
   due_date: null as string | null,
 };
+
+// Field → uppercase shortcut key, derived from the shared SHORTCUT_KEYS map so
+// the tooltip badges never drift from the keys the listener actually handles.
+const KEY_FOR_FIELD = Object.fromEntries(
+  Object.entries(SHORTCUT_KEYS).map(([key, field]) => [field, key.toUpperCase()]),
+) as Record<ShortcutField, string>;
 
 export function CreateIssueDialog({
   open,
@@ -95,6 +105,8 @@ export function CreateIssueDialog({
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
+  const [openPicker, setOpenPicker] = useState<ShortcutField | null>(null);
   // Closing the discard confirmation lets the dismissing pointer/click fall
   // through to this dialog below it and read as an outside click — which would
   // immediately re-open the confirmation just dismissed. This ref muffles the
@@ -131,6 +143,33 @@ export function CreateIssueDialog({
     }));
   }, [open, initialStatus, initialObjectiveId, defaultAssigneeId]);
 
+  // Field shortcuts: while the dialog is open, S/P/E/A/L/D/O open the matching
+  // picker (anchored on its trigger in the options row), reusing the board-card
+  // mapping. Guarded like the dictation shortcut — no modifiers, no key-repeat,
+  // and never while typing in the title / description (the keys type normally
+  // there; blur the field first to reach the shortcuts). `v` (dictation) and
+  // `c` (quick-create) are handled elsewhere and absent from SHORTCUT_KEYS.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      )
+        return;
+      const field = SHORTCUT_KEYS[e.key.toLowerCase()];
+      if (!field) return;
+      e.preventDefault();
+      setOpenPicker(field);
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [open]);
+
   const clearContent = () => {
     setTitle("");
     setDescription("");
@@ -142,6 +181,7 @@ export function CreateIssueDialog({
     setFields(DEFAULTS);
     setCategoryIds([]);
     setCreateMore(false);
+    setOpenPicker(null);
     editorNonEmptyRef.current = false;
     resetDictation();
   };
@@ -322,19 +362,31 @@ export function CreateIssueDialog({
               <StatusCompact
                 value={fields.status}
                 onChange={(status) => setFields((f) => ({ ...f, status }))}
+                open={openPicker === "status"}
+                onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
+                shortcutHint={KEY_FOR_FIELD.status}
               />
               <PriorityCompact
                 value={fields.priority}
                 onChange={(priority) => setFields((f) => ({ ...f, priority }))}
+                open={openPicker === "priority"}
+                onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
+                shortcutHint={KEY_FOR_FIELD.priority}
               />
               <EffortCompact
                 value={fields.effort}
                 onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+                open={openPicker === "effort"}
+                onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
+                shortcutHint={KEY_FOR_FIELD.effort}
               />
               <CategoriesCompact
                 categories={categories}
                 value={categoryIds}
                 onChange={setCategoryIds}
+                open={openPicker === "category"}
+                onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
+                shortcutHint={KEY_FOR_FIELD.category}
               />
               <AssigneeCompact
                 value={fields.assignee_id}
@@ -342,10 +394,16 @@ export function CreateIssueDialog({
                   setFields((f) => ({ ...f, assignee_id }))
                 }
                 members={members}
+                open={openPicker === "assignee"}
+                onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
+                shortcutHint={KEY_FOR_FIELD.assignee}
               />
               <DueDateCompact
                 value={fields.due_date}
                 onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
+                open={openPicker === "dueDate"}
+                onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
+                shortcutHint={KEY_FOR_FIELD.dueDate}
               />
               <ObjectiveCompact
                 value={fields.objective_id}
@@ -353,6 +411,9 @@ export function CreateIssueDialog({
                   setFields((f) => ({ ...f, objective_id }))
                 }
                 objectives={objectives}
+                open={openPicker === "objective"}
+                onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
+                shortcutHint={KEY_FOR_FIELD.objective}
               />
             </div>
 
@@ -372,7 +433,7 @@ export function CreateIssueDialog({
                 <DictateButton
                   onTranscription={onTranscript}
                   disabled={submitting}
-                  shortcutKey="d"
+                  shortcutKey="v"
                   className="-ml-2"
                 />
               )}

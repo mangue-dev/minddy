@@ -49,8 +49,10 @@ export type ShortcutField =
   | "dueDate"
   | "objective";
 
-/** Lowercased key → field. `c` is deliberately absent (taken by quick-create). */
-const SHORTCUT_KEYS: Record<string, ShortcutField> = {
+/** Lowercased key → field. `c` is deliberately absent (taken by quick-create).
+ *  Exported so the create-issue dialog can drive its own pickers off the same
+ *  mapping (S/P/E/A/L/D/O) without duplicating it. */
+export const SHORTCUT_KEYS: Record<string, ShortcutField> = {
   s: "status",
   p: "priority",
   e: "effort",

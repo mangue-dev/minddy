@@ -43,6 +43,8 @@ type ShellProps = {
   trigger: React.ReactNode;
   /** Optional tooltip on the trigger (used by the compact card pickers). */
   tooltip?: string;
+  /** Key badge (e.g. "S") shown next to the tooltip — surfaces the shortcut. */
+  shortcutHint?: string;
   searchPlaceholder?: string;
   emptyText?: string;
   align?: "start" | "center" | "end";
@@ -56,6 +58,7 @@ function PickerShell({
   onOpenChange,
   trigger,
   tooltip,
+  shortcutHint,
   searchPlaceholder,
   emptyText,
   align = "start",
@@ -104,7 +107,14 @@ function PickerShell({
   return (
     <Tooltip>
       {popover}
-      <TooltipContent>{tooltip}</TooltipContent>
+      <TooltipContent className="flex items-center gap-1.5">
+        {tooltip}
+        {shortcutHint && (
+          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+            {shortcutHint}
+          </kbd>
+        )}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -116,14 +126,24 @@ export function SearchSelect({
   onChange,
   options,
   noneOption,
+  open: controlledOpen,
+  onOpenChange,
   ...shell
 }: ShellProps & {
   value: string | null;
   onChange: (v: string | null) => void;
   options: PickerOption[];
   noneOption?: { label: string; icon?: React.ReactNode };
+  /** Controlled open state (e.g. driven by a keyboard shortcut). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    onOpenChange?.(next);
+    if (controlledOpen === undefined) setUncontrolledOpen(next);
+  };
   const select = (v: string | null) => {
     onChange(v);
     setOpen(false);
@@ -162,13 +182,23 @@ export function SearchMultiSelect({
   values,
   onChange,
   options,
+  open: controlledOpen,
+  onOpenChange,
   ...shell
 }: ShellProps & {
   values: string[];
   onChange: (values: string[]) => void;
   options: PickerOption[];
+  /** Controlled open state (e.g. driven by a keyboard shortcut). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    onOpenChange?.(next);
+    if (controlledOpen === undefined) setUncontrolledOpen(next);
+  };
   const toggle = (v: string) =>
     onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v]);
   return (

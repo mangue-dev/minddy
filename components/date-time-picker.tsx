@@ -15,6 +15,9 @@ import {
   PopoverContent,
   PopoverTrigger,
   Switch,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { CalendarDays } from "lucide-react";
@@ -45,6 +48,8 @@ export function DateTimePicker({
   open: controlledOpen,
   onOpenChange,
   anchor,
+  tooltip,
+  shortcutHint,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
@@ -58,6 +63,10 @@ export function DateTimePicker({
   onOpenChange?: (open: boolean) => void;
   /** Viewport coordinates the "anchored" variant opens at (the mouse pointer). */
   anchor?: { x: number; y: number } | null;
+  /** Optional tooltip on the trigger (triggered variants only). */
+  tooltip?: string;
+  /** Key badge (e.g. "D") shown next to the tooltip — surfaces the shortcut. */
+  shortcutHint?: string;
 }) {
   const t = useTranslations("DatePicker");
   const format = useFormatter();
@@ -176,7 +185,11 @@ export function DateTimePicker({
   }
   // variant === "anchored": no trigger — opens (controlled) at `anchor`.
 
-  return (
+  // A tooltip (with an optional shortcut badge) wraps triggered variants only —
+  // the "anchored" variant has no visible trigger to hang a tooltip on.
+  const showTooltip = tooltip && variant !== "anchored";
+
+  const popover = (
     <Popover open={open} onOpenChange={setOpen}>
       {variant === "anchored" ? (
         <PopoverAnchor asChild>
@@ -185,6 +198,10 @@ export function DateTimePicker({
             style={{ position: "fixed", left: anchor?.x ?? 0, top: anchor?.y ?? 0 }}
           />
         </PopoverAnchor>
+      ) : showTooltip ? (
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+        </PopoverTrigger>
       ) : (
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       )}
@@ -248,5 +265,20 @@ export function DateTimePicker({
         </div>
       </PopoverContent>
     </Popover>
+  );
+
+  if (!showTooltip) return popover;
+  return (
+    <Tooltip>
+      {popover}
+      <TooltipContent className="flex items-center gap-1.5">
+        {tooltip}
+        {shortcutHint && (
+          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+            {shortcutHint}
+          </kbd>
+        )}
+      </TooltipContent>
+    </Tooltip>
   );
 }

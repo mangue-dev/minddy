@@ -37,13 +37,25 @@ const BARE =
 const PILL =
   "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring";
 
+// Lets the create-issue dialog drive each picker's open state from a keyboard
+// shortcut and surface the key in the trigger's tooltip. All optional — the
+// pickers stay uncontrolled (click to open) when these aren't passed.
+type ShortcutControl = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  shortcutHint?: string;
+};
+
 export function StatusCompact({
   value,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   value: IssueStatus;
   onChange: (v: IssueStatus) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tStatus = useTranslations("Status");
@@ -58,6 +70,9 @@ export function StatusCompact({
       onChange={(v) => onChange(v as IssueStatus)}
       options={options}
       tooltip={tField("status")}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       trigger={
         <button type="button" aria-label={t("changeStatusAria")} className={BARE}>
           <StatusIndicator status={value} />
@@ -70,10 +85,13 @@ export function StatusCompact({
 export function PriorityCompact({
   value,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   value: IssuePriority;
   onChange: (v: IssuePriority) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
@@ -88,6 +106,9 @@ export function PriorityCompact({
       onChange={(v) => onChange(v as IssuePriority)}
       options={options}
       tooltip={tField("priority")}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       trigger={
         <button type="button" aria-label={t("changePriorityAria")} className={BARE}>
           <PriorityIndicator priority={value} />
@@ -100,10 +121,13 @@ export function PriorityCompact({
 export function EffortCompact({
   value,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   value: IssueEffort | null;
   onChange: (v: IssueEffort | null) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
@@ -118,6 +142,9 @@ export function EffortCompact({
       options={options}
       noneOption={{ label: tCommon("none") }}
       tooltip={tField("effort")}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       trigger={
         <button type="button" aria-label={t("changeEffortAria")} className={BARE}>
           {value ? (
@@ -135,11 +162,14 @@ export function CategoriesCompact({
   categories,
   value,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   categories: Category[];
   value: string[];
   onChange: (ids: string[]) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const selected = categories.filter((c) => value.includes(c.id));
@@ -156,6 +186,9 @@ export function CategoriesCompact({
       onChange={onChange}
       options={options}
       tooltip={tField("categories")}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
       trigger={
         <button type="button" aria-label={t("editCategoriesAria")} className={BARE}>
@@ -180,11 +213,14 @@ export function AssigneeCompact({
   value,
   members,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   value: string | null;
   members: Member[];
   onChange: (v: string | null) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const current = members.find((m) => m.user_id === value) ?? null;
@@ -208,6 +244,9 @@ export function AssigneeCompact({
       options={options}
       noneOption={{ label: tField("unassigned") }}
       tooltip={tField("assignee")}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       trigger={
         <button type="button" aria-label={t("changeAssigneeAria")} className={BARE}>
           {current ? (
@@ -232,10 +271,13 @@ export function AssigneeCompact({
 export function DueDateCompact({
   value,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   return (
@@ -246,6 +288,10 @@ export function DueDateCompact({
       placeholder={tField("dueDate")}
       ariaLabel={t("changeDueDateAria")}
       className="h-8 rounded-full"
+      open={open}
+      onOpenChange={onOpenChange}
+      tooltip={shortcutHint ? tField("dueDate") : undefined}
+      shortcutHint={shortcutHint}
     />
   );
 }
@@ -254,11 +300,14 @@ export function ObjectiveCompact({
   value,
   objectives,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint,
 }: {
   value: string | null;
   objectives: Objective[];
   onChange: (v: string | null) => void;
-}) {
+} & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
@@ -275,6 +324,9 @@ export function ObjectiveCompact({
       options={options}
       noneOption={{ label: tCommon("none") }}
       tooltip={tField("objective")}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       trigger={
         <button type="button" aria-label={t("changeObjectiveAria")} className={PILL}>
           {current ? (
