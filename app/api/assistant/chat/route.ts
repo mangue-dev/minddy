@@ -26,6 +26,7 @@ import {
   processChat,
   type ChatMessage,
 } from "@/lib/server/assistant/loop";
+import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -108,6 +109,10 @@ export async function POST(request: NextRequest) {
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.
   const locale = await getLocale();
+
+  // Where Numo-created issues land without an explicit status — the user's
+  // Account → Preferences choice (defaults to triage).
+  const numoDefaultStatus = resolveNumoDefaultStatus(user.user_metadata);
 
   // Fetch project (only when projectId is provided — project-scoped mode).
   // RLS does the access check: an invisible project reads as not found.
@@ -237,11 +242,11 @@ export async function POST(request: NextRequest) {
       service,
       project,
     });
-    systemPrompt = buildSystemPrompt(promptProject, locale);
+    systemPrompt = buildSystemPrompt(promptProject, locale, numoDefaultStatus);
     activeTools = ASSISTANT_TOOLS;
   } else {
     // ── Global mode ──────────────────────────────────────────────────
-    systemPrompt = buildGlobalSystemPrompt(locale);
+    systemPrompt = buildGlobalSystemPrompt(locale, numoDefaultStatus);
     activeTools = GLOBAL_ASSISTANT_TOOLS;
   }
 
@@ -319,6 +324,7 @@ export async function POST(request: NextRequest) {
           supabase,
           service,
           locale,
+          numoDefaultStatus,
           model,
           conversationId: finalConvId,
         });

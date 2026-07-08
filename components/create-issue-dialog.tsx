@@ -29,6 +29,7 @@ import {
   StatusCompact,
 } from "@/components/issue-compact-fields";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
+import { useAuth } from "@/lib/auth-context";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import type {
   IssueStatus,
@@ -86,6 +87,7 @@ export function CreateIssueDialog({
   initialObjectiveId?: string | null;
 }) {
   const t = useTranslations("IssueUI");
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
@@ -106,16 +108,28 @@ export function CreateIssueDialog({
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const createMoreId = useId();
 
+  // Account preference (Préférences → auto-attribution): pre-fill the assignee
+  // with the creator. Guarded on membership — the assignee picker only lists
+  // this project's members, so only seed when the user actually belongs here.
+  const defaultAssigneeId =
+    user?.user_metadata?.auto_assign_created === true &&
+    members.some((m) => m.user_id === user.id)
+      ? user.id
+      : DEFAULTS.assignee_id;
+
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
-  // that column's status; objective mode reopens it with the objective set).
+  // that column's status; objective mode reopens it with the objective set;
+  // the auto-assign preference seeds the assignee). Re-seeding on
+  // defaultAssigneeId also covers members loading in after the dialog opens.
   useEffect(() => {
     if (!open) return;
     setFields((f) => ({
       ...f,
       status: initialStatus ?? DEFAULTS.status,
       objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+      assignee_id: defaultAssigneeId,
     }));
-  }, [open, initialStatus, initialObjectiveId]);
+  }, [open, initialStatus, initialObjectiveId, defaultAssigneeId]);
 
   const clearContent = () => {
     setTitle("");

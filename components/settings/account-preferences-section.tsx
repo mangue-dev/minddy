@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
   Separator,
+  Switch,
   useTheme,
   cn,
   toast,
@@ -19,6 +20,12 @@ import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { locales, type Locale } from "@/i18n/config";
 import { SettingsSection } from "@/components/settings-shell";
+import { StatusIndicator } from "@/components/issue-indicators";
+import {
+  NUMO_DEFAULT_STATUS_OPTIONS,
+  resolveNumoDefaultStatus,
+  type NumoDefaultStatus,
+} from "@/lib/numo-default-status";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -33,6 +40,7 @@ export function AccountPreferencesSection() {
   const ta = useTranslations("Account");
   const tLang = useTranslations("Language");
   const tNav = useTranslations("Nav");
+  const tStatus = useTranslations("Status");
   const currentLocale = useLocale() as Locale;
   const router = useRouter();
   const { user, updateUser } = useAuth();
@@ -43,6 +51,57 @@ export function AccountPreferencesSection() {
   // Theme is only known client-side; wait for mount before highlighting so the
   // active option doesn't mismatch during hydration.
   useEffect(() => setMounted(true), []);
+
+  // Auto-assign preference lives in user_metadata (like locale). Mirror it into
+  // local state so the switch flips instantly, then reconcile once the account
+  // update resolves (or a Realtime user refresh lands).
+  const [autoAssign, setAutoAssign] = useState(
+    user?.user_metadata?.auto_assign_created === true,
+  );
+  const [savingAutoAssign, setSavingAutoAssign] = useState(false);
+  useEffect(() => {
+    setAutoAssign(user?.user_metadata?.auto_assign_created === true);
+  }, [user]);
+
+  const toggleAutoAssign = async (next: boolean) => {
+    if (!user || savingAutoAssign) return;
+    setAutoAssign(next); // optimistic — revert on failure below
+    setSavingAutoAssign(true);
+    try {
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      await updateUser({ data: { ...meta, auto_assign_created: next } });
+    } catch (e) {
+      setAutoAssign(!next);
+      toast.error((e as Error).message);
+    } finally {
+      setSavingAutoAssign(false);
+    }
+  };
+
+  // Landing status for issues Numo creates (user_metadata, like the two above).
+  const [numoStatus, setNumoStatus] = useState<NumoDefaultStatus>(
+    resolveNumoDefaultStatus(user?.user_metadata),
+  );
+  const [savingNumoStatus, setSavingNumoStatus] = useState(false);
+  useEffect(() => {
+    setNumoStatus(resolveNumoDefaultStatus(user?.user_metadata));
+  }, [user]);
+
+  const changeNumoStatus = async (next: NumoDefaultStatus) => {
+    if (!user || savingNumoStatus || next === numoStatus) return;
+    const prev = numoStatus;
+    setNumoStatus(next); // optimistic — revert on failure below
+    setSavingNumoStatus(true);
+    try {
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      await updateUser({ data: { ...meta, numo_default_status: next } });
+    } catch (e) {
+      setNumoStatus(prev);
+      toast.error((e as Error).message);
+    } finally {
+      setSavingNumoStatus(false);
+    }
+  };
 
   const switchLocale = async (locale: Locale) => {
     if (locale === currentLocale || switchingLocale) return;
@@ -115,6 +174,55 @@ export function AccountPreferencesSection() {
             );
           })}
         </div>
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title={ta("autoAssignTitle")}
+        description={ta("autoAssignDesc")}
+      >
+        <div className="flex items-center gap-3">
+          <Switch
+            id="account-auto-assign"
+            checked={autoAssign}
+            onCheckedChange={(v) => void toggleAutoAssign(v)}
+            disabled={savingAutoAssign || !user}
+          />
+          <label
+            htmlFor="account-auto-assign"
+            className="cursor-pointer text-sm text-foreground"
+          >
+            {ta("autoAssignLabel")}
+          </label>
+        </div>
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title={ta("numoStatusTitle")}
+        description={ta("numoStatusDesc")}
+      >
+        <Select
+          value={numoStatus}
+          onValueChange={(v) => void changeNumoStatus(v as NumoDefaultStatus)}
+          disabled={savingNumoStatus || !user}
+        >
+          <SelectTrigger id="account-numo-status" className="max-w-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {NUMO_DEFAULT_STATUS_OPTIONS.map((s) => (
+              <SelectItem key={s} value={s}>
+                <span className="flex items-center gap-2">
+                  <StatusIndicator status={s} className="size-4" />
+                  {tStatus(s)}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </SettingsSection>
     </>
   );

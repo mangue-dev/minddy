@@ -12,6 +12,10 @@ import {
   type NotificationRow,
 } from "@/lib/server/notifications";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import {
+  resolveNumoDefaultStatus,
+  type NumoDefaultStatus,
+} from "@/lib/numo-default-status";
 import { executeTool } from "./execute-tool";
 import { ASSISTANT_TOOLS } from "./tools";
 import {
@@ -218,6 +222,10 @@ export async function runCommentMention({
       supabase,
       service,
       locale,
+      // Landing status for issues Numo creates here (Account → Preferences).
+      numoDefaultStatus: resolveNumoDefaultStatus(
+        users.get(actorId)?.user_metadata
+      ),
       onTool: (name) => void setDisplay({ assistant_tool: name }),
       onText: (partial) =>
         void setDisplay({ assistant_tool: null, body: partial }),
@@ -278,6 +286,7 @@ async function runLoop(
     supabase: SupabaseClient;
     service: SupabaseClient;
     locale: string;
+    numoDefaultStatus: NumoDefaultStatus;
     onTool: (name: string) => void;
     onText: (partial: string) => void;
   }
@@ -410,6 +419,7 @@ async function runLoop(
           supabase: ctx.supabase,
           service: ctx.service,
           locale: ctx.locale,
+          numoDefaultStatus: ctx.numoDefaultStatus,
         });
         messages.push({
           role: "tool",

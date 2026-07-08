@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { AssistantPageContext } from "@/lib/assistant-types";
+import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 
 // ── System prompt builders ─────────────────────────────────────────────
 
@@ -69,7 +70,10 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - onglet 'my' = personal view (My issues tab, implicitly filtered on the current user);
   onglet 'all' = shared view visible to the whole project.`;
 
-export function buildSharedRules(locale: string): string {
+export function buildSharedRules(
+  locale: string,
+  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
+): string {
   return `## Rules
 - Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics (é, è, ê, à, ù, ç, etc.). Never omit accents. The word for an issue is « ticket »" : "English"}.
 - Your actions run DIRECTLY and are attributed to the user — there is no undo. Every change is
@@ -81,7 +85,7 @@ export function buildSharedRules(locale: string): string {
   "refuse les doublons du triage"). Broader requests — improve, summarize, estimate, assign,
   categorize, "clean up", "review this issue" — do NOT imply a status change: do what was asked
   and leave the status untouched (you may SUGGEST a status change in your reply instead).
-- Issues you create land in 'triage' by default for human validation. Only pass an explicit
+- Issues you create land in '${defaultStatus}' by default${defaultStatus === "triage" ? " for human validation" : " (the user's chosen landing status)"}. Only pass an explicit
   status to create_issue when the user clearly asked for one ("crée-la directement en backlog").
 - When you create an issue, fill every field you can justify — ALWAYS estimate priority (from
   the urgency/impact wording) and effort (t-shirt size, from the apparent scope of the work),
@@ -114,7 +118,8 @@ function formatStatusCounts(counts: Record<string, number>): string {
 
 export function buildSystemPrompt(
   project: PromptProjectContext,
-  locale: string
+  locale: string,
+  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
 ): string {
   const memberLines =
     project.members
@@ -155,10 +160,13 @@ ${categoryLines}
 
 ${VOCABULARY_BLOCK}
 
-${buildSharedRules(locale)}`;
+${buildSharedRules(locale, defaultStatus)}`;
 }
 
-export function buildGlobalSystemPrompt(locale: string): string {
+export function buildGlobalSystemPrompt(
+  locale: string,
+  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
+): string {
   return `You are Numo, the AI assistant for minddy, a lightweight issue tracker (projects, kanban issues, objectives, saved views).
 You help users create, find and edit issues, triage, assign work, comment, and configure kanban views — through your tools, in natural language.
 
@@ -171,7 +179,7 @@ You are running in **global mode** — not tied to any specific project.
 
 ${VOCABULARY_BLOCK}
 
-${buildSharedRules(locale)}`;
+${buildSharedRules(locale, defaultStatus)}`;
 }
 
 export interface CommentPromptIssue {

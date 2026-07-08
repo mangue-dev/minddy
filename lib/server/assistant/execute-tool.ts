@@ -18,7 +18,7 @@ import {
   type ReadContext,
 } from "@/lib/server/issue-reads";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { isStatus } from "@/lib/issue-validation";
+import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -35,6 +35,9 @@ export interface ToolContext {
   /** Service client (auth admin lookups). */
   service: SupabaseClient;
   locale: string;
+  /** Landing status for issues Numo creates without an explicit status —
+      the user's Account → Preferences choice. Defaults to 'triage'. */
+  numoDefaultStatus?: IssueStatusValue;
 }
 
 export interface ToolExecution {
@@ -170,9 +173,12 @@ export async function executeTool(
 
       // ── Write tools ───────────────────────────────────────────────────
       case "create_issue": {
-        // Without an explicit status the issue lands in triage — the human
-        // validation gate for assistant-created issues (plan.md §10).
-        const status = isStatus(args.status) ? args.status : "triage";
+        // Without an explicit status the issue lands in the user's configured
+        // Numo default (triage unless changed in Account → Preferences) — the
+        // human validation gate for assistant-created issues (plan.md §10).
+        const status = isStatus(args.status)
+          ? args.status
+          : (ctx.numoDefaultStatus ?? "triage");
         const result = await createIssueForProject({
           projectId,
           actorId: ctx.userId,
