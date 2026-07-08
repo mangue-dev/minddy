@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId } from "react";
-import { getSupabase } from "./supabase";
+import { useCallback } from "react";
 import {
   createCategoryApi,
   deleteCategoryApi,
@@ -15,35 +14,12 @@ const categoriesKey = (projectId: string) => ["categories", projectId] as const;
 
 export function useCategoriesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
-  const channelId = useId();
 
   const { data, isLoading } = useQuery({
     queryKey: categoriesKey(projectId ?? ""),
     queryFn: () => fetchCategoriesApi(projectId as string),
     enabled: !!projectId,
   });
-
-  useEffect(() => {
-    if (!projectId) return;
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`categories:${projectId}:${channelId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "categories",
-          filter: `project_id=eq.${projectId}`,
-        },
-        () =>
-          void queryClient.invalidateQueries({ queryKey: categoriesKey(projectId) })
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient, projectId, channelId]);
 
   const invalidate = useCallback(() => {
     if (projectId) {

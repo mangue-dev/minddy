@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId } from "react";
-import { getSupabase } from "./supabase";
+import { useCallback } from "react";
 import { useAuth } from "./auth-context";
 import {
   createProjectApi,
@@ -25,56 +24,20 @@ export interface UseProjectsResult {
 }
 
 /**
- * Source of truth for the project list. Mount ONCE (via ProjectsProvider) so the
- * Realtime bridge isn't duplicated. One channel per table — namespaced by a
- * per-mount id, since `supabase.channel(name)` is a singleton per name.
+ * Source of truth for the project list (mounted once via ProjectsProvider).
+ * Cross-client freshness comes from the central realtime bridge
+ * (lib/realtime-provider.tsx) invalidating ["projects"].
  */
 export function useProjectsQuery(): UseProjectsResult {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const channelId = useId();
 
   const { data, isLoading, error } = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: fetchProjectsApi,
     enabled: !!userId,
   });
-
-  useEffect(() => {
-    if (!userId) return;
-    const supabase = getSupabase();
-    const invalidate = () =>
-      void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
-
-    const projectsChannel = supabase
-      .channel(`projects:${channelId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "projects" },
-        invalidate
-      )
-      .subscribe();
-
-    const membersChannel = supabase
-      .channel(`project-members:${channelId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "project_members",
-          filter: `user_id=eq.${userId}`,
-        },
-        invalidate
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(projectsChannel);
-      void supabase.removeChannel(membersChannel);
-    };
-  }, [queryClient, userId, channelId]);
 
   const createProject = useCallback(
     async (input: CreateProjectInput) => {

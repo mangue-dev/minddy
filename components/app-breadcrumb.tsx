@@ -15,11 +15,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
-
-function projectIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/projects\/([^/]+)/);
-  return match ? match[1] : null;
-}
+import { projectIdFromPath } from "@/lib/project-id-from-path";
 
 /** The section translation key for the current project route (drives the last crumb). */
 function sectionKeyFor(pathname: string): string | null {

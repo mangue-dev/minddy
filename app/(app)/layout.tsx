@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { AuthProvider } from "@/lib/auth-context";
 import { AppQueryProvider } from "@/lib/query-provider";
+import { RealtimeProvider } from "@/lib/realtime-provider";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
@@ -18,13 +19,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AppQueryProvider>
-        <ProjectsProvider>
-          <AssistantPanelProvider>
-            <AppShellChrome>{children}</AppShellChrome>
-            <AssistantPanel />
-            <AssistantFab />
-          </AssistantPanelProvider>
-        </ProjectsProvider>
+        <RealtimeProvider>
+          <ProjectsProvider>
+            <AssistantPanelProvider>
+              <AppShellChrome>{children}</AppShellChrome>
+              <AssistantPanel />
+              <AssistantFab />
+            </AssistantPanelProvider>
+          </ProjectsProvider>
+        </RealtimeProvider>
       </AppQueryProvider>
     </AuthProvider>
   );

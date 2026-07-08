@@ -13,12 +13,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import type { AssistantPageContext } from "@/lib/assistant-types";
-
-/** Project id derived from the current URL (`/projects/[id]/…`), else null. */
-function projectIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/projects\/([^/]+)/);
-  return match ? match[1] : null;
-}
+import { projectIdFromPath } from "@/lib/project-id-from-path";
 
 export interface OpenAssistantOptions {
   /**

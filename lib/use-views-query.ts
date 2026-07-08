@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId } from "react";
-import { getSupabase } from "./supabase";
+import { useCallback } from "react";
 import {
   createViewApi,
   deleteViewApi,
@@ -15,34 +14,12 @@ const viewsKey = (projectId: string) => ["views", projectId] as const;
 
 export function useViewsQuery(projectId: string | null) {
   const queryClient = useQueryClient();
-  const channelId = useId();
 
   const { data, isLoading } = useQuery({
     queryKey: viewsKey(projectId ?? ""),
     queryFn: () => fetchViewsApi(projectId as string),
     enabled: !!projectId,
   });
-
-  useEffect(() => {
-    if (!projectId) return;
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`views:${projectId}:${channelId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "views",
-          filter: `project_id=eq.${projectId}`,
-        },
-        () => void queryClient.invalidateQueries({ queryKey: viewsKey(projectId) })
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient, projectId, channelId]);
 
   const invalidate = useCallback(() => {
     if (projectId) {

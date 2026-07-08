@@ -38,11 +38,7 @@ import { NewMenu } from "@/components/new-menu";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import { AppSidebar } from "@/components/app-sidebar";
 import type { Project } from "@/lib/types";
-
-function projectIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/projects\/([^/]+)/);
-  return match ? match[1] : null;
-}
+import { projectIdFromPath } from "@/lib/project-id-from-path";
 
 /** Right-aligned project tag shown on palette rows (orb + name), à la AutoKap. */
 function projectChip(project: Project) {

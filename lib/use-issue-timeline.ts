@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useMemo } from "react";
-import { getSupabase } from "./supabase";
+import { useCallback, useMemo } from "react";
 import {
   addCommentApi,
   deleteCommentApi,
@@ -19,10 +18,13 @@ export type TimelineItem =
 const commentsKey = (issueId: string) => ["comments", issueId] as const;
 const eventsKey = (issueId: string) => ["events", issueId] as const;
 
-/** Comments + activity events for one issue, merged into a chronological timeline. */
+/**
+ * Comments + activity events for one issue, merged into a chronological
+ * timeline. Live updates (e.g. Numo replying) come from the central realtime
+ * bridge (lib/realtime-provider.tsx) invalidating ["comments"|"events", issueId].
+ */
 export function useIssueTimeline(issueId: string | null) {
   const queryClient = useQueryClient();
-  const channelId = useId();
 
   const { data: comments } = useQuery({
     queryKey: commentsKey(issueId ?? ""),
@@ -34,31 +36,6 @@ export function useIssueTimeline(issueId: string | null) {
     queryFn: () => fetchEventsApi(issueId as string),
     enabled: !!issueId,
   });
-
-  useEffect(() => {
-    if (!issueId) return;
-    const supabase = getSupabase();
-    const commentsCh = supabase
-      .channel(`comments:${issueId}:${channelId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "comments", filter: `issue_id=eq.${issueId}` },
-        () => void queryClient.invalidateQueries({ queryKey: commentsKey(issueId) })
-      )
-      .subscribe();
-    const eventsCh = supabase
-      .channel(`events:${issueId}:${channelId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "issue_events", filter: `issue_id=eq.${issueId}` },
-        () => void queryClient.invalidateQueries({ queryKey: eventsKey(issueId) })
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(commentsCh);
-      void supabase.removeChannel(eventsCh);
-    };
-  }, [queryClient, issueId, channelId]);
 
   const items = useMemo<TimelineItem[]>(() => {
     // Threads: replies (parent_id = root comment) attach under their root;

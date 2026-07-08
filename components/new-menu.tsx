@@ -11,11 +11,7 @@ import {
 } from "mangue-ui";
 import { ChevronDown, ListTodo, FolderPlus, Target } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
-
-function projectIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/projects\/([^/]+)/);
-  return match ? match[1] : null;
-}
+import { projectIdFromPath } from "@/lib/project-id-from-path";
 
 /** Header "Nouveau" primary button → create dropdown (issue / project / objective). */
 export function NewMenu() {

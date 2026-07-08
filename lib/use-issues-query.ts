@@ -1,9 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "mangue-ui";
-import { getSupabase } from "./supabase";
 import {
   createIssueApi,
   deleteIssueApi,
@@ -15,9 +14,10 @@ import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
 
 const issuesKey = (projectId: string) => ["issues", projectId] as const;
 
+// Freshness across clients (Numo, MCP, other members) comes from the central
+// realtime bridge (lib/realtime-provider.tsx) invalidating ["issues", projectId].
 export function useIssuesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
-  const channelId = useId();
 
   // Per-issue debounce for category writes (see setCategories).
   const catTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -28,27 +28,6 @@ export function useIssuesQuery(projectId: string | null) {
     queryFn: () => fetchIssuesApi(projectId as string),
     enabled: !!projectId,
   });
-
-  useEffect(() => {
-    if (!projectId) return;
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`issues:${projectId}:${channelId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "issues",
-          filter: `project_id=eq.${projectId}`,
-        },
-        () => void queryClient.invalidateQueries({ queryKey: issuesKey(projectId) })
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient, projectId, channelId]);
 
   const invalidate = useCallback(() => {
     if (projectId) {
