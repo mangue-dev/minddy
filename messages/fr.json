@@ -319,7 +319,16 @@
     "cancelInvitationAria": "Annuler l'invitation"
   },
   "Meta": {
-    "description": "Application de tickets construite sur mangue-ui."
+    "description": "Un gestionnaire de tickets minimaliste.",
+    "home": "Accueil",
+    "inbox": "Boîte de réception",
+    "settings": "Paramètres",
+    "signIn": "Connexion",
+    "triage": "Triage",
+    "objectives": "Objectifs",
+    "myIssues": "Mes tickets",
+    "projectSettings": "Paramètres du projet",
+    "project": "Projet"
   },
   "Nav": {
     "goTo": "Aller à",

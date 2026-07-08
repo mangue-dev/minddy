@@ -319,7 +319,16 @@
     "cancelInvitationAria": "Cancel invitation"
   },
   "Meta": {
-    "description": "Ticketing app built on mangue-ui."
+    "description": "A minimal issue tracker.",
+    "home": "Home",
+    "inbox": "Inbox",
+    "settings": "Settings",
+    "signIn": "Sign in",
+    "triage": "Triage",
+    "objectives": "Objectives",
+    "myIssues": "My Issues",
+    "projectSettings": "Project settings",
+    "project": "Project"
   },
   "Nav": {
     "goTo": "Go to",

@@ -17,8 +17,14 @@ const instrumentSerif = Instrument_Serif({
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Meta");
   return {
-    title: "minddy",
+    // `default` applies to pages without their own title; `template` wraps
+    // per-page titles set by nested (server) layouts, e.g. "Inbox · minddy".
+    title: { default: "minddy", template: "%s · minddy" },
     description: t("description"),
+    // Renders <meta name="apple-mobile-web-app-title" content="minddy" />.
+    // The favicon/icon/manifest tags are auto-wired from the files in app/
+    // (favicon.ico, icon0.svg, icon1.png, apple-icon.png, manifest.json).
+    appleWebApp: { title: "minddy" },
   };
 }
 

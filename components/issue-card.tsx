@@ -637,14 +637,23 @@ export function IssueCard({
     null
   );
   const copyPrompt = async () => {
-    const prompt = buildIssuePrompt({ issue, projectId, projectKey });
-    await navigator.clipboard.writeText(prompt);
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
     // désactivable dans Compte → Préférences). On n'avance que les statuts
     // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
     const autoStart =
       resolvePromptCopyAutoStart(user?.user_metadata) &&
       shouldAutoStartOnPromptCopy(issue.status);
+    // Le XML copié doit refléter l'état RÉEL après déplacement : si on passe le
+    // ticket « En cours », le prompt le décrit déjà `in_progress`, pas l'ancien.
+    const promptIssue = autoStart
+      ? { ...issue, status: "in_progress" as const }
+      : issue;
+    const prompt = buildIssuePrompt({
+      issue: promptIssue,
+      projectId,
+      projectKey,
+    });
+    await navigator.clipboard.writeText(prompt);
     if (autoStart) {
       onUpdateIssue(issue.id, { status: "in_progress" });
       toast.success(t("promptCopiedMoved"));
