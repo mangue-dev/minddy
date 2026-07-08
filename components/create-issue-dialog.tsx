@@ -29,6 +29,7 @@ import {
   StatusCompact,
 } from "@/components/issue-compact-fields";
 import {
+  KEY_FOR_FIELD,
   SHORTCUT_KEYS,
   type ShortcutField,
 } from "@/components/issue-field-shortcuts";
@@ -57,12 +58,6 @@ const DEFAULTS = {
   objective_id: null as string | null,
   due_date: null as string | null,
 };
-
-// Field → uppercase shortcut key, derived from the shared SHORTCUT_KEYS map so
-// the tooltip badges never drift from the keys the listener actually handles.
-const KEY_FOR_FIELD = Object.fromEntries(
-  Object.entries(SHORTCUT_KEYS).map(([key, field]) => [field, key.toUpperCase()]),
-) as Record<ShortcutField, string>;
 
 export function CreateIssueDialog({
   open,

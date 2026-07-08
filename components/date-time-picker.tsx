@@ -10,6 +10,7 @@ import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { enUS, fr } from "react-day-picker/locale";
 import {
+  Kbd,
   Popover,
   PopoverAnchor,
   PopoverContent,
@@ -273,11 +274,7 @@ export function DateTimePicker({
       {popover}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltip}
-        {shortcutHint && (
-          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-            {shortcutHint}
-          </kbd>
-        )}
+        {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
       </TooltipContent>
     </Tooltip>
   );

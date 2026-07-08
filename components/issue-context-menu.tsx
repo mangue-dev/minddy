@@ -6,7 +6,7 @@
 // (d'où la recherche dès maintenant).
 
 import * as React from "react";
-import { CommandGroup, CommandItem } from "mangue-ui";
+import { CommandGroup, CommandItem, Kbd } from "mangue-ui";
 import { CommandAnchor } from "@/components/command-anchor";
 
 export interface ContextMenuAction {
@@ -46,9 +46,9 @@ export function IssueContextMenu({
             {action.icon}
             <span className="truncate">{action.label}</span>
             {action.shortcut && (
-              <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <Kbd size="sm" className="ml-auto">
                 {action.shortcut}
-              </kbd>
+              </Kbd>
             )}
           </CommandItem>
         ))}

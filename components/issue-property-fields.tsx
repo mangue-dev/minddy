@@ -22,6 +22,7 @@ import {
 } from "@/components/issue-indicators";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import { KEY_FOR_FIELD } from "@/components/issue-field-shortcuts";
 import type { Category, Member, Objective } from "@/lib/types";
 
 /* Borderless key/value fields for the issue panel — the value control has no
@@ -64,6 +65,7 @@ export function StatusValue({
   onChange: (v: IssueStatus) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tStatus = useTranslations("Status");
   const options: PickerOption[] = ALL_STATUSES.map((s) => ({
     value: s.value,
@@ -76,6 +78,8 @@ export function StatusValue({
       onChange={(v) => onChange(v as IssueStatus)}
       options={options}
       align="end"
+      tooltip={tField("status")}
+      shortcutHint={KEY_FOR_FIELD.status}
       trigger={
         <button type="button" aria-label={t("changeStatusAria")} className={TRIGGER}>
           <StatusIndicator status={value} />
@@ -93,6 +97,7 @@ export function PriorityValue({
   onChange: (v: IssuePriority) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
   const options: PickerOption[] = PRIORITIES.map((p) => ({
     value: p.value,
@@ -105,6 +110,8 @@ export function PriorityValue({
       onChange={(v) => onChange(v as IssuePriority)}
       options={options}
       align="end"
+      tooltip={tField("priority")}
+      shortcutHint={KEY_FOR_FIELD.priority}
       trigger={
         <button type="button" aria-label={t("changePriorityAria")} className={TRIGGER}>
           <PriorityIndicator priority={value} />
@@ -122,6 +129,7 @@ export function EffortValue({
   onChange: (v: IssueEffort | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
@@ -134,6 +142,8 @@ export function EffortValue({
       options={options}
       noneOption={{ label: tCommon("none") }}
       align="end"
+      tooltip={tField("effort")}
+      shortcutHint={KEY_FOR_FIELD.effort}
       trigger={
         <button type="button" aria-label={t("changeEffortAria")} className={TRIGGER}>
           {value ? (
@@ -179,6 +189,8 @@ export function AssigneeValue({
       options={options}
       noneOption={{ label: tField("unassigned") }}
       align="end"
+      tooltip={tField("assignee")}
+      shortcutHint={KEY_FOR_FIELD.assignee}
       trigger={
         <button type="button" aria-label={t("changeAssigneeAria")} className={TRIGGER}>
           {current ? (
@@ -210,6 +222,7 @@ export function CategoryValue({
   onChange: (ids: string[]) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const selected = categories.filter((c) => value.includes(c.id));
   const first = selected[0];
   const extra = selected.length - 1;
@@ -224,6 +237,8 @@ export function CategoryValue({
       onChange={onChange}
       options={options}
       align="end"
+      tooltip={tField("categories")}
+      shortcutHint={KEY_FOR_FIELD.category}
       emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
       trigger={
         <button type="button" aria-label={t("editCategoriesAria")} className={TRIGGER}>
@@ -252,6 +267,7 @@ export function DueDateValue({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   return (
     <DateTimePicker
       variant="value"
@@ -259,6 +275,8 @@ export function DueDateValue({
       onChange={onChange}
       placeholder={t("noneFem")}
       ariaLabel={t("changeDueDateAria")}
+      tooltip={tField("dueDate")}
+      shortcutHint={KEY_FOR_FIELD.dueDate}
     />
   );
 }
@@ -273,6 +291,7 @@ export function ObjectiveValue({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const current = objectives.find((o) => o.id === value) ?? null;
   const options: PickerOption[] = objectives.map((o) => ({
@@ -287,6 +306,8 @@ export function ObjectiveValue({
       options={options}
       noneOption={{ label: tCommon("none") }}
       align="end"
+      tooltip={tField("objective")}
+      shortcutHint={KEY_FOR_FIELD.objective}
       trigger={
         <button type="button" aria-label={t("changeObjectiveAria")} className={TRIGGER}>
           {current ? (

@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  Kbd,
 } from "mangue-ui";
 import { ChevronDown, ListTodo, FolderPlus, Target } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
@@ -38,6 +39,9 @@ export function NewMenu() {
         >
           <ListTodo />
           {t("newIssue", { entity: ti("entity") })}
+          <Kbd size="sm" className="ml-auto">
+            C
+          </Kbd>
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!projectId}

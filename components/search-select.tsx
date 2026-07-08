@@ -15,6 +15,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  Kbd,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -109,11 +110,7 @@ function PickerShell({
       {popover}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltip}
-        {shortcutHint && (
-          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-            {shortcutHint}
-          </kbd>
-        )}
+        {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
       </TooltipContent>
     </Tooltip>
   );

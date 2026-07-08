@@ -63,6 +63,13 @@ export const SHORTCUT_KEYS: Record<string, ShortcutField> = {
   o: "objective",
 };
 
+/** Field → uppercase shortcut key badge (the inverse of `SHORTCUT_KEYS`). The
+ *  single source for the `<kbd>` hints shown in picker tooltips, so a badge can
+ *  never drift from the key the listener actually handles. */
+export const KEY_FOR_FIELD = Object.fromEntries(
+  Object.entries(SHORTCUT_KEYS).map(([key, field]) => [field, key.toUpperCase()]),
+) as Record<ShortcutField, string>;
+
 export interface ShortcutMenuState {
   field: ShortcutField;
   /** Viewport coordinates to anchor the picker at. */

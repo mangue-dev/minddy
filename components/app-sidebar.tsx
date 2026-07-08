@@ -17,6 +17,7 @@ import {
   toast,
   cn,
   Kbd,
+  KbdSequence,
   type NavItem,
   type NavSection,
 } from "mangue-ui";
@@ -78,6 +79,7 @@ function SidebarRow({
 }) {
   const Icon = item.icon;
   const active = item.active;
+  const tk = useTranslations("Keyboard");
   // While a G-chord is armed, surface this row's second key as a Kbd hint
   // (AutoKap-style) — takes the trailing slot over the badge for the moment.
   const chordPrefix = useChordPrefix();
@@ -143,7 +145,16 @@ function SidebarRow({
     return (
       <Tooltip>
         <TooltipTrigger asChild>{row}</TooltipTrigger>
-        <TooltipContent side="right">{item.tooltip ?? item.label}</TooltipContent>
+        <TooltipContent side="right" className="flex items-center gap-2">
+          <span>{item.tooltip ?? item.label}</span>
+          {item.shortcut && (
+            <KbdSequence
+              keys={[[CHORD_PREFIX.toUpperCase()], [item.shortcut]]}
+              size="sm"
+              separator={tk("then")}
+            />
+          )}
+        </TooltipContent>
       </Tooltip>
     );
   }

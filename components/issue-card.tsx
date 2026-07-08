@@ -49,6 +49,7 @@ import {
 } from "@/components/issue-context-menu";
 import {
   IssueShortcutMenu,
+  KEY_FOR_FIELD,
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
@@ -112,6 +113,7 @@ function StatusPick({
       options={options}
       align="start"
       tooltip={tField("status")}
+      shortcutHint={KEY_FOR_FIELD.status}
       stopPropagation
       trigger={
         <button
@@ -151,6 +153,7 @@ function PriorityPick({
       options={options}
       align="start"
       tooltip={tField("priority")}
+      shortcutHint={KEY_FOR_FIELD.priority}
       stopPropagation
       trigger={
         <button
@@ -198,6 +201,7 @@ function EffortPick({
       noneOption={{ label: tCommon("none") }}
       align="start"
       tooltip={tField("effort")}
+      shortcutHint={KEY_FOR_FIELD.effort}
       stopPropagation
       trigger={
         <button
@@ -260,6 +264,7 @@ function CategoryPick({
       options={options}
       align="end"
       tooltip={tField("categories")}
+      shortcutHint={KEY_FOR_FIELD.category}
       stopPropagation
       emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
       trigger={
@@ -326,6 +331,7 @@ function AssigneePick({
       noneOption={{ label: tField("unassigned") }}
       align="end"
       tooltip={tField("assignee")}
+      shortcutHint={KEY_FOR_FIELD.assignee}
       stopPropagation
       trigger={
         <button
@@ -350,6 +356,7 @@ function DueDatePick({
   onChange?: (v: string | null) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
   const format = useFormatter();
   const parsed = parseDueDate(value);
   if (!parsed) return null;
@@ -370,6 +377,8 @@ function DueDatePick({
       value={value}
       onChange={onChange}
       ariaLabel={t("changeDueDateAria")}
+      tooltip={tField("dueDate")}
+      shortcutHint={KEY_FOR_FIELD.dueDate}
       stopPropagation
     />
   );
