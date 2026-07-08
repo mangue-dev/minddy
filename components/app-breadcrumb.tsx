@@ -5,13 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
+  Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   cn,
 } from "mangue-ui";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ChevronLeft, Home } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
@@ -129,6 +130,94 @@ function BreadcrumbLevel({
   );
 }
 
+/**
+ * Mobile header (<desktop): the trail collapses to two "temps" — a back button
+ * pointing at the parent level, plus the current level centred (à la AutoKap).
+ * At the project root the current level is the ProjectSwitcher itself.
+ */
+function MobileBreadcrumb({
+  project,
+  section,
+  sectionKey,
+  isInbox,
+  isAccountSettings,
+}: {
+  project: Project | null;
+  section: string | null;
+  sectionKey: string | null;
+  isInbox: boolean;
+  isAccountSettings: boolean;
+}) {
+  const t = useTranslations("Nav");
+  const tc = useTranslations("Common");
+
+  // Resolve the two beats: the parent (back target, shown as its icon — home or
+  // the project orb, like AutoKap) and the current level (centred).
+  const homeIcon = <Home className="size-[18px] shrink-0" />;
+  let backHref: string | null = null;
+  let backIcon: React.ReactNode = null;
+  let current: React.ReactNode;
+
+  if (isInbox) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("inbox")}</CurrentLabel>;
+  } else if (isAccountSettings) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("accountSettings")}</CurrentLabel>;
+  } else if (project) {
+    // The board root ("allIssues") is the project root — show the switcher and
+    // go back up to Home. Nested sections go back to the project root.
+    const atRoot = !section || sectionKey === "allIssues";
+    if (atRoot) {
+      backHref = "/home";
+      backIcon = homeIcon;
+      current = <ProjectSwitcher project={project} />;
+    } else {
+      backHref = `/projects/${project.id}`;
+      backIcon = <ProjectChip project={project} className="size-[18px]" />;
+      current = <CurrentLabel>{section}</CurrentLabel>;
+    }
+  } else {
+    // Home (and any other top-level route): just the current label, no back.
+    current = <CurrentLabel>{t("home")}</CurrentLabel>;
+  }
+
+  return (
+    <div className="flex min-w-0 flex-1 items-center desktop:hidden">
+      <div className="flex min-w-0 flex-1 justify-start">
+        {backHref ? (
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-1 px-2 text-foreground"
+            aria-label={tc("back")}
+          >
+            <Link href={backHref}>
+              <ChevronLeft className="size-4 shrink-0" />
+              {backIcon}
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="flex min-w-0 items-center justify-center">{current}</div>
+
+      <div className="flex-1" />
+    </div>
+  );
+}
+
+function CurrentLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="truncate text-sm font-semibold text-foreground">
+      {children}
+    </span>
+  );
+}
+
 export function AppBreadcrumb() {
   const t = useTranslations("Nav");
   const pathname = usePathname();
@@ -143,39 +232,51 @@ export function AppBreadcrumb() {
   const isAccountSettings = pathname.startsWith("/settings");
 
   return (
-    <nav className="flex min-w-0 items-center gap-2">
-      <Link
-        href="/home"
-        className={cn(
-          "shrink-0 text-sm font-medium transition-colors",
-          isHome ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-        )}
-      >
-        {t("home")}
-      </Link>
+    <>
+      {/* Desktop (≥1200px): the full animated trail. */}
+      <nav className="hidden min-w-0 items-center gap-2 desktop:flex">
+        <Link
+          href="/home"
+          className={cn(
+            "shrink-0 text-sm font-medium transition-colors",
+            isHome ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {t("home")}
+        </Link>
 
-      <BreadcrumbLevel show={isInbox} levelKey="inbox">
-        <span className="text-sm font-medium text-foreground">{t("inbox")}</span>
-      </BreadcrumbLevel>
+        <BreadcrumbLevel show={isInbox} levelKey="inbox">
+          <span className="text-sm font-medium text-foreground">{t("inbox")}</span>
+        </BreadcrumbLevel>
 
-      <BreadcrumbLevel show={isAccountSettings} levelKey="account-settings">
-        <span className="text-sm font-medium text-foreground">
-          {t("accountSettings")}
-        </span>
-      </BreadcrumbLevel>
+        <BreadcrumbLevel show={isAccountSettings} levelKey="account-settings">
+          <span className="text-sm font-medium text-foreground">
+            {t("accountSettings")}
+          </span>
+        </BreadcrumbLevel>
 
-      <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
-        {project && <ProjectSwitcher project={project} />}
-      </BreadcrumbLevel>
+        <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
+          {project && <ProjectSwitcher project={project} />}
+        </BreadcrumbLevel>
 
-      <BreadcrumbLevel
-        show={!!(project && section)}
-        levelKey={`section-${sectionKey ?? ""}`}
-      >
-        <span className="truncate text-sm font-medium text-foreground">
-          {section}
-        </span>
-      </BreadcrumbLevel>
-    </nav>
+        <BreadcrumbLevel
+          show={!!(project && section)}
+          levelKey={`section-${sectionKey ?? ""}`}
+        >
+          <span className="truncate text-sm font-medium text-foreground">
+            {section}
+          </span>
+        </BreadcrumbLevel>
+      </nav>
+
+      {/* Mobile (<1200px): two-stage back + current level. */}
+      <MobileBreadcrumb
+        project={project}
+        section={section}
+        sectionKey={sectionKey}
+        isInbox={isInbox}
+        isAccountSettings={isAccountSettings}
+      />
+    </>
   );
 }

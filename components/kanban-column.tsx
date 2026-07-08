@@ -57,7 +57,7 @@ export function KanbanColumn({
   );
 
   return (
-    <div className="flex w-[22rem] shrink-0 flex-col">
+    <div className="flex w-full shrink-0 snap-center flex-col desktop:w-[22rem]">
       <div className="mb-2 flex items-center gap-2 px-1">
         <StatusIndicator status={status.value} className="size-4" />
         <h2 className="text-sm font-semibold">{ts(status.value)}</h2>

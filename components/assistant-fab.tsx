@@ -37,9 +37,10 @@ export function AssistantFab() {
           exit={{ opacity: 0, y: 6, scale: 0.92 }}
           transition={{ ...transitions.gentle, delay: 0.35 }}
           className={cn(
-            // Hidden on mobile — the panel is full-bleed there and the FAB
-            // would overlap the mobile nav.
-            "max-md:hidden",
+            // Hidden below the 1200px mobile cutover — there the assistant is
+            // reached from the mobile navbar's Numo button (single entry point),
+            // and the FAB would overlap the bottom nav.
+            "max-desktop:hidden",
             "fixed z-40",
             "right-4 bottom-4 md:right-6 md:bottom-6",
             "pb-[env(safe-area-inset-bottom)]",

@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
   closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { toast } from "mangue-ui";
+import { cn, toast } from "mangue-ui";
 import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { Category, Issue, IssueUpdateInput, Member, Objective, ViewSort } from "@/lib/types";
@@ -96,12 +97,52 @@ export function KanbanBoard({
   const activeParent =
     activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
 
+  // MouseSensor (not PointerSensor) so drag-and-drop is mouse-only: on touch the
+  // board is a swipeable stack of full-width columns and DnD would fight the
+  // scroll, so touch never starts a drag (status changes go through the card →
+  // side panel instead). Desktop mouse drag is unchanged.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
   );
 
   // Fade the left/right edges of the board while more columns lie off-screen.
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>("x");
+
+  // Mobile: track which column is snapped into view to drive the dot indicator.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const setScrollerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollerRef.current = node;
+      fadeRef(node);
+    },
+    [fadeRef]
+  );
+  const [activeColumn, setActiveColumn] = useState(0);
+  const columnCount = columns.length;
+
+  const updateActiveColumn = useCallback(
+    (el: HTMLDivElement) => {
+      if (el.scrollWidth <= el.clientWidth + 1) {
+        setActiveColumn(0);
+        return;
+      }
+      const stride = el.scrollWidth / columnCount;
+      const idx = Math.min(
+        columnCount - 1,
+        Math.max(0, Math.round(el.scrollLeft / stride))
+      );
+      setActiveColumn(idx);
+    },
+    [columnCount]
+  );
+
+  const scrollToColumn = useCallback((index: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    // The scroller's direct children are exactly the columns.
+    const stride = el.scrollWidth / (el.children.length || 1);
+    el.scrollTo({ left: index * stride, behavior: "smooth" });
+  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -162,30 +203,41 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div
-        ref={fadeRef}
-        onScroll={scrollProps.onScroll}
-        style={scrollProps.style}
-        className="flex h-full gap-3 overflow-x-auto px-6"
-      >
-        {columns.map(({ status, items }) => (
-          <KanbanColumn
-            key={status.value}
-            status={status}
-            issues={items}
-            issueMap={issueMap}
-            projectId={projectId}
-            projectKey={projectKey}
-            memberMap={memberMap}
-            categoryMap={categoryMap}
-            objectiveMap={objectiveMap}
-            onOpenIssue={onOpenIssue}
-            onOpenPlan={onOpenPlan}
-            onCreateIssue={onCreateIssue}
-            onUpdateIssue={onUpdateIssue}
-            onSetCategories={onSetCategories}
-          />
-        ))}
+      <div className="flex h-full flex-col">
+        {/* Mobile: dots reflect / control the snapped column (one status per swipe). */}
+        <ColumnDots
+          statuses={columns.map((c) => c.status)}
+          active={activeColumn}
+          onSelect={scrollToColumn}
+        />
+        <div
+          ref={setScrollerRef}
+          onScroll={(e) => {
+            scrollProps.onScroll();
+            updateActiveColumn(e.currentTarget);
+          }}
+          style={scrollProps.style}
+          className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6"
+        >
+          {columns.map(({ status, items }) => (
+            <KanbanColumn
+              key={status.value}
+              status={status}
+              issues={items}
+              issueMap={issueMap}
+              projectId={projectId}
+              projectKey={projectKey}
+              memberMap={memberMap}
+              categoryMap={categoryMap}
+              objectiveMap={objectiveMap}
+              onOpenIssue={onOpenIssue}
+              onOpenPlan={onOpenPlan}
+              onCreateIssue={onCreateIssue}
+              onUpdateIssue={onUpdateIssue}
+              onSetCategories={onSetCategories}
+            />
+          ))}
+        </div>
       </div>
 
       {/* dropAnimation={null}: the move is optimistic (moveIssue patches the cache
@@ -209,5 +261,40 @@ export function KanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/**
+ * Mobile-only pagination dots for the swipeable board: one dot per status column,
+ * the active one widened. Tapping a dot scrolls that column into view. Hidden on
+ * desktop (the full board is visible) and when there's only one column.
+ */
+function ColumnDots({
+  statuses,
+  active,
+  onSelect,
+}: {
+  statuses: StatusMeta[];
+  active: number;
+  onSelect: (index: number) => void;
+}) {
+  const ts = useTranslations("Status");
+  if (statuses.length <= 1) return null;
+  return (
+    <div className="flex shrink-0 items-center justify-center gap-1.5 pb-2 desktop:hidden">
+      {statuses.map((status, i) => (
+        <button
+          key={status.value}
+          type="button"
+          aria-label={ts(status.value)}
+          aria-current={i === active}
+          onClick={() => onSelect(i)}
+          className={cn(
+            "h-1.5 rounded-full transition-all",
+            i === active ? "w-4 bg-foreground" : "w-1.5 bg-muted-foreground/30"
+          )}
+        />
+      ))}
+    </div>
   );
 }

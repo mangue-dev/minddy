@@ -693,7 +693,9 @@ export function IssueCard({
         e.stopPropagation();
         setMenuPosition({ x: e.clientX, y: e.clientY });
       }}
-      className={cn("cursor-pointer touch-none", isDragging && "opacity-40")}
+      // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
+      // touch is free to scroll the board/columns natively.
+      className={cn("cursor-pointer", isDragging && "opacity-40")}
     >
       <IssueCardBody
         issue={issue}

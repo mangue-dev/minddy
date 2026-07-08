@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -30,6 +30,9 @@ import {
   type PaletteItem,
 } from "@/components/header-search-pill";
 import { NewMenu } from "@/components/new-menu";
+import { MobileNavActions } from "@/components/mobile-nav-actions";
+import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
+import { ShareFeedbackDialog } from "@/components/share-feedback-dialog";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import {
   AppSidebar,
@@ -361,6 +364,24 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
 
+  // Account/global options (statistics, feedback, theme, sign out). On desktop
+  // they live in the sidebar footer; on mobile they move into the menu sheet +
+  // command palette from a single source so both stay in sync.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const { menuSections: accountSections, commandGroup: accountCommandGroup } =
+    useAccountActions(() => setFeedbackOpen(true));
+
+  // Palette gains the account group (used by the desktop pill too). The mobile
+  // menu sheet gains the account sections so it fully replaces the sidebar.
+  const paletteGroups = useMemo(
+    () => [...commandGroups, accountCommandGroup],
+    [commandGroups, accountCommandGroup]
+  );
+  const mobileMenuSections = useMemo(
+    () => [...sections, ...accountSections],
+    [sections, accountSections]
+  );
+
   return (
     <AppShell
       sidebar={<AppSidebar sections={sections} modeKey={modeKey} />}
@@ -369,16 +390,30 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           className="bg-sidebar backdrop-blur-none"
           left={<AppBreadcrumb />}
           right={
-            <div className="flex items-center gap-2">
-              <HeaderSearchPill groups={commandGroups} />
+            // Desktop only — on mobile, Search moves to the navbar Search button
+            // and "Nouveau" to the navbar "+", so the header collapses to the
+            // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
+            <div className="hidden items-center gap-2 desktop:flex">
+              <HeaderSearchPill groups={paletteGroups} />
               <NewMenu />
             </div>
           }
         />
       }
-      mobileNav={<MobileNav sections={sections} linkComponent={Link} />}
+      mobileNav={
+        <MobileNav
+          sections={mobileMenuSections}
+          commandGroups={paletteGroups}
+          actions={<MobileNavActions />}
+          menuFooter={<MobileMenuFooter />}
+          linkComponent={Link}
+          searchPlaceholder={t("searchPlaceholder")}
+          emptyMessage={t("noResults")}
+        />
+      }
     >
       {children}
+      <ShareFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </AppShell>
   );
 }

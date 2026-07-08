@@ -103,3 +103,23 @@
   div:has(> [data-streamdown="table"]) {
   padding: 0;
 }
+
+/* Mobile bottom nav (mangue-ui <MobileNav>): hide the auto "More" (⋯) menu and
+   its leading hairline divider. Every destination is reachable from the Menu
+   sheet + Search, and Numo / "+" have their own dedicated buttons — the extra
+   overflow menu is redundant. Targets the stable aria-label on the pill. */
+nav[aria-label="Navigation"] button[aria-label="More options"],
+nav[aria-label="Navigation"]
+  span[aria-hidden]:has(+ button[aria-label="More options"]) {
+  display: none;
+}
+
+/* Mobile full-screen search sheet: mangue-ui's <CommandList> ships a default
+   max-height (max-h-72 ≈ 288px) sized for the desktop popover. In the full-
+   screen sheet that squishes the command palette into the top third with a big
+   empty void below — most options end up hidden behind a scroll, so it reads as
+   "incomplete". The sheet's list is the flex-1 one (the desktop pill uses a
+   separate raw cmdk list), so lift the cap there and let flex fill the sheet. */
+[cmdk-list].flex-1 {
+  max-height: none !important;
+}
