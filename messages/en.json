@@ -369,7 +369,10 @@
     "deny": "Cancel",
     "errorTitle": "Authorization request rejected",
     "unknownClient": "Unknown application (invalid client_id). Ask the app to register again.",
-    "invalidRedirect": "The application's redirect address isn't registered — refusing to continue."
+    "invalidRedirect": "The application's redirect address isn't registered — refusing to continue.",
+    "successTitle": "Connected!",
+    "successBody": "Taking you back to {name}…",
+    "successContinue": "Continue to {name}"
   },
   "Objectives": {
     "projectNotFound": "Project not found",

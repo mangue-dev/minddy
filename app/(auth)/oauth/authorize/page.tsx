@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -15,15 +14,16 @@ import {
   validateAuthorizeRequest,
   type AuthorizeParams,
 } from "@/lib/server/oauth/authorize-validation";
-import { getMcpAgent, mapClientNameToAgent } from "@/lib/mcp-agents";
+import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { displayName } from "@/lib/display-name";
+import { OAuthConsentCard } from "@/components/oauth/consent-card";
 
 /**
  * Page de consentement OAuth (server component, layout (auth) minimal).
  * Le middleware force la connexion (redirect /login avec paramètres
  * préservés) ; ici on valide la requête (RFC 6749) et on rend la carte
- * d'autorisation. Client inconnu / redirect_uri non enregistré → carte
- * d'erreur, JAMAIS de redirection (anti open-redirect).
+ * d'autorisation partagée. Client inconnu / redirect_uri non enregistré →
+ * carte d'erreur, JAMAIS de redirection (anti open-redirect).
  */
 
 export const dynamic = "force-dynamic";
@@ -34,29 +34,6 @@ async function publicOrigin(): Promise<string> {
   const proto =
     h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   return `${proto}://${host}`;
-}
-
-/** Logo de l'agent deviné depuis le client_name — jamais le logo_uri fourni
-    par le client (surface d'injection). */
-function AgentLogoStatic({ clientName }: { clientName: string }) {
-  const agentId = mapClientNameToAgent(clientName);
-  if (!agentId) return null;
-  const agent = getMcpAgent(agentId);
-  return (
-    <span className="flex size-12 items-center justify-center rounded-xl border border-border bg-muted/40">
-      {agent.logoDark ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={agent.logo} alt="" className="size-7 dark:hidden" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={agent.logoDark} alt="" className="hidden size-7 dark:block" />
-        </>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={agent.logo} alt="" className="size-7" />
-      )}
-    </span>
-  );
 }
 
 export default async function OAuthAuthorizePage({
@@ -100,18 +77,18 @@ export default async function OAuthAuthorizePage({
 
   if (validation.kind === "fatal") {
     return (
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-md rounded-2xl">
         <CardHeader>
-          <CardTitle className="font-display text-2xl tracking-tight">minddy</CardTitle>
-          <CardDescription>{t("errorTitle")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <CardTitle className="font-display text-xl tracking-tight">
+            {t("errorTitle")}
+          </CardTitle>
+          <CardDescription>
             {validation.reason === "unknown_client"
               ? t("unknownClient")
               : t("invalidRedirect")}
-          </p>
-        </CardContent>
+          </CardDescription>
+        </CardHeader>
+        <CardContent />
       </Card>
     );
   }
@@ -126,48 +103,18 @@ export default async function OAuthAuthorizePage({
   });
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <AgentLogoStatic clientName={client.client_name} />
-          <div className="min-w-0">
-            <CardTitle className="truncate text-lg leading-snug">
-              {t("title", { name: client.client_name })}
-            </CardTitle>
-            <CardDescription>{t("subtitle")}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-          <li>• {t("scopeIssues")}</li>
-          <li>• {t("scopeActAs")}</li>
-        </ul>
-        <p className="text-xs text-muted-foreground">
-          {t("signedInAs", { name: userLabel })}
-        </p>
-        <form method="POST" action="/api/oauth/authorize" className="flex gap-2">
-          <input type="hidden" name="client_id" value={client.client_id} />
-          <input type="hidden" name="redirect_uri" value={redirectUri} />
-          <input type="hidden" name="code_challenge" value={codeChallenge} />
-          <input type="hidden" name="code_challenge_method" value="S256" />
-          <input type="hidden" name="scope" value={scope} />
-          {state !== null && <input type="hidden" name="state" value={state} />}
-          {resource !== null && <input type="hidden" name="resource" value={resource} />}
-          <Button
-            type="submit"
-            name="decision"
-            value="deny"
-            variant="outline"
-            className="flex-1"
-          >
-            {t("deny")}
-          </Button>
-          <Button type="submit" name="decision" value="approve" className="flex-1">
-            {t("authorize")}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <OAuthConsentCard
+      clientName={client.client_name}
+      agentId={mapClientNameToAgent(client.client_name)}
+      userLabel={userLabel}
+      fields={{
+        clientId: client.client_id,
+        redirectUri,
+        codeChallenge,
+        scope,
+        state,
+        resource,
+      }}
+    />
   );
 }

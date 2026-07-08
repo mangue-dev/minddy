@@ -369,7 +369,10 @@
     "deny": "Annuler",
     "errorTitle": "Demande d'autorisation rejetée",
     "unknownClient": "Application inconnue (client_id invalide). Demande à l'application de se réenregistrer.",
-    "invalidRedirect": "L'adresse de retour de l'application n'est pas enregistrée — refus de continuer."
+    "invalidRedirect": "L'adresse de retour de l'application n'est pas enregistrée — refus de continuer.",
+    "successTitle": "Connexion réussie !",
+    "successBody": "Retour vers {name}…",
+    "successContinue": "Continuer vers {name}"
   },
   "Objectives": {
     "projectNotFound": "Projet introuvable",
