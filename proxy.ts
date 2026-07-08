@@ -12,7 +12,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * the AutoKap pattern this is cloned from.
  */
 
-const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico"]);
+// `/icon` = generated favicon route (app/icon.tsx). Unlike the static icon
+// files (icon1.png, apple-icon.png, favicon.ico) it has no extension, so the
+// matcher regex below doesn't exclude it — it must be whitelisted here or the
+// favicon would redirect to /login for logged-out visitors (login/signup pages).
+const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico", "/icon"]);
 // `/api/` is excluded from middleware auth on purpose: route handlers
 // authenticate themselves (getAuthedUser) and must return JSON 401 — never an
 // HTML redirect to /login. `/.well-known/` = découverte OAuth (RFC 8414/9728),

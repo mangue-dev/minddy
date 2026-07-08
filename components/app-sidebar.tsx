@@ -37,6 +37,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { ShareFeedbackDialog } from "@/components/share-feedback-dialog";
 import {
   useChordPrefix,
@@ -64,7 +65,7 @@ function SidebarBrand() {
       aria-label="minddy"
       className="inline-flex items-center px-1 text-sidebar-foreground"
     >
-      <MinddyLogo className="h-6 w-auto" />
+      <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
     </Link>
   );
 }
@@ -448,7 +449,7 @@ export function AppSidebar({
             className="group relative flex size-8 items-center justify-center"
           >
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sidebar-foreground transition-opacity duration-150 group-hover:opacity-0">
-              <MinddyLogo className="h-6 w-auto" />
+              <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
             </span>
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sidebar-foreground/60 opacity-0 transition-opacity duration-150 group-hover:text-sidebar-foreground group-hover:opacity-100">
               <PanelLeftOpen className="h-[18px] w-[18px]" />

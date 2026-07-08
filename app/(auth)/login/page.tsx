@@ -4,9 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Input, Spinner } from "mangue-ui";
+import { Button, Input, Spinner, cn } from "mangue-ui";
 import { Github } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { AuthShader } from "@/components/auth-shader";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
@@ -119,7 +120,9 @@ function LoginForm() {
           aria-label="minddy"
           className="inline-flex w-fit items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <MinddyLogo className="h-7 w-auto text-foreground" />
+          <MinddyLogo
+            className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])}
+          />
           <span className="font-display text-lg font-semibold tracking-tight">
             minddy
           </span>
