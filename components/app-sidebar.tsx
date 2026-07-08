@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
@@ -14,7 +15,6 @@ import {
   TooltipTrigger,
   TooltipContent,
   useTheme,
-  toast,
   cn,
   Kbd,
   KbdSequence,
@@ -340,18 +340,21 @@ function FooterRow({
   label,
   onClick,
   collapsed,
+  active = false,
 }: {
   icon: typeof Megaphone;
   label: string;
   onClick: () => void;
   collapsed: boolean;
+  active?: boolean;
 }) {
   const btn = (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex h-9 items-center rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
+        "flex h-9 items-center rounded-lg text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-foreground",
+        active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         collapsed ? "w-9 justify-center" : "w-full gap-3 px-3.5 text-left",
       )}
     >
@@ -372,6 +375,8 @@ function FooterRow({
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
+  const router = useRouter();
+  const pathname = usePathname();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   return (
     <div className="flex flex-col gap-0.5">
@@ -379,7 +384,8 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         icon={BarChart3}
         label={t("statistics")}
         collapsed={collapsed}
-        onClick={() => toast(t("statisticsComingSoon"))}
+        active={pathname.startsWith("/statistics")}
+        onClick={() => router.push("/statistics")}
       />
       <FooterRow
         icon={Megaphone}

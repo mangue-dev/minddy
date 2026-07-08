@@ -14,6 +14,7 @@ import {
 } from "@/lib/server/issue-events";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
+import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 
 /**
  * Shared issue-update core: validates an untrusted field payload, applies it
@@ -141,7 +142,7 @@ export async function updateIssueFields({
   // and is the baseline we diff into activity events.
   const { data: before } = await service
     .from("issues")
-    .select("*")
+    .select("*, projects(name)")
     .eq("id", issueId)
     .maybeSingle();
   if (!before) {
@@ -213,6 +214,27 @@ export async function updateIssueFields({
     service,
     stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId)
   );
+
+  // Ledger de stats : une contribution "terminée" au nom de l'acteur, seulement
+  // sur la TRANSITION vers done (before !== done). Cette garde suffit à
+  // dédupliquer : canceled/duplicate ne matchent pas, done->done non plus. Un
+  // re-passage done->todo->done rajoute volontairement une contribution (compté
+  // brut dans la heatmap ; le total, lui, déduplique par issue au read).
+  if (updates.status === "done" && before.status !== "done") {
+    const projectName =
+      (before.projects as { name?: string | null } | null)?.name ?? null;
+    const statRow: StatEventRow = {
+      user_id: actorId,
+      kind: "issue_completed",
+      occurred_at: (updates.completed_at as string) ?? new Date().toISOString(),
+      project_id: (before.project_id as string) ?? null,
+      project_name: projectName,
+      issue_id: issueId,
+      issue_number: (before.number as number) ?? null,
+      issue_title: (before.title as string) ?? null,
+    };
+    await insertStatEvents(service, [statRow]);
+  }
 
   // Notify a newly-assigned user (never on self-assign).
   const newAssignee = updates.assignee_id as string | undefined;

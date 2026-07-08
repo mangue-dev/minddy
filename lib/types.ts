@@ -55,6 +55,52 @@ export interface MyNotification {
   actor_name: string | null;
 }
 
+// ── Statistiques utilisateur (MIN-12) ────────────────────────────────────────
+export interface StatsTotals {
+  created: number;
+  completed: number;
+  projects: number;
+}
+
+export interface StatProjectBucket {
+  name: string | null;
+  color: string | null;
+  deleted: boolean;
+  created: number;
+  completed: number;
+}
+
+export interface HeatmapDay {
+  /** Jour local (fuseau du user), format YYYY-MM-DD. */
+  date: string;
+  count: number;
+}
+
+export interface StatsHeatmap {
+  tz: string;
+  /** Premier jour de la grille (un dimanche), YYYY-MM-DD. */
+  start: string;
+  /** Dernier jour de la grille (aujourd'hui dans `tz`), YYYY-MM-DD. */
+  end: string;
+  /** Compte max sur un jour (échelle d'intensité). */
+  max: number;
+  /** Série DENSE start→end (un point par jour, count 0 inclus). */
+  days: HeatmapDay[];
+}
+
+export interface StatsWorkload {
+  /** Issues ouvertes qui me sont assignées (live). */
+  assignedOpen: number;
+  inProgress: number;
+}
+
+export interface UserStats {
+  totals: StatsTotals;
+  perProject: StatProjectBucket[];
+  heatmap: StatsHeatmap;
+  workload: StatsWorkload;
+}
+
 export interface IssueEvent {
   id: string;
   issue_id: string;

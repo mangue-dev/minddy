@@ -574,6 +574,7 @@ export function registerMinddyTools(server: McpServer): void {
       const { sub_issues: subInputs, ...issueArgs } = args;
       const result = await createIssueForProject({
         projectId: scope.access.project.id,
+        projectName: scope.access.project.name,
         actorId: scope.userId,
         input: { ...issueArgs, ...(parentId ? { parent_id: parentId } : {}) },
         mcpKeyId: scope.keyId,
@@ -591,6 +592,7 @@ export function registerMinddyTools(server: McpServer): void {
       for (const sub of subInputs ?? []) {
         const subResult = await createIssueForProject({
           projectId: scope.access.project.id,
+          projectName: scope.access.project.name,
           actorId: scope.userId,
           input: { ...sub, parent_id: result.issue.id },
           mcpKeyId: scope.keyId,

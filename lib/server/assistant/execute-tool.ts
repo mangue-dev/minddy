@@ -248,6 +248,7 @@ export async function executeTool(
           : (ctx.numoDefaultStatus ?? "triage");
         const result = await createIssueForProject({
           projectId,
+          projectName: access.project.name,
           actorId: ctx.userId,
           input: { ...args, status },
           viaAssistant: true,

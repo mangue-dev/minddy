@@ -10,6 +10,7 @@ import {
   stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
+import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
@@ -38,6 +39,7 @@ export type CreateIssueResult =
 
 export async function createIssueForProject({
   projectId,
+  projectName = null,
   actorId,
   input,
   viaAssistant = false,
@@ -45,6 +47,8 @@ export async function createIssueForProject({
   integrationId = null,
 }: {
   projectId: string;
+  /** Project name snapshot for the stats ledger (survives project deletion). */
+  projectName?: string | null;
   /** NULL when the issue comes from an integration (no user behind it). */
   actorId: string | null;
   input: Record<string, unknown>;
@@ -169,6 +173,31 @@ export async function createIssueForProject({
       integrationId
     )
   );
+
+  // Ledger de stats : une contribution "créée" (et "terminée" si créée
+  // directement en done) au nom de l'acteur. Skip pour les issues d'intégration
+  // (actorId null) — elles n'appartiennent à aucun utilisateur.
+  if (actorId) {
+    const snapshot = {
+      project_id: projectId,
+      project_name: projectName,
+      issue_id: data.id as string,
+      issue_number: data.number as number,
+      issue_title: data.title as string,
+    };
+    const statRows: StatEventRow[] = [
+      { user_id: actorId, kind: "issue_created", occurred_at: data.created_at as string, ...snapshot },
+    ];
+    if (data.status === "done") {
+      statRows.push({
+        user_id: actorId,
+        kind: "issue_completed",
+        occurred_at: (data.completed_at as string) ?? (data.created_at as string),
+        ...snapshot,
+      });
+    }
+    await insertStatEvents(service, statRows);
+  }
 
   return { ok: true, issue: { ...data, category_ids: categoryIds } };
 }

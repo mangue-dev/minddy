@@ -51,6 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const result = await createIssueForProject({
     projectId: id,
+    projectName: access.project.name,
     actorId: auth.user.id,
     input: (body ?? {}) as Record<string, unknown>,
   });
