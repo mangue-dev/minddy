@@ -26,6 +26,10 @@ import {
   resolveNumoDefaultStatus,
   type NumoDefaultStatus,
 } from "@/lib/numo-default-status";
+import {
+  PROMPT_COPY_AUTO_START_META_KEY,
+  resolvePromptCopyAutoStart,
+} from "@/lib/prompt-copy-auto-start";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -75,6 +79,33 @@ export function AccountPreferencesSection() {
       toast.error((e as Error).message);
     } finally {
       setSavingAutoAssign(false);
+    }
+  };
+
+  // "Copy prompt starts the issue" preference (user_metadata, like auto-assign).
+  // Enabled by default, so mirror the resolved value into local state.
+  const [promptAutoStart, setPromptAutoStart] = useState(
+    resolvePromptCopyAutoStart(user?.user_metadata),
+  );
+  const [savingPromptAutoStart, setSavingPromptAutoStart] = useState(false);
+  useEffect(() => {
+    setPromptAutoStart(resolvePromptCopyAutoStart(user?.user_metadata));
+  }, [user]);
+
+  const togglePromptAutoStart = async (next: boolean) => {
+    if (!user || savingPromptAutoStart) return;
+    setPromptAutoStart(next); // optimistic — revert on failure below
+    setSavingPromptAutoStart(true);
+    try {
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      await updateUser({
+        data: { ...meta, [PROMPT_COPY_AUTO_START_META_KEY]: next },
+      });
+    } catch (e) {
+      setPromptAutoStart(!next);
+      toast.error((e as Error).message);
+    } finally {
+      setSavingPromptAutoStart(false);
     }
   };
 
@@ -194,6 +225,28 @@ export function AccountPreferencesSection() {
             className="cursor-pointer text-sm text-foreground"
           >
             {ta("autoAssignLabel")}
+          </label>
+        </div>
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title={ta("promptAutoStartTitle")}
+        description={ta("promptAutoStartDesc")}
+      >
+        <div className="flex items-center gap-3">
+          <Switch
+            id="account-prompt-auto-start"
+            checked={promptAutoStart}
+            onCheckedChange={(v) => void togglePromptAutoStart(v)}
+            disabled={savingPromptAutoStart || !user}
+          />
+          <label
+            htmlFor="account-prompt-auto-start"
+            className="cursor-pointer text-sm text-foreground"
+          >
+            {ta("promptAutoStartLabel")}
           </label>
         </div>
       </SettingsSection>

@@ -52,6 +52,11 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { useAuth } from "@/lib/auth-context";
+import {
+  resolvePromptCopyAutoStart,
+  shouldAutoStartOnPromptCopy,
+} from "@/lib/prompt-copy-auto-start";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { planProgress, type PlanProgress } from "@/lib/plan";
 
@@ -615,6 +620,7 @@ export function IssueCard({
   onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const { user } = useAuth();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
   // Menu contextuel (clic droit) — position viewport du pointeur, null = fermé.
@@ -624,7 +630,18 @@ export function IssueCard({
   const copyPrompt = async () => {
     const prompt = buildIssuePrompt({ issue, projectId, projectKey });
     await navigator.clipboard.writeText(prompt);
-    toast.success(t("promptCopied"));
+    // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
+    // désactivable dans Compte → Préférences). On n'avance que les statuts
+    // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
+    const autoStart =
+      resolvePromptCopyAutoStart(user?.user_metadata) &&
+      shouldAutoStartOnPromptCopy(issue.status);
+    if (autoStart) {
+      onUpdateIssue(issue.id, { status: "in_progress" });
+      toast.success(t("promptCopiedMoved"));
+    } else {
+      toast.success(t("promptCopied"));
+    }
   };
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,

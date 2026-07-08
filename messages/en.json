@@ -296,7 +296,8 @@
     "createdByIntegration": "Created via the {name} integration",
     "createdByIntegrationGeneric": "Created via an integration",
     "copyAsPrompt": "Copy as prompt",
-    "promptCopied": "Prompt copied — paste it to your agent."
+    "promptCopied": "Prompt copied — paste it to your agent.",
+    "promptCopiedMoved": "Prompt copied — the issue moved to “In progress”."
   },
   "Language": {
     "title": "Language",
@@ -452,6 +453,9 @@
     "autoAssignLabel": "Assign issues I create to me",
     "numoStatusTitle": "Numo default status",
     "numoStatusDesc": "Choose which status issues created by Numo land in. Triage keeps a manual validation step; pick backlog or todo to skip it.",
+    "promptAutoStartTitle": "Copying the prompt starts the issue",
+    "promptAutoStartDesc": "When you copy an issue's prompt, automatically move it to “In progress”.",
+    "promptAutoStartLabel": "Move the issue to “In progress” when copying its prompt",
     "apiKeyLastUsed": "Last used {date}",
     "apiKeyNeverUsed": "Never used",
     "apiKeyRevoke": "Revoke",

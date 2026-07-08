@@ -296,7 +296,8 @@
     "createdByIntegration": "Créé via l'intégration {name}",
     "createdByIntegrationGeneric": "Créé via une intégration",
     "copyAsPrompt": "Copier le prompt",
-    "promptCopied": "Prompt copié — colle-le à ton agent."
+    "promptCopied": "Prompt copié — colle-le à ton agent.",
+    "promptCopiedMoved": "Prompt copié — le ticket est passé « En cours »."
   },
   "Language": {
     "title": "Langue",
@@ -452,6 +453,9 @@
     "autoAssignLabel": "M'assigner les tickets que je crée",
     "numoStatusTitle": "Statut par défaut de Numo",
     "numoStatusDesc": "Choisis le statut dans lequel arrivent les tickets créés par Numo. « Triage » conserve une étape de validation manuelle ; choisis backlog ou à faire pour la sauter.",
+    "promptAutoStartTitle": "Copier le prompt démarre le ticket",
+    "promptAutoStartDesc": "Quand tu copies le prompt d'un ticket, le passer automatiquement en « En cours ».",
+    "promptAutoStartLabel": "Passer le ticket « En cours » à la copie du prompt",
     "apiKeyLastUsed": "Dernière utilisation {date}",
     "apiKeyNeverUsed": "Jamais utilisée",
     "apiKeyRevoke": "Révoquer",
