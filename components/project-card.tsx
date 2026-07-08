@@ -15,14 +15,13 @@ import {
 import {
   Plus,
   MoreHorizontal,
+  CircleDotDashed,
   CircleDot,
-  CircleUser,
   CheckCircle2,
   Target,
   Settings,
   type LucideIcon,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
@@ -57,8 +56,6 @@ export function ProjectCard({ project }: { project: Project }) {
   const router = useRouter();
   const t = useTranslations("Projects");
   const tIssue = useTranslations("Issue");
-  const { user } = useAuth();
-  const myUserId = user?.id ?? null;
 
   // Reuse the ["issues", projectId] cache (shared with the board + header
   // search); no realtime bridge here — a home overview count can be lazy.
@@ -69,10 +66,12 @@ export function ProjectCard({ project }: { project: Project }) {
   const issues = data ?? [];
   const isOpen = (status: string) =>
     status !== "done" && status !== "canceled" && status !== "duplicate";
-  const openCount = issues.filter((i) => isOpen(i.status)).length;
-  const mineCount = myUserId
-    ? issues.filter((i) => i.assignee_id === myUserId && isOpen(i.status)).length
-    : 0;
+  // Triage sits before the board — count it on its own, and keep it out of the
+  // "open" bucket so the three indicators don't double-count.
+  const triageCount = issues.filter((i) => i.status === "triage").length;
+  const openCount = issues.filter(
+    (i) => isOpen(i.status) && i.status !== "triage"
+  ).length;
   const doneCount = issues.filter((i) => !isOpen(i.status)).length;
 
   const open = () => router.push(`/projects/${project.id}`);
@@ -135,14 +134,14 @@ export function ProjectCard({ project }: { project: Project }) {
       {/* Quick indicators — right-aligned, always shown (even at zero) */}
       <div className="mt-auto flex flex-col items-end gap-1 pt-1">
         <Stat
+          icon={CircleDotDashed}
+          value={triageCount}
+          label={t("triageIssues", { entityPlural: tIssue("entityPlural") })}
+        />
+        <Stat
           icon={CircleDot}
           value={openCount}
           label={t("openIssues", { entityPlural: tIssue("entityPlural") })}
-        />
-        <Stat
-          icon={CircleUser}
-          value={mineCount}
-          label={t("myOpenIssues", { entityPlural: tIssue("entityPlural") })}
         />
         <Stat
           icon={CheckCircle2}

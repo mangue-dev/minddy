@@ -43,6 +43,7 @@ import {
   useSidebarCollapse,
   CHORD_PREFIX,
 } from "@/lib/keyboard/keyboard-context";
+import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
 import { transitions } from "@/lib/motion";
 
 const EXPANDED_WIDTH = 256;
@@ -450,14 +451,22 @@ export function AppSidebar({
         ) : (
           <>
             <SidebarBrand />
-            <button
-              type="button"
-              onClick={() => setCollapsed(true)}
-              aria-label={t("collapseSidebar")}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            >
-              <PanelLeftClose className="h-[18px] w-[18px]" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setCollapsed(true)}
+                  aria-label={t("collapseSidebar")}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                >
+                  <PanelLeftClose className="h-[18px] w-[18px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="flex items-center gap-2">
+                <span>{t("collapseSidebar")}</span>
+                <KbdSequence keys={[["mod", "B"].map(resolveKeyToken)]} size="sm" />
+              </TooltipContent>
+            </Tooltip>
           </>
         )}
       </div>
