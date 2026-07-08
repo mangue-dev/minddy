@@ -13,10 +13,10 @@
    --primary, and your own `bg-primary` / `text-foreground` utilities use the
    same variables. Change or delete the block below to make it your own. */
 :root {
-  --primary: #FF438E; /* minddy green — proves the override works */
+  --primary: #3098D0;
 }
 .dark {
-  --primary: #bf336b;
+  --primary: #3098D0;
 }
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────

@@ -145,8 +145,6 @@
     "projectNotFoundDescription": "This Project doesn't exist or you don't have access to it.",
     "backToHome": "Back to home",
     "noIssuesYet": "No issues yet. Create the first one with \"New issue\" or press",
-    "noIssuesInObjective": "No issues in this objective.",
-    "noIssuesMatchView": "No issues match this view.",
     "hideDone": "Hide done issues",
     "newView": "New view",
     "saveAsView": "Save as view",

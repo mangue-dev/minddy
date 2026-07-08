@@ -145,8 +145,6 @@
     "projectNotFoundDescription": "Ce Projet n'existe pas ou tu n'y as pas accès.",
     "backToHome": "Retour à l'accueil",
     "noIssuesYet": "Aucun ticket. Crée le premier avec « Nouveau ticket » ou la touche",
-    "noIssuesInObjective": "Aucun ticket dans cet objectif.",
-    "noIssuesMatchView": "Aucun ticket ne correspond à cette vue.",
     "hideDone": "Masquer les tickets terminés",
     "newView": "Nouvelle vue",
     "saveAsView": "Enregistrer comme vue",

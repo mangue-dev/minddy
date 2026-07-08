@@ -398,46 +398,36 @@ function ProjectBoard() {
             )}
           </div>
           <div className="min-h-0 flex-1 pt-3">
-            {boardIssues.length === 0 ? (
-              <div className="mx-6 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
-                <p className="text-sm text-muted-foreground">
-                  {activeObjective
-                    ? t("noIssuesInObjective")
-                    : t("noIssuesMatchView")}
-                </p>
-              </div>
-            ) : (
-              <KanbanBoard
-                issues={boardIssues}
-                statuses={statuses}
-                sort={sort}
-                projectId={project.id}
-                projectKey={project.key}
-                members={members}
-                categories={categories}
-                objectives={objectives}
-                onOpenIssue={(issue: Issue) => {
-                  setOpenIssueId(issue.id);
-                  setOpenIssueTab("description");
-                }}
-                onOpenPlan={(issue: Issue) => {
-                  setOpenIssueId(issue.id);
-                  setOpenIssueTab("plan");
-                }}
-                onCreateIssue={openCreate}
-                onUpdateIssue={(id, patch) =>
-                  void updateIssue(id, patch).catch((err) =>
-                    toast.error((err as Error).message)
-                  )
-                }
-                onSetCategories={(id, ids) =>
-                  void setCategories(id, ids).catch((err) =>
-                    toast.error((err as Error).message)
-                  )
-                }
-                onMove={moveIssue}
-              />
-            )}
+            <KanbanBoard
+              issues={boardIssues}
+              statuses={statuses}
+              sort={sort}
+              projectId={project.id}
+              projectKey={project.key}
+              members={members}
+              categories={categories}
+              objectives={objectives}
+              onOpenIssue={(issue: Issue) => {
+                setOpenIssueId(issue.id);
+                setOpenIssueTab("description");
+              }}
+              onOpenPlan={(issue: Issue) => {
+                setOpenIssueId(issue.id);
+                setOpenIssueTab("plan");
+              }}
+              onCreateIssue={openCreate}
+              onUpdateIssue={(id, patch) =>
+                void updateIssue(id, patch).catch((err) =>
+                  toast.error((err as Error).message)
+                )
+              }
+              onSetCategories={(id, ids) =>
+                void setCategories(id, ids).catch((err) =>
+                  toast.error((err as Error).message)
+                )
+              }
+              onMove={moveIssue}
+            />
           </div>
         </>
       )}

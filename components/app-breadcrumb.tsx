@@ -141,12 +141,14 @@ function MobileBreadcrumb({
   sectionKey,
   isInbox,
   isAccountSettings,
+  isStatistics,
 }: {
   project: Project | null;
   section: string | null;
   sectionKey: string | null;
   isInbox: boolean;
   isAccountSettings: boolean;
+  isStatistics: boolean;
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
@@ -166,6 +168,10 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("accountSettings")}</CurrentLabel>;
+  } else if (isStatistics) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("statistics")}</CurrentLabel>;
   } else if (project) {
     // The board root ("allIssues") is the project root — show the switcher and
     // go back up to Home. Nested sections go back to the project root.
@@ -230,6 +236,7 @@ export function AppBreadcrumb() {
   const isHome = pathname.startsWith("/home");
   const isInbox = pathname.startsWith("/inbox");
   const isAccountSettings = pathname.startsWith("/settings");
+  const isStatistics = pathname.startsWith("/statistics");
 
   return (
     <>
@@ -255,6 +262,12 @@ export function AppBreadcrumb() {
           </span>
         </BreadcrumbLevel>
 
+        <BreadcrumbLevel show={isStatistics} levelKey="statistics">
+          <span className="text-sm font-medium text-foreground">
+            {t("statistics")}
+          </span>
+        </BreadcrumbLevel>
+
         <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
           {project && <ProjectSwitcher project={project} />}
         </BreadcrumbLevel>
@@ -276,6 +289,7 @@ export function AppBreadcrumb() {
         sectionKey={sectionKey}
         isInbox={isInbox}
         isAccountSettings={isAccountSettings}
+        isStatistics={isStatistics}
       />
     </>
   );
