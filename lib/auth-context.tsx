@@ -35,6 +35,13 @@ interface AuthContextValue {
     password?: string;
     data?: Record<string, unknown>;
   }) => Promise<void>;
+  /**
+   * Re-pull the account from Supabase Auth into local state. Needed when
+   * `user_metadata` changes OUTSIDE the client session — e.g. Numo editing the
+   * account settings server-side via the admin API, which fires no client auth
+   * event, so the UI would otherwise keep reading the stale JWT.
+   */
+  refreshUser: () => Promise<void>;
 }
 
 // Safety net: if Supabase is unreachable, onAuthStateChange may never fire
@@ -141,6 +148,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const refreshUser = useCallback(async () => {
+    const supabase = getSupabase();
+    // refreshSession mints a new JWT carrying the current user_metadata (so a
+    // later reload / server request also sees the change) and updates state.
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error && data.user) {
+      setUser(data.user);
+      if (data.session) setSession(data.session);
+      return;
+    }
+    // Fallback: fetch the fresh account without a token refresh.
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) setUser(userData.user);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -152,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithOAuth,
         signOut,
         updateUser,
+        refreshUser,
       }}
     >
       {children}

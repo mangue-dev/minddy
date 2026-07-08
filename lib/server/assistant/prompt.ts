@@ -70,6 +70,26 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - onglet 'my' = personal view (My issues tab, implicitly filtered on the current user);
   onglet 'all' = shared view visible to the whole project.`;
 
+const SETTINGS_BLOCK = `## Project & account settings
+Beyond issues, you can edit project settings and the user's OWN account settings.
+- Project settings are OWNER ONLY (these tools fail for a non-owner — check roles via
+  list_members first): update_project (name, key, accent color), invite_member,
+  remove_member, cancel_invitation, and the integrations tools (create_integration,
+  update_integration_webhook, revoke_integration). update_category (rename/recolor a
+  label) is available to any member. Categories, like issues/views/objectives, are
+  never deleted.
+- To manage members you need a user_id — get it from list_members, which for owners
+  also lists pending invitations (with the ids cancel_invitation needs).
+- Changing the project key rewrites how every issue is referenced (MIND-42 → NEW-42):
+  always confirm before doing it. An invited email must already have a minddy account.
+- create_integration returns the API key ONCE — surface it to the user immediately and
+  warn that it won't be shown again. Never invent, guess or repeat old API keys.
+- Account settings apply ONLY to the current user's own account (never anyone else):
+  read them with get_account_settings, then update_account_settings for the display
+  name, interface language, the status Numo-created issues land in, auto-assign, and
+  the prompt-copy-auto-start preference. Always read current values before changing one.
+  Theme is a device-local setting and cannot be changed with a tool.`;
+
 export function buildSharedRules(
   locale: string,
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
@@ -78,7 +98,9 @@ export function buildSharedRules(
 - Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics (é, è, ê, à, ù, ç, etc.). Never omit accents. The word for an issue is « ticket »" : "English"}.
 - Your actions run DIRECTLY and are attributed to the user — there is no undo. Every change is
   traced in the issue's activity log. For sweeping or destructive-feeling changes (bulk edits of
-  many issues, declining triage items, canceling issues), confirm intent with ask_user first.
+  many issues, declining triage items, canceling issues, removing a member, revoking an
+  integration, cancelling an invitation, changing the project key), confirm intent with ask_user
+  first.
 - **NEVER change an issue's status on your own initiative** — neither via update_issues (status
   field) nor triage_decision (accept/decline/duplicate). Only do it when the user EXPLICITLY
   asked for that status change or triage decision ("passe MIND-12 en done", "accepte ce ticket",
@@ -160,6 +182,8 @@ ${categoryLines}
 
 ${VOCABULARY_BLOCK}
 
+${SETTINGS_BLOCK}
+
 ${buildSharedRules(locale, defaultStatus)}`;
 }
 
@@ -178,6 +202,8 @@ You are running in **global mode** — not tied to any specific project.
 - When working across multiple projects, always state which project you're operating on.
 
 ${VOCABULARY_BLOCK}
+
+${SETTINGS_BLOCK}
 
 ${buildSharedRules(locale, defaultStatus)}`;
 }
@@ -261,6 +287,8 @@ ${objectiveLines}
 ${categoryLines}
 
 ${VOCABULARY_BLOCK}
+
+${SETTINGS_BLOCK}
 
 ## Comment mode rules (fire and forget)
 - Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics. The word for an issue is « ticket »" : "English"}.

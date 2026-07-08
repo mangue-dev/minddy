@@ -8,7 +8,23 @@ import { addCommentToIssue } from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { createView, updateView } from "@/lib/server/views";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
-import { createCategory } from "@/lib/server/categories";
+import { createCategory, updateCategory } from "@/lib/server/categories";
+import { updateProjectSettings } from "@/lib/server/update-project";
+import {
+  cancelInvitation,
+  inviteMember,
+  listPendingInvitations,
+  removeMember,
+} from "@/lib/server/members";
+import {
+  createIntegration,
+  revokeIntegration,
+  updateIntegrationWebhook,
+} from "@/lib/server/integrations";
+import {
+  getAccountSettings,
+  updateAccountSettings,
+} from "@/lib/server/account-settings";
 import {
   assertIssueInProject,
   getIssue,
@@ -54,6 +70,35 @@ function libError(r: { errorKey?: string; rawMessage?: string }): ToolExecution 
   return toolError(r.rawMessage ?? r.errorKey ?? "Request failed");
 }
 
+/** Readable messages for the settings cores' errorKeys — the assistant does not
+    run these through i18n, so it needs plain sentences to relay to the user. */
+const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
+  ownerOnly: "Only the project owner can change this.",
+  ownerOnlyInvite: "Only the project owner can invite members.",
+  projectNotFound: "Project not found or not accessible.",
+  nameRequired: "A name is required.",
+  invalidProjectKey: "The project key must be 2 to 5 letters (A–Z).",
+  projectKeyAlreadyUsed: "That project key is already used by another of your projects.",
+  noFieldsToUpdate: "No fields to update.",
+  invalidEmail: "That email address is invalid.",
+  noAccountForEmail: "No minddy account exists for that email address.",
+  alreadyOwner: "That person is the project owner.",
+  alreadyMember: "That person is already a member of the project.",
+  invitationAlreadyPending: "There is already a pending invitation for that email.",
+  cannotRemoveOwner: "The project owner cannot be removed.",
+  invalidColor: "That color is invalid (use a hex color like #7c5cff).",
+  categoryNotFound: "Category not found in this project.",
+  integrationNameRequired: "An integration name is required.",
+  integrationNotFound: "Integration not found.",
+  webhookInvalidUrl: "The webhook URL is invalid (must be http/https).",
+  webhookInvalidConfig: "The webhook events or scope are invalid.",
+  databaseError: "A database error occurred.",
+};
+
+function settingsError(errorKey: string): ToolExecution {
+  return toolError(SETTINGS_ERROR_MESSAGES[errorKey] ?? errorKey);
+}
+
 /** Read context for the shared lib/server/issue-reads.ts helpers — Numo reads
     through the user's RLS client (tenant isolation for free). */
 function readCtx(
@@ -84,6 +129,20 @@ export async function executeTool(
         .order("created_at", { ascending: true });
       if (error) return toolError(error.message);
       return { result: { projects: data ?? [] }, success: true };
+    }
+
+    // ── Account tools (the requesting user's own account — no project) ──
+    if (toolName === "get_account_settings") {
+      const r = await getAccountSettings({ userId: ctx.userId });
+      return r.ok
+        ? { result: { settings: r.settings }, success: true }
+        : toolError(r.error);
+    }
+    if (toolName === "update_account_settings") {
+      const r = await updateAccountSettings({ userId: ctx.userId, input: args });
+      return r.ok
+        ? { result: { settings: r.settings }, success: true }
+        : toolError(r.error);
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
@@ -119,7 +178,15 @@ export async function executeTool(
           readCtx(ctx, projectId, access),
           access.project.owner_id
         );
-        return "error" in r ? toolError(r.error) : { result: r, success: true };
+        if ("error" in r) return toolError(r.error);
+        // Owners also see pending invitations (for cancel_invitation).
+        const pending_invitations = access.isOwner
+          ? await listPendingInvitations(projectId)
+          : [];
+        return {
+          result: { ...r, pending_invitations },
+          success: true,
+        };
       }
       case "list_objectives": {
         const { data, error } = await ctx.supabase
@@ -412,6 +479,141 @@ export async function executeTool(
           result: { decision, issue_id: issueId, status: input.status },
           success: true,
         };
+      }
+
+      // ── Project settings (owner-gated inside the cores) ───────────────
+      case "update_project": {
+        const result = await updateProjectSettings({
+          projectId,
+          actorId: ctx.userId,
+          input: args,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return {
+          result: {
+            project: {
+              id: result.project.id,
+              name: result.project.name,
+              key: result.project.key,
+              color: result.project.color,
+            },
+          },
+          success: true,
+        };
+      }
+
+      case "invite_member": {
+        const result = await inviteMember({
+          projectId,
+          actorId: ctx.userId,
+          email: args.email,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return {
+          result: {
+            invitation: {
+              id: result.invitation.id,
+              email: result.invitation.invited_email,
+            },
+          },
+          success: true,
+        };
+      }
+
+      case "remove_member": {
+        const userId = typeof args.user_id === "string" ? args.user_id : "";
+        if (!userId) return toolError("user_id is required.");
+        const result = await removeMember({
+          projectId,
+          actorId: ctx.userId,
+          userId,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return { result: { removed: userId }, success: true };
+      }
+
+      case "cancel_invitation": {
+        const invitationId =
+          typeof args.invitation_id === "string" ? args.invitation_id : "";
+        if (!invitationId) return toolError("invitation_id is required.");
+        const result = await cancelInvitation({
+          projectId,
+          actorId: ctx.userId,
+          invitationId,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return { result: { cancelled: invitationId }, success: true };
+      }
+
+      case "update_category": {
+        const categoryId =
+          typeof args.category_id === "string" ? args.category_id : "";
+        if (!categoryId) return toolError("category_id is required.");
+        const result = await updateCategory({
+          categoryId,
+          projectId,
+          actorId: ctx.userId,
+          input: args,
+        });
+        if (!result.ok) return settingsError(result.errorKey ?? "databaseError");
+        return { result: { category: result.category }, success: true };
+      }
+
+      // ── Integrations (owner-gated) ────────────────────────────────────
+      case "create_integration": {
+        if (!access.isOwner) return settingsError("ownerOnly");
+        const result = await createIntegration({
+          projectId,
+          actorId: ctx.userId,
+          name: args.name,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return {
+          result: {
+            integration: {
+              id: result.integration.id,
+              name: result.integration.name,
+            },
+            // The plaintext key is returned ONCE — Numo must surface it now.
+            key: result.key,
+          },
+          success: true,
+        };
+      }
+
+      case "update_integration_webhook": {
+        if (!access.isOwner) return settingsError("ownerOnly");
+        const integrationId =
+          typeof args.integration_id === "string" ? args.integration_id : "";
+        if (!integrationId) return toolError("integration_id is required.");
+        const result = await updateIntegrationWebhook({
+          projectId,
+          integrationId,
+          input: args,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return {
+          result: {
+            integration: {
+              id: result.integration.id,
+              name: result.integration.name,
+              webhook_url: result.integration.webhook_url,
+              webhook_events: result.integration.webhook_events,
+              webhook_scope: result.integration.webhook_scope,
+            },
+          },
+          success: true,
+        };
+      }
+
+      case "revoke_integration": {
+        if (!access.isOwner) return settingsError("ownerOnly");
+        const integrationId =
+          typeof args.integration_id === "string" ? args.integration_id : "";
+        if (!integrationId) return toolError("integration_id is required.");
+        const result = await revokeIntegration({ projectId, integrationId });
+        if (!result.ok) return settingsError(result.errorKey);
+        return { result: { revoked: integrationId }, success: true };
       }
 
       default:

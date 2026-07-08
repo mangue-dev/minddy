@@ -3,11 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import {
-  fetchAuthUsersById,
-  findAuthUserByEmail,
-  toNamed,
-} from "@/lib/server/auth-users";
+  cancelInvitation,
+  inviteMember,
+  removeMember,
+} from "@/lib/server/members";
 import type { Invitation, Member } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -73,84 +74,22 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const access = await getProjectAccess(auth.user.id, id);
-  if (!access) {
-    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
-  }
-  if (!access.isOwner) {
-    return NextResponse.json(
-      { error: t("ownerOnlyInvite") },
-      { status: 403 }
-    );
-  }
-
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const email = ((body as { email?: unknown })?.email ?? "");
-  const normalized = typeof email === "string" ? email.trim().toLowerCase() : "";
-  if (!normalized || !normalized.includes("@")) {
-    return NextResponse.json({ error: t("invalidEmail") }, { status: 400 });
+
+  const result = await inviteMember({
+    projectId: id,
+    actorId: auth.user.id,
+    email: (body as { email?: unknown })?.email,
+  });
+  if (!result.ok) {
+    return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
-
-  const service = getServiceClient();
-
-  // Resolve the email to an existing minddy account — live, via Supabase Auth.
-  const memberUser = await findAuthUserByEmail(service, normalized);
-
-  if (!memberUser) {
-    return NextResponse.json(
-      { error: t("noAccountForEmail") },
-      { status: 404 }
-    );
-  }
-  if (memberUser.id === access.project.owner_id) {
-    return NextResponse.json(
-      { error: t("alreadyOwner") },
-      { status: 409 }
-    );
-  }
-
-  const { data: existingMember } = await service
-    .from("project_members")
-    .select("user_id")
-    .eq("project_id", id)
-    .eq("user_id", memberUser.id)
-    .maybeSingle();
-  if (existingMember) {
-    return NextResponse.json(
-      { error: t("alreadyMember") },
-      { status: 409 }
-    );
-  }
-
-  const { data: invitation, error } = await service
-    .from("project_invitations")
-    .insert({
-      project_id: id,
-      invited_email: normalized,
-      invited_user_id: memberUser.id,
-      invited_by: auth.user.id,
-      status: "pending",
-    })
-    .select("id, project_id, invited_email, invited_user_id, status, created_at")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") {
-      return NextResponse.json(
-        { error: t("invitationAlreadyPending") },
-        { status: 409 }
-      );
-    }
-    console.error("[api/members] invite failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-
-  return NextResponse.json(invitation, { status: 201 });
+  return NextResponse.json(result.invitation, { status: 201 });
 }
 
 /** DELETE /api/projects/[id]/members?invitationId=… | ?userId=… */
@@ -160,48 +99,32 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const access = await getProjectAccess(auth.user.id, id);
-  if (!access) {
-    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
-  }
-
   const { searchParams } = new URL(request.url);
   const invitationId = searchParams.get("invitationId");
   const userId = searchParams.get("userId");
-  const service = getServiceClient();
 
   // Cancel a pending invitation (owner only).
   if (invitationId) {
-    if (!access.isOwner) {
-      return NextResponse.json({ error: t("ownerOnly") }, { status: 403 });
-    }
-    const { error } = await service
-      .from("project_invitations")
-      .update({ status: "cancelled", responded_at: new Date().toISOString() })
-      .eq("id", invitationId)
-      .eq("project_id", id)
-      .eq("status", "pending");
-    if (error) {
-      console.error("[api/members] cancel invite failed:", error.message);
-      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    const result = await cancelInvitation({
+      projectId: id,
+      actorId: auth.user.id,
+      invitationId,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
     }
     return NextResponse.json({ ok: true });
   }
 
   // Remove a member — owner removes anyone, a member removes themselves (leave).
   if (userId) {
-    const isSelfLeave = userId === auth.user.id;
-    if (!access.isOwner && !isSelfLeave) {
-      return NextResponse.json({ error: t("ownerOnly") }, { status: 403 });
-    }
-    const { error } = await service
-      .from("project_members")
-      .delete()
-      .eq("project_id", id)
-      .eq("user_id", userId);
-    if (error) {
-      console.error("[api/members] remove member failed:", error.message);
-      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    const result = await removeMember({
+      projectId: id,
+      actorId: auth.user.id,
+      userId,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
     }
     return NextResponse.json({ ok: true });
   }

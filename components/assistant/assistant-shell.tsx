@@ -9,7 +9,8 @@ import {
   useState,
   forwardRef,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { History, Maximize2, Minimize2, Plus, X } from "lucide-react";
 import {
   Button,
@@ -41,6 +42,8 @@ import {
   StreamingMessage,
 } from "@/components/assistant/chat-message";
 import { ConversationList } from "@/components/assistant/conversation-list";
+import { useAuth } from "@/lib/auth-context";
+import { setLocaleCookie } from "@/lib/set-locale";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 
 const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
@@ -110,8 +113,28 @@ export const AssistantShell = forwardRef<
   const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
+  const { refreshUser } = useAuth();
+  const currentLocale = useLocale();
+  const router = useRouter();
+
+  // Numo can edit the account settings server-side (via the admin API), which
+  // fires no client auth event — so pull the fresh account back in when it does,
+  // and if it changed the language (a cookie, not user_metadata) apply that too.
+  const handleToolResult = useCallback(
+    (name: string, success: boolean, result: unknown) => {
+      if (!success || name !== "update_account_settings") return;
+      void refreshUser();
+      const nextLocale = (result as { settings?: { locale?: string } })
+        ?.settings?.locale;
+      if (nextLocale && nextLocale !== currentLocale) {
+        void setLocaleCookie(nextLocale).then(() => router.refresh());
+      }
+    },
+    [refreshUser, currentLocale, router],
+  );
+
   const { state, sendMessage, loadConversation, reset, abort } =
-    useAssistantChat();
+    useAssistantChat({ onToolResult: handleToolResult });
   const chatInputRef = useRef<ChatInputHandle>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);

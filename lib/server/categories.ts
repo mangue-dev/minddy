@@ -57,3 +57,70 @@ export async function createCategory({
   }
   return { ok: true, category: data };
 }
+
+/**
+ * Rename / recolor a category. Used by the assistant `update_category` tool.
+ * The category must belong to the project in scope (the access check gives the
+ * same "not found" signal RLS invisibility would). An invalid color is rejected.
+ */
+export type UpdateCategoryResult =
+  | { ok: true; category: Record<string, unknown> }
+  | {
+      ok: false;
+      status: number;
+      errorKey?:
+        | "nameRequired"
+        | "invalidColor"
+        | "noFieldsToUpdate"
+        | "categoryNotFound"
+        | "projectNotFound"
+        | "databaseError";
+      rawMessage?: string;
+    };
+
+export async function updateCategory({
+  categoryId,
+  projectId,
+  actorId,
+  input,
+}: {
+  categoryId: string;
+  projectId: string;
+  actorId: string;
+  input: Record<string, unknown>;
+}): Promise<UpdateCategoryResult> {
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+
+  const updates: Record<string, unknown> = {};
+  if (typeof input.name === "string") {
+    const name = input.name.trim();
+    if (!name) return { ok: false, status: 400, errorKey: "nameRequired" };
+    updates.name = name;
+  }
+  if ("color" in input) {
+    if (!isValidColor(input.color)) {
+      return { ok: false, status: 400, errorKey: "invalidColor" };
+    }
+    updates.color = input.color;
+  }
+  if (Object.keys(updates).length === 0) {
+    return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
+  }
+
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("categories")
+    .update(updates)
+    .eq("id", categoryId)
+    .eq("project_id", projectId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[categories] update failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  if (!data) return { ok: false, status: 404, errorKey: "categoryNotFound" };
+  return { ok: true, category: data };
+}

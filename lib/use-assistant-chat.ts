@@ -308,10 +308,24 @@ async function fetchConversationMessages(
 
 // ── Hook ───────────────────────────────────────────────────────────────
 
-export function useAssistantChat() {
+export interface UseAssistantChatOptions {
+  /**
+   * Fired for each completed tool call as its result streams in. Lets the host
+   * react to side effects that live outside the chat — e.g. refreshing the
+   * account when Numo edits account settings server-side. `result` is the raw
+   * tool result payload.
+   */
+  onToolResult?: (name: string, success: boolean, result: unknown) => void;
+}
+
+export function useAssistantChat(options?: UseAssistantChatOptions) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const abortRef = useRef<AbortController | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep the latest callback in a ref so the SSE loop closure always calls the
+  // current one without re-creating sendMessage on every render.
+  const onToolResultRef = useRef(options?.onToolResult);
+  onToolResultRef.current = options?.onToolResult;
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -443,7 +457,7 @@ export function useAssistantChat() {
             } else if (line.startsWith("data: ") && eventType) {
               try {
                 const data = JSON.parse(line.slice(6));
-                handleSSEEvent(eventType, data, dispatch);
+                handleSSEEvent(eventType, data, dispatch, onToolResultRef.current);
               } catch {
                 // Skip malformed data
               }
@@ -551,7 +565,8 @@ export function useAssistantChat() {
 function handleSSEEvent(
   eventType: string,
   data: Record<string, unknown>,
-  dispatch: React.Dispatch<Action>
+  dispatch: React.Dispatch<Action>,
+  onToolResult?: (name: string, success: boolean, result: unknown) => void
 ) {
   switch (eventType) {
     case "conversation_id":
@@ -593,6 +608,11 @@ function handleSSEEvent(
         result: data.result,
         success: data.success as boolean,
       });
+      onToolResult?.(
+        data.name as string,
+        data.success as boolean,
+        data.result
+      );
       break;
     case "message_complete":
       dispatch({

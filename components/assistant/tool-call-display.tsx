@@ -13,13 +13,20 @@ import {
   LayoutGrid,
   List,
   Loader2,
+  MailX,
   MessageCircleQuestion,
   MessageSquare,
+  Plug,
   Search,
+  Settings2,
   SlidersHorizontal,
   Tag,
   Tags,
   Target,
+  User,
+  UserCog,
+  UserMinus,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -237,6 +244,78 @@ const TOOL_META: Record<string, ToolMeta> = {
       if (decision === "decline") return t("triageDeclined");
       if (decision === "duplicate") return t("triageDuplicate");
       return t("triageApplied");
+    },
+  },
+  update_project: {
+    icon: Settings2,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingProject");
+      return success ? t("projectUpdated") : t("updateProjectFailed");
+    },
+  },
+  invite_member: {
+    icon: UserPlus,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("invitingMember");
+      return success ? t("memberInvited") : t("inviteMemberFailed");
+    },
+  },
+  remove_member: {
+    icon: UserMinus,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("removingMember");
+      return success ? t("memberRemoved") : t("removeMemberFailed");
+    },
+  },
+  cancel_invitation: {
+    icon: MailX,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("cancellingInvitation");
+      return success ? t("invitationCancelled") : t("cancelInvitationFailed");
+    },
+  },
+  update_category: {
+    icon: Tag,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingCategory");
+      return success ? t("categoryUpdated") : t("updateCategoryFailed");
+    },
+  },
+  create_integration: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("creatingIntegration");
+      return success ? t("integrationCreated") : t("createIntegrationFailed");
+    },
+  },
+  update_integration_webhook: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingWebhook");
+      return success ? t("webhookUpdated") : t("updateWebhookFailed");
+    },
+  },
+  revoke_integration: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("revokingIntegration");
+      return success ? t("integrationRevoked") : t("revokeIntegrationFailed");
+    },
+  },
+  get_account_settings: {
+    icon: User,
+    getLabel: (_args, _result, _success, status, t) => {
+      if (status === "running") return t("loadingAccountSettings");
+      return t("accountSettingsLoaded");
+    },
+  },
+  update_account_settings: {
+    icon: UserCog,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingAccountSettings");
+      return success
+        ? t("accountSettingsUpdated")
+        : t("updateAccountSettingsFailed");
     },
   },
   ask_user: {

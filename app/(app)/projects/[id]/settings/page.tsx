@@ -22,6 +22,7 @@ import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
+import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import {
   SettingsShell,
   SettingsSection,
@@ -291,6 +292,12 @@ export default function ProjectSettingsPage() {
         description={t("subtitle")}
         defaultTab="general"
         tabs={tabs}
+        topSlot={
+          <SettingsAssistantPrompt
+            projectId={project.id}
+            placeholder={t("assistantPromptPlaceholder")}
+          />
+        }
       />
 
       <ConfirmDeleteDialog

@@ -11,6 +11,7 @@ import { AccountProfileSection } from "@/components/settings/account-profile-sec
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
+import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
@@ -52,6 +53,12 @@ export default function AccountSettingsPage() {
       defaultTab="profile"
       tabs={tabs}
       maxWidth={880}
+      topSlot={
+        <SettingsAssistantPrompt
+          projectId={null}
+          placeholder={t("assistantPromptPlaceholder")}
+        />
+      }
     />
   );
 }

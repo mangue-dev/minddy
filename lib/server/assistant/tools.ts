@@ -5,6 +5,9 @@ import {
   ISSUE_PRIORITIES,
   ISSUE_EFFORTS,
 } from "@/lib/issue-validation";
+import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
+import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
+import { locales } from "@/i18n/config";
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
 // Numo's tool surface over minddy: read + write issues (all fields, bulk),
@@ -154,7 +157,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_members",
       description:
-        "List the project's members: user_id, name, role. assignee_id and lead_user_id take these user_id values.",
+        "List the project's members: user_id, name, role. assignee_id and lead_user_id take these user_id values. For owners the result also carries pending_invitations (id, email) — the ids cancel_invitation takes.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -485,6 +488,215 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
+  // ── Project settings (owner only) ─────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "update_project",
+      description:
+        "Update the project's own settings: its name, its key (the KEY-N issue prefix, 2–5 uppercase letters) and/or its accent color. OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "New project name." },
+          key: {
+            type: "string",
+            description:
+              "New project key — 2 to 5 letters (A–Z). Uppercased automatically. Must be unique for the owner.",
+          },
+          color: {
+            type: ["string", "null"],
+            description: "Accent color as a hex string like #7c5cff, or null to clear.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "invite_member",
+      description:
+        "Invite someone to the project by email. OWNER ONLY. The email must belong to an existing minddy account; the person gets a pending in-app invitation they accept from their Home. No email is sent.",
+      parameters: {
+        type: "object",
+        properties: {
+          email: { type: "string", description: "The invitee's account email." },
+        },
+        required: ["email"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remove_member",
+      description:
+        "Remove a member from the project. OWNER ONLY (a non-owner may only remove themselves — i.e. leave). The project owner cannot be removed. Destructive — confirm with the user first. Pass the member's user_id (from list_members).",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: {
+            type: "string",
+            description: "user_id of the member to remove (from list_members).",
+          },
+        },
+        required: ["user_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_invitation",
+      description:
+        "Cancel a still-pending project invitation. OWNER ONLY. Pass the invitation's id (from list_members, which lists pending invitations).",
+      parameters: {
+        type: "object",
+        properties: {
+          invitation_id: {
+            type: "string",
+            description: "Id of the pending invitation to cancel.",
+          },
+        },
+        required: ["invitation_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_category",
+      description:
+        "Rename and/or recolor an existing category (label). Get the id via list_categories. Only pass the fields to change. (Categories cannot be deleted.)",
+      parameters: {
+        type: "object",
+        properties: {
+          category_id: { type: "string", description: "Category id (from list_categories)." },
+          name: { type: "string", description: "New category name." },
+          color: { type: "string", description: "New hex color like #7c5cff." },
+        },
+        required: ["category_id"],
+      },
+    },
+  },
+  // ── Integrations (owner only) ─────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "create_integration",
+      description:
+        "Create a named integration (a Feedback API key an external app uses to submit issues). OWNER ONLY. The plaintext API key is returned ONCE in the result — surface it to the user immediately and tell them it won't be shown again.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "A name identifying the integration (max 60 chars).",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_integration_webhook",
+      description:
+        "Configure an integration's outgoing webhook: the URL minddy POSTs issue events to, which events to follow, and the scope. OWNER ONLY. Get the id via list_integrations. Pass webhook_url null to disable the webhook (keeping its event/scope config).",
+      parameters: {
+        type: "object",
+        properties: {
+          integration_id: {
+            type: "string",
+            description: "Integration id (from list_integrations).",
+          },
+          webhook_url: {
+            type: ["string", "null"],
+            description:
+              "https/http URL to POST events to, or null to disable the webhook.",
+          },
+          webhook_events: {
+            type: "array",
+            items: { type: "string", enum: [...WEBHOOK_EVENTS] },
+            description: "Which issue events to send.",
+          },
+          webhook_scope: {
+            type: "string",
+            enum: [...WEBHOOK_SCOPES],
+            description:
+              "'integration' = only events on issues this integration created; 'all' = all project issues.",
+          },
+        },
+        required: ["integration_id", "webhook_events", "webhook_scope"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "revoke_integration",
+      description:
+        "Revoke an integration's API key so it can no longer submit issues. OWNER ONLY. This is irreversible (the key stops working); confirm with the user first. Get the id via list_integrations.",
+      parameters: {
+        type: "object",
+        properties: {
+          integration_id: {
+            type: "string",
+            description: "Integration id (from list_integrations).",
+          },
+        },
+        required: ["integration_id"],
+      },
+    },
+  },
+  // ── Account settings (the current user's own account) ─────────────────
+  {
+    type: "function",
+    function: {
+      name: "get_account_settings",
+      description:
+        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, and the auto-assign / prompt-copy-auto-start preferences. Call this before update_account_settings so you use exact current values.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_account_settings",
+      description:
+        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. (Theme is a device-local setting and cannot be changed here.)",
+      parameters: {
+        type: "object",
+        properties: {
+          display_name: {
+            type: "string",
+            description: "New display name (cannot be empty).",
+          },
+          locale: {
+            type: "string",
+            enum: [...locales],
+            description: "Interface language.",
+          },
+          numo_default_status: {
+            type: "string",
+            enum: [...NUMO_DEFAULT_STATUS_OPTIONS],
+            description: "The status issues Numo creates land in by default.",
+          },
+          auto_assign_created: {
+            type: "boolean",
+            description: "Auto-assign newly created issues to the user.",
+          },
+          prompt_copy_auto_start: {
+            type: "boolean",
+            description:
+              "When copying an issue's prompt, move that issue to in_progress.",
+          },
+        },
+      },
+    },
+  },
   // ── Interaction ──────────────────────────────────────────────────────
   {
     type: "function",
@@ -511,11 +723,21 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   },
 ];
 
+// Tools that operate on the requesting user's own account, not on a project —
+// they must NOT receive a project_id (neither in global mode nor otherwise).
+export const ACCOUNT_TOOLS = new Set([
+  "get_account_settings",
+  "update_account_settings",
+]);
+
+// Tools that never take a project (ask_user + the account-level tools).
+const NON_PROJECT_TOOLS = new Set(["ask_user", ...ACCOUNT_TOOLS]);
+
 // Every tool that operates on a project. In global mode these get a required
 // `project_id` parameter injected (see buildGlobalTools).
 export const PROJECT_SCOPED_TOOLS = new Set(
   ASSISTANT_TOOLS.map((t) => t.function.name).filter(
-    (name) => name !== "ask_user"
+    (name) => !NON_PROJECT_TOOLS.has(name)
   )
 );
 
