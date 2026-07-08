@@ -76,15 +76,22 @@ export interface ShortcutMenuState {
  *   instead of opening a picker. Keys are lowercased, optionally prefixed with
  *   `shift+` (e.g. `"shift+p"` to copy the prompt). Field shortcuts (S/P/E/…)
  *   only ever fire without Shift, so a Shift combo never collides with them.
+ * @param disabledKeys Field-shortcut keys to leave alone here (lowercased), so
+ *   another handler can own them in this context — e.g. the side panel frees
+ *   `d` (normally the due-date picker) for voice dictation. The key isn't
+ *   swallowed, so the event still reaches that other handler.
  */
 export function useIssueFieldShortcuts(
   enabled = true,
-  actions?: Record<string, () => void>
+  actions?: Record<string, () => void>,
+  disabledKeys?: string[]
 ) {
   const posRef = React.useRef<{ x: number; y: number } | null>(null);
-  // Latest actions without re-subscribing the listener each render.
+  // Latest actions/disabledKeys without re-subscribing the listener each render.
   const actionsRef = React.useRef(actions);
   actionsRef.current = actions;
+  const disabledKeysRef = React.useRef(disabledKeys);
+  disabledKeysRef.current = disabledKeys;
   const [hovered, setHovered] = React.useState(false);
   const [menuState, setMenuState] = React.useState<ShortcutMenuState | null>(null);
 
@@ -114,6 +121,9 @@ export function useIssueFieldShortcuts(
       }
       // Field pickers are unmodified single keys only.
       if (e.shiftKey) return;
+      // A key handed off to another handler in this context: don't map it and
+      // don't swallow it, so that handler still receives the event.
+      if (disabledKeysRef.current?.includes(key)) return;
       const field = SHORTCUT_KEYS[key];
       if (!field || !posRef.current) return;
       e.preventDefault();

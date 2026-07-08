@@ -115,7 +115,13 @@ export function IssueSidePanel({
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
   // body; the picker opens at the cursor, in the key/value section.
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(open);
+  // `d` is freed here so it toggles voice dictation instead of opening the
+  // due-date picker (that mapping stays live on board cards).
+  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
+    open,
+    undefined,
+    ["d"]
+  );
 
   // Apply a dictated patch: categories go through their own join-table
   // endpoint, everything else is one immediate issue update. Also sync the
@@ -256,6 +262,7 @@ export function IssueSidePanel({
                 <DictateButton
                   onTranscription={onTranscript}
                   tooltipLabel={t("dictateEditTooltip")}
+                  shortcutKey="d"
                 />
               )}
             </div>

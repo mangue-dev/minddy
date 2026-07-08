@@ -35,6 +35,13 @@ export interface DictateButtonProps {
   disabled?: boolean;
   /** Optional tooltip override. Defaults to the localized "Voice dictation" label. */
   tooltipLabel?: string;
+  /**
+   * When set, pressing this key (case-insensitive, without modifiers and while
+   * focus isn't in a text field) toggles recording — same as clicking. The
+   * listener lives for as long as the button is mounted, so scope it by only
+   * rendering the button in the context where the shortcut should apply.
+   */
+  shortcutKey?: string;
   className?: string;
 }
 
@@ -64,6 +71,7 @@ export function DictateButton({
   floating = false,
   disabled = false,
   tooltipLabel,
+  shortcutKey,
   className,
 }: DictateButtonProps) {
   const t = useTranslations("Dictate");
@@ -300,6 +308,30 @@ export function DictateButton({
     }
   }, [disabled, startRecording, status, stopRecording]);
 
+  // Keyboard shortcut: toggle recording on `shortcutKey`. Guarded like the
+  // field shortcuts — no modifiers, no key-repeat, and never while the user is
+  // typing (so the key still types normally in the title/description).
+  useEffect(() => {
+    if (!shortcutKey) return;
+    const key = shortcutKey.toLowerCase();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (e.key.toLowerCase() !== key) return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      )
+        return;
+      e.preventDefault();
+      handleClick();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [shortcutKey, handleClick]);
+
   const isBusy = status !== "idle";
   const isRecording = status === "recording";
   const isStarting = status === "starting";
@@ -339,8 +371,13 @@ export function DictateButton({
             </PopoverTrigger>
           </TooltipTrigger>
           {!isBusy && (
-            <TooltipContent side="top">
+            <TooltipContent side="top" className="flex items-center gap-1.5">
               {tooltipLabel ?? t("start")}
+              {shortcutKey && (
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+                  {shortcutKey.toUpperCase()}
+                </kbd>
+              )}
             </TooltipContent>
           )}
         </Tooltip>

@@ -397,9 +397,9 @@ function ProjectBoard() {
               />
             )}
           </div>
-          <div className="min-h-0 flex-1 px-6 pt-3 pb-6">
+          <div className="min-h-0 flex-1 pt-3">
             {boardIssues.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
+              <div className="mx-6 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
                 <p className="text-sm text-muted-foreground">
                   {activeObjective
                     ? t("noIssuesInObjective")

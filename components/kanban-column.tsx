@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
@@ -7,6 +8,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
 import type { Category, Issue, IssueUpdateInput, Member, Objective } from "@/lib/types";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 
@@ -41,8 +43,18 @@ export function KanbanColumn({
   onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
   const t = useTranslations("Board");
   const ts = useTranslations("Status");
+
+  // dnd-kit needs the droppable node; useScrollFade needs it to measure scroll.
+  const setScrollRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      setNodeRef(node);
+      fadeRef(node);
+    },
+    [setNodeRef, fadeRef]
+  );
 
   return (
     <div className="flex w-[22rem] shrink-0 flex-col">
@@ -53,9 +65,11 @@ export function KanbanColumn({
       </div>
 
       <div
-        ref={setNodeRef}
+        ref={setScrollRef}
+        onScroll={scrollProps.onScroll}
+        style={scrollProps.style}
         className={cn(
-          "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
+          "no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
           isOver && "bg-muted/50"
         )}
       >

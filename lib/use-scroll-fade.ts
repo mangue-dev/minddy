@@ -1,0 +1,77 @@
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefCallback,
+} from "react";
+
+/** Height/width of the soft fade zone at each scrollable edge. */
+const FADE = "2rem";
+
+function maskImage(start: boolean, end: boolean, axis: "x" | "y"): string | undefined {
+  if (!start && !end) return undefined;
+  const dir = axis === "y" ? "to bottom" : "to right";
+  const from = start ? `transparent, #000 ${FADE}` : "#000";
+  const to = end ? `#000 calc(100% - ${FADE}), transparent` : "#000";
+  return `linear-gradient(${dir}, ${from}, ${to})`;
+}
+
+/**
+ * Softly fades the leading and/or trailing edge of a scroll container to hint
+ * that the content continues past the edge — but only on the side(s) that
+ * actually have more to reveal (leading once scrolled off the start, trailing
+ * until the end). Pass `"x"` for a horizontal scroller (default is vertical).
+ *
+ * Merge `ref` with any other ref on the scroll element and spread `scrollProps`
+ * (an `onScroll` handler + the mask `style`) onto it. The mask only changes when
+ * an edge crosses its threshold, so scrolling stays cheap.
+ */
+export function useScrollFade<T extends HTMLElement>(axis: "x" | "y" = "y") {
+  const elRef = useRef<T | null>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+
+  const update = useCallback(() => {
+    const el = elRef.current;
+    if (!el) return;
+    const offset = axis === "y" ? el.scrollTop : el.scrollLeft;
+    const client = axis === "y" ? el.clientHeight : el.clientWidth;
+    const scroll = axis === "y" ? el.scrollHeight : el.scrollWidth;
+    const start = offset > 1;
+    const end = offset + client < scroll - 1;
+    setEdges((prev) =>
+      prev.start === start && prev.end === end ? prev : { start, end }
+    );
+  }, [axis]);
+
+  const ref = useCallback<RefCallback<T>>((node) => {
+    elRef.current = node;
+  }, []);
+
+  // Recompute when the container resizes or its content changes (add/remove/
+  // reorder), so the trailing fade appears/disappears without a scroll event.
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    const mo = new MutationObserver(update);
+    mo.observe(el, { childList: true, subtree: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [update]);
+
+  const mask = maskImage(edges.start, edges.end, axis);
+  const scrollProps = {
+    onScroll: update,
+    style: mask
+      ? ({ WebkitMaskImage: mask, maskImage: mask } as CSSProperties)
+      : undefined,
+  };
+
+  return { ref, scrollProps };
+}

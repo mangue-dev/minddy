@@ -16,6 +16,7 @@ import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { Category, Issue, IssueUpdateInput, Member, Objective, ViewSort } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 
@@ -99,6 +100,9 @@ export function KanbanBoard({
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
+  // Fade the left/right edges of the board while more columns lie off-screen.
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>("x");
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
   };
@@ -158,7 +162,12 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex h-full gap-3 overflow-x-auto pb-2">
+      <div
+        ref={fadeRef}
+        onScroll={scrollProps.onScroll}
+        style={scrollProps.style}
+        className="flex h-full gap-3 overflow-x-auto px-6"
+      >
         {columns.map(({ status, items }) => (
           <KanbanColumn
             key={status.value}
