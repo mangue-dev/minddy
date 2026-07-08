@@ -9,9 +9,12 @@ import {
   cn,
   transitions,
   buttonTap,
+  Kbd,
+  KbdSequence,
 } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 
 /**
  * Minimal circular FAB that opens the global assistant panel. Hover reveals a
@@ -20,7 +23,9 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 export function AssistantFab() {
   const { isOpen, toggle, ambientContext } = useAssistantPanel();
   const hasContext = ambientContext !== null;
+  const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
+  const tk = useTranslations("Keyboard");
 
   return (
     <AnimatePresence>
@@ -62,9 +67,26 @@ export function AssistantFab() {
                 )}
               >
                 <NumoIcon className="size-5 text-foreground" />
+                {/* G-chord armed: surface the completion key (G then A). */}
+                <AnimatePresence>
+                  {chordArmed && (
+                    <motion.span
+                      key="assistant-fab-chord-hint"
+                      initial={{ opacity: 0, scale: 0.6 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.6 }}
+                      transition={transitions.snappy}
+                      className="absolute -top-1.5 -right-1.5"
+                    >
+                      <Kbd size="sm" className="shadow-sm ring-1 ring-border">
+                        A
+                      </Kbd>
+                    </motion.span>
+                  )}
+                </AnimatePresence>
                 {/* Blue dot: the assistant has a current page context (issue…). */}
                 <AnimatePresence>
-                  {hasContext && (
+                  {hasContext && !chordArmed && (
                     <motion.span
                       key="assistant-fab-context-badge"
                       initial={{ opacity: 0, scale: 0.4 }}
@@ -91,6 +113,11 @@ export function AssistantFab() {
               className="flex items-center gap-2 max-w-none"
             >
               <span>{t("title")}</span>
+              <KbdSequence
+                keys={[["G"], ["A"]]}
+                size="sm"
+                separator={tk("then")}
+              />
             </TooltipContent>
           </Tooltip>
         </motion.div>

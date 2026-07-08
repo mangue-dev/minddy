@@ -14,6 +14,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
+import { useChordPrefix } from "@/lib/keyboard/keyboard-context";
 import { CommandAnchor } from "@/components/command-anchor";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { Dot } from "@/components/issue-property-fields";
@@ -94,6 +95,10 @@ export function useIssueFieldShortcuts(
   actionsRef.current = actions;
   const disabledKeysRef = React.useRef(disabledKeys);
   disabledKeysRef.current = disabledKeys;
+  // While a global G-chord is armed, stand down so its second key (A/O/S…)
+  // routes to navigation instead of opening a field picker on the hovered card.
+  const chordArmedRef = React.useRef(false);
+  chordArmedRef.current = useChordPrefix() !== null;
   const [hovered, setHovered] = React.useState(false);
   const [menuState, setMenuState] = React.useState<ShortcutMenuState | null>(null);
 
@@ -101,6 +106,7 @@ export function useIssueFieldShortcuts(
     if (!enabled || !hovered) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (chordArmedRef.current) return;
       const el = e.target as HTMLElement | null;
       // Never hijack keys while the user is typing (title, description, search…).
       if (

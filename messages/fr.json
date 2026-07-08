@@ -354,6 +354,41 @@
     "searchPlaceholder": "Rechercher…",
     "noResults": "Aucun résultat."
   },
+  "Keyboard": {
+    "then": "puis",
+    "shortcutsTitle": "Raccourcis clavier",
+    "shortcutsDescription": "Appuyez sur ? à tout moment pour l'ouvrir.",
+    "sections": {
+      "navigation": "Navigation",
+      "general": "Général",
+      "create": "Création",
+      "card": "Ticket (au survol d'une carte)"
+    },
+    "shortcuts": {
+      "navHome": "Aller à l'accueil",
+      "navInbox": "Aller à l'inbox",
+      "navAssistant": "Ouvrir l'assistant Numo",
+      "navAllIssues": "Aller à Tous les tickets",
+      "navMyIssues": "Aller à Mes tickets",
+      "navObjectives": "Aller aux Objectifs",
+      "navTriage": "Aller au Triage",
+      "navProjectSettings": "Aller aux Réglages du projet",
+      "palette": "Palette de commandes",
+      "search": "Rechercher",
+      "toggleSidebar": "Afficher/masquer la sidebar",
+      "cheatsheet": "Afficher les raccourcis clavier",
+      "createIssue": "Nouveau ticket / objectif",
+      "openIssue": "Ouvrir le ticket",
+      "status": "Changer le statut",
+      "priority": "Changer la priorité",
+      "effort": "Changer l'effort",
+      "assignee": "Changer l'assigné",
+      "labels": "Changer les catégories",
+      "dueDate": "Changer l'échéance",
+      "objective": "Changer l'objectif",
+      "copyPrompt": "Copier en prompt"
+    }
+  },
   "ObjectiveStatus": {
     "planned": "Planifié",
     "in_progress": "En cours",

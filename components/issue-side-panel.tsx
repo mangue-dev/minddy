@@ -210,7 +210,13 @@ export function IssueSidePanel({
   return (
     <>
       <SidePanel open={open} onOpenChange={onOpenChange}>
-        <SidePanelContent onInteractOutside={keepOverlayOpenForPopper}>
+        <SidePanelContent
+          onInteractOutside={keepOverlayOpenForPopper}
+          // Radix moves focus to the first tabbable element when the panel
+          // opens; here that's the Dictate button, whose tooltip then pops up.
+          // Suppress the open-autofocus so nothing is focused on open.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           {/* Header: identifier · dictate · delete · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">

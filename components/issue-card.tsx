@@ -645,10 +645,10 @@ export function IssueCard({
   };
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
-  // Shift+P copie le prompt.
+  // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt.
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
     !isDragging,
-    { "shift+p": () => void copyPrompt() }
+    { " ": onOpen, "shift+p": () => void copyPrompt() }
   );
 
   const menuActions: ContextMenuAction[] = [

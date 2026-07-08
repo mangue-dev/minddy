@@ -354,6 +354,41 @@
     "searchPlaceholder": "Search…",
     "noResults": "No results."
   },
+  "Keyboard": {
+    "then": "then",
+    "shortcutsTitle": "Keyboard shortcuts",
+    "shortcutsDescription": "Press ? anytime to open this.",
+    "sections": {
+      "navigation": "Navigation",
+      "general": "General",
+      "create": "Create",
+      "card": "Issue (while hovering a card)"
+    },
+    "shortcuts": {
+      "navHome": "Go to Home",
+      "navInbox": "Go to Inbox",
+      "navAssistant": "Open Numo assistant",
+      "navAllIssues": "Go to All issues",
+      "navMyIssues": "Go to My issues",
+      "navObjectives": "Go to Objectives",
+      "navTriage": "Go to Triage",
+      "navProjectSettings": "Go to Project settings",
+      "palette": "Command palette",
+      "search": "Search",
+      "toggleSidebar": "Toggle sidebar",
+      "cheatsheet": "Show keyboard shortcuts",
+      "createIssue": "New issue / objective",
+      "openIssue": "Open issue",
+      "status": "Change status",
+      "priority": "Change priority",
+      "effort": "Change effort",
+      "assignee": "Change assignee",
+      "labels": "Change labels",
+      "dueDate": "Change due date",
+      "objective": "Change objective",
+      "copyPrompt": "Copy as prompt"
+    }
+  },
   "ObjectiveStatus": {
     "planned": "Planned",
     "in_progress": "In Progress",

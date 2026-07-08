@@ -16,6 +16,7 @@ import {
   useTheme,
   toast,
   cn,
+  Kbd,
   type NavItem,
   type NavSection,
 } from "mangue-ui";
@@ -36,10 +37,19 @@ import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { ShareFeedbackDialog } from "@/components/share-feedback-dialog";
+import {
+  useChordPrefix,
+  useSidebarCollapse,
+  CHORD_PREFIX,
+} from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 
 const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 56;
+
+/** A sidebar nav item that can advertise its `G`-chord second key (e.g. "M"). */
+export type AppNavItem = NavItem & { shortcut?: string };
+export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
 const MotionLink = motion.create(Link);
 
@@ -59,9 +69,22 @@ function SidebarBrand() {
 
 /* ─── Nav ──────────────────────────────────────────────────────────── */
 
-function SidebarRow({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+function SidebarRow({
+  item,
+  collapsed,
+}: {
+  item: AppNavItem;
+  collapsed: boolean;
+}) {
   const Icon = item.icon;
   const active = item.active;
+  // While a G-chord is armed, surface this row's second key as a Kbd hint
+  // (AutoKap-style) — takes the trailing slot over the badge for the moment.
+  const chordPrefix = useChordPrefix();
+  const hint =
+    !collapsed && chordPrefix === CHORD_PREFIX && item.shortcut
+      ? item.shortcut
+      : null;
 
   const rowClass = cn(
     "group relative flex h-9 items-center gap-3 rounded-lg px-3.5 text-sm font-medium transition-colors",
@@ -78,7 +101,11 @@ function SidebarRow({ item, collapsed }: { item: NavItem; collapsed: boolean }) 
     <>
       {Icon ? <Icon className="h-[18px] w-[18px] shrink-0" /> : null}
       {!collapsed ? <span className="truncate">{item.label}</span> : null}
-      {!collapsed && item.badge != null ? (
+      {hint ? (
+        <Kbd size="sm" className="ml-auto shrink-0">
+          {hint}
+        </Kbd>
+      ) : !collapsed && item.badge != null ? (
         <span className="ml-auto flex items-center">{item.badge}</span>
       ) : null}
     </>
@@ -127,7 +154,7 @@ function SidebarNav({
   sections,
   collapsed,
 }: {
-  sections: NavSection[];
+  sections: AppNavSection[];
   collapsed: boolean;
 }) {
   return (
@@ -367,11 +394,11 @@ export function AppSidebar({
   sections,
   modeKey,
 }: {
-  sections: NavSection[];
+  sections: AppNavSection[];
   modeKey: string;
 }) {
   const t = useTranslations("Nav");
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useSidebarCollapse();
   const reduce = useReducedMotion();
   const dx = modeKey === "home" ? -16 : 16;
 

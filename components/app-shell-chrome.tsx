@@ -5,13 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import {
-  AppShell,
-  Header,
-  MobileNav,
-  type NavSection,
-  type NavItem,
-} from "mangue-ui";
+import { AppShell, Header, MobileNav } from "mangue-ui";
 import {
   Home,
   ChevronLeft,
@@ -23,6 +17,7 @@ import {
   Filter,
   Settings,
   ListTodo,
+  Keyboard,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useNotifications } from "@/lib/use-notifications";
@@ -36,7 +31,12 @@ import {
 } from "@/components/header-search-pill";
 import { NewMenu } from "@/components/new-menu";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
-import { AppSidebar } from "@/components/app-sidebar";
+import {
+  AppSidebar,
+  type AppNavItem,
+  type AppNavSection,
+} from "@/components/app-sidebar";
+import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 
@@ -62,10 +62,12 @@ function identifierBadge(id: string) {
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Nav");
   const ti = useTranslations("Issue");
+  const tk = useTranslations("Keyboard");
   const pathname = usePathname();
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
   const { unreadCount } = useNotifications();
+  const { setOpen: setCheatsheetOpen } = useCheatsheet();
 
   const currentProjectId = projectIdFromPath(pathname);
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
@@ -141,6 +143,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("accountSettings"),
           icon: Settings,
           onSelect: () => router.push("/settings"),
+        },
+        {
+          key: "keyboard-shortcuts",
+          label: tk("shortcutsTitle"),
+          icon: Keyboard,
+          keywords: ["keyboard", "shortcuts", "raccourcis", "clavier", "cheatsheet", "help", "aide"],
+          onSelect: () => setCheatsheetOpen(true),
         },
       ],
     });
@@ -230,14 +239,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, currentProject, projectIssues, router, openCreateProject, t, ti]);
+  }, [projects, currentProject, projectIssues, router, openCreateProject, t, ti, tk, setCheatsheetOpen]);
 
-  const inboxItem: NavItem = {
+  const inboxItem: AppNavItem = {
     key: "inbox",
     label: t("inbox"),
     icon: Inbox,
     href: "/inbox",
     active: isInbox,
+    shortcut: "I",
     badge:
       unreadCount > 0 ? (
         <span className="flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
@@ -246,14 +256,20 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ) : undefined,
   };
 
-  const sections = useMemo<NavSection[]>(() => {
+  const sections = useMemo<AppNavSection[]>(() => {
     if (currentProject) {
       const base = `/projects/${currentProject.id}`;
       return [
         {
           items: [
             inboxItem,
-            { key: "home-back", label: t("home"), icon: ChevronLeft, href: "/home" },
+            {
+              key: "home-back",
+              label: t("home"),
+              icon: ChevronLeft,
+              href: "/home",
+              shortcut: "H",
+            },
           ],
         },
         {
@@ -264,6 +280,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: CircleUser,
               href: `${base}/my`,
               active: pathname === `${base}/my`,
+              shortcut: "M",
             },
             {
               key: "all",
@@ -271,6 +288,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: LayoutGrid,
               href: base,
               active: pathname === base,
+              shortcut: "B",
             },
             {
               key: "objectives",
@@ -278,6 +296,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: Target,
               href: `${base}/objectives`,
               active: pathname.startsWith(`${base}/objectives`),
+              shortcut: "O",
             },
             {
               key: "triage",
@@ -285,6 +304,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: Filter,
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
+              shortcut: "T",
               badge:
                 triageCount > 0 ? (
                   <span className="text-xs tabular-nums text-muted-foreground">
@@ -298,6 +318,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: Settings,
               href: `${base}/settings`,
               active: pathname.startsWith(`${base}/settings`),
+              shortcut: "S",
             },
           ],
         },
@@ -307,7 +328,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       {
         items: [
           inboxItem,
-          { key: "home", label: t("home"), icon: Home, href: "/home", active: pathname.startsWith("/home") },
+          {
+            key: "home",
+            label: t("home"),
+            icon: Home,
+            href: "/home",
+            active: pathname.startsWith("/home"),
+            shortcut: "H",
+          },
         ],
       },
       {

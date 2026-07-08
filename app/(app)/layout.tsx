@@ -6,8 +6,10 @@ import { AppQueryProvider } from "@/lib/query-provider";
 import { RealtimeProvider } from "@/lib/realtime-provider";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
+import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
+import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -22,9 +24,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <RealtimeProvider>
           <ProjectsProvider>
             <AssistantPanelProvider>
-              <AppShellChrome>{children}</AppShellChrome>
-              <AssistantPanel />
-              <AssistantFab />
+              <KeyboardProvider>
+                <AppShellChrome>{children}</AppShellChrome>
+                <AssistantPanel />
+                <AssistantFab />
+                <KeyboardCheatsheet />
+              </KeyboardProvider>
             </AssistantPanelProvider>
           </ProjectsProvider>
         </RealtimeProvider>
