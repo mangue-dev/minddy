@@ -179,7 +179,12 @@ export function KanbanBoard({
         ))}
       </div>
 
-      <DragOverlay>
+      {/* dropAnimation={null}: the move is optimistic (moveIssue patches the cache
+          synchronously), so the real card is already at its destination on drop.
+          dnd-kit's default drop animation would fly the overlay back toward the
+          source card's original rect first — the confusing "return to origin then
+          jump" on cross-column moves. Disabling it makes the card snap into place. */}
+      <DragOverlay dropAnimation={null}>
         {activeIssue ? (
           <div className="w-[21rem]">
             <IssueCardBody
