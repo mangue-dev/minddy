@@ -120,3 +120,18 @@ export const isMcpAgentId = (v: unknown): v is McpAgentId =>
 
 export const getMcpAgent = (id: McpAgentId): McpAgent =>
   MCP_AGENTS.find((a) => a.id === id) as McpAgent;
+
+/** Devine l'agent derrière un client_name OAuth (DCR) pour réutiliser les
+    logos/attribution du registry — null si inconnu (icône générique). */
+export function mapClientNameToAgent(name: string): McpAgentId | null {
+  const n = name.toLowerCase();
+  if (n.includes("claude")) return "claude";
+  if (n.includes("cursor")) return "cursor";
+  if (n.includes("codex") || n.includes("chatgpt") || n.includes("openai"))
+    return "codex";
+  if (n.includes("gemini")) return "gemini";
+  if (n.includes("visual studio") || n.includes("vs code") || n.includes("vscode"))
+    return "vscode";
+  if (n.includes("windsurf")) return "windsurf";
+  return null;
+}

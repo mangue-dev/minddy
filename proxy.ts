@@ -15,8 +15,9 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico"]);
 // `/api/` is excluded from middleware auth on purpose: route handlers
 // authenticate themselves (getAuthedUser) and must return JSON 401 — never an
-// HTML redirect to /login.
-const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/"];
+// HTML redirect to /login. `/.well-known/` = découverte OAuth (RFC 8414/9728),
+// forcément accessible sans session.
+const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/"];
 
 function isSupabaseGetSessionWarning(args: unknown[]): boolean {
   return args.some(
@@ -98,7 +99,9 @@ export async function proxy(request: NextRequest) {
 
   if (!session?.user) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    // pathname + search : /oauth/authorize doit retrouver ses paramètres
+    // (client_id, code_challenge…) après le passage par /login.
+    loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 

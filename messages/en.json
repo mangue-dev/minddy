@@ -72,6 +72,7 @@
     "apiKeyNotFound": "API key not found.",
     "unknownAgent": "Unknown agent.",
     "serviceUnavailable": "Can't reach the database right now — try again in a moment.",
+    "grantNotFound": "Connected app not found.",
     "feedbackMessageRequired": "A feedback message is required.",
     "feedbackUnavailable": "Feedback is not available right now.",
     "webhookInvalidUrl": "Invalid webhook URL.",
@@ -361,6 +362,18 @@
     "done": "Done",
     "canceled": "Canceled"
   },
+  "OAuthConsent": {
+    "title": "Authorize {name}?",
+    "subtitle": "This app wants to connect to your minddy account through the MCP server.",
+    "scopeIssues": "Read and manage your projects, issues and objectives",
+    "scopeActAs": "Act on your behalf — its actions appear as the app in issue timelines",
+    "signedInAs": "Signed in as {name}",
+    "authorize": "Authorize",
+    "deny": "Cancel",
+    "errorTitle": "Authorization request rejected",
+    "unknownClient": "Unknown application (invalid client_id). Ask the app to register again.",
+    "invalidRedirect": "The application's redirect address isn't registered — refusing to continue."
+  },
   "Objectives": {
     "projectNotFound": "Project not found",
     "backToHome": "Back to home",
@@ -467,7 +480,13 @@
     "openingAgent": "Opening {name}…",
     "mcpRegenTitle": "Regenerate the {name} key?",
     "mcpRegenDescription": "A key for this agent already exists but can no longer be displayed. Regenerating revokes the old one — an agent still using it will lose access.",
-    "mcpRegenConfirm": "Regenerate"
+    "mcpRegenConfirm": "Regenerate",
+    "connectedAppsTitle": "Connected apps",
+    "connectedAppsDesc": "Apps authorized through OAuth (browser consent, no key to paste). Their actions appear under the app's name in issue timelines.",
+    "connectedAppsEmpty": "No connected apps yet. Agents that support OAuth can connect with just the MCP server URL.",
+    "connectedAppRevokeTitle": "Disconnect {name}?",
+    "connectedAppRevokeDescription": "Its access and refresh tokens stop working immediately. Actions already performed keep their attribution.",
+    "connectedAppRevokedToast": "{name} disconnected."
   },
   "Projects": {
     "newProject": "New Project",

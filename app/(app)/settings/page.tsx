@@ -10,6 +10,7 @@ import {
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountApiKeysSection } from "@/components/settings/account-api-keys-section";
+import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
@@ -35,7 +36,12 @@ export default function AccountSettingsPage() {
       value: "api-keys",
       label: t("apiKeysTab"),
       icon: KeyRound,
-      content: <AccountApiKeysSection />,
+      content: (
+        <>
+          <AccountApiKeysSection />
+          <AccountConnectedAppsSection />
+        </>
+      ),
     },
   ];
 

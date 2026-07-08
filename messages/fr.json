@@ -72,6 +72,7 @@
     "apiKeyNotFound": "Clé API introuvable.",
     "unknownAgent": "Agent inconnu.",
     "serviceUnavailable": "Impossible de joindre la base de données pour le moment — réessaie dans un instant.",
+    "grantNotFound": "Application connectée introuvable.",
     "feedbackMessageRequired": "Le message du retour est requis.",
     "feedbackUnavailable": "Les retours sont indisponibles pour le moment.",
     "webhookInvalidUrl": "URL de webhook invalide.",
@@ -361,6 +362,18 @@
     "done": "Terminé",
     "canceled": "Annulé"
   },
+  "OAuthConsent": {
+    "title": "Autoriser {name} ?",
+    "subtitle": "Cette application veut se connecter à ton compte minddy via le serveur MCP.",
+    "scopeIssues": "Lire et gérer tes projets, tickets et objectifs",
+    "scopeActAs": "Agir en ton nom — ses actions apparaissent au nom de l'application dans les timelines",
+    "signedInAs": "Connecté en tant que {name}",
+    "authorize": "Autoriser",
+    "deny": "Annuler",
+    "errorTitle": "Demande d'autorisation rejetée",
+    "unknownClient": "Application inconnue (client_id invalide). Demande à l'application de se réenregistrer.",
+    "invalidRedirect": "L'adresse de retour de l'application n'est pas enregistrée — refus de continuer."
+  },
   "Objectives": {
     "projectNotFound": "Projet introuvable",
     "backToHome": "Retour à l'accueil",
@@ -467,7 +480,13 @@
     "openingAgent": "Ouverture de {name}…",
     "mcpRegenTitle": "Régénérer la clé {name} ?",
     "mcpRegenDescription": "Une clé pour cet agent existe déjà mais n'est plus affichable. La régénérer révoque l'ancienne — un agent qui l'utilise encore perdra l'accès.",
-    "mcpRegenConfirm": "Régénérer"
+    "mcpRegenConfirm": "Régénérer",
+    "connectedAppsTitle": "Applications connectées",
+    "connectedAppsDesc": "Applications autorisées via OAuth (consentement navigateur, aucune clé à coller). Leurs actions apparaissent au nom de l'application dans les timelines.",
+    "connectedAppsEmpty": "Aucune application connectée. Les agents compatibles OAuth se connectent avec la seule URL du serveur MCP.",
+    "connectedAppRevokeTitle": "Déconnecter {name} ?",
+    "connectedAppRevokeDescription": "Ses tokens d'accès et de refresh cessent de fonctionner immédiatement. Les actions déjà effectuées gardent leur attribution.",
+    "connectedAppRevokedToast": "{name} a été déconnectée."
   },
   "Projects": {
     "newProject": "Nouveau Projet",

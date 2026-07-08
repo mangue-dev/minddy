@@ -45,6 +45,9 @@ export async function listApiKeys(userId: string): Promise<ApiKeySummary[] | nul
     .from("api_keys")
     .select(API_KEY_SUMMARY_SELECT)
     .eq("user_id", userId)
+    // Les lignes « acteurs OAuth » (grants) vivent dans Applications
+    // connectées, pas dans la liste des clés.
+    .is("oauth_client_id", null)
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[api-keys] list failed:", error.message);
@@ -146,6 +149,9 @@ export async function connectAgentKey({
     .select(API_KEY_SUMMARY_SELECT)
     .eq("user_id", userId)
     .eq("agent", agent)
+    // Ignorer les lignes « acteurs OAuth » : un grant OAuth pour le même
+    // agent ne doit ni bloquer ni être révoqué par le flow clé en main.
+    .is("oauth_client_id", null)
     .is("revoked_at", null)
     .maybeSingle();
   if (findError) {

@@ -27,6 +27,7 @@ import {
 import { apiKeysQueryKey, useApiKeysQuery } from "@/lib/use-api-keys-query";
 import { MCP_AGENTS, getMcpAgent, isMcpAgentId, type McpAgent } from "@/lib/mcp-agents";
 import { SettingsSection } from "@/components/settings-shell";
+import { AgentLogo } from "@/components/settings/agent-logo";
 import type { ApiKey } from "@/lib/types";
 
 /** Create dialog: a name form that, once submitted, swaps to the one-time key
@@ -134,27 +135,6 @@ function CreateApiKeyDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Logo d'un agent, avec bascule light/dark quand une variante existe. */
-function AgentLogo({ agent, className }: { agent: McpAgent; className?: string }) {
-  if (!agent.logoDark) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={agent.logo} alt="" aria-hidden className={className} />;
-  }
-  return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={agent.logo} alt="" aria-hidden className={cn(className, "dark:hidden")} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={agent.logoDark}
-        alt=""
-        aria-hidden
-        className={cn(className, "hidden dark:block")}
-      />
-    </>
   );
 }
 

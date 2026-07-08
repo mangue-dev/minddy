@@ -1,0 +1,98 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations, useFormatter } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
+import { Globe } from "lucide-react";
+import { revokeOAuthGrantApi, type OAuthGrant } from "@/lib/oauth-grants-api";
+import { oauthGrantsQueryKey, useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
+import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
+import { SettingsSection } from "@/components/settings-shell";
+import { AgentLogo } from "@/components/settings/agent-logo";
+
+/** « Applications connectées » : les grants OAuth actifs (agents connectés
+    via le consentement navigateur, sans clé). Révoquer coupe l'accès
+    immédiatement — access token, refresh token et attribution future. */
+export function AccountConnectedAppsSection() {
+  const t = useTranslations("Account");
+  const tc = useTranslations("Common");
+  const format = useFormatter();
+  const queryClient = useQueryClient();
+
+  const { grants, loading } = useOAuthGrantsQuery();
+  const [toRevoke, setToRevoke] = useState<OAuthGrant | null>(null);
+
+  const handleRevoke = async () => {
+    if (!toRevoke) return;
+    try {
+      await revokeOAuthGrantApi(toRevoke.id);
+      toast.success(t("connectedAppRevokedToast", { name: toRevoke.client_name }));
+      void queryClient.invalidateQueries({ queryKey: oauthGrantsQueryKey });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const lastUsed = (grant: OAuthGrant) =>
+    grant.last_used_at
+      ? t("apiKeyLastUsed", {
+          date: format.dateTime(new Date(grant.last_used_at), {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        })
+      : t("apiKeyNeverUsed");
+
+  return (
+    <SettingsSection
+      title={t("connectedAppsTitle")}
+      description={t("connectedAppsDesc")}
+    >
+      {loading ? (
+        <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
+      ) : grants.length === 0 ? (
+        <p className="py-2 text-sm text-muted-foreground">{t("connectedAppsEmpty")}</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-border">
+          {grants.map((grant) => (
+            <li key={grant.id} className="flex items-center gap-3 py-2">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                {isMcpAgentId(grant.agent) ? (
+                  <AgentLogo agent={getMcpAgent(grant.agent)} className="size-4" />
+                ) : (
+                  <Globe className="size-4" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{grant.client_name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {format.dateTime(new Date(grant.created_at), { dateStyle: "medium" })}
+                  {" · "}
+                  {lastUsed(grant)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setToRevoke(grant)}
+              >
+                {t("apiKeyRevoke")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <ConfirmDeleteDialog
+        open={!!toRevoke}
+        onOpenChange={(open) => !open && setToRevoke(null)}
+        title={t("connectedAppRevokeTitle", { name: toRevoke?.client_name ?? "" })}
+        description={t("connectedAppRevokeDescription")}
+        confirmLabel={t("apiKeyRevoke")}
+        onConfirm={handleRevoke}
+      />
+    </SettingsSection>
+  );
+}
