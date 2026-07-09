@@ -37,6 +37,8 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { createIssueApi } from "@/lib/issues-api";
+import { useUndoHistory } from "@/lib/undo/undo-context";
+import { snapshotIssue } from "@/lib/undo/undo-core";
 import type {
   CreateIssueInput,
   Issue,
@@ -149,15 +151,22 @@ function ProjectBoard() {
   // project" dropdown). Refresh that project's board cache so the issue shows
   // the next time it's viewed. `useIssuesQuery` above only owns the current one.
   const queryClient = useQueryClient();
+  const { record } = useUndoHistory();
   const createIssueInProject = useCallback(
     async (targetProjectId: string, input: CreateIssueInput) => {
       const issue = await createIssueApi(targetProjectId, input);
+      record({
+        kind: "create",
+        projectId: targetProjectId,
+        issueId: issue.id,
+        snapshot: snapshotIssue(issue),
+      });
       void queryClient.invalidateQueries({
         queryKey: ["issues", targetProjectId],
       });
       return issue;
     },
-    [queryClient],
+    [queryClient, record],
   );
 
   // Relations (MIN-25): open a related issue by id, add/remove relations.

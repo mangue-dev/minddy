@@ -12,7 +12,14 @@ import {
 import { setIssueCategoriesApi } from "./categories-api";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
-import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
+import { useUndoHistory } from "./undo/undo-context";
+import { buildBeforePatch, snapshotIssue } from "./undo/undo-core";
+import type {
+  CreateIssueInput,
+  Issue,
+  IssueRelation,
+  IssueUpdateInput,
+} from "./types";
 
 const issuesKey = (projectId: string) => ["issues", projectId] as const;
 
@@ -21,10 +28,16 @@ const issuesKey = (projectId: string) => ["issues", projectId] as const;
 export function useIssuesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  // Local undo history (MIN-35): every successful user mutation below records
+  // its inverse. Undo/redo replays bypass this hook, so they never re-record.
+  const { record } = useUndoHistory();
 
   // Per-issue debounce for category writes (see setCategories).
   const catTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const catLatest = useRef(new Map<string, string[]>());
+  // category_ids at the start of a debounce window — the undo `before` set
+  // (the cache is already patched by the time the PUT flushes).
+  const catBefore = useRef(new Map<string, string[]>());
 
   const { data, isLoading, error } = useQuery({
     queryKey: issuesKey(projectId ?? ""),
@@ -65,10 +78,16 @@ export function useIssuesQuery(projectId: string | null) {
   const createIssue = useCallback(
     async (input: CreateIssueInput) => {
       const issue = await createIssueApi(projectId as string, input);
+      record({
+        kind: "create",
+        projectId: projectId as string,
+        issueId: issue.id,
+        snapshot: snapshotIssue(issue),
+      });
       invalidate();
       return issue;
     },
-    [projectId, invalidate]
+    [projectId, invalidate, record]
   );
 
   // Optimistic: patch the cache immediately so edits (incl. inline card pickers)
@@ -77,11 +96,8 @@ export function useIssuesQuery(projectId: string | null) {
     async (issueId: string, updates: IssueUpdateInput) => {
       const key = projectId ? issuesKey(projectId) : null;
       const previous = key ? queryClient.getQueryData<Issue[]>(key) : undefined;
-      const assignee = startAssignee(
-        previous?.find((i) => i.id === issueId),
-        updates.status,
-        "assignee_id" in updates
-      );
+      const current = previous?.find((i) => i.id === issueId);
+      const assignee = startAssignee(current, updates.status, "assignee_id" in updates);
       const patch = assignee ? { ...updates, assignee_id: assignee } : updates;
       if (key) {
         queryClient.setQueryData<Issue[]>(key, (old) =>
@@ -90,6 +106,17 @@ export function useIssuesQuery(projectId: string | null) {
       }
       try {
         const issue = await updateIssueApi(issueId, patch);
+        // The final patch (injected assignee included) against the pre-edit issue.
+        const before = current && projectId ? buildBeforePatch(current, patch) : null;
+        if (before) {
+          record({
+            kind: "update",
+            projectId: projectId as string,
+            issueId,
+            before,
+            after: patch,
+          });
+        }
         invalidate();
         return issue;
       } catch (err) {
@@ -97,15 +124,44 @@ export function useIssuesQuery(projectId: string | null) {
         throw err;
       }
     },
-    [projectId, queryClient, invalidate, startAssignee]
+    [projectId, queryClient, invalidate, startAssignee, record]
   );
 
   const deleteIssue = useCallback(
     async (issueId: string) => {
+      // Snapshot before the hard delete: the issue, the sub-issues it will
+      // orphan (parent_id is SET NULL) and the relation rows that cascade —
+      // everything the undo re-creation restores.
+      const issues = projectId
+        ? queryClient.getQueryData<Issue[]>(issuesKey(projectId))
+        : undefined;
+      const target = issues?.find((i) => i.id === issueId);
       await deleteIssueApi(issueId);
+      if (target && projectId) {
+        const relations = (
+          queryClient.getQueryData<IssueRelation[]>([
+            "issue-relations",
+            projectId,
+          ]) ?? []
+        ).filter((r) => r.source_id === issueId || r.target_id === issueId);
+        record({
+          kind: "delete",
+          projectId,
+          issueId,
+          snapshot: snapshotIssue(target),
+          childIds: (issues ?? [])
+            .filter((i) => i.parent_id === issueId)
+            .map((i) => i.id),
+          relations: relations.map(({ source_id, target_id, type }) => ({
+            source_id,
+            target_id,
+            type,
+          })),
+        });
+      }
       invalidate();
     },
-    [invalidate]
+    [projectId, queryClient, invalidate, record]
   );
 
   /**
@@ -132,12 +188,17 @@ export function useIssuesQuery(projectId: string | null) {
       );
       try {
         await updateIssueApi(issueId, write);
+        const current = previous?.find((i) => i.id === issueId);
+        const before = current ? buildBeforePatch(current, write) : null;
+        if (before) {
+          record({ kind: "update", projectId, issueId, before, after: write });
+        }
       } catch (err) {
         queryClient.setQueryData(key, previous);
         throw err;
       }
     },
-    [projectId, queryClient, startAssignee]
+    [projectId, queryClient, startAssignee, record]
   );
 
   // Optimistic + DEBOUNCED per issue: rapid category toggles patch the cache
@@ -148,6 +209,14 @@ export function useIssuesQuery(projectId: string | null) {
   const setCategories = useCallback(
     async (issueId: string, categoryIds: string[]) => {
       const key = projectId ? issuesKey(projectId) : null;
+      // First toggle of a debounce window: keep the pre-edit set for undo
+      // (subsequent calls see an already-patched cache).
+      if (key && !catTimers.current.has(issueId)) {
+        const current = queryClient
+          .getQueryData<Issue[]>(key)
+          ?.find((i) => i.id === issueId);
+        catBefore.current.set(issueId, current?.category_ids ?? []);
+      }
       if (key) {
         queryClient.setQueryData<Issue[]>(key, (old) =>
           (old ?? []).map((i) =>
@@ -164,8 +233,25 @@ export function useIssuesQuery(projectId: string | null) {
           catTimers.current.delete(issueId);
           const ids = catLatest.current.get(issueId) ?? categoryIds;
           catLatest.current.delete(issueId);
+          const before = catBefore.current.get(issueId);
+          catBefore.current.delete(issueId);
           setIssueCategoriesApi(issueId, ids)
-            .then(() => invalidate())
+            .then(() => {
+              const changed =
+                before &&
+                (before.length !== ids.length ||
+                  before.some((id) => !ids.includes(id)));
+              if (changed && projectId) {
+                record({
+                  kind: "categories",
+                  projectId,
+                  issueId,
+                  before,
+                  after: ids,
+                });
+              }
+              invalidate();
+            })
             .catch((err) => {
               toast.error((err as Error).message);
               invalidate();
@@ -173,7 +259,7 @@ export function useIssuesQuery(projectId: string | null) {
         }, 300)
       );
     },
-    [projectId, queryClient, invalidate]
+    [projectId, queryClient, invalidate, record]
   );
 
   return {

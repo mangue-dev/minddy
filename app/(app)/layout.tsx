@@ -8,6 +8,7 @@ import { ProjectsProvider } from "@/lib/projects-context";
 import { CreateProvider } from "@/lib/create-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
+import { UndoProvider } from "@/lib/undo/undo-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
@@ -26,12 +27,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <ProjectsProvider>
             <AssistantPanelProvider>
               <KeyboardProvider>
-                <CreateProvider>
-                  <AppShellChrome>{children}</AppShellChrome>
-                </CreateProvider>
-                <AssistantPanel />
-                <AssistantFab />
-                <KeyboardCheatsheet />
+                <UndoProvider>
+                  <CreateProvider>
+                    <AppShellChrome>{children}</AppShellChrome>
+                  </CreateProvider>
+                  <AssistantPanel />
+                  <AssistantFab />
+                  <KeyboardCheatsheet />
+                </UndoProvider>
               </KeyboardProvider>
             </AssistantPanelProvider>
           </ProjectsProvider>

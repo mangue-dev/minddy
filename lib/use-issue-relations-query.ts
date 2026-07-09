@@ -7,6 +7,7 @@ import {
   fetchIssueRelationsApi,
   removeIssueRelationApi,
 } from "./issue-relations-api";
+import { useUndoHistory } from "./undo/undo-context";
 import type { IssueRelation, IssueRelationType } from "./types";
 
 const relationsKey = (projectId: string) => ["issue-relations", projectId] as const;
@@ -18,6 +19,8 @@ const relationsKey = (projectId: string) => ["issue-relations", projectId] as co
  */
 export function useIssueRelationsQuery(projectId: string | null) {
   const queryClient = useQueryClient();
+  // Local undo history (MIN-35): relation edits record like issue edits do.
+  const { record } = useUndoHistory();
 
   const { data, isLoading } = useQuery({
     queryKey: relationsKey(projectId ?? ""),
@@ -39,6 +42,17 @@ export function useIssueRelationsQuery(projectId: string | null) {
         target_id: targetId,
         type,
       });
+      // Record the server-normalized row (blocked_by → inverted blocks).
+      record({
+        kind: "relation-add",
+        projectId,
+        relationId: created.id,
+        relation: {
+          source_id: created.source_id,
+          target_id: created.target_id,
+          type: created.type,
+        },
+      });
       // Merge the created (or already-existing) row in immediately; realtime +
       // invalidate reconcile across clients.
       queryClient.setQueryData<IssueRelation[]>(relationsKey(projectId), (old) => {
@@ -47,7 +61,7 @@ export function useIssueRelationsQuery(projectId: string | null) {
       });
       invalidate();
     },
-    [projectId, queryClient, invalidate]
+    [projectId, queryClient, invalidate, record]
   );
 
   const removeRelation = useCallback(
@@ -55,18 +69,31 @@ export function useIssueRelationsQuery(projectId: string | null) {
       if (!projectId) return;
       const key = relationsKey(projectId);
       const previous = queryClient.getQueryData<IssueRelation[]>(key);
+      const removed = previous?.find((r) => r.id === relationId);
       queryClient.setQueryData<IssueRelation[]>(key, (old) =>
         (old ?? []).filter((r) => r.id !== relationId)
       );
       try {
         await removeIssueRelationApi(relationId);
+        if (removed) {
+          record({
+            kind: "relation-remove",
+            projectId,
+            relationId,
+            relation: {
+              source_id: removed.source_id,
+              target_id: removed.target_id,
+              type: removed.type,
+            },
+          });
+        }
         invalidate();
       } catch (err) {
         queryClient.setQueryData(key, previous);
         throw err;
       }
     },
-    [projectId, queryClient, invalidate]
+    [projectId, queryClient, invalidate, record]
   );
 
   return {

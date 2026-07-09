@@ -16,6 +16,8 @@ import {
 } from "./issue-relations-api";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
+import { useUndoHistory } from "./undo/undo-context";
+import { buildBeforePatch, snapshotIssue } from "./undo/undo-core";
 import type {
   CreateIssueInput,
   GlobalBoardResponse,
@@ -38,6 +40,9 @@ export const GLOBAL_BOARD_KEY = ["me", "board"] as const;
 export function useGlobalBoardQuery() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  // Local undo history (MIN-35) — mirrors useIssuesQuery: record after each
+  // successful user write; undo/redo replays bypass the hook entirely.
+  const { record } = useUndoHistory();
 
   const { data, isLoading } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
@@ -105,13 +110,18 @@ export function useGlobalBoardQuery() {
       patchCache(issueId, patch as Partial<Issue>);
       try {
         await updateIssueApi(issueId, patch);
+        // Single record point for updateIssue/moveIssue/setIssueCycle.
+        const before = current ? buildBeforePatch(current, patch) : null;
+        if (before) {
+          record({ kind: "update", projectId, issueId, before, after: patch });
+        }
         invalidate(projectId);
       } catch (err) {
         if (prev) queryClient.setQueryData(GLOBAL_BOARD_KEY, prev);
         throw err;
       }
     },
-    [queryClient, patchCache, invalidate, startAssignee]
+    [queryClient, patchCache, invalidate, startAssignee, record]
   );
 
   // Inline card edits (status/priority/effort/assignee/due).
@@ -133,33 +143,78 @@ export function useGlobalBoardQuery() {
 
   const setCategories = useCallback(
     async (issueId: string, categoryIds: string[], projectId: string) => {
+      const before =
+        queryClient
+          .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
+          ?.issues.find((i) => i.id === issueId)?.category_ids ?? [];
       patchCache(issueId, { category_ids: categoryIds });
       try {
         await setIssueCategoriesApi(issueId, categoryIds);
+        // No debounce here — rapid toggles coalesce in the undo stack itself.
+        const changed =
+          before.length !== categoryIds.length ||
+          before.some((id) => !categoryIds.includes(id));
+        if (changed) {
+          record({
+            kind: "categories",
+            projectId,
+            issueId,
+            before,
+            after: categoryIds,
+          });
+        }
         invalidate(projectId);
       } catch (err) {
         toast.error((err as Error).message);
         invalidate(projectId);
       }
     },
-    [patchCache, invalidate]
+    [queryClient, patchCache, invalidate, record]
   );
 
   const deleteIssue = useCallback(
     async (issueId: string, projectId: string) => {
+      // Pre-delete snapshot for undo (see useIssuesQuery.deleteIssue) — here
+      // the aggregate cache carries both the issues and the relation rows.
+      const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+      const target = board?.issues.find((i) => i.id === issueId);
       await deleteIssueApi(issueId);
+      if (target && board) {
+        record({
+          kind: "delete",
+          projectId,
+          issueId,
+          snapshot: snapshotIssue(target),
+          childIds: board.issues
+            .filter((i) => i.parent_id === issueId)
+            .map((i) => i.id),
+          relations: board.relations
+            .filter((r) => r.source_id === issueId || r.target_id === issueId)
+            .map(({ source_id, target_id, type }) => ({
+              source_id,
+              target_id,
+              type,
+            })),
+        });
+      }
       invalidate(projectId);
     },
-    [invalidate]
+    [queryClient, invalidate, record]
   );
 
   const createIssue = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
       const issue = await createIssueApi(projectId, input);
+      record({
+        kind: "create",
+        projectId,
+        issueId: issue.id,
+        snapshot: snapshotIssue(issue),
+      });
       invalidate(projectId);
       return issue;
     },
-    [invalidate]
+    [invalidate, record]
   );
 
   // Relations (MIN-25) on the cross-project board: the writes go through the
@@ -178,6 +233,18 @@ export function useGlobalBoardQuery() {
         target_id: targetId,
         type,
       });
+      // Record the server-normalized row (blocked_by is stored as an inverted
+      // blocks), so a redo replays exactly what was persisted.
+      record({
+        kind: "relation-add",
+        projectId,
+        relationId: created.id,
+        relation: {
+          source_id: created.source_id,
+          target_id: created.target_id,
+          type: created.type,
+        },
+      });
       queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
         old
           ? {
@@ -192,12 +259,13 @@ export function useGlobalBoardQuery() {
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
     },
-    [queryClient]
+    [queryClient, record]
   );
 
   const removeRelation = useCallback(
     async (projectId: string, relationId: string) => {
       const previous = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+      const removed = previous?.relations.find((r) => r.id === relationId);
       queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
         old
           ? { ...old, relations: old.relations.filter((r) => r.id !== relationId) }
@@ -205,6 +273,18 @@ export function useGlobalBoardQuery() {
       );
       try {
         await removeIssueRelationApi(relationId);
+        if (removed) {
+          record({
+            kind: "relation-remove",
+            projectId,
+            relationId,
+            relation: {
+              source_id: removed.source_id,
+              target_id: removed.target_id,
+              type: removed.type,
+            },
+          });
+        }
         void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
         void queryClient.invalidateQueries({
           queryKey: ["issue-relations", projectId],
@@ -214,7 +294,7 @@ export function useGlobalBoardQuery() {
         throw err;
       }
     },
-    [queryClient]
+    [queryClient, record]
   );
 
   // Add to / remove from the user's cycle (MIN-32). The optimistic patch

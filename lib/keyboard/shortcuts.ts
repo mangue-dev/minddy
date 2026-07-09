@@ -46,6 +46,8 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "gen.palette", labelKey: "palette", keys: [["mod", "K"]] },
       { id: "gen.search", labelKey: "search", keys: [["F"]] },
       { id: "gen.toggleSidebar", labelKey: "toggleSidebar", keys: [["mod", "B"]] },
+      { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
+      { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
       { id: "gen.cheatsheet", labelKey: "cheatsheet", keys: [["?"]] },
     ],
   },

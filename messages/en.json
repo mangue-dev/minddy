@@ -499,6 +499,8 @@
       "palette": "Command palette",
       "search": "Search",
       "toggleSidebar": "Toggle sidebar",
+      "undo": "Undo last action",
+      "redo": "Redo",
       "cheatsheet": "Show keyboard shortcuts",
       "createIssue": "New issue",
       "createObjective": "New objective",
@@ -511,6 +513,20 @@
       "dueDate": "Change due date",
       "objective": "Change objective",
       "copyPrompt": "Copy as prompt"
+    }
+  },
+  "Undo": {
+    "undone": "Undone: {action}",
+    "redone": "Redone: {action}",
+    "undoFailed": "Couldn't undo: {message}",
+    "redoFailed": "Couldn't redo: {message}",
+    "actions": {
+      "update": "issue edit",
+      "categories": "label change",
+      "create": "issue creation",
+      "delete": "issue deletion",
+      "relationAdd": "relation added",
+      "relationRemove": "relation removed"
     }
   },
   "ObjectiveStatus": {

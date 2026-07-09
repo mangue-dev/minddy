@@ -18,6 +18,8 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { createIssueApi } from "@/lib/issues-api";
 import { createObjectiveApi } from "@/lib/objectives-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { useUndoHistory } from "@/lib/undo/undo-context";
+import { snapshotIssue } from "@/lib/undo/undo-core";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { CreateIssueInput, CreateObjectiveInput } from "@/lib/types";
@@ -73,6 +75,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { projects } = useProjects();
+  // Local undo history (MIN-35): creations from the global dialog record too.
+  const { record } = useUndoHistory();
 
   // Project whose members/categories/objectives feed the open dialog. Set on the
   // first open and left in place (dialogs stay mounted for reuse).
@@ -92,11 +96,17 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const createIssueGlobal = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
       const issue = await createIssueApi(projectId, input);
+      record({
+        kind: "create",
+        projectId,
+        issueId: issue.id,
+        snapshot: snapshotIssue(issue),
+      });
       void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       return issue;
     },
-    [queryClient]
+    [queryClient, record]
   );
 
   const createObjectiveGlobal = useCallback(

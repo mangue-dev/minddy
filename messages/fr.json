@@ -499,6 +499,8 @@
       "palette": "Palette de commandes",
       "search": "Rechercher",
       "toggleSidebar": "Afficher/masquer la sidebar",
+      "undo": "Annuler la dernière action",
+      "redo": "Rétablir l'action annulée",
       "cheatsheet": "Afficher les raccourcis clavier",
       "createIssue": "Nouveau ticket",
       "createObjective": "Nouvel objectif",
@@ -511,6 +513,20 @@
       "dueDate": "Changer l'échéance",
       "objective": "Changer l'objectif",
       "copyPrompt": "Copier en prompt"
+    }
+  },
+  "Undo": {
+    "undone": "Annulé : {action}",
+    "redone": "Rétabli : {action}",
+    "undoFailed": "Impossible d'annuler : {message}",
+    "redoFailed": "Impossible de rétablir : {message}",
+    "actions": {
+      "update": "modification du ticket",
+      "categories": "changement de catégories",
+      "create": "création du ticket",
+      "delete": "suppression du ticket",
+      "relationAdd": "ajout de relation",
+      "relationRemove": "suppression de relation"
     }
   },
   "ObjectiveStatus": {
