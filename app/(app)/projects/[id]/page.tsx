@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
+import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useViewsQuery } from "@/lib/use-views-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
@@ -36,7 +37,14 @@ import { BoardToolbar } from "@/components/board-toolbar";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { createIssueApi } from "@/lib/issues-api";
-import type { CreateIssueInput, Issue, Onglet, View, ViewConfig } from "@/lib/types";
+import type {
+  CreateIssueInput,
+  Issue,
+  IssueRelationType,
+  Onglet,
+  View,
+  ViewConfig,
+} from "@/lib/types";
 
 /** Where the last-selected view is remembered (per project + onglet). */
 const viewStorageKey = (projectId: string, onglet: Onglet) =>
@@ -87,6 +95,8 @@ function ProjectBoard() {
     moveIssue,
     setCategories,
   } = useIssuesQuery(projectId);
+  const { relations, addRelation, removeRelation } =
+    useIssueRelationsQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives, createObjective, updateObjective } = useObjectivesQuery(projectId);
@@ -129,6 +139,28 @@ function ProjectBoard() {
       return issue;
     },
     [queryClient],
+  );
+
+  // Relations (MIN-25): open a related issue by id, add/remove relations.
+  const openIssueById = useCallback((id: string) => {
+    setOpenIssueId(id);
+    setOpenIssueTab("description");
+  }, []);
+  const handleAddRelation = useCallback(
+    (sourceId: string, type: IssueRelationType, targetId: string) => {
+      void addRelation(sourceId, type, targetId).catch((err) =>
+        toast.error((err as Error).message)
+      );
+    },
+    [addRelation]
+  );
+  const handleRemoveRelation = useCallback(
+    (relationId: string) => {
+      void removeRelation(relationId).catch((err) =>
+        toast.error((err as Error).message)
+      );
+    },
+    [removeRelation]
   );
 
   // Saved-view state (the My/All onglet now comes from the route).
@@ -400,6 +432,8 @@ function ProjectBoard() {
           <div className="min-h-0 flex-1 pt-3">
             <KanbanBoard
               issues={boardIssues}
+              allIssues={issues}
+              relations={relations}
               statuses={statuses}
               sort={sort}
               projectId={project.id}
@@ -411,6 +445,8 @@ function ProjectBoard() {
                 setOpenIssueId(issue.id);
                 setOpenIssueTab("description");
               }}
+              onOpenIssueById={openIssueById}
+              onAddRelation={handleAddRelation}
               onOpenPlan={(issue: Issue) => {
                 setOpenIssueId(issue.id);
                 setOpenIssueTab("plan");
@@ -461,6 +497,7 @@ function ProjectBoard() {
         categories={categories}
         objectives={objectives}
         allIssues={issues}
+        relations={relations}
         onUpdate={updateIssue}
         onDelete={deleteIssue}
         onSetCategories={setCategories}
@@ -469,6 +506,8 @@ function ProjectBoard() {
           setOpenIssueId(id);
           setOpenIssueTab("description");
         }}
+        onAddRelation={handleAddRelation}
+        onRemoveRelation={handleRemoveRelation}
         initialTab={openIssueTab}
       />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
@@ -35,8 +35,19 @@ import {
   StatusIndicator,
   PriorityIndicator,
   EffortIndicator,
+  RelationIcon,
 } from "@/components/issue-indicators";
-import type { Category, Issue, IssueUpdateInput, Member, Objective } from "@/lib/types";
+import { RelationChips, type ChipRelation } from "@/components/relation-chips";
+import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { RELATION_TYPES } from "@/lib/relation-constants";
+import type {
+  Category,
+  Issue,
+  IssueRelationType,
+  IssueUpdateInput,
+  Member,
+  Objective,
+} from "@/lib/types";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -460,7 +471,9 @@ export function IssueCardBody({
   categoryMap,
   objectiveMap,
   parentNumber,
+  relations,
   onOpenParent,
+  onOpenRelated,
   onOpenPlan,
   onUpdate,
   onSetCategories,
@@ -475,8 +488,13 @@ export function IssueCardBody({
   /** Parent issue's number — when set, the card is a sub-issue and shows the
       parent identifier + chevron before its own identifier. */
   parentNumber?: number;
+  /** This issue's relations (blocks/blocked-by/related), pre-sorted by priority —
+      the highest-signal one shows as a chip after the identifier. */
+  relations?: ChipRelation[];
   /** Opens the parent's side panel (clicking the parent identifier). */
   onOpenParent?: () => void;
+  /** Opens a related issue's side panel (clicking a relation chip). */
+  onOpenRelated?: (issueId: string) => void;
   /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
   onOpenPlan?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
@@ -549,6 +567,15 @@ export function IssueCardBody({
               </>
             ))}
           <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
+          {relations && relations.length > 0 && (
+            <RelationChips
+              relations={relations}
+              projectKey={projectKey}
+              onOpen={onOpenRelated}
+              max={1}
+              className="shrink-0"
+            />
+          )}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
           {plan.total > 0 && <PlanPick progress={plan} onOpen={onOpenPlan} />}
@@ -609,7 +636,11 @@ export function IssueCard({
   categoryMap,
   objectiveMap,
   parentNumber,
+  relations,
+  candidateIssues,
   onOpenParent,
+  onOpenRelated,
+  onAddRelation,
   onOpenPlan,
   onOpen,
   onUpdateIssue,
@@ -622,13 +653,25 @@ export function IssueCard({
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
   parentNumber?: number;
+  relations?: ChipRelation[];
+  /** All project issues — candidates for the "add relation" picker. */
+  candidateIssues?: Issue[];
   onOpenParent?: () => void;
+  onOpenRelated?: (issueId: string) => void;
+  /** Adds a relation from this issue (source) to the picked target. When set,
+      the right-click menu gains the three "mark as…" relation actions. */
+  onAddRelation?: (
+    sourceId: string,
+    type: IssueRelationType,
+    targetId: string
+  ) => void;
   onOpenPlan?: () => void;
   onOpen: () => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
 }) {
   const t = useTranslations("IssueUI");
+  const tRel = useTranslations("Relations");
   const { user } = useAuth();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
@@ -636,6 +679,18 @@ export function IssueCard({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
     null
   );
+  // Position mémorisée du dernier clic droit : le picker de relation s'ouvre au
+  // même endroit que le menu qui vient de se fermer.
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
+  const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+
+  // Candidats du picker : les autres issues du projet, hors celles déjà liées.
+  const relationCandidates = useMemo(() => {
+    if (!candidateIssues) return [];
+    const linked = new Set((relations ?? []).map((r) => r.otherId));
+    return candidateIssues.filter((i) => i.id !== issue.id && !linked.has(i.id));
+  }, [candidateIssues, relations, issue.id]);
   const copyPrompt = async () => {
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
     // désactivable dans Compte → Préférences). On n'avance que les statuts
@@ -678,6 +733,17 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
+    // Relations (MIN-25): each action opens the target-issue picker at the
+    // pointer. Shown only when the board wired the relation handlers.
+    ...(onAddRelation
+      ? RELATION_TYPES.map((type) => ({
+          id: `relation-${type}`,
+          label: tRel(`action_${type}`),
+          keywords: [tRel(type), "relation", "link", "lier"],
+          icon: <RelationIcon relation={type} className="size-4" />,
+          onSelect: () => setRelationType(type),
+        }))
+      : []),
   ];
 
   return (
@@ -691,7 +757,8 @@ export function IssueCard({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setMenuPosition({ x: e.clientX, y: e.clientY });
+        pointerRef.current = { x: e.clientX, y: e.clientY };
+        setMenuPosition(pointerRef.current);
       }}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
@@ -704,7 +771,9 @@ export function IssueCard({
         categoryMap={categoryMap}
         objectiveMap={objectiveMap}
         parentNumber={parentNumber}
+        relations={relations}
         onOpenParent={onOpenParent}
+        onOpenRelated={onOpenRelated}
         onOpenPlan={onOpenPlan}
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
@@ -713,6 +782,17 @@ export function IssueCard({
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
         actions={menuActions}
+      />
+      <RelationTargetPicker
+        position={relationType ? pointerRef.current : null}
+        relation={relationType}
+        issues={relationCandidates}
+        projectKey={projectKey}
+        onClose={() => setRelationType(null)}
+        onSelect={(targetId) => {
+          if (relationType) onAddRelation?.(issue.id, relationType, targetId);
+          setRelationType(null);
+        }}
       />
       <IssueShortcutMenu
         state={menuState}

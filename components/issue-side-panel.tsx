@@ -29,6 +29,9 @@ import {
   StatusValue,
 } from "@/components/issue-property-fields";
 import { SubIssuesSection } from "@/components/sub-issues-section";
+import { RelationsSection } from "@/components/relations-section";
+import { RelationChips, type ChipRelation } from "@/components/relation-chips";
+import { resolveRelations } from "@/lib/relation-constants";
 import {
   IssueShortcutMenu,
   useIssueFieldShortcuts,
@@ -51,6 +54,8 @@ import type {
   CreateIssueInput,
   Issue,
   IssueDraftPatch,
+  IssueRelation,
+  IssueRelationType,
   IssueUpdateInput,
   Member,
   Objective,
@@ -65,11 +70,14 @@ export function IssueSidePanel({
   categories,
   objectives,
   allIssues,
+  relations,
   onUpdate,
   onDelete,
   onSetCategories,
   onCreate,
   onOpenIssue,
+  onAddRelation,
+  onRemoveRelation,
   initialTab = "description",
 }: {
   issue: Issue | null;
@@ -80,11 +88,19 @@ export function IssueSidePanel({
   categories: Category[];
   objectives: Objective[];
   allIssues: Issue[];
+  /** Every project relation row (raw); resolved for this issue below. */
+  relations: IssueRelation[];
   onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
   onDelete: (issueId: string) => Promise<void>;
   onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
   onOpenIssue: (id: string) => void;
+  onAddRelation: (
+    sourceId: string,
+    type: IssueRelationType,
+    targetId: string
+  ) => void;
+  onRemoveRelation: (relationId: string) => void;
   /** Tab to show when the panel (re)opens on a new issue. */
   initialTab?: "description" | "plan";
 }) {
@@ -112,6 +128,20 @@ export function IssueSidePanel({
   }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = useMemo(() => planProgress(issue?.plan), [issue?.plan]);
+
+  // This issue's relations, resolved to the display shape (with the other
+  // issue's number) and priority-sorted. Numbers come from allIssues so a
+  // filtered-out target still resolves.
+  const resolvedRelations = useMemo<ChipRelation[]>(() => {
+    if (!issue) return [];
+    const byId = new Map(allIssues.map((i) => [i.id, i]));
+    return resolveRelations(issue.id, relations)
+      .map((r) => {
+        const other = byId.get(r.otherId);
+        return other ? { ...r, otherNumber: other.number } : null;
+      })
+      .filter((r): r is ChipRelation => r !== null);
+  }, [issue?.id, relations, allIssues]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
   // body; the picker opens at the cursor, in the key/value section. `d` maps to
@@ -244,6 +274,15 @@ export function IssueSidePanel({
                   {issueIdentifier(projectKey, issue.number)}
                 </span>
               </SidePanelTitle>
+              {resolvedRelations.length > 0 && (
+                <RelationChips
+                  relations={resolvedRelations}
+                  projectKey={projectKey}
+                  onOpen={onOpenIssue}
+                  max={1}
+                  className="font-mono text-xs text-muted-foreground"
+                />
+              )}
               {/* Voice editing — Numo turns dictated commands into field updates */}
               {numoBusy ? (
                 <>
@@ -402,6 +441,16 @@ export function IssueSidePanel({
                     onCreate={onCreate}
                   />
                 )}
+
+                <RelationsSection
+                  issue={issue}
+                  relations={resolvedRelations}
+                  allIssues={allIssues}
+                  projectKey={projectKey}
+                  onOpenIssue={onOpenIssue}
+                  onAddRelation={onAddRelation}
+                  onRemoveRelation={onRemoveRelation}
+                />
 
                 <IssueActivity
                   items={items}

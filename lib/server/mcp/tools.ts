@@ -21,6 +21,11 @@ import {
 } from "@/lib/issue-validation";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import { updateIssueFields } from "@/lib/server/update-issue";
+import {
+  addIssueRelation,
+  findIssueRelation,
+  removeIssueRelation,
+} from "@/lib/server/issue-relations";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { addCommentToIssue } from "@/lib/server/add-comment";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
@@ -841,6 +846,83 @@ export function registerMinddyTools(server: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });
+    }
+  );
+
+  server.registerTool(
+    "minddy_link_issues",
+    {
+      title: "Link issues",
+      description:
+        "Create or remove a relation between two issues (MIN-25). From `issue`'s " +
+        "point of view: 'blocks' (issue blocks target), 'blocked_by' (issue is " +
+        "blocked by target), or 'related' (a soft link). Pass remove=true to delete " +
+        "that relation instead. Idempotent — adding an existing relation, or " +
+        "removing an absent one, is a no-op.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issue: ISSUE_REF,
+        relation: z
+          .enum(["blocks", "blocked_by", "related"])
+          .describe("Relation type from `issue`'s perspective."),
+        target: ISSUE_REF.describe("The other issue in the relation."),
+        remove: z
+          .boolean()
+          .optional()
+          .describe("Remove the relation instead of adding it."),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const src = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in src) return src.error;
+      const tgt = await resolveIssueRef(scope.access, args.target);
+      if ("error" in tgt) return tgt.error;
+      if (src.issue.id === tgt.issue.id) {
+        return fail("invalid_params", "An issue can't be related to itself.");
+      }
+
+      if (args.remove) {
+        const existing = await findIssueRelation(
+          scope.access.project.id,
+          src.issue.id,
+          args.relation,
+          tgt.issue.id
+        );
+        if (!existing) {
+          return ok({ removed: false, issue: src.issue.identifier, target: tgt.issue.identifier });
+        }
+        const result = await removeIssueRelation({
+          relationId: existing.id,
+          actorId: scope.userId,
+          mcpKeyId: scope.keyId,
+        });
+        if (!result.ok) return coreFail(result);
+        return ok({
+          removed: true,
+          issue: src.issue.identifier,
+          relation: args.relation,
+          target: tgt.issue.identifier,
+        });
+      }
+
+      const result = await addIssueRelation({
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        sourceId: src.issue.id,
+        targetId: tgt.issue.id,
+        type: args.relation,
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({
+        added: true,
+        issue: src.issue.identifier,
+        relation: args.relation,
+        target: tgt.issue.identifier,
+      });
     }
   );
 

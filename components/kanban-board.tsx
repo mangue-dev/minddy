@@ -15,11 +15,22 @@ import {
 import { cn, toast } from "mangue-ui";
 import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { Category, Issue, IssueUpdateInput, Member, Objective, ViewSort } from "@/lib/types";
+import type {
+  Category,
+  Issue,
+  IssueRelation,
+  IssueRelationType,
+  IssueUpdateInput,
+  Member,
+  Objective,
+  ViewSort,
+} from "@/lib/types";
+import { resolveRelations } from "@/lib/relation-constants";
 import { issueComparator } from "@/lib/view-filter";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
+import type { ChipRelation } from "@/components/relation-chips";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 
@@ -35,6 +46,8 @@ function computePosition(items: Issue[], index: number): number {
 
 export function KanbanBoard({
   issues,
+  allIssues,
+  relations,
   statuses,
   sort,
   projectId,
@@ -43,13 +56,19 @@ export function KanbanBoard({
   categories,
   objectives,
   onOpenIssue,
+  onOpenIssueById,
   onOpenPlan,
   onCreateIssue,
   onUpdateIssue,
   onSetCategories,
+  onAddRelation,
   onMove,
 }: {
   issues: Issue[];
+  /** Every project issue (unfiltered) — resolves relation targets that a view
+      filter hides from the board, and feeds the "add relation" picker. */
+  allIssues: Issue[];
+  relations: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
   projectId: string;
@@ -58,10 +77,16 @@ export function KanbanBoard({
   categories: Category[];
   objectives: Objective[];
   onOpenIssue: (issue: Issue) => void;
+  onOpenIssueById: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
+  onAddRelation: (
+    sourceId: string,
+    type: IssueRelationType,
+    targetId: string
+  ) => void;
   onMove: (
     issueId: string,
     patch: { status?: IssueStatus; position: number }
@@ -83,6 +108,26 @@ export function KanbanBoard({
     () => new Map(issues.map((i) => [i.id, i])),
     [issues]
   );
+  // Relation targets resolve against ALL issues (a view filter may hide the
+  // other end of a relation from the board).
+  const allIssueMap = useMemo(
+    () => new Map(allIssues.map((i) => [i.id, i])),
+    [allIssues]
+  );
+  const relationsByIssue = useMemo(() => {
+    const map = new Map<string, ChipRelation[]>();
+    if (relations.length === 0) return map;
+    for (const issue of issues) {
+      const resolved = resolveRelations(issue.id, relations)
+        .map((r) => {
+          const other = allIssueMap.get(r.otherId);
+          return other ? { ...r, otherNumber: other.number } : null;
+        })
+        .filter((r): r is ChipRelation => r !== null);
+      if (resolved.length > 0) map.set(issue.id, resolved);
+    }
+    return map;
+  }, [issues, relations, allIssueMap]);
 
   const columns = useMemo(() => {
     const cmp = issueComparator(sort);
@@ -225,16 +270,20 @@ export function KanbanBoard({
               status={status}
               issues={items}
               issueMap={issueMap}
+              relationsByIssue={relationsByIssue}
+              candidateIssues={allIssues}
               projectId={projectId}
               projectKey={projectKey}
               memberMap={memberMap}
               categoryMap={categoryMap}
               objectiveMap={objectiveMap}
               onOpenIssue={onOpenIssue}
+              onOpenIssueById={onOpenIssueById}
               onOpenPlan={onOpenPlan}
               onCreateIssue={onCreateIssue}
               onUpdateIssue={onUpdateIssue}
               onSetCategories={onSetCategories}
+              onAddRelation={onAddRelation}
             />
           ))}
         </div>
@@ -255,6 +304,7 @@ export function KanbanBoard({
               categoryMap={categoryMap}
               objectiveMap={objectiveMap}
               parentNumber={activeParent?.number}
+              relations={relationsByIssue.get(activeIssue.id)}
               dragging
             />
           </div>

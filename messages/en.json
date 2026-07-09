@@ -26,7 +26,13 @@
     "objectiveNone": "none",
     "objectiveSome": "an objective",
     "categorySome": "a category",
-    "issueSome": "an issue"
+    "issueSome": "an issue",
+    "relationAdded_blocks": "marked this as blocking {ref}",
+    "relationAdded_blocked_by": "marked this as blocked by {ref}",
+    "relationAdded_related": "linked this as related to {ref}",
+    "relationRemoved_blocks": "removed the blocking relation to {ref}",
+    "relationRemoved_blocked_by": "removed the blocked-by relation to {ref}",
+    "relationRemoved_related": "removed the related link to {ref}"
   },
   "ApiErrors": {
     "invalidJson": "Invalid JSON",
@@ -74,7 +80,10 @@
     "feedbackUnavailable": "Feedback is not available right now.",
     "webhookInvalidUrl": "Invalid webhook URL.",
     "webhookInvalidConfig": "Invalid webhook configuration.",
-    "cannotRemoveOwner": "The project owner cannot be removed."
+    "cannotRemoveOwner": "The project owner cannot be removed.",
+    "invalidRelationType": "Invalid relation type.",
+    "relationSelf": "An issue can't be related to itself.",
+    "relationNotFound": "Relation not found."
   },
   "Assistant": {
     "title": "Ask Numo",
@@ -505,6 +514,19 @@
     "high": "High",
     "medium": "Medium",
     "low": "Low"
+  },
+  "Relations": {
+    "relations": "Relations",
+    "blocks": "Blocking",
+    "blocked_by": "Blocked by",
+    "related": "Related",
+    "action_blocks": "Mark as blocking…",
+    "action_blocked_by": "Mark as blocked by…",
+    "action_related": "Mark as related…",
+    "pick_blocks": "Blocking which issue?",
+    "pick_blocked_by": "Blocked by which issue?",
+    "pick_related": "Related to which issue?",
+    "searchIssue": "Search issue…"
   },
   "Profile": {
     "title": "Profile",

@@ -64,6 +64,8 @@ function keysForProjectEvent(
     case "issues":
     case "issue_categories": // issues are cached hydrated with category_ids
       return [["issues", projectId]];
+    case "issue_relations":
+      return [["issue-relations", projectId]];
     case "objectives":
       return [["objectives", projectId]];
     case "categories": // renames/deletes also affect chips on cached issues
@@ -99,6 +101,7 @@ const USER_SCOPE_KEYS: QueryKey[] = [
 ];
 const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["issues", projectId],
+  ["issue-relations", projectId],
   ["objectives", projectId],
   ["categories", projectId],
   ["views", projectId],

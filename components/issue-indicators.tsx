@@ -6,6 +6,8 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
+import { RELATION_META } from "@/lib/relation-constants";
+import type { IssueRelationType } from "@/lib/types";
 
 /* ── Status ─────────────────────────────────────────────────────────────
    Linear-style ring: dashed (backlog), empty (todo), a pie fill for progress
@@ -160,6 +162,21 @@ export function PriorityIndicator({
       })}
     </svg>
   );
+}
+
+/* ── Relation ────────────────────────────────────────────────────────────
+   A lucide glyph tinted per relation type (MIN-25): blocked_by red, blocks
+   amber, related muted. Used by the card / side-panel relation chips. */
+
+export function RelationIcon({
+  relation,
+  className,
+}: {
+  relation: IssueRelationType;
+  className?: string;
+}) {
+  const { icon: Icon, color } = RELATION_META[relation];
+  return <Icon className={cn("size-3.5 shrink-0", color, className)} />;
 }
 
 /* ── Effort ──────────────────────────────────────────────────────────────

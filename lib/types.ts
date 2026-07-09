@@ -245,6 +245,35 @@ export interface Issue {
   category_ids: string[];
 }
 
+/** Relation between two issues, from one issue's point of view (MIN-25).
+    `blocked_by` is the inverse read of a stored `blocks` edge. */
+export type IssueRelationType = "blocks" | "blocked_by" | "related";
+
+/** A stored relation row as returned by the API (only `blocks`/`related` are
+    persisted; `blocked_by` is derived per-issue on the client). */
+export interface IssueRelation {
+  id: string;
+  source_id: string;
+  target_id: string;
+  type: "blocks" | "related";
+}
+
+/** A relation resolved from one issue's perspective, ready for the UI. */
+export interface ResolvedRelation {
+  /** Id of the stored relation row (used to remove it). */
+  id: string;
+  relation: IssueRelationType;
+  /** The other issue in the pair. */
+  otherId: string;
+}
+
+export interface CreateIssueRelationInput {
+  source_id: string;
+  target_id: string;
+  /** Relation type from `source_id`'s perspective. */
+  type: IssueRelationType;
+}
+
 export type IntegrationWebhookEvent =
   | "issue.created"
   | "issue.status_changed"

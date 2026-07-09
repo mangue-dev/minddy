@@ -6,6 +6,8 @@ import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus } from "@/lib/issue-validation";
+import { resolveRelations } from "@/lib/relation-constants";
+import type { IssueRelation } from "@/lib/types";
 
 // ── Lectures partagées Numo / MCP ───────────────────────────────────────
 // Extraites d'execute-tool.ts pour être servies aux deux consommateurs :
@@ -208,6 +210,7 @@ export interface IssueDetail {
   comments: Array<Record<string, unknown>>;
   sub_issues: Array<Record<string, unknown>>;
   duplicate_of?: Record<string, unknown>;
+  relations: Array<Record<string, unknown>>;
 }
 
 export async function getIssue(
@@ -282,6 +285,39 @@ export async function getIssue(
     }
   }
 
+  // Relations (MIN-25): rows touching this issue, resolved to its perspective
+  // and hydrated with the other issue's identifier/title/status.
+  const { data: relationRows } = await ctx.db
+    .from("issue_relations")
+    .select("id, source_id, target_id, type")
+    .or(`source_id.eq.${issue.id},target_id.eq.${issue.id}`);
+  const resolved = resolveRelations(
+    issue.id as string,
+    (relationRows ?? []) as unknown as IssueRelation[]
+  );
+  const otherIds = [...new Set(resolved.map((r) => r.otherId))];
+  const { data: relatedIssues } = otherIds.length
+    ? await ctx.db
+        .from("issues")
+        .select("id, number, title, status")
+        .in("id", otherIds)
+    : { data: [] as Array<Record<string, unknown>> };
+  const relatedMap = new Map(
+    (relatedIssues ?? []).map((o) => [o.id as string, o])
+  );
+  const relations = resolved.map((r) => {
+    const other = relatedMap.get(r.otherId);
+    return {
+      relation: r.relation,
+      issue_id: r.otherId,
+      identifier: other
+        ? issueIdentifier(ctx.projectKey, other.number as number)
+        : null,
+      title: other?.title ?? null,
+      status: other?.status ?? null,
+    };
+  });
+
   const categories = (issue.issue_categories ?? []) as Array<{
     category_id: string;
   }>;
@@ -301,6 +337,7 @@ export async function getIssue(
       ...s,
       identifier: issueIdentifier(ctx.projectKey, s.number as number),
     })),
+    relations,
     ...(duplicateOf ? { duplicate_of: duplicateOf } : {}),
   };
 }

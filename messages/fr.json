@@ -26,7 +26,13 @@
     "objectiveNone": "aucun",
     "objectiveSome": "un objectif",
     "categorySome": "une catégorie",
-    "issueSome": "un ticket"
+    "issueSome": "un ticket",
+    "relationAdded_blocks": "a marqué ce ticket comme bloquant {ref}",
+    "relationAdded_blocked_by": "a marqué ce ticket comme bloqué par {ref}",
+    "relationAdded_related": "a lié ce ticket à {ref}",
+    "relationRemoved_blocks": "a retiré la relation « bloque » vers {ref}",
+    "relationRemoved_blocked_by": "a retiré la relation « bloqué par » vers {ref}",
+    "relationRemoved_related": "a retiré le lien vers {ref}"
   },
   "ApiErrors": {
     "invalidJson": "JSON invalide",
@@ -74,7 +80,10 @@
     "feedbackUnavailable": "Les retours sont indisponibles pour le moment.",
     "webhookInvalidUrl": "URL de webhook invalide.",
     "webhookInvalidConfig": "Configuration de webhook invalide.",
-    "cannotRemoveOwner": "Le propriétaire du projet ne peut pas être retiré."
+    "cannotRemoveOwner": "Le propriétaire du projet ne peut pas être retiré.",
+    "invalidRelationType": "Type de relation invalide.",
+    "relationSelf": "Un ticket ne peut pas être lié à lui-même.",
+    "relationNotFound": "Relation introuvable."
   },
   "Assistant": {
     "title": "Demander à Numo",
@@ -505,6 +514,19 @@
     "high": "Haute",
     "medium": "Moyenne",
     "low": "Basse"
+  },
+  "Relations": {
+    "relations": "Relations",
+    "blocks": "Bloque",
+    "blocked_by": "Bloqué par",
+    "related": "Lié à",
+    "action_blocks": "Marquer comme bloquant…",
+    "action_blocked_by": "Marquer comme bloqué par…",
+    "action_related": "Marquer comme lié…",
+    "pick_blocks": "Bloque quel ticket ?",
+    "pick_blocked_by": "Bloqué par quel ticket ?",
+    "pick_related": "Lié à quel ticket ?",
+    "searchIssue": "Rechercher un ticket…"
   },
   "Profile": {
     "title": "Profil",

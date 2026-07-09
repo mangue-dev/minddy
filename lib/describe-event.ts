@@ -67,6 +67,16 @@ export function describeEvent(
     return t("subIssueAdded", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_removed")
     return t("subIssueRemoved", { ref: issueRef(ctx, tr, e.to_value) });
+  // Relations (MIN-25): `field` carries the perspective type (blocks /
+  // blocked_by / related), `to_value` the other issue.
+  if (e.type === "relation_added")
+    return t(`relationAdded_${e.field ?? "related"}`, {
+      ref: issueRef(ctx, tr, e.to_value),
+    });
+  if (e.type === "relation_removed")
+    return t(`relationRemoved_${e.field ?? "related"}`, {
+      ref: issueRef(ctx, tr, e.to_value),
+    });
   // Plan task transitions: to_value carries the task text.
   if (e.type === "plan_task_completed")
     return t("planTaskCompleted", { text: e.to_value ?? "" });
