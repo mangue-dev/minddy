@@ -10,12 +10,18 @@ import {
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import {
+  addIssueRelationApi,
+  removeIssueRelationApi,
+} from "./issue-relations-api";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
 import type {
   CreateIssueInput,
   GlobalBoardResponse,
   Issue,
+  IssueRelation,
+  IssueRelationType,
   IssueUpdateInput,
 } from "./types";
 
@@ -156,6 +162,61 @@ export function useGlobalBoardQuery() {
     [invalidate]
   );
 
+  // Relations (MIN-25) on the cross-project board: the writes go through the
+  // per-project routes; the board cache's `relations` slice is patched
+  // immediately and the project's own ["issue-relations"] cache invalidated so
+  // both boards stay in sync.
+  const addRelation = useCallback(
+    async (
+      projectId: string,
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string
+    ) => {
+      const created = await addIssueRelationApi(projectId, {
+        source_id: sourceId,
+        target_id: targetId,
+        type,
+      });
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old
+          ? {
+              ...old,
+              relations: [
+                ...old.relations.filter((r) => r.id !== created.id),
+                created,
+              ],
+            }
+          : old
+      );
+      void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
+    },
+    [queryClient]
+  );
+
+  const removeRelation = useCallback(
+    async (projectId: string, relationId: string) => {
+      const previous = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old
+          ? { ...old, relations: old.relations.filter((r) => r.id !== relationId) }
+          : old
+      );
+      try {
+        await removeIssueRelationApi(relationId);
+        void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+        void queryClient.invalidateQueries({
+          queryKey: ["issue-relations", projectId],
+        });
+      } catch (err) {
+        if (previous) queryClient.setQueryData(GLOBAL_BOARD_KEY, previous);
+        throw err;
+      }
+    },
+    [queryClient]
+  );
+
   // Add to / remove from the user's cycle (MIN-32). The optimistic patch
   // mirrors the server side-effect exactly — adding assigns the issue to me
   // (never a status bump) — so the card doesn't flash an empty assignee.
@@ -175,7 +236,7 @@ export function useGlobalBoardQuery() {
     membersByProject: data?.members ?? {},
     categoriesByProject: data?.categories ?? {},
     objectivesByProject: data?.objectives ?? {},
-    relations: data?.relations ?? [],
+    relations: (data?.relations ?? []) as IssueRelation[],
     cycles: data?.cycles ?? null,
     loading: isLoading,
     updateIssue,
@@ -184,5 +245,7 @@ export function useGlobalBoardQuery() {
     deleteIssue,
     createIssue,
     setIssueCycle,
+    addRelation,
+    removeRelation,
   };
 }

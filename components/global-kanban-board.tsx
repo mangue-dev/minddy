@@ -17,6 +17,8 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type {
   Category,
   Issue,
+  IssueRelation,
+  IssueRelationType,
   IssueUpdateInput,
   Member,
   Objective,
@@ -24,8 +26,11 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
+import { resolveRelations } from "@/lib/relation-constants";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
+import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
@@ -52,6 +57,8 @@ function computePosition(items: Issue[], index: number): number {
  */
 export function GlobalKanbanBoard({
   issues,
+  allIssues,
+  relations,
   statuses,
   sort,
   projectMap,
@@ -59,17 +66,24 @@ export function GlobalKanbanBoard({
   categoryMapByProject,
   objectiveMapByProject,
   onOpenIssue,
+  onOpenIssueById,
   onOpenPlan,
   onUpdateIssue,
   onSetCategories,
   onMove,
   onCreateIssue,
+  onAddRelation,
   comparator,
   buildMenuActions,
   currentCycleId,
   readOnly = false,
 }: {
   issues: Issue[];
+  /** Every board issue (unfiltered, all projects) — resolves relation targets
+      hidden by the view/cycle scope, and feeds the "add relation" picker. */
+  allIssues?: Issue[];
+  /** Stored relation rows across my projects — the cards' chips (MIN-25). */
+  relations?: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
   projectMap: Map<string, Project>;
@@ -77,6 +91,8 @@ export function GlobalKanbanBoard({
   categoryMapByProject: Map<string, Map<string, Category>>;
   objectiveMapByProject: Map<string, Map<string, Objective>>;
   onOpenIssue: (issue: Issue) => void;
+  /** Opens a related issue's side panel (clicking a relation chip). */
+  onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
@@ -88,6 +104,14 @@ export function GlobalKanbanBoard({
   /** Open the app-wide create dialog preset to a column's status (MIN-33).
       Absent → the columns render no "new issue" footer (cycle mode). */
   onCreateIssue?: (status: IssueStatus) => void;
+  /** Adds a relation from a card (right-click). Relations are same-project by
+      construction — the card's project id rides along for the API route. */
+  onAddRelation?: (
+    sourceId: string,
+    type: IssueRelationType,
+    targetId: string,
+    projectId: string
+  ) => void;
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
   comparator?: (a: Issue, b: Issue) => number;
@@ -103,6 +127,36 @@ export function GlobalKanbanBoard({
     () => new Map(issues.map((i) => [i.id, i])),
     [issues]
   );
+
+  // Relation resolution + picker candidates work on the FULL board (the other
+  // end of a relation may be outside the current view/cycle scope).
+  const allIssueMap = useMemo(
+    () => new Map((allIssues ?? issues).map((i) => [i.id, i])),
+    [allIssues, issues]
+  );
+  const issuesByProject = useMemo(() => {
+    const map = new Map<string, Issue[]>();
+    for (const i of allIssues ?? issues) {
+      const list = map.get(i.project_id);
+      if (list) list.push(i);
+      else map.set(i.project_id, [i]);
+    }
+    return map;
+  }, [allIssues, issues]);
+  const relationsByIssue = useMemo(() => {
+    const map = new Map<string, ChipRelation[]>();
+    if (!relations?.length) return map;
+    for (const issue of issues) {
+      const resolved = resolveRelations(issue.id, relations)
+        .map((r) => {
+          const other = allIssueMap.get(r.otherId);
+          return other ? { ...r, otherNumber: other.number } : null;
+        })
+        .filter((r): r is ChipRelation => r !== null);
+      if (resolved.length > 0) map.set(issue.id, resolved);
+    }
+    return map;
+  }, [issues, relations, allIssueMap]);
 
   const columns = useMemo(() => {
     const cmp = comparator ?? issueComparator(sort);
@@ -128,6 +182,10 @@ export function GlobalKanbanBoard({
       activationConstraint: { distance: readOnly ? Number.MAX_SAFE_INTEGER : 6 },
     })
   );
+
+  // Fade the left/right edges of the board while more columns lie off-screen
+  // — same affordance as the project board.
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>("x");
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -186,7 +244,12 @@ export function GlobalKanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex h-full min-h-0 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6">
+      <div
+        ref={fadeRef}
+        onScroll={scrollProps.onScroll}
+        style={scrollProps.style}
+        className="flex h-full min-h-0 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6"
+      >
         {columns.map(({ status, items }) => (
           <GlobalKanbanColumn
             key={status.value}
@@ -194,14 +257,18 @@ export function GlobalKanbanBoard({
             issues={items}
             projectMap={projectMap}
             issueMap={issueMap}
+            relationsByIssue={relationsByIssue}
+            issuesByProject={issuesByProject}
             memberMapByProject={memberMapByProject}
             categoryMapByProject={categoryMapByProject}
             objectiveMapByProject={objectiveMapByProject}
             onOpenIssue={onOpenIssue}
+            onOpenIssueById={onOpenIssueById}
             onOpenPlan={onOpenPlan}
             onUpdateIssue={onUpdateIssue}
             onSetCategories={onSetCategories}
             onCreateIssue={onCreateIssue}
+            onAddRelation={onAddRelation}
             buildMenuActions={buildMenuActions}
             currentCycleId={currentCycleId}
           />
@@ -225,6 +292,7 @@ export function GlobalKanbanBoard({
                 objectiveMapByProject.get(activeIssue.project_id) ?? EMPTY_OBJECTIVES
               }
               parentNumber={activeParent?.number}
+              relations={relationsByIssue.get(activeIssue.id)}
               inCurrentCycle={
                 !!currentCycleId && activeIssue.cycle_id === currentCycleId
               }

@@ -226,8 +226,9 @@ export interface GlobalBoardResponse {
   members: Record<string, Member[]>;
   categories: Record<string, Category[]>;
   objectives: Record<string, Objective[]>;
-  /** Stored `blocks` edges across the user's accessible projects (RLS-scoped) —
-      feeds the cycle reco ordering. */
+  /** Stored relation rows across the user's accessible projects (RLS-scoped):
+      `blocks` feeds the cycle reco ordering, the full set feeds the cards'
+      relation chips and the side panel. */
   relations: IssueRelation[];
   cycles: BoardCycles;
 }

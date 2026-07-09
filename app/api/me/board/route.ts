@@ -64,10 +64,12 @@ export async function GET(request: NextRequest) {
       auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
       auth.supabase.from("categories").select("*"),
       auth.supabase.from("objectives").select("*"),
+      // ALL relation types: `blocks` feeds the cycle reco ordering, and the
+      // full set powers the cards' relation chips + the side panel (RLS scopes
+      // the rows to my projects).
       auth.supabase
         .from("issue_relations")
-        .select("id, source_id, target_id, type")
-        .eq("type", "blocks"),
+        .select("id, source_id, target_id, type"),
     ]);
 
   const firstError =

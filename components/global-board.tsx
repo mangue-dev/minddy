@@ -25,6 +25,7 @@ import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import {
+  CycleAskNumo,
   CycleControls,
   CycleTitleSelector,
   formatCycleRange,
@@ -38,6 +39,7 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import type {
   Category,
   Issue,
+  IssueRelationType,
   Member,
   Objective,
   Project,
@@ -107,6 +109,8 @@ function GlobalBoardInner() {
     deleteIssue,
     createIssue,
     setIssueCycle,
+    addRelation,
+    removeRelation,
   } = useGlobalBoardQuery();
 
   const consumeViewParam = useCallback(() => {
@@ -291,6 +295,16 @@ function GlobalBoardInner() {
     return map;
   }, [scopedIssues]);
 
+  // Relations (MIN-25) from any card of this board — the write goes through
+  // the card's own project route (relations are same-project by construction).
+  const handleAddRelation = useCallback(
+    (sourceId: string, type: IssueRelationType, targetId: string, projectId: string) =>
+      void addRelation(projectId, sourceId, type, targetId).catch((err) =>
+        toast.error((err as Error).message)
+      ),
+    [addRelation]
+  );
+
   const openIssue = openIssueId
     ? scopedIssues.find((i) => i.id === openIssueId) ?? null
     : null;
@@ -314,6 +328,10 @@ function GlobalBoardInner() {
       setOpenIssueId(issue.id);
       setOpenIssueTab("description");
     },
+    onOpenIssueById: (id: string) => {
+      setOpenIssueId(id);
+      setOpenIssueTab("description");
+    },
     onOpenPlan: (issue: Issue) => {
       setOpenIssueId(issue.id);
       setOpenIssueTab("plan");
@@ -324,17 +342,24 @@ function GlobalBoardInner() {
       ),
     onSetCategories: setCategories,
     onMove: moveIssue,
+    allIssues: scopedIssues,
+    relations,
   };
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
         {cycleMode && cycles?.enabled && selectedCycle ? (
-          <CycleTitleSelector
-            cycles={cycles}
-            selectedId={selectedCycleId}
-            onSelect={setSelectedCycleId}
-          />
+          // Title line: date-selector left, Ask Numo right — the gauges live
+          // on the pills row below.
+          <div className="flex items-center justify-between gap-3">
+            <CycleTitleSelector
+              cycles={cycles}
+              selectedId={selectedCycleId}
+              onSelect={setSelectedCycleId}
+            />
+            <CycleAskNumo onAskNumo={askNumoAboutCycle} />
+          </div>
         ) : (
           <h1 className="font-display text-lg font-semibold tracking-tight">
             {cycleMode ? tBoard("cycleTab") : t("allTitle")}
@@ -375,7 +400,6 @@ function GlobalBoardInner() {
                   cycle={selectedCycle}
                   filledPoints={cycleFilledPoints(cycleIssues)}
                   completionPercent={cycleCompletionPercent(cycleIssues)}
-                  onAskNumo={askNumoAboutCycle}
                 />
               ) : (
                 <span aria-hidden />
@@ -404,6 +428,9 @@ function GlobalBoardInner() {
               readOnly={selectedPhase !== "current"}
               buildMenuActions={
                 selectedPhase === "current" ? buildCycleMenuActions : undefined
+              }
+              onAddRelation={
+                selectedPhase === "current" ? handleAddRelation : undefined
               }
               projectMap={projectMap}
               memberMapByProject={memberMapByProject}
@@ -437,6 +464,7 @@ function GlobalBoardInner() {
             buildMenuActions={buildCycleMenuActions}
             currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
             onCreateIssue={(status) => openCreateIssue({ status })}
+            onAddRelation={handleAddRelation}
             {...boardHandlers}
           />
         </div>
@@ -453,7 +481,7 @@ function GlobalBoardInner() {
         categories={openIssue ? categoriesByProject[openPid] ?? [] : []}
         objectives={openIssue ? objectivesByProject[openPid] ?? [] : []}
         allIssues={openIssue ? issuesByProject.get(openPid) ?? [] : []}
-        relations={[]}
+        relations={relations}
         onUpdate={(id, patch) => updateIssue(id, patch, openPid)}
         onDelete={(id) => deleteIssue(id, openPid)}
         onSetCategories={(id, ids) => setCategories(id, ids, openPid)}
@@ -462,8 +490,14 @@ function GlobalBoardInner() {
           setOpenIssueId(id);
           setOpenIssueTab("description");
         }}
-        onAddRelation={() => {}}
-        onRemoveRelation={() => {}}
+        onAddRelation={(sourceId, type, targetId) =>
+          handleAddRelation(sourceId, type, targetId, openPid)
+        }
+        onRemoveRelation={(relationId) =>
+          void removeRelation(openPid, relationId).catch((err) =>
+            toast.error((err as Error).message)
+          )
+        }
         initialTab={openIssueTab}
       />
     </div>

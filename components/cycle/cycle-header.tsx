@@ -163,20 +163,48 @@ function RingStat({
   );
 }
 
+/** The "Ask Numo" badge input — lives on the title-selector line (right end),
+    NOT with the progress rings. Submitting opens the assistant scoped to the
+    cycle with the message pre-sent. */
+export function CycleAskNumo({ onAskNumo }: { onAskNumo: (message: string) => void }) {
+  const t = useTranslations("Cycles");
+  const [draft, setDraft] = useState("");
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const message = draft.trim();
+        if (!message) return;
+        onAskNumo(message);
+        setDraft("");
+      }}
+      className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 transition-colors focus-within:border-foreground/30"
+    >
+      <NumoIcon animated={false} className="size-3.5 shrink-0 text-primary" />
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder={t("askNumoPlaceholder")}
+        className="w-44 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+      />
+    </form>
+  );
+}
+
+/** The gauges of the pills row (replacing the filter/sort controls):
+    completion ring, capacity ring, intensity label. */
 export function CycleControls({
   cycle,
   filledPoints,
   completionPercent,
-  onAskNumo,
 }: {
   cycle: CycleInfo;
   filledPoints: number;
   /** Points-weighted share of closed (done/canceled) work; null = empty cycle. */
   completionPercent: number | null;
-  onAskNumo: (message: string) => void;
 }) {
   const t = useTranslations("Cycles");
-  const [draft, setDraft] = useState("");
   const capacityPercent =
     cycle.target_points > 0
       ? Math.round((filledPoints / cycle.target_points) * 100)
@@ -184,25 +212,6 @@ export function CycleControls({
 
   return (
     <div className="flex items-center gap-3">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const message = draft.trim();
-          if (!message) return;
-          onAskNumo(message);
-          setDraft("");
-        }}
-        className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 transition-colors focus-within:border-foreground/30"
-      >
-        <NumoIcon animated={false} className="size-3.5 shrink-0 text-primary" />
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={t("askNumoPlaceholder")}
-          className="w-44 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-        />
-      </form>
-
       {completionPercent !== null && (
         <RingStat
           percent={completionPercent}

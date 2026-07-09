@@ -10,6 +10,7 @@ import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
 import type {
   Category,
   Issue,
+  IssueRelationType,
   IssueUpdateInput,
   Member,
   Objective,
@@ -18,6 +19,7 @@ import type {
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
+import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const EMPTY_MEMBERS: Map<string, Member> = new Map();
@@ -37,14 +39,18 @@ export function GlobalKanbanColumn({
   issues,
   projectMap,
   issueMap,
+  relationsByIssue,
+  issuesByProject,
   memberMapByProject,
   categoryMapByProject,
   objectiveMapByProject,
   onOpenIssue,
+  onOpenIssueById,
   onOpenPlan,
   onUpdateIssue,
   onSetCategories,
   onCreateIssue,
+  onAddRelation,
   buildMenuActions,
   currentCycleId,
 }: {
@@ -53,15 +59,29 @@ export function GlobalKanbanColumn({
   projectMap: Map<string, Project>;
   /** Every board issue by id — resolves a sub-issue's parent (same project). */
   issueMap: Map<string, Issue>;
+  /** Resolved relation chips per issue id (MIN-25). */
+  relationsByIssue?: Map<string, ChipRelation[]>;
+  /** All board issues per project — candidates for the "add relation" picker
+      (relations are same-project by construction). */
+  issuesByProject?: Map<string, Issue[]>;
   memberMapByProject: Map<string, Map<string, Member>>;
   categoryMapByProject: Map<string, Map<string, Category>>;
   objectiveMapByProject: Map<string, Map<string, Objective>>;
   onOpenIssue: (issue: Issue) => void;
+  /** Opens a related issue's side panel (clicking a relation chip). */
+  onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
   onCreateIssue?: (status: IssueStatus) => void;
+  /** Adds a relation from a card; the card's project id rides along. */
+  onAddRelation?: (
+    sourceId: string,
+    type: IssueRelationType,
+    targetId: string,
+    projectId: string
+  ) => void;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
@@ -118,7 +138,16 @@ export function GlobalKanbanColumn({
                 categoryMap={categoryMapByProject.get(pid) ?? EMPTY_CATEGORIES}
                 objectiveMap={objectiveMapByProject.get(pid) ?? EMPTY_OBJECTIVES}
                 parentNumber={parent?.number}
+                relations={relationsByIssue?.get(issue.id)}
+                candidateIssues={issuesByProject?.get(pid)}
                 onOpenParent={parent ? () => onOpenIssue(parent) : undefined}
+                onOpenRelated={onOpenIssueById}
+                onAddRelation={
+                  onAddRelation
+                    ? (sourceId, type, targetId) =>
+                        onAddRelation(sourceId, type, targetId, pid)
+                    : undefined
+                }
                 onOpenPlan={() => onOpenPlan(issue)}
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={(id, patch) => onUpdateIssue(id, patch, pid)}
