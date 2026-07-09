@@ -21,11 +21,10 @@ import { projectIdFromPath } from "@/lib/project-id-from-path";
 /** The section translation key for the current project route (drives the last crumb). */
 function sectionKeyFor(pathname: string): string | null {
   if (!/^\/projects\/[^/]+/.test(pathname)) return null;
-  if (pathname.endsWith("/my")) return "myIssues";
   if (pathname.includes("/objectives")) return "objectives";
   if (pathname.includes("/settings")) return "settings";
   if (pathname.includes("/triage")) return "triage";
-  return "allIssues";
+  return "tickets";
 }
 
 function ProjectChip({ project, className }: { project: Project; className?: string }) {
@@ -142,7 +141,6 @@ function MobileBreadcrumb({
   isInbox,
   isAccountSettings,
   isStatistics,
-  isMyGlobal,
   isAllGlobal,
 }: {
   project: Project | null;
@@ -151,7 +149,6 @@ function MobileBreadcrumb({
   isInbox: boolean;
   isAccountSettings: boolean;
   isStatistics: boolean;
-  isMyGlobal: boolean;
   isAllGlobal: boolean;
 }) {
   const t = useTranslations("Nav");
@@ -176,18 +173,14 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("statistics")}</CurrentLabel>;
-  } else if (isMyGlobal) {
-    backHref = "/home";
-    backIcon = homeIcon;
-    current = <CurrentLabel>{t("myIssues")}</CurrentLabel>;
   } else if (isAllGlobal) {
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("allIssues")}</CurrentLabel>;
   } else if (project) {
-    // The board root ("allIssues") is the project root — show the switcher and
+    // The board root ("tickets") is the project root — show the switcher and
     // go back up to Home. Nested sections go back to the project root.
-    const atRoot = !section || sectionKey === "allIssues";
+    const atRoot = !section || sectionKey === "tickets";
     if (atRoot) {
       backHref = "/home";
       backIcon = homeIcon;
@@ -249,7 +242,6 @@ export function AppBreadcrumb() {
   const isInbox = pathname.startsWith("/inbox");
   const isAccountSettings = pathname.startsWith("/settings");
   const isStatistics = pathname.startsWith("/statistics");
-  const isMyGlobal = pathname === "/my";
   const isAllGlobal = pathname === "/all";
 
   return (
@@ -282,12 +274,6 @@ export function AppBreadcrumb() {
           </span>
         </BreadcrumbLevel>
 
-        <BreadcrumbLevel show={isMyGlobal} levelKey="my-global">
-          <span className="text-sm font-medium text-foreground">
-            {t("myIssues")}
-          </span>
-        </BreadcrumbLevel>
-
         <BreadcrumbLevel show={isAllGlobal} levelKey="all-global">
           <span className="text-sm font-medium text-foreground">
             {t("allIssues")}
@@ -316,7 +302,6 @@ export function AppBreadcrumb() {
         isInbox={isInbox}
         isAccountSettings={isAccountSettings}
         isStatistics={isStatistics}
-        isMyGlobal={isMyGlobal}
         isAllGlobal={isAllGlobal}
       />
     </>

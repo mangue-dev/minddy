@@ -19,6 +19,19 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "development",
   },
+  // The "Mes tickets" tabs merged into the tickets board as a system view —
+  // old routes land there with it pre-selected (?view=my; extra query params
+  // like ?issue= are preserved). Temporary (307): don't let browsers cache it.
+  async redirects() {
+    return [
+      { source: "/my", destination: "/all?view=my", permanent: false },
+      {
+        source: "/projects/:id/my",
+        destination: "/projects/:id?view=my",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

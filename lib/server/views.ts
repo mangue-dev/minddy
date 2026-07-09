@@ -7,17 +7,23 @@ import {
   ISSUE_PRIORITIES,
   ISSUE_EFFORTS,
 } from "@/lib/issue-validation";
+import { ME_ASSIGNEE } from "@/lib/view-filter";
 import type { ViewFilters, ViewSort, ViewDisplay } from "@/lib/types";
 
 /**
- * Shared saved-view core (create + update), used by POST /api/projects/[id]/views,
- * PATCH /api/views/[id] and the assistant tools.
+ * Shared saved-view core (create + update + baseline seeding), used by
+ * POST /api/projects/[id]/views, POST /api/me/views, PATCH /api/views/[id]
+ * and the assistant tools.
  *
  * Access is enforced HERE (the writes bypass RLS), replicating the views RLS
  * policies: the actor must access the project, and a personal view (user_id
  * not null) is only visible/editable by its owner — anything else is reported
  * as not found, the same signal RLS invisibility gives. Shared views
- * (user_id null) are editable by any member (open v1 governance).
+ * (user_id null) are editable by any member (open v1 governance). Global views
+ * (project_id null) are always personal.
+ *
+ * The kind='my' system view is locked: name and filters.assignee (pinned to
+ * ["@me"]) can never change, and it is never deletable.
  */
 export type ViewResult =
   | {
@@ -31,12 +37,12 @@ export type ViewResult =
       status: number;
       /** Key into the ApiErrors i18n namespace (mutually exclusive with rawMessage). */
       errorKey?:
-        | "invalidTab"
         | "nameRequired"
         | "invalidSort"
         | "noFieldsToUpdate"
         | "projectNotFound"
         | "viewNotFound"
+        | "systemViewLocked"
         | "databaseError";
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
@@ -214,14 +220,11 @@ export async function createView({
   actorId,
   input,
 }: {
-  projectId: string;
+  /** null = global (cross-project) view — always personal. */
+  projectId: string | null;
   actorId: string;
   input: Record<string, unknown>;
 }): Promise<ViewResult> {
-  const onglet = input.onglet;
-  if (onglet !== "my" && onglet !== "all") {
-    return { ok: false, status: 400, errorKey: "invalidTab" };
-  }
   const name = typeof input.name === "string" ? input.name.trim() : "";
   if (!name) {
     return { ok: false, status: 400, errorKey: "nameRequired" };
@@ -234,9 +237,11 @@ export async function createView({
     display: input.display,
   });
 
-  const access = await getProjectAccess(actorId, projectId);
-  if (!access) {
-    return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (projectId !== null) {
+    const access = await getProjectAccess(actorId, projectId);
+    if (!access) {
+      return { ok: false, status: 404, errorKey: "projectNotFound" };
+    }
   }
 
   const service = getServiceClient();
@@ -244,9 +249,10 @@ export async function createView({
     .from("views")
     .insert({
       project_id: projectId,
-      onglet,
-      // 'my' → personal (owned by me); 'all' → shared (NULL).
-      user_id: onglet === "my" ? actorId : null,
+      // Project views are shared (NULL) unless explicitly personal; global
+      // views are always the caller's own.
+      user_id: projectId === null || input.personal === true ? actorId : null,
+      kind: "custom", // the system view is only ever seeded, never created
       name,
       filters,
       sort,
@@ -304,7 +310,7 @@ export async function updateView({
 
   const { data: view } = await service
     .from("views")
-    .select("id, project_id, user_id")
+    .select("id, project_id, user_id, kind")
     .eq("id", viewId)
     .maybeSingle();
   if (!view) {
@@ -314,9 +320,32 @@ export async function updateView({
   if (view.user_id && view.user_id !== actorId) {
     return { ok: false, status: 404, errorKey: "viewNotFound" };
   }
-  const access = await getProjectAccess(actorId, view.project_id as string);
-  if (!access) {
-    return { ok: false, status: 404, errorKey: "viewNotFound" };
+  // Global views (project_id null) are personal: the ownership check above
+  // is the whole access rule.
+  if (view.project_id !== null) {
+    const access = await getProjectAccess(actorId, view.project_id as string);
+    if (!access) {
+      return { ok: false, status: 404, errorKey: "viewNotFound" };
+    }
+  }
+
+  if (view.kind === "my") {
+    // System view: the name never changes…
+    if ("name" in updates) {
+      return { ok: false, status: 400, errorKey: "systemViewLocked" };
+    }
+    // …and the assignee filter is pinned to the dynamic "@me". Forgiving:
+    // the rest of the filters payload is kept, the caller is just told.
+    if ("filters" in updates) {
+      const filters = updates.filters as ViewFilters;
+      const wanted = JSON.stringify(filters.assignee ?? null);
+      if (wanted !== JSON.stringify([ME_ASSIGNEE])) {
+        invalid.push(
+          `filters.assignee: locked to ["${ME_ASSIGNEE}"] on the system view, overridden`
+        );
+      }
+      filters.assignee = [ME_ASSIGNEE];
+    }
   }
 
   const { data, error } = await service
@@ -334,4 +363,84 @@ export async function updateView({
     return { ok: false, status: 404, errorKey: "viewNotFound" };
   }
   return { ok: true, view: data, invalid };
+}
+
+/**
+ * Idempotent baseline seeding, called from the GET list handlers (one code
+ * path that also covers Numo/MCP callers and members joining later):
+ *  - the caller's kind='my' system view ("Mes tickets"), if missing;
+ *  - the default view ("Toutes") when the scope has no custom view at all
+ *    (bootstrap only — the UI forbids deleting the last custom view).
+ * projectId null = the global (cross-project) scope, where both are personal.
+ * Failures are logged, never thrown: listing views must not break on a seed.
+ */
+export async function ensureBaselineViews({
+  projectId,
+  userId,
+  systemViewName,
+  defaultViewName,
+}: {
+  projectId: string | null;
+  userId: string;
+  systemViewName: string;
+  defaultViewName: string;
+}): Promise<void> {
+  const service = getServiceClient();
+
+  let systemQuery = service
+    .from("views")
+    .select("id")
+    .eq("kind", "my")
+    .eq("user_id", userId);
+  systemQuery =
+    projectId === null
+      ? systemQuery.is("project_id", null)
+      : systemQuery.eq("project_id", projectId);
+  const { data: systemRow, error: systemReadError } = await systemQuery.maybeSingle();
+  if (systemReadError) {
+    console.error("[views] system view lookup failed:", systemReadError.message);
+  } else if (!systemRow) {
+    const { error } = await service.from("views").insert({
+      project_id: projectId,
+      user_id: userId,
+      kind: "my",
+      name: systemViewName,
+      filters: { assignee: [ME_ASSIGNEE] },
+      sort: "manual",
+      display: {},
+      position: -1, // API consumers list it first; the UI orders pills itself
+    });
+    // 23505 = a concurrent GET won the seed race (partial unique index) — fine.
+    if (error && error.code !== "23505") {
+      console.error("[views] system view seed failed:", error.message);
+    }
+  }
+
+  let customQuery = service
+    .from("views")
+    .select("id", { count: "exact", head: true })
+    .eq("kind", "custom");
+  customQuery =
+    projectId === null
+      ? customQuery.is("project_id", null).eq("user_id", userId)
+      : customQuery.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${userId}`);
+  const { count, error: countError } = await customQuery;
+  if (countError) {
+    console.error("[views] custom views count failed:", countError.message);
+    return;
+  }
+  if (!count) {
+    const { error } = await service.from("views").insert({
+      project_id: projectId,
+      user_id: projectId === null ? userId : null, // project default = shared
+      kind: "custom",
+      name: defaultViewName,
+      filters: {},
+      sort: "manual",
+      display: {},
+    });
+    if (error) {
+      console.error("[views] default view seed failed:", error.message);
+    }
+  }
 }

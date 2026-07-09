@@ -64,11 +64,14 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   and can hide done issues (display.hideDone).
 - Filters take IDS only — resolve names with list_members / list_categories / list_objectives /
   list_integrations before creating or updating a view. null inside assignee/objective/integration
-  means "unassigned"/"no objective"/"not created by an integration".
+  means "unassigned"/"no objective"/"not created by an integration". '@me' inside assignee is the
+  dynamic "assigned to me" value, resolved to whoever is looking at the view.
 - filters.integration matches issues submitted by an external app through the project's
   Feedback API (they carry an integration_id).
-- onglet 'my' = personal view (My issues tab, implicitly filtered on the current user);
-  onglet 'all' = shared view visible to the whole project.`;
+- Views created here are shared with the whole project. Each user also has a personal
+  system view (kind 'my', named "Mes tickets"): its name and its assignee filter (locked
+  to ["@me"]) can never change and it cannot be deleted — its other filters, sort and
+  display remain editable via update_view.`;
 
 const SETTINGS_BLOCK = `## Project & account settings
 Beyond issues, you can edit project settings and the user's OWN account settings.
@@ -326,14 +329,10 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Objective board: "${ctx.objectiveName ?? "(unknown name)"}" (id: ${ctx.objectiveId}).`,
       `When the user says "cet objectif" / "this objective", they mean the objective above.`
     );
-  } else if (ctx.onglet) {
-    lines.push(
-      `- Board tab: ${ctx.onglet === "my" ? "My issues (issues assigned to the user)" : "All issues"}.`
-    );
   }
   if (ctx.viewId) {
     lines.push(
-      `- Current kanban view: "${ctx.viewName ?? "(unnamed)"}" (id: ${ctx.viewId})${ctx.onglet ? `, on the ${ctx.onglet === "my" ? "My issues" : "All issues"} tab` : ""}.`,
+      `- Current kanban view: "${ctx.viewName ?? "(unnamed)"}" (id: ${ctx.viewId}).`,
       `When the user asks to filter, sort, or otherwise change "this view" / "the current view" / "cette vue", edit THIS view with update_view (that exact id) — do NOT create a new view unless they explicitly ask for a new or separate one.`
     );
   }

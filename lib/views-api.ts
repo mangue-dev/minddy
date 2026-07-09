@@ -18,16 +18,22 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchViewsApi(projectId: string): Promise<View[]> {
-  return parseJson<View[]>(await fetch(`/api/projects/${projectId}/views`));
+/** Where a board's views live: a project, or the global cross-project board. */
+export type ViewScope = { kind: "project"; projectId: string } | { kind: "global" };
+
+const viewsUrl = (scope: ViewScope) =>
+  scope.kind === "project" ? `/api/projects/${scope.projectId}/views` : "/api/me/views";
+
+export async function fetchViewsApi(scope: ViewScope): Promise<View[]> {
+  return parseJson<View[]>(await fetch(viewsUrl(scope)));
 }
 
 export async function createViewApi(
-  projectId: string,
+  scope: ViewScope,
   input: CreateViewInput
 ): Promise<View> {
   return parseJson<View>(
-    await fetch(`/api/projects/${projectId}/views`, {
+    await fetch(viewsUrl(scope), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),

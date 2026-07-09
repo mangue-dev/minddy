@@ -164,12 +164,13 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         default:
           break;
       }
-      // Outside a project, M/B reach the cross-project Home boards (MIN-29);
-      // inside one they're the project's My/All onglets (below).
+      // B reaches the tickets board (cross-project on Home, the project's
+      // inside one); M is the same board with the "Mes tickets" system view
+      // pre-selected (the ?view= one-shot instruction).
       if (!projectId) {
         switch (key) {
           case "m":
-            go("/my");
+            go("/all?view=my");
             return true;
           case "b":
             go("/all");
@@ -184,7 +185,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           go(base);
           return true;
         case "m":
-          go(`${base}/my`);
+          go(`${base}?view=my`);
           return true;
         case "o":
           go(`${base}/objectives`);

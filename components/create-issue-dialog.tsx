@@ -79,6 +79,7 @@ export function CreateIssueDialog({
   onCreateInProject,
   initialStatus,
   initialObjectiveId,
+  initialAssigneeId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -98,6 +99,9 @@ export function CreateIssueDialog({
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
   initialObjectiveId?: string | null;
+  /** Preset the assignee (when creating from an assignee-filtered board, so
+      the new issue doesn't instantly vanish from it). */
+  initialAssigneeId?: string | null;
 }) {
   const t = useTranslations("IssueUI");
   const { user } = useAuth();
@@ -141,7 +145,7 @@ export function CreateIssueDialog({
     ...DEFAULTS,
     status: initialStatus ?? DEFAULTS.status,
     objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
-    assignee_id: defaultAssigneeId,
+    assignee_id: initialAssigneeId ?? defaultAssigneeId,
   });
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
@@ -154,9 +158,9 @@ export function CreateIssueDialog({
       ...f,
       status: initialStatus ?? DEFAULTS.status,
       objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
-      assignee_id: defaultAssigneeId,
+      assignee_id: initialAssigneeId ?? defaultAssigneeId,
     }));
-  }, [open, initialStatus, initialObjectiveId, defaultAssigneeId]);
+  }, [open, initialStatus, initialObjectiveId, initialAssigneeId, defaultAssigneeId]);
 
   // Field shortcuts: while the dialog is open, S/P/E/A/L/D/O open the matching
   // picker (anchored on its trigger in the options row), reusing the board-card

@@ -1,56 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Skeleton, toast } from "mangue-ui";
 import { ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
-import {
-  DEFAULT_CONFIG,
-  filterIssues,
-  visibleStatuses,
-} from "@/lib/view-filter";
+import { useBoardViews } from "@/lib/use-board-views";
+import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
-import { GlobalBoardToolbar } from "@/components/global-board-toolbar";
+import { BoardToolbar } from "@/components/board-toolbar";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import type {
   Category,
   Issue,
   Member,
   Objective,
-  Onglet,
   Project,
-  ViewConfig,
 } from "@/lib/types";
-
-const storageKey = (scope: Onglet) => `minddy:global-view:${scope}`;
-
-function readStoredConfig(scope: Onglet): ViewConfig | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(storageKey(scope));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<ViewConfig>;
-    return {
-      filters: parsed.filters ?? {},
-      sort: parsed.sort ?? "manual",
-      display: parsed.display ?? {},
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredConfig(scope: Onglet, config: ViewConfig) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(storageKey(scope), JSON.stringify(config));
-  } catch {
-    /* localStorage unavailable (private mode / disabled) — ignore. */
-  }
-}
 
 /** Turn a projectId → rows[] record into a Map of per-project id → row maps. */
 function toIdMaps<T extends { id: string }>(
@@ -63,18 +32,33 @@ function toIdMaps<T extends { id: string }>(
   return out;
 }
 
+// Facets that only mean something inside a project — absent on the global
+// board (BoardToolbar hides a facet when its list is empty). No Numo either
+// (project-scoped), so no view is ever "generating".
+const NO_CATEGORIES: Category[] = [];
+const NO_OBJECTIVES: Objective[] = [];
+const NO_INTEGRATIONS: never[] = [];
+const NO_GENERATING = new Set<string>();
+
 /**
- * The cross-project "My tickets" / "All tickets" board (MIN-29). A real kanban:
- * issues from every project are grouped by status, each card is a fully
- * interactive project card (drag to change status, inline pickers, origin
- * project chip), and clicking one opens the full side panel in place — using
- * that issue's own project context (members/categories/objectives).
+ * The cross-project "Tous les tickets" board (MIN-29). A real kanban: issues
+ * from every project are grouped by status, each card is a fully interactive
+ * project card (drag to change status, inline pickers, origin project chip),
+ * and clicking one opens the full side panel in place — using that issue's own
+ * project context (members/categories/objectives). Views are DB-backed like a
+ * project board's, but global (project_id NULL) and always personal — incl.
+ * the "Mes tickets" system view.
  */
-export function GlobalBoard({ scope }: { scope: Onglet }) {
+function GlobalBoardInner() {
   const t = useTranslations("GlobalBoard");
+  const tBoard = useTranslations("Board");
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
   const { projects } = useProjects();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get("view");
   const {
     issues,
     membersByProject,
@@ -88,22 +72,40 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
     createIssue,
   } = useGlobalBoardQuery();
 
-  const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
+  const consumeViewParam = useCallback(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("view");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [searchParams, pathname, router]);
+
+  const {
+    views,
+    viewsLoading,
+    activeView,
+    activeViewId,
+    config,
+    setConfig,
+    dirty,
+    selectView,
+    createViewAndSelect,
+    saveActiveView,
+    renameView,
+    deleteView,
+  } = useBoardViews(
+    { kind: "global" },
+    { viewParam, onViewParamConsumed: consumeViewParam }
+  );
+
+  const handleCreateView = async (name: string) => {
+    await createViewAndSelect(name);
+    toast.success(tBoard("viewCreated", { name }));
+  };
+
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
   );
-
-  // Restore the last filter/sort for this scope. The board remounts on /my ↔
-  // /all (separate route files), so this runs for the right scope each time.
-  useEffect(() => {
-    setConfig(readStoredConfig(scope) ?? DEFAULT_CONFIG);
-  }, [scope]);
-
-  const updateConfig = (next: ViewConfig) => {
-    setConfig(next);
-    writeStoredConfig(scope, next);
-  };
 
   const projectMap = useMemo(
     () => new Map<string, Project>(projects.map((p) => [p.id, p])),
@@ -133,8 +135,8 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
     [objectivesByProject]
   );
 
-  // Deduped union of members across all projects — the "All" board's assignee
-  // filter (a user can be a member of several projects).
+  // Deduped union of members across all projects — the global assignee filter
+  // (a user can be a member of several projects).
   const unionMembers = useMemo(() => {
     const seen = new Map<string, Member>();
     for (const list of Object.values(membersByProject)) {
@@ -144,8 +146,8 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
   }, [membersByProject]);
 
   const filtered = useMemo(
-    () => filterIssues(scopedIssues, config, { onglet: scope, myUserId }),
-    [scopedIssues, config, scope, myUserId]
+    () => filterIssues(scopedIssues, config, { myUserId }),
+    [scopedIssues, config, myUserId]
   );
   const statuses = visibleStatuses(config);
 
@@ -165,7 +167,7 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
   const openPid = openIssue?.project_id ?? "";
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
-  if (loading) {
+  if (loading || viewsLoading) {
     return (
       <div className="min-h-0 flex-1 px-6 pt-4">
         <div className="flex gap-3">
@@ -179,18 +181,30 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-3 px-6 pt-4">
+      <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
         <h1 className="font-display text-lg font-semibold tracking-tight">
-          {scope === "my" ? t("myTitle") : t("allTitle")}
+          {t("allTitle")}
         </h1>
-        <div className="ml-auto">
-          <GlobalBoardToolbar
-            scope={scope}
-            config={config}
-            onConfigChange={updateConfig}
-            members={unionMembers}
-          />
-        </div>
+        <BoardToolbar
+          views={views}
+          activeViewId={activeViewId}
+          generatingViewIds={NO_GENERATING}
+          onSelectView={selectView}
+          config={config}
+          onConfigChange={setConfig}
+          members={unionMembers}
+          categories={NO_CATEGORIES}
+          objectives={NO_OBJECTIVES}
+          integrations={NO_INTEGRATIONS}
+          dirty={dirty}
+          onCreateView={handleCreateView}
+          onUpdateActiveView={saveActiveView}
+          onRenameView={renameView}
+          onDeleteView={deleteView}
+          withNumo={false}
+          withShare={false}
+          onAskNumo={() => {}}
+        />
       </div>
 
       {filtered.length === 0 ? (
@@ -200,7 +214,7 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
               <ListTodo className="size-6" />
             </div>
             <p className="max-w-xs text-sm text-muted-foreground">
-              {scope === "my" ? t("emptyMy") : t("emptyAll")}
+              {activeView?.kind === "my" ? t("emptyMy") : t("emptyAll")}
             </p>
           </div>
         </div>
@@ -258,5 +272,24 @@ export function GlobalBoard({ scope }: { scope: Onglet }) {
         initialTab={openIssueTab}
       />
     </div>
+  );
+}
+
+export function GlobalBoard() {
+  return (
+    // useSearchParams (the ?view= deep link) requires a Suspense boundary.
+    <Suspense
+      fallback={
+        <div className="min-h-0 flex-1 px-6 pt-4">
+          <div className="flex gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <GlobalBoardInner />
+    </Suspense>
   );
 }

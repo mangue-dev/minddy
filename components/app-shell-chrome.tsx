@@ -12,7 +12,6 @@ import {
   Plus,
   Inbox,
   LayoutGrid,
-  CircleUser,
   Target,
   Filter,
   Settings,
@@ -145,12 +144,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
         {
-          key: "go-my-global",
-          label: t("myIssues"),
-          icon: CircleUser,
-          onSelect: () => router.push("/my"),
-        },
-        {
           key: "go-all-global",
           label: t("allIssues"),
           icon: LayoutGrid,
@@ -194,20 +187,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         const kw = [p.name, p.key];
         pageItems.push(
           {
-            key: `pg-all-${p.id}`,
-            label: t("allIssues"),
+            key: `pg-tickets-${p.id}`,
+            label: t("tickets"),
             icon: LayoutGrid,
             keywords: kw,
             meta: chip,
             onSelect: () => router.push(base),
-          },
-          {
-            key: `pg-my-${p.id}`,
-            label: t("myIssues"),
-            icon: CircleUser,
-            keywords: kw,
-            meta: chip,
-            onSelect: () => router.push(`${base}/my`),
           },
           {
             key: `pg-obj-${p.id}`,
@@ -293,16 +278,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         {
           items: [
             {
-              key: "my",
-              label: t("myIssues"),
-              icon: CircleUser,
-              href: `${base}/my`,
-              active: pathname === `${base}/my`,
-              shortcut: "M",
-            },
-            {
-              key: "all",
-              label: t("allIssues"),
+              key: "tickets",
+              label: t("tickets"),
               icon: LayoutGrid,
               href: base,
               active: pathname === base,
@@ -353,14 +330,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             href: "/home",
             active: pathname.startsWith("/home"),
             shortcut: "H",
-          },
-          {
-            key: "my-global",
-            label: t("myIssues"),
-            icon: CircleUser,
-            href: "/my",
-            active: pathname === "/my",
-            shortcut: "M",
           },
           {
             key: "all-global",

@@ -78,7 +78,8 @@ export type AssistantSSEEvent =
  */
 export interface AssistantPageContext {
   projectId?: string;
-  /** Which board tab the user is on. */
+  /** Legacy (pre views-v2): the board tab the message was sent from. No longer
+      populated — kept so old persisted messages still render their badge. */
   onglet?: "my" | "all";
   /** The issue open in the side panel (or selected in triage), when any. */
   issueId?: string;

@@ -37,7 +37,11 @@ export function PageContextBadge({
     label = context.objectiveName ?? t("contextObjective");
     tooltip = t("contextObjective");
   } else {
-    label = context.onglet === "my" ? t("contextBoardMy") : t("contextBoardAll");
+    // Prefer the selected view's name; the onglet fallback only concerns
+    // messages persisted before views v2 (single tab since).
+    label =
+      context.viewName ??
+      (context.onglet === "my" ? t("contextBoardMy") : t("contextBoardAll"));
     tooltip = t("contextBoard");
   }
 

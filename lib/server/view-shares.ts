@@ -24,7 +24,11 @@ export type ViewShareResult =
       ok: false;
       status: number;
       /** Key into the ApiErrors i18n namespace. */
-      errorKey: "viewNotFound" | "passwordRequired" | "databaseError";
+      errorKey:
+        | "viewNotFound"
+        | "passwordRequired"
+        | "globalViewsNotShareable"
+        | "databaseError";
     };
 
 export const SHARE_UNLOCK_COOKIE = "mdy_share_unlock";
@@ -59,15 +63,21 @@ interface ShareRow {
   level: "password" | "public";
   password_salt: string | null;
   password_hash: string | null;
+  created_by: string | null;
 }
 
-const SHARE_SELECT = "id, token, level, password_salt, password_hash";
+const SHARE_SELECT = "id, token, level, password_salt, password_hash, created_by";
 
-/** Same access rule as updateView: project access, personal view = owner only. */
+/** Same access rule as updateView: project access, personal view = owner only.
+    Global views (project_id null) are not shareable in v1 — the public share
+    renderer is single-project. */
 async function resolveShareView(
   viewId: string,
   actorId: string
-): Promise<{ ok: true } | { ok: false; status: 404; errorKey: "viewNotFound" }> {
+): Promise<
+  | { ok: true }
+  | { ok: false; status: 400 | 404; errorKey: "viewNotFound" | "globalViewsNotShareable" }
+> {
   const service = getServiceClient();
   const { data: view } = await service
     .from("views")
@@ -77,6 +87,9 @@ async function resolveShareView(
   if (!view) return { ok: false, status: 404, errorKey: "viewNotFound" };
   if (view.user_id && view.user_id !== actorId) {
     return { ok: false, status: 404, errorKey: "viewNotFound" };
+  }
+  if (view.project_id === null) {
+    return { ok: false, status: 400, errorKey: "globalViewsNotShareable" };
   }
   const access = await getProjectAccess(actorId, view.project_id as string);
   if (!access) return { ok: false, status: 404, errorKey: "viewNotFound" };

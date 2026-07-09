@@ -96,12 +96,12 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   const allIssues = (issuesRes.data ?? []).map(mapIssueRow) as unknown as Issue[];
   const relations = (relationsRes.data ?? []) as IssueRelation[];
 
-  // A "my" view shares the SHARER's roadmap: its implicit assignee filter
-  // resolves against the view owner's id, exactly like on their own board.
+  // An "@me" filter shares the SHARER's roadmap: it resolves against the view
+  // owner's id (shared team views fall back to whoever created the share),
+  // exactly like on their own board.
   const config = viewConfigOf(view);
   const issues = filterIssues(allIssues, config, {
-    onglet: view.onglet,
-    myUserId: view.user_id,
+    myUserId: view.user_id ?? ctx.share.created_by,
   });
 
   // Parent identifiers and relation chips resolve against ALL issues (a filter

@@ -7,33 +7,34 @@ import {
   deleteViewApi,
   fetchViewsApi,
   updateViewApi,
+  type ViewScope,
 } from "./views-api";
 import type { CreateViewInput, View, ViewUpdateInput } from "./types";
 
-const viewsKey = (projectId: string) => ["views", projectId] as const;
-
-export function useViewsQuery(projectId: string | null) {
+export function useViewsQuery(scope: ViewScope) {
   const queryClient = useQueryClient();
+  // The scope object may be re-created every render — key on its content.
+  const scopeId = scope.kind === "project" ? scope.projectId : "global";
 
   const { data, isLoading } = useQuery({
-    queryKey: viewsKey(projectId ?? ""),
-    queryFn: () => fetchViewsApi(projectId as string),
-    enabled: !!projectId,
+    queryKey: ["views", scopeId],
+    queryFn: () => fetchViewsApi(scope),
   });
 
   const invalidate = useCallback(() => {
-    if (projectId) {
-      void queryClient.invalidateQueries({ queryKey: viewsKey(projectId) });
-    }
-  }, [queryClient, projectId]);
+    void queryClient.invalidateQueries({ queryKey: ["views", scopeId] });
+  }, [queryClient, scopeId]);
 
   const createView = useCallback(
     async (input: CreateViewInput) => {
-      const view = await createViewApi(projectId as string, input);
+      const view = await createViewApi(
+        scopeId === "global" ? { kind: "global" } : { kind: "project", projectId: scopeId },
+        input
+      );
       invalidate();
       return view;
     },
-    [projectId, invalidate]
+    [scopeId, invalidate]
   );
 
   const updateView = useCallback(
@@ -61,3 +62,5 @@ export function useViewsQuery(projectId: string | null) {
     deleteView,
   };
 }
+
+export type { ViewScope };

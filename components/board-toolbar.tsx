@@ -28,9 +28,11 @@ import {
 } from "mangue-ui";
 import {
   Check,
+  CircleUser,
   ListFilter,
   ArrowUpDown,
   Loader2,
+  Lock,
   MoreHorizontal,
   Plug,
   Plus,
@@ -54,7 +56,7 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import { activeFilterCount } from "@/lib/view-filter";
+import { ME_ASSIGNEE, activeFilterCount } from "@/lib/view-filter";
 import { displayName } from "@/lib/display-name";
 import type {
   Category,
@@ -104,6 +106,8 @@ function FiltersPopover({
   categories,
   objectives,
   integrations,
+  lockedToMe,
+  withNumo,
   onAskNumo,
 }: {
   config: ViewConfig;
@@ -112,6 +116,9 @@ function FiltersPopover({
   categories: Category[];
   objectives: Objective[];
   integrations: Integration[];
+  /** System view: the assignee facet is pinned to "@me" and not editable. */
+  lockedToMe: boolean;
+  withNumo: boolean;
   onAskNumo: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -138,18 +145,22 @@ function FiltersPopover({
         <TooltipContent>{tc("filters")}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="max-h-[70vh] w-64 overflow-y-auto p-2">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            onAskNumo();
-          }}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-        >
-          <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
-          <span className="min-w-0 flex-1 truncate">{t("askNumo")}</span>
-        </button>
-        <Separator className="my-1.5" />
+        {withNumo && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onAskNumo();
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+            >
+              <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate">{t("askNumo")}</span>
+            </button>
+            <Separator className="my-1.5" />
+          </>
+        )}
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("status")}</p>
         {STATUSES.map((s) => (
           <ToggleRow
@@ -184,23 +195,49 @@ function FiltersPopover({
 
         <Separator className="my-1.5" />
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("assignee")}</p>
-        <ToggleRow
-          active={!!f.assignee?.includes(null)}
-          onClick={() => setFilters({ ...f, assignee: toggle(f.assignee, null) })}
-        >
-          {tf("unassigned")}
-        </ToggleRow>
-        {members.map((m) => (
-          <ToggleRow
-            key={m.user_id}
-            active={!!f.assignee?.includes(m.user_id)}
-            onClick={() =>
-              setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) })
-            }
+        {lockedToMe ? (
+          /* System view: nothing else to pick — one non-interactive locked row. */
+          <div
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
+            aria-disabled
+            title={t("myViewLockedHint")}
           >
-            <span className="truncate">{displayName(m)}</span>
-          </ToggleRow>
-        ))}
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+              {tf("assignedToMe")}
+            </span>
+            <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <ToggleRow
+              active={!!f.assignee?.includes(ME_ASSIGNEE)}
+              onClick={() =>
+                setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) })
+              }
+            >
+              <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+              {tf("assignedToMe")}
+            </ToggleRow>
+            <ToggleRow
+              active={!!f.assignee?.includes(null)}
+              onClick={() => setFilters({ ...f, assignee: toggle(f.assignee, null) })}
+            >
+              {tf("unassigned")}
+            </ToggleRow>
+            {members.map((m) => (
+              <ToggleRow
+                key={m.user_id}
+                active={!!f.assignee?.includes(m.user_id)}
+                onClick={() =>
+                  setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) })
+                }
+              >
+                <span className="truncate">{displayName(m)}</span>
+              </ToggleRow>
+            ))}
+          </>
+        )}
 
         <Separator className="my-1.5" />
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("effort")}</p>
@@ -428,6 +465,8 @@ export function BoardToolbar({
   onUpdateActiveView,
   onRenameView,
   onDeleteView,
+  withNumo = true,
+  withShare = true,
   onAskNumo,
 }: {
   views: View[];
@@ -445,6 +484,10 @@ export function BoardToolbar({
   onUpdateActiveView: () => Promise<void>;
   onRenameView: (view: View, name: string) => Promise<void>;
   onDeleteView: (view: View) => Promise<void>;
+  /** Numo is project-scoped — the global board hides its affordances. */
+  withNumo?: boolean;
+  /** Global views are not shareable (v1) — the global board hides Share. */
+  withShare?: boolean;
   onAskNumo: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
@@ -456,6 +499,9 @@ export function BoardToolbar({
   const tSort = useTranslations("Sort");
 
   const activeView = views.find((v) => v.id === activeViewId) ?? null;
+  // The system view is neither renamable, nor deletable, nor unlockable.
+  const isSystem = activeView?.kind === "my";
+  const customCount = views.filter((v) => v.kind !== "my").length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -535,10 +581,13 @@ export function BoardToolbar({
             categories={categories}
             objectives={objectives}
             integrations={integrations}
+            lockedToMe={isSystem}
+            withNumo={withNumo}
             onAskNumo={onAskNumo}
           />
 
-          {/* Active view actions — rename / share / delete */}
+          {/* Active view actions — rename / share / delete (the system view
+              only shares; without Share the menu would be empty → disabled) */}
           <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -546,7 +595,7 @@ export function BoardToolbar({
                   <Button
                     variant="outline"
                     size="icon-sm"
-                    disabled={!activeView}
+                    disabled={!activeView || (isSystem && !withShare)}
                     aria-label={t("viewOptions", { name: activeView?.name ?? "" })}
                   >
                     <MoreHorizontal />
@@ -558,27 +607,35 @@ export function BoardToolbar({
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => activeView && setRenameTarget(activeView)}
-              >
-                <Pencil />
-                {t("renameView")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => activeView && setShareTarget(activeView)}
-              >
-                <Share2 />
-                {t("shareView")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={views.length <= 1}
-                onSelect={() => activeView && void onDeleteView(activeView)}
-              >
-                <Trash2 />
-                {t("deleteView")}
-              </DropdownMenuItem>
+              {!isSystem && (
+                <DropdownMenuItem
+                  onSelect={() => activeView && setRenameTarget(activeView)}
+                >
+                  <Pencil />
+                  {t("renameView")}
+                </DropdownMenuItem>
+              )}
+              {withShare && (
+                <DropdownMenuItem
+                  onSelect={() => activeView && setShareTarget(activeView)}
+                >
+                  <Share2 />
+                  {t("shareView")}
+                </DropdownMenuItem>
+              )}
+              {!isSystem && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={customCount <= 1}
+                    onSelect={() => activeView && void onDeleteView(activeView)}
+                  >
+                    <Trash2 />
+                    {t("deleteView")}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -590,8 +647,8 @@ export function BoardToolbar({
         title={t("newView")}
         initialName=""
         onSubmit={onCreateView}
-        withDescription
-        submitLabel={tc("continue")}
+        withDescription={withNumo}
+        submitLabel={withNumo ? tc("continue") : undefined}
       />
       <ViewNameDialog
         open={renameTarget !== null}
@@ -627,6 +684,9 @@ function ViewChip({
   onSelect: () => void;
 }) {
   const t = useTranslations("Board");
+  // The system view's label follows the viewer's language (the stored name is
+  // only for API consumers).
+  const isSystem = view.kind === "my";
   return (
     <button
       type="button"
@@ -645,7 +705,8 @@ function ViewChip({
           aria-label={t("viewGenerating")}
         />
       )}
-      {view.name}
+      {isSystem && <CircleUser className="size-3 shrink-0" aria-hidden />}
+      {isSystem ? t("myView") : view.name}
     </button>
   );
 }

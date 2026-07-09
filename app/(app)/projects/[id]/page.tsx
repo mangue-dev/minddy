@@ -21,14 +21,8 @@ import { useViewsQuery } from "@/lib/use-views-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
-import {
-  DEFAULT_CONFIG,
-  configsEqual,
-  filterIssues,
-  normalizeConfig,
-  viewConfigOf,
-  visibleStatuses,
-} from "@/lib/view-filter";
+import { useBoardViews } from "@/lib/use-board-views";
+import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 import {
   useAssistantContext,
@@ -45,33 +39,7 @@ import type {
   CreateIssueInput,
   Issue,
   IssueRelationType,
-  Onglet,
-  View,
-  ViewConfig,
 } from "@/lib/types";
-
-/** Where the last-selected view is remembered (per project + onglet). */
-const viewStorageKey = (projectId: string, onglet: Onglet) =>
-  `minddy:view:${projectId}:${onglet}`;
-
-function readStoredView(key: string): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredView(key: string, id: string | null) {
-  if (typeof window === "undefined") return;
-  try {
-    if (id) window.localStorage.setItem(key, id);
-    else window.localStorage.removeItem(key);
-  } catch {
-    /* localStorage unavailable (private mode / disabled) — ignore. */
-  }
-}
 
 function ProjectBoard() {
   const t = useTranslations("Board");
@@ -83,9 +51,7 @@ function ProjectBoard() {
   const objectiveParam = searchParams.get("objective");
   const issueParam = searchParams.get("issue");
   const newParam = searchParams.get("new");
-
-  // The onglet is the route: /projects/[id] = all, /projects/[id]/my = mine.
-  const onglet: Onglet = pathname.endsWith("/my") ? "my" : "all";
+  const viewParam = searchParams.get("view");
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -105,16 +71,35 @@ function ProjectBoard() {
   const { categories } = useCategoriesQuery(projectId);
   const { objectives, createObjective, updateObjective } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);
-  const {
-    views,
-    loading: viewsLoading,
-    createView,
-    updateView,
-    deleteView,
-  } = useViewsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
   const { open: openAssistant } = useAssistantPanel();
+
+  // Strip the one-shot ?view= instruction once applied, keeping other params
+  // (?issue= deep links survive the /my redirect).
+  const consumeViewParam = useCallback(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("view");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [searchParams, pathname, router]);
+
+  const {
+    views,
+    activeView,
+    activeViewId,
+    config,
+    setConfig,
+    dirty,
+    selectView,
+    createViewAndSelect,
+    saveActiveView,
+    renameView,
+    deleteView,
+  } = useBoardViews(
+    { kind: "project", projectId },
+    { viewParam, onViewParamConsumed: consumeViewParam }
+  );
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
@@ -132,10 +117,6 @@ function ProjectBoard() {
     {}
   );
   const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  // Signature of the config we last applied from the active view — lets us tell
-  // an external change to that view (Numo, a teammate) apart from the user's own
-  // local edits, so we adopt the former live without clobbering the latter.
-  const appliedSigRef = useRef<string | null>(null);
 
   // Open the create dialog, optionally preset to a column's status.
   const openCreate = (status?: IssueStatus) => {
@@ -180,33 +161,10 @@ function ProjectBoard() {
     [removeRelation]
   );
 
-  // Saved-view state (the My/All onglet now comes from the route).
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
-  const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
-  const storageKey = viewStorageKey(projectId, onglet);
-  const restoredKeyRef = useRef<string | null>(null);
-
-  // Reset the working view state the instant the project or onglet (route)
-  // changes — during render, so no frame shows the previous board's view before
-  // the restore effect runs. `storageKey` encodes both project id and onglet.
-  const [prevKey, setPrevKey] = useState(storageKey);
-  if (prevKey !== storageKey) {
-    setPrevKey(storageKey);
-    setActiveViewId(null);
-    setConfig(DEFAULT_CONFIG);
-  }
-
-  const ongletViews = useMemo(
-    () => views.filter((v) => v.onglet === onglet),
-    [views, onglet]
-  );
-  const activeView = ongletViews.find((v) => v.id === activeViewId) ?? null;
   const generatingViewIds = useMemo(
     () => new Set(Object.keys(generatingViews)),
     [generatingViews]
   );
-  const baseline = activeView ? viewConfigOf(activeView) : DEFAULT_CONFIG;
-  const dirty = !configsEqual(config, baseline);
 
   // Objective mode: the board is filtered to a single objective (plan §6).
   const activeObjective = objectiveParam
@@ -214,8 +172,8 @@ function ProjectBoard() {
     : null;
 
   const normalIssues = useMemo(
-    () => filterIssues(issues, config, { onglet, myUserId }),
-    [issues, config, onglet, myUserId]
+    () => filterIssues(issues, config, { myUserId }),
+    [issues, config, myUserId]
   );
   const objectiveIssues = useMemo(
     () =>
@@ -229,16 +187,8 @@ function ProjectBoard() {
   const statuses = activeObjective ? STATUSES : visibleStatuses(config);
   const sort = activeObjective ? "manual" : config.sort;
 
-  const selectView = (id: string | null) => {
-    setActiveViewId(id);
-    const v = id ? ongletViews.find((x) => x.id === id) : null;
-    setConfig(v ? viewConfigOf(v) : DEFAULT_CONFIG);
-    writeStoredView(storageKey, id);
-  };
   const handleCreateView = async (name: string, description?: string) => {
-    const view = await createView({ onglet, name, ...config });
-    setActiveViewId(view.id);
-    writeStoredView(storageKey, view.id);
+    const view = await createViewAndSelect(name);
     const wish = description?.trim();
     if (wish) {
       // Hand the view over to Numo: mark it generating, then ask Numo to fill in
@@ -259,7 +209,7 @@ function ProjectBoard() {
       openAssistant({
         projectId,
         prompt: t("numoBuildViewPrompt", { name, description: wish }),
-        pageContext: { projectId, onglet, viewId: view.id, viewName: name },
+        pageContext: { projectId, viewId: view.id, viewName: name },
       });
     } else {
       toast.success(t("viewCreated", { name }));
@@ -273,42 +223,9 @@ function ProjectBoard() {
     openAssistant({
       projectId,
       pageContext: activeView
-        ? { projectId, onglet, viewId: activeView.id, viewName: activeView.name }
-        : { projectId, onglet },
+        ? { projectId, viewId: activeView.id, viewName: activeView.name }
+        : { projectId },
     });
-  };
-  const handleUpdateActiveView = async () => {
-    if (!activeView) return;
-    try {
-      await updateView(activeView.id, {
-        filters: config.filters,
-        sort: config.sort,
-        display: config.display,
-      });
-      toast.success(t("viewUpdated"));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-  const handleRenameView = async (view: View, name: string) => {
-    await updateView(view.id, { name });
-  };
-  const handleDeleteView = async (view: View) => {
-    if (ongletViews.length <= 1) {
-      toast.error(t("needOneView"));
-      return;
-    }
-    try {
-      await deleteView(view.id);
-      if (view.id === activeViewId) {
-        // Fall back to another view — never leave the onglet without a selection.
-        const next = ongletViews.find((v) => v.id !== view.id);
-        if (next) selectView(next.id);
-      }
-      toast.success(t("viewDeleted"));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
   };
 
   const openIssue = openIssueId
@@ -327,7 +244,6 @@ function ProjectBoard() {
       ? openIssue
         ? {
             projectId,
-            onglet,
             issueId: openIssue.id,
             issueIdentifier: issueIdentifier(project.key, openIssue.number),
             issueTitle: openIssue.title,
@@ -336,64 +252,12 @@ function ProjectBoard() {
         : activeObjective
           ? {
               projectId,
-              onglet,
               objectiveId: activeObjective.id,
               objectiveName: activeObjective.name,
             }
-          : { projectId, onglet, ...viewCtx }
+          : { projectId, ...viewCtx }
       : null
   );
-
-  // Ensure every onglet always has at least one real view: seed a default
-  // "Toutes" (empty config) when it has none. The old "Toutes" was virtual — now
-  // every view is real, so it can be renamed/deleted like the others. Seed only
-  // when empty, so deleting "Toutes" (with others present) doesn't recreate it.
-  const seededKeyRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (viewsLoading || ongletViews.length > 0) return;
-    if (seededKeyRef.current.has(storageKey)) return;
-    seededKeyRef.current.add(storageKey);
-    void createView({
-      onglet,
-      name: t("defaultViewName"),
-      filters: {},
-      sort: "manual",
-      display: {},
-    }).catch(() => seededKeyRef.current.delete(storageKey));
-  }, [viewsLoading, ongletViews, onglet, storageKey, createView, t]);
-
-  // Restore the last-selected view for this project + onglet once its views have
-  // loaded (falling back to the first view), so a saved view — its filters and
-  // sort — survives a page reload. Runs once per onglet.
-  useEffect(() => {
-    if (viewsLoading || ongletViews.length === 0) return;
-    if (restoredKeyRef.current === storageKey) return;
-    restoredKeyRef.current = storageKey;
-    const savedId = readStoredView(storageKey);
-    const view =
-      (savedId ? ongletViews.find((v) => v.id === savedId) : undefined) ??
-      ongletViews[0];
-    setActiveViewId(view.id);
-    setConfig(viewConfigOf(view));
-  }, [storageKey, viewsLoading, ongletViews]);
-
-  // Keep the working config in sync when the ACTIVE view's stored config changes
-  // underneath us — Numo editing it (incl. the "Ask Numo" / generate-a-view
-  // flows) or a teammate editing a shared view. Only adopt when the user has no
-  // unsaved local edits (working config still matches what we last applied), so
-  // we never overwrite their in-progress tweaks.
-  useEffect(() => {
-    if (!activeView) {
-      appliedSigRef.current = null;
-      return;
-    }
-    const storedSig = normalizeConfig(viewConfigOf(activeView));
-    const prev = appliedSigRef.current;
-    if (prev === storedSig) return;
-    appliedSigRef.current = storedSig;
-    if (prev === null) return; // first observation — select/restore set config
-    if (normalizeConfig(config) === prev) setConfig(viewConfigOf(activeView));
-  }, [activeView, config]);
 
   // Clear a view's "generating" spinner once Numo has touched it (its stored
   // config bumps updated_at) or it disappears. The safety timeout in
@@ -522,7 +386,7 @@ function ProjectBoard() {
               />
             ) : (
               <BoardToolbar
-                views={ongletViews}
+                views={views}
                 activeViewId={activeViewId}
                 generatingViewIds={generatingViewIds}
                 onSelectView={selectView}
@@ -534,9 +398,9 @@ function ProjectBoard() {
                 integrations={integrations}
                 dirty={dirty}
                 onCreateView={handleCreateView}
-                onUpdateActiveView={handleUpdateActiveView}
-                onRenameView={handleRenameView}
-                onDeleteView={handleDeleteView}
+                onUpdateActiveView={saveActiveView}
+                onRenameView={renameView}
+                onDeleteView={deleteView}
                 onAskNumo={handleAskNumo}
               />
             )}
@@ -592,6 +456,13 @@ function ProjectBoard() {
         onCreateInProject={createIssueInProject}
         initialStatus={createStatus}
         initialObjectiveId={activeObjective?.id ?? null}
+        initialAssigneeId={
+          // On an assigned-to-me board, a new unassigned issue would instantly
+          // vanish — pre-assign it to the creator.
+          !activeObjective && config.filters.assignee?.includes(ME_ASSIGNEE)
+            ? myUserId
+            : null
+        }
       />
 
       <IssueSidePanel

@@ -193,17 +193,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_views",
       description:
-        "List the saved kanban views: id, name, onglet ('my' personal / 'all' shared), filters, sort, display.",
-      parameters: {
-        type: "object",
-        properties: {
-          onglet: {
-            type: "string",
-            enum: ["my", "all"],
-            description: "Only this tab's views. Omit for both.",
-          },
-        },
-      },
+        "List the saved kanban views: id, name, kind, shared, filters, sort, display. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
+      parameters: { type: "object", properties: {} },
     },
   },
   // ── Write tools ───────────────────────────────────────────────────────
@@ -298,16 +289,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view. The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'.",
+        "Create a saved kanban view (shared with the whole project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic).",
       parameters: {
         type: "object",
         properties: {
-          onglet: {
-            type: "string",
-            enum: ["my", "all"],
-            description:
-              "'my' = personal view (My issues tab), 'all' = shared view (All issues tab).",
-          },
           name: { type: "string", description: "View name." },
           filters: {
             type: "object",
@@ -327,7 +312,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               assignee: {
                 type: "array",
                 items: { type: ["string", "null"] },
-                description: "user_ids; null = unassigned.",
+                description:
+                  "user_ids; null = unassigned; '@me' = assigned to the viewing user (dynamic).",
               },
               objective: {
                 type: "array",
@@ -359,7 +345,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description: "Display options.",
           },
         },
-        required: ["onglet", "name"],
+        required: ["name"],
       },
     },
   },
@@ -368,7 +354,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_view",
       description:
-        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view. Get view ids via list_views.",
+        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view. Get view ids via list_views. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
       parameters: {
         type: "object",
         properties: {

@@ -216,20 +216,16 @@ export async function executeTool(
         return { result: { integrations: data ?? [] }, success: true };
       }
       case "list_views": {
-        let query = ctx.supabase
+        const { data, error } = await ctx.supabase
           .from("views")
-          .select("id, name, onglet, user_id, filters, sort, display")
+          .select("id, name, kind, user_id, filters, sort, display")
           .eq("project_id", projectId)
           .order("position", { ascending: true });
-        if (args.onglet === "my" || args.onglet === "all") {
-          query = query.eq("onglet", args.onglet);
-        }
-        const { data, error } = await query;
         if (error) return toolError(error.message);
         const views = (data ?? []).map((v) => ({
           id: v.id,
           name: v.name,
-          onglet: v.onglet,
+          kind: v.kind,
           shared: v.user_id === null,
           filters: v.filters,
           sort: v.sort,
@@ -354,7 +350,7 @@ export async function executeTool(
             view: {
               id: result.view.id,
               name: result.view.name,
-              onglet: result.view.onglet,
+              kind: result.view.kind,
             },
             // Anything sanitizeViewConfig dropped — lets the model self-correct.
             ...(result.invalid.length > 0 ? { invalid: result.invalid } : {}),
@@ -377,7 +373,7 @@ export async function executeTool(
             view: {
               id: result.view.id,
               name: result.view.name,
-              onglet: result.view.onglet,
+              kind: result.view.kind,
             },
             ...(result.invalid.length > 0 ? { invalid: result.invalid } : {}),
           },

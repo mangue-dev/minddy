@@ -381,13 +381,15 @@ export interface IssueUpdateInput {
   position?: number;
 }
 
-export type Onglet = "my" | "all";
 export type ViewSort = "manual" | "priority" | "created" | "updated" | "due";
+/** 'custom' = regular saved view; 'my' = the per-user system view ("Mes
+    tickets"): seeded server-side, undeletable, name + assignee locked. */
+export type ViewKind = "custom" | "my";
 
 export interface ViewFilters {
   status?: IssueStatus[];
   priority?: IssuePriority[];
-  assignee?: (string | null)[]; // null = unassigned
+  assignee?: (string | null)[]; // null = unassigned, "@me" = current user (resolved at filter time)
   effort?: IssueEffort[];
   category?: string[];
   objective?: (string | null)[]; // null = no objective
@@ -407,8 +409,8 @@ export interface ViewConfig {
 
 export interface View {
   id: string;
-  project_id: string;
-  onglet: Onglet;
+  project_id: string | null; // NULL = global (cross-project) view
+  kind: ViewKind;
   user_id: string | null; // NULL = shared
   name: string;
   filters: ViewFilters;
@@ -420,11 +422,12 @@ export interface View {
 }
 
 export interface CreateViewInput {
-  onglet: Onglet;
   name: string;
   filters: ViewFilters;
   sort: ViewSort;
   display: ViewDisplay;
+  /** Project scope only: own the view instead of sharing it (default shared). */
+  personal?: boolean;
 }
 
 export interface ViewUpdateInput {

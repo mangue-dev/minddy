@@ -31,12 +31,26 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.view);
 }
 
-/** DELETE /api/views/[id] — delete a view (RLS enforces ownership/sharing). */
+/** DELETE /api/views/[id] — delete a view (RLS enforces ownership/sharing).
+    The kind='my' system view is undeletable (RLS blocks it too — this
+    pre-check just turns the silent no-op into an explicit 400). */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+
+  const { data: existing } = await auth.supabase
+    .from("views")
+    .select("id, kind")
+    .eq("id", id)
+    .maybeSingle();
+  if (!existing) {
+    return NextResponse.json({ error: t("viewNotFound") }, { status: 404 });
+  }
+  if (existing.kind === "my") {
+    return NextResponse.json({ error: t("systemViewLocked") }, { status: 400 });
+  }
 
   const { data, error } = await auth.supabase
     .from("views")

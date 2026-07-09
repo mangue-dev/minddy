@@ -1,5 +1,9 @@
 import { STATUSES, type StatusMeta } from "./issue-constants";
-import type { Issue, Onglet, ViewConfig, ViewSort } from "./types";
+import type { Issue, ViewConfig, ViewSort } from "./types";
+
+/** Dynamic assignee filter value: "assigned to me", resolved at filter time
+    to the viewing user (on public shares: to the view owner). */
+export const ME_ASSIGNEE = "@me";
 
 export const DEFAULT_CONFIG: ViewConfig = {
   filters: {},
@@ -7,7 +11,16 @@ export const DEFAULT_CONFIG: ViewConfig = {
   display: {},
 };
 
-/** Is a config equivalent to the empty default (ignoring the implicit My filter)? */
+/** Pin a config's assignee filter to ["@me"] — the invariant of the kind='my'
+    system view. Every config write while that view is active goes through
+    here, so a save can never unlock it. */
+export function lockToMe(config: ViewConfig): ViewConfig {
+  const assignee = config.filters.assignee;
+  if (assignee?.length === 1 && assignee[0] === ME_ASSIGNEE) return config;
+  return { ...config, filters: { ...config.filters, assignee: [ME_ASSIGNEE] } };
+}
+
+/** Is a config equivalent to the empty default? */
 export function isDefaultConfig(config: ViewConfig): boolean {
   const f = config.filters;
   const empty =
@@ -76,19 +89,22 @@ const PRIORITY_ORDER: Record<string, number> = {
   none: 4,
 };
 
-/** Apply a view's filters (plus the onglet's implicit assignee=me for "my"). */
+/** Apply a view's filters. "@me" in the assignee filter resolves to
+    ctx.myUserId (null → stays unresolved and matches nothing — safe). */
 export function filterIssues(
   issues: Issue[],
   config: ViewConfig,
-  ctx: { onglet: Onglet; myUserId: string | null }
+  ctx: { myUserId: string | null }
 ): Issue[] {
   const f = config.filters;
+  const assignee = f.assignee?.map((v) =>
+    v === ME_ASSIGNEE ? (ctx.myUserId ?? ME_ASSIGNEE) : v
+  );
   return issues.filter((i) => {
-    if (ctx.onglet === "my" && i.assignee_id !== ctx.myUserId) return false;
     if (config.display.hideDone && i.status === "done") return false;
     if (f.status?.length && !f.status.includes(i.status)) return false;
     if (f.priority?.length && !f.priority.includes(i.priority)) return false;
-    if (f.assignee?.length && !f.assignee.includes(i.assignee_id)) return false;
+    if (assignee?.length && !assignee.includes(i.assignee_id)) return false;
     if (f.effort?.length && (i.effort === null || !f.effort.includes(i.effort)))
       return false;
     if (f.category?.length && !f.category.some((c) => i.category_ids.includes(c)))
