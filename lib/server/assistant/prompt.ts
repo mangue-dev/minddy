@@ -324,6 +324,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Board tab: ${ctx.onglet === "my" ? "My issues (issues assigned to the user)" : "All issues"}.`
     );
   }
+  if (ctx.viewId) {
+    lines.push(
+      `- Current kanban view: "${ctx.viewName ?? "(unnamed)"}" (id: ${ctx.viewId})${ctx.onglet ? `, on the ${ctx.onglet === "my" ? "My issues" : "All issues"} tab` : ""}.`,
+      `When the user asks to filter, sort, or otherwise change "this view" / "the current view" / "cette vue", edit THIS view with update_view (that exact id) — do NOT create a new view unless they explicitly ask for a new or separate one.`
+    );
+  }
   if (lines.length === 0) return "";
   return `
 ## What the user is looking at right now

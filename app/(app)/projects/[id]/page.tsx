@@ -25,11 +25,15 @@ import {
   DEFAULT_CONFIG,
   configsEqual,
   filterIssues,
+  normalizeConfig,
   viewConfigOf,
   visibleStatuses,
 } from "@/lib/view-filter";
 import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
-import { useAssistantContext } from "@/lib/assistant-panel-context";
+import {
+  useAssistantContext,
+  useAssistantPanel,
+} from "@/lib/assistant-panel-context";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -110,6 +114,7 @@ function ProjectBoard() {
   } = useViewsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
+  const { open: openAssistant } = useAssistantPanel();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
@@ -119,6 +124,18 @@ function ProjectBoard() {
     "description"
   );
   const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
+  // Views Numo is currently building from a description (their chip shows a
+  // spinner). Maps view id → the view's updated_at when generation started;
+  // cleared when the view's stored config changes (Numo applied filters) or
+  // after a safety timeout.
+  const [generatingViews, setGeneratingViews] = useState<Record<string, string>>(
+    {}
+  );
+  const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Signature of the config we last applied from the active view — lets us tell
+  // an external change to that view (Numo, a teammate) apart from the user's own
+  // local edits, so we adopt the former live without clobbering the latter.
+  const appliedSigRef = useRef<string | null>(null);
 
   // Open the create dialog, optionally preset to a column's status.
   const openCreate = (status?: IssueStatus) => {
@@ -184,6 +201,10 @@ function ProjectBoard() {
     [views, onglet]
   );
   const activeView = ongletViews.find((v) => v.id === activeViewId) ?? null;
+  const generatingViewIds = useMemo(
+    () => new Set(Object.keys(generatingViews)),
+    [generatingViews]
+  );
   const baseline = activeView ? viewConfigOf(activeView) : DEFAULT_CONFIG;
   const dirty = !configsEqual(config, baseline);
 
@@ -214,11 +235,47 @@ function ProjectBoard() {
     setConfig(v ? viewConfigOf(v) : DEFAULT_CONFIG);
     writeStoredView(storageKey, id);
   };
-  const handleCreateView = async (name: string) => {
+  const handleCreateView = async (name: string, description?: string) => {
     const view = await createView({ onglet, name, ...config });
     setActiveViewId(view.id);
     writeStoredView(storageKey, view.id);
-    toast.success(t("viewCreated", { name }));
+    const wish = description?.trim();
+    if (wish) {
+      // Hand the view over to Numo: mark it generating, then ask Numo to fill in
+      // its filters/sort from the description. It edits this exact view (the id
+      // rides along in pageContext), and the board reflects the change live once
+      // realtime brings the updated view back (see the config-sync effect).
+      setGeneratingViews((prev) => ({ ...prev, [view.id]: view.updated_at }));
+      const timer = setTimeout(() => {
+        setGeneratingViews((prev) => {
+          if (!(view.id in prev)) return prev;
+          const next = { ...prev };
+          delete next[view.id];
+          return next;
+        });
+        genTimers.current.delete(view.id);
+      }, 120_000);
+      genTimers.current.set(view.id, timer);
+      openAssistant({
+        projectId,
+        prompt: t("numoBuildViewPrompt", { name, description: wish }),
+        pageContext: { projectId, onglet, viewId: view.id, viewName: name },
+      });
+    } else {
+      toast.success(t("viewCreated", { name }));
+    }
+  };
+
+  // Let Numo shape the currently selected view: open the chat carrying the
+  // active view as context so "cette vue" resolves without the user re-stating
+  // it. Reachable from the "Ask Numo" entry in the filters dropdown.
+  const handleAskNumo = () => {
+    openAssistant({
+      projectId,
+      pageContext: activeView
+        ? { projectId, onglet, viewId: activeView.id, viewName: activeView.name }
+        : { projectId, onglet },
+    });
   };
   const handleUpdateActiveView = async () => {
     if (!activeView) return;
@@ -259,7 +316,12 @@ function ProjectBoard() {
     : null;
 
   // Publish what this board is showing to Numo (open issue > objective > tab),
-  // so "ce ticket" / "cet objectif" resolve without searching.
+  // so "ce ticket" / "cet objectif" / "cette vue" resolve without searching.
+  // The selected view rides along in every case so Numo can edit it in place.
+  const viewCtx =
+    !activeObjective && activeView
+      ? { viewId: activeView.id, viewName: activeView.name }
+      : null;
   useAssistantContext(
     project
       ? openIssue
@@ -269,6 +331,7 @@ function ProjectBoard() {
             issueId: openIssue.id,
             issueIdentifier: issueIdentifier(project.key, openIssue.number),
             issueTitle: openIssue.title,
+            ...viewCtx,
           }
         : activeObjective
           ? {
@@ -277,7 +340,7 @@ function ProjectBoard() {
               objectiveId: activeObjective.id,
               objectiveName: activeObjective.name,
             }
-          : { projectId, onglet }
+          : { projectId, onglet, ...viewCtx }
       : null
   );
 
@@ -313,6 +376,53 @@ function ProjectBoard() {
     setActiveViewId(view.id);
     setConfig(viewConfigOf(view));
   }, [storageKey, viewsLoading, ongletViews]);
+
+  // Keep the working config in sync when the ACTIVE view's stored config changes
+  // underneath us — Numo editing it (incl. the "Ask Numo" / generate-a-view
+  // flows) or a teammate editing a shared view. Only adopt when the user has no
+  // unsaved local edits (working config still matches what we last applied), so
+  // we never overwrite their in-progress tweaks.
+  useEffect(() => {
+    if (!activeView) {
+      appliedSigRef.current = null;
+      return;
+    }
+    const storedSig = normalizeConfig(viewConfigOf(activeView));
+    const prev = appliedSigRef.current;
+    if (prev === storedSig) return;
+    appliedSigRef.current = storedSig;
+    if (prev === null) return; // first observation — select/restore set config
+    if (normalizeConfig(config) === prev) setConfig(viewConfigOf(activeView));
+  }, [activeView, config]);
+
+  // Clear a view's "generating" spinner once Numo has touched it (its stored
+  // config bumps updated_at) or it disappears. The safety timeout in
+  // handleCreateView covers the case where Numo makes no change.
+  useEffect(() => {
+    setGeneratingViews((prev) => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const id of ids) {
+        const v = views.find((x) => x.id === id);
+        if (!v || v.updated_at !== prev[id]) {
+          delete next[id];
+          changed = true;
+          const timer = genTimers.current.get(id);
+          if (timer) clearTimeout(timer);
+          genTimers.current.delete(id);
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [views]);
+
+  // Drop any pending generation timers on unmount.
+  useEffect(() => {
+    const timers = genTimers.current;
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  }, []);
 
   // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
   useEffect(() => {
@@ -414,6 +524,7 @@ function ProjectBoard() {
               <BoardToolbar
                 views={ongletViews}
                 activeViewId={activeViewId}
+                generatingViewIds={generatingViewIds}
                 onSelectView={selectView}
                 config={config}
                 onConfigChange={setConfig}
@@ -426,6 +537,7 @@ function ProjectBoard() {
                 onUpdateActiveView={handleUpdateActiveView}
                 onRenameView={handleRenameView}
                 onDeleteView={handleDeleteView}
+                onAskNumo={handleAskNumo}
               />
             )}
           </div>

@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Separator,
+  Textarea,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -29,6 +30,7 @@ import {
   Check,
   ListFilter,
   ArrowUpDown,
+  Loader2,
   MoreHorizontal,
   Plug,
   Plus,
@@ -42,6 +44,7 @@ import {
   StatusIndicator,
   PriorityIndicator,
 } from "@/components/issue-indicators";
+import { NumoIcon } from "@/components/numo-icon";
 import {
   STATUSES,
   PRIORITIES,
@@ -100,6 +103,7 @@ function FiltersPopover({
   categories,
   objectives,
   integrations,
+  onAskNumo,
 }: {
   config: ViewConfig;
   onChange: (config: ViewConfig) => void;
@@ -107,7 +111,9 @@ function FiltersPopover({
   categories: Category[];
   objectives: Objective[];
   integrations: Integration[];
+  onAskNumo: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
     onChange({ ...config, filters: next });
@@ -119,7 +125,7 @@ function FiltersPopover({
   const tp = useTranslations("Priority");
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -131,6 +137,18 @@ function FiltersPopover({
         <TooltipContent>{tc("filters")}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="max-h-[70vh] w-64 overflow-y-auto p-2">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onAskNumo();
+          }}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+        >
+          <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 truncate">{t("askNumo")}</span>
+        </button>
+        <Separator className="my-1.5" />
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("status")}</p>
         {STATUSES.map((s) => (
           <ToggleRow
@@ -308,14 +326,20 @@ function ViewNameDialog({
   title,
   initialName,
   onSubmit,
+  withDescription = false,
+  submitLabel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   initialName: string;
-  onSubmit: (name: string) => Promise<void>;
+  onSubmit: (name: string, description?: string) => Promise<void>;
+  /** Show a "describe the view to Numo" field (create flow only). */
+  withDescription?: boolean;
+  submitLabel?: string;
 }) {
   const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const tc = useTranslations("Common");
   const t = useTranslations("Board");
@@ -324,7 +348,10 @@ function ViewNameDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (next) setName(initialName);
+        if (next) {
+          setName(initialName);
+          setDescription("");
+        }
         onOpenChange(next);
       }}
     >
@@ -339,7 +366,10 @@ function ViewNameDialog({
             if (!trimmed) return;
             setBusy(true);
             try {
-              await onSubmit(trimmed);
+              await onSubmit(
+                trimmed,
+                withDescription ? description.trim() || undefined : undefined
+              );
               onOpenChange(false);
             } catch (err) {
               toast.error((err as Error).message);
@@ -355,9 +385,24 @@ function ViewNameDialog({
             onChange={(e) => setName(e.target.value)}
             placeholder={t("viewNamePlaceholder")}
           />
+          {withDescription && (
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <NumoIcon animated={false} className="size-3.5 text-primary" />
+                {t("askNumoOptional")}
+              </label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("viewDescriptionPlaceholder")}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={busy || !name.trim()}>
-              {tc("save")}
+              {submitLabel ?? tc("save")}
             </Button>
           </DialogFooter>
         </form>
@@ -369,6 +414,7 @@ function ViewNameDialog({
 export function BoardToolbar({
   views,
   activeViewId,
+  generatingViewIds,
   onSelectView,
   config,
   onConfigChange,
@@ -381,9 +427,11 @@ export function BoardToolbar({
   onUpdateActiveView,
   onRenameView,
   onDeleteView,
+  onAskNumo,
 }: {
   views: View[];
   activeViewId: string | null;
+  generatingViewIds: Set<string>;
   onSelectView: (id: string | null) => void;
   config: ViewConfig;
   onConfigChange: (config: ViewConfig) => void;
@@ -392,10 +440,11 @@ export function BoardToolbar({
   objectives: Objective[];
   integrations: Integration[];
   dirty: boolean;
-  onCreateView: (name: string) => Promise<void>;
+  onCreateView: (name: string, description?: string) => Promise<void>;
   onUpdateActiveView: () => Promise<void>;
   onRenameView: (view: View, name: string) => Promise<void>;
   onDeleteView: (view: View) => Promise<void>;
+  onAskNumo: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
@@ -416,6 +465,7 @@ export function BoardToolbar({
               key={v.id}
               view={v}
               active={v.id === activeViewId}
+              generating={generatingViewIds.has(v.id)}
               canDelete={views.length > 1}
               onSelect={() => onSelectView(v.id)}
               onRename={() => setRenameTarget(v)}
@@ -486,6 +536,7 @@ export function BoardToolbar({
             categories={categories}
             objectives={objectives}
             integrations={integrations}
+            onAskNumo={onAskNumo}
           />
         </div>
       </div>
@@ -496,6 +547,8 @@ export function BoardToolbar({
         title={t("newView")}
         initialName=""
         onSubmit={onCreateView}
+        withDescription
+        submitLabel={tc("continue")}
       />
       <ViewNameDialog
         open={renameTarget !== null}
@@ -515,6 +568,7 @@ export function BoardToolbar({
 function ViewChip({
   view,
   active,
+  generating,
   canDelete,
   onSelect,
   onRename,
@@ -522,6 +576,7 @@ function ViewChip({
 }: {
   view: View;
   active: boolean;
+  generating: boolean;
   canDelete: boolean;
   onSelect: () => void;
   onRename: () => void;
@@ -540,11 +595,18 @@ function ViewChip({
       <button
         type="button"
         onClick={onSelect}
+        title={generating ? t("viewGenerating") : undefined}
         className={cn(
-          "rounded-full px-3 py-1 text-sm transition-colors",
+          "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors",
           active ? "text-background" : "text-muted-foreground"
         )}
       >
+        {generating && (
+          <Loader2
+            className="size-3 shrink-0 animate-spin"
+            aria-label={t("viewGenerating")}
+          />
+        )}
         {view.name}
       </button>
 
