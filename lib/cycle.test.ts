@@ -176,12 +176,12 @@ describe("points", () => {
   it("computes points-weighted completion (done + canceled = dealt with)", () => {
     expect(
       cycleCompletionPercent([
-        { effort: "xl", status: "todo" }, // 8 open
-        { effort: "s", status: "done" }, // 2 closed
-        { effort: "l", status: "canceled" }, // 5 closed
-        { effort: null, status: "in_progress" }, // 3 open
+        { effort: "xl", status: "todo" }, // 8 → 0
+        { effort: "s", status: "done" }, // 2 → 2
+        { effort: "l", status: "canceled" }, // 5 → 5
+        { effort: null, status: "in_progress" }, // 3 → 0.3
       ])
-    ).toBe(Math.round(((2 + 5) / 18) * 100)); // 39
+    ).toBe(Math.round(((2 + 5 + 0.3) / 18) * 100)); // 41
     expect(
       cycleCompletionPercent([
         { effort: "m", status: "done" },
@@ -189,6 +189,27 @@ describe("points", () => {
       ])
     ).toBe(50);
     expect(cycleCompletionPercent([])).toBeNull();
+  });
+
+  it("gives partial credit to work in flight (10% started, 50% in review)", () => {
+    // Review = half-earned: 4/8 vs done = 8/8.
+    expect(
+      cycleCompletionPercent([
+        { effort: "xl", status: "in_review" }, // 8 → 4
+        { effort: "xl", status: "todo" }, // 8 → 0
+      ])
+    ).toBe(25);
+    // Started = 10%: 0.8/16 with an untouched twin.
+    expect(
+      cycleCompletionPercent([
+        { effort: "xl", status: "in_progress" }, // 8 → 0.8
+        { effort: "xl", status: "todo" }, // 8 → 0
+      ])
+    ).toBe(5);
+    // The ladder for one issue: started 10% → reviewed 50% → done 100%.
+    expect(cycleCompletionPercent([{ effort: "m", status: "in_progress" }])).toBe(10);
+    expect(cycleCompletionPercent([{ effort: "m", status: "in_review" }])).toBe(50);
+    expect(cycleCompletionPercent([{ effort: "m", status: "done" }])).toBe(100);
   });
 });
 

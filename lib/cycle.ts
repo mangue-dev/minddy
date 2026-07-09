@@ -179,18 +179,27 @@ export function cycleCompletedPoints(issues: PointedIssue[]): number {
   );
 }
 
+// Partial completion credit per open status: started work is worth a sliver
+// (10%), reviewed work half — the rest lands with "done".
+const COMPLETION_CREDIT: Partial<Record<IssueStatus, number>> = {
+  in_progress: 0.1,
+  in_review: 0.5,
+};
+
 /** Share of the cycle already dealt with: points of closed issues (done,
-    canceled, duplicate) ÷ points of every issue in the cycle. Weighted like
-    everything else — never a raw issue count. Null when the cycle is empty. */
+    canceled, duplicate) ÷ points of every issue in the cycle — with partial
+    credit for work in flight (COMPLETION_CREDIT). Weighted like everything
+    else — never a raw issue count. Null when the cycle is empty. */
 export function cycleCompletionPercent(issues: PointedIssue[]): number | null {
   let total = 0;
-  let closed = 0;
+  let earned = 0;
   for (const i of issues) {
     const points = effortToPoints(i.effort);
     total += points;
-    if (isClosed(i.status)) closed += points;
+    if (isClosed(i.status)) earned += points;
+    else earned += points * (COMPLETION_CREDIT[i.status] ?? 0);
   }
-  return total === 0 ? null : Math.round((closed / total) * 100);
+  return total === 0 ? null : Math.round((earned / total) * 100);
 }
 
 // ── Reco scoring & fill ──────────────────────────────────────────────────────

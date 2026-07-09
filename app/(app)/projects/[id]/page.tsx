@@ -390,6 +390,7 @@ function ProjectBoard() {
               />
             ) : (
               <BoardToolbar
+                tabOrderScope={project.id}
                 views={views}
                 activeViewId={activeViewId}
                 generatingViewIds={generatingViewIds}

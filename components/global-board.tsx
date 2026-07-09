@@ -341,6 +341,7 @@ function GlobalBoardInner() {
           </h1>
         )}
         <BoardToolbar
+          tabOrderScope="global"
           views={views}
           activeViewId={cycleMode ? null : activeViewId}
           generatingViewIds={NO_GENERATING}

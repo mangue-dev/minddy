@@ -1,7 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Button,
   Dialog,
@@ -61,6 +78,8 @@ import {
   type IssueEffort,
 } from "@/lib/issue-constants";
 import { ME_ASSIGNEE, activeFilterCount } from "@/lib/view-filter";
+import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
+import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { displayName } from "@/lib/display-name";
 import type {
   Category,
@@ -75,6 +94,16 @@ import type {
 } from "@/lib/types";
 
 const SORTS: ViewSort[] = ["manual", "priority", "created", "updated", "due"];
+
+// Shared tab-pill styling — used by the sortable pills AND the drag overlay, so
+// the dragged copy is pixel-identical. `shrink-0` keeps a pill at its natural
+// width (the strip wraps instead of squishing pills).
+const PILL_CLASS =
+  "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors";
+const pillTone = (active: boolean) =>
+  active
+    ? "bg-foreground text-background"
+    : "text-muted-foreground hover:bg-muted";
 
 function toggle<T>(arr: T[] | undefined, value: T): T[] {
   const set = new Set(arr ?? []);
@@ -499,6 +528,7 @@ export function BoardToolbar({
   onAskNumo,
   cycleTab,
   rightControls,
+  tabOrderScope,
 }: {
   views: View[];
   activeViewId: string | null;
@@ -528,6 +558,9 @@ export function BoardToolbar({
   /** Cycle mode: replaces the whole right cluster (save/sort/filters/options)
       — the special view has no use for them. */
   rightControls?: React.ReactNode;
+  /** Scope key for the per-user tab-strip order (MIN-34): a project id, or
+      "global" for the /all board. Drag reorder persists to localStorage here. */
+  tabOrderScope: string;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   // "Save as new view" from the Save split button: same create flow, but the
@@ -545,38 +578,119 @@ export function BoardToolbar({
   const isSystem = activeView?.kind === "my";
   const customCount = views.filter((v) => v.kind !== "my").length;
 
+  // ── Tab reorder (MIN-34) ────────────────────────────────────────────────
+  // The strip = view pills + the Cycle pill, all drag-reorderable. The order is
+  // per-user/per-scope, DB-backed (user_metadata) — the Cycle pill is a board
+  // mode, not a `views` row, so it can't share the DB `position` column, and the
+  // whole strip order is kept together. `views` already carries the default
+  // order from useBoardViews; the stored order is a permutation over it.
+  const hasCycle = Boolean(cycleTab);
+  const viewById = useMemo(() => new Map(views.map((v) => [v.id, v])), [views]);
+  const defaultTabKeys = useMemo(
+    () => [...views.map((v) => v.id), ...(hasCycle ? [CYCLE_TAB_KEY] : [])],
+    [views, hasCycle]
+  );
+  const { order: storedOrder, setOrder } = useTabOrderQuery(tabOrderScope);
+  const tabKeys = useMemo(
+    () => mergeTabOrder(defaultTabKeys, storedOrder),
+    [defaultTabKeys, storedOrder]
+  );
+  const tabSensors = useSensors(
+    // MouseSensor + a small distance so a plain click still selects the view;
+    // only a >6px drag starts a reorder (same pattern as the issue cards).
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
+  );
+  // The pill currently being dragged — rendered in a fixed-size DragOverlay so
+  // it never stretches/squishes to match the slot it hovers.
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const activeDragView = activeTabId ? viewById.get(activeTabId) ?? null : null;
+  const handleTabDragEnd = (event: DragEndEvent) => {
+    setActiveTabId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = tabKeys.indexOf(String(active.id));
+    const to = tabKeys.indexOf(String(over.id));
+    if (from === -1 || to === -1) return;
+    // Optimistic: setOrder patches the cache instantly, then persists.
+    void setOrder(arrayMove(tabKeys, from, to)).catch((err) =>
+      toast.error((err as Error).message)
+    );
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        {/* Views bar */}
+        {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
+            stays fixed at the end. */}
         <div className="flex flex-wrap items-center gap-1">
-          {views.map((v) => (
-            <ViewChip
-              key={v.id}
-              view={v}
-              active={v.id === activeViewId}
-              generating={generatingViewIds.has(v.id)}
-              onSelect={() => onSelectView(v.id)}
-            />
-          ))}
-          {cycleTab && (
-            <button
-              type="button"
-              onClick={cycleTab.onSelect}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors",
-                cycleTab.active
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted"
-              )}
+          <DndContext
+            sensors={tabSensors}
+            collisionDetection={closestCenter}
+            onDragStart={(event: DragStartEvent) =>
+              setActiveTabId(String(event.active.id))
+            }
+            onDragEnd={handleTabDragEnd}
+            onDragCancel={() => setActiveTabId(null)}
+          >
+            <SortableContext
+              items={tabKeys}
+              strategy={horizontalListSortingStrategy}
             >
-              <IterationCw className="size-3 shrink-0" aria-hidden />
-              {t("cycleTab")}
-              {cycleTab.external && (
-                <ArrowUpRight className="size-3 shrink-0" aria-hidden />
-              )}
-            </button>
-          )}
+              {tabKeys.map((key) => {
+                if (key === CYCLE_TAB_KEY) {
+                  return cycleTab ? (
+                    <CycleTab
+                      key={key}
+                      active={cycleTab.active}
+                      external={cycleTab.external}
+                      onSelect={cycleTab.onSelect}
+                    />
+                  ) : null;
+                }
+                const v = viewById.get(key);
+                if (!v) return null;
+                return (
+                  <ViewChip
+                    key={v.id}
+                    view={v}
+                    active={v.id === activeViewId}
+                    generating={generatingViewIds.has(v.id)}
+                    onSelect={() => onSelectView(v.id)}
+                  />
+                );
+              })}
+            </SortableContext>
+            {/* Fixed-size copy of the dragged pill (portaled). dropAnimation
+                null: the reorder is optimistic, the pill is already in place. */}
+            <DragOverlay dropAnimation={null}>
+              {activeTabId === CYCLE_TAB_KEY && cycleTab ? (
+                <div className={cn(PILL_CLASS, pillTone(cycleTab.active))}>
+                  <IterationCw className="size-3 shrink-0" aria-hidden />
+                  {t("cycleTab")}
+                  {cycleTab.external && (
+                    <ArrowUpRight className="size-3 shrink-0" aria-hidden />
+                  )}
+                </div>
+              ) : activeDragView ? (
+                <div
+                  className={cn(
+                    PILL_CLASS,
+                    pillTone(activeDragView.id === activeViewId)
+                  )}
+                >
+                  {generatingViewIds.has(activeDragView.id) && (
+                    <Loader2 className="size-3 shrink-0 animate-spin" />
+                  )}
+                  {activeDragView.kind === "my" && (
+                    <CircleUser className="size-3 shrink-0" aria-hidden />
+                  )}
+                  {activeDragView.kind === "my"
+                    ? t("myView")
+                    : activeDragView.name}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -754,6 +868,21 @@ export function BoardToolbar({
   );
 }
 
+/** Drag wiring shared by every reorderable tab pill (MIN-34). The listeners go
+    on the pill's own button; MouseSensor's distance constraint keeps a plain
+    click firing onClick (select), only a drag starts the reorder. */
+function useTabSortable(id: string) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  return {
+    setNodeRef,
+    style: { transform: CSS.Transform.toString(transform), transition },
+    attributes,
+    listeners,
+    isDragging,
+  };
+}
+
 function ViewChip({
   view,
   active,
@@ -769,17 +898,19 @@ function ViewChip({
   // The system view's label follows the viewer's language (the stored name is
   // only for API consumers).
   const isSystem = view.kind === "my";
+  const { setNodeRef, style, attributes, listeners, isDragging } = useTabSortable(
+    view.id
+  );
   return (
     <button
       type="button"
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       onClick={onSelect}
       title={generating ? t("viewGenerating") : undefined}
-      className={cn(
-        "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors",
-        active
-          ? "bg-foreground text-background"
-          : "text-muted-foreground hover:bg-muted"
-      )}
+      className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {generating && (
         <Loader2
@@ -789,6 +920,36 @@ function ViewChip({
       )}
       {isSystem && <CircleUser className="size-3 shrink-0" aria-hidden />}
       {isSystem ? t("myView") : view.name}
+    </button>
+  );
+}
+
+/** The (non-view) Cycle pill — reorderable like the view pills. */
+function CycleTab({
+  active,
+  external,
+  onSelect,
+}: {
+  active: boolean;
+  external?: boolean;
+  onSelect: () => void;
+}) {
+  const t = useTranslations("Board");
+  const { setNodeRef, style, attributes, listeners, isDragging } =
+    useTabSortable(CYCLE_TAB_KEY);
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={onSelect}
+      className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
+    >
+      <IterationCw className="size-3 shrink-0" aria-hidden />
+      {t("cycleTab")}
+      {external && <ArrowUpRight className="size-3 shrink-0" aria-hidden />}
     </button>
   );
 }
