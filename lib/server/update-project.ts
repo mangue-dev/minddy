@@ -2,18 +2,22 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import type { Project } from "@/lib/types";
 
 /**
  * Shared project-settings update core, used by PATCH /api/projects/[id] and the
  * assistant `update_project` tool. Only the owner may change a project's own
- * settings (name / key / color); the write bypasses RLS (service client) so
- * ownership is enforced HERE, before touching the row.
+ * settings (name / key / color / smart assign); the write bypasses RLS
+ * (service client) so ownership is enforced HERE, before touching the row.
  *
  * Field semantics mirror the route: `name` trimmed & required-if-present, `key`
  * normalized then validated, `color` nullable (any present value, null clears).
  * A unique-violation on `key` (23505) surfaces as `projectKeyAlreadyUsed`.
+ * `smart_assign_enabled` is gated by the billing stub (`canUseSmartAssign`) on
+ * activation; `smart_assign_rules` replaces the whole map, keys whitelisted to
+ * the current team.
  */
 export type UpdateProjectResult =
   | { ok: true; project: Project }
@@ -27,6 +31,7 @@ export type UpdateProjectResult =
         | "noFieldsToUpdate"
         | "projectNotFound"
         | "ownerOnly"
+        | "smartAssignNotAllowed"
         | "databaseError";
     };
 
@@ -59,12 +64,45 @@ export async function updateProjectSettings({
   if ("color" in input) {
     updates.color = typeof input.color === "string" ? input.color : null;
   }
+  if (typeof input.smart_assign_enabled === "boolean") {
+    if (
+      input.smart_assign_enabled &&
+      !(await canUseSmartAssign(access.project.owner_id))
+    ) {
+      return { ok: false, status: 403, errorKey: "smartAssignNotAllowed" };
+    }
+    updates.smart_assign_enabled = input.smart_assign_enabled;
+  }
+
+  const service = getServiceClient();
+
+  if (
+    typeof input.smart_assign_rules === "object" &&
+    input.smart_assign_rules !== null &&
+    !Array.isArray(input.smart_assign_rules)
+  ) {
+    // Whitelist keys to the current team (owner + members) and keep only
+    // non-empty texts — stale entries for removed members drop on save.
+    const { data: memberRows } = await service
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", projectId);
+    const teamIds = new Set([
+      access.project.owner_id as string,
+      ...(memberRows ?? []).map((m) => m.user_id as string),
+    ]);
+    const rules: Record<string, string> = {};
+    for (const [userId, rule] of Object.entries(input.smart_assign_rules)) {
+      if (!teamIds.has(userId) || typeof rule !== "string") continue;
+      const text = rule.trim();
+      if (text) rules[userId] = text.slice(0, 500);
+    }
+    updates.smart_assign_rules = rules;
+  }
 
   if (Object.keys(updates).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
-
-  const service = getServiceClient();
   const { data, error } = await service
     .from("projects")
     .update(updates)

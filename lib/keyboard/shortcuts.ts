@@ -54,6 +54,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
     titleKey: "create",
     shortcuts: [
       { id: "create.issue", labelKey: "createIssue", keys: [["C"]] },
+      { id: "create.objective", labelKey: "createObjective", keys: [["O"]] },
     ],
   },
   {

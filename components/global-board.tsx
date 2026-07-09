@@ -7,6 +7,7 @@ import { Skeleton, toast } from "mangue-ui";
 import { ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useCreate } from "@/lib/create-context";
 import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
 import { useBoardViews } from "@/lib/use-board-views";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
@@ -55,6 +56,7 @@ function GlobalBoardInner() {
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
   const { projects } = useProjects();
+  const { openCreateIssue } = useCreate();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -196,6 +198,7 @@ function GlobalBoardInner() {
           categories={NO_CATEGORIES}
           objectives={NO_OBJECTIVES}
           integrations={NO_INTEGRATIONS}
+          projects={projects}
           dirty={dirty}
           onCreateView={handleCreateView}
           onUpdateActiveView={saveActiveView}
@@ -243,6 +246,7 @@ function GlobalBoardInner() {
             }
             onSetCategories={setCategories}
             onMove={moveIssue}
+            onCreateIssue={(status) => openCreateIssue({ status })}
           />
         </div>
       )}

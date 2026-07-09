@@ -14,7 +14,15 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { LogOut, Plug, Settings2, Tags, Trash2, Users } from "lucide-react";
+import {
+  LogOut,
+  Plug,
+  Settings2,
+  Tags,
+  Trash2,
+  Users,
+  WandSparkles,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { removeMemberApi } from "@/lib/members-api";
@@ -22,6 +30,7 @@ import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
+import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import {
   SettingsShell,
@@ -269,6 +278,12 @@ export default function ProjectSettingsPage() {
           <ProjectMembers projectId={project.id} enabled />
         </SettingsSection>
       ),
+    },
+    {
+      value: "smart-assign",
+      label: t("smartAssignTab"),
+      icon: WandSparkles,
+      content: <SmartAssignSection project={project} isOwner={isOwner} />,
     },
     {
       value: "integrations",

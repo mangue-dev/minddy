@@ -182,6 +182,12 @@ export function sanitizeViewConfig(input: {
             if (kept) filters.integration = kept;
             break;
           }
+          case "project": {
+            // Only meaningful on global views (a project board is single-project).
+            const kept = keepIdValues(key, value, invalid);
+            if (kept) filters.project = kept;
+            break;
+          }
           default:
             invalid.push(`filters.${key}: unknown key, dropped`);
         }

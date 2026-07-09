@@ -19,6 +19,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
+import { useCreate } from "@/lib/create-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -68,6 +69,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
+  const { openCreateIssue, openCreateObjective } = useCreate();
   const { unreadCount } = useNotifications();
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
 
@@ -105,7 +107,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         icon: ListTodo,
         keywords: [...createKw, ti("entity"), currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
-        onSelect: () => router.push(`/projects/${currentProject.id}?new=issue`),
+        onSelect: () => openCreateIssue({ projectId: currentProject.id }),
       });
       createItems.push({
         key: "create-objective",
@@ -113,7 +115,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         icon: Target,
         keywords: [...createKw, currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
-        onSelect: () => router.push(`/projects/${currentProject.id}/objectives?new=1`),
+        onSelect: () => openCreateObjective({ projectId: currentProject.id }),
       });
     } else {
       for (const p of projects) {
@@ -123,7 +125,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           icon: ListTodo,
           keywords: [...createKw, ti("entity"), p.name, p.key],
           meta: projectChip(p),
-          onSelect: () => router.push(`/projects/${p.id}?new=issue`),
+          onSelect: () => openCreateIssue({ projectId: p.id }),
+        });
+      }
+      // Objective creation from anywhere (MIN-33): one entry — the dialog's split
+      // button picks the target project.
+      if (projects.length > 0) {
+        createItems.push({
+          key: "create-objective",
+          label: t("newObjective"),
+          icon: Target,
+          keywords: createKw,
+          onSelect: () => openCreateObjective(),
         });
       }
     }
@@ -242,7 +255,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, currentProject, projectIssues, router, openCreateProject, t, ti, tk, setCheatsheetOpen]);
+  }, [projects, currentProject, projectIssues, router, openCreateProject, openCreateIssue, openCreateObjective, t, ti, tk, setCheatsheetOpen]);
 
   const inboxItem: AppNavItem = {
     key: "inbox",

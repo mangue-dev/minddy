@@ -62,6 +62,7 @@ export function GlobalKanbanBoard({
   onUpdateIssue,
   onSetCategories,
   onMove,
+  onCreateIssue,
 }: {
   issues: Issue[];
   statuses: StatusMeta[];
@@ -79,6 +80,8 @@ export function GlobalKanbanBoard({
     patch: { status?: IssueStatus; position: number },
     projectId: string
   ) => Promise<void>;
+  /** Open the app-wide create dialog preset to a column's status (MIN-33). */
+  onCreateIssue: (status: IssueStatus) => void;
 }) {
   const issueMap = useMemo(
     () => new Map(issues.map((i) => [i.id, i])),
@@ -177,6 +180,7 @@ export function GlobalKanbanBoard({
             onOpenPlan={onOpenPlan}
             onUpdateIssue={onUpdateIssue}
             onSetCategories={onSetCategories}
+            onCreateIssue={onCreateIssue}
           />
         ))}
       </div>

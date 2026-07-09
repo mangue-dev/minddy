@@ -111,6 +111,10 @@ export function describeEvent(
           to: effortLabel(e.to_value),
         });
       case "assignee_id":
+        // Smart Assign writes a dedicated sentence — the actor line already
+        // reads "Smart Assign", so "reassigned: — → X" would be redundant.
+        if (e.via_smart_assign)
+          return t("smartAssigned", { to: memberName(ctx, tr, e.to_value) });
         return t("assigneeChanged", {
           from: memberName(ctx, tr, e.from_value),
           to: memberName(ctx, tr, e.to_value),

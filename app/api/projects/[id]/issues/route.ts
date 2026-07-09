@@ -7,6 +7,9 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Headroom for the Smart Assign after() run (one AI call post-response).
+export const maxDuration = 60;
+
 /** GET /api/projects/[id]/issues — all issues of an accessible project. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

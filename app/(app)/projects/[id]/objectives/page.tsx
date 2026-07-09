@@ -79,26 +79,8 @@ function ObjectivesInner() {
     }
   }, [newParam, pathname, router]);
 
-  // `C` opens the new-objective dialog (mirrors the board's quick-create),
-  // unless typing or a dialog is already open. Reachable via `G O` then `C`.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "c" && e.key !== "C") return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const el = e.target as HTMLElement | null;
-      const typing =
-        el &&
-        (el.tagName === "INPUT" ||
-          el.tagName === "TEXTAREA" ||
-          el.isContentEditable);
-      if (typing || dialogOpen || toDelete) return;
-      e.preventDefault();
-      setEditing(null);
-      setDialogOpen(true);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dialogOpen, toDelete]);
+  // Objective creation is keyboard-driven by the app-wide `O` shortcut now
+  // (see CreateProvider) — no page-local `C` handler.
 
   if (projectsLoading && !project) {
     return (

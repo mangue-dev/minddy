@@ -148,6 +148,9 @@ export interface IssueEvent {
       timeline shows the integration's name as the actor. */
   integration_id?: string | null;
   integration_name?: string | null;
+  /** True when the assignment was made by Smart Assign — the timeline shows
+      "Smart Assign" as the actor. */
+  via_smart_assign?: boolean;
   created_at: string;
 }
 
@@ -175,6 +178,11 @@ export interface Project {
   name: string;
   key: string;
   color: string | null;
+  /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
+  smart_assign_enabled: boolean;
+  /** Smart Assign rules, user_id → free text describing the member's preferred
+      tasks (kept on the project — the owner has no project_members row). */
+  smart_assign_rules: Record<string, string>;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -190,6 +198,8 @@ export interface ProjectUpdateInput {
   name?: string;
   key?: string;
   color?: string | null;
+  smart_assign_enabled?: boolean;
+  smart_assign_rules?: Record<string, string>;
 }
 
 export interface Member {
@@ -394,6 +404,7 @@ export interface ViewFilters {
   category?: string[];
   objective?: (string | null)[]; // null = no objective
   integration?: (string | null)[]; // null = not created by an integration
+  project?: string[]; // global (cross-project) views only — a project board is single-project
 }
 
 export interface ViewDisplay {

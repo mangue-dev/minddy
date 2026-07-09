@@ -15,11 +15,13 @@ import {
   DropdownMenuTrigger,
   Input,
   Spinner,
+  SplitButton,
   cn,
   toast,
 } from "mangue-ui";
 import { Check } from "lucide-react";
 import { AssigneePicker, DueDateField } from "@/components/issue-fields";
+import { ProjectOrb } from "@/components/project-orb";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import {
   OBJECTIVE_STATUSES,
@@ -32,6 +34,7 @@ import type {
   Member,
   Objective,
   ObjectiveUpdateInput,
+  Project,
 } from "@/lib/types";
 
 function StatusSelect({
@@ -122,6 +125,9 @@ export function ObjectiveDialog({
   objective,
   onCreate,
   onUpdate,
+  projects = [],
+  projectId,
+  onCreateInProject,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -130,11 +136,26 @@ export function ObjectiveDialog({
   objective?: Objective | null;
   onCreate: (input: CreateObjectiveInput) => Promise<unknown>;
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
+  /** All the user's projects — powers the "create in another project" split. */
+  projects?: Project[];
+  /** The project `onCreate` targets — labels the split button's primary action. */
+  projectId?: string;
+  /** Create in an arbitrary project (the split-button dropdown targets). */
+  onCreateInProject?: (
+    targetProjectId: string,
+    input: CreateObjectiveInput
+  ) => Promise<unknown>;
 }) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
+
+  const currentProject = projects.find((p) => p.id === projectId) ?? null;
+  const otherProjects = projects.filter((p) => p.id !== projectId);
+  // Only in create mode, and only when there's somewhere else to create it.
+  const showSplit =
+    !objective && !!onCreateInProject && !!currentProject && otherProjects.length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -152,8 +173,8 @@ export function ObjectiveDialog({
     );
   }, [open, objective]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // `target` is set only when creating in a different project (dropdown item).
+  const submit = async (target?: Project) => {
     const name = form.name.trim();
     if (!name) return;
     setSubmitting(true);
@@ -165,16 +186,38 @@ export function ObjectiveDialog({
       target_date: form.target_date,
       color: form.color,
     };
+    const other =
+      target && projectId && target.id !== projectId ? target : null;
     try {
-      if (objective) await onUpdate(objective.id, payload);
-      else await onCreate(payload);
-      toast.success(objective ? t("updatedToast") : t("createdToast"));
+      if (objective) {
+        await onUpdate(objective.id, payload);
+        toast.success(t("updatedToast"));
+      } else if (other && onCreateInProject) {
+        // Cross-project: the lead references THIS project's members and doesn't
+        // exist in the target — only the portable fields travel.
+        await onCreateInProject(other.id, {
+          name,
+          description: form.description.trim() || null,
+          status: form.status,
+          target_date: form.target_date,
+          color: form.color,
+        });
+        toast.success(t("createdInProjectToast", { project: other.name }));
+      } else {
+        await onCreate(payload);
+        toast.success(t("createdToast"));
+      }
       onOpenChange(false);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void submit();
   };
 
   return (
@@ -245,10 +288,29 @@ export function ObjectiveDialog({
             >
               {tCommon("cancel")}
             </Button>
-            <Button type="submit" disabled={submitting || !form.name.trim()}>
-              {submitting && <Spinner />}
-              {objective ? tCommon("save") : tCommon("create")}
-            </Button>
+            {showSplit ? (
+              <SplitButton
+                type="submit"
+                disabled={submitting || !form.name.trim()}
+                menuLabel={t("createInOtherProject")}
+                menu={otherProjects.map((p) => (
+                  <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
+                    <ProjectOrb seed={p.id} className="size-4" />
+                    <span className="truncate">{p.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              >
+                {submitting && <Spinner />}
+                <span className="max-w-[14rem] truncate">
+                  {t("createInProject", { project: currentProject!.name })}
+                </span>
+              </SplitButton>
+            ) : (
+              <Button type="submit" disabled={submitting || !form.name.trim()}>
+                {submitting && <Spinner />}
+                {objective ? tCommon("save") : tCommon("create")}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

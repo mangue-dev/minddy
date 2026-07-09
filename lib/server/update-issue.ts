@@ -15,6 +15,10 @@ import {
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
+import {
+  isSmartAssignEligibleStatus,
+  scheduleSmartAssign,
+} from "@/lib/server/smart-assign";
 
 /**
  * Shared issue-update core: validates an untrusted field payload, applies it
@@ -253,6 +257,24 @@ export async function updateIssueFields({
         actor_id: actorId,
       },
     ]);
+  }
+
+  // Smart Assign (MIN-31): an unassigned issue leaving triage gets an assignee
+  // after the response (opt-in per project; the run re-checks everything).
+  const assigneeAfterUpdate =
+    "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
+  if (
+    "status" in updates &&
+    before.status === "triage" &&
+    isSmartAssignEligibleStatus(updates.status) &&
+    assigneeAfterUpdate == null
+  ) {
+    scheduleSmartAssign({
+      issueId,
+      projectId: before.project_id as string,
+      triggerActorId: actorId,
+      trigger: "triage_exit",
+    });
   }
 
   return { ok: true, issue: mapIssueRow(data) };

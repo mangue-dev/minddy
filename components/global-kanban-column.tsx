@@ -4,8 +4,9 @@ import { useCallback } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { StatusMeta } from "@/lib/issue-constants";
+import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
 import type {
   Category,
   Issue,
@@ -26,8 +27,9 @@ const EMPTY_OBJECTIVES: Map<string, Objective> = new Map();
  * One status column of the cross-project kanban (MIN-29). Same droppable +
  * sortable machinery as <KanbanColumn>, but every card is fed its OWN project's
  * key/members/categories/objectives (looked up by `issue.project_id`) so it's a
- * fully interactive project card. No "new issue" footer (which project would it
- * target?) and no relation affordances (relations are per-project).
+ * fully interactive project card. The "new issue" footer opens the app-wide
+ * create dialog with this column's status preset (the dialog's split button
+ * picks the target project — MIN-33). No relation affordances (per-project).
  */
 export function GlobalKanbanColumn({
   status,
@@ -41,6 +43,7 @@ export function GlobalKanbanColumn({
   onOpenPlan,
   onUpdateIssue,
   onSetCategories,
+  onCreateIssue,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -54,9 +57,11 @@ export function GlobalKanbanColumn({
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
+  onCreateIssue: (status: IssueStatus) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
+  const t = useTranslations("Board");
   const ts = useTranslations("Status");
 
   const setScrollRef = useCallback(
@@ -114,6 +119,15 @@ export function GlobalKanbanColumn({
             );
           })}
         </SortableContext>
+
+        <button
+          type="button"
+          onClick={() => onCreateIssue(status.value)}
+          className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+        >
+          <Plus className="size-4" />
+          {t("newIssue")}
+        </button>
       </div>
     </div>
   );

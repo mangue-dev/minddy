@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { AppQueryProvider } from "@/lib/query-provider";
 import { RealtimeProvider } from "@/lib/realtime-provider";
 import { ProjectsProvider } from "@/lib/projects-context";
+import { CreateProvider } from "@/lib/create-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
@@ -25,7 +26,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <ProjectsProvider>
             <AssistantPanelProvider>
               <KeyboardProvider>
-                <AppShellChrome>{children}</AppShellChrome>
+                <CreateProvider>
+                  <AppShellChrome>{children}</AppShellChrome>
+                </CreateProvider>
                 <AssistantPanel />
                 <AssistantFab />
                 <KeyboardCheatsheet />

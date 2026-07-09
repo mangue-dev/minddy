@@ -8,6 +8,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Headroom for the Smart Assign after() run (one AI call post-response).
+export const maxDuration = 60;
+
 /** GET /api/issues/[id] — a single issue (RLS: caller can access its project). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

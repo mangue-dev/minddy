@@ -305,25 +305,8 @@ function ProjectBoard() {
     }
   }, [newParam, pathname, router]);
 
-  // `C` opens the quick-create dialog (unless typing or a dialog is already open).
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "c" && e.key !== "C") return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const el = e.target as HTMLElement | null;
-      const typing =
-        el &&
-        (el.tagName === "INPUT" ||
-          el.tagName === "TEXTAREA" ||
-          el.isContentEditable);
-      if (typing || createOpen || openIssueId || objectiveEditOpen) return;
-      e.preventDefault();
-      setCreateStatus(undefined);
-      setCreateOpen(true);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [createOpen, openIssueId, objectiveEditOpen]);
+  // `C` (new issue) is an app-wide shortcut now (see CreateProvider). The column
+  // "+" still opens this local dialog with its status/objective/assignee presets.
 
   if (projectsLoading && !project) {
     return (

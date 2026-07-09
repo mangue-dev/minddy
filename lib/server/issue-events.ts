@@ -24,6 +24,9 @@ export interface EventRow {
   /** Set when the action comes from a project integration (Feedback API); the
       timeline then shows the integration's name as the actor. */
   integration_id?: string | null;
+  /** True when the assignment was made by Smart Assign (actor_id null); the
+      timeline then shows "Smart Assign" as the actor. */
+  via_smart_assign?: boolean;
 }
 
 /** Stamp a batch of events as assistant-triggered (no-op when false). */

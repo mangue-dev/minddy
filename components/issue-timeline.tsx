@@ -16,7 +16,16 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Bot, ChevronDown, ChevronRight, Ellipsis, Pencil, Plug, Trash2 } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  Ellipsis,
+  Pencil,
+  Plug,
+  Trash2,
+  WandSparkles,
+} from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import {
   describeEvent,
@@ -160,6 +169,22 @@ function McpAvatar({ agent, className }: { agent: string | null | undefined; cla
   );
 }
 
+/** Avatar for assignments made by Smart Assign — the feature acts as its own
+    entity in the timeline, never as a user. */
+function SmartAssignAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      <WandSparkles className="size-3" />
+    </span>
+  );
+}
+
 /** Avatar for issues submitted through a project integration (Feedback API) —
     a plug instead of a user's initials, so external submissions stand out. */
 function IntegrationAvatar({ className }: { className?: string }) {
@@ -209,25 +234,31 @@ function OneLine({ full, children }: { full: string; children: React.ReactNode }
 function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
-  const viaNumo = !!item.event.via_assistant;
-  const viaMcp = !viaNumo && !!item.event.via_mcp;
-  const viaIntegration = !viaNumo && !viaMcp && !!item.event.integration_id;
+  const viaSmartAssign = !!item.event.via_smart_assign;
+  const viaNumo = !viaSmartAssign && !!item.event.via_assistant;
+  const viaMcp = !viaSmartAssign && !viaNumo && !!item.event.via_mcp;
+  const viaIntegration =
+    !viaSmartAssign && !viaNumo && !viaMcp && !!item.event.integration_id;
   // via_mcp : l'acteur affiché est l'AGENT (nom de la clé API + logo), pas
   // l'utilisateur — l'action peut venir d'un workflow automatisé.
   const actor = actorName(ctx.members, item.event.actor_id, t);
-  const name = viaNumo
-    ? "Numo"
-    : viaIntegration
-      ? t("integrationActor", {
-          name: item.event.integration_name ?? t("integrationFallback"),
-        })
-      : viaMcp
-        ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
-        : actor;
+  const name = viaSmartAssign
+    ? "Smart Assign"
+    : viaNumo
+      ? "Numo"
+      : viaIntegration
+        ? t("integrationActor", {
+            name: item.event.integration_name ?? t("integrationFallback"),
+          })
+        : viaMcp
+          ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
+          : actor;
   const summary = describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
-      {viaNumo ? (
+      {viaSmartAssign ? (
+        <SmartAssignAvatar />
+      ) : viaNumo ? (
         <NumoAvatar />
       ) : viaMcp ? (
         <McpAvatar agent={item.event.api_key_agent} />

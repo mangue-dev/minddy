@@ -15,6 +15,10 @@ import {
   type EventRow,
 } from "@/lib/server/issue-events";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
+import {
+  isSmartAssignEligibleStatus,
+  scheduleSmartAssign,
+} from "@/lib/server/smart-assign";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
@@ -225,6 +229,18 @@ export async function createIssueForProject({
       });
     }
     await insertStatEvents(service, statRows);
+  }
+
+  // Smart Assign (MIN-31): an issue born past triage without an assignee gets
+  // one after the response (opt-in per project; the run re-checks everything).
+  // Integration issues are forced to "triage" by their routes, so never match.
+  if (data.assignee_id == null && isSmartAssignEligibleStatus(data.status)) {
+    scheduleSmartAssign({
+      issueId: data.id as string,
+      projectId,
+      triggerActorId: actorId,
+      trigger: "create",
+    });
   }
 
   return { ok: true, issue: { ...data, category_ids: categoryIds } };

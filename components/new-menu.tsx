@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -18,7 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
-import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { useCreate } from "@/lib/create-context";
 
 export interface CreateAction {
   key: string;
@@ -33,32 +32,31 @@ export interface CreateAction {
 /**
  * The three "Nouveau" create actions (issue / objective / project), shared by the
  * desktop header {@link NewMenu} and the mobile navbar "+" button so both stay in
- * sync. Issue/objective target the current project (disabled outside one).
+ * sync. Issue/objective open the app-wide create dialogs (MIN-33) — available
+ * from anywhere, not just inside a project — targeting the current route's
+ * project when there is one, else letting the dialog's split button pick.
  */
 export function useCreateActions(): CreateAction[] {
   const t = useTranslations("Nav");
-  const pathname = usePathname();
-  const router = useRouter();
   const { openCreateProject } = useProjects();
-
-  const projectId = projectIdFromPath(pathname);
+  const { openCreateIssue, openCreateObjective, canCreate } = useCreate();
 
   return [
     {
       key: "new-issue",
       icon: ListTodo,
       label: t("newIssue"),
-      disabled: !projectId,
+      disabled: !canCreate,
       shortcut: "C",
-      onSelect: () => projectId && router.push(`/projects/${projectId}?new=issue`),
+      onSelect: () => openCreateIssue(),
     },
     {
       key: "new-objective",
       icon: Target,
       label: t("newObjective"),
-      disabled: !projectId,
-      onSelect: () =>
-        projectId && router.push(`/projects/${projectId}/objectives?new=1`),
+      disabled: !canCreate,
+      shortcut: "O",
+      onSelect: () => openCreateObjective(),
     },
     {
       key: "new-project",

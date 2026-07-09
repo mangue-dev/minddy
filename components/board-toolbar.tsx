@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Separator,
+  SplitButton,
   Textarea,
   Tooltip,
   TooltipContent,
@@ -47,6 +48,7 @@ import {
   PriorityIndicator,
 } from "@/components/issue-indicators";
 import { NumoIcon } from "@/components/numo-icon";
+import { ProjectOrb } from "@/components/project-orb";
 import { ShareViewDialog } from "@/components/share-view-dialog";
 import {
   STATUSES,
@@ -63,6 +65,7 @@ import type {
   Integration,
   Member,
   Objective,
+  Project,
   View,
   ViewConfig,
   ViewFilters,
@@ -106,6 +109,7 @@ function FiltersPopover({
   categories,
   objectives,
   integrations,
+  projects,
   lockedToMe,
   withNumo,
   onAskNumo,
@@ -116,6 +120,8 @@ function FiltersPopover({
   categories: Category[];
   objectives: Objective[];
   integrations: Integration[];
+  /** Global board only — a project board has no project facet. */
+  projects: Project[];
   /** System view: the assignee facet is pinned to "@me" and not editable. */
   lockedToMe: boolean;
   withNumo: boolean;
@@ -158,6 +164,26 @@ function FiltersPopover({
               <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
               <span className="min-w-0 flex-1 truncate">{t("askNumo")}</span>
             </button>
+            <Separator className="my-1.5" />
+          </>
+        )}
+        {projects.length > 0 && (
+          <>
+            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              {tf("project")}
+            </p>
+            {projects.map((p) => (
+              <ToggleRow
+                key={p.id}
+                active={!!f.project?.includes(p.id)}
+                onClick={() =>
+                  setFilters({ ...f, project: toggle<string>(f.project, p.id) })
+                }
+              >
+                <ProjectOrb seed={p.id} className="size-4 shrink-0" />
+                <span className="truncate">{p.name}</span>
+              </ToggleRow>
+            ))}
             <Separator className="my-1.5" />
           </>
         )}
@@ -460,6 +486,7 @@ export function BoardToolbar({
   categories,
   objectives,
   integrations,
+  projects = [],
   dirty,
   onCreateView,
   onUpdateActiveView,
@@ -479,6 +506,8 @@ export function BoardToolbar({
   categories: Category[];
   objectives: Objective[];
   integrations: Integration[];
+  /** Global board only: enables the project facet in the filters popover. */
+  projects?: Project[];
   dirty: boolean;
   onCreateView: (name: string, description?: string) => Promise<void>;
   onUpdateActiveView: () => Promise<void>;
@@ -491,6 +520,9 @@ export function BoardToolbar({
   onAskNumo: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  // "Save as new view" from the Save split button: same create flow, but the
+  // config to save already exists — no Numo description step.
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
   const [shareTarget, setShareTarget] = useState<View | null>(null);
   const t = useTranslations("Board");
@@ -534,10 +566,20 @@ export function BoardToolbar({
 
         <div className="ml-auto flex items-center gap-1.5">
           {dirty && activeView && (
-            <Button size="sm" onClick={() => void onUpdateActiveView()}>
+            <SplitButton
+              size="sm"
+              onClick={() => void onUpdateActiveView()}
+              menuLabel={t("saveOptions")}
+              menu={
+                <DropdownMenuItem onSelect={() => setSaveAsOpen(true)}>
+                  <Plus />
+                  {t("saveAsNewView")}
+                </DropdownMenuItem>
+              }
+            >
               <Save />
               {tc("save")}
-            </Button>
+            </SplitButton>
           )}
           {dirty && !activeView && (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -581,6 +623,7 @@ export function BoardToolbar({
             categories={categories}
             objectives={objectives}
             integrations={integrations}
+            projects={projects}
             lockedToMe={isSystem}
             withNumo={withNumo}
             onAskNumo={onAskNumo}
@@ -649,6 +692,13 @@ export function BoardToolbar({
         onSubmit={onCreateView}
         withDescription={withNumo}
         submitLabel={withNumo ? tc("continue") : undefined}
+      />
+      <ViewNameDialog
+        open={saveAsOpen}
+        onOpenChange={setSaveAsOpen}
+        title={t("saveAsNewView")}
+        initialName=""
+        onSubmit={(name) => onCreateView(name)}
       />
       <ViewNameDialog
         open={renameTarget !== null}
