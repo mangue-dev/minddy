@@ -308,6 +308,12 @@
   "Home": {
     "title": "My Projects"
   },
+  "GlobalBoard": {
+    "myTitle": "My issues",
+    "allTitle": "All issues",
+    "emptyMy": "No issues are assigned to you across your projects.",
+    "emptyAll": "No issues across your projects yet."
+  },
   "Inbox": {
     "title": "Inbox",
     "markAllRead": "Mark all as read",

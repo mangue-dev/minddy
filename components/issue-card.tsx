@@ -49,7 +49,9 @@ import type {
   IssueUpdateInput,
   Member,
   Objective,
+  Project,
 } from "@/lib/types";
+import { ProjectOrb } from "@/components/project-orb";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -473,6 +475,7 @@ function PlanPick({
 export function IssueCardBody({
   issue,
   projectKey,
+  project,
   memberMap,
   categoryMap,
   objectiveMap,
@@ -487,6 +490,9 @@ export function IssueCardBody({
 }: {
   issue: Issue;
   projectKey: string;
+  /** On the cross-project (global) boards, the issue's project — renders an
+      origin-project chip at the top of the card. Omitted on project boards. */
+  project?: Project;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   /** Objectives by id — the linked one shows as a bottom-line indicator. */
@@ -543,6 +549,14 @@ export function IssueCardBody({
         dragging && "cursor-grabbing shadow-lg"
       )}
     >
+      {/* Cross-project boards only: the issue's origin project (orb + name). */}
+      {project && (
+        <div className="-mb-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <ProjectOrb seed={project.id} className="size-3.5" />
+          <span className="truncate">{project.name}</span>
+        </div>
+      )}
+
       {/* Identifier (préfixé de l'icône intégration le cas échéant) + assignee */}
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
@@ -638,6 +652,7 @@ export function IssueCard({
   issue,
   projectId,
   projectKey,
+  project,
   memberMap,
   categoryMap,
   objectiveMap,
@@ -655,6 +670,8 @@ export function IssueCard({
   issue: Issue;
   projectId: string;
   projectKey: string;
+  /** Cross-project boards: the issue's project (shows an origin-project chip). */
+  project?: Project;
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
@@ -814,6 +831,7 @@ export function IssueCard({
       <IssueCardBody
         issue={issue}
         projectKey={projectKey}
+        project={project}
         memberMap={memberMap}
         categoryMap={categoryMap}
         objectiveMap={objectiveMap}

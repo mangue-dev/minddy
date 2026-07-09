@@ -75,6 +75,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const currentProjectId = projectIdFromPath(pathname);
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
   const isInbox = pathname.startsWith("/inbox");
+  // Cross-project (Home-level) boards (MIN-29).
+  const isMyGlobal = pathname === "/my";
+  const isAllGlobal = pathname === "/all";
 
   // Shares the ["issues", projectId] cache with the board (no extra realtime
   // bridge) so search can list the current project's issues.
@@ -141,6 +144,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       items: [
         { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+        {
+          key: "go-my-global",
+          label: t("myIssues"),
+          icon: CircleUser,
+          onSelect: () => router.push("/my"),
+        },
+        {
+          key: "go-all-global",
+          label: t("allIssues"),
+          icon: LayoutGrid,
+          onSelect: () => router.push("/all"),
+        },
         {
           key: "go-account-settings",
           label: t("accountSettings"),
@@ -338,6 +353,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             href: "/home",
             active: pathname.startsWith("/home"),
             shortcut: "H",
+          },
+          {
+            key: "my-global",
+            label: t("myIssues"),
+            icon: CircleUser,
+            href: "/my",
+            active: pathname === "/my",
+            shortcut: "M",
+          },
+          {
+            key: "all-global",
+            label: t("allIssues"),
+            icon: LayoutGrid,
+            href: "/all",
+            active: pathname === "/all",
+            shortcut: "B",
           },
         ],
       },

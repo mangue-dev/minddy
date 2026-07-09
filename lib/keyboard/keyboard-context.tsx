@@ -164,7 +164,20 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         default:
           break;
       }
-      if (!projectId) return false;
+      // Outside a project, M/B reach the cross-project Home boards (MIN-29);
+      // inside one they're the project's My/All onglets (below).
+      if (!projectId) {
+        switch (key) {
+          case "m":
+            go("/my");
+            return true;
+          case "b":
+            go("/all");
+            return true;
+          default:
+            return false;
+        }
+      }
       const base = `/projects/${projectId}`;
       switch (key) {
         case "b":

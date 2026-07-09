@@ -308,6 +308,12 @@
   "Home": {
     "title": "Mes Projets"
   },
+  "GlobalBoard": {
+    "myTitle": "Mes tickets",
+    "allTitle": "Tous les tickets",
+    "emptyMy": "Aucun ticket ne vous est assigné dans vos projets.",
+    "emptyAll": "Aucun ticket dans vos projets pour le moment."
+  },
   "Inbox": {
     "title": "Inbox",
     "markAllRead": "Tout marquer comme lu",

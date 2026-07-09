@@ -1,0 +1,208 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { toast } from "mangue-ui";
+import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
+import type { IssueStatus } from "@/lib/issue-constants";
+import type {
+  Category,
+  Issue,
+  IssueUpdateInput,
+  Member,
+  Objective,
+  Project,
+  ViewSort,
+} from "@/lib/types";
+import { issueComparator } from "@/lib/view-filter";
+import { GlobalKanbanColumn } from "@/components/global-kanban-column";
+import { IssueCardBody } from "@/components/issue-card";
+
+const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
+const EMPTY_MEMBERS: Map<string, Member> = new Map();
+const EMPTY_CATEGORIES: Map<string, Category> = new Map();
+const EMPTY_OBJECTIVES: Map<string, Objective> = new Map();
+
+/** Insert position = midpoint of the two neighbours at `index` (active excluded). */
+function computePosition(items: Issue[], index: number): number {
+  const before = items[index - 1];
+  const after = items[index];
+  if (!before && !after) return 0;
+  if (!before) return after.position - 1;
+  if (!after) return before.position + 1;
+  return (before.position + after.position) / 2;
+}
+
+/**
+ * The cross-project kanban's drag-and-drop surface (MIN-29) — the same DnD model
+ * as <KanbanBoard>: drag a card between columns to change its status, or reorder
+ * within a column under manual sort. Positions are computed among the board's
+ * (cross-project) column items; the touched issue's project id rides along so
+ * the write targets the right project cache. No relations/create here.
+ */
+export function GlobalKanbanBoard({
+  issues,
+  statuses,
+  sort,
+  projectMap,
+  memberMapByProject,
+  categoryMapByProject,
+  objectiveMapByProject,
+  onOpenIssue,
+  onOpenPlan,
+  onUpdateIssue,
+  onSetCategories,
+  onMove,
+}: {
+  issues: Issue[];
+  statuses: StatusMeta[];
+  sort: ViewSort;
+  projectMap: Map<string, Project>;
+  memberMapByProject: Map<string, Map<string, Member>>;
+  categoryMapByProject: Map<string, Map<string, Category>>;
+  objectiveMapByProject: Map<string, Map<string, Objective>>;
+  onOpenIssue: (issue: Issue) => void;
+  onOpenPlan: (issue: Issue) => void;
+  onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
+  onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
+  onMove: (
+    issueId: string,
+    patch: { status?: IssueStatus; position: number },
+    projectId: string
+  ) => Promise<void>;
+}) {
+  const issueMap = useMemo(
+    () => new Map(issues.map((i) => [i.id, i])),
+    [issues]
+  );
+
+  const columns = useMemo(() => {
+    const cmp = issueComparator(sort);
+    return statuses.map((status) => ({
+      status,
+      items: issues.filter((i) => i.status === status.value).sort(cmp),
+    }));
+  }, [issues, statuses, sort]);
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
+  const activeProject = activeIssue
+    ? projectMap.get(activeIssue.project_id)
+    : undefined;
+  const activeParent =
+    activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
+
+  // Mouse-only drag (touch scrolls the swipeable columns) — mirrors KanbanBoard.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || over.id === active.id) return;
+
+    const dragged = issueMap.get(String(active.id));
+    if (!dragged) return;
+
+    let targetStatus: IssueStatus;
+    let overIssue: Issue | null = null;
+    if (STATUS_VALUES.has(String(over.id))) {
+      targetStatus = String(over.id) as IssueStatus;
+    } else {
+      overIssue = issueMap.get(String(over.id)) ?? null;
+      if (!overIssue) return;
+      targetStatus = overIssue.status;
+    }
+
+    const sameColumn = targetStatus === dragged.status;
+    if (sameColumn && sort !== "manual") return;
+
+    const patch: { status?: IssueStatus; position: number } = {
+      position: dragged.position,
+    };
+    if (!sameColumn) patch.status = targetStatus;
+
+    if (sort === "manual") {
+      const targetItems = issues
+        .filter((i) => i.status === targetStatus && i.id !== dragged.id)
+        .sort((a, b) => a.position - b.position);
+      let index = overIssue
+        ? targetItems.findIndex((i) => i.id === overIssue!.id)
+        : targetItems.length;
+      if (index < 0) index = targetItems.length;
+      patch.position = computePosition(targetItems, index);
+    } else {
+      patch.position = Date.now();
+    }
+
+    void onMove(dragged.id, patch, dragged.project_id).catch((err) =>
+      toast.error((err as Error).message)
+    );
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      <div className="flex h-full min-h-0 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6">
+        {columns.map(({ status, items }) => (
+          <GlobalKanbanColumn
+            key={status.value}
+            status={status}
+            issues={items}
+            projectMap={projectMap}
+            issueMap={issueMap}
+            memberMapByProject={memberMapByProject}
+            categoryMapByProject={categoryMapByProject}
+            objectiveMapByProject={objectiveMapByProject}
+            onOpenIssue={onOpenIssue}
+            onOpenPlan={onOpenPlan}
+            onUpdateIssue={onUpdateIssue}
+            onSetCategories={onSetCategories}
+          />
+        ))}
+      </div>
+
+      <DragOverlay dropAnimation={null}>
+        {activeIssue ? (
+          <div className="w-[21rem]">
+            <IssueCardBody
+              issue={activeIssue}
+              projectKey={activeProject?.key ?? ""}
+              project={activeProject}
+              memberMap={
+                memberMapByProject.get(activeIssue.project_id) ?? EMPTY_MEMBERS
+              }
+              categoryMap={
+                categoryMapByProject.get(activeIssue.project_id) ?? EMPTY_CATEGORIES
+              }
+              objectiveMap={
+                objectiveMapByProject.get(activeIssue.project_id) ?? EMPTY_OBJECTIVES
+              }
+              parentNumber={activeParent?.number}
+              dragging
+            />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}

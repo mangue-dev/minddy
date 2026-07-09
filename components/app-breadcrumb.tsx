@@ -142,6 +142,8 @@ function MobileBreadcrumb({
   isInbox,
   isAccountSettings,
   isStatistics,
+  isMyGlobal,
+  isAllGlobal,
 }: {
   project: Project | null;
   section: string | null;
@@ -149,6 +151,8 @@ function MobileBreadcrumb({
   isInbox: boolean;
   isAccountSettings: boolean;
   isStatistics: boolean;
+  isMyGlobal: boolean;
+  isAllGlobal: boolean;
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
@@ -172,6 +176,14 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("statistics")}</CurrentLabel>;
+  } else if (isMyGlobal) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("myIssues")}</CurrentLabel>;
+  } else if (isAllGlobal) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("allIssues")}</CurrentLabel>;
   } else if (project) {
     // The board root ("allIssues") is the project root — show the switcher and
     // go back up to Home. Nested sections go back to the project root.
@@ -237,6 +249,8 @@ export function AppBreadcrumb() {
   const isInbox = pathname.startsWith("/inbox");
   const isAccountSettings = pathname.startsWith("/settings");
   const isStatistics = pathname.startsWith("/statistics");
+  const isMyGlobal = pathname === "/my";
+  const isAllGlobal = pathname === "/all";
 
   return (
     <>
@@ -268,6 +282,18 @@ export function AppBreadcrumb() {
           </span>
         </BreadcrumbLevel>
 
+        <BreadcrumbLevel show={isMyGlobal} levelKey="my-global">
+          <span className="text-sm font-medium text-foreground">
+            {t("myIssues")}
+          </span>
+        </BreadcrumbLevel>
+
+        <BreadcrumbLevel show={isAllGlobal} levelKey="all-global">
+          <span className="text-sm font-medium text-foreground">
+            {t("allIssues")}
+          </span>
+        </BreadcrumbLevel>
+
         <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
           {project && <ProjectSwitcher project={project} />}
         </BreadcrumbLevel>
@@ -290,6 +316,8 @@ export function AppBreadcrumb() {
         isInbox={isInbox}
         isAccountSettings={isAccountSettings}
         isStatistics={isStatistics}
+        isMyGlobal={isMyGlobal}
+        isAllGlobal={isAllGlobal}
       />
     </>
   );

@@ -201,6 +201,22 @@ export interface Member {
   is_owner: boolean;
 }
 
+/**
+ * Response of GET /api/me/board — everything the cross-project "My/All" kanban
+ * needs to render as a *real* board (drag, inline pickers), keyed by project so
+ * each card gets its own project's members/categories/objectives (see MIN-29):
+ *   - issues:     every issue across all my accessible projects (RLS-scoped)
+ *   - members:    projectId → the project's members (owner synthesized first)
+ *   - categories: projectId → the project's categories
+ *   - objectives: projectId → the project's objectives
+ */
+export interface GlobalBoardResponse {
+  issues: Issue[];
+  members: Record<string, Member[]>;
+  categories: Record<string, Category[]>;
+  objectives: Record<string, Objective[]>;
+}
+
 export interface Invitation {
   id: string;
   project_id: string;
