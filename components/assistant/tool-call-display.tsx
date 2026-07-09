@@ -10,6 +10,7 @@ import {
   FilePlus2,
   FileSearch,
   Filter,
+  IterationCw,
   LayoutGrid,
   List,
   Loader2,
@@ -316,6 +317,40 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success
         ? t("accountSettingsUpdated")
         : t("updateAccountSettingsFailed");
+    },
+  },
+  get_cycle: {
+    icon: IterationCw,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingCycle");
+      return success ? t("cycleLoaded") : t("loadCycleFailed");
+    },
+  },
+  fill_cycle: {
+    icon: IterationCw,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("fillingCycle");
+      if (!success) return t("fillCycleFailed");
+      const added = typeof result?.added === "number" ? result.added : 0;
+      return t("cycleFilled", { count: added });
+    },
+  },
+  add_issues_to_cycle: {
+    icon: IterationCw,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("addingToCycle");
+      if (!success) return t("addToCycleFailed");
+      const added = typeof result?.added === "number" ? result.added : 0;
+      return t("addedToCycle", { count: added });
+    },
+  },
+  remove_issues_from_cycle: {
+    icon: IterationCw,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("removingFromCycle");
+      if (!success) return t("removeFromCycleFailed");
+      const removed = typeof result?.removed === "number" ? result.removed : 0;
+      return t("removedFromCycle", { count: removed });
     },
   },
   ask_user: {

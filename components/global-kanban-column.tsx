@@ -18,6 +18,7 @@ import type {
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const EMPTY_MEMBERS: Map<string, Member> = new Map();
 const EMPTY_CATEGORIES: Map<string, Category> = new Map();
@@ -44,6 +45,7 @@ export function GlobalKanbanColumn({
   onUpdateIssue,
   onSetCategories,
   onCreateIssue,
+  buildMenuActions,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -57,7 +59,10 @@ export function GlobalKanbanColumn({
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
-  onCreateIssue: (status: IssueStatus) => void;
+  /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
+  onCreateIssue?: (status: IssueStatus) => void;
+  /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
+  buildMenuActions?: (issue: Issue) => ContextMenuAction[];
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
@@ -115,19 +120,22 @@ export function GlobalKanbanColumn({
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={(id, patch) => onUpdateIssue(id, patch, pid)}
                 onSetCategories={(id, ids) => onSetCategories(id, ids, pid)}
+                extraActions={buildMenuActions?.(issue)}
               />
             );
           })}
         </SortableContext>
 
-        <button
-          type="button"
-          onClick={() => onCreateIssue(status.value)}
-          className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
-        >
-          <Plus className="size-4" />
-          {t("newIssue")}
-        </button>
+        {onCreateIssue && (
+          <button
+            type="button"
+            onClick={() => onCreateIssue(status.value)}
+            className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+          >
+            <Plus className="size-4" />
+            {t("newIssue")}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants";
 import type { ObjectiveStatus } from "./objective-constants";
+import type { CycleIntensity } from "./cycle-prefs";
 
 export interface Objective {
   id: string;
@@ -225,6 +226,10 @@ export interface GlobalBoardResponse {
   members: Record<string, Member[]>;
   categories: Record<string, Category[]>;
   objectives: Record<string, Objective[]>;
+  /** Stored `blocks` edges across the user's accessible projects (RLS-scoped) —
+      feeds the cycle reco ordering. */
+  relations: IssueRelation[];
+  cycles: BoardCycles;
 }
 
 export interface Invitation {
@@ -294,8 +299,34 @@ export interface Issue {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  /** The personal cross-project cycle this issue belongs to (MIN-32), if any.
+      Invariant (SQL trigger): a cycled issue is assigned to the cycle's owner. */
+  cycle_id: string | null;
   category_ids: string[];
 }
+
+/** A cycle as the board consumes it (MIN-32): the user's personal
+    cross-project week/fortnight. `end_date` is EXCLUSIVE; intensity and
+    target_points are per-cycle snapshots (past cycles stay frozen). */
+export interface CycleInfo {
+  id: string;
+  start_date: string;
+  end_date: string;
+  intensity: CycleIntensity;
+  target_points: number;
+  /** Points actually completed, snapshotted when the cycle closed; null while open. */
+  completed_points: number | null;
+}
+
+/** The cycles slice of the global board payload. */
+export interface BoardCycles {
+  enabled: boolean;
+  current: CycleInfo | null;
+  upcoming: CycleInfo[];
+  past: CycleInfo[];
+}
+
+export type { CycleIntensity };
 
 /** Relation between two issues, from one issue's point of view (MIN-25).
     `blocked_by` is the inverse read of a stored `blocks` edge. */
@@ -389,6 +420,9 @@ export interface IssueUpdateInput {
   duplicate_of_id?: string | null;
   due_date?: string | null;
   position?: number;
+  /** Setting a cycle assigns the issue to the cycle's owner as a side-effect
+      (never bumps status); null removes it from its cycle. */
+  cycle_id?: string | null;
 }
 
 export type ViewSort = "manual" | "priority" | "created" | "updated" | "due";

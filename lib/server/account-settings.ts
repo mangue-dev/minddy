@@ -14,6 +14,18 @@ import {
   AUTO_ASSIGN_ON_START_META_KEY,
   resolveAutoAssignOnStart,
 } from "@/lib/auto-assign-on-start";
+import {
+  CYCLES_ENABLED_META_KEY,
+  CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
+  CYCLE_AUTO_CAPTURE_STARTED_META_KEY,
+  CYCLE_DURATION_WEEKS_META_KEY,
+  CYCLE_INTENSITY_META_KEY,
+  CYCLE_START_DOW_META_KEY,
+  CYCLE_UPCOMING_COUNT_META_KEY,
+  isCycleIntensity,
+  resolveCyclePrefs,
+  type CyclePrefs,
+} from "@/lib/cycle-prefs";
 import { emailLocalPart } from "@/lib/display-name";
 
 /**
@@ -34,6 +46,8 @@ export interface AccountSettings {
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
+  /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
+  cycles: CyclePrefs;
 }
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -62,6 +76,7 @@ function toSettings(
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
+    cycles: resolveCyclePrefs(meta),
   };
 }
 
@@ -139,6 +154,46 @@ export async function updateAccountSettings({
     next[PROMPT_COPY_AUTO_START_META_KEY] = input.prompt_copy_auto_start;
   }
 
+  // Cycles (MIN-32) — same flat input keys as the meta keys.
+  for (const key of [
+    CYCLES_ENABLED_META_KEY,
+    CYCLE_AUTO_CAPTURE_STARTED_META_KEY,
+    CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
+  ]) {
+    if (key in input) {
+      if (typeof input[key] !== "boolean") {
+        return { ok: false, error: `${key} must be a boolean.` };
+      }
+      next[key] = input[key];
+    }
+  }
+  if (CYCLE_DURATION_WEEKS_META_KEY in input) {
+    if (input[CYCLE_DURATION_WEEKS_META_KEY] !== 1 && input[CYCLE_DURATION_WEEKS_META_KEY] !== 2) {
+      return { ok: false, error: `${CYCLE_DURATION_WEEKS_META_KEY} must be 1 or 2.` };
+    }
+    next[CYCLE_DURATION_WEEKS_META_KEY] = input[CYCLE_DURATION_WEEKS_META_KEY];
+  }
+  if (CYCLE_START_DOW_META_KEY in input) {
+    const dow = input[CYCLE_START_DOW_META_KEY];
+    if (typeof dow !== "number" || !Number.isInteger(dow) || dow < 1 || dow > 7) {
+      return { ok: false, error: `${CYCLE_START_DOW_META_KEY} must be 1 (Monday) to 7 (Sunday).` };
+    }
+    next[CYCLE_START_DOW_META_KEY] = dow;
+  }
+  if (CYCLE_INTENSITY_META_KEY in input) {
+    if (!isCycleIntensity(input[CYCLE_INTENSITY_META_KEY])) {
+      return { ok: false, error: `${CYCLE_INTENSITY_META_KEY} must be light, medium or heavy.` };
+    }
+    next[CYCLE_INTENSITY_META_KEY] = input[CYCLE_INTENSITY_META_KEY];
+  }
+  if (CYCLE_UPCOMING_COUNT_META_KEY in input) {
+    const n = input[CYCLE_UPCOMING_COUNT_META_KEY];
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > 4) {
+      return { ok: false, error: `${CYCLE_UPCOMING_COUNT_META_KEY} must be an integer between 1 and 4.` };
+    }
+    next[CYCLE_UPCOMING_COUNT_META_KEY] = n;
+  }
+
   // Nothing recognised to change.
   const CHANGEABLE = [
     "display_name",
@@ -147,6 +202,13 @@ export async function updateAccountSettings({
     "auto_assign_created",
     "auto_assign_on_start",
     "prompt_copy_auto_start",
+    CYCLES_ENABLED_META_KEY,
+    CYCLE_DURATION_WEEKS_META_KEY,
+    CYCLE_START_DOW_META_KEY,
+    CYCLE_INTENSITY_META_KEY,
+    CYCLE_UPCOMING_COUNT_META_KEY,
+    CYCLE_AUTO_CAPTURE_STARTED_META_KEY,
+    CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
   ];
   if (!CHANGEABLE.some((k) => k in input)) {
     return { ok: false, error: "No account settings to update." };

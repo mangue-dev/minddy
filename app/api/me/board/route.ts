@@ -4,37 +4,80 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
-import type { Category, Member, Objective } from "@/lib/types";
+import { ensureCycles, toCycleInfo } from "@/lib/server/cycles";
+import { resolveCyclePrefs } from "@/lib/cycle-prefs";
+import type { BoardCycles, Category, IssueRelation, Member, Objective } from "@/lib/types";
+
+/** How many closed cycles the header's date-selector lists. */
+const PAST_CYCLES_SHOWN = 8;
 
 /**
  * GET /api/me/board — everything the cross-project "My/All" kanban needs, so it
  * can be a *real* board (drag between columns, inline pickers) and not a
  * read-only list (MIN-29).
  *
- * Issues, categories and objectives are read through the user's client, so RLS
- * (`can_access_project`) scopes them to my projects. Members come from the
- * service client (project_members isn't readable for other users under RLS),
- * mirroring GET /api/projects/[id]/members — the owner isn't stored in
- * project_members, so it's synthesized first from projects.owner_id.
+ * Issues, categories, objectives and `blocks` relations are read through the
+ * user's client, so RLS (`can_access_project`) scopes them to my projects.
+ * Members come from the service client (project_members isn't readable for
+ * other users under RLS), mirroring GET /api/projects/[id]/members — the owner
+ * isn't stored in project_members, so it's synthesized first from
+ * projects.owner_id.
+ *
+ * Cycles (MIN-32): when the user has cycles enabled, this read lazily
+ * reconciles their timeline (create/close/rollover/auto-fill — see
+ * lib/server/cycles.ts) using `?tz=` to resolve the user's calendar day.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+  const service = getServiceClient();
 
-  const [issuesRes, projectsRes, categoriesRes, objectivesRes] = await Promise.all([
-    auth.supabase
-      .from("issues")
-      .select(ISSUE_SELECT)
-      .order("position", { ascending: true })
-      .order("number", { ascending: true }),
-    auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
-    auth.supabase.from("categories").select("*"),
-    auth.supabase.from("objectives").select("*"),
-  ]);
+  // Cycles first: the reconciliation may move issues around (rollover,
+  // auto-fill), and the issues read below must reflect it.
+  const prefs = resolveCyclePrefs(
+    (auth.user.user_metadata ?? null) as Record<string, unknown> | null
+  );
+  let cycles: BoardCycles = { enabled: false, current: null, upcoming: [], past: [] };
+  if (prefs.enabled) {
+    const tz = request.nextUrl.searchParams.get("tz") || "UTC";
+    let today: string;
+    try {
+      today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    } catch {
+      today = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date());
+    }
+    const ensured = await ensureCycles({ service, userId: auth.user.id, prefs, today });
+    cycles = {
+      enabled: true,
+      current: ensured.current ? toCycleInfo(ensured.current) : null,
+      upcoming: ensured.upcoming.map(toCycleInfo),
+      past: ensured.past.slice(0, PAST_CYCLES_SHOWN).map(toCycleInfo),
+    };
+  }
+
+  const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
+    await Promise.all([
+      auth.supabase
+        .from("issues")
+        .select(ISSUE_SELECT)
+        .order("position", { ascending: true })
+        .order("number", { ascending: true }),
+      auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
+      auth.supabase.from("categories").select("*"),
+      auth.supabase.from("objectives").select("*"),
+      auth.supabase
+        .from("issue_relations")
+        .select("id, source_id, target_id, type")
+        .eq("type", "blocks"),
+    ]);
 
   const firstError =
-    issuesRes.error || projectsRes.error || categoriesRes.error || objectivesRes.error;
+    issuesRes.error ||
+    projectsRes.error ||
+    categoriesRes.error ||
+    objectivesRes.error ||
+    relationsRes.error;
   if (firstError) {
     console.error("[api/me/board] load failed:", firstError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
@@ -60,7 +103,6 @@ export async function GET(request: NextRequest) {
   }[];
   const projectIds = projectRows.map((p) => p.id);
 
-  const service = getServiceClient();
   const { data: memberRows } = projectIds.length
     ? await service
         .from("project_members")
@@ -94,5 +136,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ issues, members, categories, objectives });
+  const relations = (relationsRes.data ?? []) as IssueRelation[];
+
+  return NextResponse.json({ issues, members, categories, objectives, relations, cycles });
 }

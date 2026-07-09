@@ -1,19 +1,40 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, toast } from "mangue-ui";
-import { ListTodo } from "lucide-react";
+import { IterationCw, ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
 import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
 import { useBoardViews } from "@/lib/use-board-views";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
+import { STATUSES } from "@/lib/issue-constants";
+import {
+  cycleCompletionPercent,
+  cycleFilledPoints,
+  recoComparator,
+} from "@/lib/cycle";
+import {
+  useAssistantContext,
+  useAssistantPanel,
+} from "@/lib/assistant-panel-context";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { IssueSidePanel } from "@/components/issue-side-panel";
+import {
+  CycleControls,
+  CycleTitleSelector,
+  formatCycleRange,
+} from "@/components/cycle/cycle-header";
+import {
+  CycleActivationWelcome,
+  CycleEmptyNotice,
+  CycleFutureNotice,
+} from "@/components/cycle/cycle-empty-states";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import type {
   Category,
   Issue,
@@ -21,6 +42,11 @@ import type {
   Objective,
   Project,
 } from "@/lib/types";
+
+/** Remembered "the Cycle tab is selected" flag — deliberately OUTSIDE the view
+    system's storage: useBoardViews self-heals unknown view ids by rewriting
+    its slot, so a "cycle" sentinel in there would be destroyed on reload. */
+const CYCLE_MODE_KEY = "minddy:cycle-mode";
 
 /** Turn a projectId → rows[] record into a Map of per-project id → row maps. */
 function toIdMaps<T extends { id: string }>(
@@ -53,25 +79,35 @@ const NO_GENERATING = new Set<string>();
 function GlobalBoardInner() {
   const t = useTranslations("GlobalBoard");
   const tBoard = useTranslations("Board");
+  const tCycles = useTranslations("Cycles");
+  const format = useFormatter();
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
   const { projects } = useProjects();
   const { openCreateIssue } = useCreate();
+  const openAssistant = useAssistantPanel().open;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const viewParam = searchParams.get("view");
+  const rawViewParam = searchParams.get("view");
+  // "cycle" is OUR one-shot instruction (the project boards' ↗ tab lands
+  // here with it) — never let useBoardViews consume it, or the remembered
+  // view restore would be skipped.
+  const viewParam = rawViewParam === "cycle" ? null : rawViewParam;
   const {
     issues,
     membersByProject,
     categoriesByProject,
     objectivesByProject,
+    relations,
+    cycles,
     loading,
     updateIssue,
     moveIssue,
     setCategories,
     deleteIssue,
     createIssue,
+    setIssueCycle,
   } = useGlobalBoardQuery();
 
   const consumeViewParam = useCallback(() => {
@@ -80,6 +116,35 @@ function GlobalBoardInner() {
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   }, [searchParams, pathname, router]);
+
+  // Cycle mode (MIN-32) — a MODE of this board, not a saved view. Restored
+  // from its own localStorage slot after mount (SSR renders view mode).
+  const [cycleMode, setCycleMode] = useState(false);
+  // null = the current cycle; a past/upcoming id when browsing the selector.
+  const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
+  const switchCycleMode = useCallback((next: boolean) => {
+    setCycleMode(next);
+    setSelectedCycleId(null);
+    try {
+      if (next) window.localStorage.setItem(CYCLE_MODE_KEY, "1");
+      else window.localStorage.removeItem(CYCLE_MODE_KEY);
+    } catch {
+      /* localStorage unavailable — mode just won't be remembered. */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(CYCLE_MODE_KEY)) setCycleMode(true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    if (rawViewParam === "cycle") {
+      switchCycleMode(true);
+      consumeViewParam();
+    }
+  }, [rawViewParam, switchCycleMode, consumeViewParam]);
 
   const {
     views,
@@ -153,6 +218,86 @@ function GlobalBoardInner() {
   );
   const statuses = visibleStatuses(config);
 
+  // ── Cycle mode derivations ──────────────────────────────────────────────
+  const cyclesEnabled = cycles?.enabled === true;
+  const selectedCycle = useMemo(() => {
+    if (!cycles?.enabled) return null;
+    const all = [cycles.current, ...cycles.upcoming, ...cycles.past];
+    return (
+      (selectedCycleId ? all.find((c) => c?.id === selectedCycleId) : null) ??
+      cycles.current
+    );
+  }, [cycles, selectedCycleId]);
+  const selectedPhase: "current" | "future" | "past" = !selectedCycle
+    ? "current"
+    : selectedCycle.id === cycles?.current?.id
+      ? "current"
+      : cycles?.upcoming.some((c) => c.id === selectedCycle.id)
+        ? "future"
+        : "past";
+  const cycleIssues = useMemo(
+    () =>
+      selectedCycle
+        ? scopedIssues.filter((i) => i.cycle_id === selectedCycle.id)
+        : [],
+    [scopedIssues, selectedCycle]
+  );
+  // Reco ordering: blockers may live outside the cycle, so the status map
+  // covers the whole board.
+  const cycleComparator = useMemo(() => {
+    const statusById = new Map(scopedIssues.map((i) => [i.id, i.status]));
+    return recoComparator(relations, statusById);
+  }, [scopedIssues, relations]);
+  const cycleLabel = selectedCycle ? formatCycleRange(format, selectedCycle) : null;
+
+  // Numo rides along while the cycle is on screen ("remplis mon cycle").
+  useAssistantContext(
+    cycleMode && selectedCycle && cycleLabel
+      ? { cycleId: selectedCycle.id, cycleLabel }
+      : null
+  );
+
+  const askNumoAboutCycle = useCallback(
+    (message: string) => {
+      if (!selectedCycle || !cycleLabel) return;
+      openAssistant({
+        projectId: null,
+        prompt: message,
+        pageContext: { cycleId: selectedCycle.id, cycleLabel },
+      });
+    },
+    [openAssistant, selectedCycle, cycleLabel]
+  );
+
+  // Right-click cycle actions, on every card of this board (both modes):
+  // add → assigns to me as a side-effect, never a status bump; remove → just
+  // clears the link. Only real, living work can join a cycle.
+  const buildCycleMenuActions = useCallback(
+    (issue: Issue): ContextMenuAction[] => {
+      const current = cycles?.enabled ? cycles.current : null;
+      if (!current) return [];
+      const inCurrent = issue.cycle_id === current.id;
+      if (!inCurrent && ["done", "canceled", "duplicate", "triage"].includes(issue.status)) {
+        return [];
+      }
+      return [
+        {
+          id: inCurrent ? "cycle-remove" : "cycle-add",
+          label: inCurrent ? tCycles("removeFromCycle") : tCycles("addToCycle"),
+          keywords: ["cycle", "semaine", "week", "sprint"],
+          icon: <IterationCw className="size-4" />,
+          onSelect: () =>
+            void setIssueCycle(
+              issue.id,
+              inCurrent ? null : current.id,
+              issue.project_id
+            ).catch((err) => toast.error((err as Error).message)),
+        },
+      ];
+    },
+    [cycles, setIssueCycle, tCycles]
+  );
+
   const issuesByProject = useMemo(() => {
     const map = new Map<string, Issue[]>();
     for (const i of scopedIssues) {
@@ -181,17 +326,45 @@ function GlobalBoardInner() {
     );
   }
 
+  const boardHandlers = {
+    onOpenIssue: (issue: Issue) => {
+      setOpenIssueId(issue.id);
+      setOpenIssueTab("description");
+    },
+    onOpenPlan: (issue: Issue) => {
+      setOpenIssueId(issue.id);
+      setOpenIssueTab("plan");
+    },
+    onUpdateIssue: (id: string, patch: Parameters<typeof updateIssue>[1], pid: string) =>
+      void updateIssue(id, patch, pid).catch((err) =>
+        toast.error((err as Error).message)
+      ),
+    onSetCategories: setCategories,
+    onMove: moveIssue,
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
-        <h1 className="font-display text-lg font-semibold tracking-tight">
-          {t("allTitle")}
-        </h1>
+        {cycleMode && cycles?.enabled && selectedCycle ? (
+          <CycleTitleSelector
+            cycles={cycles}
+            selectedId={selectedCycleId}
+            onSelect={setSelectedCycleId}
+          />
+        ) : (
+          <h1 className="font-display text-lg font-semibold tracking-tight">
+            {cycleMode ? tBoard("cycleTab") : t("allTitle")}
+          </h1>
+        )}
         <BoardToolbar
           views={views}
-          activeViewId={activeViewId}
+          activeViewId={cycleMode ? null : activeViewId}
           generatingViewIds={NO_GENERATING}
-          onSelectView={selectView}
+          onSelectView={(id) => {
+            if (cycleMode) switchCycleMode(false);
+            selectView(id);
+          }}
           config={config}
           onConfigChange={setConfig}
           members={unionMembers}
@@ -199,7 +372,7 @@ function GlobalBoardInner() {
           objectives={NO_OBJECTIVES}
           integrations={NO_INTEGRATIONS}
           projects={projects}
-          dirty={dirty}
+          dirty={cycleMode ? false : dirty}
           onCreateView={handleCreateView}
           onUpdateActiveView={saveActiveView}
           onRenameView={renameView}
@@ -207,10 +380,56 @@ function GlobalBoardInner() {
           withNumo={false}
           withShare={false}
           onAskNumo={() => {}}
+          cycleTab={{
+            active: cycleMode,
+            onSelect: () => switchCycleMode(true),
+          }}
+          rightControls={
+            cycleMode ? (
+              cyclesEnabled && selectedCycle ? (
+                <CycleControls
+                  cycle={selectedCycle}
+                  filledPoints={cycleFilledPoints(cycleIssues)}
+                  completionPercent={cycleCompletionPercent(cycleIssues)}
+                  onAskNumo={askNumoAboutCycle}
+                />
+              ) : (
+                <span aria-hidden />
+              )
+            ) : undefined
+          }
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {cycleMode ? (
+        !cyclesEnabled ? (
+          <CycleActivationWelcome />
+        ) : !selectedCycle ? (
+          <CycleEmptyNotice />
+        ) : selectedPhase === "future" ? (
+          <CycleFutureNotice cycle={selectedCycle} />
+        ) : cycleIssues.length === 0 ? (
+          <CycleEmptyNotice />
+        ) : (
+          <div className="min-h-0 flex-1 pt-3">
+            <GlobalKanbanBoard
+              issues={cycleIssues}
+              statuses={STATUSES}
+              sort="manual"
+              comparator={cycleComparator}
+              readOnly={selectedPhase !== "current"}
+              buildMenuActions={
+                selectedPhase === "current" ? buildCycleMenuActions : undefined
+              }
+              projectMap={projectMap}
+              memberMapByProject={memberMapByProject}
+              categoryMapByProject={categoryMapByProject}
+              objectiveMapByProject={objectiveMapByProject}
+              {...boardHandlers}
+            />
+          </div>
+        )
+      ) : filtered.length === 0 ? (
         <div className="min-h-0 flex-1 px-6 pt-4">
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
@@ -231,22 +450,9 @@ function GlobalBoardInner() {
             memberMapByProject={memberMapByProject}
             categoryMapByProject={categoryMapByProject}
             objectiveMapByProject={objectiveMapByProject}
-            onOpenIssue={(issue) => {
-              setOpenIssueId(issue.id);
-              setOpenIssueTab("description");
-            }}
-            onOpenPlan={(issue) => {
-              setOpenIssueId(issue.id);
-              setOpenIssueTab("plan");
-            }}
-            onUpdateIssue={(id, patch, pid) =>
-              void updateIssue(id, patch, pid).catch((err) =>
-                toast.error((err as Error).message)
-              )
-            }
-            onSetCategories={setCategories}
-            onMove={moveIssue}
+            buildMenuActions={buildCycleMenuActions}
             onCreateIssue={(status) => openCreateIssue({ status })}
+            {...boardHandlers}
           />
         </div>
       )}

@@ -92,6 +92,10 @@ export interface AssistantPageContext {
   /** The saved kanban view currently selected on the board, when any. */
   viewId?: string;
   viewName?: string;
+  /** The cycle displayed in cycle mode (MIN-32), when any. */
+  cycleId?: string;
+  /** Human date-range label ("6–19 juil") — used for the context badge. */
+  cycleLabel?: string;
 }
 
 // Request body for chat endpoint

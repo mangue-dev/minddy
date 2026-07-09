@@ -156,16 +156,33 @@ export function useGlobalBoardQuery() {
     [invalidate]
   );
 
+  // Add to / remove from the user's cycle (MIN-32). The optimistic patch
+  // mirrors the server side-effect exactly — adding assigns the issue to me
+  // (never a status bump) — so the card doesn't flash an empty assignee.
+  const setIssueCycle = useCallback(
+    (issueId: string, cycleId: string | null, projectId: string) => {
+      const patch: IssueUpdateInput =
+        cycleId && user?.id
+          ? { cycle_id: cycleId, assignee_id: user.id }
+          : { cycle_id: cycleId };
+      return writeIssue(issueId, patch, projectId, true);
+    },
+    [writeIssue, user]
+  );
+
   return {
     issues: (data?.issues ?? []) as Issue[],
     membersByProject: data?.members ?? {},
     categoriesByProject: data?.categories ?? {},
     objectivesByProject: data?.objectives ?? {},
+    relations: data?.relations ?? [],
+    cycles: data?.cycles ?? null,
     loading: isLoading,
     updateIssue,
     moveIssue,
     setCategories,
     deleteIssue,
     createIssue,
+    setIssueCycle,
   };
 }

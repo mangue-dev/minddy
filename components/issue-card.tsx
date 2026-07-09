@@ -666,6 +666,7 @@ export function IssueCard({
   onOpen,
   onUpdateIssue,
   onSetCategories,
+  extraActions,
 }: {
   issue: Issue;
   projectId: string;
@@ -692,6 +693,9 @@ export function IssueCard({
   onOpen: () => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
+  /** Board-provided right-click actions appended to the menu (e.g. the cycle
+      add/remove actions — MIN-32). */
+  extraActions?: ContextMenuAction[];
 }) {
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
@@ -797,6 +801,7 @@ export function IssueCard({
           },
         ]
       : []),
+    ...(extraActions ?? []),
   ];
 
   return (

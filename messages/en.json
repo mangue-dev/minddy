@@ -33,7 +33,9 @@
     "relationAdded_related": "linked this as related to {ref}",
     "relationRemoved_blocks": "removed the blocking relation to {ref}",
     "relationRemoved_blocked_by": "removed the blocked-by relation to {ref}",
-    "relationRemoved_related": "removed the related link to {ref}"
+    "relationRemoved_related": "removed the related link to {ref}",
+    "cycleAdded": "added the issue to the cycle",
+    "cycleRemoved": "removed the issue from the cycle"
   },
   "ApiErrors": {
     "invalidJson": "Invalid JSON",
@@ -90,7 +92,8 @@
     "passwordRequired": "A password is required.",
     "invalidShareLevel": "Invalid share level.",
     "attachmentNotFound": "Attachment not found",
-    "attachmentInvalid": "Invalid attachments."
+    "attachmentInvalid": "Invalid attachments.",
+    "invalidCycle": "Unknown or invalid cycle."
   },
   "Attachments": {
     "attach": "Attach files",
@@ -148,7 +151,8 @@
     "contextBoardMy": "My issues",
     "contextBoardAll": "All issues",
     "working": "Working…",
-    "commentError": "Numo couldn't complete this request."
+    "commentError": "Numo couldn't complete this request.",
+    "contextCycle": "Cycle · {label}"
   },
   "Auth": {
     "callbackFailed": "The confirmation link is invalid or has expired. Try signing in again.",
@@ -204,7 +208,8 @@
     "createInSettings": "Create one in Settings.",
     "shareView": "Share view",
     "renameView": "Rename view",
-    "deleteView": "Delete view"
+    "deleteView": "Delete view",
+    "cycleTab": "Cycle"
   },
   "ShareView": {
     "title": "Share view",
@@ -654,7 +659,8 @@
     "connectedAppRevokedToast": "{name} disconnected.",
     "mcpTab": "MCP",
     "mcpSectionTitle": "Connect an agent",
-    "mcpSectionDesc": "Connect an AI agent to minddy's MCP server. No key to paste — your browser opens to authorize the agent on first use."
+    "mcpSectionDesc": "Connect an AI agent to minddy's MCP server. No key to paste — your browser opens to authorize the agent on first use.",
+    "cyclesTab": "Cycles"
   },
   "Projects": {
     "newProject": "New Project",
@@ -893,7 +899,19 @@
     "otherOption": "Other…",
     "processing": "Processing…",
     "done": "Done",
-    "toolCallSummary": "{count} actions"
+    "toolCallSummary": "{count} actions",
+    "loadingCycle": "Loading the cycle…",
+    "cycleLoaded": "Cycle loaded",
+    "loadCycleFailed": "Couldn't load the cycle",
+    "fillingCycle": "Filling the cycle…",
+    "cycleFilled": "{count, plural, =0 {Nothing to add} one {# issue added to the cycle} other {# issues added to the cycle}}",
+    "fillCycleFailed": "Couldn't fill the cycle",
+    "addingToCycle": "Adding to the cycle…",
+    "addedToCycle": "{count, plural, one {# issue added to the cycle} other {# issues added to the cycle}}",
+    "addToCycleFailed": "Couldn't add to the cycle",
+    "removingFromCycle": "Removing from the cycle…",
+    "removedFromCycle": "{count, plural, one {# issue removed from the cycle} other {# issues removed from the cycle}}",
+    "removeFromCycleFailed": "Couldn't remove from the cycle"
   },
   "Triage": {
     "projectNotFound": "Project not found",
@@ -921,5 +939,43 @@
     "send": "Send",
     "sent": "Thanks for your feedback!",
     "sendFailed": "Could not send your feedback. Please try again."
+  },
+  "Cycles": {
+    "enableTitle": "Cycles",
+    "enableDesc": "Your personal week or fortnight, across all projects: what you're working on right now.",
+    "enableLabel": "Enable cycles",
+    "cadenceTitle": "Cadence",
+    "cadenceDesc": "One global cadence — a cycle is identified by its dates.",
+    "durationLabel": "Duration",
+    "durationOneWeek": "1 week",
+    "durationTwoWeeks": "2 weeks",
+    "startDowLabel": "Starts on",
+    "upcomingLabel": "Upcoming cycles created ahead",
+    "intensityTitle": "Intensity",
+    "intensityDesc": "Your pace. It sets each cycle's capacity target, and calibrates itself on what you actually complete.",
+    "intensity_light": "Light",
+    "intensity_medium": "Medium",
+    "intensity_heavy": "Heavy",
+    "captureTitle": "Auto-capture",
+    "captureDesc": "Issues assigned to you join your current cycle when work actually happens on them.",
+    "captureStartedLabel": "When an issue is started",
+    "captureCompletedLabel": "When an issue is completed",
+    "currentCycle": "Current cycle",
+    "upcomingCycle": "Next cycle",
+    "pastCycle": "Past cycle",
+    "pastCycles": "Past cycles",
+    "askNumoPlaceholder": "Ask Numo…",
+    "capacityTooltip": "{percent}% of your cycle capacity",
+    "completionTooltip": "{percent}% of this cycle completed",
+    "addToCycle": "Add to cycle",
+    "removeFromCycle": "Remove from cycle",
+    "welcomeTitle": "Plan your week, across all your projects",
+    "welcomeBullet1": "A cycle is your personal week (or fortnight), all projects included.",
+    "welcomeBullet2": "minddy fills it from the issues assigned to you — priorities first, small wins first.",
+    "welcomeBullet3": "Anything unfinished rolls over to the next cycle automatically.",
+    "activate": "Activate cycles",
+    "futureCycle": "Cycle not available yet · starts on {date}",
+    "emptyCycle": "No issues in this cycle",
+    "emptyCycleHint": "Right-click a card to add it, or ask Numo to fill your cycle."
   }
 }

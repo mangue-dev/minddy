@@ -26,6 +26,25 @@ import {
   updateAccountSettings,
 } from "@/lib/server/account-settings";
 import {
+  ensureCycles,
+  fillCycleForUser,
+  getCyclePrefsForUser,
+  toCycleInfo,
+  CYCLE_OPEN_STATUSES,
+  type CycleRow,
+} from "@/lib/server/cycles";
+import {
+  blockedSet,
+  cycleCompletionPercent,
+  cycleFilledPoints,
+  effortToPoints,
+  recoScore,
+  todayISO,
+  type FillWeights,
+  type RecoIssue,
+} from "@/lib/cycle";
+import type { IssueRelation } from "@/lib/types";
+import {
   assertIssueInProject,
   getIssue,
   listIssues,
@@ -143,6 +162,16 @@ export async function executeTool(
       return r.ok
         ? { result: { settings: r.settings }, success: true }
         : toolError(r.error);
+    }
+
+    // ── Cycle tools (the user's personal cross-project cycle — MIN-32) ──
+    if (
+      toolName === "get_cycle" ||
+      toolName === "fill_cycle" ||
+      toolName === "add_issues_to_cycle" ||
+      toolName === "remove_issues_from_cycle"
+    ) {
+      return executeCycleTool(toolName, args, ctx);
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
@@ -620,4 +649,241 @@ export async function executeTool(
     console.error(`[assistant] tool ${toolName} threw:`, err);
     return toolError(err instanceof Error ? err.message : "Tool execution failed");
   }
+}
+
+// ── Cycles (MIN-32) ─────────────────────────────────────────────────────
+// The cycle is the requesting user's own, cross-project — no project scope.
+// Reads/writes go through the lib/server/cycles.ts cores (service client);
+// add/remove reuse updateIssueFields so the assignment side-effect, activity
+// events and the SQL invariant apply exactly like the UI path.
+
+function parseFillWeights(args: Record<string, unknown>): FillWeights {
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+  const boostMap = (v: unknown, idKey: string): Record<string, number> | undefined => {
+    if (!Array.isArray(v)) return undefined;
+    const out: Record<string, number> = {};
+    for (const item of v) {
+      const row = item as Record<string, unknown>;
+      const id = row?.[idKey];
+      const weight = num(row?.weight);
+      if (typeof id === "string" && id && weight !== undefined) out[id] = weight;
+    }
+    return Object.keys(out).length ? out : undefined;
+  };
+  const keywordBoost = Array.isArray(args.keyword_boosts)
+    ? (args.keyword_boosts as Record<string, unknown>[])
+        .map((row) => ({
+          keyword: typeof row?.keyword === "string" ? row.keyword : "",
+          weight: num(row?.weight) ?? 0,
+        }))
+        .filter((k) => k.keyword && k.weight)
+    : undefined;
+  return {
+    priority: num(args.priority_weight),
+    unblocked: num(args.unblocked_weight),
+    small: num(args.small_first_weight),
+    projectBoost: boostMap(args.project_boosts, "project_id"),
+    categoryBoost: boostMap(args.category_boosts, "category_id"),
+    keywordBoost: keywordBoost?.length ? keywordBoost : undefined,
+  };
+}
+
+/** Issues of a cycle, with human identifiers ("MIN-42") for Numo. */
+async function listCycleIssues(ctx: ToolContext, cycleId: string) {
+  const { data } = await ctx.service
+    .from("issues")
+    .select("id, project_id, number, title, status, priority, effort, projects(key)")
+    .eq("cycle_id", cycleId)
+    .order("number", { ascending: true });
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    identifier: issueIdentifier(
+      ((row.projects as { key?: string } | null)?.key ?? "").toString(),
+      row.number as number
+    ),
+    title: row.title as string,
+    status: row.status as string,
+    priority: row.priority as string,
+    effort: (row.effort as string | null) ?? null,
+    project_id: row.project_id as string,
+  }));
+}
+
+function parseIssueIds(args: Record<string, unknown>): string[] | null {
+  const raw = args.issue_ids;
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 50) return null;
+  const ids = raw.filter((v): v is string => typeof v === "string" && v.length > 0);
+  return ids.length === raw.length ? ids : null;
+}
+
+async function executeCycleTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext
+): Promise<ToolExecution> {
+  const prefs = await getCyclePrefsForUser(ctx.service, ctx.userId);
+  if (!prefs.enabled) {
+    return toolError(
+      "Cycles are not enabled for this account. The user can enable them in Account → Cycles (or via update_account_settings with cycles_enabled: true)."
+    );
+  }
+  const ensured = await ensureCycles({
+    service: ctx.service,
+    userId: ctx.userId,
+    prefs,
+    today: todayISO(),
+  });
+  const current = ensured.current;
+
+  if (toolName === "get_cycle") {
+    const which = args.which === "next" || args.which === "previous" ? args.which : "current";
+    const cycle: CycleRow | null =
+      which === "next"
+        ? ensured.upcoming[0] ?? null
+        : which === "previous"
+          ? ensured.past[0] ?? null
+          : current;
+    if (!cycle) return toolError(`No ${which} cycle exists.`);
+
+    const issues = await listCycleIssues(ctx, cycle.id);
+    const pointed = issues.map((i) => ({
+      effort: (i.effort as RecoIssue["effort"]) ?? null,
+      status: i.status as RecoIssue["status"],
+    }));
+    const filledPoints = cycleFilledPoints(pointed);
+    const completionPercent = cycleCompletionPercent(pointed);
+
+    // Best next candidates from the assigned pool, reco-ordered (top 10).
+    const { data: poolRows } = await ctx.service
+      .from("issues")
+      .select(
+        "id, project_id, number, title, status, priority, effort, issue_categories(category_id), projects!inner(key, deleted_at)"
+      )
+      .eq("assignee_id", ctx.userId)
+      .is("cycle_id", null)
+      .in("status", CYCLE_OPEN_STATUSES as string[])
+      .is("projects.deleted_at", null);
+    const pool: (RecoIssue & { number: number; key: string })[] = (poolRows ?? []).map(
+      (row) => ({
+        id: row.id as string,
+        project_id: row.project_id as string,
+        title: (row.title as string) ?? "",
+        status: row.status as RecoIssue["status"],
+        priority: row.priority as RecoIssue["priority"],
+        effort: (row.effort as RecoIssue["effort"]) ?? null,
+        category_ids: ((row.issue_categories ?? []) as { category_id: string }[]).map(
+          (c) => c.category_id
+        ),
+        number: row.number as number,
+        key: ((row.projects as { key?: string } | null)?.key ?? "").toString(),
+      })
+    );
+    const { data: relationRows } = pool.length
+      ? await ctx.service
+          .from("issue_relations")
+          .select("id, source_id, target_id, type")
+          .eq("type", "blocks")
+          .in(
+            "target_id",
+            pool.map((c) => c.id)
+          )
+      : { data: [] };
+    const statusById = new Map(pool.map((c) => [c.id, c.status]));
+    const blocked = blockedSet(
+      pool.map((c) => c.id),
+      (relationRows ?? []) as IssueRelation[],
+      statusById
+    );
+    const candidates = pool
+      .map((c) => ({ c, score: recoScore(c, blocked.has(c.id)) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map(({ c }) => ({
+        id: c.id,
+        identifier: issueIdentifier(c.key, c.number),
+        title: c.title,
+        status: c.status,
+        priority: c.priority,
+        effort: c.effort,
+        blocked: blocked.has(c.id),
+        points: effortToPoints(c.effort),
+      }));
+
+    return {
+      result: {
+        which,
+        cycle: {
+          ...toCycleInfo(cycle),
+          filled_points: filledPoints,
+          completion_percent: completionPercent,
+          intensity_note:
+            "Points are internal — talk to the user in effort sizes or % of capacity.",
+        },
+        issues,
+        candidates,
+      },
+      success: true,
+    };
+  }
+
+  if (!current) return toolError("No current cycle exists yet.");
+
+  if (toolName === "fill_cycle") {
+    const { pickedIds, points } = await fillCycleForUser({
+      service: ctx.service,
+      userId: ctx.userId,
+      actorId: ctx.userId,
+      cycle: current,
+      weights: parseFillWeights(args),
+      viaAssistant: true,
+    });
+    return {
+      result: {
+        added: pickedIds.length,
+        added_ids: pickedIds,
+        added_points: points,
+        cycle: toCycleInfo(current),
+      },
+      success: true,
+    };
+  }
+
+  if (toolName === "add_issues_to_cycle" || toolName === "remove_issues_from_cycle") {
+    const ids = parseIssueIds(args);
+    if (!ids) return toolError("issue_ids must be 1–50 issue ids.");
+    const removing = toolName === "remove_issues_from_cycle";
+    const done: string[] = [];
+    const failed: { id: string; error: string }[] = [];
+    for (const issueId of ids) {
+      if (removing) {
+        // Only pull issues out of the user's OWN current cycle — never someone
+        // else's (project access alone would otherwise allow it).
+        const { data: row } = await ctx.service
+          .from("issues")
+          .select("cycle_id")
+          .eq("id", issueId)
+          .maybeSingle();
+        if (!row || row.cycle_id !== current.id) {
+          failed.push({ id: issueId, error: "Not in the user's current cycle." });
+          continue;
+        }
+      }
+      const r = await updateIssueFields({
+        issueId,
+        actorId: ctx.userId,
+        input: { cycle_id: removing ? null : current.id },
+        viaAssistant: true,
+      });
+      if (r.ok) done.push(issueId);
+      else failed.push({ id: issueId, error: r.rawMessage ?? r.errorKey ?? "failed" });
+    }
+    return {
+      result: removing
+        ? { removed: done.length, removed_ids: done, failed }
+        : { added: done.length, added_ids: done, failed },
+      success: failed.length < ids.length,
+    };
+  }
+
+  return toolError(`Unknown cycle tool: ${toolName}`);
 }

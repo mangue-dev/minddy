@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { FileText, LayoutGrid, Target } from "lucide-react";
+import { FileText, IterationCw, LayoutGrid, Target } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 
@@ -36,6 +36,10 @@ export function PageContextBadge({
     icon = <Target className="h-3 w-3" />;
     label = context.objectiveName ?? t("contextObjective");
     tooltip = t("contextObjective");
+  } else if (context.cycleId) {
+    icon = <IterationCw className="h-3 w-3" />;
+    label = t("contextCycle", { label: context.cycleLabel ?? "" });
+    tooltip = t("contextCycle", { label: context.cycleLabel ?? "" });
   } else {
     // Prefer the selected view's name; the onglet fallback only concerns
     // messages persisted before views v2 (single tab since).

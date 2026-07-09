@@ -19,6 +19,7 @@ import {
   isSmartAssignEligibleStatus,
   scheduleSmartAssign,
 } from "@/lib/server/smart-assign";
+import { scheduleCycleCapture } from "@/lib/server/cycles";
 
 /**
  * Shared issue-update core: validates an untrusted field payload, applies it
@@ -42,6 +43,7 @@ export type UpdateIssueResult =
         | "invalidEffort"
         | "invalidDate"
         | "invalidPosition"
+        | "invalidCycle"
         | "planTooLong"
         | "noFieldsToUpdate"
         | "issueNotFound"
@@ -135,6 +137,14 @@ export async function updateIssueFields({
     }
     updates.position = input.position;
   }
+  if ("cycle_id" in input) {
+    if (input.cycle_id !== null && typeof input.cycle_id !== "string") {
+      return { ok: false, status: 400, errorKey: "invalidCycle" };
+    }
+    // Existence + the assignment side-effect are resolved below, once the
+    // before-snapshot is loaded.
+    updates.cycle_id = input.cycle_id ?? null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
@@ -155,6 +165,25 @@ export async function updateIssueFields({
   const access = await getProjectAccess(actorId, before.project_id as string);
   if (!access) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+
+  // Adding to a cycle ASSIGNS the issue to the cycle's owner as a side-effect
+  // — never the other way around, and never a status bump (MIN-32). The SQL
+  // trigger enforce_issue_cycle then keeps the pair consistent on every path.
+  if (typeof updates.cycle_id === "string") {
+    const { data: cycle } = await service
+      .from("cycles")
+      .select("id, user_id")
+      .eq("id", updates.cycle_id)
+      .maybeSingle();
+    if (!cycle) {
+      return { ok: false, status: 400, errorKey: "invalidCycle" };
+    }
+    const finalAssignee =
+      "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
+    if (!("assignee_id" in input) && finalAssignee !== cycle.user_id) {
+      updates.assignee_id = cycle.user_id as string;
+    }
   }
 
   const { data, error } = await service
@@ -275,6 +304,26 @@ export async function updateIssueFields({
       triggerActorId: actorId,
       trigger: "triage_exit",
     });
+  }
+
+  // Cycle auto-capture (MIN-32): an uncycled issue whose assignee has cycles
+  // enabled joins their current cycle when it starts or completes (opt-out
+  // per-user toggles; the run re-checks everything after the response).
+  if ("status" in updates && !("cycle_id" in updates) && before.cycle_id == null) {
+    const transition =
+      updates.status === "in_progress" && before.status !== "in_progress"
+        ? ("started" as const)
+        : updates.status === "done" && before.status !== "done"
+          ? ("completed" as const)
+          : null;
+    if (transition && typeof assigneeAfterUpdate === "string") {
+      scheduleCycleCapture({
+        issueId,
+        userId: assigneeAfterUpdate,
+        actorId,
+        transition,
+      });
+    }
   }
 
   return { ok: true, issue: mapIssueRow(data) };

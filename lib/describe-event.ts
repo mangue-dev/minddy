@@ -133,6 +133,10 @@ export function describeEvent(
         return e.to_value
           ? t("parentAttached", { ref: issueRef(ctx, tr, e.to_value) })
           : t("parentDetached");
+      // Cycles (MIN-32): the values are cycle ids — meaningless to a reader,
+      // so the sentence only says joined/left the assignee's cycle.
+      case "cycle_id":
+        return e.to_value ? t("cycleAdded") : t("cycleRemoved");
       default:
         return t("updated");
     }

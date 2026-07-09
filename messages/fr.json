@@ -33,7 +33,9 @@
     "relationAdded_related": "a lié ce ticket à {ref}",
     "relationRemoved_blocks": "a retiré la relation « bloque » vers {ref}",
     "relationRemoved_blocked_by": "a retiré la relation « bloqué par » vers {ref}",
-    "relationRemoved_related": "a retiré le lien vers {ref}"
+    "relationRemoved_related": "a retiré le lien vers {ref}",
+    "cycleAdded": "a ajouté le ticket au cycle",
+    "cycleRemoved": "a retiré le ticket du cycle"
   },
   "ApiErrors": {
     "invalidJson": "JSON invalide",
@@ -90,7 +92,8 @@
     "passwordRequired": "Un mot de passe est requis.",
     "invalidShareLevel": "Niveau de partage invalide.",
     "attachmentNotFound": "Pièce jointe introuvable",
-    "attachmentInvalid": "Pièces jointes invalides."
+    "attachmentInvalid": "Pièces jointes invalides.",
+    "invalidCycle": "Cycle inconnu ou invalide."
   },
   "Attachments": {
     "attach": "Joindre des fichiers",
@@ -148,7 +151,8 @@
     "contextBoardMy": "Mes tickets",
     "contextBoardAll": "Tous les tickets",
     "working": "Travaille…",
-    "commentError": "Numo n'a pas pu aboutir."
+    "commentError": "Numo n'a pas pu aboutir.",
+    "contextCycle": "Cycle · {label}"
   },
   "Auth": {
     "callbackFailed": "Le lien de confirmation est invalide ou expiré. Réessaie de te connecter.",
@@ -204,7 +208,8 @@
     "createInSettings": "Crée-en dans les Paramètres.",
     "shareView": "Partager la vue",
     "renameView": "Renommer la vue",
-    "deleteView": "Supprimer la vue"
+    "deleteView": "Supprimer la vue",
+    "cycleTab": "Cycle"
   },
   "ShareView": {
     "title": "Partager la vue",
@@ -654,7 +659,8 @@
     "connectedAppRevokedToast": "{name} a été déconnectée.",
     "mcpTab": "MCP",
     "mcpSectionTitle": "Connecter un agent",
-    "mcpSectionDesc": "Connecte un agent IA au serveur MCP de minddy. Aucune clé à coller — le navigateur s'ouvre pour autoriser l'agent à la première utilisation."
+    "mcpSectionDesc": "Connecte un agent IA au serveur MCP de minddy. Aucune clé à coller — le navigateur s'ouvre pour autoriser l'agent à la première utilisation.",
+    "cyclesTab": "Cycles"
   },
   "Projects": {
     "newProject": "Nouveau Projet",
@@ -893,7 +899,19 @@
     "otherOption": "Autre…",
     "processing": "Traitement…",
     "done": "Terminé",
-    "toolCallSummary": "{count} actions"
+    "toolCallSummary": "{count} actions",
+    "loadingCycle": "Chargement du cycle…",
+    "cycleLoaded": "Cycle chargé",
+    "loadCycleFailed": "Échec du chargement du cycle",
+    "fillingCycle": "Remplissage du cycle…",
+    "cycleFilled": "{count, plural, =0 {Rien à ajouter} one {# ticket ajouté au cycle} other {# tickets ajoutés au cycle}}",
+    "fillCycleFailed": "Échec du remplissage du cycle",
+    "addingToCycle": "Ajout au cycle…",
+    "addedToCycle": "{count, plural, one {# ticket ajouté au cycle} other {# tickets ajoutés au cycle}}",
+    "addToCycleFailed": "Échec de l'ajout au cycle",
+    "removingFromCycle": "Retrait du cycle…",
+    "removedFromCycle": "{count, plural, one {# ticket retiré du cycle} other {# tickets retirés du cycle}}",
+    "removeFromCycleFailed": "Échec du retrait du cycle"
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",
@@ -921,5 +939,43 @@
     "send": "Envoyer",
     "sent": "Merci pour votre retour !",
     "sendFailed": "Impossible d'envoyer votre retour. Réessayez."
+  },
+  "Cycles": {
+    "enableTitle": "Cycles",
+    "enableDesc": "Ta semaine ou quinzaine personnelle, tous projets confondus : ce sur quoi tu travailles en ce moment.",
+    "enableLabel": "Activer les cycles",
+    "cadenceTitle": "Cadence",
+    "cadenceDesc": "Une seule cadence globale — un cycle est identifié par ses dates.",
+    "durationLabel": "Durée",
+    "durationOneWeek": "1 semaine",
+    "durationTwoWeeks": "2 semaines",
+    "startDowLabel": "Commence le",
+    "upcomingLabel": "Cycles à venir créés d'avance",
+    "intensityTitle": "Intensité",
+    "intensityDesc": "Ton rythme. Il fixe la cible de capacité de chaque cycle et se calibre sur ce que tu termines réellement.",
+    "intensity_light": "Léger",
+    "intensity_medium": "Moyen",
+    "intensity_heavy": "Soutenu",
+    "captureTitle": "Capture automatique",
+    "captureDesc": "Les tickets qui te sont assignés rejoignent ton cycle en cours quand le travail démarre vraiment.",
+    "captureStartedLabel": "Quand un ticket démarre",
+    "captureCompletedLabel": "Quand un ticket est terminé",
+    "currentCycle": "Cycle en cours",
+    "upcomingCycle": "Cycle suivant",
+    "pastCycle": "Cycle passé",
+    "pastCycles": "Cycles passés",
+    "askNumoPlaceholder": "Demander à Numo…",
+    "capacityTooltip": "{percent}% de la capacité de ton cycle",
+    "completionTooltip": "{percent}% du cycle terminé",
+    "addToCycle": "Ajouter au cycle",
+    "removeFromCycle": "Retirer du cycle",
+    "welcomeTitle": "Planifie ta semaine, tous projets confondus",
+    "welcomeBullet1": "Un cycle, c'est ta semaine (ou quinzaine) personnelle, tous projets inclus.",
+    "welcomeBullet2": "minddy le remplit avec les tickets qui te sont assignés — priorités d'abord, petites victoires d'abord.",
+    "welcomeBullet3": "Ce qui n'est pas terminé glisse automatiquement au cycle suivant.",
+    "activate": "Activer les cycles",
+    "futureCycle": "Cycle pas encore disponible · démarre le {date}",
+    "emptyCycle": "Aucun ticket dans ce cycle",
+    "emptyCycleHint": "Clic droit sur une carte pour l'ajouter, ou demande à Numo de remplir ton cycle."
   }
 }

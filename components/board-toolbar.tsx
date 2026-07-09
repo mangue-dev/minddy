@@ -28,8 +28,10 @@ import {
   toast,
 } from "mangue-ui";
 import {
+  ArrowUpRight,
   Check,
   CircleUser,
+  IterationCw,
   ListFilter,
   ArrowUpDown,
   Loader2,
@@ -495,6 +497,8 @@ export function BoardToolbar({
   withNumo = true,
   withShare = true,
   onAskNumo,
+  cycleTab,
+  rightControls,
 }: {
   views: View[];
   activeViewId: string | null;
@@ -518,6 +522,12 @@ export function BoardToolbar({
   /** Global views are not shareable (v1) — the global board hides Share. */
   withShare?: boolean;
   onAskNumo: () => void;
+  /** The "Cycle" pill (MIN-32), after the view pills. `external` renders the ↗
+      icon — a project board's pill that navigates to /all in cycle mode. */
+  cycleTab?: { active: boolean; external?: boolean; onSelect: () => void };
+  /** Cycle mode: replaces the whole right cluster (save/sort/filters/options)
+      — the special view has no use for them. */
+  rightControls?: React.ReactNode;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   // "Save as new view" from the Save split button: same create flow, but the
@@ -549,6 +559,24 @@ export function BoardToolbar({
               onSelect={() => onSelectView(v.id)}
             />
           ))}
+          {cycleTab && (
+            <button
+              type="button"
+              onClick={cycleTab.onSelect}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors",
+                cycleTab.active
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <IterationCw className="size-3 shrink-0" aria-hidden />
+              {t("cycleTab")}
+              {cycleTab.external && (
+                <ArrowUpRight className="size-3 shrink-0" aria-hidden />
+              )}
+            </button>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -565,6 +593,8 @@ export function BoardToolbar({
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          {rightControls ?? (
+            <>
           {dirty && activeView && (
             <SplitButton
               size="sm"
@@ -681,6 +711,8 @@ export function BoardToolbar({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+            </>
+          )}
         </div>
       </div>
 

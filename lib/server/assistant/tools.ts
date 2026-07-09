@@ -7,6 +7,7 @@ import {
 } from "@/lib/issue-validation";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
+import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { locales } from "@/i18n/config";
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
@@ -643,7 +644,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, and the auto-assign (on create / on start) and prompt-copy-auto-start preferences. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, and the cycle preferences (enabled, duration, start day, intensity, auto-capture). Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -684,7 +685,159 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "When copying an issue's prompt, move that issue to in_progress.",
           },
+          cycles_enabled: {
+            type: "boolean",
+            description:
+              "Enable the personal cross-project cycle (the user's week/fortnight).",
+          },
+          cycle_duration_weeks: {
+            type: "number",
+            enum: [1, 2],
+            description: "Cycle length: 1 week or 2 weeks.",
+          },
+          cycle_start_dow: {
+            type: "number",
+            description: "ISO day the cycle starts on: 1 = Monday … 7 = Sunday.",
+          },
+          cycle_intensity: {
+            type: "string",
+            enum: [...CYCLE_INTENSITIES],
+            description:
+              "Personal pace preference — sets the cycle's capacity target.",
+          },
+          cycle_upcoming_count: {
+            type: "number",
+            description: "How many upcoming cycles to keep created ahead (1–4).",
+          },
+          cycle_auto_capture_started: {
+            type: "boolean",
+            description:
+              "Capture an uncycled assigned issue into the current cycle when it starts.",
+          },
+          cycle_auto_capture_completed: {
+            type: "boolean",
+            description:
+              "Capture an uncycled assigned issue into the current cycle when it completes.",
+          },
         },
+      },
+    },
+  },
+  // ── Cycles (the current user's personal cross-project cycle — MIN-32) ──
+  {
+    type: "function",
+    function: {
+      name: "get_cycle",
+      description:
+        "Read the current user's cycle: their PERSONAL, CROSS-PROJECT week/fortnight ('what am I working on right now'), identified by its dates. Returns the cycle (dates, intensity, capacity target and filled points), the issues in it, and the best next candidates from their assigned pool (reco-scored). Points are an internal capacity unit — when talking to the user, speak in effort sizes or percentages, never raw points. Requires the user to have cycles enabled (Account → Cycles).",
+      parameters: {
+        type: "object",
+        properties: {
+          which: {
+            type: "string",
+            enum: ["current", "next", "previous"],
+            description: "Which cycle to read. Default: current.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "fill_cycle",
+      description:
+        "Top up the user's CURRENT cycle with the deterministic engine: it picks from the issues assigned to them (no cycle yet, open status), by priority + unblocked (blocks relations are respected) + smallest first, until the capacity target is reached. The optional weights let you steer it from a phrase ('priorise les fixs UI' → keyword/category boosts; 'focus project X' → project boost) — they bias the scoring, they NEVER force a pick. Resolve category/project ids first via list_categories/list_projects. Weights default to 1; boosts are additive score points (10–100 = mild–strong).",
+      parameters: {
+        type: "object",
+        properties: {
+          priority_weight: {
+            type: "number",
+            description: "Multiplier on the issue-priority component (default 1).",
+          },
+          unblocked_weight: {
+            type: "number",
+            description: "Multiplier on the not-blocked bonus (default 1).",
+          },
+          small_first_weight: {
+            type: "number",
+            description: "Multiplier on the smallest-first component (default 1).",
+          },
+          project_boosts: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                project_id: { type: "string" },
+                weight: { type: "number" },
+              },
+              required: ["project_id", "weight"],
+            },
+            description: "Additive boost per project id.",
+          },
+          category_boosts: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                category_id: { type: "string" },
+                weight: { type: "number" },
+              },
+              required: ["category_id", "weight"],
+            },
+            description: "Additive boost per category id.",
+          },
+          keyword_boosts: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                keyword: { type: "string" },
+                weight: { type: "number" },
+              },
+              required: ["keyword", "weight"],
+            },
+            description: "Additive boost when the issue title contains the keyword.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_issues_to_cycle",
+      description:
+        "Add issues (1–50, by id) to the user's CURRENT cycle. Adding ASSIGNS each issue to the user as a side-effect; it NEVER changes the status (the cycle is orthogonal to status). Reassigning an issue to someone else later silently drops it from the cycle.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Issue ids (from list_issues / get_cycle candidates).",
+          },
+        },
+        required: ["issue_ids"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remove_issues_from_cycle",
+      description:
+        "Remove issues (1–50, by id) from the user's CURRENT cycle. Assignment and status are untouched — the issues simply leave the cycle.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Issue ids currently in the cycle (see get_cycle).",
+          },
+        },
+        required: ["issue_ids"],
       },
     },
   },
@@ -716,9 +869,14 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
 
 // Tools that operate on the requesting user's own account, not on a project —
 // they must NOT receive a project_id (neither in global mode nor otherwise).
+// The cycle is personal & cross-project (MIN-32), so its tools live here too.
 export const ACCOUNT_TOOLS = new Set([
   "get_account_settings",
   "update_account_settings",
+  "get_cycle",
+  "fill_cycle",
+  "add_issues_to_cycle",
+  "remove_issues_from_cycle",
 ]);
 
 // Tools that never take a project (ask_user + the account-level tools).

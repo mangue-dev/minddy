@@ -336,6 +336,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `When the user asks to filter, sort, or otherwise change "this view" / "the current view" / "cette vue", edit THIS view with update_view (that exact id) — do NOT create a new view unless they explicitly ask for a new or separate one.`
     );
   }
+  if (ctx.cycleId) {
+    lines.push(
+      `- Their cycle (personal, cross-project week/fortnight): ${ctx.cycleLabel ?? "(current)"} (id: ${ctx.cycleId}).`,
+      `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / remove_issues_from_cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`
+    );
+  }
   if (lines.length === 0) return "";
   return `
 ## What the user is looking at right now

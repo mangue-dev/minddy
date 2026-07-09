@@ -26,6 +26,7 @@ import type {
 import { issueComparator } from "@/lib/view-filter";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 const EMPTY_MEMBERS: Map<string, Member> = new Map();
@@ -63,6 +64,9 @@ export function GlobalKanbanBoard({
   onSetCategories,
   onMove,
   onCreateIssue,
+  comparator,
+  buildMenuActions,
+  readOnly = false,
 }: {
   issues: Issue[];
   statuses: StatusMeta[];
@@ -80,8 +84,16 @@ export function GlobalKanbanBoard({
     patch: { status?: IssueStatus; position: number },
     projectId: string
   ) => Promise<void>;
-  /** Open the app-wide create dialog preset to a column's status (MIN-33). */
-  onCreateIssue: (status: IssueStatus) => void;
+  /** Open the app-wide create dialog preset to a column's status (MIN-33).
+      Absent → the columns render no "new issue" footer (cycle mode). */
+  onCreateIssue?: (status: IssueStatus) => void;
+  /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
+      same-column reordering is disabled; cross-column drag still moves status. */
+  comparator?: (a: Issue, b: Issue) => number;
+  /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
+  buildMenuActions?: (issue: Issue) => ContextMenuAction[];
+  /** Past/future cycles are read-only: no drag at all. */
+  readOnly?: boolean;
 }) {
   const issueMap = useMemo(
     () => new Map(issues.map((i) => [i.id, i])),
@@ -89,12 +101,12 @@ export function GlobalKanbanBoard({
   );
 
   const columns = useMemo(() => {
-    const cmp = issueComparator(sort);
+    const cmp = comparator ?? issueComparator(sort);
     return statuses.map((status) => ({
       status,
       items: issues.filter((i) => i.status === status.value).sort(cmp),
     }));
-  }, [issues, statuses, sort]);
+  }, [issues, statuses, sort, comparator]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
@@ -105,8 +117,12 @@ export function GlobalKanbanBoard({
     activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
 
   // Mouse-only drag (touch scrolls the swipeable columns) — mirrors KanbanBoard.
+  // Read-only boards (past/future cycles) get a huge activation distance so the
+  // sensor never fires — hooks must run unconditionally.
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: readOnly ? Number.MAX_SAFE_INTEGER : 6 },
+    })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -132,7 +148,8 @@ export function GlobalKanbanBoard({
     }
 
     const sameColumn = targetStatus === dragged.status;
-    if (sameColumn && sort !== "manual") return;
+    // The reco comparator is the only order in cycle mode — no manual reorder.
+    if (sameColumn && (comparator || sort !== "manual")) return;
 
     const patch: { status?: IssueStatus; position: number } = {
       position: dragged.position,
@@ -181,6 +198,7 @@ export function GlobalKanbanBoard({
             onUpdateIssue={onUpdateIssue}
             onSetCategories={onSetCategories}
             onCreateIssue={onCreateIssue}
+            buildMenuActions={buildMenuActions}
           />
         ))}
       </div>

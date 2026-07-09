@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Plug, SlidersHorizontal, User } from "lucide-react";
+import { IterationCw, Plug, SlidersHorizontal, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   SettingsShell,
@@ -9,6 +9,7 @@ import {
 } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
+import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
 import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
@@ -32,6 +33,12 @@ export default function AccountSettingsPage() {
       label: t("preferencesTab"),
       icon: SlidersHorizontal,
       content: <AccountPreferencesSection />,
+    },
+    {
+      value: "cycles",
+      label: t("cyclesTab"),
+      icon: IterationCw,
+      content: <AccountCyclesSection />,
     },
     {
       value: "mcp",

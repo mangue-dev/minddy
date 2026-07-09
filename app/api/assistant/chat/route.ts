@@ -59,6 +59,8 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     objectiveName: pick("objectiveName"),
     viewId: pick("viewId"),
     viewName: pick("viewName"),
+    cycleId: pick("cycleId"),
+    cycleLabel: pick("cycleLabel"),
   };
   const hasAnything = Object.values(ctx).some((v) => v !== undefined);
   return hasAnything ? ctx : null;

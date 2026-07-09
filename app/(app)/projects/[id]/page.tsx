@@ -385,6 +385,14 @@ function ProjectBoard() {
                 onRenameView={renameView}
                 onDeleteView={deleteView}
                 onAskNumo={handleAskNumo}
+                // The cycle is personal & cross-project: the tab exists on every
+                // board but is canonical on /all only — here it just links out
+                // (↗), it never scopes the cycle to this project (MIN-32).
+                cycleTab={{
+                  active: false,
+                  external: true,
+                  onSelect: () => router.push("/all?view=cycle"),
+                }}
               />
             )}
           </div>
