@@ -592,6 +592,7 @@
     "blocks": "Blocking",
     "blocked_by": "Blocked by",
     "related": "Related",
+    "resolved": "Resolved",
     "action_blocks": "Mark as blocking…",
     "action_blocked_by": "Mark as blocked by…",
     "action_related": "Mark as related…",

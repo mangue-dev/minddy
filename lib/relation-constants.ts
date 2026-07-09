@@ -1,5 +1,6 @@
 import { Ban, OctagonX, Link2, type LucideIcon } from "lucide-react";
 import type { IssueRelation, IssueRelationType, ResolvedRelation } from "./types";
+import { isClosedStatus, type IssueStatus } from "./issue-constants";
 
 // Issue relations (MIN-25). Two edges are stored — `blocks` (directed) and
 // `related` (symmetric) — but three are shown: an incoming `blocks` reads as
@@ -38,32 +39,66 @@ export const RELATION_TYPES: IssueRelationType[] = [
 /**
  * Resolve every relation touching `issueId` from that issue's perspective:
  * an outgoing `blocks` edge reads as `blocks`, an incoming one as `blocked_by`,
- * and a `related` edge (either stored direction) as `related`. Sorted by
- * RELATION_PRIORITY so the highest-signal relation comes first.
+ * and a `related` edge (either stored direction) as `related`.
+ *
+ * When `statusById` is supplied, a blocking relation is flagged `resolved` once
+ * its blocker is closed — the blocker is `issueId` itself for `blocks`, and the
+ * other issue for `blocked_by`. Resolved relations sort last (after the
+ * RELATION_PRIORITY order) so the compact card surfaces an active blockage over
+ * a spent one.
  */
 export function resolveRelations(
   issueId: string,
-  rows: IssueRelation[]
+  rows: IssueRelation[],
+  statusById?: Map<string, IssueStatus>
 ): ResolvedRelation[] {
+  const isClosedId = (id: string): boolean => {
+    const status = statusById?.get(id);
+    return status !== undefined && isClosedStatus(status);
+  };
+  const selfClosed = isClosedId(issueId);
+
   const out: ResolvedRelation[] = [];
   for (const r of rows) {
     if (r.type === "blocks") {
       if (r.source_id === issueId)
-        out.push({ id: r.id, relation: "blocks", otherId: r.target_id });
+        out.push({
+          id: r.id,
+          relation: "blocks",
+          otherId: r.target_id,
+          resolved: selfClosed,
+        });
       else if (r.target_id === issueId)
-        out.push({ id: r.id, relation: "blocked_by", otherId: r.source_id });
+        out.push({
+          id: r.id,
+          relation: "blocked_by",
+          otherId: r.source_id,
+          resolved: isClosedId(r.source_id),
+        });
     } else {
       if (r.source_id === issueId)
-        out.push({ id: r.id, relation: "related", otherId: r.target_id });
+        out.push({
+          id: r.id,
+          relation: "related",
+          otherId: r.target_id,
+          resolved: false,
+        });
       else if (r.target_id === issueId)
-        out.push({ id: r.id, relation: "related", otherId: r.source_id });
+        out.push({
+          id: r.id,
+          relation: "related",
+          otherId: r.source_id,
+          resolved: false,
+        });
     }
   }
-  return out.sort(
-    (a, b) =>
+  return out.sort((a, b) => {
+    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
+    return (
       RELATION_PRIORITY.indexOf(a.relation) -
       RELATION_PRIORITY.indexOf(b.relation)
-  );
+    );
+  });
 }
 
 /**

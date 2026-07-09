@@ -17,6 +17,9 @@ export interface ChipRelation {
   relation: IssueRelationType;
   otherId: string;
   otherNumber: number;
+  /** A blocking relation whose blocker is closed: dropped from the compact chip
+      row so the card reads as normal (it stays, marked resolved, in the panel). */
+  resolved: boolean;
 }
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -37,9 +40,13 @@ export function RelationChips({
   className?: string;
 }) {
   const t = useTranslations("Relations");
-  if (relations.length === 0) return null;
-  const shown = relations.slice(0, max);
-  const overflow = relations.length - shown.length;
+  // A resolved blocking relation (its blocker is done/canceled/duplicate) no
+  // longer constrains, so the compact card must read as normal — drop resolved
+  // relations here. They stay visible, marked resolved, in RelationsSection.
+  const active = relations.filter((r) => !r.resolved);
+  if (active.length === 0) return null;
+  const shown = active.slice(0, max);
+  const overflow = active.length - shown.length;
 
   return (
     <span className={cn("flex items-center gap-1", className)}>

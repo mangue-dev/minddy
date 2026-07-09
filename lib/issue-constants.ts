@@ -60,6 +60,17 @@ export const STATUS_MAP: Record<IssueStatus, StatusMeta> = Object.fromEntries(
   ALL_STATUSES.map((s) => [s.value, s])
 ) as Record<IssueStatus, StatusMeta>;
 
+// Terminal statuses: a closed issue is finished for tracking purposes — it no
+// longer blocks the issues it gates, and drops out of "active" counts. Mirrors
+// the server-side CLOSED_STATUSES (lib/server/issue-reads.ts) and lib/cycle.ts.
+export const CLOSED_STATUSES: readonly IssueStatus[] = [
+  "done",
+  "canceled",
+  "duplicate",
+];
+export const isClosedStatus = (status: IssueStatus): boolean =>
+  CLOSED_STATUSES.includes(status);
+
 // Labels are i18n'd — resolve via useTranslations("Priority")(value).
 export interface PriorityMeta {
   value: IssuePriority;

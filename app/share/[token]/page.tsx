@@ -108,9 +108,10 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   // may hide the other end), mirroring KanbanBoard — resolved here so the full
   // issue list never reaches the client.
   const allIssueMap = new Map(allIssues.map((i) => [i.id, i]));
+  const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
   const cards: PublicCard[] = issues.map((issue) => {
     const parent = issue.parent_id ? allIssueMap.get(issue.parent_id) : undefined;
-    const chips = resolveRelations(issue.id, relations)
+    const chips = resolveRelations(issue.id, relations, statusById)
       .map((r) => {
         const other = allIssueMap.get(r.otherId);
         return other ? { ...r, otherNumber: other.number } : null;

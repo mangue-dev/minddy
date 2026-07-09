@@ -592,6 +592,7 @@
     "blocks": "Bloque",
     "blocked_by": "Bloqué par",
     "related": "Lié à",
+    "resolved": "Résolu",
     "action_blocks": "Marquer comme bloquant…",
     "action_blocked_by": "Marquer comme bloqué par…",
     "action_related": "Marquer comme lié…",

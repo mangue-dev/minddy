@@ -349,6 +349,11 @@ export interface ResolvedRelation {
   relation: IssueRelationType;
   /** The other issue in the pair. */
   otherId: string;
+  /** A blocking relation whose blocker is closed (done/canceled/duplicate) no
+      longer constrains: it's kept in the DB but surfaced as resolved rather than
+      as an active blockage. Always false for `related`, and false whenever the
+      resolver was called without issue statuses. */
+  resolved: boolean;
 }
 
 export interface CreateIssueRelationInput {

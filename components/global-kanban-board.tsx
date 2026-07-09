@@ -146,8 +146,12 @@ export function GlobalKanbanBoard({
   const relationsByIssue = useMemo(() => {
     const map = new Map<string, ChipRelation[]>();
     if (!relations?.length) return map;
+    // Blocker statuses drive relation resolution (a done blocker no longer blocks).
+    const statusById = new Map(
+      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const)
+    );
     for (const issue of issues) {
-      const resolved = resolveRelations(issue.id, relations)
+      const resolved = resolveRelations(issue.id, relations, statusById)
         .map((r) => {
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;

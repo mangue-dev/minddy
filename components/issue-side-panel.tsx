@@ -135,7 +135,8 @@ export function IssueSidePanel({
   const resolvedRelations = useMemo<ChipRelation[]>(() => {
     if (!issue) return [];
     const byId = new Map(allIssues.map((i) => [i.id, i]));
-    return resolveRelations(issue.id, relations)
+    const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
+    return resolveRelations(issue.id, relations, statusById)
       .map((r) => {
         const other = byId.get(r.otherId);
         return other ? { ...r, otherNumber: other.number } : null;
