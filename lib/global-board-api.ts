@@ -2,7 +2,7 @@
 
 import type { GlobalBoardResponse } from "./types";
 
-function browserTimeZone(): string {
+export function browserTimeZone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   } catch {

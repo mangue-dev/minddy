@@ -16,6 +16,7 @@ import {
   Calendar,
   ChevronRight,
   ClipboardCopy,
+  IterationCw,
   Link2,
   ListChecks,
   Triangle,
@@ -486,6 +487,7 @@ export function IssueCardBody({
   onOpenPlan,
   onUpdate,
   onSetCategories,
+  inCurrentCycle,
   dragging,
 }: {
   issue: Issue;
@@ -513,9 +515,14 @@ export function IssueCardBody({
   onUpdate?: (patch: IssueUpdateInput) => void;
   /** When set, the category indicator becomes an inline multi-select picker. */
   onSetCategories?: (ids: string[]) => void;
+  /** The issue belongs to MY current cycle (MIN-32) — shows the blue cycle
+      icon before the identifier. Boards leave it unset in cycle view (where
+      every card is in the cycle, the icon would be noise). */
+  inCurrentCycle?: boolean;
   dragging?: boolean;
 }) {
   const t = useTranslations("IssueUI");
+  const tCycles = useTranslations("Cycles");
   const plan = planProgress(issue.plan);
   const assignee = issue.assignee_id
     ? memberMap.get(issue.assignee_id) ?? null
@@ -557,9 +564,19 @@ export function IssueCardBody({
         </div>
       )}
 
-      {/* Identifier (préfixé de l'icône intégration le cas échéant) + assignee */}
+      {/* Identifier (préfixé des icônes cycle / intégration le cas échéant) + assignee */}
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
+          {inCurrentCycle && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
+                  <IterationCw className="size-3" aria-label={tCycles("inCurrentCycle")} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{tCycles("inCurrentCycle")}</TooltipContent>
+            </Tooltip>
+          )}
           <IntegrationIndicator issue={issue} iconClassName="size-3" />
           {parentNumber != null &&
             (onOpenParent ? (
@@ -667,6 +684,7 @@ export function IssueCard({
   onUpdateIssue,
   onSetCategories,
   extraActions,
+  inCurrentCycle,
 }: {
   issue: Issue;
   projectId: string;
@@ -696,6 +714,8 @@ export function IssueCard({
   /** Board-provided right-click actions appended to the menu (e.g. the cycle
       add/remove actions — MIN-32). */
   extraActions?: ContextMenuAction[];
+  /** The issue belongs to MY current cycle — forwarded to the card body. */
+  inCurrentCycle?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
@@ -847,6 +867,7 @@ export function IssueCard({
         onOpenPlan={onOpenPlan}
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+        inCurrentCycle={inCurrentCycle}
       />
       <IssueContextMenu
         position={menuPosition}

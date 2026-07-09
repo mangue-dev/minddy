@@ -66,6 +66,7 @@ export function GlobalKanbanBoard({
   onCreateIssue,
   comparator,
   buildMenuActions,
+  currentCycleId,
   readOnly = false,
 }: {
   issues: Issue[];
@@ -92,6 +93,9 @@ export function GlobalKanbanBoard({
   comparator?: (a: Issue, b: Issue) => number;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
+  /** My current cycle's id — cards in it show the blue cycle icon. Unset in
+      cycle view, where the icon would be pure noise. */
+  currentCycleId?: string | null;
   /** Past/future cycles are read-only: no drag at all. */
   readOnly?: boolean;
 }) {
@@ -199,6 +203,7 @@ export function GlobalKanbanBoard({
             onSetCategories={onSetCategories}
             onCreateIssue={onCreateIssue}
             buildMenuActions={buildMenuActions}
+            currentCycleId={currentCycleId}
           />
         ))}
       </div>
@@ -220,6 +225,9 @@ export function GlobalKanbanBoard({
                 objectiveMapByProject.get(activeIssue.project_id) ?? EMPTY_OBJECTIVES
               }
               parentNumber={activeParent?.number}
+              inCurrentCycle={
+                !!currentCycleId && activeIssue.cycle_id === currentCycleId
+              }
               dragging
             />
           </div>

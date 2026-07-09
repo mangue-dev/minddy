@@ -248,6 +248,21 @@ export async function updateIssueFields({
     stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId)
   );
 
+  // Cycle membership changed → touch the affected cycle row(s). Issue writes
+  // broadcast on the project topic only; the cycles UPDATE rides the owner's
+  // user topic so an open /all board refetches live (MIN-32).
+  if ("cycle_id" in updates && (updates.cycle_id ?? null) !== (before.cycle_id ?? null)) {
+    const touched = [updates.cycle_id, before.cycle_id].filter(
+      (id): id is string => typeof id === "string"
+    );
+    for (const cycleId of new Set(touched)) {
+      await service
+        .from("cycles")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", cycleId);
+    }
+  }
+
   // Ledger de stats : une contribution "terminée" au nom de l'acteur, seulement
   // sur la TRANSITION vers done (before !== done). Cette garde suffit à
   // dédupliquer : canceled/duplicate ne matchent pas, done->done non plus. Un

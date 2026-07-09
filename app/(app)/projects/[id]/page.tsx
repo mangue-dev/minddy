@@ -21,6 +21,7 @@ import { useViewsQuery } from "@/lib/use-views-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
+import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { useBoardViews } from "@/lib/use-board-views";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
@@ -32,6 +33,7 @@ import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
+import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { createIssueApi } from "@/lib/issues-api";
@@ -74,6 +76,25 @@ function ProjectBoard() {
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
   const { open: openAssistant } = useAssistantPanel();
+
+  // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
+  // picking work into your week from a project board must work too. The patch
+  // mirrors the server side-effect: adding assigns to me, never a status bump.
+  const { currentCycle } = useMyCycleQuery();
+  const onSetIssueCycle = useCallback(
+    (issue: Issue, cycleId: string | null) =>
+      void updateIssue(
+        issue.id,
+        cycleId && myUserId
+          ? { cycle_id: cycleId, assignee_id: myUserId }
+          : { cycle_id: cycleId }
+      ).catch((err) => toast.error((err as Error).message)),
+    [updateIssue, myUserId]
+  );
+  const buildCycleMenuActions = useCycleMenuActions(
+    currentCycle?.id ?? null,
+    onSetIssueCycle
+  );
 
   // Strip the one-shot ?view= instruction once applied, keeping other params
   // (?issue= deep links survive the /my redirect).
@@ -403,6 +424,8 @@ function ProjectBoard() {
               relations={relations}
               statuses={statuses}
               sort={sort}
+              buildMenuActions={buildCycleMenuActions}
+              currentCycleId={currentCycle?.id ?? null}
               projectId={project.id}
               projectKey={project.key}
               members={members}

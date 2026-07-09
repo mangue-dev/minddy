@@ -46,6 +46,7 @@ export function GlobalKanbanColumn({
   onSetCategories,
   onCreateIssue,
   buildMenuActions,
+  currentCycleId,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -63,6 +64,8 @@ export function GlobalKanbanColumn({
   onCreateIssue?: (status: IssueStatus) => void;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
+  /** My current cycle's id — its cards show the blue cycle icon. */
+  currentCycleId?: string | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
@@ -121,6 +124,7 @@ export function GlobalKanbanColumn({
                 onUpdateIssue={(id, patch) => onUpdateIssue(id, patch, pid)}
                 onSetCategories={(id, ids) => onSetCategories(id, ids, pid)}
                 extraActions={buildMenuActions?.(issue)}
+                inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
               />
             );
           })}

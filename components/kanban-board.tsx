@@ -31,6 +31,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 
@@ -63,6 +64,8 @@ export function KanbanBoard({
   onSetCategories,
   onAddRelation,
   onMove,
+  buildMenuActions,
+  currentCycleId,
 }: {
   issues: Issue[];
   /** Every project issue (unfiltered) — resolves relation targets that a view
@@ -91,6 +94,10 @@ export function KanbanBoard({
     issueId: string,
     patch: { status?: IssueStatus; position: number }
   ) => Promise<void>;
+  /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
+  buildMenuActions?: (issue: Issue) => ContextMenuAction[];
+  /** My current cycle's id — its cards show the blue cycle icon. */
+  currentCycleId?: string | null;
 }) {
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),
@@ -284,6 +291,8 @@ export function KanbanBoard({
               onUpdateIssue={onUpdateIssue}
               onSetCategories={onSetCategories}
               onAddRelation={onAddRelation}
+              buildMenuActions={buildMenuActions}
+              currentCycleId={currentCycleId}
             />
           ))}
         </div>
@@ -305,6 +314,9 @@ export function KanbanBoard({
               objectiveMap={objectiveMap}
               parentNumber={activeParent?.number}
               relations={relationsByIssue.get(activeIssue.id)}
+              inCurrentCycle={
+                !!currentCycleId && activeIssue.cycle_id === currentCycleId
+              }
               dragging
             />
           </div>

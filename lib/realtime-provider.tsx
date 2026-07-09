@@ -53,6 +53,11 @@ function keysForUserEvent(change: BroadcastChange): QueryKey[] {
       return [["my-invitations"], ["projects"]];
     case "views": // global (project-less) views broadcast on the user topic
       return [["views", "global"]];
+    case "cycles": // my cycle timeline moved (fill, capture, rollover — MIN-32)
+      return [
+        ["me", "board"],
+        ["me", "cycle"],
+      ];
     default:
       return [];
   }
@@ -112,6 +117,8 @@ const USER_SCOPE_KEYS: QueryKey[] = [
   ["projects"],
   ["my-invitations"],
   ["views", "global"],
+  ["me", "board"],
+  ["me", "cycle"],
 ];
 const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["issues", projectId],

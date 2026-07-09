@@ -19,6 +19,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 export function KanbanColumn({
   status,
@@ -38,6 +39,8 @@ export function KanbanColumn({
   onUpdateIssue,
   onSetCategories,
   onAddRelation,
+  buildMenuActions,
+  currentCycleId,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -63,6 +66,10 @@ export function KanbanColumn({
     type: IssueRelationType,
     targetId: string
   ) => void;
+  /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
+  buildMenuActions?: (issue: Issue) => ContextMenuAction[];
+  /** My current cycle's id — its cards show the blue cycle icon. */
+  currentCycleId?: string | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
@@ -122,6 +129,8 @@ export function KanbanColumn({
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={onUpdateIssue}
                 onSetCategories={onSetCategories}
+                extraActions={buildMenuActions?.(issue)}
+                inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
               />
             );
           })}

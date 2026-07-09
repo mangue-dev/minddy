@@ -969,6 +969,7 @@
     "completionTooltip": "{percent}% of this cycle completed",
     "addToCycle": "Add to cycle",
     "removeFromCycle": "Remove from cycle",
+    "inCurrentCycle": "In the current cycle",
     "welcomeTitle": "Plan your week, across all your projects",
     "welcomeBullet1": "A cycle is your personal week (or fortnight), all projects included.",
     "welcomeBullet2": "minddy fills it from the issues assigned to you — priorities first, small wins first.",

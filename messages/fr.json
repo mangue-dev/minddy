@@ -969,6 +969,7 @@
     "completionTooltip": "{percent}% du cycle terminé",
     "addToCycle": "Ajouter au cycle",
     "removeFromCycle": "Retirer du cycle",
+    "inCurrentCycle": "Dans le cycle en cours",
     "welcomeTitle": "Planifie ta semaine, tous projets confondus",
     "welcomeBullet1": "Un cycle, c'est ta semaine (ou quinzaine) personnelle, tous projets inclus.",
     "welcomeBullet2": "minddy le remplit avec les tickets qui te sont assignés — priorités d'abord, petites victoires d'abord.",

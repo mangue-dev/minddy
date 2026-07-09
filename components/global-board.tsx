@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, toast } from "mangue-ui";
-import { IterationCw, ListTodo } from "lucide-react";
+import { ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -34,7 +34,7 @@ import {
   CycleEmptyNotice,
   CycleFutureNotice,
 } from "@/components/cycle/cycle-empty-states";
-import type { ContextMenuAction } from "@/components/issue-context-menu";
+import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import type {
   Category,
   Issue,
@@ -79,7 +79,6 @@ const NO_GENERATING = new Set<string>();
 function GlobalBoardInner() {
   const t = useTranslations("GlobalBoard");
   const tBoard = useTranslations("Board");
-  const tCycles = useTranslations("Cycles");
   const format = useFormatter();
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
@@ -269,33 +268,17 @@ function GlobalBoardInner() {
     [openAssistant, selectedCycle, cycleLabel]
   );
 
-  // Right-click cycle actions, on every card of this board (both modes):
-  // add → assigns to me as a side-effect, never a status bump; remove → just
-  // clears the link. Only real, living work can join a cycle.
-  const buildCycleMenuActions = useCallback(
-    (issue: Issue): ContextMenuAction[] => {
-      const current = cycles?.enabled ? cycles.current : null;
-      if (!current) return [];
-      const inCurrent = issue.cycle_id === current.id;
-      if (!inCurrent && ["done", "canceled", "duplicate", "triage"].includes(issue.status)) {
-        return [];
-      }
-      return [
-        {
-          id: inCurrent ? "cycle-remove" : "cycle-add",
-          label: inCurrent ? tCycles("removeFromCycle") : tCycles("addToCycle"),
-          keywords: ["cycle", "semaine", "week", "sprint"],
-          icon: <IterationCw className="size-4" />,
-          onSelect: () =>
-            void setIssueCycle(
-              issue.id,
-              inCurrent ? null : current.id,
-              issue.project_id
-            ).catch((err) => toast.error((err as Error).message)),
-        },
-      ];
-    },
-    [cycles, setIssueCycle, tCycles]
+  // Right-click cycle actions, on every card of this board (both modes).
+  const onSetIssueCycle = useCallback(
+    (issue: Issue, cycleId: string | null) =>
+      void setIssueCycle(issue.id, cycleId, issue.project_id).catch((err) =>
+        toast.error((err as Error).message)
+      ),
+    [setIssueCycle]
+  );
+  const buildCycleMenuActions = useCycleMenuActions(
+    cycles?.enabled ? (cycles.current?.id ?? null) : null,
+    onSetIssueCycle
   );
 
   const issuesByProject = useMemo(() => {
@@ -451,6 +434,7 @@ function GlobalBoardInner() {
             categoryMapByProject={categoryMapByProject}
             objectiveMapByProject={objectiveMapByProject}
             buildMenuActions={buildCycleMenuActions}
+            currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
             onCreateIssue={(status) => openCreateIssue({ status })}
             {...boardHandlers}
           />

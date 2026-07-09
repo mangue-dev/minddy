@@ -4,7 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
-import { ensureCycles, toCycleInfo } from "@/lib/server/cycles";
+import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
 import type { BoardCycles, Category, IssueRelation, Member, Objective } from "@/lib/types";
 
@@ -40,14 +40,12 @@ export async function GET(request: NextRequest) {
   );
   let cycles: BoardCycles = { enabled: false, current: null, upcoming: [], past: [] };
   if (prefs.enabled) {
-    const tz = request.nextUrl.searchParams.get("tz") || "UTC";
-    let today: string;
-    try {
-      today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
-    } catch {
-      today = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date());
-    }
-    const ensured = await ensureCycles({ service, userId: auth.user.id, prefs, today });
+    const ensured = await ensureCycles({
+      service,
+      userId: auth.user.id,
+      prefs,
+      today: todayInTz(request.nextUrl.searchParams.get("tz")),
+    });
     cycles = {
       enabled: true,
       current: ensured.current ? toCycleInfo(ensured.current) : null,

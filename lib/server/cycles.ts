@@ -64,6 +64,15 @@ export function toCycleInfo(row: CycleRow): CycleInfo {
   };
 }
 
+/** The user's calendar date in `tz` (stats pattern) — UTC on a bad/missing tz. */
+export function todayInTz(tz: string | null | undefined): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: tz || "UTC" }).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date());
+  }
+}
+
 const CYCLE_SELECT =
   "id, user_id, start_date, end_date, intensity, target_points, completed_points, filled_at";
 
@@ -354,6 +363,16 @@ export async function fillCycleForUser({
   }));
   await insertEvents(service, events);
 
+  // Touch the cycle row: issue writes only broadcast on project topics, which
+  // the /all board doesn't subscribe to — this UPDATE rides the user topic and
+  // tells the open board to refetch (a Numo fill becomes visible live).
+  if (pickedIds.length > 0) {
+    await service
+      .from("cycles")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", cycle.id);
+  }
+
   const points = cycleFilledPoints(
     (updated ?? []) as { effort: RecoIssue["effort"]; status: IssueStatus }[]
   );
@@ -442,4 +461,11 @@ export async function runCycleCapture(params: CycleCaptureParams): Promise<void>
       to_value: current.id,
     },
   ]);
+
+  // Same user-topic nudge as the fill: the capture lands after the response,
+  // so an open board only sees it through this broadcast.
+  await service
+    .from("cycles")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", current.id);
 }
