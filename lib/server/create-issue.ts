@@ -4,6 +4,10 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
+  insertAttachments,
+  parseAttachmentsInput,
+} from "@/lib/server/attachments";
+import {
   insertEvents,
   stampIntegration,
   stampViaAssistant,
@@ -32,7 +36,8 @@ export type CreateIssueResult =
         | "parentIssueNotFound"
         | "nestingLimitedToOneLevel"
         | "planTooLong"
-        | "databaseError";
+        | "databaseError"
+        | "attachmentInvalid";
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
     };
@@ -62,6 +67,15 @@ export async function createIssueForProject({
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
     return { ok: false, status: 400, errorKey: "titleRequired" };
+  }
+
+  // Files the client already uploaded under this project's storage prefix.
+  const parsedAttachments = parseAttachmentsInput(
+    input.attachments,
+    `projects/${projectId}/`
+  );
+  if (parsedAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
   }
 
   const row: Record<string, unknown> = {
@@ -133,6 +147,20 @@ export async function createIssueForProject({
     }
     console.error("[create-issue] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  // Attachment rows — the issue exists from here on, so a failure must not
+  // fail the request (the files just don't get registered).
+  try {
+    await insertAttachments(service, {
+      projectId,
+      issueId: data.id as string,
+      commentId: null,
+      createdBy: actorId,
+      attachments: parsedAttachments,
+    });
+  } catch (e) {
+    console.error("[create-issue] attachments failed:", (e as Error).message);
   }
 
   // Attach categories (only those that belong to this project).

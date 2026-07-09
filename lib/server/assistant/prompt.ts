@@ -225,6 +225,8 @@ export interface CommentPromptIssue {
 export interface CommentPromptThreadEntry {
   author: string;
   body: string;
+  /** File names attached to that comment, shown inline in the thread. */
+  attachments?: string[];
 }
 
 /**
@@ -256,7 +258,12 @@ export function buildCommentSystemPrompt({
     "None yet.";
   const threadLines =
     thread
-      .map((c) => `- ${c.author}: ${c.body.replace(/\n/g, " ").slice(0, 500)}`)
+      .map((c) => {
+        const files = c.attachments?.length
+          ? ` [attachments: ${c.attachments.join(", ")}]`
+          : "";
+        return `- ${c.author}: ${c.body.replace(/\n/g, " ").slice(0, 500)}${files}`;
+      })
       .join("\n") || "(no other comments)";
 
   return `You are Numo, the AI assistant for minddy, a lightweight issue tracker.

@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { updateIssueFields } from "@/lib/server/update-issue";
+import { removeStorageObjects } from "@/lib/server/attachments";
+import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -60,6 +62,14 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
+  // Snapshot the storage paths first — the rows cascade with the issue and the
+  // objects would otherwise be orphaned. Only removed once the delete succeeds.
+  const service = getServiceClient();
+  const { data: attachmentRows } = await service
+    .from("attachments")
+    .select("storage_path")
+    .eq("issue_id", id);
+
   const { data, error } = await auth.supabase
     .from("issues")
     .delete()
@@ -72,5 +82,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
+
+  await removeStorageObjects(
+    service,
+    (attachmentRows ?? []).map((a) => a.storage_path as string)
+  );
   return NextResponse.json({ ok: true });
 }

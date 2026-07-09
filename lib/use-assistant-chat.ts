@@ -8,6 +8,7 @@ import type {
   AssistantPageContext,
   ConversationStatus,
 } from "./assistant-types";
+import type { AttachmentInput } from "./types";
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ type Action =
       type: "ADD_USER_MESSAGE";
       content: string;
       context?: AssistantPageContext | null;
+      attachments?: AttachmentInput[];
     }
   | { type: "DONE" }
   | { type: "GENERATING_SERVER" }
@@ -240,7 +242,9 @@ function reducer(
         tool_calls: null,
         tool_call_id: null,
         tool_name: null,
-        metadata: {},
+        metadata: action.attachments?.length
+          ? { attachments: action.attachments }
+          : {},
         context: action.context ?? null,
         created_at: new Date().toISOString(),
       };
@@ -390,7 +394,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     async (
       projectId: string | null,
       message: string,
-      options?: { pageContext?: AssistantPageContext | null },
+      options?: {
+        pageContext?: AssistantPageContext | null;
+        attachments?: AttachmentInput[];
+      },
     ) => {
       if (!message.trim()) return;
 
@@ -404,6 +411,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         type: "ADD_USER_MESSAGE",
         content: message,
         context: options?.pageContext ?? null,
+        attachments: options?.attachments,
       });
       dispatch({ type: "START_STREAMING" });
 
@@ -413,6 +421,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           message,
           conversationId: state.conversationId || undefined,
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
+          ...(options?.attachments?.length
+            ? { attachments: options.attachments }
+            : {}),
         };
 
         const response = await fetch("/api/assistant/chat", {

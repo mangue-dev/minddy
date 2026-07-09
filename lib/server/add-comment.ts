@@ -3,6 +3,10 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
+  insertAttachments,
+  parseAttachmentsInput,
+} from "@/lib/server/attachments";
+import {
   insertNotifications,
   projectMemberIds,
   type NotificationRow,
@@ -24,7 +28,12 @@ export type AddCommentResult =
       ok: false;
       status: number;
       /** Key into the ApiErrors i18n namespace (mutually exclusive with rawMessage). */
-      errorKey?: "commentEmpty" | "issueNotFound" | "commentNotFound" | "databaseError";
+      errorKey?:
+        | "commentEmpty"
+        | "issueNotFound"
+        | "commentNotFound"
+        | "databaseError"
+        | "attachmentInvalid";
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
     };
@@ -35,6 +44,7 @@ export async function addCommentToIssue({
   body,
   parentId,
   mentionedUserIds,
+  attachments,
   viaAssistant = false,
   mcpKeyId = null,
 }: {
@@ -43,6 +53,9 @@ export async function addCommentToIssue({
   body: string;
   parentId?: string | null;
   mentionedUserIds?: string[];
+  /** Files already uploaded to storage by the client — validated here against
+      the issue's project prefix before the rows are created. */
+  attachments?: unknown;
   /** Marks the comment as posted through Numo (shown as "Numo" in the timeline). */
   viaAssistant?: boolean;
   /** Attributes the comment to an MCP API key (agent actor) — shown as
@@ -50,9 +63,6 @@ export async function addCommentToIssue({
   mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
   const text = body.trim();
-  if (!text) {
-    return { ok: false, status: 400, errorKey: "commentEmpty" };
-  }
   const mentioned = (mentionedUserIds ?? []).filter(
     (v): v is string => typeof v === "string"
   );
@@ -72,6 +82,21 @@ export async function addCommentToIssue({
   const access = await getProjectAccess(actorId, issue.project_id as string);
   if (!access) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+
+  // Validate the attachment descriptors before creating anything: the paths
+  // must live under this project's storage prefix.
+  const parsedAttachments = parseAttachmentsInput(
+    attachments,
+    `projects/${issue.project_id}/`
+  );
+  if (parsedAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  }
+  // A comment can be attachments-only (screenshot dropped without a word),
+  // but never fully empty.
+  if (!text && parsedAttachments.length === 0) {
+    return { ok: false, status: 400, errorKey: "commentEmpty" };
   }
 
   // Replies: the stored parent_id is always the thread's ROOT comment
@@ -118,6 +143,21 @@ export async function addCommentToIssue({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
+  // The comment exists from here on — an attachment-row failure must not fail
+  // the request; the comment just comes back without its files.
+  let attachmentRows: Awaited<ReturnType<typeof insertAttachments>> = [];
+  try {
+    attachmentRows = await insertAttachments(service, {
+      projectId: issue.project_id as string,
+      issueId,
+      commentId: data.id as string,
+      createdBy: actorId,
+      attachments: parsedAttachments,
+    });
+  } catch (e) {
+    console.error("[add-comment] attachments failed:", (e as Error).message);
+  }
+
   // Notifications: @mentions + "comment on an issue I own/am assigned" +
   // reply on a thread I authored (root or direct parent).
   const valid = await projectMemberIds(service, issue.project_id as string);
@@ -156,5 +196,5 @@ export async function addCommentToIssue({
   ];
   await insertNotifications(service, rows);
 
-  return { ok: true, comment: data };
+  return { ok: true, comment: { ...data, attachments: attachmentRows } };
 }

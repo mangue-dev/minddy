@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { removeStorageObjects } from "@/lib/server/attachments";
+import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -46,6 +48,20 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
+  // Snapshot storage paths first — deleting a thread root cascades its replies
+  // (parent_id FK), whose attachment rows go with them. Objects are removed
+  // only once the delete succeeds.
+  const service = getServiceClient();
+  const { data: replies } = await service
+    .from("comments")
+    .select("id")
+    .eq("parent_id", id);
+  const commentIds = [id, ...(replies ?? []).map((r) => r.id as string)];
+  const { data: attachmentRows } = await service
+    .from("attachments")
+    .select("storage_path")
+    .in("comment_id", commentIds);
+
   const { data, error } = await auth.supabase
     .from("comments")
     .delete()
@@ -58,5 +74,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("commentNotFound") }, { status: 404 });
+
+  await removeStorageObjects(
+    service,
+    (attachmentRows ?? []).map((a) => a.storage_path as string)
+  );
   return NextResponse.json({ ok: true });
 }

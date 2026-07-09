@@ -17,6 +17,14 @@ import {
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
+import {
+  AttachButton,
+  AttachmentPills,
+  DropOverlay,
+  pasteFileHandler,
+  useFileDrop,
+} from "@/components/attachments";
+import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import {
@@ -114,6 +122,8 @@ export function CreateIssueDialog({
   const editorNonEmptyRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const createMoreId = useId();
+  const uploads = useAttachmentUploads(() => `projects/${projectId}`);
+  const drop = useFileDrop(uploads.addFiles);
 
   // Account preference (Préférences → auto-attribution): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
@@ -179,6 +189,7 @@ export function CreateIssueDialog({
     setTitle("");
     setDescription("");
     setEditorKey((k) => k + 1);
+    uploads.clear();
   };
 
   const reset = () => {
@@ -196,11 +207,13 @@ export function CreateIssueDialog({
     onOpenChange(false);
   };
 
-  // Typed text is the only thing worth guarding — pickers are two clicks to redo.
+  // Typed text and uploaded files are worth guarding — pickers are two clicks
+  // to redo.
   const draftHasContent = () =>
     title.trim() !== "" ||
     description.trim() !== "" ||
-    editorNonEmptyRef.current;
+    editorNonEmptyRef.current ||
+    uploads.pending.length > 0;
 
   const handleOpenChange = (next: boolean) => {
     // Swallow close signals while the confirmation owns the decision (it's up),
@@ -240,6 +253,8 @@ export function CreateIssueDialog({
         // Cross-project: assignee / objective / categories reference THIS
         // project's entities and don't exist in the target — only the portable
         // fields travel. (Statuses, priority, effort are global constants.)
+        // Attachments stay behind too: their storage paths carry THIS
+        // project's prefix.
         await onCreateInProject(other.id, {
           title: trimmed,
           description: description.trim() || null,
@@ -255,6 +270,7 @@ export function CreateIssueDialog({
           description: description.trim() || null,
           ...fields,
           category_ids: categoryIds,
+          attachments: uploads.inputs,
         });
         toast.success(t("issueCreatedToast"));
       }
@@ -339,8 +355,24 @@ export function CreateIssueDialog({
               e.preventDefault();
               void submit(createMore);
             }}
-            className="flex flex-col"
+            className="relative flex flex-col rounded-lg"
+            onPaste={pasteFileHandler(uploads.addFiles)}
+            {...drop.handlers}
           >
+            <DropOverlay show={drop.dragging} />
+            {/* Attachments are context — they sit ABOVE the text being written. */}
+            <AttachmentPills
+              attachments={uploads.pending.filter((p) => p.status === "done")}
+              pending={uploads.pending}
+              onRemove={(a) => {
+                const match = uploads.pending.find(
+                  (p) => p.storage_path === a.storage_path
+                );
+                if (match) uploads.remove(match.localId);
+              }}
+              onRemovePending={uploads.remove}
+              className="mb-3"
+            />
             <AutoTextarea
               ref={titleRef}
               autoFocus
@@ -451,6 +483,7 @@ export function CreateIssueDialog({
                   {t("numoWorking")}
                 </span>
               )}
+              <AttachButton onFiles={uploads.addFiles} disabled={submitting} />
               <div className="ml-auto flex items-center gap-4">
                 <label
                   htmlFor={createMoreId}
@@ -466,7 +499,7 @@ export function CreateIssueDialog({
                 {otherProjects.length > 0 && currentProject ? (
                   <SplitButton
                     type="submit"
-                    disabled={submitting || numoBusy || !title.trim()}
+                    disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                     actionClassName="rounded-l-full pl-4"
                     triggerClassName="rounded-r-full"
                     menuLabel={t("createInOtherProject")}
@@ -489,7 +522,7 @@ export function CreateIssueDialog({
                   <Button
                     type="submit"
                     className="rounded-full px-4"
-                    disabled={submitting || numoBusy || !title.trim()}
+                    disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                   >
                     {submitting && <Spinner />}
                     {t("createTicket")}

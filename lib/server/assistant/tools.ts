@@ -139,7 +139,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_issue",
       description:
-        "Get one issue in full: all fields, categories, comments (with author names), sub-issues, and the duplicate target if any. Pass issue_id when known, or number (the N of KEY-N).",
+        "Get one issue in full: all fields, categories, comments (with author names), attachment metadata (file name/type/size, on the issue and per comment), sub-issues, and the duplicate target if any. Pass issue_id when known, or number (the N of KEY-N).",
       parameters: {
         type: "object",
         properties: {

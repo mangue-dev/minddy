@@ -13,9 +13,15 @@ import type { AssistantToolDef } from "./tools";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+/** One entry of a multimodal message content array (OpenRouter chat format). */
+export type ChatContentPart =
+  | { type: "text"; text: string; cache_control?: { type: "ephemeral" } }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "file"; file: { filename: string; file_data: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content?: string | null;
+  content?: string | ChatContentPart[] | null;
   tool_calls?: AssistantToolCall[];
   tool_call_id?: string;
   name?: string;
@@ -35,34 +41,64 @@ export interface ProcessChatResult {
   generations: GenerationInfo[];
 }
 
-/** Module-level cache — OpenRouter model list is fetched at most once per process. */
-const cachingCapabilityCache = new Map<string, boolean>();
+/** Module-level cache — OpenRouter model list is fetched at most once per
+    process (on success), then feeds both capability lookups below. */
+const modelIndexCache = new Map<
+  string,
+  { caching: boolean; modalities: string[] }
+>();
+let modelIndexLoaded = false;
 
-/**
- * Returns true if the model supports explicit prompt caching via cache_control,
- * detected from OpenRouter's pricing metadata (input_cache_read > 0).
- * Memoised for the lifetime of the process.
- */
-export async function modelSupportsCaching(
-  model: string,
-  apiKey: string
-): Promise<boolean> {
-  if (cachingCapabilityCache.has(model)) return cachingCapabilityCache.get(model)!;
+async function loadModelIndex(apiKey: string): Promise<void> {
+  if (modelIndexLoaded) return;
   try {
     const res = await fetch("https://openrouter.ai/api/v1/models", {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const body = (await res.json()) as {
-      data?: Array<{ id: string; pricing?: { input_cache_read?: string | number } }>;
+      data?: Array<{
+        id: string;
+        pricing?: { input_cache_read?: string | number };
+        architecture?: { input_modalities?: string[] };
+      }>;
     };
     for (const m of body.data ?? []) {
-      cachingCapabilityCache.set(m.id, Number(m.pricing?.input_cache_read ?? 0) > 0);
+      modelIndexCache.set(m.id, {
+        caching: Number(m.pricing?.input_cache_read ?? 0) > 0,
+        modalities: m.architecture?.input_modalities ?? ["text"],
+      });
     }
-    return cachingCapabilityCache.get(model) ?? false;
+    modelIndexLoaded = true;
   } catch {
-    return false;
+    // Left unloaded — callers fall back to the conservative default and the
+    // next call retries the fetch.
   }
+}
+
+/**
+ * Returns true if the model supports explicit prompt caching via cache_control,
+ * detected from OpenRouter's pricing metadata (input_cache_read > 0).
+ */
+export async function modelSupportsCaching(
+  model: string,
+  apiKey: string
+): Promise<boolean> {
+  await loadModelIndex(apiKey);
+  return modelIndexCache.get(model)?.caching ?? false;
+}
+
+/**
+ * The model's input modalities per OpenRouter ("text", "image", "file"…) —
+ * gates whether attachments are sent as image/file parts or degraded to text
+ * notes. Falls back to text-only when the index is unavailable.
+ */
+export async function getModelInputModalities(
+  model: string,
+  apiKey: string
+): Promise<Set<string>> {
+  await loadModelIndex(apiKey);
+  return new Set(modelIndexCache.get(model)?.modalities ?? ["text"]);
 }
 
 /** Cap tool result JSON sent to the LLM. The full result is already persisted in DB. */

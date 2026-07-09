@@ -85,7 +85,24 @@
     "relationSelf": "An issue can't be related to itself.",
     "relationNotFound": "Relation not found.",
     "passwordRequired": "A password is required.",
-    "invalidShareLevel": "Invalid share level."
+    "invalidShareLevel": "Invalid share level.",
+    "attachmentNotFound": "Attachment not found",
+    "attachmentInvalid": "Invalid attachments."
+  },
+  "Attachments": {
+    "attach": "Attach files",
+    "sectionTitle": "Attachments",
+    "download": "Download",
+    "remove": "Remove",
+    "preview": "Preview",
+    "uploadFailed": "Couldn't upload {name}.",
+    "tooLarge": "{name} exceeds {max} MB.",
+    "tooMany": "Maximum {max} files.",
+    "dropHere": "Drop to attach",
+    "dropOnIssue": "Attach to {id}",
+    "addedTo": "Attachment added to {id}.",
+    "kb": "KB",
+    "mb": "MB"
   },
   "Assistant": {
     "title": "Ask Numo",

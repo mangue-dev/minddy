@@ -232,20 +232,42 @@ export async function getIssue(
   if (error) return { error: error.message };
   if (!issue) return { error: "Issue not found in this project." };
 
-  const [{ data: comments }, { data: subIssues }] = await Promise.all([
-    ctx.db
-      .from("comments")
-      .select(
-        "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
-      )
-      .eq("issue_id", issue.id)
-      .order("created_at", { ascending: true }),
-    ctx.db
-      .from("issues")
-      .select("id, number, title, status")
-      .eq("parent_id", issue.id)
-      .order("number", { ascending: true }),
-  ]);
+  const [{ data: comments }, { data: subIssues }, { data: attachmentRows }] =
+    await Promise.all([
+      ctx.db
+        .from("comments")
+        .select(
+          "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
+        )
+        .eq("issue_id", issue.id)
+        .order("created_at", { ascending: true }),
+      ctx.db
+        .from("issues")
+        .select("id, number, title, status")
+        .eq("parent_id", issue.id)
+        .order("number", { ascending: true }),
+      // Attachment metadata (MIN-24): comment_id null = on the issue itself.
+      // File contents stay behind the app's signed-URL door — agents only see
+      // names/types/sizes here.
+      ctx.db
+        .from("attachments")
+        .select("id, comment_id, file_name, mime_type, size_bytes")
+        .eq("issue_id", issue.id)
+        .order("created_at", { ascending: true }),
+    ]);
+
+  const attachmentsByComment = new Map<string | null, Record<string, unknown>[]>();
+  for (const row of attachmentRows ?? []) {
+    const key = (row.comment_id as string | null) ?? null;
+    const list = attachmentsByComment.get(key) ?? [];
+    list.push({
+      id: row.id,
+      file_name: row.file_name,
+      mime_type: row.mime_type,
+      size_bytes: row.size_bytes,
+    });
+    attachmentsByComment.set(key, list);
+  }
 
   // Resolve author display names (auth admin — best effort). MCP comments are
   // attributed to their acting API key (agent), not the key's owner.
@@ -261,12 +283,14 @@ export async function getIssue(
       : c.via_mcp
         ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
         : displayName(named, "User");
+    const commentAttachments = attachmentsByComment.get(c.id as string);
     return {
       id: c.id,
       author,
       body: c.body,
       parent_id: c.parent_id,
       created_at: c.created_at,
+      ...(commentAttachments ? { attachments: commentAttachments } : {}),
     };
   });
 
@@ -331,6 +355,7 @@ export async function getIssue(
       ...issueFields,
       identifier: issueIdentifier(ctx.projectKey, issue.number as number),
       category_ids: categories.map((c) => c.category_id),
+      attachments: attachmentsByComment.get(null) ?? [],
     },
     comments: commentRows,
     sub_issues: ((subIssues ?? []) as Array<Record<string, unknown>>).map((s) => ({

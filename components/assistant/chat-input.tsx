@@ -10,13 +10,22 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Button, SendButtonWithCost, cn } from "mangue-ui";
-import { Square } from "lucide-react";
+import { Paperclip, Square } from "lucide-react";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { PageContextBadge } from "@/components/assistant/page-context-badge";
+import { AttachmentPills, DropOverlay, useFileDrop } from "@/components/attachments";
+import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { useAuth } from "@/lib/auth-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
+import type { AttachmentInput } from "@/lib/types";
+
+/** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
+    text-ish) — MIN-24 scope. */
+const ACCEPT =
+  "image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json,.log";
 
 interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (message: string, attachments: AttachmentInput[]) => void;
   onAbort?: () => void;
   disabled?: boolean;
   isStreaming?: boolean;
@@ -48,10 +57,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) {
     const t = useTranslations("Assistant");
+    const tAttach = useTranslations("Attachments");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isEmpty, setIsEmpty] = useState(true);
     const [isFocused, setIsFocused] = useState(false);
+    const { user } = useAuth();
+    const userId = user?.id;
+    const uploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
+    const drop = useFileDrop((files) => {
+      if (userId) uploads.addFiles(files);
+    });
 
     const serializeContent = useCallback((): string => {
       const el = editorRef.current;
@@ -95,10 +112,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
-      if (!value || disabled) return;
-      onSend(value);
+      if (!value || disabled || uploads.uploading) return;
+      onSend(value, uploads.inputs);
       clearEditor();
-    }, [serializeContent, onSend, disabled, clearEditor]);
+      uploads.clear();
+    }, [serializeContent, onSend, disabled, clearEditor, uploads]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -199,22 +217,41 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       >
         <div
           className={cn(
-            "chat-input-surface flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
-            isFocused
-              ? "border-brand/40 ring-2 ring-brand/10"
-              : "border-border"
+            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
+            drop.dragging
+              ? "border-brand ring-2 ring-brand/20"
+              : isFocused
+                ? "border-brand/40 ring-2 ring-brand/10"
+                : "border-border"
           )}
+          {...drop.handlers}
         >
-          {pageContext && (
-            // Concentric nesting: the surface is rounded-2xl (--radius-2xl =
-            // --radius + 8px = 24px), so the badge's rounded-md (--radius - 2px =
-            // 14px) + the 10px (p-2.5) gap to the surface edge === 24px. `flex`
-            // keeps the badge sized to its content (a corner chip) rather than
-            // stretching to the full surface width.
-            <div className="flex px-2.5 pt-2.5">
-              <PageContextBadge
-                context={pageContext}
-                className="rounded-md shadow-none"
+          <DropOverlay show={drop.dragging} />
+          {(pageContext || uploads.pending.length > 0) && (
+            // Context row above the text: the page badge and the attachment
+            // pills share it (same height — the pills mirror the badge's
+            // anatomy). Concentric nesting: the surface is rounded-2xl
+            // (--radius-2xl = --radius + 8px = 24px), so the chips' rounded-md
+            // (--radius - 2px = 14px) + the 10px (p-2.5) gap to the surface
+            // edge === 24px.
+            <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
+              {pageContext && (
+                <PageContextBadge
+                  context={pageContext}
+                  className="rounded-md shadow-none"
+                />
+              )}
+              <AttachmentPills
+                pillClassName="rounded-md shadow-none"
+                attachments={uploads.pending.filter((p) => p.status === "done")}
+                pending={uploads.pending}
+                onRemove={(a) => {
+                  const match = uploads.pending.find(
+                    (p) => p.storage_path === a.storage_path
+                  );
+                  if (match) uploads.remove(match.localId);
+                }}
+                onRemovePending={uploads.remove}
               />
             </div>
           )}
@@ -228,6 +265,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               suppressContentEditableWarning
               onInput={handleInput}
               onKeyDown={handleKeyDown}
+              onPaste={(e) => {
+                if (userId && e.clipboardData.files.length > 0) {
+                  e.preventDefault();
+                  uploads.addFiles(e.clipboardData.files);
+                }
+              }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               className="min-h-[24px] whitespace-pre-wrap break-words text-sm leading-relaxed outline-none [&:empty]:before:pointer-events-none [&:empty]:before:text-muted-foreground [&:empty]:before:content-[attr(aria-placeholder)]"
@@ -248,6 +291,28 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 </Button>
               ) : (
                 <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={ACCEPT}
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.length) uploads.addFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    disabled={disabled || !userId}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                    aria-label={tAttach("attach")}
+                    title={tAttach("attach")}
+                  >
+                    <Paperclip className="size-4" />
+                  </Button>
                   <DictateButton
                     onTranscription={appendDictated}
                     disabled={disabled}
@@ -256,7 +321,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                     <SendButtonWithCost
                       cost={null}
                       isLoading={false}
-                      disabled={disabled ?? false}
+                      disabled={(disabled ?? false) || uploads.uploading}
                       onClick={handleSubmit}
                       ariaLabel={t("send")}
                       tooltipLabel={t("send")}

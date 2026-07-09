@@ -33,6 +33,9 @@ const handler = createMcpHandler(
       "'- [-]' cancelled. When asked to plan work, write the full plan into the issue " +
       "(create/update); while executing one, keep task states current with " +
       "minddy_update_plan_task (mark the task you start '- [~]', finished '- [x]'). " +
+      "Issues and comments can carry file attachments: minddy_get_issue lists their " +
+      "metadata (name/type/size), minddy_add_attachment uploads one (base64, 10 MB " +
+      "max) to an issue or, via comment_id, to a comment. " +
       "Start with minddy_list_projects to discover project ids.",
   },
   { basePath: "/api", disableSse: true, maxDuration: 60 }

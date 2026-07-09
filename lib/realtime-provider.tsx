@@ -82,6 +82,17 @@ function keysForProjectEvent(
       const issueId = issueIdOf(change);
       return issueId ? [["comments", issueId]] : [];
     }
+    case "attachments": {
+      // Comment attachments ride the ["comments"] cache; issue-level ones
+      // have their own query.
+      const issueId = issueIdOf(change);
+      return issueId
+        ? [
+            ["comments", issueId],
+            ["issue-attachments", issueId],
+          ]
+        : [];
+    }
     case "issue_events": {
       const issueId = issueIdOf(change);
       return issueId ? [["events", issueId]] : [];
@@ -108,6 +119,7 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["members", projectId],
   ["comments"],
   ["events"],
+  ["issue-attachments"],
 ];
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {

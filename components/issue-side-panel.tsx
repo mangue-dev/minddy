@@ -37,6 +37,7 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { IssueAttachmentsSection } from "@/components/issue-attachments-section";
 import { IssuePlan } from "@/components/issue-plan";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -116,9 +117,8 @@ export function IssueSidePanel({
   // `value` only on mount and commits on blur.
   const [editorKey, setEditorKey] = useState(0);
 
-  const { items, addComment, updateComment, deleteComment } = useIssueTimeline(
-    issue?.id ?? null
-  );
+  const { items, addComment, updateComment, deleteComment, deleteAttachment } =
+    useIssueTimeline(issue?.id ?? null);
 
   // Sync the editable title when a different issue opens (not on every tick),
   // and land on the tab the opener asked for (plan indicator → plan tab).
@@ -379,6 +379,11 @@ export function IssueSidePanel({
                   placeholder={t("descriptionPlaceholder")}
                 />
 
+                <IssueAttachmentsSection
+                  issueId={issue.id}
+                  projectId={issue.project_id}
+                />
+
                 {/* Key/value properties — borderless, like the issue cards */}
                 <div className="flex flex-col">
                   <PropertyRow label={tField("status")}>
@@ -462,11 +467,13 @@ export function IssueSidePanel({
                     projectKey,
                   }}
                   currentUserId={user?.id ?? null}
-                  onReply={(parentId, body, mentions) =>
-                    addComment(body, mentions, parentId)
+                  projectId={issue.project_id}
+                  onReply={(parentId, body, mentions, attachments) =>
+                    addComment(body, mentions, parentId, attachments)
                   }
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
+                  onDeleteAttachment={deleteAttachment}
                 />
               </TabsContent>
             </Tabs>
@@ -488,7 +495,13 @@ export function IssueSidePanel({
           />
 
           <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
-            <CommentComposer members={members} onSubmit={addComment} />
+            <CommentComposer
+              members={members}
+              projectId={issue.project_id}
+              onSubmit={(body, mentions, attachments) =>
+                addComment(body, mentions, null, attachments)
+              }
+            />
           </SidePanelFooter>
         </SidePanelContent>
       </SidePanel>

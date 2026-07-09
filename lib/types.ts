@@ -14,6 +14,31 @@ export interface Objective {
   updated_at: string;
 }
 
+/** A file attached to an issue (comment_id null) or to a comment/reply.
+    The file itself lives in the private `attachments` Storage bucket and is
+    served through GET /api/attachments/file?path=… (302 → signed URL). */
+export interface Attachment {
+  id: string;
+  project_id: string;
+  issue_id: string;
+  comment_id: string | null;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** What the client sends after a direct-to-storage upload; the server
+    validates the path prefix and creates the `attachments` row. */
+export interface AttachmentInput {
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
 export interface Comment {
   id: string;
   issue_id: string;
@@ -21,6 +46,7 @@ export interface Comment {
   /** Root comment of the thread when this is a reply (depth ≤ 1). */
   parent_id: string | null;
   body: string;
+  attachments?: Attachment[];
   /** True when posted through Numo — the timeline shows "Numo" as the author. */
   via_assistant?: boolean;
   /** True when posted through the MCP endpoint — the timeline shows the acting
@@ -307,6 +333,7 @@ export interface CreateIssueInput {
   parent_id?: string | null;
   due_date?: string | null;
   category_ids?: string[];
+  attachments?: AttachmentInput[];
 }
 
 /** Field changes Numo applies to the create-issue form via voice dictation.

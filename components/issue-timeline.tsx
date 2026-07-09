@@ -27,12 +27,20 @@ import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
 import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
+import {
+  AttachButton,
+  AttachmentPills,
+  DropOverlay,
+  pasteFileHandler,
+  useFileDrop,
+} from "@/components/attachments";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
-import type { Comment, Member } from "@/lib/types";
+import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import type { AttachmentInput, Comment, Member } from "@/lib/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
 type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
@@ -247,6 +255,7 @@ function CommentBlock({
   currentUserId,
   onEdit,
   onDelete,
+  onDeleteAttachment,
   deletesReplies,
 }: {
   comment: Comment;
@@ -254,6 +263,7 @@ function CommentBlock({
   currentUserId: string | null;
   onEdit: (commentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
   deletesReplies: boolean;
 }) {
   const t = useTranslations("Timeline");
@@ -413,9 +423,27 @@ function CommentBlock({
           </div>
         </div>
       ) : (
-        <Markdown className="text-foreground" members={ctx.members}>
-          {comment.body}
-        </Markdown>
+        comment.body && (
+          <Markdown className="text-foreground" members={ctx.members}>
+            {comment.body}
+          </Markdown>
+        )
+      )}
+      {!working && !failed && (comment.attachments?.length ?? 0) > 0 && (
+        <AttachmentPills
+          attachments={comment.attachments}
+          onRemove={
+            mine
+              ? (a) => {
+                  if (a.id) {
+                    onDeleteAttachment(a.id).catch((e) =>
+                      toast.error((e as Error).message)
+                    );
+                  }
+                }
+              : undefined
+          }
+        />
       )}
       <ConfirmDeleteDialog
         open={confirmDelete}
@@ -440,32 +468,43 @@ function CommentBlock({
 function ReplyComposer({
   members,
   currentUserId,
+  projectId,
   rootId,
   onReply,
 }: {
   members: Member[];
   currentUserId: string | null;
+  projectId: string;
   rootId: string;
-  onReply: (parentId: string, body: string, mentionedUserIds: string[]) => Promise<void>;
+  onReply: (
+    parentId: string,
+    body: string,
+    mentionedUserIds: string[],
+    attachments: AttachmentInput[]
+  ) => Promise<void>;
 }) {
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  const uploads = useAttachmentUploads(() => `projects/${projectId}`);
+  const drop = useFileDrop(uploads.addFiles);
   const meName = actorName(members, currentUserId, t);
 
   const close = () => {
     setDraft("");
+    uploads.clear();
     setOpen(false);
   };
 
+  const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
+
   const submit = async () => {
-    const body = draft.trim();
-    if (!body) return;
+    if (!canPost) return;
     setPosting(true);
     try {
-      await onReply(rootId, body, extractMentions(draft, members));
+      await onReply(rootId, draft.trim(), extractMentions(draft, members), uploads.inputs);
       close();
     } catch (e) {
       toast.error((e as Error).message);
@@ -487,7 +526,23 @@ function ReplyComposer({
     );
   }
   return (
-    <div className="flex flex-col">
+    <div
+      className="relative flex flex-col rounded-b-lg"
+      onPaste={pasteFileHandler(uploads.addFiles)}
+      {...drop.handlers}
+    >
+      <DropOverlay show={drop.dragging} />
+      {/* Attachments are context — they sit ABOVE the text being written. */}
+      <AttachmentPills
+        attachments={uploads.pending.filter((p) => p.status === "done")}
+        pending={uploads.pending}
+        onRemove={(a) => {
+          const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
+          if (match) uploads.remove(match.localId);
+        }}
+        onRemovePending={uploads.remove}
+        className="px-3.5 pt-2.5"
+      />
       <MentionTextarea
         value={draft}
         onChange={setDraft}
@@ -502,13 +557,14 @@ function ReplyComposer({
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />
       <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5">
+        <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
         </Button>
         <Button
           size="sm"
           className="rounded-full px-4"
-          disabled={posting || !draft.trim()}
+          disabled={posting || !canPost}
           onClick={() => void submit()}
         >
           {posting && <Spinner />}
@@ -532,16 +588,25 @@ function CommentCard({
   item,
   ctx,
   currentUserId,
+  projectId,
   onReply,
   onEditComment,
   onDeleteComment,
+  onDeleteAttachment,
 }: {
   item: CommentItem;
   ctx: EventContext;
   currentUserId: string | null;
-  onReply: (parentId: string, body: string, mentionedUserIds: string[]) => Promise<void>;
+  projectId: string;
+  onReply: (
+    parentId: string,
+    body: string,
+    mentionedUserIds: string[],
+    attachments: AttachmentInput[]
+  ) => Promise<void>;
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
 }) {
   return (
     <li className="flex flex-col rounded-lg border border-border bg-card">
@@ -552,6 +617,7 @@ function CommentCard({
           currentUserId={currentUserId}
           onEdit={onEditComment}
           onDelete={onDeleteComment}
+          onDeleteAttachment={onDeleteAttachment}
           deletesReplies={item.replies.length > 0}
         />
       </div>
@@ -563,6 +629,7 @@ function CommentCard({
             currentUserId={currentUserId}
             onEdit={onEditComment}
             onDelete={onDeleteComment}
+            onDeleteAttachment={onDeleteAttachment}
             deletesReplies={false}
           />
         </div>
@@ -571,6 +638,7 @@ function CommentCard({
         <ReplyComposer
           members={ctx.members}
           currentUserId={currentUserId}
+          projectId={projectId}
           rootId={item.comment.id}
           onReply={onReply}
         />
@@ -640,16 +708,25 @@ export function IssueActivity({
   items,
   ctx,
   currentUserId,
+  projectId,
   onReply,
   onEditComment,
   onDeleteComment,
+  onDeleteAttachment,
 }: {
   items: TimelineItem[];
   ctx: EventContext;
   currentUserId: string | null;
-  onReply: (parentId: string, body: string, mentionedUserIds: string[]) => Promise<void>;
+  projectId: string;
+  onReply: (
+    parentId: string,
+    body: string,
+    mentionedUserIds: string[],
+    attachments: AttachmentInput[]
+  ) => Promise<void>;
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
 }) {
   const t = useTranslations("Timeline");
   const [open, setOpen] = useState(true);
@@ -685,9 +762,11 @@ export function IssueActivity({
                     item={row.item}
                     ctx={ctx}
                     currentUserId={currentUserId}
+                    projectId={projectId}
                     onReply={onReply}
                     onEditComment={onEditComment}
                     onDeleteComment={onDeleteComment}
+                    onDeleteAttachment={onDeleteAttachment}
                   />
                 );
               }
@@ -707,22 +786,32 @@ export function IssueActivity({
 /** Fixed comment composer (panel footer). */
 export function CommentComposer({
   members,
+  projectId,
   onSubmit,
 }: {
   members: Member[];
-  onSubmit: (body: string, mentionedUserIds: string[]) => Promise<void>;
+  projectId: string;
+  onSubmit: (
+    body: string,
+    mentionedUserIds: string[],
+    attachments: AttachmentInput[]
+  ) => Promise<void>;
 }) {
   const t = useTranslations("Timeline");
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  const uploads = useAttachmentUploads(() => `projects/${projectId}`);
+  const drop = useFileDrop(uploads.addFiles);
+
+  const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
 
   const submit = async () => {
-    const body = draft.trim();
-    if (!body) return;
+    if (!canPost) return;
     setPosting(true);
     try {
-      await onSubmit(body, extractMentions(draft, members));
+      await onSubmit(draft.trim(), extractMentions(draft, members), uploads.inputs);
       setDraft("");
+      uploads.clear();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -731,7 +820,26 @@ export function CommentComposer({
   };
 
   return (
-    <div className="w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring">
+    <div
+      className={cn(
+        "relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring",
+        drop.dragging && "border-brand"
+      )}
+      onPaste={pasteFileHandler(uploads.addFiles)}
+      {...drop.handlers}
+    >
+      <DropOverlay show={drop.dragging} />
+      {/* Attachments are context — they sit ABOVE the text being written. */}
+      <AttachmentPills
+        attachments={uploads.pending.filter((p) => p.status === "done")}
+        pending={uploads.pending}
+        onRemove={(a) => {
+          const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
+          if (match) uploads.remove(match.localId);
+        }}
+        onRemovePending={uploads.remove}
+        className="px-3.5 pt-2.5"
+      />
       <MentionTextarea
         value={draft}
         onChange={setDraft}
@@ -745,17 +853,18 @@ export function CommentComposer({
       {/* Dictate sits where the Comment button lives while the composer is
           empty, and slides to its left once there is text to post. */}
       <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
+        <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         <DictateButton
           onTranscription={(text) =>
             setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
           }
           disabled={posting}
         />
-        {(draft.trim() || posting) && (
+        {(canPost || posting) && (
           <Button
             size="sm"
             className="rounded-full px-4"
-            disabled={posting || !draft.trim()}
+            disabled={posting || !canPost}
             onClick={() => void submit()}
           >
             {posting && <Spinner />}

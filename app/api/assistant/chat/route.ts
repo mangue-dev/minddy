@@ -22,11 +22,16 @@ import {
 } from "@/lib/server/assistant/prompt";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
 import {
+  getModelInputModalities,
   modelSupportsCaching,
   processChat,
+  type ChatContentPart,
   type ChatMessage,
 } from "@/lib/server/assistant/loop";
+import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
+import { parseAttachmentsInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
+import type { AttachmentInput } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -97,6 +102,17 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
   const sanitizedUserMessage = sanitizeAssistantMessageContent(message);
+
+  // Shell attachments: the client uploaded them under its own chat/ prefix;
+  // the descriptors ride the request and live on the message's metadata.
+  const attachments = parseAttachmentsInput(
+    body.attachments,
+    `chat/${user.id}/`,
+    5
+  );
+  if (attachments === null) {
+    return Response.json({ error: "Invalid attachments" }, { status: 400 });
+  }
 
   const service = getServiceClient();
 
@@ -222,6 +238,7 @@ export async function POST(request: NextRequest) {
     role: "user",
     content: sanitizedUserMessage,
     context: pageContext,
+    metadata: attachments.length > 0 ? { attachments } : {},
   });
 
   if (userMsgError) {
@@ -261,7 +278,7 @@ export async function POST(request: NextRequest) {
   // Load conversation history
   const { data: history } = await supabase
     .from("assistant_messages")
-    .select("role, content, tool_calls, tool_call_id, tool_name")
+    .select("role, content, tool_calls, tool_call_id, tool_name, metadata")
     .eq("conversation_id", convId)
     .order("created_at", { ascending: true })
     .limit(30);
@@ -270,7 +287,7 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY ?? "";
   const supportsCache = await modelSupportsCaching(model, apiKey);
   const systemMessage: ChatMessage = supportsCache
-    ? ({
+    ? {
         role: "system",
         content: [
           {
@@ -279,16 +296,48 @@ export async function POST(request: NextRequest) {
             cache_control: { type: "ephemeral" },
           },
         ],
-      } as unknown as ChatMessage)
+      }
     : { role: "system", content: systemPrompt };
 
   const chatMessages: ChatMessage[] = [systemMessage];
 
+  // Attachments persisted on a user row's metadata (validated at write time).
+  const rowAttachments = (msg: { role: string; metadata: unknown }): AttachmentInput[] => {
+    if (msg.role !== "user") return [];
+    const meta = msg.metadata as { attachments?: unknown } | null;
+    return Array.isArray(meta?.attachments)
+      ? (meta.attachments as AttachmentInput[])
+      : [];
+  };
+
   if (history) {
-    for (const msg of history) {
+    // Heavy parts (PDF base64, CSV excerpts) go only with the LATEST user
+    // message; older images stay (cheap signed URLs), the rest degrade to
+    // text notes inside buildAttachmentParts.
+    const lastUserIdx = history.reduce(
+      (acc, m, i) => (m.role === "user" ? i : acc),
+      -1
+    );
+    const modalities = history.some((m) => rowAttachments(m).length > 0)
+      ? await getModelInputModalities(model, apiKey)
+      : null;
+
+    for (const [i, msg] of history.entries()) {
+      const sanitized = sanitizeAssistantMessageContent(msg.content);
+      const atts = rowAttachments(msg);
+      let content: string | ChatContentPart[] = sanitized;
+      if (atts.length > 0 && modalities) {
+        content = [
+          { type: "text", text: sanitized },
+          ...(await buildAttachmentParts(service, atts, {
+            modalities,
+            includeHeavy: i === lastUserIdx,
+          })),
+        ];
+      }
       chatMessages.push({
         role: msg.role as ChatMessage["role"],
-        content: sanitizeAssistantMessageContent(msg.content),
+        content,
         tool_calls: msg.tool_calls || undefined,
         tool_call_id: msg.tool_call_id || undefined,
         name: msg.tool_name || undefined,

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Comment, IssueEvent } from "./types";
+import type { AttachmentInput, Comment, IssueEvent } from "./types";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -30,7 +30,8 @@ export async function addCommentApi(
   issueId: string,
   body: string,
   mentionedUserIds: string[] = [],
-  parentId: string | null = null
+  parentId: string | null = null,
+  attachments: AttachmentInput[] = []
 ): Promise<Comment> {
   return parseJson<Comment>(
     await fetch(`/api/issues/${issueId}/comments`, {
@@ -40,9 +41,22 @@ export async function addCommentApi(
         body,
         mentioned_user_ids: mentionedUserIds,
         parent_id: parentId,
+        attachments,
       }),
     })
   );
+}
+
+export async function deleteAttachmentApi(attachmentId: string): Promise<void> {
+  const response = await fetch(`/api/attachments/${attachmentId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      (data as { error?: string } | null)?.error || "Delete failed"
+    );
+  }
 }
 
 export async function updateCommentApi(commentId: string, body: string): Promise<Comment> {

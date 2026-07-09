@@ -12,6 +12,7 @@ import {
 } from "@/components/ai-elements/message";
 import { ToolCallList } from "./tool-call-display";
 import { PageContextBadge } from "./page-context-badge";
+import { AttachmentPills, type AttachmentLike } from "@/components/attachments";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -121,6 +122,14 @@ export function ChatMessage({
             {message.context &&
               (message.context.issueId || message.context.objectiveId) && (
                 <PageContextBadge context={message.context} />
+              )}
+            {Array.isArray(message.metadata?.attachments) &&
+              message.metadata.attachments.length > 0 && (
+                <AttachmentPills
+                  variant="ultra-compact"
+                  attachments={message.metadata.attachments as AttachmentLike[]}
+                  className="justify-end"
+                />
               )}
             {message.content && (
               <>

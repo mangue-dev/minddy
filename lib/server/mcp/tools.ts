@@ -28,6 +28,7 @@ import {
 } from "@/lib/server/issue-relations";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { addCommentToIssue } from "@/lib/server/add-comment";
+import { uploadAttachment } from "@/lib/server/attachments";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
@@ -356,8 +357,10 @@ export function registerMinddyTools(server: McpServer): void {
         "effort, assignee, objective, due date, parent), its implementation plan " +
         "(raw markdown plus parsed plan_tasks with stable task_index for " +
         "minddy_update_plan_task, and plan_progress), comments with author names, " +
-        "sub-issues, and the last activity events (status changes, reassignments…) " +
-        "with resolved actors — 'what happened on this issue?'.",
+        "attachment metadata (file name/type/size, on the issue and on each " +
+        "comment — add files with minddy_add_attachment), sub-issues, and the last " +
+        "activity events (status changes, reassignments…) with resolved actors — " +
+        "'what happened on this issue?'.",
       inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
       annotations: READ_ONLY,
     },
@@ -824,7 +827,8 @@ export function registerMinddyTools(server: McpServer): void {
       description:
         "Post a markdown comment on an issue — e.g. to report progress or leave a " +
         "note for the team. The timeline shows the agent as the author (this API " +
-        "key's name with an '(mcp)' marker), not the key's owner.",
+        "key's name with an '(mcp)' marker), not the key's owner. To attach a file " +
+        "to the comment, call minddy_add_attachment with the returned comment id.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
@@ -846,6 +850,98 @@ export function registerMinddyTools(server: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });
+    }
+  );
+
+  server.registerTool(
+    "minddy_add_attachment",
+    {
+      title: "Add attachment",
+      description:
+        "Attach a file to an issue, or to one of its comments (pass comment_id — " +
+        "e.g. the id minddy_add_comment returned). Content is sent inline as " +
+        "base64, 10 MB max after decoding. The file lands in minddy's private " +
+        "storage and shows as a pill in the app; minddy_get_issue lists the " +
+        "attachment metadata.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issue: ISSUE_REF,
+        comment_id: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            "Attach to this comment of the issue instead of the issue itself."
+          ),
+        file_name: z
+          .string()
+          .min(1)
+          .max(200)
+          .describe("Display name, extension included (e.g. 'screenshot.png')."),
+        mime_type: z
+          .string()
+          .max(120)
+          .optional()
+          .describe("MIME type; defaults to application/octet-stream."),
+        content_base64: z
+          .string()
+          .min(1)
+          .max(14_000_000)
+          .describe("File content, base64-encoded (no 'data:' prefix)."),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in ref) return ref.error;
+
+      const normalized = args.content_base64.replace(/\s/g, "");
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+        return fail("invalid_params", "content_base64 is not valid base64.");
+      }
+      const data = Buffer.from(normalized, "base64");
+      if (data.byteLength === 0) {
+        return fail("invalid_params", "Empty file.");
+      }
+      if (data.byteLength > 10 * 1024 * 1024) {
+        return fail("invalid_params", "File exceeds the 10 MB cap.");
+      }
+
+      if (args.comment_id) {
+        const { data: comment } = await getServiceClient()
+          .from("comments")
+          .select("id, issue_id")
+          .eq("id", args.comment_id)
+          .maybeSingle();
+        if (!comment || comment.issue_id !== ref.issue.id) {
+          return fail("not_found", "Comment not found on this issue.");
+        }
+      }
+
+      try {
+        const attachment = await uploadAttachment(getServiceClient(), {
+          projectId: scope.access.project.id,
+          issueId: ref.issue.id,
+          commentId: args.comment_id ?? null,
+          createdBy: scope.userId,
+          fileName: args.file_name,
+          mimeType: args.mime_type,
+          data,
+        });
+        return ok({
+          attachment: {
+            id: attachment.id,
+            file_name: attachment.file_name,
+            mime_type: attachment.mime_type,
+            size_bytes: attachment.size_bytes,
+            comment_id: attachment.comment_id,
+          },
+        });
+      } catch (e) {
+        return fail("database_error", (e as Error).message);
+      }
     }
   );
 

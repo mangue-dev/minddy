@@ -45,6 +45,7 @@ import { ConversationList } from "@/components/assistant/conversation-list";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import type { AssistantPageContext } from "@/lib/assistant-types";
+import type { AttachmentInput } from "@/lib/types";
 
 const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
 
@@ -271,9 +272,10 @@ export const AssistantShell = forwardRef<
   );
 
   const handleSend = useCallback(
-    (message: string) => {
+    (message: string, attachments: AttachmentInput[] = []) => {
       sendMessage(projectId, message, {
         pageContext: pageContextRef.current,
+        attachments,
       });
     },
     [projectId, sendMessage]

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const { data, error } = await auth.supabase
     .from("comments")
-    .select("*")
+    .select("*, attachments(*)")
     .eq("issue_id", id)
     .order("created_at", { ascending: true });
 
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     body?: unknown;
     mentioned_user_ids?: unknown;
     parent_id?: unknown;
+    attachments?: unknown;
   };
 
   const result = await addCommentToIssue({
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     mentionedUserIds: Array.isArray(input.mentioned_user_ids)
       ? input.mentioned_user_ids.filter((v): v is string => typeof v === "string")
       : [],
+    attachments: input.attachments,
   });
   if (!result.ok) {
     const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");

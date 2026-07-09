@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
 import {
+  Spinner,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -66,6 +67,10 @@ import {
 } from "@/components/issue-field-shortcuts";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
 import { useAuth } from "@/lib/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { DropOverlay, useFileDrop } from "@/components/attachments";
+import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { addIssueAttachmentsApi } from "@/lib/use-issue-attachments";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -673,9 +678,30 @@ export function IssueCard({
 }) {
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
+  const tAttach = useTranslations("Attachments");
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
+
+  // Drop de fichiers depuis l'OS directement sur la carte (MIN-24) — chaque
+  // fichier est enregistré sur l'issue dès que son upload aboutit. Distinct du
+  // drag dnd-kit (pointer events) : aucun conflit.
+  const identifier = issueIdentifier(projectKey, issue.number);
+  const uploads = useAttachmentUploads(() => `projects/${issue.project_id}`, {
+    onUploaded: (input, localId) => {
+      addIssueAttachmentsApi(issue.id, [input])
+        .then(() => {
+          void queryClient.invalidateQueries({
+            queryKey: ["issue-attachments", issue.id],
+          });
+          toast.success(tAttach("addedTo", { id: identifier }));
+        })
+        .catch((e) => toast.error((e as Error).message))
+        .finally(() => uploads.remove(localId));
+    },
+  });
+  const drop = useFileDrop(uploads.addFiles);
   // Menu contextuel (clic droit) — position viewport du pointeur, null = fermé.
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
     null
@@ -770,10 +796,21 @@ export function IssueCard({
         pointerRef.current = { x: e.clientX, y: e.clientY };
         setMenuPosition(pointerRef.current);
       }}
+      {...drop.handlers}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
-      className={cn("cursor-pointer", isDragging && "opacity-40")}
+      className={cn("relative cursor-pointer rounded-xl", isDragging && "opacity-40")}
     >
+      <DropOverlay
+        show={drop.dragging}
+        label={tAttach("dropOnIssue", { id: identifier })}
+      />
+      {/* Upload dropped on the card still in flight — discreet corner spinner. */}
+      {!drop.dragging && uploads.pending.length > 0 && (
+        <span className="absolute right-2 top-2 z-10 flex size-5 items-center justify-center rounded-full border border-border bg-card shadow-sm">
+          <Spinner className="size-3" />
+        </span>
+      )}
       <IssueCardBody
         issue={issue}
         projectKey={projectKey}

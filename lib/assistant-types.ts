@@ -32,6 +32,8 @@ export interface AssistantMessage {
   tool_calls: AssistantToolCall[] | null;
   tool_call_id: string | null;
   tool_name: string | null;
+  /** On user messages, `metadata.attachments` carries the files sent with the
+      message (AttachmentInput[] shape) — chat files have no DB row. */
   metadata: Record<string, unknown>;
   /**
    * The page context the message was sent with (open issue, board onglet…),
@@ -102,4 +104,15 @@ export interface AssistantChatRequest {
    * Carried on the messages of the originating session.
    */
   pageContext?: AssistantPageContext;
+  /**
+   * Files already uploaded to the `attachments` bucket under `chat/{uid}/…`
+   * (AttachmentInput[] shape) — validated server-side against that prefix and
+   * persisted on the user message's metadata.
+   */
+  attachments?: Array<{
+    storage_path: string;
+    file_name: string;
+    mime_type: string;
+    size_bytes: number;
+  }>;
 }

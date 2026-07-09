@@ -105,8 +105,13 @@ export default function TriagePage() {
   const [message, setMessage] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
 
-  const { items: timelineItems, addComment, updateComment, deleteComment } =
-    useIssueTimeline(selected?.id ?? null);
+  const {
+    items: timelineItems,
+    addComment,
+    updateComment,
+    deleteComment,
+    deleteAttachment,
+  } = useIssueTimeline(selected?.id ?? null);
 
   // Keep a valid selection: default to the first pending issue, and when the
   // selected one leaves triage (accepted/declined/duplicate) move on to the next.
@@ -444,14 +449,22 @@ export default function TriagePage() {
                     projectKey: project.key,
                   }}
                   currentUserId={user?.id ?? null}
-                  onReply={(parentId, body, mentions) =>
-                    addComment(body, mentions, parentId)
+                  projectId={projectId}
+                  onReply={(parentId, body, mentions, attachments) =>
+                    addComment(body, mentions, parentId, attachments)
                   }
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
+                  onDeleteAttachment={deleteAttachment}
                 />
 
-                <CommentComposer members={members} onSubmit={addComment} />
+                <CommentComposer
+                  members={members}
+                  projectId={projectId}
+                  onSubmit={(body, mentions, attachments) =>
+                    addComment(body, mentions, null, attachments)
+                  }
+                />
               </div>
             </div>
           </>

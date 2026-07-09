@@ -23,7 +23,13 @@ import {
   type CommentPromptThreadEntry,
 } from "./prompt";
 import { gatherProjectPromptContext } from "./prompt-context";
-import { serializeToolResult, type ChatMessage } from "./loop";
+import { buildAttachmentParts, type PromptAttachment } from "./attachment-parts";
+import {
+  getModelInputModalities,
+  serializeToolResult,
+  type ChatContentPart,
+  type ChatMessage,
+} from "./loop";
 
 // ── @Numo in comments (fire and forget, Linear-style) ───────────────────
 // A comment mentioning @numo spawns this agent AFTER the HTTP response (via
@@ -145,27 +151,48 @@ export async function runCommentMention({
     };
 
     // ── Gather prompt context ────────────────────────────────────────────
-    const [promptProject, { data: threadRows }] = await Promise.all([
-      gatherProjectPromptContext({
-        supabase,
-        service,
-        project: access.project as unknown as {
-          id: string;
-          name: string;
-          key: string;
-          owner_id: string;
-        },
-      }),
-      // The LAST 20 comments (that's where the live discussion is), re-sorted
-      // chronologically below for the prompt.
-      service
-        .from("comments")
-        .select("author_id, body, via_assistant, created_at")
-        .eq("issue_id", issueId)
-        .neq("id", replyId)
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+    const [promptProject, { data: threadRows }, { data: attachmentRows }] =
+      await Promise.all([
+        gatherProjectPromptContext({
+          supabase,
+          service,
+          project: access.project as unknown as {
+            id: string;
+            name: string;
+            key: string;
+            owner_id: string;
+          },
+        }),
+        // The LAST 20 comments (that's where the live discussion is), re-sorted
+        // chronologically below for the prompt.
+        service
+          .from("comments")
+          .select("id, author_id, body, via_assistant, created_at")
+          .eq("issue_id", issueId)
+          .neq("id", replyId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        // Every attachment of the issue in one query — thread lines name them,
+        // the trigger comment's (+ issue-level ones) feed the model directly.
+        service
+          .from("attachments")
+          .select("comment_id, storage_path, file_name, mime_type, size_bytes")
+          .eq("issue_id", issueId)
+          .order("created_at", { ascending: true }),
+      ]);
+
+    const attachmentsByComment = new Map<string | null, PromptAttachment[]>();
+    for (const row of attachmentRows ?? []) {
+      const key = (row.comment_id as string | null) ?? null;
+      const list = attachmentsByComment.get(key) ?? [];
+      list.push({
+        storage_path: row.storage_path as string,
+        file_name: row.file_name as string,
+        mime_type: row.mime_type as string,
+        size_bytes: row.size_bytes as number,
+      });
+      attachmentsByComment.set(key, list);
+    }
 
     const recentComments = [...(threadRows ?? [])].reverse();
     const authorIds = recentComments.map((c) => c.author_id as string);
@@ -176,6 +203,9 @@ export async function runCommentMention({
     const thread: CommentPromptThreadEntry[] = recentComments.map((c) => ({
       author: authorName(c.author_id as string | null, !!c.via_assistant),
       body: (c.body as string) ?? "",
+      attachments: attachmentsByComment
+        .get(c.id as string)
+        ?.map((a) => a.file_name),
     }));
 
     const categories = (issue.issue_categories ?? []) as Array<{
@@ -200,23 +230,51 @@ export async function runCommentMention({
       locale,
     });
 
+    // Model resolved here (not in runLoop) so its input modalities can gate
+    // the attachment parts below.
+    const cfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
+    const model =
+      cfg["assistant_model"]?.trim() ||
+      cfg["fallback_model"]?.trim() ||
+      "deepseek/deepseek-v4-flash";
+
+    const triggerText = `${authorName(actorId)} ${
+      trigger === "reply"
+        ? "replied to your comment"
+        : "mentioned you in a comment"
+    } on ${issueIdentifier(
+      access.project.key,
+      issue.number as number
+    )}:\n"""\n${triggerRow.body as string}\n"""`;
+
+    // Files the model gets to actually look at: the trigger comment's, then
+    // the issue-level ones — capped to keep the request bounded.
+    const directAttachments = [
+      ...(attachmentsByComment.get(triggerCommentId) ?? []),
+      ...(attachmentsByComment.get(null) ?? []),
+    ].slice(0, 5);
+
+    let triggerContent: string | ChatContentPart[] = triggerText;
+    if (directAttachments.length > 0) {
+      const apiKey = process.env.OPENROUTER_API_KEY ?? "";
+      const modalities = await getModelInputModalities(model, apiKey);
+      triggerContent = [
+        { type: "text", text: triggerText },
+        ...(await buildAttachmentParts(service, directAttachments, {
+          modalities,
+          includeHeavy: true,
+        })),
+      ];
+    }
+
     const messages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: `${authorName(actorId)} ${
-          trigger === "reply"
-            ? "replied to your comment"
-            : "mentioned you in a comment"
-        } on ${issueIdentifier(
-          access.project.key,
-          issue.number as number
-        )}:\n"""\n${triggerRow.body as string}\n"""`,
-      },
+      { role: "user", content: triggerContent },
     ];
 
     // ── Agent loop (streamed, in-memory only — nothing persisted per round)
     const finalContent = await runLoop(messages, {
+      model,
       projectId: issue.project_id as string,
       userId: actorId,
       supabase,
@@ -281,6 +339,7 @@ export async function runCommentMention({
 async function runLoop(
   messages: ChatMessage[],
   ctx: {
+    model: string;
     projectId: string;
     userId: string;
     supabase: SupabaseClient;
@@ -293,12 +352,6 @@ async function runLoop(
 ): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured");
-
-  const cfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
-  const model =
-    cfg["assistant_model"]?.trim() ||
-    cfg["fallback_model"]?.trim() ||
-    "deepseek/deepseek-v4-flash";
 
   let finalContent = "";
   let continueLoop = true;
@@ -319,7 +372,7 @@ async function runLoop(
         "X-Title": "Numo (minddy)",
       },
       body: JSON.stringify({
-        model,
+        model: ctx.model,
         messages,
         stream: true,
         max_tokens: 4096,

@@ -85,7 +85,24 @@
     "relationSelf": "Un ticket ne peut pas être lié à lui-même.",
     "relationNotFound": "Relation introuvable.",
     "passwordRequired": "Un mot de passe est requis.",
-    "invalidShareLevel": "Niveau de partage invalide."
+    "invalidShareLevel": "Niveau de partage invalide.",
+    "attachmentNotFound": "Pièce jointe introuvable",
+    "attachmentInvalid": "Pièces jointes invalides."
+  },
+  "Attachments": {
+    "attach": "Joindre des fichiers",
+    "sectionTitle": "Pièces jointes",
+    "download": "Télécharger",
+    "remove": "Retirer",
+    "preview": "Aperçu",
+    "uploadFailed": "Impossible d'envoyer {name}.",
+    "tooLarge": "{name} dépasse {max} Mo.",
+    "tooMany": "Maximum {max} fichiers.",
+    "dropHere": "Déposer pour joindre",
+    "dropOnIssue": "Joindre à {id}",
+    "addedTo": "Pièce jointe ajoutée à {id}.",
+    "kb": "Ko",
+    "mb": "Mo"
   },
   "Assistant": {
     "title": "Demander à Numo",
