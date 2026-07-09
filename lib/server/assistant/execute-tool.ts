@@ -28,22 +28,11 @@ import {
 import {
   ensureCycles,
   fillCycleForUser,
+  getCycleOverview,
   getCyclePrefsForUser,
   toCycleInfo,
-  CYCLE_OPEN_STATUSES,
-  type CycleRow,
 } from "@/lib/server/cycles";
-import {
-  blockedSet,
-  cycleCompletionPercent,
-  cycleFilledPoints,
-  effortToPoints,
-  recoScore,
-  todayISO,
-  type FillWeights,
-  type RecoIssue,
-} from "@/lib/cycle";
-import type { IssueRelation } from "@/lib/types";
+import { todayISO, type FillWeights } from "@/lib/cycle";
 import {
   assertIssueInProject,
   getIssue,
@@ -688,27 +677,6 @@ function parseFillWeights(args: Record<string, unknown>): FillWeights {
   };
 }
 
-/** Issues of a cycle, with human identifiers ("MIN-42") for Numo. */
-async function listCycleIssues(ctx: ToolContext, cycleId: string) {
-  const { data } = await ctx.service
-    .from("issues")
-    .select("id, project_id, number, title, status, priority, effort, projects(key)")
-    .eq("cycle_id", cycleId)
-    .order("number", { ascending: true });
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    identifier: issueIdentifier(
-      ((row.projects as { key?: string } | null)?.key ?? "").toString(),
-      row.number as number
-    ),
-    title: row.title as string,
-    status: row.status as string,
-    priority: row.priority as string,
-    effort: (row.effort as string | null) ?? null,
-    project_id: row.project_id as string,
-  }));
-}
-
 function parseIssueIds(args: Record<string, unknown>): string[] | null {
   const raw = args.issue_ids;
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 50) return null;
@@ -736,91 +704,20 @@ async function executeCycleTool(
   const current = ensured.current;
 
   if (toolName === "get_cycle") {
-    const which = args.which === "next" || args.which === "previous" ? args.which : "current";
-    const cycle: CycleRow | null =
-      which === "next"
-        ? ensured.upcoming[0] ?? null
-        : which === "previous"
-          ? ensured.past[0] ?? null
-          : current;
-    if (!cycle) return toolError(`No ${which} cycle exists.`);
-
-    const issues = await listCycleIssues(ctx, cycle.id);
-    const pointed = issues.map((i) => ({
-      effort: (i.effort as RecoIssue["effort"]) ?? null,
-      status: i.status as RecoIssue["status"],
-    }));
-    const filledPoints = cycleFilledPoints(pointed);
-    const completionPercent = cycleCompletionPercent(pointed);
-
-    // Best next candidates from the assigned pool, reco-ordered (top 10).
-    const { data: poolRows } = await ctx.service
-      .from("issues")
-      .select(
-        "id, project_id, number, title, status, priority, effort, issue_categories(category_id), projects!inner(key, deleted_at)"
-      )
-      .eq("assignee_id", ctx.userId)
-      .is("cycle_id", null)
-      .in("status", CYCLE_OPEN_STATUSES as string[])
-      .is("projects.deleted_at", null);
-    const pool: (RecoIssue & { number: number; key: string })[] = (poolRows ?? []).map(
-      (row) => ({
-        id: row.id as string,
-        project_id: row.project_id as string,
-        title: (row.title as string) ?? "",
-        status: row.status as RecoIssue["status"],
-        priority: row.priority as RecoIssue["priority"],
-        effort: (row.effort as RecoIssue["effort"]) ?? null,
-        category_ids: ((row.issue_categories ?? []) as { category_id: string }[]).map(
-          (c) => c.category_id
-        ),
-        number: row.number as number,
-        key: ((row.projects as { key?: string } | null)?.key ?? "").toString(),
-      })
-    );
-    const { data: relationRows } = pool.length
-      ? await ctx.service
-          .from("issue_relations")
-          .select("id, source_id, target_id, type")
-          .eq("type", "blocks")
-          .in(
-            "target_id",
-            pool.map((c) => c.id)
-          )
-      : { data: [] };
-    const statusById = new Map(pool.map((c) => [c.id, c.status]));
-    const blocked = blockedSet(
-      pool.map((c) => c.id),
-      (relationRows ?? []) as IssueRelation[],
-      statusById
-    );
-    const candidates = pool
-      .map((c) => ({ c, score: recoScore(c, blocked.has(c.id)) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10)
-      .map(({ c }) => ({
-        id: c.id,
-        identifier: issueIdentifier(c.key, c.number),
-        title: c.title,
-        status: c.status,
-        priority: c.priority,
-        effort: c.effort,
-        blocked: blocked.has(c.id),
-        points: effortToPoints(c.effort),
-      }));
-
+    const which =
+      args.which === "next" || args.which === "previous" ? args.which : "current";
+    const r = await getCycleOverview({
+      service: ctx.service,
+      userId: ctx.userId,
+      prefs,
+      which,
+    });
+    if (!r.ok) return toolError(r.error);
     return {
       result: {
-        which,
-        cycle: {
-          ...toCycleInfo(cycle),
-          filled_points: filledPoints,
-          completion_percent: completionPercent,
-          intensity_note:
-            "Points are internal — talk to the user in effort sizes or % of capacity.",
-        },
-        issues,
-        candidates,
+        ...r.overview,
+        intensity_note:
+          "Points are internal — talk to the user in effort sizes or % of capacity.",
       },
       success: true,
     };

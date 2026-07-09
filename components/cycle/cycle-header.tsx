@@ -152,8 +152,10 @@ function RingStat({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+          {/* The arc caps at a full circle, but the number is honest — an
+              overfilled cycle reads 115%, not a lying 100%. */}
           <ProgressRing percent={percent} colorClass={colorClass} />
-          {Math.min(100, percent)}%
+          {percent}%
         </span>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>

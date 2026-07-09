@@ -30,6 +30,13 @@ import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { addCommentToIssue } from "@/lib/server/add-comment";
 import { uploadAttachment } from "@/lib/server/attachments";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
+import {
+  ensureCycles,
+  fillCycleForUser,
+  getCycleOverview,
+  getCyclePrefsForUser,
+} from "@/lib/server/cycles";
+import { todayISO } from "@/lib/cycle";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
 import {
@@ -1093,6 +1100,274 @@ export function registerMinddyTools(server: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });
+    }
+  );
+
+  // ── Cycles (MIN-32) — le cycle personnel cross-projet du propriétaire de
+  // la clé. Pas de project_id sur les lectures/fill (le cycle traverse les
+  // projets) ; add/remove résolvent leurs références d'issues dans UN projet,
+  // comme tous les autres tools — appeler une fois par projet si besoin.
+  // Mêmes cœurs que Numo (lib/server/cycles.ts) : parité par construction.
+
+  /** Garde commune des tools cycle : auth + prefs (cycles activés). */
+  async function requireCycle(
+    extra: ToolExtra
+  ): Promise<
+    | { userId: string; keyId: string | null; prefs: Awaited<ReturnType<typeof getCyclePrefsForUser>> }
+    | { error: ToolResult }
+  > {
+    const auth = requireUser(extra);
+    if ("error" in auth) return auth;
+    const prefs = await getCyclePrefsForUser(getServiceClient(), auth.userId);
+    if (!prefs.enabled) {
+      return {
+        error: fail(
+          "cycles_disabled",
+          "Cycles are not enabled for this account. The owner can enable them in Account → Cycles."
+        ),
+      };
+    }
+    return { userId: auth.userId, keyId: auth.keyId, prefs };
+  }
+
+  server.registerTool(
+    "minddy_get_cycle",
+    {
+      title: "Get cycle",
+      description:
+        "Read the key owner's cycle: their PERSONAL, CROSS-PROJECT week/fortnight " +
+        "('what am I working on right now'), identified by its dates. Returns the " +
+        "cycle (dates, intensity, capacity target and filled points, completion %), " +
+        "the issues in it (with identifiers, across all projects), and the best " +
+        "next candidates from their assigned pool (reco-scored, `blocks` relations " +
+        "respected). Points are an internal capacity unit — talk to humans in " +
+        "effort sizes or percentages, never raw points. Reading also reconciles " +
+        "the timeline (cycle creation, rollover, one-shot auto-fill).",
+      inputSchema: {
+        which: z
+          .enum(["current", "next", "previous"])
+          .optional()
+          .describe("Which cycle to read. Default: current."),
+      },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireCycle(extra);
+      if ("error" in scope) return scope.error;
+      const r = await getCycleOverview({
+        service: getServiceClient(),
+        userId: scope.userId,
+        prefs: scope.prefs,
+        which: args.which,
+      });
+      if (!r.ok) return fail("not_found", r.error);
+      return ok(r.overview);
+    }
+  );
+
+  server.registerTool(
+    "minddy_fill_cycle",
+    {
+      title: "Fill cycle",
+      description:
+        "Top up the key owner's CURRENT cycle with the deterministic engine: it " +
+        "picks from the issues assigned to them (no cycle yet, open status), by " +
+        "priority + unblocked (`blocks` relations respected) + smallest first, " +
+        "until the capacity target is reached. The optional weights steer the " +
+        "scoring ('prioritize UI fixes' → keyword/category boosts) — they bias " +
+        "the same deterministic engine, they NEVER force a pick. Weights default " +
+        "to 1; boosts are additive score points (10–100 = mild–strong).",
+      inputSchema: {
+        priority_weight: z
+          .number()
+          .positive()
+          .optional()
+          .describe("Multiplier on the issue-priority component (default 1)."),
+        unblocked_weight: z
+          .number()
+          .positive()
+          .optional()
+          .describe("Multiplier on the not-blocked bonus (default 1)."),
+        small_first_weight: z
+          .number()
+          .positive()
+          .optional()
+          .describe("Multiplier on the smallest-first component (default 1)."),
+        project_boosts: z
+          .array(z.object({ project_id: z.string().uuid(), weight: z.number() }))
+          .optional()
+          .describe("Additive boost per project id."),
+        category_boosts: z
+          .array(z.object({ category_id: z.string().uuid(), weight: z.number() }))
+          .optional()
+          .describe("Additive boost per category id."),
+        keyword_boosts: z
+          .array(z.object({ keyword: z.string().min(1), weight: z.number() }))
+          .optional()
+          .describe("Additive boost when the issue title contains the keyword."),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireCycle(extra);
+      if ("error" in scope) return scope.error;
+      const service = getServiceClient();
+      const ensured = await ensureCycles({
+        service,
+        userId: scope.userId,
+        prefs: scope.prefs,
+        today: todayISO(),
+      });
+      if (!ensured.current) return fail("not_found", "No current cycle exists yet.");
+
+      const toBoostMap = (
+        rows: Array<Record<string, unknown>> | undefined,
+        idKey: string
+      ): Record<string, number> | undefined => {
+        if (!rows?.length) return undefined;
+        return Object.fromEntries(rows.map((r) => [r[idKey] as string, r.weight as number]));
+      };
+      const { pickedIds, points } = await fillCycleForUser({
+        service,
+        userId: scope.userId,
+        actorId: scope.userId,
+        cycle: ensured.current,
+        weights: {
+          priority: args.priority_weight,
+          unblocked: args.unblocked_weight,
+          small: args.small_first_weight,
+          projectBoost: toBoostMap(args.project_boosts, "project_id"),
+          categoryBoost: toBoostMap(args.category_boosts, "category_id"),
+          keywordBoost: args.keyword_boosts,
+        },
+      });
+      return ok({
+        added: pickedIds.length,
+        added_ids: pickedIds,
+        added_points: points,
+        cycle_id: ensured.current.id,
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_add_to_cycle",
+    {
+      title: "Add to cycle",
+      description:
+        "Add issues (1–50) of a project to the key owner's CURRENT cycle. Adding " +
+        "ASSIGNS each issue to the owner as a side-effect; it NEVER changes the " +
+        "status (the cycle is orthogonal to status). Reassigning an issue to " +
+        "someone else later silently drops it from the cycle. The cycle is " +
+        "cross-project — call once per project to add issues from several.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issues: z.array(ISSUE_REF).min(1).max(50),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireCycle(extra);
+      if ("error" in scope) return scope.error;
+      const project = await resolveProject(scope.userId, args.project_id);
+      if ("error" in project) return project.error;
+      const ensured = await ensureCycles({
+        service: getServiceClient(),
+        userId: scope.userId,
+        prefs: scope.prefs,
+        today: todayISO(),
+      });
+      if (!ensured.current) return fail("not_found", "No current cycle exists yet.");
+
+      const added: string[] = [];
+      const failed: Array<{ issue: string; error: string }> = [];
+      for (const ref of args.issues) {
+        const resolved = await resolveIssueRef(project.access, ref);
+        if ("error" in resolved) {
+          failed.push({ issue: ref, error: `Issue '${ref}' not found in this project.` });
+          continue;
+        }
+        const r = await updateIssueFields({
+          issueId: resolved.issue.id,
+          actorId: scope.userId,
+          input: { cycle_id: ensured.current.id },
+          mcpKeyId: scope.keyId,
+        });
+        if (r.ok) added.push(resolved.issue.identifier);
+        else
+          failed.push({
+            issue: resolved.issue.identifier,
+            error: r.rawMessage ?? r.errorKey ?? "update failed",
+          });
+      }
+      return ok({ added, failed, cycle_id: ensured.current.id });
+    }
+  );
+
+  server.registerTool(
+    "minddy_remove_from_cycle",
+    {
+      title: "Remove from cycle",
+      description:
+        "Remove issues (1–50) of a project from the key owner's CURRENT cycle. " +
+        "Assignment and status are untouched — the issues simply leave the cycle. " +
+        "Issues that aren't in the owner's current cycle are reported in `failed`.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issues: z.array(ISSUE_REF).min(1).max(50),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireCycle(extra);
+      if ("error" in scope) return scope.error;
+      const project = await resolveProject(scope.userId, args.project_id);
+      if ("error" in project) return project.error;
+      const service = getServiceClient();
+      const ensured = await ensureCycles({
+        service,
+        userId: scope.userId,
+        prefs: scope.prefs,
+        today: todayISO(),
+      });
+      if (!ensured.current) return fail("not_found", "No current cycle exists yet.");
+
+      const removed: string[] = [];
+      const failed: Array<{ issue: string; error: string }> = [];
+      for (const ref of args.issues) {
+        const resolved = await resolveIssueRef(project.access, ref);
+        if ("error" in resolved) {
+          failed.push({ issue: ref, error: `Issue '${ref}' not found in this project.` });
+          continue;
+        }
+        // Only pull issues out of the owner's OWN current cycle — project
+        // access alone must not allow draining someone else's cycle.
+        const { data: row } = await service
+          .from("issues")
+          .select("cycle_id")
+          .eq("id", resolved.issue.id)
+          .maybeSingle();
+        if (!row || row.cycle_id !== ensured.current.id) {
+          failed.push({
+            issue: resolved.issue.identifier,
+            error: "Not in the owner's current cycle.",
+          });
+          continue;
+        }
+        const r = await updateIssueFields({
+          issueId: resolved.issue.id,
+          actorId: scope.userId,
+          input: { cycle_id: null },
+          mcpKeyId: scope.keyId,
+        });
+        if (r.ok) removed.push(resolved.issue.identifier);
+        else
+          failed.push({
+            issue: resolved.issue.identifier,
+            error: r.rawMessage ?? r.errorKey ?? "update failed",
+          });
+      }
+      return ok({ removed, failed });
     }
   );
 }

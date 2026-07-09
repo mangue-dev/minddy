@@ -6,17 +6,23 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents, type EventRow } from "@/lib/server/issue-events";
 import { resolveCyclePrefs, type CyclePrefs } from "@/lib/cycle-prefs";
 import {
+  blockedSet,
+  calibrationFactor,
   computeTargetPoints,
+  cycleCompletionPercent,
   cycleFilledPoints,
   cycleCompletedPoints,
   cycleWindows,
+  effortToPoints,
   fillCycle,
+  recoScore,
   todayISO,
+  type CalibrationSample,
   type FillWeights,
   type RecoIssue,
 } from "@/lib/cycle";
 import type { CycleInfo, CycleIntensity, IssueRelation } from "@/lib/types";
-import type { IssueStatus } from "@/lib/issue-constants";
+import { issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 
 /**
  * Server cores for Cycles (MIN-32). Cycles have NO cron: everything is
@@ -76,13 +82,14 @@ export function todayInTz(tz: string | null | undefined): string {
 const CYCLE_SELECT =
   "id, user_id, start_date, end_date, intensity, target_points, completed_points, filled_at";
 
-/** Most recent completed_points at this intensity (recent first, ≤3). */
-function calibrationOf(rows: CycleRow[], intensity: CycleIntensity): number[] {
+/** Closed cycles as calibration samples, most recent first. Intensity rides
+    along so lib/cycle can normalize each sample by its own base — the factor
+    then scales all three levels together. */
+function calibrationSamplesOf(rows: CycleRow[]): CalibrationSample[] {
   return rows
-    .filter((r) => r.intensity === intensity && r.completed_points !== null)
+    .filter((r) => r.completed_points !== null)
     .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
-    .slice(0, 3)
-    .map((r) => r.completed_points as number);
+    .map((r) => ({ completed: r.completed_points as number, intensity: r.intensity }));
 }
 
 export interface EnsuredCycles {
@@ -168,7 +175,10 @@ async function reconcileCycles({
     rows.find((r) => r.start_date <= today && today < r.end_date) ?? null;
   const windows = cycleWindows(cadence, today, prefs.upcomingCount);
   const currentEnd = existingCurrent?.end_date ?? windows[0].end_date;
-  const target = computeTargetPoints(prefs.intensity, calibrationOf(rows, prefs.intensity));
+  const target = computeTargetPoints(
+    prefs.intensity,
+    calibrationFactor(calibrationSamplesOf(rows))
+  );
   const missing = windows.filter(
     (w) =>
       (w.start_date === windows[0].start_date
@@ -388,6 +398,145 @@ export async function getCyclePrefsForUser(
   return resolveCyclePrefs(
     (data?.user?.user_metadata ?? null) as Record<string, unknown> | null
   );
+}
+
+export interface CycleIssueSummary {
+  id: string;
+  identifier: string;
+  title: string;
+  status: string;
+  priority: string;
+  effort: string | null;
+  project_id: string;
+}
+
+export interface CycleOverview {
+  which: "current" | "next" | "previous";
+  cycle: CycleInfo & {
+    filled_points: number;
+    completion_percent: number | null;
+  };
+  issues: CycleIssueSummary[];
+  /** Best next candidates from the user's assigned pool, reco-ordered (≤10). */
+  candidates: Array<CycleIssueSummary & { blocked: boolean; points: number }>;
+}
+
+/**
+ * One cycle with its content and the reco-ordered pool — the shared read
+ * behind Numo's get_cycle and the MCP's minddy_get_cycle (agent parity by
+ * construction). Runs ensureCycles first, so reading also reconciles.
+ */
+export async function getCycleOverview({
+  service,
+  userId,
+  prefs,
+  which = "current",
+}: {
+  service: SupabaseClient;
+  userId: string;
+  prefs: CyclePrefs;
+  which?: "current" | "next" | "previous";
+}): Promise<{ ok: true; overview: CycleOverview } | { ok: false; error: string }> {
+  const ensured = await ensureCycles({ service, userId, prefs, today: todayISO() });
+  const cycle =
+    which === "next"
+      ? (ensured.upcoming[0] ?? null)
+      : which === "previous"
+        ? (ensured.past[0] ?? null)
+        : ensured.current;
+  if (!cycle) return { ok: false, error: `No ${which} cycle exists.` };
+
+  const { data: issueRows } = await service
+    .from("issues")
+    .select("id, project_id, number, title, status, priority, effort, projects(key)")
+    .eq("cycle_id", cycle.id)
+    .order("number", { ascending: true });
+  const issues: CycleIssueSummary[] = (issueRows ?? []).map((row) => ({
+    id: row.id as string,
+    identifier: issueIdentifier(
+      ((row.projects as { key?: string } | null)?.key ?? "").toString(),
+      row.number as number
+    ),
+    title: (row.title as string) ?? "",
+    status: row.status as string,
+    priority: row.priority as string,
+    effort: (row.effort as string | null) ?? null,
+    project_id: row.project_id as string,
+  }));
+  const pointed = issues.map((i) => ({
+    effort: (i.effort as RecoIssue["effort"]) ?? null,
+    status: i.status as IssueStatus,
+  }));
+
+  // Best next candidates: the user's assigned, uncycled, open-status pool,
+  // reco-scored with `blocks` precedence.
+  const { data: poolRows } = await service
+    .from("issues")
+    .select(
+      "id, project_id, number, title, status, priority, effort, issue_categories(category_id), projects!inner(key, deleted_at)"
+    )
+    .eq("assignee_id", userId)
+    .is("cycle_id", null)
+    .in("status", CYCLE_OPEN_STATUSES as string[])
+    .is("projects.deleted_at", null);
+  const pool = (poolRows ?? []).map((row) => ({
+    id: row.id as string,
+    project_id: row.project_id as string,
+    title: (row.title as string) ?? "",
+    status: row.status as IssueStatus,
+    priority: row.priority as RecoIssue["priority"],
+    effort: (row.effort as RecoIssue["effort"]) ?? null,
+    category_ids: ((row.issue_categories ?? []) as { category_id: string }[]).map(
+      (c) => c.category_id
+    ),
+    number: row.number as number,
+    key: ((row.projects as { key?: string } | null)?.key ?? "").toString(),
+  }));
+  const { data: relationRows } = pool.length
+    ? await service
+        .from("issue_relations")
+        .select("id, source_id, target_id, type")
+        .eq("type", "blocks")
+        .in(
+          "target_id",
+          pool.map((c) => c.id)
+        )
+    : { data: [] };
+  const statusById = new Map<string, IssueStatus>(pool.map((c) => [c.id, c.status]));
+  const blocked = blockedSet(
+    pool.map((c) => c.id),
+    (relationRows ?? []) as IssueRelation[],
+    statusById
+  );
+  const candidates = pool
+    .map((c) => ({ c, score: recoScore(c, blocked.has(c.id)) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10)
+    .map(({ c }) => ({
+      id: c.id,
+      identifier: issueIdentifier(c.key, c.number),
+      title: c.title,
+      status: c.status as string,
+      priority: c.priority as string,
+      effort: (c.effort as string | null) ?? null,
+      project_id: c.project_id,
+      blocked: blocked.has(c.id),
+      points: effortToPoints(c.effort),
+    }));
+
+  return {
+    ok: true,
+    overview: {
+      which,
+      cycle: {
+        ...toCycleInfo(cycle),
+        filled_points: cycleFilledPoints(pointed),
+        completion_percent: cycleCompletionPercent(pointed),
+      },
+      issues,
+      candidates,
+    },
+  };
 }
 
 export interface CycleCaptureParams {

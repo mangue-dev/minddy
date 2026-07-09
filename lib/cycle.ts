@@ -123,23 +123,36 @@ export const INTENSITY_BASE_POINTS: Record<CycleIntensity, number> = {
   heavy: 30,
 };
 
+/** A closed cycle's calibration signal: what got done, at which pace setting. */
+export interface CalibrationSample {
+  completed: number;
+  intensity: CycleIntensity;
+}
+
 /**
- * Capacity target for a new cycle: the intensity's base, auto-calibrated on
- * the points ACTUALLY completed in past cycles at the same intensity. With
- * fewer than 2 closed samples the base stands alone; otherwise blend 50/50
- * with the mean of the most recent (≤3) samples, clamped to [0.6×, 1.6×] of
- * the base so one wild week can't wreck the target.
+ * Personal velocity factor relative to the default scale. Each closed cycle
+ * contributes `completed ÷ base(its intensity)` — normalizing by the base
+ * makes samples from different intensity levels comparable — and the factor
+ * is the mean of the most recent (≤3). One factor scales ALL three levels
+ * (light/medium/heavy stay 0.5×/1×/1.5× of the same unit), so a calibrated
+ * medium can grow past the heavy DEFAULT while heavy grows with it — the
+ * levels can never cross. No ceiling at the default: a consistently faster
+ * week yields a genuinely bigger target. Clamped to [0.5, 3] only to absorb
+ * outliers; 1 (the defaults) with fewer than 2 samples.
  */
-export function computeTargetPoints(
-  intensity: CycleIntensity,
-  pastCompleted: number[]
-): number {
-  const base = INTENSITY_BASE_POINTS[intensity];
-  if (pastCompleted.length < 2) return base;
-  const samples = pastCompleted.slice(0, 3);
-  const mean = samples.reduce((sum, n) => sum + n, 0) / samples.length;
-  const blended = Math.round(0.5 * base + 0.5 * mean);
-  return Math.min(Math.round(base * 1.6), Math.max(Math.round(base * 0.6), blended));
+export function calibrationFactor(samples: CalibrationSample[]): number {
+  if (samples.length < 2) return 1;
+  const recent = samples.slice(0, 3);
+  const mean =
+    recent.reduce((sum, s) => sum + s.completed / INTENSITY_BASE_POINTS[s.intensity], 0) /
+    recent.length;
+  return Math.min(3, Math.max(0.5, mean));
+}
+
+/** Capacity target for a cycle: the intensity's base scaled by the user's
+    calibrated velocity factor. */
+export function computeTargetPoints(intensity: CycleIntensity, factor: number): number {
+  return Math.max(1, Math.round(INTENSITY_BASE_POINTS[intensity] * factor));
 }
 
 const CLOSED_STATUSES: readonly IssueStatus[] = ["done", "canceled", "duplicate"];

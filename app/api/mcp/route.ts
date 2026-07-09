@@ -35,7 +35,12 @@ const handler = createMcpHandler(
       "minddy_update_plan_task (mark the task you start '- [~]', finished '- [x]'). " +
       "Issues and comments can carry file attachments: minddy_get_issue lists their " +
       "metadata (name/type/size), minddy_add_attachment uploads one (base64, 10 MB " +
-      "max) to an issue or, via comment_id, to a comment. " +
+      "max) to an issue or, via comment_id, to a comment. The key owner may have a " +
+      "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
+      "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +
+      "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +
+      "individual issues — adding assigns the issue to the owner and never changes " +
+      "its status. " +
       "Start with minddy_list_projects to discover project ids.",
   },
   { basePath: "/api", disableSse: true, maxDuration: 60 }
