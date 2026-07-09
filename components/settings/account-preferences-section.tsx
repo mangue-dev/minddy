@@ -30,6 +30,10 @@ import {
   PROMPT_COPY_AUTO_START_META_KEY,
   resolvePromptCopyAutoStart,
 } from "@/lib/prompt-copy-auto-start";
+import {
+  AUTO_ASSIGN_ON_START_META_KEY,
+  resolveAutoAssignOnStart,
+} from "@/lib/auto-assign-on-start";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -79,6 +83,33 @@ export function AccountPreferencesSection() {
       toast.error((e as Error).message);
     } finally {
       setSavingAutoAssign(false);
+    }
+  };
+
+  // "Starting an issue self-assigns it" preference (user_metadata, like the
+  // others). Enabled by default, so mirror the resolved value into local state.
+  const [autoAssignStart, setAutoAssignStart] = useState(
+    resolveAutoAssignOnStart(user?.user_metadata),
+  );
+  const [savingAutoAssignStart, setSavingAutoAssignStart] = useState(false);
+  useEffect(() => {
+    setAutoAssignStart(resolveAutoAssignOnStart(user?.user_metadata));
+  }, [user]);
+
+  const toggleAutoAssignStart = async (next: boolean) => {
+    if (!user || savingAutoAssignStart) return;
+    setAutoAssignStart(next); // optimistic — revert on failure below
+    setSavingAutoAssignStart(true);
+    try {
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      await updateUser({
+        data: { ...meta, [AUTO_ASSIGN_ON_START_META_KEY]: next },
+      });
+    } catch (e) {
+      setAutoAssignStart(!next);
+      toast.error((e as Error).message);
+    } finally {
+      setSavingAutoAssignStart(false);
     }
   };
 
@@ -225,6 +256,28 @@ export function AccountPreferencesSection() {
             className="cursor-pointer text-sm text-foreground"
           >
             {ta("autoAssignLabel")}
+          </label>
+        </div>
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title={ta("autoAssignStartTitle")}
+        description={ta("autoAssignStartDesc")}
+      >
+        <div className="flex items-center gap-3">
+          <Switch
+            id="account-auto-assign-start"
+            checked={autoAssignStart}
+            onCheckedChange={(v) => void toggleAutoAssignStart(v)}
+            disabled={savingAutoAssignStart || !user}
+          />
+          <label
+            htmlFor="account-auto-assign-start"
+            className="cursor-pointer text-sm text-foreground"
+          >
+            {ta("autoAssignStartLabel")}
           </label>
         </div>
       </SettingsSection>

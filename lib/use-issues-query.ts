@@ -10,6 +10,8 @@ import {
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import { useAuth } from "./auth-context";
+import { autoAssignOnStart } from "./auto-assign-on-start";
 import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
 
 const issuesKey = (projectId: string) => ["issues", projectId] as const;
@@ -18,6 +20,7 @@ const issuesKey = (projectId: string) => ["issues", projectId] as const;
 // realtime bridge (lib/realtime-provider.tsx) invalidating ["issues", projectId].
 export function useIssuesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Per-issue debounce for category writes (see setCategories).
   const catTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -35,6 +38,30 @@ export function useIssuesQuery(projectId: string | null) {
     }
   }, [queryClient, projectId]);
 
+  // Self-assign on start (Account → Preferences): when a status change moves an
+  // unassigned issue into in_progress, claim it for the current user. Returns
+  // the id to assign, or null to leave the assignee alone — a no-op unless it's
+  // a genuine transition of an unassigned issue and the caller isn't already
+  // setting the assignee in the same patch. Covers every status-changing path:
+  // drag & drop (moveIssue), the status pickers, triage, and Shift+P copyPrompt.
+  const startAssignee = useCallback(
+    (
+      current: Issue | undefined,
+      nextStatus: Issue["status"] | undefined,
+      patchHasAssignee: boolean
+    ): string | null => {
+      if (!current || patchHasAssignee) return null;
+      return autoAssignOnStart({
+        meta: user?.user_metadata,
+        currentStatus: current.status,
+        currentAssigneeId: current.assignee_id,
+        nextStatus,
+        userId: user?.id,
+      });
+    },
+    [user]
+  );
+
   const createIssue = useCallback(
     async (input: CreateIssueInput) => {
       const issue = await createIssueApi(projectId as string, input);
@@ -50,13 +77,19 @@ export function useIssuesQuery(projectId: string | null) {
     async (issueId: string, updates: IssueUpdateInput) => {
       const key = projectId ? issuesKey(projectId) : null;
       const previous = key ? queryClient.getQueryData<Issue[]>(key) : undefined;
+      const assignee = startAssignee(
+        previous?.find((i) => i.id === issueId),
+        updates.status,
+        "assignee_id" in updates
+      );
+      const patch = assignee ? { ...updates, assignee_id: assignee } : updates;
       if (key) {
         queryClient.setQueryData<Issue[]>(key, (old) =>
-          (old ?? []).map((i) => (i.id === issueId ? { ...i, ...updates } : i))
+          (old ?? []).map((i) => (i.id === issueId ? { ...i, ...patch } : i))
         );
       }
       try {
-        const issue = await updateIssueApi(issueId, updates);
+        const issue = await updateIssueApi(issueId, patch);
         invalidate();
         return issue;
       } catch (err) {
@@ -64,7 +97,7 @@ export function useIssuesQuery(projectId: string | null) {
         throw err;
       }
     },
-    [projectId, queryClient, invalidate]
+    [projectId, queryClient, invalidate, startAssignee]
   );
 
   const deleteIssue = useCallback(
@@ -88,17 +121,23 @@ export function useIssuesQuery(projectId: string | null) {
       if (!projectId) return;
       const key = issuesKey(projectId);
       const previous = queryClient.getQueryData<Issue[]>(key);
+      const assignee = startAssignee(
+        previous?.find((i) => i.id === issueId),
+        patch.status,
+        false
+      );
+      const write = assignee ? { ...patch, assignee_id: assignee } : patch;
       queryClient.setQueryData<Issue[]>(key, (old) =>
-        (old ?? []).map((i) => (i.id === issueId ? { ...i, ...patch } : i))
+        (old ?? []).map((i) => (i.id === issueId ? { ...i, ...write } : i))
       );
       try {
-        await updateIssueApi(issueId, patch);
+        await updateIssueApi(issueId, write);
       } catch (err) {
         queryClient.setQueryData(key, previous);
         throw err;
       }
     },
-    [projectId, queryClient]
+    [projectId, queryClient, startAssignee]
   );
 
   // Optimistic + DEBOUNCED per issue: rapid category toggles patch the cache

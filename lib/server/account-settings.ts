@@ -10,6 +10,10 @@ import {
   PROMPT_COPY_AUTO_START_META_KEY,
   resolvePromptCopyAutoStart,
 } from "@/lib/prompt-copy-auto-start";
+import {
+  AUTO_ASSIGN_ON_START_META_KEY,
+  resolveAutoAssignOnStart,
+} from "@/lib/auto-assign-on-start";
 import { emailLocalPart } from "@/lib/display-name";
 
 /**
@@ -28,6 +32,7 @@ export interface AccountSettings {
   locale: Locale;
   numo_default_status: ReturnType<typeof resolveNumoDefaultStatus>;
   auto_assign_created: boolean;
+  auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
 }
 
@@ -55,6 +60,7 @@ function toSettings(
     locale,
     numo_default_status: resolveNumoDefaultStatus(meta),
     auto_assign_created: meta.auto_assign_created === true,
+    auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
   };
 }
@@ -120,6 +126,12 @@ export async function updateAccountSettings({
     }
     next.auto_assign_created = input.auto_assign_created;
   }
+  if ("auto_assign_on_start" in input) {
+    if (typeof input.auto_assign_on_start !== "boolean") {
+      return { ok: false, error: "auto_assign_on_start must be a boolean." };
+    }
+    next[AUTO_ASSIGN_ON_START_META_KEY] = input.auto_assign_on_start;
+  }
   if ("prompt_copy_auto_start" in input) {
     if (typeof input.prompt_copy_auto_start !== "boolean") {
       return { ok: false, error: "prompt_copy_auto_start must be a boolean." };
@@ -133,6 +145,7 @@ export async function updateAccountSettings({
     "locale",
     "numo_default_status",
     "auto_assign_created",
+    "auto_assign_on_start",
     "prompt_copy_auto_start",
   ];
   if (!CHANGEABLE.some((k) => k in input)) {

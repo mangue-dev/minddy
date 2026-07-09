@@ -657,7 +657,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, and the auto-assign / prompt-copy-auto-start preferences. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, and the auto-assign (on create / on start) and prompt-copy-auto-start preferences. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -687,6 +687,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           auto_assign_created: {
             type: "boolean",
             description: "Auto-assign newly created issues to the user.",
+          },
+          auto_assign_on_start: {
+            type: "boolean",
+            description:
+              "When an unassigned issue moves to in_progress, self-assign it to the user.",
           },
           prompt_copy_auto_start: {
             type: "boolean",
