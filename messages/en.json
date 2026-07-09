@@ -83,7 +83,9 @@
     "cannotRemoveOwner": "The project owner cannot be removed.",
     "invalidRelationType": "Invalid relation type.",
     "relationSelf": "An issue can't be related to itself.",
-    "relationNotFound": "Relation not found."
+    "relationNotFound": "Relation not found.",
+    "passwordRequired": "A password is required.",
+    "invalidShareLevel": "Invalid share level."
   },
   "Assistant": {
     "title": "Ask Numo",
@@ -174,9 +176,34 @@
     "numoBuildViewPrompt": "Set up the view \"{name}\" from this description: {description}",
     "viewGenerating": "Numo is building this view…",
     "viewOptions": "Options for \"{name}\"",
-    "openView": "Open view",
     "newIssue": "New issue",
-    "createInSettings": "Create one in Settings."
+    "createInSettings": "Create one in Settings.",
+    "shareView": "Share view",
+    "renameView": "Rename view",
+    "deleteView": "Delete view"
+  },
+  "ShareView": {
+    "title": "Share view",
+    "description": "Anyone with the link sees “{name}” as a read-only board.",
+    "levelPrivate": "Private",
+    "levelPassword": "Password",
+    "levelPublic": "Public",
+    "hintPrivate": "Only project members can see this view.",
+    "hintPassword": "Anyone with the link and the password can see it.",
+    "hintPublic": "Anyone with the link can see it.",
+    "passwordPlaceholder": "Set a password",
+    "changePasswordPlaceholder": "New password",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "sharingDisabled": "Sharing disabled — the link no longer works"
+  },
+  "PublicShare": {
+    "protectedTitle": "This view is password-protected",
+    "passwordPlaceholder": "Password",
+    "unlock": "Unlock",
+    "wrongPassword": "Incorrect password",
+    "tooManyAttempts": "Too many attempts — try again in a minute",
+    "madeWith": "Made with"
   },
   "Categories": {
     "colorSwatchAria": "Color {color}",

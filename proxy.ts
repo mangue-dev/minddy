@@ -20,8 +20,9 @@ const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico", "/icon"]);
 // `/api/` is excluded from middleware auth on purpose: route handlers
 // authenticate themselves (getAuthedUser) and must return JSON 401 — never an
 // HTML redirect to /login. `/.well-known/` = découverte OAuth (RFC 8414/9728),
-// forcément accessible sans session.
-const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/"];
+// forcément accessible sans session. `/share/` = liens publics de vues
+// (MIN-26) — la page valide elle-même le token (et le mot de passe).
+const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/"];
 
 function isSupabaseGetSessionWarning(args: unknown[]): boolean {
   return args.some(

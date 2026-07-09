@@ -15,6 +15,7 @@ import {
   Calendar,
   ChevronRight,
   ClipboardCopy,
+  Link2,
   ListChecks,
   Triangle,
   User,
@@ -733,16 +734,25 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
-    // Relations (MIN-25): each action opens the target-issue picker at the
-    // pointer. Shown only when the board wired the relation handlers.
+    // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
+    // leaf opens the target-issue picker at the pointer. Shown only when the
+    // board wired the relation handlers.
     ...(onAddRelation
-      ? RELATION_TYPES.map((type) => ({
-          id: `relation-${type}`,
-          label: tRel(`action_${type}`),
-          keywords: [tRel(type), "relation", "link", "lier"],
-          icon: <RelationIcon relation={type} className="size-4" />,
-          onSelect: () => setRelationType(type),
-        }))
+      ? [
+          {
+            id: "relations",
+            label: tRel("relations"),
+            keywords: ["relation", "link", "lier", "bloc", "block"],
+            icon: <Link2 className="size-4" />,
+            children: RELATION_TYPES.map((type) => ({
+              id: `relation-${type}`,
+              label: tRel(`action_${type}`),
+              keywords: [tRel(type), "relation", "link", "lier"],
+              icon: <RelationIcon relation={type} className="size-4" />,
+              onSelect: () => setRelationType(type),
+            })),
+          },
+        ]
       : []),
   ];
 

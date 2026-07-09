@@ -36,15 +36,16 @@ import {
   Plus,
   Save,
   Pencil,
+  Share2,
   Trash2,
   Triangle,
-  Eye,
 } from "lucide-react";
 import {
   StatusIndicator,
   PriorityIndicator,
 } from "@/components/issue-indicators";
 import { NumoIcon } from "@/components/numo-icon";
+import { ShareViewDialog } from "@/components/share-view-dialog";
 import {
   STATUSES,
   PRIORITIES,
@@ -448,6 +449,7 @@ export function BoardToolbar({
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
+  const [shareTarget, setShareTarget] = useState<View | null>(null);
   const t = useTranslations("Board");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
@@ -466,10 +468,7 @@ export function BoardToolbar({
               view={v}
               active={v.id === activeViewId}
               generating={generatingViewIds.has(v.id)}
-              canDelete={views.length > 1}
               onSelect={() => onSelectView(v.id)}
-              onRename={() => setRenameTarget(v)}
-              onDelete={() => void onDeleteView(v)}
             />
           ))}
           <Tooltip>
@@ -538,6 +537,50 @@ export function BoardToolbar({
             integrations={integrations}
             onAskNumo={onAskNumo}
           />
+
+          {/* Active view actions — rename / share / delete */}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={!activeView}
+                    aria-label={t("viewOptions", { name: activeView?.name ?? "" })}
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("viewOptions", { name: activeView?.name ?? "" })}
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={() => activeView && setRenameTarget(activeView)}
+              >
+                <Pencil />
+                {t("renameView")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => activeView && setShareTarget(activeView)}
+              >
+                <Share2 />
+                {t("shareView")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={views.length <= 1}
+                onSelect={() => activeView && void onDeleteView(activeView)}
+              >
+                <Trash2 />
+                {t("deleteView")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -561,6 +604,13 @@ export function BoardToolbar({
           renameTarget ? onRenameView(renameTarget, name) : Promise.resolve()
         }
       />
+      <ShareViewDialog
+        view={shareTarget}
+        open={shareTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setShareTarget(null);
+        }}
+      />
     </div>
   );
 }
@@ -569,83 +619,33 @@ function ViewChip({
   view,
   active,
   generating,
-  canDelete,
   onSelect,
-  onRename,
-  onDelete,
 }: {
   view: View;
   active: boolean;
   generating: boolean;
-  canDelete: boolean;
   onSelect: () => void;
-  onRename: () => void;
-  onDelete: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const t = useTranslations("Board");
-  const tc = useTranslations("Common");
   return (
-    <div
+    <button
+      type="button"
+      onClick={onSelect}
+      title={generating ? t("viewGenerating") : undefined}
       className={cn(
-        "group relative rounded-full transition-colors",
-        active ? "bg-foreground" : "hover:bg-muted"
+        "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors",
+        active
+          ? "bg-foreground text-background"
+          : "text-muted-foreground hover:bg-muted"
       )}
     >
-      <button
-        type="button"
-        onClick={onSelect}
-        title={generating ? t("viewGenerating") : undefined}
-        className={cn(
-          "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors",
-          active ? "text-background" : "text-muted-foreground"
-        )}
-      >
-        {generating && (
-          <Loader2
-            className="size-3 shrink-0 animate-spin"
-            aria-label={t("viewGenerating")}
-          />
-        )}
-        {view.name}
-      </button>
-
-      {/* Per-view actions — revealed on hover, overlaid on the pill's right edge
-          (matching bg covers the name) so the layout never shifts. */}
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={t("viewOptions", { name: view.name })}
-            className={cn(
-              "absolute inset-y-0 right-0 flex items-center rounded-r-full pr-1.5 pl-2.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
-              menuOpen && "opacity-100",
-              active ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
-            )}
-          >
-            <MoreHorizontal className="size-3.5" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={onSelect}>
-            <Eye />
-            {t("openView")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={onRename}>
-            <Pencil />
-            {tc("rename")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            disabled={!canDelete}
-            onSelect={onDelete}
-          >
-            <Trash2 />
-            {tc("delete")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+      {generating && (
+        <Loader2
+          className="size-3 shrink-0 animate-spin"
+          aria-label={t("viewGenerating")}
+        />
+      )}
+      {view.name}
+    </button>
   );
 }

@@ -83,7 +83,9 @@
     "cannotRemoveOwner": "Le propriétaire du projet ne peut pas être retiré.",
     "invalidRelationType": "Type de relation invalide.",
     "relationSelf": "Un ticket ne peut pas être lié à lui-même.",
-    "relationNotFound": "Relation introuvable."
+    "relationNotFound": "Relation introuvable.",
+    "passwordRequired": "Un mot de passe est requis.",
+    "invalidShareLevel": "Niveau de partage invalide."
   },
   "Assistant": {
     "title": "Demander à Numo",
@@ -174,9 +176,34 @@
     "numoBuildViewPrompt": "Configure la vue « {name} » d'après cette description : {description}",
     "viewGenerating": "Numo construit cette vue…",
     "viewOptions": "Options de « {name} »",
-    "openView": "Ouvrir la vue",
     "newIssue": "Nouveau ticket",
-    "createInSettings": "Crée-en dans les Paramètres."
+    "createInSettings": "Crée-en dans les Paramètres.",
+    "shareView": "Partager la vue",
+    "renameView": "Renommer la vue",
+    "deleteView": "Supprimer la vue"
+  },
+  "ShareView": {
+    "title": "Partager la vue",
+    "description": "Toute personne disposant du lien voit « {name} » en lecture seule.",
+    "levelPrivate": "Privée",
+    "levelPassword": "Mot de passe",
+    "levelPublic": "Publique",
+    "hintPrivate": "Seuls les membres du projet voient cette vue.",
+    "hintPassword": "Accessible avec le lien et le mot de passe.",
+    "hintPublic": "Accessible à toute personne disposant du lien.",
+    "passwordPlaceholder": "Définir un mot de passe",
+    "changePasswordPlaceholder": "Nouveau mot de passe",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié",
+    "sharingDisabled": "Partage désactivé — le lien ne fonctionne plus"
+  },
+  "PublicShare": {
+    "protectedTitle": "Cette vue est protégée par mot de passe",
+    "passwordPlaceholder": "Mot de passe",
+    "unlock": "Déverrouiller",
+    "wrongPassword": "Mot de passe incorrect",
+    "tooManyAttempts": "Trop de tentatives — réessayez dans une minute",
+    "madeWith": "Créé avec"
   },
   "Categories": {
     "colorSwatchAria": "Couleur {color}",

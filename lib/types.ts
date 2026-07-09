@@ -390,3 +390,13 @@ export interface ViewUpdateInput {
   sort?: ViewSort;
   display?: ViewDisplay;
 }
+
+/** Public-link sharing level of a view — "private" = no share row exists. */
+export type ViewShareLevel = "private" | "password" | "public";
+
+/** Owner-facing share state (what the share API returns; null = private).
+    The token is the /share/<token> URL capability. */
+export interface ViewShare {
+  level: Exclude<ViewShareLevel, "private">;
+  token: string;
+}

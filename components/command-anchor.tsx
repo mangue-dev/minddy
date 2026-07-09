@@ -1,22 +1,13 @@
 "use client";
 
-// A cmdk <Command> popover anchored at an arbitrary viewport position (the mouse
-// pointer), instead of a trigger element. Shared shell for the right-click issue
-// menu (issue-context-menu.tsx) and the keyboard field shortcuts
-// (issue-field-shortcuts.tsx). Same look as the search-select.tsx pickers.
+// A searchable cmdk popover anchored at an arbitrary viewport position (the
+// mouse pointer) instead of a trigger element. Used by the keyboard field
+// shortcuts (issue-field-shortcuts.tsx) and the relation target picker
+// (relation-target-picker.tsx). Thin wrapper over the shared SearchMenu shell
+// in position-anchored mode, so it looks identical to every other searchable
+// dropdown in the app.
 
-import * as React from "react";
-import { useTranslations } from "next-intl";
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandList,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  cn,
-} from "mangue-ui";
+import { SearchMenu } from "@/components/search-menu";
 
 export function CommandAnchor({
   position,
@@ -31,34 +22,15 @@ export function CommandAnchor({
   /** Overrides the default popover width (w-60). */
   className?: string;
 }) {
-  const t = useTranslations("Picker");
-  if (!position) return null;
-
   return (
-    <Popover open onOpenChange={(open) => !open && onClose()}>
-      <PopoverAnchor asChild>
-        <span
-          aria-hidden
-          style={{ position: "fixed", left: position.x, top: position.y }}
-        />
-      </PopoverAnchor>
-      <PopoverContent
-        align="start"
-        side="bottom"
-        className={cn("w-60 overflow-hidden p-0", className)}
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {/* Same radius fix as PickerShell (search-select.tsx): the input rounds
-            to rounded-sm to match the options below it. */}
-        <Command className="[&_[data-slot=input-group]]:rounded-sm!">
-          <CommandInput autoFocus placeholder={t("search")} />
-          <CommandList>
-            <CommandEmpty>{t("noResults")}</CommandEmpty>
-            {children}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <SearchMenu
+      open={!!position}
+      onOpenChange={(open) => !open && onClose()}
+      position={position}
+      contentClassName={className}
+      stopPropagation
+    >
+      {children}
+    </SearchMenu>
   );
 }
