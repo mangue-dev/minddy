@@ -1,30 +1,79 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Skeleton } from "mangue-ui";
+import { Button, Skeleton } from "mangue-ui";
+import { Plus } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
+import { useCreate } from "@/lib/create-context";
+import { useAuth } from "@/lib/auth-context";
+import { displayName } from "@/lib/display-name";
 import { ProjectCard, NewProjectCard } from "@/components/project-card";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
+import { HomeNumoComposer } from "@/components/home/home-numo-composer";
+import { HomeCycleCard } from "@/components/home/home-cycle-card";
+import { HomeGlobalCard } from "@/components/home/home-global-card";
+import { HomeFeedbackSection } from "@/components/home/home-feedback-section";
 
-// auto-fit (not auto-fill) collapses empty trailing tracks so a lone card grows
-// into the available width; the 380px cap keeps it at a comfortable size.
+// auto-fit + 1fr: empty trailing tracks collapse and the remaining cards share
+// all the space, so the grid always spans the full row width (matching the
+// dashboard's focus cards above) instead of leaving a gap on the right.
 const GRID_STYLE = {
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 380px))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
   gridAutoRows: "1fr",
 } as const;
+
+/** Display name from Supabase auth metadata (display_name → full_name → name),
+    never the raw email — mirrors the sidebar account button. */
+type AuthMeta = { display_name?: string; full_name?: string; name?: string };
 
 export default function HomePage() {
   const t = useTranslations("Home");
   const { projects, loading, openCreateProject } = useProjects();
+  const { openCreateIssue, canCreate } = useCreate();
+  const { user } = useAuth();
+
+  const meta = user?.user_metadata as AuthMeta | undefined;
+  const name = displayName(
+    {
+      full_name: meta?.display_name || meta?.full_name || meta?.name || null,
+      email: user?.email ?? null,
+    },
+    t("greetingFallback"),
+  );
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <PendingInvitationsBanner />
 
-      <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">
-        {t("title")}
-      </h1>
+      {/* Greeting + a clearly-accessible "new ticket" button (MIN-38). */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
+          {t("greeting", { name })}
+        </h1>
+        <Button onClick={() => openCreateIssue()} disabled={!canCreate}>
+          <Plus className="size-4" />
+          {t("newTicket")}
+        </Button>
+      </div>
 
+      {/* "Ask Numo" composer — hands off to the global assistant panel. */}
+      <HomeNumoComposer />
+
+      {/* Focus: the current cycle + a global pulse. */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <HomeCycleCard />
+        <HomeGlobalCard />
+      </div>
+
+      {/* Feedback — renders nothing when no project has open feedback. */}
+      <div className="mt-6">
+        <HomeFeedbackSection />
+      </div>
+
+      {/* Projects grid — still the launcher. */}
+      <h2 className="mb-4 mt-10 text-sm font-semibold tracking-tight text-muted-foreground">
+        {t("yourProjects")}
+      </h2>
       {loading ? (
         <div className="grid gap-4" style={GRID_STYLE}>
           {Array.from({ length: 3 }).map((_, i) => (

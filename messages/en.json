@@ -478,7 +478,25 @@
     "noIntegration": "No integration"
   },
   "Home": {
-    "title": "My Projects"
+    "title": "My Projects",
+    "greeting": "Hi, {name}",
+    "greetingFallback": "there",
+    "numoPlaceholder": "Ask Numo anything…",
+    "newTicket": "New issue",
+    "yourProjects": "Your projects",
+    "cycleTitle": "Current cycle",
+    "cycleActivate": "Enable cycles",
+    "cycleActivatePrompt": "Organize your week into cycles.",
+    "cycleNextStart": "Next cycle · starts {date}",
+    "cycleEmpty": "No issues in this cycle yet.",
+    "openCycle": "Open cycle",
+    "globalTitle": "Overview",
+    "globalOpen": "open",
+    "globalInProgress": "in progress",
+    "globalAssignedToMe": "assigned to me",
+    "globalAllIssues": "All issues",
+    "feedbackTitle": "Feedback",
+    "feedbackOpenCount": "{count, plural, one {# open} other {# open}}"
   },
   "GlobalBoard": {
     "allTitle": "All issues",

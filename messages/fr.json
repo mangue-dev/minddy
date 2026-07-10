@@ -478,7 +478,25 @@
     "noIntegration": "Sans intégration"
   },
   "Home": {
-    "title": "Mes Projets"
+    "title": "Mes Projets",
+    "greeting": "Bonjour, {name}",
+    "greetingFallback": "toi",
+    "numoPlaceholder": "Demandez à Numo…",
+    "newTicket": "Nouveau ticket",
+    "yourProjects": "Tes projets",
+    "cycleTitle": "Cycle en cours",
+    "cycleActivate": "Activer les cycles",
+    "cycleActivatePrompt": "Organise ta semaine en cycles.",
+    "cycleNextStart": "Prochain cycle · démarre le {date}",
+    "cycleEmpty": "Aucun ticket dans ce cycle.",
+    "openCycle": "Ouvrir le cycle",
+    "globalTitle": "Vue globale",
+    "globalOpen": "ouverts",
+    "globalInProgress": "en cours",
+    "globalAssignedToMe": "à moi",
+    "globalAllIssues": "Tous les tickets",
+    "feedbackTitle": "Feedback",
+    "feedbackOpenCount": "{count, plural, one {# ouvert} other {# ouverts}}"
   },
   "GlobalBoard": {
     "allTitle": "Tous les tickets",

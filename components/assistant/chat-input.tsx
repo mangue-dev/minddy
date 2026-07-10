@@ -32,6 +32,13 @@ interface ChatInputProps {
   noBorder?: boolean;
   placeholder?: string;
   /**
+   * Hide the attach affordances (file button + drop overlay + paste-to-attach).
+   * The home composer sets this: it hands the prompt off to the global panel via
+   * `open({ prompt })`, which carries no files, so an attach button there would
+   * silently drop the upload. Attachments still belong in the panel itself.
+   */
+  hideAttach?: boolean;
+  /**
    * The assistant's current context (open issue / board), shown as a chip
    * tucked into the top of the composer, above the placeholder. Its radius is
    * set so `badge radius + padding === surface radius` (concentric nesting).
@@ -52,6 +59,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       isStreaming,
       noBorder,
       placeholder,
+      hideAttach = false,
       pageContext = null,
     },
     ref
@@ -224,7 +232,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 ? "border-brand/40 ring-2 ring-brand/10"
                 : "border-border"
           )}
-          {...drop.handlers}
+          {...(hideAttach ? {} : drop.handlers)}
         >
           <DropOverlay show={drop.dragging} />
           {(pageContext || uploads.pending.length > 0) && (
@@ -266,7 +274,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               onInput={handleInput}
               onKeyDown={handleKeyDown}
               onPaste={(e) => {
-                if (userId && e.clipboardData.files.length > 0) {
+                if (!hideAttach && userId && e.clipboardData.files.length > 0) {
                   e.preventDefault();
                   uploads.addFiles(e.clipboardData.files);
                 }
@@ -291,28 +299,32 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 </Button>
               ) : (
                 <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept={ACCEPT}
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.length) uploads.addFiles(e.target.files);
-                      e.target.value = "";
-                    }}
-                  />
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    disabled={disabled || !userId}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                    aria-label={tAttach("attach")}
-                    title={tAttach("attach")}
-                  >
-                    <Paperclip className="size-4" />
-                  </Button>
+                  {!hideAttach && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept={ACCEPT}
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.length) uploads.addFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        disabled={disabled || !userId}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                        aria-label={tAttach("attach")}
+                        title={tAttach("attach")}
+                      >
+                        <Paperclip className="size-4" />
+                      </Button>
+                    </>
+                  )}
                   <DictateButton
                     onTranscription={appendDictated}
                     disabled={disabled}
