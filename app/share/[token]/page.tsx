@@ -2,8 +2,10 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PublicBoard, type PublicCard } from "@/components/public-board";
 import { PublicPageShell } from "@/components/public-page-shell";
+import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import type { ChipRelation } from "@/components/relation-chips";
 import { AppQueryProvider } from "@/lib/query-provider";
 import { displayName } from "@/lib/display-name";
@@ -157,10 +159,19 @@ export default async function SharedViewPage({ params }: PageProps) {
   if (!ctx) notFound();
   const { view } = ctx;
   const unlocked = await isUnlocked(ctx);
+  // Le site public du projet : onglets Feedback + vues partagées. Une vue
+  // verrouillée ne révèle rien d'elle-même, mais la navigation du site reste.
+  const tFeedback = await getTranslations("PublicFeedback");
+  const tabs = await getPublicSiteTabs({
+    projectId: ctx.project.id,
+    feedbackLabel: tFeedback("title"),
+    current: { kind: "view", shareToken: token },
+  });
 
   return (
     <PublicPageShell
       fullHeight
+      tabs={tabs}
       // The password gate shows nothing about the view, not even its name.
       heading={
         unlocked ? (

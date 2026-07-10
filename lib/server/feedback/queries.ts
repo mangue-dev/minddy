@@ -1,7 +1,11 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import type { PublicFacet, PublicPost } from "@/lib/feedback/types";
+import type {
+  FeedbackPostStatus,
+  PublicFacet,
+  PublicPost,
+} from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
 
@@ -13,6 +17,8 @@ import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
  */
 
 const PUBLIC_LIST_LIMIT = 200;
+/** Pills de facettes affichées par post sur la liste (carrousel). */
+const FACET_PILLS_PER_POST = 8;
 
 export type PublicSort = "top" | "recent";
 
@@ -28,7 +34,8 @@ function toPublicPost(
   row: PostWithAuthor,
   viewerId: string | null,
   votedPostIds: Set<string>,
-  facetCounts: Map<string, number>
+  facetCounts: Map<string, number>,
+  facets: PublicFacet[] = []
 ): PublicPost {
   return {
     id: row.id,
@@ -37,6 +44,7 @@ function toPublicPost(
     status: row.status,
     voteCount: row.vote_count,
     facetCount: facetCounts.get(row.id) ?? 0,
+    facets,
     createdAt: row.created_at,
     authorPseudonym: row.feedback_users?.pseudonym ?? null,
     isMine: viewerId !== null && row.author_id === viewerId,
@@ -44,6 +52,58 @@ function toPublicPost(
     teamResponse: row.team_response,
     teamResponseAt: row.team_response_at,
   };
+}
+
+/** Facettes vivantes des posts listés, triées par voix, plafonnées par post,
+    avec les votes du visiteur — la matière des pills du carrousel. */
+async function fetchFacetPills(
+  postIds: string[],
+  viewerId: string | null
+): Promise<{ byPost: Map<string, PublicFacet[]>; counts: Map<string, number> }> {
+  const byPost = new Map<string, PublicFacet[]>();
+  const counts = new Map<string, number>();
+  if (postIds.length === 0) return { byPost, counts };
+
+  const service = getServiceClient();
+  const { data } = await service
+    .from("feedback_facets")
+    .select("id, post_id, text, vote_count, created_by")
+    .in("post_id", postIds)
+    .is("merged_into_id", null)
+    .order("vote_count", { ascending: false })
+    .order("created_at", { ascending: true });
+  const rows = (data ?? []) as {
+    id: string;
+    post_id: string;
+    text: string;
+    vote_count: number;
+    created_by: string | null;
+  }[];
+
+  let myVotes = new Set<string>();
+  if (viewerId && rows.length > 0) {
+    const { data: fv } = await service
+      .from("feedback_facet_votes")
+      .select("facet_id")
+      .eq("user_id", viewerId)
+      .in("facet_id", rows.map((r) => r.id));
+    myVotes = new Set((fv ?? []).map((v) => v.facet_id as string));
+  }
+
+  for (const row of rows) {
+    counts.set(row.post_id, (counts.get(row.post_id) ?? 0) + 1);
+    const pills = byPost.get(row.post_id) ?? [];
+    if (pills.length >= FACET_PILLS_PER_POST) continue;
+    pills.push({
+      id: row.id,
+      text: row.text,
+      voteCount: row.vote_count,
+      votedByMe: myVotes.has(row.id),
+      isMine: viewerId !== null && row.created_by === viewerId,
+    });
+    byPost.set(row.post_id, pills);
+  }
+  return { byPost, counts };
 }
 
 async function fetchViewerVotes(
@@ -80,6 +140,7 @@ export async function listPublicPosts(params: {
   projectId: string;
   viewerId: string | null;
   sort: PublicSort;
+  status?: FeedbackPostStatus | null;
 }): Promise<PublicPost[]> {
   const service = getServiceClient();
   let query = service
@@ -88,6 +149,7 @@ export async function listPublicPosts(params: {
     .eq("project_id", params.projectId)
     .is("merged_into_id", null)
     .limit(PUBLIC_LIST_LIMIT);
+  if (params.status) query = query.eq("status", params.status);
   query =
     params.sort === "top"
       ? query.order("vote_count", { ascending: false }).order("created_at", { ascending: false })
@@ -96,11 +158,13 @@ export async function listPublicPosts(params: {
   if (error) console.error("[feedback-queries] list failed:", error.message);
   const rows = (data ?? []) as unknown as PostWithAuthor[];
   const ids = rows.map((r) => r.id);
-  const [voted, facetCounts] = await Promise.all([
+  const [voted, pills] = await Promise.all([
     fetchViewerVotes(params.viewerId, ids),
-    fetchFacetCounts(ids),
+    fetchFacetPills(ids, params.viewerId),
   ]);
-  return rows.map((r) => toPublicPost(r, params.viewerId, voted, facetCounts));
+  return rows.map((r) =>
+    toPublicPost(r, params.viewerId, voted, pills.counts, pills.byPost.get(r.id) ?? [])
+  );
 }
 
 export interface PublicPostDetail {

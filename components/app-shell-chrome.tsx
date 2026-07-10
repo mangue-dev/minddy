@@ -93,6 +93,20 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // same issues cache the board and search already keep fresh.
   const triageCount = (projectIssues ?? []).filter((i) => i.status === "triage").length;
 
+  // Feedback (MIN-37) : compteur des retours ouverts/prévus, via un endpoint
+  // léger (le badge n'a pas besoin de la liste complète).
+  const { data: feedbackCountData } = useQuery({
+    queryKey: ["feedback-count", currentProjectId ?? ""],
+    queryFn: async () => {
+      const r = await fetch(`/api/projects/${currentProjectId}/feedback/counts`);
+      if (!r.ok) return { count: 0 };
+      return (await r.json()) as { count: number };
+    },
+    enabled: !!currentProjectId,
+    staleTime: 60_000,
+  });
+  const feedbackCount = feedbackCountData?.count ?? 0;
+
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
     const createKw = ["create", "créer", "new", "nouveau"];
@@ -336,6 +350,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/feedback`,
               active: pathname.startsWith(`${base}/feedback`),
               shortcut: "F",
+              badge:
+                feedbackCount > 0 ? (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {feedbackCount}
+                  </span>
+                ) : undefined,
             },
             {
               key: "settings",
@@ -389,7 +409,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, triageCount, openCreateProject, t]);
+  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openCreateProject, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

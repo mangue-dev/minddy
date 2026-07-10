@@ -241,7 +241,7 @@
   },
   "PublicFeedback": {
     "title": "Feedback",
-    "signIn": "Sign in",
+    "signIn": "Authenticate",
     "signOut": "Sign out",
     "myFeedback": "My feedback",
     "composerTitle": "Share feedback",
@@ -249,7 +249,7 @@
     "postBodyPlaceholder": "Describe the context: what are you trying to do?",
     "submitPost": "Post",
     "similarTitle": "This may already exist — vote instead:",
-    "sortTop": "Top",
+    "sortTop": "Popular",
     "sortRecent": "Recent",
     "empty": "No feedback yet — be the first.",
     "facetCount": "{count, plural, one {# facet} other {# facets}}",
@@ -269,11 +269,11 @@
     "mergedFrom": "Merged from: {titles}",
     "teamResponse": "Response from the {project} team",
     "facetsTitle": "Facets",
-    "facetsExplainer": "A facet refines the need: a constraint or modality (“but offline”, “per project”). Voting for a facet also supports the need.",
-    "facetPlaceholder": "Add a constraint or modality…",
+    "facetsExplainer": "Each facet is a way of seeing the need — yours becomes votable by everyone, and adding one also supports the feedback.",
+    "facetPlaceholder": "Describe how you picture this feature…",
     "addFacet": "Add",
     "similarFacets": "Similar existing facets:",
-    "meSignInPrompt": "Sign in to find your feedback and votes.",
+    "meSignInPrompt": "Authenticate to find your feedback and votes.",
     "meIntro": "Your contributions appear under the pseudonym {pseudonym}.",
     "meEmpty": "You have no feedback or votes yet.",
     "meAuthored": "Your feedback",
@@ -296,7 +296,10 @@
       "titleRequired": "A title is required",
       "failed": "Something went wrong — try again",
       "notAuthenticated": "Sign in to continue"
-    }
+    },
+    "composerIntro": "Describe your need — similar feedback gets grouped and votable by everyone.",
+    "emptyFiltered": "No feedback matches this filter.",
+    "similarChecking": "Looking for similar feedback…"
   },
   "FeedbackBoard": {
     "title": "Feedback",
@@ -355,7 +358,15 @@
     "create": "Create",
     "rawTitle": "Submitted text (raw)",
     "openBoard": "View public board",
-    "errorGeneric": "Something went wrong"
+    "errorGeneric": "Something went wrong",
+    "respondPublishedAt": "Published on {date} — visible on the board",
+    "respondEdit": "Edit",
+    "respondCancel": "Cancel",
+    "respondUpdate": "Update",
+    "linkToIssue": "Link to an existing issue",
+    "linkIssueDialogDesc": "The feedback then follows that issue's progress: its public status aligns immediately, then on every transition.",
+    "linkIssueSearchPlaceholder": "Search by title or identifier…",
+    "unlinkIssue": "Unlink issue"
   },
   "Categories": {
     "colorSwatchAria": "Color {color}",
@@ -956,7 +967,10 @@
     "feedbackWizardCopied": "Prompt copied — paste it into your coding agent.",
     "feedbackWizardDoneTitle": "Prompt ready",
     "feedbackWizardSecretsWarning": "The prompt contains secrets — don't share it publicly.",
-    "feedbackWizardDoneKeyNote": "A “Feedback” integration key was created for this prompt — find it (and revoke it if needed) in the Integrations tab."
+    "feedbackWizardDoneKeyNote": "A “Feedback” integration key was created for this prompt — find it (and revoke it if needed) in the Integrations tab.",
+    "feedbackShowViews": "Shared view tabs",
+    "feedbackShowViewsDesc": "Shows the shared views checked below as tabs on the board — and the way back to the board from those views. When off, each public page stays isolated.",
+    "feedbackNoSharedViews": "No shared views yet — share a view from the project board first."
   },
   "Sort": {
     "manual": "Manual",

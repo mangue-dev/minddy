@@ -241,7 +241,7 @@
   },
   "PublicFeedback": {
     "title": "Feedback",
-    "signIn": "Se connecter",
+    "signIn": "S'authentifier",
     "signOut": "Se déconnecter",
     "myFeedback": "Mes feedbacks",
     "composerTitle": "Partager un retour",
@@ -249,7 +249,7 @@
     "postBodyPlaceholder": "Décrivez le contexte : qu'essayez-vous de faire ?",
     "submitPost": "Publier",
     "similarTitle": "Ce retour existe peut-être déjà — votez plutôt :",
-    "sortTop": "Top",
+    "sortTop": "Populaire",
     "sortRecent": "Récents",
     "empty": "Aucun retour pour l'instant — soyez le premier.",
     "facetCount": "{count, plural, one {# facette} other {# facettes}}",
@@ -269,11 +269,11 @@
     "mergedFrom": "Fusionné depuis : {titles}",
     "teamResponse": "Réponse de l'équipe {project}",
     "facetsTitle": "Facettes",
-    "facetsExplainer": "Une facette précise le besoin : une contrainte ou une modalité (« mais hors-ligne », « par projet »). Voter une facette soutient aussi le besoin.",
-    "facetPlaceholder": "Ajouter une contrainte ou une modalité…",
+    "facetsExplainer": "Chaque facette est une façon de voir le besoin — la vôtre devient votable par tous, et l'ajouter soutient aussi le retour.",
+    "facetPlaceholder": "Décrivez comment vous imaginez cette fonctionnalité…",
     "addFacet": "Ajouter",
     "similarFacets": "Facettes proches existantes :",
-    "meSignInPrompt": "Connectez-vous pour retrouver vos retours et vos votes.",
+    "meSignInPrompt": "Authentifiez-vous pour retrouver vos retours et vos votes.",
     "meIntro": "Vos contributions apparaissent sous le pseudonyme {pseudonym}.",
     "meEmpty": "Vous n'avez encore ni retour ni vote.",
     "meAuthored": "Votre retour",
@@ -296,7 +296,10 @@
       "titleRequired": "Un titre est requis",
       "failed": "Une erreur est survenue — réessayez",
       "notAuthenticated": "Connectez-vous pour continuer"
-    }
+    },
+    "composerIntro": "Décrivez votre besoin — les retours proches seront regroupés et votables par tous.",
+    "emptyFiltered": "Aucun retour ne correspond à ce filtre.",
+    "similarChecking": "Recherche de retours proches…"
   },
   "FeedbackBoard": {
     "title": "Feedback",
@@ -355,7 +358,15 @@
     "create": "Créer",
     "rawTitle": "Texte soumis (brut)",
     "openBoard": "Voir le board public",
-    "errorGeneric": "Une erreur est survenue"
+    "errorGeneric": "Une erreur est survenue",
+    "respondPublishedAt": "Publié le {date} — visible sur le board",
+    "respondEdit": "Modifier",
+    "respondCancel": "Annuler",
+    "respondUpdate": "Mettre à jour",
+    "linkToIssue": "Lier à une issue existante",
+    "linkIssueDialogDesc": "Le retour suit alors l'avancement de cette issue : son statut public s'aligne immédiatement, puis à chaque transition.",
+    "linkIssueSearchPlaceholder": "Chercher par titre ou identifiant…",
+    "unlinkIssue": "Délier le ticket"
   },
   "Categories": {
     "colorSwatchAria": "Couleur {color}",
@@ -956,7 +967,10 @@
     "feedbackWizardCopied": "Prompt copié — collez-le dans votre agent de code.",
     "feedbackWizardDoneTitle": "Prompt prêt",
     "feedbackWizardSecretsWarning": "Le prompt contient des secrets — ne le partagez pas publiquement.",
-    "feedbackWizardDoneKeyNote": "Une clé d'intégration « Feedback » a été créée pour ce prompt — retrouvez-la (et révoquez-la au besoin) dans l'onglet Intégrations."
+    "feedbackWizardDoneKeyNote": "Une clé d'intégration « Feedback » a été créée pour ce prompt — retrouvez-la (et révoquez-la au besoin) dans l'onglet Intégrations.",
+    "feedbackShowViews": "Onglets des vues partagées",
+    "feedbackShowViewsDesc": "Affiche les vues partagées cochées ci-dessous en onglets sur le board — et le lien retour vers le board depuis ces vues. Désactivé, chaque page publique reste isolée.",
+    "feedbackNoSharedViews": "Aucune vue partagée pour l'instant — partagez d'abord une vue depuis le board du projet."
   },
   "Sort": {
     "manual": "Manuel",

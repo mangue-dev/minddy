@@ -253,7 +253,9 @@ export async function findSimilarPostsAction(
   });
   if (!rate.allowed) return [];
 
-  const embedding = await embedText(trimmed, { timeoutMs: 3000 });
+  // 5 s : le premier appel à froid (config + OpenRouter) peut dépasser 3 s,
+  // et un échec ici est silencieux pour le visiteur.
+  const embedding = await embedText(trimmed, { timeoutMs: 5000 });
   if (!embedding) return [];
   const matches = await matchFeedbackPosts({
     projectId: ctx.project.id,

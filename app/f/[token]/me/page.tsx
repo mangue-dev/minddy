@@ -10,7 +10,9 @@ import {
   FEEDBACK_SESSION_COOKIE,
   getFeedbackSession,
 } from "@/lib/server/feedback/identity";
+import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import { listMyFeedback } from "@/lib/server/feedback/queries";
+import { HeaderIdentity } from "../header-identity";
 import { MyFeedbackClient, type MyFeedbackItem } from "./me-client";
 
 export const dynamic = "force-dynamic";
@@ -35,29 +37,38 @@ export default async function MyFeedbackPage({ params }: PageProps) {
   const t = await getTranslations("PublicFeedback");
 
   const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
-  const session = await getFeedbackSession(ctx.board.id, cookie);
+  const [session, tabs] = await Promise.all([
+    getFeedbackSession(ctx.board.id, cookie),
+    getPublicSiteTabs({
+      projectId: ctx.project.id,
+      feedbackLabel: t("title"),
+      current: { kind: "feedback" },
+    }),
+  ]);
   const entries: MyFeedbackItem[] = session
     ? await listMyFeedback({ projectId: ctx.project.id, viewerId: session.user.id })
     : [];
+  const identity = session
+    ? { pseudonym: session.user.pseudonym, email: session.user.email }
+    : null;
 
   return (
     <PublicPageShell
+      contained
+      tabs={tabs}
       heading={
         <div className="flex min-w-0 items-center gap-2">
           <ProjectOrb seed={ctx.project.id} className="size-5 rounded-[6px]" />
           <h1 className="min-w-0 truncate text-sm font-semibold">{ctx.project.name}</h1>
-          <span className="shrink-0 text-sm text-muted-foreground">· {t("title")}</span>
+          {tabs.length === 0 && (
+            <span className="shrink-0 text-sm text-muted-foreground">· {t("title")}</span>
+          )}
         </div>
       }
+      actions={<HeaderIdentity token={token} identity={identity} />}
     >
       <main className="min-h-0 flex-1">
-        <MyFeedbackClient
-          token={token}
-          identity={
-            session ? { pseudonym: session.user.pseudonym, email: session.user.email } : null
-          }
-          entries={entries}
-        />
+        <MyFeedbackClient token={token} identity={identity} entries={entries} />
       </main>
     </PublicPageShell>
   );

@@ -88,6 +88,58 @@ export async function promoteFeedbackPost(params: {
   return { ok: true, issue: created.issue };
 }
 
+/** Lie un post à une issue EXISTANTE (l'alternative à la promotion : le
+    travail est déjà tracké). Le statut public s'aligne immédiatement sur
+    l'issue (done→shipped, in_progress→in_progress, sinon planned) puis suivra
+    ses transitions via status-sync. */
+export async function linkFeedbackIssue(params: {
+  postId: string;
+  issueId: string;
+}): Promise<
+  | { ok: true }
+  | { ok: false; status: number; errorKey: "issueNotFound" | "feedbackNotFound" | "databaseError" }
+> {
+  const service = getServiceClient();
+
+  const { data: post } = await service
+    .from("feedback_posts")
+    .select("id, project_id, merged_into_id, issue_id")
+    .eq("id", params.postId)
+    .maybeSingle();
+  if (!post || post.merged_into_id !== null || post.issue_id !== null) {
+    return { ok: false, status: 404, errorKey: "feedbackNotFound" };
+  }
+
+  const { data: issue } = await service
+    .from("issues")
+    .select("id, status, project_id")
+    .eq("id", params.issueId)
+    .eq("project_id", post.project_id as string)
+    .maybeSingle();
+  if (!issue) {
+    return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+
+  const status =
+    issue.status === "done"
+      ? "shipped"
+      : issue.status === "in_progress" || issue.status === "in_review"
+        ? "in_progress"
+        : issue.status === "canceled"
+          ? "declined"
+          : "planned";
+  const { error } = await service
+    .from("feedback_posts")
+    .update({ issue_id: issue.id as string, status })
+    .eq("id", params.postId)
+    .is("issue_id", null);
+  if (error) {
+    console.error("[feedback-promote] link existing failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return { ok: true };
+}
+
 /** Détache l'issue liée (le post garde son dernier statut public). */
 export async function unlinkFeedbackIssue(postId: string): Promise<boolean> {
   const service = getServiceClient();

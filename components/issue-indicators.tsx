@@ -70,7 +70,15 @@ export function StatusIndicator({
         </svg>
       );
     case "in_progress":
-      return <Pie color="#FADB28" fraction={0.5} className={className} />;
+      // Le jaune Figma (#FADB28) est pensé pour le dark ; en light il frôle
+      // l'invisible — même teinte, assombrie, pour tenir ~3:1 sur fond clair.
+      return (
+        <Pie
+          color="currentColor"
+          fraction={0.5}
+          className={cn("text-[#B0890B] dark:text-[#FADB28]", className)}
+        />
+      );
     case "in_review":
       return <Pie color="#AA41FF" fraction={0.7} className={className} />;
     case "done":

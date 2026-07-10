@@ -16,12 +16,17 @@ export interface FeedbackBoardRow {
   project_id: string;
   token: string;
   enabled: boolean;
+  /** Couplage opt-in avec les vues partagées (onglets du site public). */
+  show_views: boolean;
+  /** Les vues (views.id) affichées en onglets — chaque vue est opt-in. */
+  visible_view_ids: string[];
   sso_secret: string | null;
   created_at: string;
   updated_at: string;
 }
 
-const BOARD_SELECT = "id, project_id, token, enabled, sso_secret, created_at, updated_at";
+const BOARD_SELECT =
+  "id, project_id, token, enabled, show_views, visible_view_ids, sso_secret, created_at, updated_at";
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
@@ -92,6 +97,32 @@ export async function enableBoardForProject(projectId: string): Promise<Feedback
     return null;
   }
   return (data as FeedbackBoardRow | null) ?? null;
+}
+
+/** Couplage board ⇄ vues partagées (onglets du site public), opt-in. */
+export async function setBoardShowViews(
+  projectId: string,
+  showViews: boolean
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update({ show_views: showViews })
+    .eq("project_id", projectId);
+  return !error;
+}
+
+/** Sélection des vues partagées affichées en onglets (remplace la liste). */
+export async function setBoardVisibleViews(
+  projectId: string,
+  viewIds: string[]
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update({ visible_view_ids: viewIds })
+    .eq("project_id", projectId);
+  return !error;
 }
 
 export async function disableBoardForProject(projectId: string): Promise<boolean> {

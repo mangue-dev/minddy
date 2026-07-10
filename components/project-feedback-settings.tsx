@@ -4,7 +4,17 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Input, Skeleton, Spinner, Switch, cn, toast } from "mangue-ui";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Input,
+  Skeleton,
+  Spinner,
+  Switch,
+  cn,
+  toast,
+} from "mangue-ui";
 import { Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
@@ -18,9 +28,16 @@ import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wiz
 
 interface BoardSettings {
   enabled: boolean;
+  show_views: boolean;
+  visible_view_ids: string[];
   token: string;
   sso_secret: string | null;
   sso_configured: boolean;
+}
+
+interface SharedView {
+  id: string;
+  name: string;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -75,9 +92,11 @@ export function ProjectFeedbackSettings({
 
   const { data, isLoading } = useQuery({
     queryKey: ["feedback-settings", projectId],
-    queryFn: () => api<{ board: BoardSettings | null }>(settingsPath),
+    queryFn: () =>
+      api<{ board: BoardSettings | null; shared_views: SharedView[] }>(settingsPath),
   });
   const board = data?.board ?? null;
+  const sharedViews = data?.shared_views ?? [];
 
   const { integrations } = useIntegrationsQuery(projectId);
   const feedbackKeyCount = integrations.filter(
@@ -161,6 +180,62 @@ export function ProjectFeedbackSettings({
                 {t("feedbackRotateToken")}
               </button>
             )}
+          </div>
+        )}
+
+        {board?.enabled && (
+          <div className="flex flex-col gap-3 border-t pt-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm">{t("feedbackShowViews")}</p>
+                <p className="text-xs text-muted-foreground">{t("feedbackShowViewsDesc")}</p>
+              </div>
+              <Switch
+                checked={board.show_views}
+                disabled={busy || !isOwner}
+                onCheckedChange={(v) =>
+                  void mutate(() =>
+                    api(settingsPath, {
+                      method: "PATCH",
+                      body: JSON.stringify({ show_views: v }),
+                    })
+                  )
+                }
+              />
+            </div>
+            {board.show_views &&
+              (sharedViews.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t("feedbackNoSharedViews")}</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {sharedViews.map((view) => {
+                    const checked = board.visible_view_ids.includes(view.id);
+                    return (
+                      <label
+                        key={view.id}
+                        className="flex items-center gap-2.5 text-sm"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          disabled={busy || !isOwner}
+                          onCheckedChange={(next) => {
+                            const ids = next
+                              ? [...board.visible_view_ids, view.id]
+                              : board.visible_view_ids.filter((id) => id !== view.id);
+                            void mutate(() =>
+                              api(settingsPath, {
+                                method: "PATCH",
+                                body: JSON.stringify({ visible_view_ids: ids }),
+                              })
+                            );
+                          }}
+                        />
+                        {view.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              ))}
           </div>
         )}
 

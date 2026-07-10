@@ -36,6 +36,18 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        {/* Applique le thème AVANT le premier paint — le ThemeProvider de
+            mangue-ui ne le fait qu'en useEffect, d'où un flash light→dark à
+            chaque chargement, surtout visible sur les pages publiques
+            anonymes. Même logique que lui : localStorage "mangue-ui-theme",
+            défaut "dark". */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("mangue-ui-theme")||"dark";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){document.documentElement.classList.add("dark");}})();`,
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >

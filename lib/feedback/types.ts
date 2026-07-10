@@ -40,12 +40,21 @@ export interface PublicPost {
   status: FeedbackPostStatus;
   voteCount: number;
   facetCount: number;
+  /** Facettes votables affichées en pills (plafonnées côté serveur). */
+  facets: PublicFacet[];
   createdAt: string;
   authorPseudonym: string | null;
   isMine: boolean;
   votedByMe: boolean;
   teamResponse: string | null;
   teamResponseAt: string | null;
+}
+
+/** Onglet de navigation du site public (board + vues partagées du projet). */
+export interface PublicSiteTab {
+  label: string;
+  href: string;
+  active: boolean;
 }
 
 /** Suggestion « ce post existe peut-être déjà » du composeur public. */
