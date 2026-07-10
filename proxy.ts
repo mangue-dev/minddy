@@ -16,7 +16,16 @@ import { NextResponse, type NextRequest } from "next/server";
 // files (icon1.png, apple-icon.png, favicon.ico) it has no extension, so the
 // matcher regex below doesn't exclude it — it must be whitelisted here or the
 // favicon would redirect to /login for logged-out visitors (login/signup pages).
-const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico", "/icon"]);
+// `/manifest.json` : le fetch d'un manifest n'envoie JAMAIS les cookies (sauf
+// crossorigin=use-credentials), donc sans whitelist il redirige vers /login et
+// le navigateur logge « Manifest: Syntax error » sur toutes les pages.
+const PUBLIC_ROUTES = new Set([
+  "/login",
+  "/signup",
+  "/favicon.ico",
+  "/icon",
+  "/manifest.json",
+]);
 // `/api/` is excluded from middleware auth on purpose: route handlers
 // authenticate themselves (getAuthedUser) and must return JSON 401 — never an
 // HTML redirect to /login. `/.well-known/` = découverte OAuth (RFC 8414/9728),

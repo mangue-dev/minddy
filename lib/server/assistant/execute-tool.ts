@@ -581,6 +581,8 @@ export async function executeTool(
           projectId,
           actorId: ctx.userId,
           name: args.name,
+          // 'issues' | 'feedback' — validé côté core, défaut 'issues'.
+          kind: args.kind,
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {

@@ -368,10 +368,13 @@ export type IntegrationWebhookEvent =
   | "issue.status_changed"
   | "issue.updated";
 export type IntegrationWebhookScope = "integration" | "all";
+/** Usage dédié d'une clé mdy_ : création d'issues ou dépôt de feedback. */
+export type IntegrationKind = "issues" | "feedback";
 
 export interface Integration {
   id: string;
   name: string;
+  kind: IntegrationKind;
   key_prefix: string;
   created_at: string;
   last_used_at: string | null;

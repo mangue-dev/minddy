@@ -18,6 +18,8 @@ export interface AuthedIntegration {
   id: string;
   project_id: string;
   name: string;
+  /** Usage dédié de la clé — chaque endpoint /api/v1 vérifie le sien. */
+  kind: "issues" | "feedback";
 }
 
 export interface IntegrationProject {
@@ -63,7 +65,7 @@ export async function authenticateIntegrationKey(
   const service = getServiceClient();
   const { data: integration } = await service
     .from("integrations")
-    .select("id, project_id, name")
+    .select("id, project_id, name, kind")
     .eq("key_hash", hashIntegrationKey(key))
     .is("revoked_at", null)
     .maybeSingle();
@@ -87,5 +89,19 @@ export async function authenticateIntegrationKey(
       if (error) console.error("[integration-auth] last_used_at:", error.message);
     });
 
-  return { ok: true, integration, project };
+  return { ok: true, integration: integration as AuthedIntegration, project };
+}
+
+/** Garde d'usage : une clé issues ne dépose pas de feedback et inversement.
+    Le message pointe vers le bon endpoint pour une DX sans impasse. */
+export function requireIntegrationKind(
+  integration: AuthedIntegration,
+  expected: "issues" | "feedback"
+): NextResponse | null {
+  if (integration.kind === expected) return null;
+  const hint =
+    expected === "feedback"
+      ? "This key creates issues directly. Use POST /api/v1/issues with it, or create a feedback key in Settings → Integrations."
+      : "This key submits feedback. Use POST /api/v1/feedback with it, or create an issues key in Settings → Integrations.";
+  return publicApiError(403, "wrong_key_kind", hint);
 }

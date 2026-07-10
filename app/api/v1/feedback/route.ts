@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   authenticateIntegration,
   publicApiError,
+  requireIntegrationKind,
 } from "@/lib/server/integration-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
@@ -24,6 +25,8 @@ import {
 export async function POST(request: NextRequest) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
+  const wrongKind = requireIntegrationKind(auth.integration, "feedback");
+  if (wrongKind) return wrongKind;
 
   const rate = checkSessionRateLimit(auth.integration.id, "integration:feedback:post", {
     limit: 20,

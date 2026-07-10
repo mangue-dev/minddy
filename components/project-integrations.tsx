@@ -27,7 +27,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, Copy, Plug, Plus, Webhook } from "lucide-react";
+import { Check, Copy, ListPlus, MessagesSquare, Plug, Plus, Webhook } from "lucide-react";
 import {
   createIntegrationApi,
   revokeIntegrationApi,
@@ -39,12 +39,68 @@ import {
 } from "@/lib/use-integrations-query";
 import type {
   Integration,
+  IntegrationKind,
   IntegrationWebhookEvent,
   IntegrationWebhookScope,
 } from "@/lib/types";
 
-/** Create dialog: a name form that, once submitted, swaps to the one-time key
-    panel — the only moment the plaintext key is ever visible. */
+/** Choix du type de clé à la création : deux cartes exclusives. */
+function KindPicker({
+  value,
+  onChange,
+}: {
+  value: IntegrationKind;
+  onChange: (kind: IntegrationKind) => void;
+}) {
+  const t = useTranslations("Settings");
+  const options = [
+    {
+      kind: "issues" as const,
+      icon: ListPlus,
+      label: t("integrationKind_issues"),
+      description: t("integrationKindIssuesDesc"),
+    },
+    {
+      kind: "feedback" as const,
+      icon: MessagesSquare,
+      label: t("integrationKind_feedback"),
+      description: t("integrationKindFeedbackDesc"),
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-2" role="radiogroup">
+      {options.map((option) => (
+        <button
+          key={option.kind}
+          type="button"
+          role="radio"
+          aria-checked={value === option.kind}
+          onClick={() => onChange(option.kind)}
+          className={cn(
+            "flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+            value === option.kind
+              ? "border-primary/60 bg-primary/5"
+              : "hover:border-foreground/25"
+          )}
+        >
+          <option.icon
+            className={cn(
+              "mt-0.5 size-4 shrink-0",
+              value === option.kind ? "text-primary" : "text-muted-foreground"
+            )}
+          />
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm font-medium">{option.label}</span>
+            <span className="text-xs text-muted-foreground">{option.description}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Create dialog: kind + name form that, once submitted, swaps to the one-time
+    key panel — the only moment the plaintext key is ever visible. */
 function CreateIntegrationDialog({
   projectId,
   open,
@@ -58,12 +114,14 @@ function CreateIntegrationDialog({
 }) {
   const t = useTranslations("Settings");
   const [name, setName] = useState("");
+  const [kind, setKind] = useState<IntegrationKind>("issues");
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reset = () => {
     setName("");
+    setKind("issues");
     setCreatedKey(null);
     setCopied(false);
   };
@@ -79,7 +137,7 @@ function CreateIntegrationDialog({
     if (!trimmed) return;
     setCreating(true);
     try {
-      const { key } = await createIntegrationApi(projectId, trimmed);
+      const { key } = await createIntegrationApi(projectId, trimmed, kind);
       setCreatedKey(key);
       onCreated();
     } catch (err) {
@@ -126,6 +184,10 @@ function CreateIntegrationDialog({
               <DialogTitle>{t("newIntegration")}</DialogTitle>
               <DialogDescription>{t("integrationsSectionDesc")}</DialogDescription>
             </DialogHeader>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-sm font-medium">{t("integrationKindLabel")}</p>
+              <KindPicker value={kind} onChange={setKind} />
+            </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="integration-name" className="text-sm font-medium">
                 {t("integrationNameLabel")}
@@ -397,7 +459,11 @@ export function ProjectIntegrations({
           {integrations.map((integration) => (
             <li key={integration.id} className="flex items-center gap-3 py-2">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                <Plug className="size-4" />
+                {integration.kind === "feedback" ? (
+                  <MessagesSquare className="size-4" />
+                ) : (
+                  <Plug className="size-4" />
+                )}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -405,6 +471,9 @@ export function ProjectIntegrations({
                   <code className="shrink-0 font-mono text-xs text-muted-foreground">
                     {integration.key_prefix}…
                   </code>
+                  <Badge variant="secondary">
+                    {t(`integrationKind_${integration.kind}`)}
+                  </Badge>
                   {integration.revoked_at && (
                     <Badge variant="secondary">{t("integrationRevokedBadge")}</Badge>
                   )}
@@ -420,15 +489,18 @@ export function ProjectIntegrations({
               <WebhookStatusDot integration={integration} />
               {isOwner && !integration.revoked_at && (
                 <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWebhookFor(integration)}
-                  >
-                    <Webhook />
-                    {t("webhookButton")}
-                  </Button>
+                  {/* Les webhooks suivent des événements d'issues : réservés aux clés issues. */}
+                  {integration.kind === "issues" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWebhookFor(integration)}
+                    >
+                      <Webhook />
+                      {t("webhookButton")}
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"

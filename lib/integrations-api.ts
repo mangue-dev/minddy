@@ -2,6 +2,7 @@
 
 import type {
   Integration,
+  IntegrationKind,
   IntegrationWebhookEvent,
   IntegrationWebhookScope,
 } from "./types";
@@ -38,13 +39,14 @@ export async function fetchIntegrationsApi(
 /** Returns the plaintext key — shown once, never retrievable again. */
 export async function createIntegrationApi(
   projectId: string,
-  name: string
+  name: string,
+  kind: IntegrationKind
 ): Promise<{ integration: Integration; key: string }> {
   return parseJson(
     await fetch(`/api/projects/${projectId}/integrations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, kind }),
     })
   );
 }

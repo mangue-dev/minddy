@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   authenticateIntegration,
   publicApiError,
+  requireIntegrationKind,
 } from "@/lib/server/integration-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ISSUE_PRIORITIES, ISSUE_EFFORTS } from "@/lib/issue-validation";
@@ -15,6 +16,8 @@ import { ISSUE_PRIORITIES, ISSUE_EFFORTS } from "@/lib/issue-validation";
 export async function GET(request: NextRequest) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
+  const wrongKind = requireIntegrationKind(auth.integration, "issues");
+  if (wrongKind) return wrongKind;
 
   const rate = checkSessionRateLimit(auth.integration.id, "integration:issues:options");
   if (!rate.allowed) {

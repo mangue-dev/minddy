@@ -16,12 +16,20 @@ import {
  */
 
 export const INTEGRATION_SUMMARY_SELECT =
-  "id, name, key_prefix, created_at, last_used_at, revoked_at, " +
+  "id, name, kind, key_prefix, created_at, last_used_at, revoked_at, " +
   "webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at";
+
+/** Usage dédié d'une clé : créer des issues directement, ou déposer du feedback. */
+export type IntegrationKind = "issues" | "feedback";
+
+export function isIntegrationKind(value: unknown): value is IntegrationKind {
+  return value === "issues" || value === "feedback";
+}
 
 export interface IntegrationSummary {
   id: string;
   name: string;
+  kind: IntegrationKind;
   key_prefix: string;
   created_at: string;
   last_used_at: string | null;
@@ -55,10 +63,12 @@ export async function createIntegration({
   projectId,
   actorId,
   name,
+  kind,
 }: {
   projectId: string;
   actorId: string;
   name: unknown;
+  kind: unknown;
 }): Promise<
   | { ok: true; integration: IntegrationSummary; key: string }
   | { ok: false; status: number; errorKey: "integrationNameRequired" | "databaseError" }
@@ -75,6 +85,7 @@ export async function createIntegration({
     .insert({
       project_id: projectId,
       name: trimmed,
+      kind: isIntegrationKind(kind) ? kind : "issues",
       key_hash: hash,
       key_prefix: prefix,
       created_by: actorId,
