@@ -399,7 +399,16 @@ export interface CreateIssueInput {
   parent_id?: string | null;
   due_date?: string | null;
   category_ids?: string[];
+  /** Cross-project creation carries category NAMES, not IDs (a category ID is
+      scoped to one project). The server matches them against the target
+      project's categories by name and keeps the ones that exist. */
+  category_names?: string[];
   attachments?: AttachmentInput[];
+  /** Cross-project creation: files the browser uploaded under the SOURCE
+      project's storage prefix. A storage object can't be referenced across
+      projects, so the server COPIES each into the target project (after
+      checking the actor can reach the source) and registers the copy. */
+  copy_attachments?: AttachmentInput[];
 }
 
 /** Field changes Numo applies to the create-issue form via voice dictation.

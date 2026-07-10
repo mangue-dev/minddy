@@ -1,9 +1,11 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
+  copyAttachmentsToProject,
   insertAttachments,
   parseAttachmentsInput,
 } from "@/lib/server/attachments";
@@ -82,6 +84,17 @@ export async function createIssueForProject({
     return { ok: false, status: 400, errorKey: "attachmentInvalid" };
   }
 
+  // Cross-project creation: files uploaded under another project's prefix, to be
+  // COPIED into this one. Validated with the generic `projects/` family here;
+  // per-file source access is checked at copy time (copyAttachmentsToProject).
+  const parsedCopyAttachments = parseAttachmentsInput(
+    input.copy_attachments,
+    "projects/"
+  );
+  if (parsedCopyAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  }
+
   const row: Record<string, unknown> = {
     project_id: projectId,
     title,
@@ -111,6 +124,15 @@ export async function createIssueForProject({
   if (isDateOrNull(input.due_date)) row.due_date = input.due_date;
 
   const service = getServiceClient();
+
+  // An assignee must belong to the target project. Cross-project creation may
+  // carry an assignee_id whose user isn't a member here — drop it rather than
+  // assign a stranger. (Same-project assignees are picked from the project's
+  // own member list, so this is a no-op there.)
+  if (typeof row.assignee_id === "string") {
+    const assigneeAccess = await getProjectAccess(row.assignee_id, projectId);
+    if (!assigneeAccess) row.assignee_id = null;
+  }
 
   // Sub-issue: validate the parent (same project, top-level) and, unless an
   // objective was explicitly set, inherit the parent's objective (plan §4).
@@ -154,31 +176,56 @@ export async function createIssueForProject({
   }
 
   // Attachment rows — the issue exists from here on, so a failure must not
-  // fail the request (the files just don't get registered).
+  // fail the request (the files just don't get registered). Cross-project files
+  // are copied into this project's storage prefix first, then registered
+  // alongside the local ones.
   try {
+    const copied = await copyAttachmentsToProject(service, {
+      targetProjectId: projectId,
+      actorId,
+      attachments: parsedCopyAttachments,
+    });
     await insertAttachments(service, {
       projectId,
       issueId: data.id as string,
       commentId: null,
       createdBy: actorId,
-      attachments: parsedAttachments,
+      attachments: [...parsedAttachments, ...copied],
     });
   } catch (e) {
     console.error("[create-issue] attachments failed:", (e as Error).message);
   }
 
-  // Attach categories (only those that belong to this project).
+  // Attach categories that belong to this project — matched by ID (same-project
+  // creation) and/or by NAME (cross-project creation carries names, since a
+  // category ID is scoped to one project). The DB filter on project_id keeps
+  // foreign values out either way.
   let categoryIds: string[] = [];
-  const requested = Array.isArray(input.category_ids)
+  const requestedIds = Array.isArray(input.category_ids)
     ? input.category_ids.filter((v): v is string => typeof v === "string")
     : [];
-  if (requested.length > 0) {
-    const { data: cats } = await service
-      .from("categories")
-      .select("id")
-      .eq("project_id", projectId)
-      .in("id", requested);
-    categoryIds = (cats ?? []).map((c) => c.id as string);
+  const requestedNames = Array.isArray(input.category_names)
+    ? input.category_names.filter((v): v is string => typeof v === "string")
+    : [];
+  if (requestedIds.length > 0 || requestedNames.length > 0) {
+    const resolved = new Set<string>();
+    if (requestedIds.length > 0) {
+      const { data: cats } = await service
+        .from("categories")
+        .select("id")
+        .eq("project_id", projectId)
+        .in("id", requestedIds);
+      (cats ?? []).forEach((c) => resolved.add(c.id as string));
+    }
+    if (requestedNames.length > 0) {
+      const { data: cats } = await service
+        .from("categories")
+        .select("id")
+        .eq("project_id", projectId)
+        .in("name", requestedNames);
+      (cats ?? []).forEach((c) => resolved.add(c.id as string));
+    }
+    categoryIds = [...resolved];
     if (categoryIds.length > 0) {
       await service
         .from("issue_categories")

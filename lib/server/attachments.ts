@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getProjectAccess } from "@/lib/server/project-access";
 import type { Attachment, AttachmentInput } from "@/lib/types";
 
 /** Client-checked too (use-attachment-uploads) — keep the two in sync. */
@@ -117,6 +118,63 @@ export async function uploadAttachment(
     await removeStorageObjects(service, [path]);
     throw e;
   }
+}
+
+/** `projects/{uuid}/…` — extracts the project a storage key belongs to. */
+const PROJECT_PATH_RE = /^projects\/([0-9a-fA-F-]{36})\//;
+
+/**
+ * Copy files uploaded under their SOURCE project's prefix into `targetProjectId`,
+ * returning descriptors (with the new target paths) ready for insertAttachments.
+ * Cross-project issue creation needs this: the browser uploaded the files under
+ * the source project, and a storage object can't be referenced across projects.
+ *
+ * Each source project is access-checked against the actor (cached) so a client
+ * can't smuggle another project's file into one it owns; files whose source is
+ * unreadable or whose copy fails are skipped (best-effort, like all attachment
+ * handling). A null actor (integration) can't be access-checked, so nothing is
+ * copied.
+ */
+export async function copyAttachmentsToProject(
+  service: SupabaseClient,
+  args: {
+    targetProjectId: string;
+    actorId: string | null;
+    attachments: AttachmentInput[];
+  }
+): Promise<AttachmentInput[]> {
+  if (args.attachments.length === 0 || !args.actorId) return [];
+  const access = new Map<string, boolean>();
+  const out: AttachmentInput[] = [];
+
+  for (const a of args.attachments) {
+    const sourcePid = PROJECT_PATH_RE.exec(a.storage_path)?.[1];
+    if (!sourcePid) continue;
+    // Already in the target project — register as-is, no copy needed.
+    if (sourcePid === args.targetProjectId) {
+      out.push(a);
+      continue;
+    }
+    let canReach = access.get(sourcePid);
+    if (canReach === undefined) {
+      canReach = !!(await getProjectAccess(args.actorId, sourcePid));
+      access.set(sourcePid, canReach);
+    }
+    if (!canReach) continue;
+
+    const targetPath = `projects/${args.targetProjectId}/${crypto.randomUUID()}/${sanitizeKeyPart(
+      a.file_name
+    )}`;
+    const { error } = await service.storage
+      .from("attachments")
+      .copy(a.storage_path, targetPath);
+    if (error) {
+      console.error("[attachments] cross-project copy failed:", error.message);
+      continue;
+    }
+    out.push({ ...a, storage_path: targetPath });
+  }
+  return out;
 }
 
 /** Insert the rows for files already uploaded to storage (service client —

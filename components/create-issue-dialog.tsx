@@ -254,11 +254,16 @@ export function CreateIssueDialog({
     setSubmitting(true);
     try {
       if (other) {
-        // Cross-project: assignee / objective / categories reference THIS
-        // project's entities and don't exist in the target — only the portable
-        // fields travel. (Statuses, priority, effort are global constants.)
-        // Attachments stay behind too: their storage paths carry THIS
-        // project's prefix.
+        // Cross-project: statuses / priority / effort / due date are portable.
+        // The assignee is a person (may belong to the target too) and categories
+        // travel by NAME — the server keeps each only if the target project has
+        // a matching member / category, and drops it otherwise. Attachments are
+        // COPIED into the target project by the server (their storage paths carry
+        // THIS project's prefix, so they can't be referenced as-is). Only the
+        // objective can't travel (an objective is scoped to one project).
+        const categoryNames = categories
+          .filter((c) => categoryIds.includes(c.id))
+          .map((c) => c.name);
         await onCreateInProject(other.id, {
           title: trimmed,
           description: description.trim() || null,
@@ -266,6 +271,9 @@ export function CreateIssueDialog({
           priority: fields.priority,
           effort: fields.effort,
           due_date: fields.due_date,
+          assignee_id: fields.assignee_id,
+          category_names: categoryNames,
+          copy_attachments: uploads.inputs,
         });
         toast.success(t("issueCreatedInProjectToast", { project: other.name }));
       } else {

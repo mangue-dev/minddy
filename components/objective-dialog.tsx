@@ -6,21 +6,22 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Spinner,
   SplitButton,
   cn,
   toast,
 } from "mangue-ui";
 import { Check } from "lucide-react";
-import { AssigneePicker, DueDateField } from "@/components/issue-fields";
+import { AutoTextarea } from "@/components/auto-textarea";
+import { MarkdownEditor } from "@/components/markdown-editor";
+import { AssigneeCompact } from "@/components/issue-compact-fields";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ProjectOrb } from "@/components/project-orb";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import {
@@ -37,41 +38,49 @@ import type {
   Project,
 } from "@/lib/types";
 
-function StatusSelect({
+// Bare (borderless) compact-field trigger — matches issue-compact-fields.tsx so
+// the objective dialog's options row reads like the create-issue dialog's.
+const BARE =
+  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+
+/** Icon + label status picker for the compact options row. */
+function ObjectiveStatusCompact({
   value,
   onChange,
 }: {
   value: ObjectiveStatus;
   onChange: (v: ObjectiveStatus) => void;
 }) {
+  const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
   const Icon = meta.icon;
+  const options: PickerOption[] = OBJECTIVE_STATUSES.map((s) => {
+    const SIcon = s.icon;
+    return {
+      value: s.value,
+      label: tStatus(s.value),
+      icon: <SIcon className={cn("size-4", s.color)} />,
+    };
+  });
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Icon className={meta.color} />
-          {tStatus(meta.value)}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {OBJECTIVE_STATUSES.map((s) => {
-          const SIcon = s.icon;
-          return (
-            <DropdownMenuItem key={s.value} onSelect={() => onChange(s.value)}>
-              <SIcon className={s.color} />
-              {tStatus(s.value)}
-              {s.value === value && <Check className="ml-auto size-4" />}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SearchSelect
+      value={value}
+      onChange={(v) => onChange(v as ObjectiveStatus)}
+      options={options}
+      tooltip={t("statusFieldLabel")}
+      trigger={
+        <button type="button" aria-label={t("statusFieldLabel")} className={BARE}>
+          <Icon className={cn("size-[18px] shrink-0", meta.color)} />
+          <span>{tStatus(meta.value)}</span>
+        </button>
+      }
+    />
   );
 }
 
-function ColorPicker({
+/** Color swatch picker — a single dot trigger opening the palette in a popover. */
+function ColorCompact({
   value,
   onChange,
 }: {
@@ -79,33 +88,56 @@ function ColorPicker({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("Objectives");
+  const [open, setOpen] = useState(false);
+  const pick = (c: string | null) => {
+    onChange(c);
+    setOpen(false);
+  };
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => onChange(null)}
-        aria-label={t("noColor")}
-        className={cn(
-          "flex size-5 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
-          value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
-        )}
-      >
-        ∅
-      </button>
-      {CATEGORY_COLORS.map((c) => (
-        <button
-          key={c}
-          type="button"
-          onClick={() => onChange(c)}
-          aria-label={t("colorAria", { color: c })}
-          className={cn(
-            "size-5 rounded-full ring-offset-2 ring-offset-background",
-            value === c && "ring-2 ring-ring"
-          )}
-          style={{ backgroundColor: c }}
-        />
-      ))}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label={t("colorFieldLabel")} className={BARE}>
+          <span
+            className={cn(
+              "flex size-[18px] shrink-0 items-center justify-center rounded-full",
+              value === null && "border border-dashed border-muted-foreground/60"
+            )}
+            style={value ? { backgroundColor: value } : undefined}
+          />
+          <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => pick(null)}
+            aria-label={t("noColor")}
+            className={cn(
+              "flex size-6 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
+              value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
+            )}
+          >
+            ∅
+          </button>
+          {CATEGORY_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => pick(c)}
+              aria-label={t("colorAria", { color: c })}
+              className={cn(
+                "flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background",
+                value === c && "ring-2 ring-ring"
+              )}
+              style={{ backgroundColor: c }}
+            >
+              {value === c && <Check className="size-3.5 text-white" />}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -150,6 +182,9 @@ export function ObjectiveDialog({
   const tCommon = useTranslations("Common");
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
+  // Remount the markdown editor to swap its content (it only reads `value` on
+  // mount and commits on blur) when the dialog opens on a new/other objective.
+  const [editorKey, setEditorKey] = useState(0);
 
   const currentProject = projects.find((p) => p.id === projectId) ?? null;
   const otherProjects = projects.filter((p) => p.id !== projectId);
@@ -171,6 +206,7 @@ export function ObjectiveDialog({
           }
         : EMPTY
     );
+    setEditorKey((k) => k + 1);
   }, [open, objective]);
 
   // `target` is set only when creating in a different project (dropdown item).
@@ -223,75 +259,70 @@ export function ObjectiveDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-lg"
+        className="p-8 sm:max-w-2xl"
         onInteractOutside={keepOverlayOpenForPopper}
       >
-        <DialogHeader>
-          <DialogTitle>{objective ? t("editObjectiveTitle") : t("newObjective")}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="objective-name" className="text-sm font-medium">
-              {t("nameLabel")}
-            </label>
-            <Input
-              id="objective-name"
-              autoFocus
-              required
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder={t("namePlaceholder")}
-            />
-          </div>
+        <DialogTitle className="sr-only">
+          {objective ? t("editObjectiveTitle") : t("newObjective")}
+        </DialogTitle>
 
-          <textarea
+        <form onSubmit={handleSubmit} className="relative flex flex-col rounded-lg">
+          <AutoTextarea
+            autoFocus
+            required
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              void submit();
+            }}
+            placeholder={t("namePlaceholder")}
+            className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+          />
+          <MarkdownEditor
+            key={editorKey}
             value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            onCommit={(description) => setForm((f) => ({ ...f, description }))}
             placeholder={t("descriptionPlaceholder")}
-            rows={3}
-            className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="mt-2 min-h-16"
           />
 
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusSelect
+          {/* Options — one compact inline row, like the create-issue dialog */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <ObjectiveStatusCompact
               value={form.status}
               onChange={(status) => setForm((f) => ({ ...f, status }))}
             />
-            <AssigneePicker
+            <AssigneeCompact
               value={form.lead_user_id}
               onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
               members={members}
-              emptyLabel={t("noLead")}
+              noneLabel={t("noLead")}
             />
-            <DueDateField
+            <DateTimePicker
+              variant="field"
               value={form.target_date}
               onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
               placeholder={t("targetDatePlaceholder")}
-              className="w-44"
+              ariaLabel={t("targetDatePlaceholder")}
+              tooltip={t("targetDatePlaceholder")}
+              className="h-8 rounded-full"
             />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t("colorFieldLabel")}</span>
-            <ColorPicker
+            <ColorCompact
               value={form.color}
               onChange={(color) => setForm((f) => ({ ...f, color }))}
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              {tCommon("cancel")}
-            </Button>
+          {/* Bottom bar — create controls at right, like the create-issue dialog */}
+          <div className="mt-8 flex items-center justify-end gap-4">
             {showSplit ? (
               <SplitButton
                 type="submit"
                 disabled={submitting || !form.name.trim()}
+                actionClassName="rounded-l-full pl-4"
+                triggerClassName="rounded-r-full"
                 menuLabel={t("createInOtherProject")}
                 menu={otherProjects.map((p) => (
                   <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
@@ -306,12 +337,16 @@ export function ObjectiveDialog({
                 </span>
               </SplitButton>
             ) : (
-              <Button type="submit" disabled={submitting || !form.name.trim()}>
+              <Button
+                type="submit"
+                className="rounded-full px-4"
+                disabled={submitting || !form.name.trim()}
+              >
                 {submitting && <Spinner />}
                 {objective ? tCommon("save") : tCommon("create")}
               </Button>
             )}
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

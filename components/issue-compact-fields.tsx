@@ -216,10 +216,13 @@ export function AssigneeCompact({
   open,
   onOpenChange,
   shortcutHint,
+  noneLabel,
 }: {
   value: string | null;
   members: Member[];
   onChange: (v: string | null) => void;
+  /** Overrides the "clear" option's label (e.g. "Sans lead" for objectives). */
+  noneLabel?: string;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -242,7 +245,7 @@ export function AssigneeCompact({
       value={value}
       onChange={onChange}
       options={options}
-      noneOption={{ label: tField("unassigned") }}
+      noneOption={{ label: noneLabel ?? tField("unassigned") }}
       tooltip={tField("assignee")}
       open={open}
       onOpenChange={onOpenChange}
