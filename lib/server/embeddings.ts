@@ -98,6 +98,9 @@ export async function matchFeedbackPosts(params: {
   embedding: number[];
   exclude?: string | null;
   limit?: number;
+  /** true = ne remonter que les posts publics (suggestions côté visiteur, pour
+      ne pas divulguer un retour privé). false (défaut) = dédup équipe/IA. */
+  publicOnly?: boolean;
 }): Promise<MatchedPost[]> {
   const service = getServiceClient();
   const { data, error } = await service.rpc("match_feedback_posts", {
@@ -105,6 +108,7 @@ export async function matchFeedbackPosts(params: {
     p_embedding: toVectorLiteral(params.embedding),
     p_exclude: params.exclude ?? null,
     p_limit: params.limit ?? 8,
+    p_public_only: params.publicOnly ?? false,
   });
   if (error) {
     console.error("[embeddings] match_feedback_posts failed:", error.message);

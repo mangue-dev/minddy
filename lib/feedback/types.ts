@@ -20,6 +20,35 @@ export function isFeedbackPostStatus(value: unknown): value is FeedbackPostStatu
   );
 }
 
+/**
+ * Statuts « terminés » : un besoin livré (shipped) ou refusé (declined) est
+ * résolu et n'a plus à occuper le haut des listes. On les range en bas, board
+ * public comme onglet équipe.
+ */
+export const FEEDBACK_RESOLVED_STATUSES: readonly FeedbackPostStatus[] = [
+  "shipped",
+  "declined",
+];
+
+export function isResolvedFeedbackStatus(status: FeedbackPostStatus): boolean {
+  return FEEDBACK_RESOLVED_STATUSES.includes(status);
+}
+
+/**
+ * Repousse les feedbacks résolus en bas sans casser l'ordre déjà appliqué
+ * (votes/date) : partition stable — Array.prototype.sort l'est en JS moderne.
+ */
+export function sortFeedbackResolvedLast<T>(
+  items: T[],
+  getStatus: (item: T) => FeedbackPostStatus
+): T[] {
+  return [...items].sort(
+    (a, b) =>
+      Number(isResolvedFeedbackStatus(getStatus(a))) -
+      Number(isResolvedFeedbackStatus(getStatus(b)))
+  );
+}
+
 export type FeedbackPostSource = "board" | "api" | "internal";
 export type FeedbackFacetSource = "ai" | "user" | "team";
 
@@ -38,6 +67,8 @@ export interface PublicPost {
   title: string;
   body: string;
   status: FeedbackPostStatus;
+  /** false = retour privé : remonté à l'équipe mais absent du board public. */
+  isPublic: boolean;
   voteCount: number;
   facetCount: number;
   /** Facettes votables affichées en pills (plafonnées côté serveur). */

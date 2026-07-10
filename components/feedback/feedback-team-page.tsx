@@ -39,6 +39,7 @@ import {
   ChevronUp,
   GitMerge,
   Link2,
+  Lock,
   MessagesSquare,
   MoreHorizontal,
   Plus,
@@ -217,6 +218,12 @@ export function FeedbackTeamPage() {
                       </span>
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                         <FeedbackStatusBadge status={post.status} />
+                        {!post.is_public && (
+                          <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+                            <Lock className="size-2.5" />
+                            {t("private")}
+                          </span>
+                        )}
                         {post.suggested_merge_into_id && (
                           <Sparkles className="size-3 text-brand" />
                         )}
@@ -399,6 +406,12 @@ function FeedbackDetail({
             </span>
             {t(`source.${post.source}`)} ·{" "}
             {format.dateTime(new Date(post.created_at), { dateStyle: "medium" })}
+            {!post.is_public && (
+              <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+                <Lock className="size-2.5" />
+                {t("private")}
+              </span>
+            )}
           </span>
           <div className="flex items-center gap-1.5">
             {/* Statut public : un select tant que le post est autonome — dès

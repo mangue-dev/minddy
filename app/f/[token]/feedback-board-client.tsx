@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Spinner,
+  Switch,
   cn,
 } from "mangue-ui";
 import { ArrowUpDown, Check, ChevronDown, MessagesSquare, Megaphone } from "lucide-react";
@@ -321,6 +322,8 @@ function ComposerDialog({
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
   const [title, setTitle] = useState("");
+  // Coché par défaut : publier sur le board. Décoché = retour privé à l'équipe.
+  const [isPublic, setIsPublic] = useState(true);
   const [similar, setSimilar] = useState<SimilarPost[]>([]);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -389,6 +392,7 @@ function ComposerDialog({
 
   const reset = () => {
     setTitle("");
+    setIsPublic(true);
     setSimilar([]);
     setChecking(false);
     setError(null);
@@ -407,6 +411,7 @@ function ComposerDialog({
         const result = await createPostAction(token, {
           title: title.trim(),
           body: bodyRef.current.trim(),
+          isPublic,
         });
         if (!result?.ok) {
           if (result?.error === "notAuthenticated") {
@@ -495,7 +500,20 @@ function ComposerDialog({
         {error && (
           <p className="mt-3 text-sm text-destructive">{t(`errors.${error}`)}</p>
         )}
-        <div className="mt-4 flex items-center justify-between gap-4 border-t pt-3">
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
+          <label htmlFor="feedback-make-public" className="flex min-w-0 cursor-pointer flex-col">
+            <span className="text-sm font-medium">{t("makePublic")}</span>
+            <span className="text-xs text-muted-foreground">
+              {isPublic ? t("makePublicHint") : t("makePrivateHint")}
+            </span>
+          </label>
+          <Switch
+            id="feedback-make-public"
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
+          />
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
           <p className="text-xs text-muted-foreground">{t("composerIntro")}</p>
           <Button onClick={() => title.trim() && submit()} disabled={pending || !title.trim()}>
             {pending && <Spinner />}

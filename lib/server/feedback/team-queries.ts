@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
+import { sortFeedbackResolvedLast } from "@/lib/feedback/types";
 
 /**
  * Lectures côté équipe (MIN-37) — contrairement au board public, les vraies
@@ -47,13 +48,16 @@ export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackL
     fetchTitles(rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)),
   ]);
 
-  return rows.map((row) => ({
+  const items = rows.map((row) => ({
     ...row,
     facet_count: facetCounts.get(row.id) ?? 0,
     suggested_title: row.suggested_merge_into_id
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,
   }));
+  // Terminés (livrés / refusés) en bas de liste, tri par votes conservé au sein
+  // de chaque groupe — comme sur le board public.
+  return sortFeedbackResolvedLast(items, (item) => item.status);
 }
 
 async function fetchFacetCounts(postIds: string[]): Promise<Map<string, number>> {

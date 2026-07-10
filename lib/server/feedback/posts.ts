@@ -27,6 +27,7 @@ export interface FeedbackPostRow {
   submitted_title: string;
   submitted_body: string;
   status: FeedbackPostStatus;
+  is_public: boolean;
   vote_count: number;
   issue_id: string | null;
   merged_into_id: string | null;
@@ -42,7 +43,7 @@ export interface FeedbackPostRow {
 
 /** Colonnes rendues aux appelants — jamais l'embedding (payload inutile). */
 export const FEEDBACK_POST_SELECT =
-  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, team_response, team_response_at, created_at, updated_at";
+  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, team_response, team_response_at, created_at, updated_at";
 
 export type CreateFeedbackPostResult =
   | { ok: true; post: FeedbackPostRow }
@@ -58,6 +59,9 @@ export async function createFeedbackPost(input: {
   authorId: string | null;
   /** Membre qui a saisi le feedback (canal interne uniquement). */
   createdByMember?: string | null;
+  /** false = retour privé : collecté par l'équipe mais jamais publié sur le
+      board. Par défaut public (choix explicite du visiteur au composeur). */
+  isPublic?: boolean;
 }): Promise<CreateFeedbackPostResult> {
   const service = getServiceClient();
   const title = input.title.trim().slice(0, FEEDBACK_TITLE_MAX);
@@ -78,6 +82,7 @@ export async function createFeedbackPost(input: {
       body,
       submitted_title: title,
       submitted_body: body,
+      is_public: input.isPublic ?? true,
       source: input.source,
       embedding: embedding ? toVectorLiteral(embedding) : null,
     })

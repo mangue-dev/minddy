@@ -150,7 +150,7 @@ export type CreatePostState =
 
 export async function createPostAction(
   token: string,
-  input: { title: string; body: string }
+  input: { title: string; body: string; isPublic?: boolean }
 ): Promise<CreatePostState> {
   const resolved = await resolveSession(token);
   if (!resolved) return { ok: false, error: "notAuthenticated" };
@@ -165,6 +165,8 @@ export async function createPostAction(
     body: input.body,
     source: "board",
     authorId: session.user.id,
+    // Coché par défaut côté composeur ; décoché = retour privé pour l'équipe.
+    isPublic: input.isPublic ?? true,
   });
   if (!result.ok) {
     return {
@@ -268,6 +270,8 @@ export async function findSimilarPostsAction(
     projectId: ctx.project.id,
     embedding,
     limit: 5,
+    // Un visiteur ne doit jamais se voir suggérer un retour privé d'autrui.
+    publicOnly: true,
   });
   return matches
     .filter((m) => m.similarity >= MIN_SUGGESTION_SIMILARITY)

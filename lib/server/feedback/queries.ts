@@ -1,10 +1,11 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import type {
-  FeedbackPostStatus,
-  PublicFacet,
-  PublicPost,
+import {
+  sortFeedbackResolvedLast,
+  type FeedbackPostStatus,
+  type PublicFacet,
+  type PublicPost,
 } from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
@@ -42,6 +43,7 @@ function toPublicPost(
     title: row.title,
     body: row.body,
     status: row.status,
+    isPublic: row.is_public,
     voteCount: row.vote_count,
     facetCount: facetCounts.get(row.id) ?? 0,
     facets,
@@ -148,6 +150,8 @@ export async function listPublicPosts(params: {
     .select(PUBLIC_POST_SELECT)
     .eq("project_id", params.projectId)
     .is("merged_into_id", null)
+    // Les retours privés remontent à l'équipe mais ne sont jamais listés ici.
+    .eq("is_public", true)
     .limit(PUBLIC_LIST_LIMIT);
   if (params.status) query = query.eq("status", params.status);
   query =
@@ -162,9 +166,12 @@ export async function listPublicPosts(params: {
     fetchViewerVotes(params.viewerId, ids),
     fetchFacetPills(ids, params.viewerId),
   ]);
-  return rows.map((r) =>
+  const posts = rows.map((r) =>
     toPublicPost(r, params.viewerId, voted, pills.counts, pills.byPost.get(r.id) ?? [])
   );
+  // Terminés (livrés / refusés) rangés en bas, l'ordre choisi (votes/date)
+  // conservé au sein de chaque groupe.
+  return sortFeedbackResolvedLast(posts, (p) => p.status);
 }
 
 export interface PublicPostDetail {
@@ -190,6 +197,9 @@ export async function getPublicPostDetail(params: {
     .maybeSingle();
   if (!data) return null;
   const row = data as unknown as PostWithAuthor;
+  // Retour privé : seul son auteur peut l'ouvrir (les autres → 404). Il reste
+  // visible côté équipe via l'onglet feedback du projet.
+  if (!row.is_public && row.author_id !== params.viewerId) return null;
   if (row.merged_into_id !== null) {
     // Tombstone : le canonique porte tout, l'appelant redirige.
     const [voted, facetCounts] = [new Set<string>(), new Map<string, number>()];

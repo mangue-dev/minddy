@@ -318,10 +318,15 @@
     },
     "composerIntro": "Describe your need — similar feedback gets grouped and votable by everyone.",
     "emptyFiltered": "No feedback matches this filter.",
-    "similarChecking": "Looking for similar feedback…"
+    "similarChecking": "Looking for similar feedback…",
+    "makePublic": "Make public",
+    "makePublicHint": "Visible on the board and votable by everyone.",
+    "makePrivateHint": "Private — sent to the team only, not shown on the board.",
+    "private": "Private"
   },
   "FeedbackBoard": {
     "title": "Feedback",
+    "private": "Private",
     "empty": "No feedback yet.",
     "emptyHint": "Feedback arrives from the public board, the API (/api/v1/feedback) or internal entry.",
     "selectPost": "Select a feedback post",

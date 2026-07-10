@@ -318,10 +318,15 @@
     },
     "composerIntro": "Décrivez votre besoin — les retours proches seront regroupés et votables par tous.",
     "emptyFiltered": "Aucun retour ne correspond à ce filtre.",
-    "similarChecking": "Recherche de retours proches…"
+    "similarChecking": "Recherche de retours proches…",
+    "makePublic": "Rendre public",
+    "makePublicHint": "Visible sur le board et votable par tous.",
+    "makePrivateHint": "Privé — transmis à l'équipe seule, absent du board.",
+    "private": "Privé"
   },
   "FeedbackBoard": {
     "title": "Feedback",
+    "private": "Privé",
     "empty": "Aucun feedback pour l'instant.",
     "emptyHint": "Les retours arrivent par le board public, l'API (/api/v1/feedback) ou la saisie interne.",
     "selectPost": "Sélectionnez un feedback",
