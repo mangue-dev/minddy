@@ -108,15 +108,24 @@ export function useGlobalBoardQuery() {
       const assignee = startAssignee(current, updates.status, patchHasAssignee);
       const patch = assignee ? { ...updates, assignee_id: assignee } : updates;
       patchCache(issueId, patch as Partial<Issue>);
+      // Single record point for updateIssue/moveIssue/setIssueCycle — recorded
+      // with the optimistic patch so an instant ⌘Z works; retracted on failure.
+      const request = updateIssueApi(issueId, patch);
+      const before = current ? buildBeforePatch(current, patch) : null;
+      const rec = before
+        ? record(
+            { kind: "update", projectId, issueId, before, after: patch },
+            request.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+        : null;
       try {
-        await updateIssueApi(issueId, patch);
-        // Single record point for updateIssue/moveIssue/setIssueCycle.
-        const before = current ? buildBeforePatch(current, patch) : null;
-        if (before) {
-          record({ kind: "update", projectId, issueId, before, after: patch });
-        }
+        await request;
         invalidate(projectId);
       } catch (err) {
+        rec?.retract();
         if (prev) queryClient.setQueryData(GLOBAL_BOARD_KEY, prev);
         throw err;
       }
@@ -148,23 +157,25 @@ export function useGlobalBoardQuery() {
           .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
           ?.issues.find((i) => i.id === issueId)?.category_ids ?? [];
       patchCache(issueId, { category_ids: categoryIds });
+      // No debounce here — rapid toggles coalesce in the undo stack itself.
+      const changed =
+        before.length !== categoryIds.length ||
+        before.some((id) => !categoryIds.includes(id));
+      const request = setIssueCategoriesApi(issueId, categoryIds);
+      const rec = changed
+        ? record(
+            { kind: "categories", projectId, issueId, before, after: categoryIds },
+            request.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+        : null;
       try {
-        await setIssueCategoriesApi(issueId, categoryIds);
-        // No debounce here — rapid toggles coalesce in the undo stack itself.
-        const changed =
-          before.length !== categoryIds.length ||
-          before.some((id) => !categoryIds.includes(id));
-        if (changed) {
-          record({
-            kind: "categories",
-            projectId,
-            issueId,
-            before,
-            after: categoryIds,
-          });
-        }
+        await request;
         invalidate(projectId);
       } catch (err) {
+        rec?.retract();
         toast.error((err as Error).message);
         invalidate(projectId);
       }
@@ -178,24 +189,37 @@ export function useGlobalBoardQuery() {
       // the aggregate cache carries both the issues and the relation rows.
       const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const target = board?.issues.find((i) => i.id === issueId);
-      await deleteIssueApi(issueId);
-      if (target && board) {
-        record({
-          kind: "delete",
-          projectId,
-          issueId,
-          snapshot: snapshotIssue(target),
-          childIds: board.issues
-            .filter((i) => i.parent_id === issueId)
-            .map((i) => i.id),
-          relations: board.relations
-            .filter((r) => r.source_id === issueId || r.target_id === issueId)
-            .map(({ source_id, target_id, type }) => ({
-              source_id,
-              target_id,
-              type,
-            })),
-        });
+      const request = deleteIssueApi(issueId);
+      const rec =
+        target && board
+          ? record(
+              {
+                kind: "delete",
+                projectId,
+                issueId,
+                snapshot: snapshotIssue(target),
+                childIds: board.issues
+                  .filter((i) => i.parent_id === issueId)
+                  .map((i) => i.id),
+                relations: board.relations
+                  .filter((r) => r.source_id === issueId || r.target_id === issueId)
+                  .map(({ source_id, target_id, type }) => ({
+                    source_id,
+                    target_id,
+                    type,
+                  })),
+              },
+              request.then(
+                () => undefined,
+                () => undefined
+              )
+            )
+          : null;
+      try {
+        await request;
+      } catch (err) {
+        rec?.retract();
+        throw err;
       }
       invalidate(projectId);
     },

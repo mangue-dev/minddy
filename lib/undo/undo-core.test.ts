@@ -127,19 +127,27 @@ describe("resolveAliased", () => {
 });
 
 describe("pushEntry", () => {
-  it("appends regular entries", () => {
+  it("appends regular entries and returns the pushed entry", () => {
     const stack: UndoEntry[] = [];
-    pushEntry(stack, updateEntry("issue-1", 0));
+    const first = updateEntry("issue-1", 0);
+    expect(pushEntry(stack, first)).toBe(first);
     pushEntry(stack, updateEntry("issue-1", 10));
     expect(stack).toHaveLength(2);
   });
 
-  it("coalesces rapid category toggles on the same issue", () => {
+  it("coalesces rapid category toggles in place, returning the canonical entry", () => {
     const stack: UndoEntry[] = [];
-    pushEntry(stack, categoriesEntry("issue-1", ["a"], ["a", "b"], 0));
-    pushEntry(stack, categoriesEntry("issue-1", ["a", "b"], ["a", "b", "c"], 500));
+    const first = categoriesEntry("issue-1", ["a"], ["a", "b"], 0);
+    pushEntry(stack, first);
+    const merged = pushEntry(
+      stack,
+      categoriesEntry("issue-1", ["a", "b"], ["a", "b", "c"], 500)
+    );
     pushEntry(stack, categoriesEntry("issue-1", ["a", "b", "c"], ["a"], 900));
     expect(stack).toHaveLength(1);
+    // Identity preserved so holders can retract / update `after` live.
+    expect(merged).toBe(first);
+    expect(stack[0]).toBe(first);
     expect(stack[0]).toMatchObject({ before: ["a"], after: ["a"], at: 900 });
   });
 

@@ -81,7 +81,16 @@ export type UndoAction =
     };
 
 // The intersection distributes over the union, so narrowing on `kind` holds.
-export type UndoEntry = UndoAction & { at: number };
+export type UndoEntry = UndoAction & {
+  at: number;
+  /** Ordering barrier: resolves when the recorded write settled on the server.
+      An undo/redo replay awaits it before sending its own write, so an instant
+      ⌘Z can't overtake the in-flight mutation it reverts. Mutable (a debounce
+      window swaps in the promise of its own flush). Never rejects. */
+  settled?: Promise<unknown>;
+  /** Set when the recorded write failed (entry retracted) — replays skip it. */
+  dead?: boolean;
+};
 
 export function snapshotIssue(issue: Issue): IssueSnapshot {
   return {
@@ -143,9 +152,11 @@ export function resolveAliased(
 /**
  * Push onto the undo stack, coalescing rapid category toggles on the same
  * issue into one entry (oldest `before`, newest `after`) and capping the
- * stack by dropping its oldest entry.
+ * stack by dropping its oldest entry. Returns the canonical entry now on the
+ * stack — the merged-into one when coalescing — mutated IN PLACE so callers
+ * holding it (for retraction or live `after` updates) keep a valid reference.
  */
-export function pushEntry(stack: UndoEntry[], entry: UndoEntry): void {
+export function pushEntry(stack: UndoEntry[], entry: UndoEntry): UndoEntry {
   const last = stack[stack.length - 1];
   if (
     entry.kind === "categories" &&
@@ -153,9 +164,11 @@ export function pushEntry(stack: UndoEntry[], entry: UndoEntry): void {
     last.issueId === entry.issueId &&
     entry.at - last.at <= CATEGORY_COALESCE_MS
   ) {
-    stack[stack.length - 1] = { ...last, after: entry.after, at: entry.at };
-    return;
+    last.after = entry.after;
+    last.at = entry.at;
+    return last;
   }
   stack.push(entry);
   if (stack.length > UNDO_STACK_LIMIT) stack.shift();
+  return entry;
 }

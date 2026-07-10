@@ -12,7 +12,7 @@ import {
 import { setIssueCategoriesApi } from "./categories-api";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
-import { useUndoHistory } from "./undo/undo-context";
+import { useUndoHistory, type UndoRecord } from "./undo/undo-context";
 import { buildBeforePatch, snapshotIssue } from "./undo/undo-core";
 import type {
   CreateIssueInput,
@@ -28,16 +28,22 @@ const issuesKey = (projectId: string) => ["issues", projectId] as const;
 export function useIssuesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  // Local undo history (MIN-35): every successful user mutation below records
-  // its inverse. Undo/redo replays bypass this hook, so they never re-record.
+  // Local undo history (MIN-35): mutations record WITH their optimistic patch
+  // (not after the server confirms — an instant ⌘Z must find the entry) and
+  // retract if the write fails. Undo/redo replays bypass this hook entirely.
   const { record } = useUndoHistory();
 
   // Per-issue debounce for category writes (see setCategories).
   const catTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const catLatest = useRef(new Map<string, string[]>());
-  // category_ids at the start of a debounce window — the undo `before` set
-  // (the cache is already patched by the time the PUT flushes).
-  const catBefore = useRef(new Map<string, string[]>());
+  // The open debounce window's undo entry — its `after` follows the toggles,
+  // its `settled` resolves once the flush PUT lands (see setCategories).
+  const catRec = useRef(
+    new Map<string, { rec: UndoRecord; resolve: () => void }>()
+  );
+  // Last flush PUT per issue (never-throwing) — chained into the next window's
+  // `settled` so an undo can't overtake a still-in-flight flush.
+  const catFlush = useRef(new Map<string, Promise<unknown>>());
 
   const { data, isLoading, error } = useQuery({
     queryKey: issuesKey(projectId ?? ""),
@@ -104,22 +110,30 @@ export function useIssuesQuery(projectId: string | null) {
           (old ?? []).map((i) => (i.id === issueId ? { ...i, ...patch } : i))
         );
       }
+      // The final patch (injected assignee included) against the pre-edit issue.
+      const request = updateIssueApi(issueId, patch);
+      const before = current && projectId ? buildBeforePatch(current, patch) : null;
+      const rec = before
+        ? record(
+            {
+              kind: "update",
+              projectId: projectId as string,
+              issueId,
+              before,
+              after: patch,
+            },
+            request.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+        : null;
       try {
-        const issue = await updateIssueApi(issueId, patch);
-        // The final patch (injected assignee included) against the pre-edit issue.
-        const before = current && projectId ? buildBeforePatch(current, patch) : null;
-        if (before) {
-          record({
-            kind: "update",
-            projectId: projectId as string,
-            issueId,
-            before,
-            after: patch,
-          });
-        }
+        const issue = await request;
         invalidate();
         return issue;
       } catch (err) {
+        rec?.retract();
         if (key) queryClient.setQueryData(key, previous);
         throw err;
       }
@@ -136,28 +150,41 @@ export function useIssuesQuery(projectId: string | null) {
         ? queryClient.getQueryData<Issue[]>(issuesKey(projectId))
         : undefined;
       const target = issues?.find((i) => i.id === issueId);
-      await deleteIssueApi(issueId);
-      if (target && projectId) {
-        const relations = (
-          queryClient.getQueryData<IssueRelation[]>([
-            "issue-relations",
-            projectId,
-          ]) ?? []
-        ).filter((r) => r.source_id === issueId || r.target_id === issueId);
-        record({
-          kind: "delete",
+      const relations = (
+        queryClient.getQueryData<IssueRelation[]>([
+          "issue-relations",
           projectId,
-          issueId,
-          snapshot: snapshotIssue(target),
-          childIds: (issues ?? [])
-            .filter((i) => i.parent_id === issueId)
-            .map((i) => i.id),
-          relations: relations.map(({ source_id, target_id, type }) => ({
-            source_id,
-            target_id,
-            type,
-          })),
-        });
+        ]) ?? []
+      ).filter((r) => r.source_id === issueId || r.target_id === issueId);
+      const request = deleteIssueApi(issueId);
+      const rec =
+        target && projectId
+          ? record(
+              {
+                kind: "delete",
+                projectId,
+                issueId,
+                snapshot: snapshotIssue(target),
+                childIds: (issues ?? [])
+                  .filter((i) => i.parent_id === issueId)
+                  .map((i) => i.id),
+                relations: relations.map(({ source_id, target_id, type }) => ({
+                  source_id,
+                  target_id,
+                  type,
+                })),
+              },
+              request.then(
+                () => undefined,
+                () => undefined
+              )
+            )
+          : null;
+      try {
+        await request;
+      } catch (err) {
+        rec?.retract();
+        throw err;
       }
       invalidate();
     },
@@ -186,14 +213,22 @@ export function useIssuesQuery(projectId: string | null) {
       queryClient.setQueryData<Issue[]>(key, (old) =>
         (old ?? []).map((i) => (i.id === issueId ? { ...i, ...write } : i))
       );
+      const request = updateIssueApi(issueId, write);
+      const current = previous?.find((i) => i.id === issueId);
+      const before = current ? buildBeforePatch(current, write) : null;
+      const rec = before
+        ? record(
+            { kind: "update", projectId, issueId, before, after: write },
+            request.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+        : null;
       try {
-        await updateIssueApi(issueId, write);
-        const current = previous?.find((i) => i.id === issueId);
-        const before = current ? buildBeforePatch(current, write) : null;
-        if (before) {
-          record({ kind: "update", projectId, issueId, before, after: write });
-        }
+        await request;
       } catch (err) {
+        rec?.retract();
         queryClient.setQueryData(key, previous);
         throw err;
       }
@@ -209,13 +244,34 @@ export function useIssuesQuery(projectId: string | null) {
   const setCategories = useCallback(
     async (issueId: string, categoryIds: string[]) => {
       const key = projectId ? issuesKey(projectId) : null;
-      // First toggle of a debounce window: keep the pre-edit set for undo
-      // (subsequent calls see an already-patched cache).
-      if (key && !catTimers.current.has(issueId)) {
+      // First toggle of a debounce window: record right away (an instant ⌘Z
+      // must find the entry) with a `settled` the flush resolves. Subsequent
+      // toggles only move the entry's `after`.
+      if (key && projectId && !catTimers.current.has(issueId)) {
         const current = queryClient
           .getQueryData<Issue[]>(key)
           ?.find((i) => i.id === issueId);
-        catBefore.current.set(issueId, current?.category_ids ?? []);
+        let resolve: () => void = () => {};
+        const flushed = new Promise<void>((r) => {
+          resolve = r;
+        });
+        const priorFlush = catFlush.current.get(issueId);
+        const rec = record(
+          {
+            kind: "categories",
+            projectId,
+            issueId,
+            before: current?.category_ids ?? [],
+            after: categoryIds,
+          },
+          priorFlush ? Promise.all([priorFlush, flushed]) : flushed
+        );
+        if (rec) catRec.current.set(issueId, { rec, resolve });
+      } else {
+        const held = catRec.current.get(issueId);
+        if (held && held.rec.entry.kind === "categories") {
+          held.rec.entry.after = categoryIds;
+        }
       }
       if (key) {
         queryClient.setQueryData<Issue[]>(key, (old) =>
@@ -233,26 +289,35 @@ export function useIssuesQuery(projectId: string | null) {
           catTimers.current.delete(issueId);
           const ids = catLatest.current.get(issueId) ?? categoryIds;
           catLatest.current.delete(issueId);
-          const before = catBefore.current.get(issueId);
-          catBefore.current.delete(issueId);
-          setIssueCategoriesApi(issueId, ids)
+          const held = catRec.current.get(issueId);
+          catRec.current.delete(issueId);
+          const request = setIssueCategoriesApi(issueId, ids);
+          catFlush.current.set(
+            issueId,
+            request.then(
+              () => undefined,
+              () => undefined
+            )
+          );
+          request
             .then(() => {
-              const changed =
-                before &&
-                (before.length !== ids.length ||
-                  before.some((id) => !ids.includes(id)));
-              if (changed && projectId) {
-                record({
-                  kind: "categories",
-                  projectId,
-                  issueId,
-                  before,
-                  after: ids,
-                });
+              if (held) {
+                const entry = held.rec.entry;
+                // The window toggled back to its starting set — drop the no-op.
+                if (
+                  entry.kind === "categories" &&
+                  entry.before.length === ids.length &&
+                  entry.before.every((id) => ids.includes(id))
+                ) {
+                  held.rec.retract();
+                }
+                held.resolve();
               }
               invalidate();
             })
             .catch((err) => {
+              held?.rec.retract();
+              held?.resolve();
               toast.error((err as Error).message);
               invalidate();
             });

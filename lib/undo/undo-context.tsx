@@ -9,9 +9,14 @@
 // only paths direct UI edits take. Numo and MCP mutate server-side and reach
 // the browser through the realtime bridge, so they are structurally excluded.
 //
-// Execution calls the API wrappers directly (never the hooks), so applying an
-// undo/redo is itself never recorded; caches are reconciled by invalidation.
-// While focus is on a typing target, ⌘Z stays with the native/TipTap undo.
+// The whole loop is optimistic so an edit can be undone the instant it's made:
+// hooks record BEFORE their write settles (retracting the entry if it fails),
+// and a replay patches the react-query caches synchronously, then queues its
+// server write on a serial queue that waits for the recorded write (`settled`)
+// — ordering is preserved without ever blocking the UI. Replays call the API
+// wrappers directly (never the hooks), so applying an undo/redo is itself
+// never recorded. While focus is on a typing target, ⌘Z stays with the
+// native/TipTap undo.
 
 import {
   createContext,
@@ -45,14 +50,27 @@ import {
   type UndoAction,
   type UndoEntry,
 } from "./undo-core";
-import type { Issue, IssueUpdateInput } from "@/lib/types";
+import type {
+  GlobalBoardResponse,
+  Issue,
+  IssueUpdateInput,
+} from "@/lib/types";
+
+/** Handle returned by record(): the canonical stack entry (rapid category
+    toggles coalesce into one) and its retraction (write failed → drop it). */
+export interface UndoRecord {
+  entry: UndoEntry;
+  retract: () => void;
+}
 
 interface UndoHistory {
-  record: (action: UndoAction) => void;
+  /** Record a user mutation the moment it's applied optimistically. `settled`
+      is the write's own promise (never-throwing) — replays order after it. */
+  record: (action: UndoAction, settled?: Promise<unknown>) => UndoRecord | null;
 }
 
 // Safe default so the hook is a no-op outside the provider (tests, share pages).
-const UndoContext = createContext<UndoHistory>({ record: () => {} });
+const UndoContext = createContext<UndoHistory>({ record: () => null });
 
 /** Recording facade for the mutation hooks. No-op outside an UndoProvider. */
 export function useUndoHistory(): UndoHistory {
@@ -79,13 +97,130 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   const redoStackRef = useRef<UndoEntry[]>([]);
   /** Original issue id → id of its latest re-creation. */
   const aliasRef = useRef(new Map<string, string>());
-  /** An execution is in flight — further ⌘Z are consumed but ignored. */
-  const busyRef = useRef(false);
+  /** Serial queue of replay writes — keeps them ordered without blocking UI. */
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const record = useCallback((action: UndoAction) => {
-    pushEntry(undoStackRef.current, { ...action, at: Date.now() });
-    redoStackRef.current = [];
+  const retract = useCallback((entry: UndoEntry) => {
+    entry.dead = true;
+    undoStackRef.current = undoStackRef.current.filter((e) => e !== entry);
+    redoStackRef.current = redoStackRef.current.filter((e) => e !== entry);
   }, []);
+
+  const record = useCallback(
+    (action: UndoAction, settled?: Promise<unknown>): UndoRecord => {
+      const entry = pushEntry(undoStackRef.current, {
+        ...action,
+        at: Date.now(),
+      });
+      entry.settled = settled;
+      redoStackRef.current = [];
+      return { entry, retract: () => retract(entry) };
+    },
+    [retract]
+  );
+
+  // ── Optimistic cache patches (both boards) — replays feel instant ────────
+
+  const patchIssueCaches = useCallback(
+    (projectId: string, issueId: string, patch: Partial<Issue>) => {
+      queryClient.setQueryData<Issue[]>(["issues", projectId], (old) =>
+        old?.map((i) => (i.id === issueId ? { ...i, ...patch } : i))
+      );
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old
+          ? {
+              ...old,
+              issues: old.issues.map((i) =>
+                i.id === issueId ? { ...i, ...patch } : i
+              ),
+            }
+          : old
+      );
+    },
+    [queryClient]
+  );
+
+  const removeIssueFromCaches = useCallback(
+    (projectId: string, issueId: string) => {
+      queryClient.setQueryData<Issue[]>(["issues", projectId], (old) =>
+        old?.filter((i) => i.id !== issueId)
+      );
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old
+          ? { ...old, issues: old.issues.filter((i) => i.id !== issueId) }
+          : old
+      );
+    },
+    [queryClient]
+  );
+
+  const removeRelationFromCaches = useCallback(
+    (projectId: string, relationId: string) => {
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old
+          ? {
+              ...old,
+              relations: old.relations.filter((r) => r.id !== relationId),
+            }
+          : old
+      );
+      queryClient.setQueryData(
+        ["issue-relations", projectId],
+        (old: { id: string }[] | undefined) =>
+          old?.filter((r) => r.id !== relationId)
+      );
+    },
+    [queryClient]
+  );
+
+  /** What can be shown before the server confirms. Re-creations and relation
+      re-adds need server-assigned ids, so they reconcile via invalidation. */
+  const applyOptimistic = useCallback(
+    (entry: UndoEntry, direction: "undo" | "redo") => {
+      const alias = aliasRef.current;
+      switch (entry.kind) {
+        case "update":
+          patchIssueCaches(
+            entry.projectId,
+            resolveAliased(alias, entry.issueId),
+            (direction === "undo" ? entry.before : entry.after) as Partial<Issue>
+          );
+          break;
+        case "categories":
+          patchIssueCaches(entry.projectId, resolveAliased(alias, entry.issueId), {
+            category_ids: direction === "undo" ? entry.before : entry.after,
+          });
+          break;
+        case "create":
+          if (direction === "undo") {
+            removeIssueFromCaches(
+              entry.projectId,
+              resolveAliased(alias, entry.issueId)
+            );
+          }
+          break;
+        case "delete":
+          if (direction === "redo") {
+            removeIssueFromCaches(
+              entry.projectId,
+              resolveAliased(alias, entry.issueId)
+            );
+          }
+          break;
+        case "relation-add":
+          if (direction === "undo") {
+            removeRelationFromCaches(entry.projectId, entry.relationId);
+          }
+          break;
+        case "relation-remove":
+          if (direction === "redo") {
+            removeRelationFromCaches(entry.projectId, entry.relationId);
+          }
+          break;
+      }
+    },
+    [patchIssueCaches, removeIssueFromCaches, removeRelationFromCaches]
+  );
 
   const invalidate = useCallback(
     (entry: UndoEntry) => {
@@ -177,7 +312,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     [readdRelation]
   );
 
-  const execute = useCallback(
+  const applyServer = useCallback(
     async (entry: UndoEntry, direction: "undo" | "redo") => {
       const alias = aliasRef.current;
       switch (entry.kind) {
@@ -236,35 +371,46 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   );
 
   const run = useCallback(
-    async (direction: "undo" | "redo") => {
-      if (busyRef.current) return;
+    (direction: "undo" | "redo") => {
       const [from, to] =
         direction === "undo"
           ? [undoStackRef.current, redoStackRef.current]
           : [redoStackRef.current, undoStackRef.current];
-      const entry = from.pop();
+      let entry: UndoEntry | undefined;
+      do {
+        entry = from.pop();
+      } while (entry?.dead);
       if (!entry) return;
-      busyRef.current = true;
-      try {
-        await execute(entry, direction);
-        to.push(entry);
-        const action = tRef.current(`actions.${ACTION_KEYS[entry.kind]}`);
-        toast.success(
-          tRef.current(direction === "undo" ? "undone" : "redone", { action })
-        );
-      } catch (err) {
-        // Entry dropped: it no longer applies (e.g. deleted elsewhere) and
-        // keeping it would wedge the stack.
-        toast.error(
-          tRef.current(direction === "undo" ? "undoFailed" : "redoFailed", {
-            message: (err as Error).message,
-          })
-        );
-      } finally {
-        busyRef.current = false;
-      }
+
+      // Instant feedback: patch the caches and toast now, write in the queue.
+      applyOptimistic(entry, direction);
+      to.push(entry);
+      const action = tRef.current(`actions.${ACTION_KEYS[entry.kind]}`);
+      toast.success(
+        tRef.current(direction === "undo" ? "undone" : "redone", { action })
+      );
+
+      const queued = entry;
+      queueRef.current = queueRef.current.then(async () => {
+        if (queued.dead) return;
+        try {
+          // Never overtake the mutation being replayed (it may still be in flight).
+          if (queued.settled) await queued.settled;
+          await applyServer(queued, direction);
+        } catch (err) {
+          // Entry dropped: it no longer applies (e.g. deleted elsewhere) and
+          // keeping it would wedge the stack; invalidation restores the truth.
+          retract(queued);
+          toast.error(
+            tRef.current(direction === "undo" ? "undoFailed" : "redoFailed", {
+              message: (err as Error).message,
+            })
+          );
+          invalidate(queued);
+        }
+      });
     },
-    [execute]
+    [applyOptimistic, applyServer, retract, invalidate]
   );
 
   useEffect(() => {
@@ -275,7 +421,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       if (isTypingTarget(e.target)) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      void run(e.shiftKey ? "redo" : "undo");
+      run(e.shiftKey ? "redo" : "undo");
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
