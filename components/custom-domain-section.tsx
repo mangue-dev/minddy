@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Input, Spinner, cn, toast } from "mangue-ui";
-import { Check, Copy, RefreshCw } from "lucide-react";
+import { Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
 
 /**
  * Section « Domaine personnalisé » (MIN-36), partagée entre les réglages du
@@ -53,12 +53,16 @@ export function CustomDomainSection({
   endpoint,
   queryKey,
   className,
+  primaryUrlShown = false,
 }: {
   /** Route API GET/PUT/DELETE, ex. /api/projects/<id>/feedback/domain. */
   endpoint: string;
   queryKey: readonly unknown[];
   /** Appliqué au conteneur — absent du DOM quand la section est masquée. */
   className?: string;
+  /** Le parent affiche déjà le domaine vérifié comme lien public principal :
+   *  on n'en répète donc pas la valeur ici (évite le doublon). */
+  primaryUrlShown?: boolean;
 }) {
   const t = useTranslations("CustomDomain");
   const queryClient = useQueryClient();
@@ -98,12 +102,15 @@ export function CustomDomainSection({
     ).then(() => setInput(""));
   };
 
+  const verified = domain?.status === "verified";
+
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-center gap-2">
-        <p className="text-xs font-medium text-muted-foreground">{t("title")}</p>
+    <div className={cn("flex flex-col gap-2.5", className)}>
+      {/* En-tête : titre à gauche, statut aligné à droite. */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">{t("title")}</p>
         {domain &&
-          (domain.status === "verified" ? (
+          (verified ? (
             <Badge variant="secondary" className="border-brand/30 text-brand">
               {t("statusVerified")}
             </Badge>
@@ -144,50 +151,56 @@ export function CustomDomainSection({
         </>
       ) : (
         <>
-          <p className="font-mono text-xs">{domain.domain}</p>
-          {domain.status !== "verified" && (
+          {/* La valeur du domaine : lien cliquable si vérifié, sinon texte brut.
+              Masquée si le parent l'affiche déjà comme lien public principal. */}
+          {!(primaryUrlShown && verified) &&
+            (verified ? (
+              <a
+                href={`https://${domain.domain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex w-fit items-center gap-1.5 font-mono text-xs transition-colors hover:text-brand"
+              >
+                {domain.domain}
+                <ExternalLink className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
+              </a>
+            ) : (
+              <p className="font-mono text-xs">{domain.domain}</p>
+            ))}
+
+          {!verified && (
             <>
               <p className="text-xs leading-relaxed text-muted-foreground">{t("dnsIntro")}</p>
-              <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 px-3 py-2">
-                {domain.dns.map((record) => (
-                  <div
-                    key={`${record.type}:${record.name}`}
-                    className="flex items-center gap-2 font-mono text-xs"
-                  >
-                    <span className="w-12 shrink-0 text-muted-foreground">{record.type}</span>
-                    <span className="min-w-0 flex-1 truncate">{record.name}</span>
-                    <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                      {record.value}
-                    </span>
-                    <CopyValueButton value={record.value} />
-                  </div>
-                ))}
-              </div>
+              <DnsTable records={domain.dns} />
             </>
           )}
+
           {canManage && (
-            <div className="flex items-center gap-3">
-              <button
+            <div className="flex items-center justify-end gap-2">
+              {!verified && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => void mutate(() => api<CustomDomainPayload>(`${endpoint}?refresh=1`))}
+                >
+                  {busy ? <Spinner /> : <RefreshCw className="size-3.5" />}
+                  {t("refresh")}
+                </Button>
+              )}
+              <Button
                 type="button"
-                disabled={busy}
-                onClick={() =>
-                  void mutate(() => api<CustomDomainPayload>(`${endpoint}?refresh=1`))
-                }
-                className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <RefreshCw className="size-3" />
-                {t("refresh")}
-              </button>
-              <button
-                type="button"
+                variant="ghost"
+                size="sm"
                 disabled={busy}
                 onClick={() =>
                   void mutate(() => api<CustomDomainPayload>(endpoint, { method: "DELETE" }))
                 }
-                className="text-xs text-destructive/80 transition-colors hover:text-destructive"
+                className="text-destructive hover:text-destructive"
               >
                 {t("remove")}
-              </button>
+              </Button>
             </div>
           )}
         </>
@@ -196,21 +209,71 @@ export function CustomDomainSection({
   );
 }
 
+/** Tableau des enregistrements DNS à créer : en-têtes explicites (Type, Nom,
+ *  Valeur, TTL) et valeur copiable. Le TTL est libre côté registrar → « Auto ». */
+function DnsTable({ records }: { records: CustomDomainDns[] }) {
+  const t = useTranslations("CustomDomain");
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full border-collapse text-xs">
+        <thead>
+          <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
+            <th className="px-3 py-1.5 font-medium">Type</th>
+            <th className="px-3 py-1.5 font-medium">{t("dnsName")}</th>
+            <th className="px-3 py-1.5 font-medium">{t("dnsValue")}</th>
+            <th className="px-3 py-1.5 font-medium">TTL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((record) => (
+            <tr
+              key={`${record.type}:${record.name}`}
+              className="border-b border-border align-top last:border-b-0"
+            >
+              <td className="px-3 py-2 font-mono">{record.type}</td>
+              <td className="px-3 py-2 font-mono">
+                <DnsValue value={record.name} />
+              </td>
+              <td className="px-3 py-2 font-mono">
+                <DnsValue value={record.value} />
+              </td>
+              <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">Auto</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Cellule DNS : valeur (repliable si longue) + bouton copier. */
+function DnsValue({ value }: { value: string }) {
+  return (
+    <div className="flex items-start gap-1.5">
+      <span className="min-w-0 break-all">{value}</span>
+      <CopyValueButton value={value} />
+    </div>
+  );
+}
+
 function CopyValueButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
+    <button
+      type="button"
       aria-label="Copy"
-      className="shrink-0"
+      className="shrink-0 text-muted-foreground/70 transition-colors hover:text-foreground"
       onClick={() => {
         void navigator.clipboard.writeText(value);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
-    </Button>
+      {copied ? (
+        <Check className="size-3.5 text-emerald-500" />
+      ) : (
+        <Copy className="size-3.5" />
+      )}
+    </button>
   );
 }

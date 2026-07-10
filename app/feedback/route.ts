@@ -16,7 +16,10 @@ import { signFeedbackSsoJwt } from "@/lib/feedback/sso-jwt";
  * sert qu'à la redirection : `exp` = maintenant + 10 min (borné par le signeur).
  */
 
-const BOARD_URL = "https://www.minddy.app/f/wOd9bP50QqAwPnVW0GbRgw";
+// Domaine personnalisé du board minddy (MIN-36, dogfooding). Le proxy réécrit
+// `feedback.minddy.app/?sso=<jwt>` → `/f/<token>?sso=<jwt>` (query préservée) :
+// le token est résolu côté serveur depuis le host, inutile de l'exposer ici.
+const BOARD_URL = "https://feedback.minddy.app";
 
 export const dynamic = "force-dynamic";
 
