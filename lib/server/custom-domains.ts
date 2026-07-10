@@ -8,7 +8,7 @@ import {
   lookupCustomDomain,
   type DomainTarget,
 } from "@/lib/custom-domain-lookup";
-import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
+import { customDomainAllowlist, isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import {
   addDomainToVercel,
   getVercelDomainState,
@@ -69,7 +69,10 @@ export function normalizeDomain(input: string): NormalizeDomainResult {
   if (!value || value.length > 253 || !HOSTNAME_RE.test(value)) {
     return { ok: false, error: "invalid" };
   }
+  // L'allowlist ops (MDY_CUSTOM_DOMAIN_ALLOWLIST) court-circuite l'interdit
+  // des suffixes minddy — dogfooding de feedback.minddy.app.
   if (
+    !customDomainAllowlist().has(value) &&
     FORBIDDEN_SUFFIXES.some((suffix) => value === suffix || value.endsWith(`.${suffix}`))
   ) {
     return { ok: false, error: "forbidden" };
