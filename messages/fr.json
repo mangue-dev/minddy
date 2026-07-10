@@ -1155,14 +1155,6 @@
     "noSelection": "Sélectionne un ticket pour le trier.",
     "backToList": "Retour à la liste"
   },
-  "Feedback": {
-    "title": "Partager un retour",
-    "description": "Un bug, une idée, un manque ? Dites-nous tout — votre retour part directement à l'équipe minddy.",
-    "placeholder": "Qu'avez-vous en tête ?",
-    "send": "Envoyer",
-    "sent": "Merci pour votre retour !",
-    "sendFailed": "Impossible d'envoyer votre retour. Réessayez."
-  },
   "Cycles": {
     "enableTitle": "Cycles",
     "enableDesc": "Ta semaine ou quinzaine personnelle, tous projets confondus : ce sur quoi tu travailles en ce moment.",

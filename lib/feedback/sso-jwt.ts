@@ -78,3 +78,48 @@ export function verifyFeedbackSsoJwt(
 
   return { ok: true, claims: { externalId: sub.trim(), email, name } };
 }
+
+/** Durée de vie maximale du JWT SSO : il ne sert qu'à la redirection immédiate. */
+export const SSO_MAX_TTL_SECONDS = 600;
+
+export interface SignFeedbackSsoInput {
+  /** Identifiant stable de l'utilisateur chez le client → claim `sub` (requis). */
+  sub: string;
+  email?: string | null;
+  name?: string | null;
+  /** Durée de vie en secondes ; bornée à {@link SSO_MAX_TTL_SECONDS} (10 min). */
+  ttlSeconds?: number;
+}
+
+function encodeSegment(value: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+/**
+ * Signe le JWT SSO (côté client du board) : HS256, `sub`/`email`/`name` + `exp`
+ * court. Miroir de {@link verifyFeedbackSsoJwt} — même format, même algo, pas de
+ * dépendance jose. Le résultat va dans `/f/<token>?sso=<jwt>`.
+ */
+export function signFeedbackSsoJwt(
+  input: SignFeedbackSsoInput,
+  secret: string,
+  nowSeconds: number = Math.floor(Date.now() / 1000)
+): string {
+  const ttl = Math.min(
+    Math.max(1, Math.floor(input.ttlSeconds ?? SSO_MAX_TTL_SECONDS)),
+    SSO_MAX_TTL_SECONDS
+  );
+  const headerB64 = encodeSegment({ alg: "HS256", typ: "JWT" });
+  const payload: Record<string, unknown> = {
+    sub: input.sub,
+    iat: nowSeconds,
+    exp: nowSeconds + ttl,
+  };
+  if (input.email) payload.email = input.email;
+  if (input.name) payload.name = input.name;
+  const payloadB64 = encodeSegment(payload);
+  const signature = createHmac("sha256", secret)
+    .update(`${headerB64}.${payloadB64}`)
+    .digest("base64url");
+  return `${headerB64}.${payloadB64}.${signature}`;
+}

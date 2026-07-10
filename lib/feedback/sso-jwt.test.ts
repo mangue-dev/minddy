@@ -1,6 +1,10 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { verifyFeedbackSsoJwt } from "./sso-jwt";
+import {
+  SSO_MAX_TTL_SECONDS,
+  signFeedbackSsoJwt,
+  verifyFeedbackSsoJwt,
+} from "./sso-jwt";
 
 const SECRET = "test-sso-secret";
 const NOW = 1_800_000_000;
@@ -102,6 +106,60 @@ describe("verifyFeedbackSsoJwt", () => {
     expect(verifyFeedbackSsoJwt("", SECRET, NOW)).toEqual({
       ok: false,
       error: "malformed",
+    });
+  });
+});
+
+describe("signFeedbackSsoJwt", () => {
+  it("round-trips through verifyFeedbackSsoJwt with normalized claims", () => {
+    const token = signFeedbackSsoJwt(
+      { sub: "user-42", email: "Jane@Example.COM", name: "Jane" },
+      SECRET,
+      NOW
+    );
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW)).toEqual({
+      ok: true,
+      claims: { externalId: "user-42", email: "jane@example.com", name: "Jane" },
+    });
+  });
+
+  it("defaults exp to now + 10 min", () => {
+    const token = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);
+    // Still valid at +599s, expired at +601s.
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW + 599).ok).toBe(true);
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW + 601)).toEqual({
+      ok: false,
+      error: "expired",
+    });
+  });
+
+  it("caps a longer requested TTL to the 10 min maximum", () => {
+    const token = signFeedbackSsoJwt(
+      { sub: "user-1", ttlSeconds: 3600 },
+      SECRET,
+      NOW
+    );
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW + SSO_MAX_TTL_SECONDS + 1)).toEqual({
+      ok: false,
+      error: "expired",
+    });
+  });
+
+  it("omits email/name when absent", () => {
+    const token = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);
+    const result = verifyFeedbackSsoJwt(token, SECRET, NOW);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.claims.email).toBeNull();
+      expect(result.claims.name).toBeNull();
+    }
+  });
+
+  it("is rejected by verify under a different secret", () => {
+    const token = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);
+    expect(verifyFeedbackSsoJwt(token, "other-secret", NOW)).toEqual({
+      ok: false,
+      error: "bad_signature",
     });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -38,7 +38,7 @@ import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
-import { ShareFeedbackDialog } from "@/components/share-feedback-dialog";
+import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import {
   useChordPrefix,
   useSidebarCollapse,
@@ -378,7 +378,6 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const router = useRouter();
   const pathname = usePathname();
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   return (
     <div className="flex flex-col gap-0.5">
       <FooterRow
@@ -392,9 +391,8 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         icon={Megaphone}
         label={t("shareFeedback")}
         collapsed={collapsed}
-        onClick={() => setFeedbackOpen(true)}
+        onClick={openFeedbackBoard}
       />
-      <ShareFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <AccountButton collapsed={collapsed} />
     </div>
   );

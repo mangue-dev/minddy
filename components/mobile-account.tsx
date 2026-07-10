@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
+import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
 
@@ -55,7 +56,7 @@ const THEME_CHOICES: { value: "light" | "dark" | "system"; icon: LucideIcon; key
  * hamburger menu sheet (as nav sections — the sidebar replacement) and the
  * command palette (as an "Account" group), from one source so they stay in sync.
  */
-export function useAccountActions(onOpenFeedback: () => void): {
+export function useAccountActions(): {
   menuSections: AppNavSection[];
   commandGroup: PaletteGroup;
 } {
@@ -71,7 +72,7 @@ export function useAccountActions(onOpenFeedback: () => void): {
       items: [
         { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
         { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
-        { key: "m-feedback", label: t("shareFeedback"), icon: Megaphone, onClick: onOpenFeedback },
+        { key: "m-feedback", label: t("shareFeedback"), icon: Megaphone, onClick: openFeedbackBoard },
       ],
     },
     {
@@ -106,7 +107,7 @@ export function useAccountActions(onOpenFeedback: () => void): {
       label: t("shareFeedback"),
       icon: Megaphone,
       keywords: ["feedback", "support", "retour", "avis"],
-      onSelect: onOpenFeedback,
+      onSelect: openFeedbackBoard,
     },
     ...THEME_CHOICES.map((c) => ({
       key: `cmd-${c.value}`,

@@ -54,7 +54,7 @@ export async function authenticateIntegration(
 }
 
 /** Key-only variant, for server code that holds a key without an incoming
-    Bearer header (e.g. minddy's own share-feedback relay). */
+    Bearer header. */
 export async function authenticateIntegrationKey(
   key: string | null | undefined
 ): Promise<IntegrationAuthResult> {

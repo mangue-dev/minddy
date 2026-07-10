@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -33,7 +33,6 @@ import {
 import { NewMenu } from "@/components/new-menu";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
-import { ShareFeedbackDialog } from "@/components/share-feedback-dialog";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import {
   AppSidebar,
@@ -417,9 +416,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Account/global options (statistics, feedback, theme, sign out). On desktop
   // they live in the sidebar footer; on mobile they move into the menu sheet +
   // command palette from a single source so both stay in sync.
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { menuSections: accountSections, commandGroup: accountCommandGroup } =
-    useAccountActions(() => setFeedbackOpen(true));
+    useAccountActions();
 
   // Palette gains the account group (used by the desktop pill too). The mobile
   // menu sheet gains the account sections so it fully replaces the sidebar.
@@ -463,7 +461,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       {children}
-      <ShareFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </AppShell>
   );
 }

@@ -1155,14 +1155,6 @@
     "noSelection": "Select an issue to triage it.",
     "backToList": "Back to the list"
   },
-  "Feedback": {
-    "title": "Share feedback",
-    "description": "A bug, an idea, something missing? Tell us — your feedback goes straight to the minddy team.",
-    "placeholder": "What's on your mind?",
-    "send": "Send",
-    "sent": "Thanks for your feedback!",
-    "sendFailed": "Could not send your feedback. Please try again."
-  },
   "Cycles": {
     "enableTitle": "Cycles",
     "enableDesc": "Your personal week or fortnight, across all projects: what you're working on right now.",
