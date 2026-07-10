@@ -36,10 +36,12 @@ export interface DictateButtonProps {
   /** Optional tooltip override. Defaults to the localized "Voice dictation" label. */
   tooltipLabel?: string;
   /**
-   * When set, pressing this key (case-insensitive, without modifiers and while
-   * focus isn't in a text field) toggles recording — same as clicking. The
-   * listener lives for as long as the button is mounted, so scope it by only
-   * rendering the button in the context where the shortcut should apply.
+   * When set, pressing this key toggles recording — same as clicking. Accepts a
+   * bare key ("v") or a Shift combo ("shift+v"), case-insensitive. A bare key
+   * only fires while focus isn't in a text field (it would type otherwise); a
+   * Shift combo fires everywhere, inputs included. The listener lives for as
+   * long as the button is mounted, so scope it by only rendering the button in
+   * the context where the shortcut should apply.
    */
   shortcutKey?: string;
   className?: string;
@@ -50,6 +52,16 @@ function formatTime(ms: number): string {
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
   return `${min}:${sec.toString().padStart(2, "0")}`;
+}
+
+/** Parse a shortcut spec ("v" or "shift+v") into its parts, or null if unset. */
+function parseShortcut(
+  spec?: string,
+): { requireShift: boolean; key: string } | null {
+  if (!spec) return null;
+  const lower = spec.toLowerCase();
+  const requireShift = lower.startsWith("shift+");
+  return { requireShift, key: requireShift ? lower.slice("shift+".length) : lower };
 }
 
 function pickRecorderMimeType(): string | undefined {
@@ -308,29 +320,35 @@ export function DictateButton({
     }
   }, [disabled, startRecording, status, stopRecording]);
 
-  // Keyboard shortcut: toggle recording on `shortcutKey`. Guarded like the
-  // field shortcuts — no modifiers, no key-repeat, and never while the user is
-  // typing (so the key still types normally in the title/description).
+  // Keyboard shortcut: toggle recording on `shortcutKey`. No Cmd/Ctrl/Alt, no
+  // key-repeat. A bare key stands down while the user is typing (so it still
+  // types normally in the title/description); a Shift combo carries its own
+  // modifier, so it fires everywhere — inputs included.
+  const shortcut = parseShortcut(shortcutKey);
+  const shortcutChar = shortcut?.key ?? null;
+  const shortcutRequireShift = shortcut?.requireShift ?? false;
   useEffect(() => {
-    if (!shortcutKey) return;
-    const key = shortcutKey.toLowerCase();
+    if (!shortcutChar) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-      if (e.key.toLowerCase() !== key) return;
-      const el = e.target as HTMLElement | null;
-      if (
-        el &&
-        (el.tagName === "INPUT" ||
-          el.tagName === "TEXTAREA" ||
-          el.isContentEditable)
-      )
-        return;
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (shortcutRequireShift ? !e.shiftKey : e.shiftKey) return;
+      if (e.key.toLowerCase() !== shortcutChar) return;
+      if (!shortcutRequireShift) {
+        const el = e.target as HTMLElement | null;
+        if (
+          el &&
+          (el.tagName === "INPUT" ||
+            el.tagName === "TEXTAREA" ||
+            el.isContentEditable)
+        )
+          return;
+      }
       e.preventDefault();
       handleClick();
     };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
-  }, [shortcutKey, handleClick]);
+  }, [shortcutChar, shortcutRequireShift, handleClick]);
 
   const isBusy = status !== "idle";
   const isRecording = status === "recording";
@@ -373,9 +391,10 @@ export function DictateButton({
           {!isBusy && (
             <TooltipContent side="top" className="flex items-center gap-1.5">
               {tooltipLabel ?? t("start")}
-              {shortcutKey && (
+              {shortcut && (
                 <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  {shortcutKey.toUpperCase()}
+                  {shortcut.requireShift ? "⇧" : ""}
+                  {shortcut.key.toUpperCase()}
                 </kbd>
               )}
             </TooltipContent>

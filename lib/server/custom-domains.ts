@@ -35,12 +35,14 @@ export interface CustomDomainRow {
   share_id: string | null;
   status: "pending" | "verified";
   verification: VercelVerificationRecord[] | null;
+  /** Cible CNAME recommandée par Vercel pour CE domaine (null → générique). */
+  cname_target: string | null;
   created_at: string;
   updated_at: string;
 }
 
 const DOMAIN_SELECT =
-  "id, domain, board_id, share_id, status, verification, created_at, updated_at";
+  "id, domain, board_id, share_id, status, verification, cname_target, created_at, updated_at";
 
 export type DomainTargetRef = { boardId: string } | { shareId: string };
 
@@ -214,16 +216,23 @@ export async function refreshDomainStatus(row: CustomDomainRow): Promise<DomainS
   const status: CustomDomainRow["status"] =
     state.verified && !state.misconfigured ? "verified" : "pending";
   const verification = state.verification.length > 0 ? state.verification : null;
+  // On ne dégrade jamais une recommandation déjà connue vers null (réponse
+  // config en erreur) — la valeur par domaine reste stable côté Vercel.
+  const cname_target = state.cnameTarget ?? row.cname_target;
 
-  if (status !== row.status || JSON.stringify(verification) !== JSON.stringify(row.verification)) {
+  if (
+    status !== row.status ||
+    cname_target !== row.cname_target ||
+    JSON.stringify(verification) !== JSON.stringify(row.verification)
+  ) {
     const service = getServiceClient();
     await service
       .from("custom_domains")
-      .update({ status, verification })
+      .update({ status, verification, cname_target })
       .eq("id", row.id);
   }
 
-  return serializeDomainStatus({ ...row, status, verification }, state.misconfigured);
+  return serializeDomainStatus({ ...row, status, verification, cname_target }, state.misconfigured);
 }
 
 /** Forme API/UI sans appel Vercel (chargement initial des réglages). */
@@ -232,7 +241,9 @@ export function serializeDomainStatus(
   misconfigured?: boolean
 ): DomainStatus {
   const dns: DomainStatus["dns"] = [
-    { type: "CNAME", name: row.domain, value: VERCEL_CNAME_TARGET },
+    // La cible recommandée par domaine (vercel-dns-016 & co) quand on l'a lue,
+    // sinon la générique — qui fonctionne mais que Vercel déconseille désormais.
+    { type: "CNAME", name: row.domain, value: row.cname_target ?? VERCEL_CNAME_TARGET },
     ...(row.verification ?? [])
       .filter((v) => v.type?.toUpperCase() === "TXT")
       .map((v) => ({ type: "TXT" as const, name: v.domain, value: v.value })),

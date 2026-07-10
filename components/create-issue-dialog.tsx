@@ -478,7 +478,7 @@ export function CreateIssueDialog({
                 <DictateButton
                   onTranscription={onTranscript}
                   disabled={submitting}
-                  shortcutKey="v"
+                  shortcutKey="shift+v"
                   className="-ml-2"
                 />
               )}

@@ -27,13 +27,18 @@ export type VercelDomainState = {
   verified: boolean;
   misconfigured: boolean;
   verification: VercelVerificationRecord[];
+  /** Cible CNAME recommandée par Vercel pour CE domaine (rank 1), ou null. */
+  cnameTarget: string | null;
 };
 
 export type AddDomainResult =
   | { ok: true; verified: boolean; verification: VercelVerificationRecord[] }
   | { ok: false; code: "taken" | "invalid" | "api_error" };
 
-/** La cible CNAME universelle de Vercel, affichée dans les instructions DNS. */
+/** Cible CNAME générique de Vercel — repli quand la recommandation par domaine
+    (recommendedCNAME) n'a pas encore été lue. Fonctionne toujours, mais le
+    dashboard Vercel affiche « DNS Change Recommended » depuis l'expansion
+    d'IP : préférer la valeur par domaine dès qu'on l'a. */
 export const VERCEL_CNAME_TARGET = "cname.vercel-dns.com";
 
 function isFake(): boolean {
@@ -45,13 +50,22 @@ export function isVercelDomainsConfigured(): boolean {
   return Boolean(process.env.VERCEL_TOKEN && process.env.VERCEL_PROJECT_ID);
 }
 
-function apiUrl(path: string): string {
+function apiUrl(path: string, params?: Record<string, string>): string {
+  const url = new URL(`https://api.vercel.com${path}`);
   const teamId = process.env.VERCEL_TEAM_ID;
-  return `https://api.vercel.com${path}${teamId ? `?teamId=${encodeURIComponent(teamId)}` : ""}`;
+  if (teamId) url.searchParams.set("teamId", teamId);
+  for (const [key, value] of Object.entries(params ?? {})) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
 }
 
-async function vercelFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), {
+async function vercelFetch(
+  path: string,
+  init?: RequestInit,
+  params?: Record<string, string>
+): Promise<Response> {
+  return fetch(apiUrl(path, params), {
     ...init,
     headers: {
       authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
@@ -110,18 +124,31 @@ export async function removeDomainFromVercel(domain: string): Promise<{ ok: bool
 }
 
 export async function getVercelDomainState(domain: string): Promise<VercelDomainState> {
-  if (isFake()) return { attached: true, verified: true, misconfigured: false, verification: [] };
+  if (isFake()) {
+    return {
+      attached: true,
+      verified: true,
+      misconfigured: false,
+      verification: [],
+      cnameTarget: null,
+    };
+  }
 
   const projectId = process.env.VERCEL_PROJECT_ID;
   const encoded = encodeURIComponent(domain);
+  const notAttached: VercelDomainState = {
+    attached: false,
+    verified: false,
+    misconfigured: true,
+    verification: [],
+    cnameTarget: null,
+  };
 
   const domainRes = await vercelFetch(`/v9/projects/${projectId}/domains/${encoded}`);
-  if (domainRes.status === 404) {
-    return { attached: false, verified: false, misconfigured: true, verification: [] };
-  }
+  if (domainRes.status === 404) return notAttached;
   if (!domainRes.ok) {
     console.error(`[vercel-domains] get ${domain} failed: ${domainRes.status}`);
-    return { attached: false, verified: false, misconfigured: true, verification: [] };
+    return notAttached;
   }
   let body = (await domainRes.json()) as {
     verified?: boolean;
@@ -140,15 +167,30 @@ export async function getVercelDomainState(domain: string): Promise<VercelDomain
     }
   }
 
-  const configRes = await vercelFetch(`/v6/domains/${encoded}/config`);
+  // projectIdOrName : la recommandation CNAME est propre au couple
+  // domaine × projet depuis l'expansion d'IP Vercel (vercel-dns-016 & co).
+  const configRes = await vercelFetch(`/v6/domains/${encoded}/config`, undefined, {
+    projectIdOrName: projectId as string,
+  });
   const config = configRes.ok
-    ? ((await configRes.json()) as { misconfigured?: boolean })
-    : { misconfigured: true };
+    ? ((await configRes.json()) as {
+        misconfigured?: boolean;
+        recommendedCNAME?: Array<{ rank: number; value: string }>;
+      })
+    : { misconfigured: true, recommendedCNAME: undefined };
+
+  const cnameTarget =
+    (config.recommendedCNAME ?? [])
+      .slice()
+      .sort((a, b) => a.rank - b.rank)
+      .map((r) => r.value.trim())
+      .find(Boolean) ?? null;
 
   return {
     attached: true,
     verified: body.verified === true,
     misconfigured: config.misconfigured !== false,
     verification: body.verification ?? [],
+    cnameTarget,
   };
 }

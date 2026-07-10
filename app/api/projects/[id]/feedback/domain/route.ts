@@ -87,10 +87,13 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ error: t("customDomainApiError") }, { status: 502 });
     }
   }
+  // Refresh immédiat : lit la cible CNAME recommandée par Vercel pour CE
+  // domaine (vercel-dns-016 & co) et la persiste — les instructions DNS
+  // affichées au premier rendu sont les bonnes.
   return NextResponse.json({
     configured: true,
     can_manage: true,
-    domain: serializeDomainStatus(result.row),
+    domain: await refreshDomainStatus(result.row),
   });
 }
 
