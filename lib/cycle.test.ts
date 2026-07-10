@@ -12,6 +12,7 @@ import {
   diffDays,
   effortToPoints,
   fillCycle,
+  pickEvictions,
   isoDow,
   recoComparator,
   recoScore,
@@ -268,6 +269,43 @@ describe("recoScore / recoComparator", () => {
     expect(
       recoScore(boosted, false, { projectBoost: { "proj-x": 50 } })
     ).toBe(recoScore(boosted, false) + 50);
+  });
+});
+
+describe("pickEvictions", () => {
+  it("does nothing without excess", () => {
+    expect(
+      pickEvictions({
+        candidates: [issue({ id: "a" })],
+        relations: [],
+        statusById: statuses({}),
+        excessPoints: 0,
+      })
+    ).toEqual([]);
+  });
+
+  it("evicts the lowest-reco candidates first, just enough to fit", () => {
+    const evicted = pickEvictions({
+      candidates: [
+        issue({ id: "keep-urgent", priority: "urgent", effort: "l" }),
+        issue({ id: "go-first", priority: "none", effort: "l" }), // worst score
+        issue({ id: "maybe", priority: "medium", effort: "l" }),
+      ],
+      relations: [],
+      statusById: statuses({}),
+      excessPoints: 5,
+    });
+    expect(evicted).toEqual(["go-first"]); // 5 pts freed — enough, stop there
+  });
+
+  it("evicts partially when the pool can't absorb the whole excess", () => {
+    const evicted = pickEvictions({
+      candidates: [issue({ id: "only-one", effort: "s" })], // frees 2
+      relations: [],
+      statusById: statuses({}),
+      excessPoints: 8,
+    });
+    expect(evicted).toEqual(["only-one"]);
   });
 });
 

@@ -342,6 +342,36 @@ export function recoComparator(
 }
 
 /**
+ * Make room in an over-target cycle: pick the LOWEST-reco candidates to evict
+ * until `excessPoints` are freed (or candidates run out — an honest overfull
+ * cycle beats evicting started work). The caller pre-filters candidates to
+ * unstarted issues only (backlog/todo): in_progress / in_review / done never
+ * leave a cycle on rebalancing.
+ */
+export function pickEvictions(opts: {
+  candidates: RecoIssue[];
+  relations: IssueRelation[];
+  statusById: Map<string, IssueStatus>;
+  excessPoints: number;
+}): string[] {
+  const { candidates, relations, statusById } = opts;
+  if (opts.excessPoints <= 0) return [];
+  const worstFirst = [...candidates]
+    .sort(recoComparator(relations, statusById))
+    .reverse();
+  const evicted: string[] = [];
+  let freed = 0;
+  for (const issue of worstFirst) {
+    if (freed >= opts.excessPoints) break;
+    evicted.push(issue.id);
+    freed += effortToPoints(issue.effort);
+  }
+  // Partial is fine: evicted issues return to the pool (re-picked at the next
+  // boundary), and getting closer to the target beats doing nothing.
+  return evicted;
+}
+
+/**
  * Deterministic greedy fill: repeatedly pick the best-scored candidate that
  * (a) isn't blocked by an issue that is still open and not itself picked, and
  * (b) fits in the remaining capacity — undershoot beats overshoot. Fallback:

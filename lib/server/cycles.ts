@@ -16,6 +16,7 @@ import {
   diffDays,
   effortToPoints,
   fillCycle,
+  pickEvictions,
   recoScore,
   todayISO,
   type CalibrationSample,
@@ -625,4 +626,177 @@ export async function runCycleCapture(params: CycleCaptureParams): Promise<void>
     .from("cycles")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", current.id);
+}
+
+export interface CycleBlockerPullParams {
+  /** Stored `blocks` edge: source blocks target. */
+  blockerId: string;
+  blockedId: string;
+  /** Who created the relation — the pull is attributed to them. */
+  actorId: string;
+  viaAssistant?: boolean;
+  mcpKeyId?: string | null;
+}
+
+/**
+ * A `blocks` relation landed AFTER the cycle was planned (fire-and-forget,
+ * pattern of scheduleCycleCapture): if the BLOCKED issue sits in its owner's
+ * current cycle while the BLOCKER doesn't, the plan is incoherent — "pas B
+ * sans A". Pull the blocker in (assign side-effect, never a status bump) and,
+ * if that overshoots the capacity target, make room by evicting the
+ * lowest-reco UNSTARTED issues only: in_progress / in_review / done never
+ * leave a cycle on rebalancing. Re-checks everything at execution time.
+ */
+export function scheduleCycleBlockerPull(params: CycleBlockerPullParams): void {
+  after(() =>
+    runCycleBlockerPull(params).catch((e) =>
+      console.error("[cycles] blocker pull failed:", (e as Error).message)
+    )
+  );
+}
+
+export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promise<void> {
+  const service = getServiceClient();
+
+  // The blocked issue must sit in a cycle…
+  const { data: blocked } = await service
+    .from("issues")
+    .select("id, cycle_id, status")
+    .eq("id", params.blockedId)
+    .maybeSingle();
+  if (!blocked?.cycle_id) return;
+
+  // …and that cycle must be its owner's CURRENT one (past cycles are frozen
+  // history; a future cycle gets refilled at its own boundary anyway).
+  const { data: cycleRow } = await service
+    .from("cycles")
+    .select(CYCLE_SELECT)
+    .eq("id", blocked.cycle_id)
+    .maybeSingle();
+  if (!cycleRow) return;
+  const cycle = cycleRow as CycleRow;
+  const today = todayISO();
+  if (!(cycle.start_date <= today && today < cycle.end_date)) return;
+
+  // The blocker must be pullable: real living work, not already planned in a
+  // cycle, and not someone else's assignment (their plan, not this one —
+  // pulling it here would steal it via a mere relation).
+  const { data: blocker } = await service
+    .from("issues")
+    .select("id, cycle_id, status, assignee_id, project_id")
+    .eq("id", params.blockerId)
+    .maybeSingle();
+  if (!blocker || blocker.cycle_id !== null) return;
+  if (!CYCLE_OPEN_STATUSES.includes(blocker.status as IssueStatus)) return;
+  if (blocker.assignee_id && blocker.assignee_id !== cycle.user_id) return;
+
+  // Pull it in (CAS on "still uncycled"), assigning to the owner — the same
+  // side-effect as every add-to-cycle path; the SQL trigger keeps it honest.
+  const { data: claimed } = await service
+    .from("issues")
+    .update({ cycle_id: cycle.id, assignee_id: cycle.user_id })
+    .eq("id", params.blockerId)
+    .is("cycle_id", null)
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return;
+
+  const pullEvents: EventRow[] = [
+    {
+      issue_id: params.blockerId,
+      actor_id: params.actorId,
+      type: "updated",
+      field: "cycle_id",
+      from_value: null,
+      to_value: cycle.id,
+      via_assistant: params.viaAssistant || undefined,
+    },
+  ];
+  if (blocker.assignee_id !== cycle.user_id) {
+    pullEvents.push({
+      issue_id: params.blockerId,
+      actor_id: params.actorId,
+      type: "updated",
+      field: "assignee_id",
+      from_value: (blocker.assignee_id as string) ?? null,
+      to_value: cycle.user_id,
+      via_assistant: params.viaAssistant || undefined,
+    });
+  }
+  await insertEvents(service, pullEvents);
+
+  // Rebalance: if the pull overshot the target, evict the lowest-reco
+  // unstarted issues (never the blocker/blocked pair, never started work).
+  const { data: cycleIssueRows } = await service
+    .from("issues")
+    .select("id, project_id, title, status, priority, effort, issue_categories(category_id)")
+    .eq("cycle_id", cycle.id);
+  const cycleIssues: RecoIssue[] = (cycleIssueRows ?? []).map((row) => ({
+    id: row.id as string,
+    project_id: row.project_id as string,
+    title: (row.title as string) ?? "",
+    status: row.status as IssueStatus,
+    priority: row.priority as RecoIssue["priority"],
+    effort: (row.effort as RecoIssue["effort"]) ?? null,
+    category_ids: ((row.issue_categories ?? []) as { category_id: string }[]).map(
+      (c) => c.category_id
+    ),
+  }));
+  const filled = cycleFilledPoints(cycleIssues);
+  const excess = filled - cycle.target_points;
+  if (excess > 0) {
+    const candidates = cycleIssues.filter(
+      (i) =>
+        (i.status === "backlog" || i.status === "todo") &&
+        i.id !== params.blockerId &&
+        i.id !== params.blockedId
+    );
+    const { data: relationRows } = candidates.length
+      ? await service
+          .from("issue_relations")
+          .select("id, source_id, target_id, type")
+          .eq("type", "blocks")
+          .in(
+            "target_id",
+            candidates.map((c) => c.id)
+          )
+      : { data: [] };
+    const statusById = new Map<string, IssueStatus>(
+      cycleIssues.map((i) => [i.id, i.status])
+    );
+    const evicted = pickEvictions({
+      candidates,
+      relations: (relationRows ?? []) as IssueRelation[],
+      statusById,
+      excessPoints: excess,
+    });
+    if (evicted.length > 0) {
+      // CAS guards: an issue started or moved meanwhile stays put.
+      const { data: removedRows } = await service
+        .from("issues")
+        .update({ cycle_id: null })
+        .in("id", evicted)
+        .eq("cycle_id", cycle.id)
+        .in("status", ["backlog", "todo"])
+        .select("id");
+      await insertEvents(
+        service,
+        (removedRows ?? []).map((row) => ({
+          issue_id: row.id as string,
+          actor_id: params.actorId,
+          type: "updated",
+          field: "cycle_id",
+          from_value: cycle.id,
+          to_value: null,
+          via_assistant: params.viaAssistant || undefined,
+        }))
+      );
+    }
+  }
+
+  // One user-topic nudge for the whole rebalance (pull + evictions).
+  await service
+    .from("cycles")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", cycle.id);
 }

@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn, toast } from "mangue-ui";
 import { X } from "lucide-react";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import {
   RELATION_PRIORITY,
   RELATION_TYPES,
@@ -48,11 +48,13 @@ export function RelationsSection({
     [allIssues]
   );
 
-  // Candidates for the add pickers: other issues not already linked here.
+  // Candidates for the add pickers: other OPEN issues not already linked here
+  // — relating to done/canceled work is pointless (a closed blocker doesn't
+  // block, and the resolver would mark it spent immediately).
   const candidateOptions = useMemo<PickerOption[]>(() => {
     const linked = new Set(relations.map((r) => r.otherId));
     return allIssues
-      .filter((i) => i.id !== issue.id && !linked.has(i.id))
+      .filter((i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status))
       .map((i) => {
         const id = issueIdentifier(projectKey, i.number);
         return {

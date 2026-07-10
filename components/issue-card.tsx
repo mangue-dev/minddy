@@ -26,6 +26,7 @@ import {
   ALL_STATUSES,
   PRIORITIES,
   EFFORTS,
+  isClosedStatus,
   issueIdentifier,
   type IssueStatus,
   type IssuePriority,
@@ -753,11 +754,15 @@ export function IssueCard({
   // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
 
-  // Candidats du picker : les autres issues du projet, hors celles déjà liées.
+  // Candidats du picker : les autres issues OUVERTES du projet, hors celles
+  // déjà liées — lier à du travail terminé/annulé n'a pas de sens (un bloqueur
+  // clos ne bloque plus).
   const relationCandidates = useMemo(() => {
     if (!candidateIssues) return [];
     const linked = new Set((relations ?? []).map((r) => r.otherId));
-    return candidateIssues.filter((i) => i.id !== issue.id && !linked.has(i.id));
+    return candidateIssues.filter(
+      (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
+    );
   }, [candidateIssues, relations, issue.id]);
   const copyPrompt = async () => {
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,

@@ -10,6 +10,7 @@ import {
   type EventRow,
 } from "@/lib/server/issue-events";
 import { normalizeRelation, isRelationType } from "@/lib/relation-constants";
+import { scheduleCycleBlockerPull } from "@/lib/server/cycles";
 import type { IssueRelationType } from "@/lib/types";
 
 /**
@@ -190,6 +191,21 @@ export async function addIssueRelation({
       mcpKeyId
     )
   );
+
+  // Cycle coherence (MIN-32): a fresh `blocks` edge whose BLOCKED end sits in
+  // a current cycle pulls the blocker in after the response ("pas B sans A"),
+  // rebalancing without ever evicting started work. Stored form only — the
+  // blocked_by direction was normalized above.
+  if (row.type === "blocks") {
+    scheduleCycleBlockerPull({
+      blockerId: row.source_id,
+      blockedId: row.target_id,
+      actorId,
+      viaAssistant,
+      mcpKeyId,
+    });
+  }
+
   return { ok: true, relation: row };
 }
 
