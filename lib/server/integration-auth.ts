@@ -8,8 +8,8 @@ import {
 } from "@/lib/server/integration-key";
 
 /**
- * Authentification par clé d'intégration pour l'API publique de feedback
- * (serveur-à-serveur, Authorization: Bearer mdy_…). La clé identifie à elle
+ * Authentification par clé d'intégration pour l'API publique (/api/v1/…,
+ * serveur-à-serveur, Authorization: Bearer mdy_…). La clé identifie à elle
  * seule l'intégration et donc le projet. Contrairement aux routes de l'app,
  * les erreurs sont en anglais simple avec des codes stables — pas de i18n.
  */

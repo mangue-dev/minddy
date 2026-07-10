@@ -32,6 +32,7 @@ import {
 } from "@/components/cycle/cycle-header";
 import {
   CycleActivationWelcome,
+  CycleCompletedBanner,
   CycleEmptyNotice,
   CycleFutureNotice,
 } from "@/components/cycle/cycle-empty-states";
@@ -252,6 +253,10 @@ function GlobalBoardInner() {
     return recoComparator(relations, statusById);
   }, [scopedIssues, relations]);
   const cycleLabel = selectedCycle ? formatCycleRange(format, selectedCycle) : null;
+  // Every issue of the cycle closed → the "completed" banner offers a refill.
+  const cycleFullyCompleted =
+    cycleIssues.length > 0 &&
+    cycleIssues.every((i) => ["done", "canceled", "duplicate"].includes(i.status));
 
   // Numo rides along while the cycle is on screen ("remplis mon cycle").
   useAssistantContext(
@@ -419,25 +424,32 @@ function GlobalBoardInner() {
         ) : cycleIssues.length === 0 ? (
           <CycleEmptyNotice />
         ) : (
-          <div className="min-h-0 flex-1 pt-3">
-            <GlobalKanbanBoard
-              issues={cycleIssues}
-              statuses={STATUSES}
-              sort="manual"
-              comparator={cycleComparator}
-              readOnly={selectedPhase !== "current"}
-              buildMenuActions={
-                selectedPhase === "current" ? buildCycleMenuActions : undefined
-              }
-              onAddRelation={
-                selectedPhase === "current" ? handleAddRelation : undefined
-              }
-              projectMap={projectMap}
-              memberMapByProject={memberMapByProject}
-              categoryMapByProject={categoryMapByProject}
-              objectiveMapByProject={objectiveMapByProject}
-              {...boardHandlers}
-            />
+          <div className="flex min-h-0 flex-1 flex-col pt-3">
+            {selectedPhase === "current" && cycleFullyCompleted && (
+              <div className="px-6 pb-3">
+                <CycleCompletedBanner />
+              </div>
+            )}
+            <div className="min-h-0 flex-1">
+              <GlobalKanbanBoard
+                issues={cycleIssues}
+                statuses={STATUSES}
+                sort="manual"
+                comparator={cycleComparator}
+                readOnly={selectedPhase !== "current"}
+                buildMenuActions={
+                  selectedPhase === "current" ? buildCycleMenuActions : undefined
+                }
+                onAddRelation={
+                  selectedPhase === "current" ? handleAddRelation : undefined
+                }
+                projectMap={projectMap}
+                memberMapByProject={memberMapByProject}
+                categoryMapByProject={categoryMapByProject}
+                objectiveMapByProject={objectiveMapByProject}
+                {...boardHandlers}
+              />
+            </div>
           </div>
         )
       ) : filtered.length === 0 ? (

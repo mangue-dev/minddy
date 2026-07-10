@@ -116,43 +116,58 @@ export function effortToPoints(effort: IssueEffort | null | undefined): number {
   return effort ? EFFORT_POINTS[effort] : DEFAULT_EFFORT_POINTS;
 }
 
-/** Intensity is a per-user pace preference, not a per-cycle knob. */
+/** Intensity is a per-user pace preference, not a per-cycle knob. The bases
+    are PER WEEK — a fortnight cycle targets twice as much — and sized for
+    AI-assisted throughput (a "heavy" solo week ships a lot of small issues);
+    the calibration factor stretches them further, up to 3×. */
 export const INTENSITY_BASE_POINTS: Record<CycleIntensity, number> = {
-  light: 10,
-  medium: 20,
-  heavy: 30,
+  light: 40,
+  medium: 80,
+  heavy: 120,
 };
 
-/** A closed cycle's calibration signal: what got done, at which pace setting. */
+/** A closed cycle's calibration signal: what got done, at which pace setting,
+    over how many weeks. */
 export interface CalibrationSample {
   completed: number;
   intensity: CycleIntensity;
+  /** The cycle's length in weeks (default 1) — a fortnight completing 2× the
+      weekly base is pace 1, not pace 2. */
+  weeks?: number;
 }
 
 /**
  * Personal velocity factor relative to the default scale. Each closed cycle
- * contributes `completed ÷ base(its intensity)` — normalizing by the base
- * makes samples from different intensity levels comparable — and the factor
- * is the mean of the most recent (≤3). One factor scales ALL three levels
- * (light/medium/heavy stay 0.5×/1×/1.5× of the same unit), so a calibrated
- * medium can grow past the heavy DEFAULT while heavy grows with it — the
- * levels can never cross. No ceiling at the default: a consistently faster
- * week yields a genuinely bigger target. Clamped to [0.5, 3] only to absorb
- * outliers; 1 (the defaults) with fewer than 2 samples.
+ * contributes `completed ÷ (weekly base of its intensity × its weeks)` —
+ * normalizing by base and duration makes samples from different intensity
+ * levels and cadences comparable — and the factor is the mean of the most
+ * recent (≤3). One factor scales ALL three levels (light/medium/heavy stay
+ * 0.5×/1×/1.5× of the same unit), so a calibrated medium can grow past the
+ * heavy DEFAULT while heavy grows with it — the levels can never cross. No
+ * ceiling at the default: a consistently faster week yields a genuinely
+ * bigger target. Clamped to [0.5, 3] only to absorb outliers; 1 (the
+ * defaults) with fewer than 2 samples.
  */
 export function calibrationFactor(samples: CalibrationSample[]): number {
   if (samples.length < 2) return 1;
   const recent = samples.slice(0, 3);
   const mean =
-    recent.reduce((sum, s) => sum + s.completed / INTENSITY_BASE_POINTS[s.intensity], 0) /
-    recent.length;
+    recent.reduce(
+      (sum, s) =>
+        sum + s.completed / (INTENSITY_BASE_POINTS[s.intensity] * (s.weeks ?? 1)),
+      0
+    ) / recent.length;
   return Math.min(3, Math.max(0.5, mean));
 }
 
-/** Capacity target for a cycle: the intensity's base scaled by the user's
-    calibrated velocity factor. */
-export function computeTargetPoints(intensity: CycleIntensity, factor: number): number {
-  return Math.max(1, Math.round(INTENSITY_BASE_POINTS[intensity] * factor));
+/** Capacity target for a cycle: the intensity's WEEKLY base scaled by the
+    user's calibrated velocity factor and the cycle's duration. */
+export function computeTargetPoints(
+  intensity: CycleIntensity,
+  factor: number,
+  durationWeeks: number = 1
+): number {
+  return Math.max(1, Math.round(INTENSITY_BASE_POINTS[intensity] * factor * durationWeeks));
 }
 
 const CLOSED_STATUSES: readonly IssueStatus[] = ["done", "canceled", "duplicate"];

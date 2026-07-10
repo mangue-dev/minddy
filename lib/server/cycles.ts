@@ -13,6 +13,7 @@ import {
   cycleFilledPoints,
   cycleCompletedPoints,
   cycleWindows,
+  diffDays,
   effortToPoints,
   fillCycle,
   recoScore,
@@ -82,14 +83,18 @@ export function todayInTz(tz: string | null | undefined): string {
 const CYCLE_SELECT =
   "id, user_id, start_date, end_date, intensity, target_points, completed_points, filled_at";
 
-/** Closed cycles as calibration samples, most recent first. Intensity rides
-    along so lib/cycle can normalize each sample by its own base — the factor
-    then scales all three levels together. */
+/** Closed cycles as calibration samples, most recent first. Intensity and
+    duration ride along so lib/cycle can normalize each sample by its own
+    weekly base — the factor then scales all three levels together. */
 function calibrationSamplesOf(rows: CycleRow[]): CalibrationSample[] {
   return rows
     .filter((r) => r.completed_points !== null)
     .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
-    .map((r) => ({ completed: r.completed_points as number, intensity: r.intensity }));
+    .map((r) => ({
+      completed: r.completed_points as number,
+      intensity: r.intensity,
+      weeks: Math.max(1, Math.round(diffDays(r.start_date, r.end_date) / 7)),
+    }));
 }
 
 export interface EnsuredCycles {
@@ -175,10 +180,8 @@ async function reconcileCycles({
     rows.find((r) => r.start_date <= today && today < r.end_date) ?? null;
   const windows = cycleWindows(cadence, today, prefs.upcomingCount);
   const currentEnd = existingCurrent?.end_date ?? windows[0].end_date;
-  const target = computeTargetPoints(
-    prefs.intensity,
-    calibrationFactor(calibrationSamplesOf(rows))
-  );
+  const factor = calibrationFactor(calibrationSamplesOf(rows));
+  const target = computeTargetPoints(prefs.intensity, factor, prefs.durationWeeks);
   const missing = windows.filter(
     (w) =>
       (w.start_date === windows[0].start_date
@@ -229,18 +232,23 @@ async function reconcileCycles({
         .in("status", CYCLE_OPEN_STATUSES as string[]);
     }
 
-    // 4. Re-align current + future snapshots when the intensity pref changed
-    //    (past cycles stay frozen for calibration).
-    const misaligned = [current, ...upcoming].filter(
-      (r) => r.intensity !== prefs.intensity
-    );
-    for (const row of misaligned) {
+    // 4. Re-align current + future snapshots whenever the freshly computed
+    //    target differs — intensity change, base/scale change, calibration
+    //    drift — so a settings tweak applies NOW, not at the next boundary
+    //    (past cycles stay frozen for calibration). Each row keeps a target
+    //    matching its OWN duration (a still-running fortnight stays ×2 even
+    //    if the pref moved to weekly). Idempotent: the next reconcile
+    //    recomputes the same targets and writes nothing.
+    for (const row of [current, ...upcoming]) {
+      const rowWeeks = Math.max(1, Math.round(diffDays(row.start_date, row.end_date) / 7));
+      const rowTarget = computeTargetPoints(prefs.intensity, factor, rowWeeks);
+      if (row.intensity === prefs.intensity && row.target_points === rowTarget) continue;
       await service
         .from("cycles")
-        .update({ intensity: prefs.intensity, target_points: target })
+        .update({ intensity: prefs.intensity, target_points: rowTarget })
         .eq("id", row.id);
       row.intensity = prefs.intensity;
-      row.target_points = target;
+      row.target_points = rowTarget;
     }
 
     // 5. One-shot deterministic auto-fill of the current cycle. The claim on

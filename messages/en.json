@@ -734,7 +734,7 @@
     "leaveProjectHint": "You'll no longer have access to it.",
     "leave": "Leave",
     "integrationsTab": "Integrations",
-    "integrationsSectionDesc": "Named API keys that let your own app submit feedback straight into this project's triage.",
+    "integrationsSectionDesc": "Named API keys that let your own tools create issues straight into this project's triage.",
     "integrationsEmpty": "No integrations yet.",
     "newIntegration": "New integration",
     "integrationNameLabel": "Name",
@@ -994,6 +994,11 @@
     "activate": "Activate cycles",
     "futureCycle": "Cycle not available yet · starts on {date}",
     "emptyCycle": "No issues in this cycle",
-    "emptyCycleHint": "Right-click a card to add it, or ask Numo to fill your cycle."
+    "emptyCycleHint": "Right-click a card to add it, or ask Numo to fill your cycle.",
+    "completedTitle": "Cycle completed",
+    "completedDesc": "Every issue in this cycle is done — nice work.",
+    "refill": "Refill the cycle",
+    "refillAdded": "{count, plural, one {# issue added to the cycle} other {# issues added to the cycle}}",
+    "refillEmpty": "Nothing eligible to add — your assigned pool is empty."
   }
 }

@@ -9,17 +9,17 @@ import { createIssueForProject } from "@/lib/server/create-issue";
 import { isPriority, isEffort } from "@/lib/issue-validation";
 
 /**
- * POST /api/feedback — API publique (Bearer mdy_…). Crée une issue au statut
- * 'triage' attribuée à l'intégration. Champs acceptés : title (requis),
- * description, priority, effort, categories (ids). Tout le reste est ignoré —
- * la whitelist ci-dessous est le point d'enforcement (pas d'assignee, de
- * parent ni de statut pilotables de l'extérieur).
+ * POST /api/v1/issues — API publique d'intégration (Bearer mdy_…). Crée une
+ * issue au statut 'triage' attribuée à l'intégration. Champs acceptés : title
+ * (requis), description, priority, effort, categories (ids). Tout le reste est
+ * ignoré — la whitelist ci-dessous est le point d'enforcement (pas d'assignee,
+ * de parent ni de statut pilotables de l'extérieur).
  */
 export async function POST(request: NextRequest) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
 
-  const rate = checkSessionRateLimit(auth.integration.id, "feedback:post", {
+  const rate = checkSessionRateLimit(auth.integration.id, "integration:issues:post", {
     limit: 20,
   });
   if (!rate.allowed) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         return publicApiError(
           422,
           "unknown_category",
-          `Unknown category ids: ${unknown.join(", ")}. GET /api/feedback/options lists the valid ones.`
+          `Unknown category ids: ${unknown.join(", ")}. GET /api/v1/issues/options lists the valid ones.`
         );
       }
     }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
-    console.error("[api/feedback] create failed:", result.errorKey ?? result.rawMessage);
+    console.error("[api/v1/issues] create failed:", result.errorKey ?? result.rawMessage);
     return publicApiError(500, "internal_error", "Something went wrong.");
   }
 

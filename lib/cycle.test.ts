@@ -105,46 +105,61 @@ describe("points", () => {
 
   it("keeps the default factor with fewer than 2 samples", () => {
     expect(calibrationFactor([])).toBe(1);
-    expect(calibrationFactor([{ completed: 35, intensity: "medium" }])).toBe(1);
-    expect(computeTargetPoints("medium", 1)).toBe(20);
+    expect(calibrationFactor([{ completed: 140, intensity: "medium" }])).toBe(1);
+    expect(computeTargetPoints("medium", 1)).toBe(80);
   });
 
   it("calibrates a velocity factor normalized by each cycle's intensity base", () => {
-    // 35/20 = 1.75 and 33/20 = 1.65 → factor 1.7
+    // 140/80 = 1.75 and 132/80 = 1.65 → factor 1.7
     const factor = calibrationFactor([
-      { completed: 35, intensity: "medium" },
-      { completed: 33, intensity: "medium" },
+      { completed: 140, intensity: "medium" },
+      { completed: 132, intensity: "medium" },
     ]);
     expect(factor).toBeCloseTo(1.7);
     // Only the 3 most recent samples count.
     expect(
       calibrationFactor([
-        { completed: 35, intensity: "medium" },
-        { completed: 33, intensity: "medium" },
-        { completed: 34, intensity: "medium" },
-        { completed: 999, intensity: "medium" },
+        { completed: 140, intensity: "medium" },
+        { completed: 132, intensity: "medium" },
+        { completed: 136, intensity: "medium" },
+        { completed: 9999, intensity: "medium" },
       ])
     ).toBeCloseTo((1.75 + 1.65 + 1.7) / 3);
-    // Cross-intensity samples are comparable: 30 done on light (base 10) is
-    // the same pace as 60 on medium.
+    // Cross-intensity samples are comparable: 120 done on light (base 40) is
+    // the same pace as 360 on heavy.
     expect(
       calibrationFactor([
-        { completed: 30, intensity: "light" },
-        { completed: 28, intensity: "medium" },
+        { completed: 120, intensity: "light" },
+        { completed: 112, intensity: "medium" },
       ])
     ).toBeCloseTo((3 + 1.4) / 2);
   });
 
+  it("normalizes samples by their cycle duration", () => {
+    // A fortnight completing twice the weekly base is pace 1, not pace 2.
+    expect(
+      calibrationFactor([
+        { completed: 160, intensity: "medium", weeks: 2 },
+        { completed: 80, intensity: "medium", weeks: 1 },
+      ])
+    ).toBe(1);
+  });
+
+  it("scales the target with the cycle duration", () => {
+    expect(computeTargetPoints("medium", 1, 2)).toBe(160);
+    expect(computeTargetPoints("light", 1.5, 2)).toBe(120);
+  });
+
   it("lets the target exceed the default, keeping levels coherent", () => {
     const factor = calibrationFactor([
-      { completed: 36, intensity: "medium" },
-      { completed: 36, intensity: "medium" },
+      { completed: 144, intensity: "medium" },
+      { completed: 144, intensity: "medium" },
     ]); // 1.8
-    // Calibrated medium (36) overtakes the heavy DEFAULT (30) — and heavy
+    // Calibrated medium (144) overtakes the heavy DEFAULT (120) — and heavy
     // scales along, so the ordering light < medium < heavy always holds.
-    expect(computeTargetPoints("medium", factor)).toBe(36);
-    expect(computeTargetPoints("heavy", factor)).toBe(54);
-    expect(computeTargetPoints("light", factor)).toBe(18);
+    expect(computeTargetPoints("medium", factor)).toBe(144);
+    expect(computeTargetPoints("heavy", factor)).toBe(216);
+    expect(computeTargetPoints("light", factor)).toBe(72);
   });
 
   it("clamps the factor to [0.5, 3] against outliers", () => {
@@ -156,8 +171,8 @@ describe("points", () => {
     ).toBe(0.5);
     expect(
       calibrationFactor([
-        { completed: 500, intensity: "medium" },
-        { completed: 500, intensity: "medium" },
+        { completed: 2000, intensity: "medium" },
+        { completed: 2000, intensity: "medium" },
       ])
     ).toBe(3);
   });

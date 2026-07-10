@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, toast } from "mangue-ui";
-import { IterationCw, Loader2 } from "lucide-react";
+import { CheckCircle2, IterationCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
@@ -93,5 +93,52 @@ export function CycleEmptyNotice() {
       <p className="text-sm text-muted-foreground">{t("emptyCycle")}</p>
       <p className="max-w-xs text-xs text-muted-foreground">{t("emptyCycleHint")}</p>
     </EmptyShell>
+  );
+}
+
+/**
+ * Every issue of the current cycle is closed — the one moment where offering
+ * a refill makes sense (the engine never refills mid-cycle on its own; the
+ * person clicks, the engine picks). A slim banner above the board, not a
+ * replacement: the finished cards stay visible below.
+ */
+export function CycleCompletedBanner() {
+  const t = useTranslations("Cycles");
+  const queryClient = useQueryClient();
+  const [refilling, setRefilling] = useState(false);
+
+  const refill = async () => {
+    if (refilling) return;
+    setRefilling(true);
+    try {
+      const response = await fetch("/api/me/cycle/fill", { method: "POST" });
+      const data = (await response.json().catch(() => null)) as
+        | { added?: number; error?: string }
+        | null;
+      if (!response.ok) throw new Error(data?.error ?? "Request failed");
+      const added = data?.added ?? 0;
+      toast.success(
+        added > 0 ? t("refillAdded", { count: added }) : t("refillEmpty")
+      );
+      await queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRefilling(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+      <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{t("completedTitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("completedDesc")}</p>
+      </div>
+      <Button size="sm" variant="outline" onClick={() => void refill()} disabled={refilling}>
+        {refilling ? <Loader2 className="animate-spin" /> : <IterationCw />}
+        {t("refill")}
+      </Button>
+    </div>
   );
 }

@@ -8,15 +8,15 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ISSUE_PRIORITIES, ISSUE_EFFORTS } from "@/lib/issue-validation";
 
 /**
- * GET /api/feedback/options — API publique (Bearer mdy_…). Expose les options
- * du projet pour que l'app externe mappe son propre UI de feedback :
- * catégories vivantes + enums priorité/effort.
+ * GET /api/v1/issues/options — API publique d'intégration (Bearer mdy_…).
+ * Expose les options du projet pour que l'app externe mappe son propre
+ * formulaire de création : catégories vivantes + enums priorité/effort.
  */
 export async function GET(request: NextRequest) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
 
-  const rate = checkSessionRateLimit(auth.integration.id, "feedback:options");
+  const rate = checkSessionRateLimit(auth.integration.id, "integration:issues:options");
   if (!rate.allowed) {
     return publicApiError(429, "rate_limited", "Too many requests.", {
       "Retry-After": String(rate.retryAfter),
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     .order("name");
 
   if (error) {
-    console.error("[api/feedback/options] list failed:", error.message);
+    console.error("[api/v1/issues/options] list failed:", error.message);
     return publicApiError(500, "internal_error", "Something went wrong.");
   }
 

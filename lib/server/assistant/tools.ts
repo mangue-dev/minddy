@@ -185,7 +185,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_integrations",
       description:
-        "List the project's integrations (external apps submitting feedback through the API): id, name, revoked_at. Issues created by one carry its integration_id; the view filter filters.integration takes these ids.",
+        "List the project's integrations (external tools creating issues through the API): id, name, revoked_at. Issues created by one carry its integration_id; the view filter filters.integration takes these ids.",
       parameters: { type: "object", properties: {} },
     },
   },

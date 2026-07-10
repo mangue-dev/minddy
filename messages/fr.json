@@ -734,7 +734,7 @@
     "leaveProjectHint": "Tu n'y auras plus accès.",
     "leave": "Quitter",
     "integrationsTab": "Intégrations",
-    "integrationsSectionDesc": "Des clés API nommées qui permettent à votre propre app d'envoyer du feedback directement dans le triage de ce projet.",
+    "integrationsSectionDesc": "Des clés API nommées qui permettent à vos propres outils de créer des tickets directement dans le triage de ce projet.",
     "integrationsEmpty": "Aucune intégration pour le moment.",
     "newIntegration": "Nouvelle intégration",
     "integrationNameLabel": "Nom",
@@ -994,6 +994,11 @@
     "activate": "Activer les cycles",
     "futureCycle": "Cycle pas encore disponible · démarre le {date}",
     "emptyCycle": "Aucun ticket dans ce cycle",
-    "emptyCycleHint": "Clic droit sur une carte pour l'ajouter, ou demande à Numo de remplir ton cycle."
+    "emptyCycleHint": "Clic droit sur une carte pour l'ajouter, ou demande à Numo de remplir ton cycle.",
+    "completedTitle": "Cycle complété",
+    "completedDesc": "Tous les tickets de ce cycle sont terminés — beau travail.",
+    "refill": "Re-remplir le cycle",
+    "refillAdded": "{count, plural, one {# ticket ajouté au cycle} other {# tickets ajoutés au cycle}}",
+    "refillEmpty": "Aucun ticket éligible à ajouter — ta réserve assignée est vide."
   }
 }
