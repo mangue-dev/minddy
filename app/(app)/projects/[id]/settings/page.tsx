@@ -16,6 +16,7 @@ import {
 } from "mangue-ui";
 import {
   LogOut,
+  MessagesSquare,
   Plug,
   Settings2,
   Tags,
@@ -30,6 +31,7 @@ import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
+import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import {
@@ -284,6 +286,19 @@ export default function ProjectSettingsPage() {
       label: t("smartAssignTab"),
       icon: WandSparkles,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
+    },
+    {
+      value: "feedback",
+      label: t("feedbackTab"),
+      icon: MessagesSquare,
+      content: (
+        <SettingsSection
+          title={t("feedbackSectionTitle")}
+          description={t("feedbackSectionDesc")}
+        >
+          <ProjectFeedbackSettings projectId={project.id} isOwner={isOwner} />
+        </SettingsSection>
+      ),
     },
     {
       value: "integrations",

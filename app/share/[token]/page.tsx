@@ -2,9 +2,8 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { MinddyLogo } from "@/components/minddy-logo";
 import { PublicBoard, type PublicCard } from "@/components/public-board";
+import { PublicPageShell } from "@/components/public-page-shell";
 import type { ChipRelation } from "@/components/relation-chips";
 import { AppQueryProvider } from "@/lib/query-provider";
 import { displayName } from "@/lib/display-name";
@@ -157,29 +156,18 @@ export default async function SharedViewPage({ params }: PageProps) {
   const ctx = await getShareContext(token);
   if (!ctx) notFound();
   const { view } = ctx;
-  const t = await getTranslations("PublicShare");
   const unlocked = await isUnlocked(ctx);
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 desktop:px-6">
-        {/* The password gate shows nothing about the view, not even its name. */}
-        {unlocked ? (
+    <PublicPageShell
+      fullHeight
+      // The password gate shows nothing about the view, not even its name.
+      heading={
+        unlocked ? (
           <h1 className="min-w-0 truncate text-sm font-semibold">{view.name}</h1>
-        ) : (
-          <span />
-        )}
-        <a
-          href="/"
-          className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <MinddyLogo className="size-3.5" />
-          <span>
-            {t("madeWith")} <span className="font-semibold">minddy</span>
-          </span>
-        </a>
-      </header>
-
+        ) : undefined
+      }
+    >
       {unlocked ? (
         <main className="min-h-0 flex-1 px-4 pb-4 desktop:px-6">
           {/* IssueCardBody's integration indicator uses React Query — the
@@ -193,6 +181,6 @@ export default async function SharedViewPage({ params }: PageProps) {
           <PasswordForm token={token} />
         </main>
       )}
-    </div>
+    </PublicPageShell>
   );
 }

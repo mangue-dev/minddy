@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Target,
   Filter,
+  MessagesSquare,
   Settings,
   ListTodo,
   Keyboard,
@@ -224,6 +225,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             onSelect: () => router.push(`${base}/triage`),
           },
           {
+            key: `pg-feedback-${p.id}`,
+            label: t("feedback"),
+            icon: MessagesSquare,
+            keywords: kw,
+            meta: chip,
+            onSelect: () => router.push(`${base}/feedback`),
+          },
+          {
             key: `pg-set-${p.id}`,
             label: t("projectSettings"),
             icon: Settings,
@@ -319,6 +328,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                     {triageCount}
                   </span>
                 ) : undefined,
+            },
+            {
+              key: "feedback",
+              label: t("feedback"),
+              icon: MessagesSquare,
+              href: `${base}/feedback`,
+              active: pathname.startsWith(`${base}/feedback`),
+              shortcut: "F",
             },
             {
               key: "settings",

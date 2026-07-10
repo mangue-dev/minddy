@@ -22,7 +22,8 @@ const PUBLIC_ROUTES = new Set(["/login", "/signup", "/favicon.ico", "/icon"]);
 // HTML redirect to /login. `/.well-known/` = découverte OAuth (RFC 8414/9728),
 // forcément accessible sans session. `/share/` = liens publics de vues
 // (MIN-26) — la page valide elle-même le token (et le mot de passe).
-const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/"];
+// `/f/` = boards publics de feedback (MIN-37) — token + session OTP/SSO propre.
+const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/", "/f/"];
 
 function isSupabaseGetSessionWarning(args: unknown[]): boolean {
   return args.some(

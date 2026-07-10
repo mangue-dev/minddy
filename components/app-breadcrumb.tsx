@@ -24,6 +24,7 @@ function sectionKeyFor(pathname: string): string | null {
   if (pathname.includes("/objectives")) return "objectives";
   if (pathname.includes("/settings")) return "settings";
   if (pathname.includes("/triage")) return "triage";
+  if (pathname.includes("/feedback")) return "feedback";
   return "tickets";
 }
 

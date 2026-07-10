@@ -1,0 +1,103 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useFormatter, useTranslations } from "next-intl";
+import { Button } from "mangue-ui";
+import { ArrowLeft, GitMerge, UserRound } from "lucide-react";
+import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
+import { FeedbackAuthDialog } from "../feedback-auth";
+import { FeedbackStatusBadge } from "../feedback-bits";
+
+export interface MyFeedbackItem {
+  post: PublicPost;
+  relation: "authored" | "voted";
+  mergedFromTitle: string | null;
+}
+
+/** « Mes feedbacks » (MIN-37) : suivi pull-based de ses posts et votes, avec
+    avancement — y compris après merge (le canonique est suivi à la place). */
+export function MyFeedbackClient({
+  token,
+  identity,
+  entries,
+}: {
+  token: string;
+  identity: PublicIdentity | null;
+  entries: MyFeedbackItem[];
+}) {
+  const t = useTranslations("PublicFeedback");
+  const format = useFormatter();
+  const [authOpen, setAuthOpen] = useState(false);
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-2 desktop:px-0">
+      <Link
+        href={`/f/${token}`}
+        className="flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-3.5" />
+        {t("back")}
+      </Link>
+
+      {!identity ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center">
+          <UserRound className="size-5 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{t("meSignInPrompt")}</p>
+          <Button variant="outline" onClick={() => setAuthOpen(true)}>
+            {t("signIn")}
+          </Button>
+          <FeedbackAuthDialog token={token} open={authOpen} onOpenChange={setAuthOpen} />
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-base font-semibold">{t("myFeedback")}</h2>
+            <p className="text-xs text-muted-foreground">
+              {t("meIntro", { pseudonym: identity.pseudonym })}
+            </p>
+          </div>
+
+          {entries.length === 0 ? (
+            <div className="rounded-lg border border-dashed px-6 py-12 text-center">
+              <p className="text-sm text-muted-foreground">{t("meEmpty")}</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col divide-y divide-border/60">
+              {entries.map((entry) => (
+                <li key={`${entry.relation}:${entry.post.id}`}>
+                  <Link
+                    href={`/f/${token}/p/${entry.post.id}`}
+                    className="group flex flex-col gap-1 py-3"
+                  >
+                    <p className="text-sm font-medium leading-snug group-hover:text-brand">
+                      {entry.post.title}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      <FeedbackStatusBadge status={entry.post.status} />
+                      <span>
+                        {entry.relation === "authored" ? t("meAuthored") : t("meVoted")}
+                      </span>
+                      <span>▲ {entry.post.voteCount}</span>
+                      <span>
+                        {format.dateTime(new Date(entry.post.createdAt), {
+                          dateStyle: "medium",
+                        })}
+                      </span>
+                    </div>
+                    {entry.mergedFromTitle && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <GitMerge className="size-3" />
+                        {t("meMergedFrom", { title: entry.mergedFromTitle })}
+                      </p>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
