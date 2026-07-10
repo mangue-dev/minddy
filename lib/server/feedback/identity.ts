@@ -233,13 +233,19 @@ export async function revokeFeedbackSession(token: string | undefined | null): P
 }
 
 /** Options du cookie de session, path-scopé au board (une seule et même
-    cookie name sert autant de boards que nécessaire). */
-export function feedbackSessionCookieOptions(boardToken: string, expiresAt: Date) {
+    cookie name sert autant de boards que nécessaire). Sur un domaine
+    personnalisé (MIN-36), le path visible ne contient pas /f/<token> :
+    atRoot=true pose le cookie à la racine — un domaine = un seul board. */
+export function feedbackSessionCookieOptions(
+  boardToken: string,
+  expiresAt: Date,
+  opts?: { atRoot?: boolean }
+) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-    path: `/f/${boardToken}`,
+    path: opts?.atRoot ? "/" : `/f/${boardToken}`,
     expires: expiresAt,
   };
 }

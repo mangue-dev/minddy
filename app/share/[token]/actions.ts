@@ -3,6 +3,12 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  getRequestDomainTarget,
+  isCustomPublicHost,
+  publicCookiePath,
+  shareBasePath,
+} from "@/lib/server/custom-domains";
+import {
   SHARE_UNLOCK_COOKIE,
   getPublicShareByToken,
   unlockCookieValue,
@@ -29,12 +35,15 @@ export async function unlockShare(
   });
   if (!allowed) return { error: "tooManyAttempts" };
 
+  // Sur domaine personnalisé (MIN-36), le path visible est la racine : les
+  // redirects et le path du cookie doivent suivre le host courant.
+  const base = shareBasePath(token, await getRequestDomainTarget());
   const ctx = await getPublicShareByToken(token);
   if (!ctx) return { error: "wrongPassword" };
   const { share } = ctx;
   // Share turned public meanwhile — nothing to unlock, just re-render.
   if (share.level !== "password" || !share.password_salt || !share.password_hash) {
-    redirect(`/share/${token}`);
+    redirect(base || "/");
   }
 
   const password = formData.get("password");
@@ -52,10 +61,11 @@ export async function unlockShare(
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      // Path-scoped so one cookie name serves any number of shares.
-      path: `/share/${share.token}`,
+      // Path-scoped so one cookie name serves any number of shares. Sur
+      // domaine personnalisé, la racine (la valeur reste liée à CE share).
+      path: publicCookiePath(await isCustomPublicHost(), `/share/${share.token}`),
       maxAge: 7 * 24 * 3600,
     }
   );
-  redirect(`/share/${token}`);
+  redirect(base || "/");
 }

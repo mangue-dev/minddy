@@ -49,8 +49,10 @@ export async function PublicPageShell({
           <div className="min-w-0 flex-1">{heading ?? <span />}</div>
           <div className="flex shrink-0 items-center gap-3 sm:gap-4">
             {actions}
+            {/* Lien absolu : sur un domaine personnalisé (MIN-36), "/" serait
+                la racine du site du client, pas minddy. */}
             <a
-              href="/"
+              href="https://www.minddy.app"
               className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <MinddyLogo className="size-3.5" />

@@ -98,7 +98,24 @@
     "feedbackMergeFailed": "Merge failed — the state changed in the meantime",
     "feedbackUndoFailed": "Undo failed — undo the most recent merge first",
     "feedbackUserRequired": "An identity (email) is required",
-    "feedbackAlreadyPromoted": "This feedback is already linked to an issue"
+    "feedbackAlreadyPromoted": "This feedback is already linked to an issue",
+    "customDomainInvalid": "This domain cannot be used",
+    "customDomainApexUnsupported": "Apex domains are not supported — use a subdomain (e.g. feedback.yourdomain.com)",
+    "customDomainTaken": "This domain is already in use",
+    "customDomainsNotConfigured": "Custom domains are not configured on this deployment",
+    "customDomainApiError": "The domain provider could not be reached — try again"
+  },
+  "CustomDomain": {
+    "title": "Custom domain",
+    "description": "Serve this page on your own subdomain via a CNAME record.",
+    "placeholder": "feedback.yourdomain.com",
+    "save": "Save",
+    "remove": "Remove",
+    "refresh": "Check status",
+    "statusPending": "Waiting for DNS",
+    "statusVerified": "Verified",
+    "dnsIntro": "Add these records to your DNS provider, then check the status (propagation can take a few minutes).",
+    "apexHint": "Subdomains only — an apex domain (yourdomain.com) is not supported."
   },
   "Attachments": {
     "attach": "Attach files",

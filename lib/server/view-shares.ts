@@ -2,6 +2,10 @@ import "server-only";
 
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
+import {
+  detachDomainFromVercelOnly,
+  getDomainForShare,
+} from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
 import type { View, ViewShare } from "@/lib/types";
@@ -94,6 +98,54 @@ async function resolveShareView(
   const access = await getProjectAccess(actorId, view.project_id as string);
   if (!access) return { ok: false, status: 404, errorKey: "viewNotFound" };
   return { ok: true };
+}
+
+/**
+ * Résolution vue → share pour la gestion du domaine personnalisé (MIN-36).
+ * Même règle d'accès que le partage, plus isOwner : attacher un domaine touche
+ * l'infra Vercel, la mutation est réservée au owner du projet côté route.
+ */
+export async function resolveShareForDomain(
+  viewId: string,
+  actorId: string
+): Promise<
+  | { ok: true; share: { id: string; token: string } | null; isOwner: boolean }
+  | {
+      ok: false;
+      status: 400 | 404 | 500;
+      errorKey: "viewNotFound" | "globalViewsNotShareable" | "databaseError";
+    }
+> {
+  const service = getServiceClient();
+  const { data: view } = await service
+    .from("views")
+    .select("id, project_id, user_id")
+    .eq("id", viewId)
+    .maybeSingle();
+  if (!view) return { ok: false, status: 404, errorKey: "viewNotFound" };
+  if (view.user_id && view.user_id !== actorId) {
+    return { ok: false, status: 404, errorKey: "viewNotFound" };
+  }
+  if (view.project_id === null) {
+    return { ok: false, status: 400, errorKey: "globalViewsNotShareable" };
+  }
+  const access = await getProjectAccess(actorId, view.project_id as string);
+  if (!access) return { ok: false, status: 404, errorKey: "viewNotFound" };
+
+  const { data: share, error } = await service
+    .from("view_shares")
+    .select("id, token")
+    .eq("view_id", viewId)
+    .maybeSingle();
+  if (error) {
+    console.error("[view-shares] read failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return {
+    ok: true,
+    share: (share as { id: string; token: string } | null) ?? null,
+    isOwner: access.isOwner,
+  };
 }
 
 export async function getViewShare(
@@ -189,11 +241,21 @@ export async function deleteViewShare(
   if (!resolved.ok) return resolved;
 
   const service = getServiceClient();
+  // Le cascade DB emporte l'éventuelle ligne custom_domains mais pas
+  // l'attachement Vercel (MIN-36) — capturé avant, détaché après.
+  const { data: shareRow } = await service
+    .from("view_shares")
+    .select("id")
+    .eq("view_id", viewId)
+    .maybeSingle();
+  const domainRow = shareRow ? await getDomainForShare(shareRow.id as string) : null;
+
   const { error } = await service.from("view_shares").delete().eq("view_id", viewId);
   if (error) {
     console.error("[view-shares] delete failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+  if (domainRow) await detachDomainFromVercelOnly(domainRow);
   return { ok: true, share: null };
 }
 

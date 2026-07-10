@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ProjectOrb } from "@/components/project-orb";
 import { PublicPageShell } from "@/components/public-page-shell";
+import { feedbackBasePath, getRequestDomainTarget } from "@/lib/server/custom-domains";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -41,6 +42,8 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
   const ctx = await getBoardContext(token);
   if (!ctx || !ctx.board.enabled) notFound();
   const t = await getTranslations("PublicFeedback");
+  const domainTarget = await getRequestDomainTarget();
+  const base = feedbackBasePath(token, domainTarget);
 
   const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
   const [session, tabs] = await Promise.all([
@@ -49,6 +52,7 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
       projectId: ctx.project.id,
       feedbackLabel: t("title"),
       current: { kind: "feedback" },
+      domainTarget,
     }),
   ]);
   const detail = await getPublicPostDetail({
@@ -58,7 +62,7 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
   });
   if (!detail) notFound();
   if (detail.mergedIntoId) {
-    permanentRedirect(`/f/${token}/p/${detail.mergedIntoId}`);
+    permanentRedirect(`${base}/p/${detail.mergedIntoId}`);
   }
   const identity = session
     ? { pseudonym: session.user.pseudonym, email: session.user.email }
@@ -77,11 +81,12 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
           )}
         </div>
       }
-      actions={<HeaderIdentity token={token} identity={identity} />}
+      actions={<HeaderIdentity token={token} basePath={base} identity={identity} />}
     >
       <main className="min-h-0 flex-1">
         <FeedbackPostClient
           token={token}
+          basePath={base}
           projectName={ctx.project.name}
           post={detail.post}
           facets={detail.facets}

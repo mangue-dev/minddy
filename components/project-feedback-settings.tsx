@@ -17,6 +17,10 @@ import {
 } from "mangue-ui";
 import { Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
+import {
+  CustomDomainSection,
+  fetchCustomDomainApi,
+} from "@/components/custom-domain-section";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
 
 /**
@@ -98,6 +102,17 @@ export function ProjectFeedbackSettings({
   const board = data?.board ?? null;
   const sharedViews = data?.shared_views ?? [];
 
+  // Domaine personnalisé (MIN-36) — même query que la CustomDomainSection
+  // (dédupliquée par React Query) pour préférer le domaine vérifié dans l'URL.
+  const domainPath = `/api/projects/${projectId}/feedback/domain`;
+  const { data: domainData } = useQuery({
+    queryKey: ["feedback-domain", projectId],
+    queryFn: () => fetchCustomDomainApi(domainPath),
+    enabled: Boolean(board?.enabled),
+  });
+  const verifiedDomain =
+    domainData?.domain?.status === "verified" ? domainData.domain.domain : null;
+
   const { integrations } = useIntegrationsQuery(projectId);
   const feedbackKeyCount = integrations.filter(
     (i) => i.kind === "feedback" && !i.revoked_at
@@ -133,7 +148,12 @@ export function ProjectFeedbackSettings({
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const publicUrl = board ? `${origin}/f/${board.token}` : null;
+  // Le domaine personnalisé vérifié devient l'URL de référence du board.
+  const publicUrl = verifiedDomain
+    ? `https://${verifiedDomain}`
+    : board
+      ? `${origin}/f/${board.token}`
+      : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -181,6 +201,15 @@ export function ProjectFeedbackSettings({
               </button>
             )}
           </div>
+        )}
+
+        {/* ── Domaine personnalisé (MIN-36) ──────────────────────────────── */}
+        {board?.enabled && (
+          <CustomDomainSection
+            endpoint={domainPath}
+            queryKey={["feedback-domain", projectId]}
+            className="border-t pt-3"
+          />
         )}
 
         {board?.enabled && (

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PublicBoard, type PublicCard } from "@/components/public-board";
 import { PublicPageShell } from "@/components/public-page-shell";
+import { getRequestDomainTarget } from "@/lib/server/custom-domains";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import type { ChipRelation } from "@/components/relation-chips";
 import { AppQueryProvider } from "@/lib/query-provider";
@@ -166,6 +167,7 @@ export default async function SharedViewPage({ params }: PageProps) {
     projectId: ctx.project.id,
     feedbackLabel: tFeedback("title"),
     current: { kind: "view", shareToken: token },
+    domainTarget: await getRequestDomainTarget(),
   });
 
   return (

@@ -98,7 +98,24 @@
     "feedbackMergeFailed": "Fusion impossible — l'état a changé entre-temps",
     "feedbackUndoFailed": "Annulation impossible — défaites d'abord la fusion la plus récente",
     "feedbackUserRequired": "Une identité (email) est requise",
-    "feedbackAlreadyPromoted": "Ce feedback est déjà lié à un ticket"
+    "feedbackAlreadyPromoted": "Ce feedback est déjà lié à un ticket",
+    "customDomainInvalid": "Ce domaine ne peut pas être utilisé",
+    "customDomainApexUnsupported": "Les domaines apex ne sont pas pris en charge — utilisez un sous-domaine (ex. feedback.votredomaine.com)",
+    "customDomainTaken": "Ce domaine est déjà utilisé",
+    "customDomainsNotConfigured": "Les domaines personnalisés ne sont pas configurés sur ce déploiement",
+    "customDomainApiError": "Le fournisseur de domaine est injoignable — réessayez"
+  },
+  "CustomDomain": {
+    "title": "Domaine personnalisé",
+    "description": "Servez cette page sur votre propre sous-domaine via un enregistrement CNAME.",
+    "placeholder": "feedback.votredomaine.com",
+    "save": "Enregistrer",
+    "remove": "Retirer",
+    "refresh": "Vérifier le statut",
+    "statusPending": "En attente du DNS",
+    "statusVerified": "Vérifié",
+    "dnsIntro": "Ajoutez ces enregistrements chez votre fournisseur DNS, puis vérifiez le statut (la propagation peut prendre quelques minutes).",
+    "apexHint": "Sous-domaines uniquement — un domaine apex (votredomaine.com) n'est pas pris en charge."
   },
   "Attachments": {
     "attach": "Joindre des fichiers",

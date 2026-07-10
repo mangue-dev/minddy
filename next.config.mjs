@@ -19,6 +19,10 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "development",
   },
+  // Test local des domaines personnalisés (MIN-36) : hosts /etc/hosts pointés
+  // sur 127.0.0.1 — sans quoi `next dev` bloque les requêtes cross-origin
+  // (server actions, assets) venant d'un host non-localhost.
+  allowedDevOrigins: ["board.minddy.test", "view.minddy.test"],
   // The "Mes tickets" tabs merged into the tickets board as a system view —
   // old routes land there with it pre-selected (?view=my; extra query params
   // like ?issue= are preserved). Temporary (307): don't let browsers cache it.

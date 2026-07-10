@@ -28,6 +28,7 @@ const SIMILAR_DEBOUNCE_MS = 1000;
 
 export function FeedbackPostClient({
   token,
+  basePath,
   projectName,
   post,
   facets,
@@ -35,6 +36,8 @@ export function FeedbackPostClient({
   identity,
 }: {
   token: string;
+  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  basePath: string;
   projectName: string;
   post: PublicPost;
   facets: PublicFacet[];
@@ -78,7 +81,7 @@ export function FeedbackPostClient({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-5 desktop:px-0">
       <Link
-        href={`/f/${token}`}
+        href={basePath || "/"}
         className="flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />

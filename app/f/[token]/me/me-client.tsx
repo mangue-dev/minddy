@@ -19,10 +19,13 @@ export interface MyFeedbackItem {
     avancement — y compris après merge (le canonique est suivi à la place). */
 export function MyFeedbackClient({
   token,
+  basePath,
   identity,
   entries,
 }: {
   token: string;
+  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  basePath: string;
   identity: PublicIdentity | null;
   entries: MyFeedbackItem[];
 }) {
@@ -33,7 +36,7 @@ export function MyFeedbackClient({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-2 desktop:px-0">
       <Link
-        href={`/f/${token}`}
+        href={basePath || "/"}
         className="flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
@@ -67,7 +70,7 @@ export function MyFeedbackClient({
               {entries.map((entry) => (
                 <li key={`${entry.relation}:${entry.post.id}`}>
                   <Link
-                    href={`/f/${token}/p/${entry.post.id}`}
+                    href={`${basePath}/p/${entry.post.id}`}
                     className="group flex flex-col gap-1 py-3"
                   >
                     <p className="text-sm font-medium leading-snug group-hover:text-brand">

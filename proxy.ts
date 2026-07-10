@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { lookupCustomDomain } from "@/lib/custom-domain-lookup";
+import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 
 /**
  * Next 16 middleware (named `proxy`). Protects every route except the public
@@ -34,6 +36,39 @@ const PUBLIC_ROUTES = new Set([
 // `/f/` = boards publics de feedback (MIN-37) — token + session OTP/SSO propre.
 const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/", "/f/"];
 
+// Domaines personnalisés (MIN-36) : chemins servis tels quels sur un host
+// custom. `/f/` + `/share/` = navigation croisée par token (onglets du site
+// public) ; `/icon`, `/favicon.ico`, `/manifest.json` = routes/fichiers de
+// métadonnées qui seraient sinon réécrits vers /f/<token>/icon → 404.
+const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/api/", "/auth/", "/_next/", "/.well-known/"];
+const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
+
+/**
+ * Host custom → réécriture vers la page publique mappée (board de feedback ou
+ * vue partagée) : `/` devient `/f/<token>` (resp. `/share/<token>`), les
+ * sous-chemins sont préfixés (`/p/123` → `/f/<token>/p/123`), la query string
+ * est préservée. Host inconnu (domaine encore attaché à Vercel mais mapping
+ * supprimé) → 404 texte. Jamais d'auth Supabase ici : un domaine client ne
+ * sert que du public.
+ */
+async function proxyCustomHost(request: NextRequest, host: string): Promise<NextResponse> {
+  const pathname = request.nextUrl.pathname;
+  if (
+    CUSTOM_HOST_PASS_ROUTES.has(pathname) ||
+    CUSTOM_HOST_PASS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  ) {
+    return NextResponse.next();
+  }
+
+  const target = await lookupCustomDomain(host);
+  if (!target) return new NextResponse("Unknown domain", { status: 404 });
+
+  const base = target.kind === "feedback" ? `/f/${target.token}` : `/share/${target.token}`;
+  const url = request.nextUrl.clone();
+  url.pathname = pathname === "/" ? base : `${base}${pathname}`;
+  return NextResponse.rewrite(url);
+}
+
 function isSupabaseGetSessionWarning(args: unknown[]): boolean {
   return args.some(
     (arg) => typeof arg === "string" && arg.includes("supabase.auth.getSession()")
@@ -41,6 +76,14 @@ function isSupabaseGetSessionWarning(args: unknown[]): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Domaine personnalisé (MIN-36) : branche dédiée, AVANT toute la logique
+  // pathname-based — les hosts primaires ne paient rien, les hosts custom ne
+  // touchent jamais l'auth/locale/login.
+  const host = normalizeHost(request.headers.get("host") ?? "");
+  if (host && !isPrimaryHost(host)) {
+    return proxyCustomHost(request, host);
+  }
+
   const pathname = request.nextUrl.pathname;
 
   const isPublicRoute =

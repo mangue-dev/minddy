@@ -54,6 +54,7 @@ const SIMILAR_MIN_CHARS = 15;
 
 export function FeedbackBoardClient({
   token,
+  basePath,
   posts,
   sort,
   status,
@@ -61,6 +62,8 @@ export function FeedbackBoardClient({
   ssoError,
 }: {
   token: string;
+  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  basePath: string;
   posts: PublicPost[];
   sort: "top" | "recent";
   status: FeedbackPostStatus | null;
@@ -95,7 +98,7 @@ export function FeedbackBoardClient({
           {t("composerTitle")}
         </Button>
 
-        <FilterBar token={token} sort={sort} status={status} />
+        <FilterBar basePath={basePath} sort={sort} status={status} />
 
         {posts.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-12 text-center">
@@ -108,7 +111,13 @@ export function FeedbackBoardClient({
         ) : (
           <ul className="flex flex-col divide-y divide-border/60">
             {posts.map((post) => (
-              <PostRow key={post.id} token={token} post={post} onNeedAuth={requireAuth} />
+              <PostRow
+                key={post.id}
+                token={token}
+                basePath={basePath}
+                post={post}
+                onNeedAuth={requireAuth}
+              />
             ))}
           </ul>
         )}
@@ -123,6 +132,7 @@ export function FeedbackBoardClient({
 
       <ComposerDialog
         token={token}
+        basePath={basePath}
         open={composerOpen}
         onOpenChange={setComposerOpen}
         onNeedAuth={requireAuth}
@@ -144,7 +154,7 @@ export function FeedbackBoardClient({
 // ── Filtres par statut + tri ─────────────────────────────────────────────────
 
 function buildHref(
-  token: string,
+  basePath: string,
   sort: "top" | "recent",
   status: FeedbackPostStatus | null
 ): string {
@@ -152,15 +162,16 @@ function buildHref(
   if (sort === "recent") params.set("sort", "recent");
   if (status) params.set("status", status);
   const query = params.toString();
-  return `/f/${token}${query ? `?${query}` : ""}`;
+  // basePath "" (domaine personnalisé) : la racine du board est "/".
+  return `${basePath || "/"}${query ? `?${query}` : ""}`;
 }
 
 function FilterBar({
-  token,
+  basePath,
   sort,
   status,
 }: {
-  token: string;
+  basePath: string;
   sort: "top" | "recent";
   status: FeedbackPostStatus | null;
 }) {
@@ -177,7 +188,7 @@ function FilterBar({
             <Link
               key={value}
               // re-cliquer le filtre actif le retire
-              href={buildHref(token, sort, active ? null : value)}
+              href={buildHref(basePath, sort, active ? null : value)}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                 active
@@ -209,7 +220,7 @@ function FilterBar({
           {(["top", "recent"] as const).map((value) => (
             <DropdownMenuItem
               key={value}
-              onSelect={() => router.push(buildHref(token, value, status))}
+              onSelect={() => router.push(buildHref(basePath, value, status))}
             >
               {value === "top" ? t("sortTop") : t("sortRecent")}
               {sort === value && <Check className="ml-auto size-4" />}
@@ -225,10 +236,12 @@ function FilterBar({
 
 function PostRow({
   token,
+  basePath,
   post,
   onNeedAuth,
 }: {
   token: string;
+  basePath: string;
   post: PublicPost;
   onNeedAuth: (run: () => void) => void;
 }) {
@@ -258,7 +271,7 @@ function PostRow({
     <li className="flex flex-col gap-2 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <Link href={`/f/${token}/p/${post.id}`} className="group flex flex-col gap-1">
+          <Link href={`${basePath}/p/${post.id}`} className="group flex flex-col gap-1">
             <h3 className="text-[15px] font-semibold leading-snug group-hover:text-brand">
               {post.title}
             </h3>
@@ -294,11 +307,13 @@ function PostRow({
 
 function ComposerDialog({
   token,
+  basePath,
   open,
   onOpenChange,
   onNeedAuth,
 }: {
   token: string;
+  basePath: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNeedAuth: (run: () => void) => void;
@@ -465,7 +480,7 @@ function ComposerDialog({
             {similar.map((s) => (
               <Link
                 key={s.id}
-                href={`/f/${token}/p/${s.id}`}
+                href={`${basePath}/p/${s.id}`}
                 onClick={() => onOpenChange(false)}
                 className="flex items-center justify-between gap-2 text-sm transition-colors hover:text-brand"
               >

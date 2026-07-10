@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
+import type { DomainTarget } from "@/lib/custom-domain-lookup";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
 /**
@@ -17,6 +18,9 @@ export async function getPublicSiteTabs(params: {
   feedbackLabel: string;
   /** Page courante : le token du board ou celui d'une vue partagée. */
   current: { kind: "feedback" } | { kind: "view"; shareToken: string };
+  /** Cible mappée sur le host courant (MIN-36) : son onglet pointe sur "/",
+      les autres gardent leur path token (servis en pass-through). */
+  domainTarget?: DomainTarget | null;
 }): Promise<PublicSiteTab[]> {
   const service = getServiceClient();
 
@@ -31,11 +35,13 @@ export async function getPublicSiteTabs(params: {
     .eq("views.project_id", params.projectId)
     .order("created_at", { ascending: true });
 
+  const target = params.domainTarget ?? null;
   const tabs: PublicSiteTab[] = [];
   if (board.enabled) {
+    const mapped = target?.kind === "feedback" && target.token === board.token;
     tabs.push({
       label: params.feedbackLabel,
-      href: `/f/${board.token}`,
+      href: mapped ? "/" : `/f/${board.token}`,
       active: params.current.kind === "feedback",
     });
   }
@@ -44,11 +50,12 @@ export async function getPublicSiteTabs(params: {
     const view = row.views as unknown as { id: string; name: string } | null;
     // Chaque vue est opt-in : seules celles cochées dans les settings sortent.
     if (!view || !visible.has(view.id)) continue;
+    const shareToken = row.token as string;
+    const mapped = target?.kind === "share" && target.token === shareToken;
     tabs.push({
       label: view.name,
-      href: `/share/${row.token as string}`,
-      active:
-        params.current.kind === "view" && params.current.shareToken === (row.token as string),
+      href: mapped ? "/" : `/share/${shareToken}`,
+      active: params.current.kind === "view" && params.current.shareToken === shareToken,
     });
   }
 

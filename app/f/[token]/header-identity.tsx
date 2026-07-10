@@ -21,9 +21,12 @@ import { PseudonymAvatar } from "./feedback-bits";
     vivent dans un dropdown, à l'abri des clics accidentels. */
 export function HeaderIdentity({
   token,
+  basePath,
   identity,
 }: {
   token: string;
+  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  basePath: string;
   identity: PublicIdentity | null;
 }) {
   const t = useTranslations("PublicFeedback");
@@ -54,7 +57,7 @@ export function HeaderIdentity({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => router.push(`/f/${token}/me`)}>
+        <DropdownMenuItem onSelect={() => router.push(`${basePath}/me`)}>
           <MessagesSquare className="size-4" />
           {t("myFeedback")}
         </DropdownMenuItem>

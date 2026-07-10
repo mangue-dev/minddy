@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import {
+  detachDomainFromVercelOnly,
+  getDomainForShare,
+} from "@/lib/server/custom-domains";
 import { updateView } from "@/lib/server/views";
+import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -52,6 +57,16 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("systemViewLocked") }, { status: 400 });
   }
 
+  // Le cascade views → view_shares → custom_domains emporte la ligne domaine
+  // mais pas l'attachement Vercel (MIN-36) — capturé avant, détaché après.
+  const service = getServiceClient();
+  const { data: shareRow } = await service
+    .from("view_shares")
+    .select("id")
+    .eq("view_id", id)
+    .maybeSingle();
+  const domainRow = shareRow ? await getDomainForShare(shareRow.id as string) : null;
+
   const { data, error } = await auth.supabase
     .from("views")
     .delete()
@@ -64,5 +79,6 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("viewNotFound") }, { status: 404 });
+  if (domainRow) await detachDomainFromVercelOnly(domainRow);
   return NextResponse.json({ ok: true });
 }

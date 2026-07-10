@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ProjectOrb } from "@/components/project-orb";
 import { PublicPageShell } from "@/components/public-page-shell";
+import { feedbackBasePath, getRequestDomainTarget } from "@/lib/server/custom-domains";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -45,11 +46,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicFeedbackPage({ params, searchParams }: PageProps) {
   const { token } = await params;
   const search = await searchParams;
+  // Domaine personnalisé (MIN-36) : basePath "" quand le board est servi par
+  // son propre domaine — les liens deviennent /p/<id>, /me…
+  const domainTarget = await getRequestDomainTarget();
+  const base = feedbackBasePath(token, domainTarget);
 
   // Atterrissage SSO documenté : /f/<token>?sso=<jwt> — une page ne peut pas
   // poser de cookie, la route dédiée s'en charge puis revient ici.
   if (search.sso) {
-    redirect(`/f/${token}/sso?jwt=${encodeURIComponent(search.sso)}`);
+    redirect(`${base}/sso?jwt=${encodeURIComponent(search.sso)}`);
   }
 
   const ctx = await getBoardContext(token);
@@ -63,6 +68,7 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
       projectId: ctx.project.id,
       feedbackLabel: t("title"),
       current: { kind: "feedback" },
+      domainTarget,
     }),
   ]);
   const sort: PublicSort = search.sort === "recent" ? "recent" : "top";
@@ -90,11 +96,12 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
           )}
         </div>
       }
-      actions={<HeaderIdentity token={token} identity={identity} />}
+      actions={<HeaderIdentity token={token} basePath={base} identity={identity} />}
     >
       <main className="min-h-0 flex-1">
         <FeedbackBoardClient
           token={token}
+          basePath={base}
           posts={posts}
           sort={sort}
           status={status}

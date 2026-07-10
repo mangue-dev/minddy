@@ -18,6 +18,10 @@ import {
 import { Copy, Share2 } from "lucide-react";
 import type { View, ViewShareLevel } from "@/lib/types";
 import {
+  CustomDomainSection,
+  fetchCustomDomainApi,
+} from "@/components/custom-domain-section";
+import {
   deleteViewShareApi,
   fetchViewShareApi,
   updateViewShareApi,
@@ -94,7 +98,21 @@ export function ShareViewDialog({
     update.mutate({ level: "password", password: trimmed });
   };
 
-  const shareUrl = share ? `${window.location.origin}/share/${share.token}` : null;
+  // Domaine personnalisé (MIN-36) — même query que la CustomDomainSection ;
+  // vérifié, il devient l'URL de partage affichée.
+  const { data: domainData } = useQuery({
+    queryKey: ["share-domain", viewId],
+    queryFn: () => fetchCustomDomainApi(`/api/views/${viewId}/share/domain`),
+    enabled: open && viewId !== null && Boolean(share),
+  });
+  const verifiedDomain =
+    domainData?.domain?.status === "verified" ? domainData.domain.domain : null;
+
+  const shareUrl = share
+    ? verifiedDomain
+      ? `https://${verifiedDomain}`
+      : `${window.location.origin}/share/${share.token}`
+    : null;
   const copyLink = async () => {
     if (!shareUrl) return;
     await navigator.clipboard.writeText(shareUrl);
@@ -183,6 +201,15 @@ export function ShareViewDialog({
                   {t("copyLink")}
                 </Button>
               </div>
+            )}
+
+            {/* ── Domaine personnalisé (MIN-36) ─────────────────────────── */}
+            {share && viewId && (
+              <CustomDomainSection
+                endpoint={`/api/views/${viewId}/share/domain`}
+                queryKey={["share-domain", viewId]}
+                className="border-t pt-3"
+              />
             )}
           </div>
         )}
