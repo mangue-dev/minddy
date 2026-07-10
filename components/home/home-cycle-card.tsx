@@ -30,8 +30,10 @@ function Shell({
   children?: ReactNode;
 }) {
   return (
-    <section className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-5 text-card-foreground">
-      <div className="flex items-start justify-between gap-3">
+    <section className="flex h-full min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-5 text-card-foreground">
+      {/* Rings drop under the title on narrow screens so the header never
+          overflows the card; side-by-side once there's room (≥ sm). */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">{title}</div>
         {right ? <div className="shrink-0">{right}</div> : null}
       </div>
@@ -66,15 +68,15 @@ function CycleIssueRow({
   return (
     <Link
       href={`/projects/${issue.project_id}?issue=${issue.id}`}
-      className="group flex items-center gap-2 rounded-md py-0.5 text-sm"
+      className="group flex min-w-0 items-center gap-2 rounded-md py-0.5 text-sm"
     >
-      <StatusIndicator status={issue.status} className="size-4" />
+      <StatusIndicator status={issue.status} className="size-4 shrink-0" />
       {projectKey ? (
         <span className="shrink-0 font-mono text-xs text-muted-foreground">
           {issueIdentifier(projectKey, issue.number)}
         </span>
       ) : null}
-      <span className="truncate text-foreground/90 group-hover:text-foreground">
+      <span className="min-w-0 flex-1 truncate text-foreground/90 group-hover:text-foreground">
         {issue.title}
       </span>
     </Link>

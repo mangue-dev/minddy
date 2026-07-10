@@ -59,8 +59,11 @@ export default function HomePage() {
       {/* "Ask Numo" composer — hands off to the global assistant panel. */}
       <HomeNumoComposer />
 
-      {/* Focus: the current cycle + a global pulse. */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      {/* Focus: the current cycle + a global pulse. Stacked full-width until
+          lg — two narrow columns cram the cycle card's rings on tablet/mobile.
+          Explicit grid-cols give minmax(0,1fr) tracks so a card's content can't
+          blow the column past the viewport. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <HomeCycleCard />
         <HomeGlobalCard />
       </div>

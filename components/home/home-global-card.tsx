@@ -61,7 +61,7 @@ export function HomeGlobalCard() {
   }, [issues, myId]);
 
   return (
-    <section className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-5 text-card-foreground">
+    <section className="flex h-full min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-5 text-card-foreground">
       <h2 className="text-sm font-semibold tracking-tight">{t("globalTitle")}</h2>
 
       <div className="flex flex-1 flex-col gap-2">
