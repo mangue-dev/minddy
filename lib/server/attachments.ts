@@ -223,6 +223,19 @@ export async function signedAttachmentUrl(
   return data.signedUrl;
 }
 
+/** Fetch an attachment's bytes from the private bucket (service role bypasses
+    the absence of a storage select policy). Null when the object is missing. */
+export async function downloadAttachment(
+  service: SupabaseClient,
+  storagePath: string
+): Promise<Buffer | null> {
+  const { data, error } = await service.storage
+    .from("attachments")
+    .download(storagePath);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}
+
 /** Best-effort storage cleanup — a failure must never fail the business write
     (the leftover is an orphan object, same class as an abandoned upload). */
 export async function removeStorageObjects(

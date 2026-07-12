@@ -152,6 +152,19 @@ export function useAttachmentUploads(
 
   const clear = useCallback(() => setPending([]), []);
 
+  // Reseed the composer from already-uploaded references (a recovered draft,
+  // MIN-41). The storage objects still exist — mark each done with a fresh
+  // localId so removal keeps working.
+  const restore = useCallback((restored: AttachmentInput[]) => {
+    setPending(
+      restored.map((input) => ({
+        ...input,
+        localId: crypto.randomUUID(),
+        status: "done" as const,
+      }))
+    );
+  }, []);
+
   const inputs = useMemo<AttachmentInput[]>(
     () =>
       pending
@@ -167,5 +180,5 @@ export function useAttachmentUploads(
 
   const uploading = pending.some((p) => p.status === "uploading");
 
-  return { pending, addFiles, remove, clear, inputs, uploading };
+  return { pending, addFiles, remove, clear, restore, inputs, uploading };
 }

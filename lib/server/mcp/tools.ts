@@ -28,7 +28,11 @@ import {
 } from "@/lib/server/issue-relations";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { addCommentToIssue } from "@/lib/server/add-comment";
-import { uploadAttachment } from "@/lib/server/attachments";
+import {
+  downloadAttachment,
+  signedAttachmentUrl,
+  uploadAttachment,
+} from "@/lib/server/attachments";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import {
   ensureCycles,
@@ -60,6 +64,24 @@ import {
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
+
+/** Above this, minddy_get_attachment never embeds bytes inline (base64 would
+    swamp the model's context) — the signed download_url is the way in. */
+const MAX_INLINE_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
+
+/** Text-ish MIME → return the file as readable text rather than a base64 blob. */
+function isTextMime(mime: string): boolean {
+  return (
+    mime.startsWith("text/") ||
+    mime === "application/json" ||
+    mime === "application/xml" ||
+    mime === "application/javascript" ||
+    mime === "application/x-yaml" ||
+    mime === "application/yaml" ||
+    mime.endsWith("+json") ||
+    mime.endsWith("+xml")
+  );
+}
 
 /** Map a lib/server/* core failure to a stable MCP error. */
 function coreFail(r: {
@@ -364,8 +386,9 @@ export function registerMinddyTools(server: McpServer): void {
         "effort, assignee, objective, due date, parent), its implementation plan " +
         "(raw markdown plus parsed plan_tasks with stable task_index for " +
         "minddy_update_plan_task, and plan_progress), comments with author names, " +
-        "attachment metadata (file name/type/size, on the issue and on each " +
-        "comment — add files with minddy_add_attachment), sub-issues, and the last " +
+        "attachment metadata (id + file name/type/size, on the issue and on each " +
+        "comment — add files with minddy_add_attachment, download them with " +
+        "minddy_get_attachment), sub-issues, and the last " +
         "activity events (status changes, reassignments…) with resolved actors — " +
         "'what happened on this issue?'.",
       inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
@@ -452,9 +475,11 @@ export function registerMinddyTools(server: McpServer): void {
       title: "List objectives",
       description:
         "List a project's objectives (issue groups with a shared goal): id, name, " +
-        "status (planned/in_progress/done/canceled), lead, target date, and " +
+        "status (planned/in_progress/done/canceled), lead, target date, " +
         "progress — { done, total, percent } computed from linked issues " +
-        "(status 'done' / all linked), same as the UI's progress bar.",
+        "(status 'done' / all linked), same as the UI's progress bar — and, when " +
+        "present, the objective's own attachments (file name/type/size + id; " +
+        "download the bytes with minddy_get_attachment).",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
     },
@@ -462,21 +487,46 @@ export function registerMinddyTools(server: McpServer): void {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       const service = getServiceClient();
-      const [{ data, error }, { data: linkedIssues, error: issuesError }] =
-        await Promise.all([
-          service
-            .from("objectives")
-            .select("id, name, status, lead_user_id, target_date, color")
-            .eq("project_id", scope.access.project.id)
-            .order("created_at", { ascending: true }),
-          service
-            .from("issues")
-            .select("objective_id, status")
-            .eq("project_id", scope.access.project.id)
-            .not("objective_id", "is", null),
-        ]);
+      const [
+        { data, error },
+        { data: linkedIssues, error: issuesError },
+        { data: attachmentRows },
+      ] = await Promise.all([
+        service
+          .from("objectives")
+          .select("id, name, status, lead_user_id, target_date, color")
+          .eq("project_id", scope.access.project.id)
+          .order("created_at", { ascending: true }),
+        service
+          .from("issues")
+          .select("objective_id, status")
+          .eq("project_id", scope.access.project.id)
+          .not("objective_id", "is", null),
+        // Objective-level attachments (comment_id null) — metadata only; the
+        // bytes come from minddy_get_attachment by id.
+        service
+          .from("attachments")
+          .select("id, objective_id, file_name, mime_type, size_bytes")
+          .eq("project_id", scope.access.project.id)
+          .not("objective_id", "is", null)
+          .is("comment_id", null)
+          .order("created_at", { ascending: true }),
+      ]);
       if (error) return fail("database_error", error.message);
       if (issuesError) return fail("database_error", issuesError.message);
+
+      const attachmentsByObjective = new Map<string, Record<string, unknown>[]>();
+      for (const row of attachmentRows ?? []) {
+        const id = row.objective_id as string;
+        const list = attachmentsByObjective.get(id) ?? [];
+        list.push({
+          id: row.id,
+          file_name: row.file_name,
+          mime_type: row.mime_type,
+          size_bytes: row.size_bytes,
+        });
+        attachmentsByObjective.set(id, list);
+      }
 
       // Progression = issues done / total des issues liées (plan §6, même
       // calcul que objectiveProgress dans lib/use-objectives-query.ts).
@@ -498,6 +548,7 @@ export function registerMinddyTools(server: McpServer): void {
       return ok({
         objectives: (data ?? []).map((o) => {
           const p = progress.get(o.id as string) ?? { done: 0, total: 0 };
+          const atts = attachmentsByObjective.get(o.id as string);
           return {
             ...o,
             lead_name: o.lead_user_id
@@ -508,6 +559,7 @@ export function registerMinddyTools(server: McpServer): void {
               total: p.total,
               percent: p.total === 0 ? 0 : Math.round((p.done / p.total) * 100),
             },
+            ...(atts ? { attachments: atts } : {}),
           };
         }),
       });
@@ -949,6 +1001,117 @@ export function registerMinddyTools(server: McpServer): void {
       } catch (e) {
         return fail("database_error", (e as Error).message);
       }
+    }
+  );
+
+  server.registerTool(
+    "minddy_get_attachment",
+    {
+      title: "Get attachment",
+      description:
+        "Download one attachment — of an issue, an objective, or a comment. Pass the " +
+        "attachment_id you got from minddy_get_issue (issue and comment attachments) " +
+        "or minddy_list_objectives (objective attachments). By default returns the " +
+        "file metadata and a short-lived signed download_url (~10 min) — fetch that " +
+        "URL to grab the bytes without loading them into context, whatever the size. " +
+        "Set include_content=true to also embed the file inline (base64): images come " +
+        "back viewable, text-ish files as readable text, anything else as a resource " +
+        "blob. Inline content is capped at 10 MB — larger files stay URL-only.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        attachment_id: z
+          .string()
+          .uuid()
+          .describe("Attachment id from minddy_get_issue / minddy_list_objectives."),
+        include_content: z
+          .boolean()
+          .optional()
+          .describe(
+            "Embed the file bytes in the result (base64), not just the URL. " +
+              "Default false. Skipped for files over 10 MB."
+          ),
+      },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+
+      const service = getServiceClient();
+      // Scope by project_id (attachments carry it directly) — one door for
+      // issue, objective and comment attachments alike.
+      const { data: row, error } = await service
+        .from("attachments")
+        .select(
+          "id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id"
+        )
+        .eq("id", args.attachment_id)
+        .eq("project_id", scope.access.project.id)
+        .maybeSingle();
+      if (error) return fail("database_error", error.message);
+      if (!row) return fail("not_found", "Attachment not found in this project.");
+
+      const fileName = (row.file_name as string) || "attachment";
+      const mime = (row.mime_type as string) || "application/octet-stream";
+      const size = typeof row.size_bytes === "number" ? row.size_bytes : 0;
+
+      const url = await signedAttachmentUrl(service, row.storage_path as string, {
+        download: fileName,
+        expiresIn: 600,
+      });
+
+      const meta: Record<string, unknown> = {
+        id: row.id,
+        file_name: row.file_name,
+        mime_type: row.mime_type,
+        size_bytes: row.size_bytes,
+        issue_id: row.issue_id,
+        objective_id: row.objective_id,
+        comment_id: row.comment_id,
+        download_url: url,
+        download_url_expires_in_seconds: 600,
+      };
+
+      if (!args.include_content) return ok(meta);
+      if (size > MAX_INLINE_ATTACHMENT_BYTES) {
+        return ok({
+          ...meta,
+          content_omitted: `File is larger than the ${
+            MAX_INLINE_ATTACHMENT_BYTES / (1024 * 1024)
+          } MB inline cap — fetch download_url instead.`,
+        });
+      }
+
+      const data = await downloadAttachment(service, row.storage_path as string);
+      if (!data) {
+        return ok({ ...meta, content_omitted: "The stored file could not be read." });
+      }
+
+      const content: Array<Record<string, unknown>> = [
+        { type: "text", text: JSON.stringify(meta, null, 2) },
+      ];
+      if (mime.startsWith("image/")) {
+        content.push({ type: "image", data: data.toString("base64"), mimeType: mime });
+      } else if (isTextMime(mime)) {
+        content.push({
+          type: "resource",
+          resource: {
+            uri: `minddy://attachments/${row.id}`,
+            mimeType: mime,
+            text: data.toString("utf8"),
+          },
+        });
+      } else {
+        content.push({
+          type: "resource",
+          resource: {
+            uri: `minddy://attachments/${row.id}`,
+            mimeType: mime,
+            blob: data.toString("base64"),
+          },
+        });
+      }
+      return { content } as unknown as ToolResult;
     }
   );
 

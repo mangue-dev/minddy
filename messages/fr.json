@@ -554,10 +554,6 @@
     "numoWorking": "Numo remplit le ticket…",
     "numoUpdating": "Numo met à jour le ticket…",
     "dictateEditTooltip": "Modifier le ticket à la voix",
-    "discardDraftTitle": "Abandonner le brouillon ?",
-    "discardDraftDescription": "Le ticket en cours de rédaction sera perdu.",
-    "discardDraftConfirm": "Abandonner",
-    "discardDraftKeepEditing": "Continuer la rédaction",
     "addSubIssuePlaceholder": "Ajouter un sous-ticket…",
     "openParentAria": "Ouvrir le ticket parent {id}",
     "viewPlanAria": "Voir le plan",
@@ -762,11 +758,16 @@
     "createdInProjectToast": "Objectif créé dans {project}.",
     "entity": "Objectif",
     "leadFieldLabel": "Responsable",
-    "viewLinkedIssues": "Voir les {issues}",
-    "discardDraftTitle": "Abandonner le brouillon ?",
-    "discardDraftDescription": "L'objectif en cours de rédaction sera perdu.",
-    "discardDraftConfirm": "Abandonner",
-    "discardDraftKeepEditing": "Continuer la rédaction"
+    "viewLinkedIssues": "Voir les {issues}"
+  },
+  "Drafts": {
+    "recent": "Brouillons récents",
+    "untitled": "Sans titre",
+    "delete": "Supprimer le brouillon",
+    "closeTitle": "Fermer ce brouillon ?",
+    "closeDescription": "Il sera enregistré dans vos brouillons récents ; vous pourrez le reprendre plus tard.",
+    "closeConfirm": "Fermer le brouillon",
+    "keepEditing": "Continuer la rédaction"
   },
   "Picker": {
     "search": "Rechercher…",

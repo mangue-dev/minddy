@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  ConfirmDeleteDialog,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -24,6 +23,9 @@ import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ProjectOrb } from "@/components/project-orb";
+import { DraftRecoveryRow } from "@/components/draft-recovery-row";
+import { CloseDraftDialog } from "@/components/close-draft-dialog";
+import { useDrafts } from "@/lib/use-drafts";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import {
   OBJECTIVE_STATUSES,
@@ -183,9 +185,14 @@ export function ObjectiveDialog({
   const tCommon = useTranslations("Common");
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
-  // Closing the discard confirmation lets the dismissing click fall through to
-  // this dialog as an outside click, which would re-open the confirmation just
+  // Id of the draft loaded in the form (MIN-41), so re-closing updates it in
+  // place and a successful create removes exactly the draft it came from.
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  // Dismissing a create form with content asks first (MIN-41) — confirming
+  // stashes it as a local draft rather than losing it.
+  const [confirmClose, setConfirmClose] = useState(false);
+  // Closing the confirmation lets the dismissing click fall through to this
+  // dialog as an outside click, which would re-open the confirmation just
   // dismissed. This ref muffles the close signal for the brief window after.
   const ignoreCloseAfterConfirmRef = useRef(false);
   // Live emptiness of the description editor — `form.description` alone would
@@ -194,6 +201,11 @@ export function ObjectiveDialog({
   // Remount the markdown editor to swap its content (it only reads `value` on
   // mount and commits on blur) when the dialog opens on a new/other objective.
   const [editorKey, setEditorKey] = useState(0);
+
+  // Drafts only apply to the create flow (editing lives in the side panel) and
+  // need a home project to scope to.
+  const draftsEnabled = !objective && !!projectId;
+  const drafts = useDrafts("objective", projectId ?? null, open && draftsEnabled);
 
   const currentProject = projects.find((p) => p.id === projectId) ?? null;
   const otherProjects = projects.filter((p) => p.id !== projectId);
@@ -216,43 +228,86 @@ export function ObjectiveDialog({
         : EMPTY
     );
     editorNonEmptyRef.current = false;
+    setActiveDraftId(null);
     setEditorKey((k) => k + 1);
   }, [open, objective]);
 
   const closeAndReset = () => {
     setForm(EMPTY);
     editorNonEmptyRef.current = false;
+    setActiveDraftId(null);
     onOpenChange(false);
   };
 
-  // Typed text is worth guarding — the pickers are two clicks to redo. Only in
+  // Typed text is worth keeping — the pickers are two clicks to redo. Only in
   // create mode; editing lives in the side panel now.
   const draftHasContent = () =>
     form.name.trim() !== "" ||
     form.description.trim() !== "" ||
     editorNonEmptyRef.current;
 
+  // Snapshot the form as a local draft (MIN-41), reusing the active id.
+  const saveDraft = () => {
+    if (!projectId) return;
+    drafts.save({
+      id: activeDraftId ?? crypto.randomUUID(),
+      projectId,
+      updatedAt: Date.now(),
+      name: form.name,
+      description: form.description,
+      status: form.status,
+      lead_user_id: form.lead_user_id,
+      target_date: form.target_date,
+      color: form.color,
+    });
+  };
+
+  // Stash the draft and close (the confirmation's "Close draft" action).
+  const saveDraftAndClose = () => {
+    saveDraft();
+    closeAndReset();
+  };
+
   const handleOpenChange = (next: boolean) => {
     // Swallow close signals while the confirmation owns the decision, and for
     // the brief window right after it closes (the fall-through click).
-    if (!next && (confirmDiscard || ignoreCloseAfterConfirmRef.current)) return;
-    if (!next && !objective && draftHasContent()) {
-      setConfirmDiscard(true);
+    if (!next && (confirmClose || ignoreCloseAfterConfirmRef.current)) return;
+    // Dismissing a create form with content asks first — confirming keeps it.
+    if (!next && draftsEnabled && draftHasContent()) {
+      setConfirmClose(true);
       return;
     }
-    onOpenChange(next);
+    if (!next) closeAndReset();
+    else onOpenChange(next);
   };
 
   // Arm the fall-through guard the instant the confirmation closes (keep
   // editing, Escape, or after confirming).
   const handleConfirmOpenChange = (openNext: boolean) => {
-    setConfirmDiscard(openNext);
+    setConfirmClose(openNext);
     if (!openNext) {
       ignoreCloseAfterConfirmRef.current = true;
       window.setTimeout(() => {
         ignoreCloseAfterConfirmRef.current = false;
       }, 300);
     }
+  };
+
+  // Load a saved draft back into the form and track its id.
+  const recoverDraft = (id: string) => {
+    const draft = drafts.find(id);
+    if (!draft) return;
+    setForm({
+      name: draft.name,
+      description: draft.description,
+      status: draft.status,
+      lead_user_id: draft.lead_user_id,
+      target_date: draft.target_date,
+      color: draft.color,
+    });
+    editorNonEmptyRef.current = draft.description.trim() !== "";
+    setEditorKey((k) => k + 1); // remount the editor with the draft's content
+    setActiveDraftId(draft.id);
   };
 
   // `target` is set only when creating in a different project (dropdown item).
@@ -289,6 +344,8 @@ export function ObjectiveDialog({
         await onCreate(payload);
         toast.success(t("createdToast"));
       }
+      // The draft became a real objective — drop it from the local store.
+      if (activeDraftId) drafts.remove(activeDraftId);
       closeAndReset();
     } catch (err) {
       toast.error((err as Error).message);
@@ -304,112 +361,120 @@ export function ObjectiveDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="p-8 sm:max-w-2xl"
-        onInteractOutside={keepOverlayOpenForPopper}
-      >
-        <DialogTitle className="sr-only">
-          {objective ? t("editObjectiveTitle") : t("newObjective")}
-        </DialogTitle>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="p-8 sm:max-w-2xl"
+          onInteractOutside={keepOverlayOpenForPopper}
+        >
+          <DialogTitle className="sr-only">
+            {objective ? t("editObjectiveTitle") : t("newObjective")}
+          </DialogTitle>
 
-        <form onSubmit={handleSubmit} className="relative flex flex-col rounded-lg">
-          <AutoTextarea
-            autoFocus
-            required
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              e.preventDefault();
-              void submit();
-            }}
-            placeholder={t("namePlaceholder")}
-            className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
-          />
-          <MarkdownEditor
-            key={editorKey}
-            value={form.description}
-            onCommit={(description) => setForm((f) => ({ ...f, description }))}
-            onEmptyChange={(empty) => {
-              editorNonEmptyRef.current = !empty;
-            }}
-            placeholder={t("descriptionPlaceholder")}
-            className="mt-2 min-h-16"
-          />
+          <form onSubmit={handleSubmit} className="relative flex flex-col rounded-lg">
+            {/* Recent drafts — a row above the name to restore or delete an
+              abandoned draft (MIN-41). Hidden once the form has content. */}
+            {draftsEnabled &&
+              form.name.trim() === "" &&
+              form.description.trim() === "" && (
+                <DraftRecoveryRow
+                  drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.name }))}
+                  onRecover={recoverDraft}
+                  onDelete={drafts.remove}
+                  className="mb-3"
+                />
+              )}
+            <AutoTextarea
+              autoFocus
+              required
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                void submit();
+              }}
+              placeholder={t("namePlaceholder")}
+              className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+            />
+            <MarkdownEditor
+              key={editorKey}
+              value={form.description}
+              onCommit={(description) => setForm((f) => ({ ...f, description }))}
+              onEmptyChange={(empty) => {
+                editorNonEmptyRef.current = !empty;
+              }}
+              placeholder={t("descriptionPlaceholder")}
+              className="mt-2 min-h-16"
+            />
 
-          {/* Options — one compact inline row, like the create-issue dialog */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <ObjectiveStatusCompact
-              value={form.status}
-              onChange={(status) => setForm((f) => ({ ...f, status }))}
-            />
-            <AssigneeCompact
-              value={form.lead_user_id}
-              onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
-              members={members}
-              noneLabel={t("noLead")}
-            />
-            <DateTimePicker
-              variant="field"
-              value={form.target_date}
-              onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
-              placeholder={t("targetDatePlaceholder")}
-              ariaLabel={t("targetDatePlaceholder")}
-              tooltip={t("targetDatePlaceholder")}
-              className="h-8 rounded-full"
-            />
-            <ColorCompact
-              value={form.color}
-              onChange={(color) => setForm((f) => ({ ...f, color }))}
-            />
-          </div>
+            {/* Options — one compact inline row, like the create-issue dialog */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <ObjectiveStatusCompact
+                value={form.status}
+                onChange={(status) => setForm((f) => ({ ...f, status }))}
+              />
+              <AssigneeCompact
+                value={form.lead_user_id}
+                onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
+                members={members}
+                noneLabel={t("noLead")}
+              />
+              <DateTimePicker
+                variant="field"
+                value={form.target_date}
+                onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
+                placeholder={t("targetDatePlaceholder")}
+                ariaLabel={t("targetDatePlaceholder")}
+                tooltip={t("targetDatePlaceholder")}
+                className="h-8 rounded-full"
+              />
+              <ColorCompact
+                value={form.color}
+                onChange={(color) => setForm((f) => ({ ...f, color }))}
+              />
+            </div>
 
-          {/* Bottom bar — create controls at right, like the create-issue dialog */}
-          <div className="mt-8 flex items-center justify-end gap-4">
-            {showSplit ? (
-              <SplitButton
-                type="submit"
-                disabled={submitting || !form.name.trim()}
-                actionClassName="rounded-l-full pl-4"
-                triggerClassName="rounded-r-full"
-                menuLabel={t("createInOtherProject")}
-                menu={otherProjects.map((p) => (
-                  <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
-                    <ProjectOrb seed={p.id} className="size-4" />
-                    <span className="truncate">{p.name}</span>
-                  </DropdownMenuItem>
-                ))}
-              >
-                {submitting && <Spinner />}
-                <span className="max-w-[14rem] truncate">
-                  {t("createInProject", { project: currentProject!.name })}
-                </span>
-              </SplitButton>
-            ) : (
-              <Button
-                type="submit"
-                className="rounded-full px-4"
-                disabled={submitting || !form.name.trim()}
-              >
-                {submitting && <Spinner />}
-                {objective ? tCommon("save") : tCommon("create")}
-              </Button>
-            )}
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            {/* Bottom bar — create controls at right, like the create-issue dialog */}
+            <div className="mt-8 flex items-center justify-end gap-4">
+              {showSplit ? (
+                <SplitButton
+                  type="submit"
+                  disabled={submitting || !form.name.trim()}
+                  actionClassName="rounded-l-full pl-4"
+                  triggerClassName="rounded-r-full"
+                  menuLabel={t("createInOtherProject")}
+                  menu={otherProjects.map((p) => (
+                    <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
+                      <ProjectOrb seed={p.id} className="size-4" />
+                      <span className="truncate">{p.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                >
+                  {submitting && <Spinner />}
+                  <span className="max-w-[14rem] truncate">
+                    {t("createInProject", { project: currentProject!.name })}
+                  </span>
+                </SplitButton>
+              ) : (
+                <Button
+                  type="submit"
+                  className="rounded-full px-4"
+                  disabled={submitting || !form.name.trim()}
+                >
+                  {submitting && <Spinner />}
+                  {objective ? tCommon("save") : tCommon("create")}
+                </Button>
+              )}
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dismissing a non-empty new-objective draft asks first (create only). */}
-      <ConfirmDeleteDialog
-        open={confirmDiscard}
+      <CloseDraftDialog
+        open={confirmClose}
         onOpenChange={handleConfirmOpenChange}
-        title={t("discardDraftTitle")}
-        description={t("discardDraftDescription")}
-        confirmLabel={t("discardDraftConfirm")}
-        cancelLabel={t("discardDraftKeepEditing")}
-        onConfirm={closeAndReset}
+        onConfirm={saveDraftAndClose}
       />
     </>
   );

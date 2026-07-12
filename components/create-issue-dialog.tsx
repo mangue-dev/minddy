@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  ConfirmDeleteDialog,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -16,6 +15,8 @@ import {
 } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { DraftRecoveryRow } from "@/components/draft-recovery-row";
+import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
   AttachButton,
@@ -43,6 +44,7 @@ import {
 } from "@/components/issue-field-shortcuts";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
+import { useDrafts } from "@/lib/use-drafts";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import type {
   IssueStatus,
@@ -111,13 +113,19 @@ export function CreateIssueDialog({
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
   const [openPicker, setOpenPicker] = useState<ShortcutField | null>(null);
-  // Closing the discard confirmation lets the dismissing pointer/click fall
-  // through to this dialog below it and read as an outside click — which would
-  // immediately re-open the confirmation just dismissed. This ref muffles the
-  // dialog's close signal for the brief window right after the confirm closes.
+  // Id of the draft currently loaded in the form (MIN-41): set when a draft is
+  // recovered, so re-closing updates it in place rather than spawning a copy,
+  // and a successful create removes exactly the draft it came from.
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  // Dismissing a form with content asks first (MIN-41) — confirming stashes it
+  // as a local draft rather than losing it.
+  const [confirmClose, setConfirmClose] = useState(false);
+  // Closing the confirmation lets the dismissing pointer/click fall through to
+  // this dialog below it and read as an outside click — which would immediately
+  // re-open the confirmation just dismissed. This ref muffles the dialog's close
+  // signal for the brief window right after the confirmation closes.
   const ignoreCloseAfterConfirmRef = useRef(false);
   // Remount the markdown editor to swap its content (it only commits on blur).
   const [editorKey, setEditorKey] = useState(0);
@@ -128,6 +136,7 @@ export function CreateIssueDialog({
   const createMoreId = useId();
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
+  const drafts = useDrafts("issue", projectId, open);
 
   // Account preference (Préférences → auto-attribution): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
@@ -202,6 +211,7 @@ export function CreateIssueDialog({
     setCategoryIds([]);
     setCreateMore(false);
     setOpenPicker(null);
+    setActiveDraftId(null);
     editorNonEmptyRef.current = false;
     resetDictation();
   };
@@ -211,21 +221,48 @@ export function CreateIssueDialog({
     onOpenChange(false);
   };
 
-  // Typed text and uploaded files are worth guarding — pickers are two clicks
-  // to redo.
+  // Typed text or a finished upload is worth keeping — a pristine (or
+  // still-uploading-only) form is not.
   const draftHasContent = () =>
     title.trim() !== "" ||
     description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.pending.length > 0;
+    uploads.inputs.length > 0;
+
+  // Snapshot the form as a draft (MIN-41) — reuses the active id so re-closing a
+  // recovered draft updates it in place instead of piling up copies.
+  const saveDraft = () => {
+    drafts.save({
+      id: activeDraftId ?? crypto.randomUUID(),
+      projectId,
+      updatedAt: Date.now(),
+      title,
+      description,
+      status: fields.status,
+      priority: fields.priority,
+      effort: fields.effort,
+      assignee_id: fields.assignee_id,
+      objective_id: fields.objective_id,
+      due_date: fields.due_date,
+      category_ids: categoryIds,
+      attachments: uploads.inputs,
+    });
+  };
+
+  // Stash the draft and close (the confirmation's "Close draft" action).
+  const saveDraftAndClose = () => {
+    saveDraft();
+    closeAndReset();
+  };
 
   const handleOpenChange = (next: boolean) => {
     // Swallow close signals while the confirmation owns the decision (it's up),
     // and for the brief window right after it closes — that window is the
     // fall-through click that would otherwise re-open the confirmation in a loop.
-    if (!next && (confirmDiscard || ignoreCloseAfterConfirmRef.current)) return;
+    if (!next && (confirmClose || ignoreCloseAfterConfirmRef.current)) return;
+    // Dismissing a form with content asks first — confirming keeps it as a draft.
     if (!next && draftHasContent()) {
-      setConfirmDiscard(true);
+      setConfirmClose(true);
       return;
     }
     if (!next) reset();
@@ -234,16 +271,38 @@ export function CreateIssueDialog({
 
   // Route the confirmation's own open/close through here so we can arm the
   // fall-through guard the instant it closes (keep-editing, Escape, or after
-  // confirming). "Abandonner" still closes the dialog via closeAndReset, which
-  // calls onOpenChange directly and bypasses handleOpenChange's guard.
+  // confirming). "Close draft" also closes the dialog via saveDraftAndClose,
+  // which calls onOpenChange directly and bypasses handleOpenChange's guard.
   const handleConfirmOpenChange = (open: boolean) => {
-    setConfirmDiscard(open);
+    setConfirmClose(open);
     if (!open) {
       ignoreCloseAfterConfirmRef.current = true;
       window.setTimeout(() => {
         ignoreCloseAfterConfirmRef.current = false;
       }, 300);
     }
+  };
+
+  // Load a saved draft back into the form and remember its id so a create /
+  // re-close targets the same entry.
+  const recoverDraft = (id: string) => {
+    const draft = drafts.find(id);
+    if (!draft) return;
+    setTitle(draft.title);
+    setDescription(draft.description);
+    setEditorKey((k) => k + 1); // remount the editor with the draft's content
+    editorNonEmptyRef.current = draft.description.trim() !== "";
+    setFields({
+      status: draft.status,
+      priority: draft.priority,
+      effort: draft.effort,
+      assignee_id: draft.assignee_id,
+      objective_id: draft.objective_id,
+      due_date: draft.due_date,
+    });
+    setCategoryIds(draft.category_ids);
+    uploads.restore(draft.attachments);
+    setActiveDraftId(draft.id);
   };
 
   // `target` is set only when creating in a different project (dropdown item).
@@ -285,6 +344,11 @@ export function CreateIssueDialog({
           attachments: uploads.inputs,
         });
         toast.success(t("issueCreatedToast"));
+      }
+      // The draft became a real issue — drop it from the local store (MIN-41).
+      if (activeDraftId) {
+        drafts.remove(activeDraftId);
+        setActiveDraftId(null);
       }
       // The dictation session is about the issue that was just created — a
       // follow-up recording starts fresh.
@@ -372,6 +436,16 @@ export function CreateIssueDialog({
             {...drop.handlers}
           >
             <DropOverlay show={drop.dragging} />
+            {/* Recent drafts — a row above the title to restore or delete an
+              abandoned draft (MIN-41). Hidden once the form has content. */}
+            {title.trim() === "" && description.trim() === "" && (
+              <DraftRecoveryRow
+                drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.title }))}
+                onRecover={recoverDraft}
+                onDelete={drafts.remove}
+                className="mb-3"
+              />
+            )}
             {/* Attachments are context — they sit ABOVE the text being written. */}
             <AttachmentPills
               attachments={uploads.pending.filter((p) => p.status === "done")}
@@ -548,14 +622,10 @@ export function CreateIssueDialog({
 
       {/* Dismissing a non-empty draft asks first — Escape / outside click / any
         close path funnels through handleOpenChange above. */}
-      <ConfirmDeleteDialog
-        open={confirmDiscard}
+      <CloseDraftDialog
+        open={confirmClose}
         onOpenChange={handleConfirmOpenChange}
-        title={t("discardDraftTitle")}
-        description={t("discardDraftDescription")}
-        confirmLabel={t("discardDraftConfirm")}
-        cancelLabel={t("discardDraftKeepEditing")}
-        onConfirm={closeAndReset}
+        onConfirm={saveDraftAndClose}
       />
     </>
   );

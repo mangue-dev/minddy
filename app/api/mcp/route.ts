@@ -33,9 +33,11 @@ const handler = createMcpHandler(
       "'- [-]' cancelled. When asked to plan work, write the full plan into the issue " +
       "(create/update); while executing one, keep task states current with " +
       "minddy_update_plan_task (mark the task you start '- [~]', finished '- [x]'). " +
-      "Issues and comments can carry file attachments: minddy_get_issue lists their " +
-      "metadata (name/type/size), minddy_add_attachment uploads one (base64, 10 MB " +
-      "max) to an issue or, via comment_id, to a comment. The key owner may have a " +
+      "Issues, objectives and comments can carry file attachments: minddy_get_issue " +
+      "and minddy_list_objectives list their metadata (id + name/type/size), " +
+      "minddy_add_attachment uploads one (base64, 10 MB max) to an issue or, via " +
+      "comment_id, to a comment, and minddy_get_attachment downloads one by id " +
+      "(signed URL, or the bytes inline). The key owner may have a " +
       "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
       "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +
       "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +

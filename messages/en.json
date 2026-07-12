@@ -554,10 +554,6 @@
     "numoWorking": "Numo is filling the issue…",
     "numoUpdating": "Numo is updating the issue…",
     "dictateEditTooltip": "Edit the issue by voice",
-    "discardDraftTitle": "Discard this draft?",
-    "discardDraftDescription": "The issue you're drafting will be lost.",
-    "discardDraftConfirm": "Discard",
-    "discardDraftKeepEditing": "Keep editing",
     "addSubIssuePlaceholder": "Add a sub-issue…",
     "openParentAria": "Open parent issue {id}",
     "viewPlanAria": "View plan",
@@ -762,11 +758,16 @@
     "createdInProjectToast": "Objective created in {project}.",
     "entity": "Objective",
     "leadFieldLabel": "Lead",
-    "viewLinkedIssues": "View {issues}",
-    "discardDraftTitle": "Discard draft?",
-    "discardDraftDescription": "The objective you're drafting will be lost.",
-    "discardDraftConfirm": "Discard",
-    "discardDraftKeepEditing": "Keep editing"
+    "viewLinkedIssues": "View {issues}"
+  },
+  "Drafts": {
+    "recent": "Recent drafts",
+    "untitled": "Untitled",
+    "delete": "Delete draft",
+    "closeTitle": "Close this draft?",
+    "closeDescription": "It'll be saved to your recent drafts so you can pick it up later.",
+    "closeConfirm": "Close draft",
+    "keepEditing": "Keep editing"
   },
   "Picker": {
     "search": "Search…",
