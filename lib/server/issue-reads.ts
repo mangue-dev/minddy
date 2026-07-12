@@ -127,6 +127,12 @@ export async function listIssues(
   if (typeof args.objective_id === "string") {
     query = query.eq("objective_id", args.objective_id);
   }
+  if ("integration_id" in args) {
+    // null = not created by an integration; a string = that integration.
+    if (args.integration_id === null) query = query.is("integration_id", null);
+    else if (typeof args.integration_id === "string")
+      query = query.eq("integration_id", args.integration_id);
+  }
 
   const { data, error } = await query;
   if (error) return { error: error.message };

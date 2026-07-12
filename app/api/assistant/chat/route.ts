@@ -271,9 +271,10 @@ export async function POST(request: NextRequest) {
     activeTools = GLOBAL_ASSISTANT_TOOLS;
   }
 
-  // What the user is currently viewing — only meaningful in project mode
-  // (that's where issues/objectives live).
-  if (pageContext && project) {
+  // What the user is currently viewing. In project mode that's the open issue/
+  // objective/view; in global mode it's the cross-project view or cycle. The
+  // block renders only the lines that apply, so it's safe in both modes.
+  if (pageContext) {
     systemPrompt += `\n${buildPageContextBlock(pageContext)}`;
   }
 

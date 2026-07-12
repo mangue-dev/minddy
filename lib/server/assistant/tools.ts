@@ -106,6 +106,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             description: "Only issues carrying this category.",
           },
+          integration_id: {
+            type: ["string", "null"],
+            description:
+              "Only issues created by this integration; null = only issues NOT created by an integration.",
+          },
           include_done: {
             type: "boolean",
             description:
@@ -290,7 +295,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view (shared with the whole project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic).",
+        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations, or list_global_filter_options in global mode, first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic).",
       parameters: {
         type: "object",
         properties: {
@@ -890,6 +895,11 @@ export const PROJECT_SCOPED_TOOLS = new Set(
   )
 );
 
+// View tools that, in global mode, operate on the user's CROSS-PROJECT global
+// view (project_id null, personal) rather than a project's — so they take NO
+// injected project_id there. In project mode they stay project-scoped as usual.
+export const GLOBAL_VIEW_TOOLS = new Set(["create_view", "update_view"]);
+
 export function buildGlobalTools(): AssistantToolDef[] {
   const listProjectsTool: AssistantToolDef = {
     type: "function",
@@ -901,8 +911,27 @@ export function buildGlobalTools(): AssistantToolDef[] {
     },
   };
 
+  // Global-mode discovery for the cross-project view's category/objective/
+  // integration filters: same names collapsed across projects, each carrying
+  // the full set of ids to put in filters.category/objective/integration.
+  const listGlobalFilterOptionsTool: AssistantToolDef = {
+    type: "function",
+    function: {
+      name: "list_global_filter_options",
+      description:
+        "List the category, objective and integration filter options across ALL the user's projects, grouped by name. Each entry gives { name, ids } — the ids to drop into a GLOBAL view's filters.category / filters.objective / filters.integration. Use this before filtering the cross-project global view by category, objective or integration.",
+      parameters: { type: "object", properties: {} },
+    },
+  };
+
   const augmented = ASSISTANT_TOOLS.map((tool) => {
-    if (!PROJECT_SCOPED_TOOLS.has(tool.function.name)) return tool;
+    // View tools edit the global view in global mode → no project_id injected.
+    if (
+      !PROJECT_SCOPED_TOOLS.has(tool.function.name) ||
+      GLOBAL_VIEW_TOOLS.has(tool.function.name)
+    ) {
+      return tool;
+    }
 
     const params = tool.function.parameters;
 
@@ -926,7 +955,7 @@ export function buildGlobalTools(): AssistantToolDef[] {
     };
   });
 
-  return [listProjectsTool, ...augmented];
+  return [listProjectsTool, listGlobalFilterOptionsTool, ...augmented];
 }
 
 export const GLOBAL_ASSISTANT_TOOLS = buildGlobalTools();

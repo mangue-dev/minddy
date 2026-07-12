@@ -206,6 +206,18 @@ You are running in **global mode** — not tied to any specific project.
 
 ${VOCABULARY_BLOCK}
 
+## Saved views in global mode (the "Tous les tickets" board)
+- Here \`create_view\`/\`update_view\` act on the user's PERSONAL CROSS-PROJECT view
+  (it spans every project) — NOT a project view. Do NOT pass a project_id to them.
+  When the context says "Current kanban view", that is the global view to edit.
+- To filter the global view by category, objective or integration, first call
+  \`list_global_filter_options\`: it returns those options grouped by name across all
+  projects, each with the full set of ids (the same label, e.g. "Bug", present in
+  several projects collapses to one entry). Put those ids in filters.category /
+  filters.objective / filters.integration — a single name can contribute several ids.
+- status, priority, effort and assignee filters work the same as in a project view
+  ('@me' = the viewing user). filters.integration null = issues not from an integration.
+
 ${SETTINGS_BLOCK}
 
 ${buildSharedRules(locale, defaultStatus)}`;

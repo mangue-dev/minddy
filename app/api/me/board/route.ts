@@ -6,7 +6,14 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
-import type { BoardCycles, Category, IssueRelation, Member, Objective } from "@/lib/types";
+import type {
+  BoardCycles,
+  Category,
+  IntegrationRef,
+  IssueRelation,
+  Member,
+  Objective,
+} from "@/lib/types";
 
 /** How many closed cycles the header's date-selector lists. */
 const PAST_CYCLES_SHOWN = 8;
@@ -111,6 +118,22 @@ export async function GET(request: NextRequest) {
         .order("created_at", { ascending: true })
     : { data: [] as { project_id: string; user_id: string }[] };
 
+  // Integrations across my projects — feeds the cross-project integration
+  // filter (issues carry integration_id). Read via the service client like
+  // members, then bucketed by project. Only id/name/project_id are exposed.
+  const { data: integrationRows } = projectIds.length
+    ? await service
+        .from("integrations")
+        .select("id, name, project_id")
+        .in("project_id", projectIds)
+        .order("name", { ascending: true })
+    : { data: [] as IntegrationRef[] };
+
+  const integrations: Record<string, IntegrationRef[]> = {};
+  for (const row of (integrationRows ?? []) as IntegrationRef[]) {
+    (integrations[row.project_id] ??= []).push(row);
+  }
+
   const usersById = await fetchAuthUsersById(service, [
     ...projectRows.map((p) => p.owner_id),
     ...(memberRows ?? []).map((m) => m.user_id as string),
@@ -138,5 +161,13 @@ export async function GET(request: NextRequest) {
 
   const relations = (relationsRes.data ?? []) as IssueRelation[];
 
-  return NextResponse.json({ issues, members, categories, objectives, relations, cycles });
+  return NextResponse.json({
+    issues,
+    members,
+    categories,
+    objectives,
+    integrations,
+    relations,
+    cycles,
+  });
 }

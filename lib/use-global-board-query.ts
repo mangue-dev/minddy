@@ -372,6 +372,7 @@ export function useGlobalBoardQuery() {
     membersByProject: data?.members ?? {},
     categoriesByProject: data?.categories ?? {},
     objectivesByProject: data?.objectives ?? {},
+    integrationsByProject: data?.integrations ?? {},
     relations: (data?.relations ?? []) as IssueRelation[],
     cycles: data?.cycles ?? null,
     loading: isLoading,

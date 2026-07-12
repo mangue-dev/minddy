@@ -83,7 +83,6 @@ import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { displayName } from "@/lib/display-name";
 import type {
   Category,
-  Integration,
   Member,
   Objective,
   Project,
@@ -109,6 +108,79 @@ function toggle<T>(arr: T[] | undefined, value: T): T[] {
   const set = new Set(arr ?? []);
   if (set.has(value)) set.delete(value);
   else set.add(value);
+  return [...set];
+}
+
+/** Minimal shape the integration facet needs (the global board feeds slim
+    cross-project refs, the project board feeds full Integration rows). */
+type IntegrationFacet = { id: string; name: string };
+
+/** One filter row for a category/objective/integration facet. `ids` is the set
+    of underlying entity ids the row covers — a single id normally, but several
+    when the same name spans projects (global board, group-by-name). */
+interface FacetOption {
+  /** Stable React key + identity: the name when grouped, else the id. */
+  key: string;
+  label: string;
+  color?: string | null;
+  ids: string[];
+}
+
+/** Flatten entities into filter rows. When `groupByName`, same-named entities
+    (e.g. a "Bug" category present in several projects) collapse into ONE row
+    spanning all their ids — the cross-project "flat list" the global board
+    shows. Otherwise each entity is its own row (project board, unchanged). */
+function buildFacetOptions<T extends { id: string; name: string }>(
+  items: T[],
+  groupByName: boolean,
+  colorOf?: (item: T) => string | null | undefined
+): FacetOption[] {
+  if (!groupByName) {
+    return items.map((it) => ({
+      key: it.id,
+      label: it.name,
+      color: colorOf?.(it) ?? null,
+      ids: [it.id],
+    }));
+  }
+  const byName = new Map<string, FacetOption>();
+  for (const it of items) {
+    const existing = byName.get(it.name);
+    if (existing) {
+      existing.ids.push(it.id);
+      if (existing.color == null) existing.color = colorOf?.(it) ?? null;
+    } else {
+      byName.set(it.name, {
+        key: it.name,
+        label: it.name,
+        color: colorOf?.(it) ?? null,
+        ids: [it.id],
+      });
+    }
+  }
+  return [...byName.values()];
+}
+
+/** True when any of a row's ids is currently selected. */
+function facetActive(
+  selected: readonly (string | null)[] | undefined,
+  ids: string[]
+): boolean {
+  return ids.some((id) => selected?.includes(id));
+}
+
+/** Toggle a whole id-group at once: if any id is on, remove them all; else add
+    them all. Keeps `filterIssues` id-based while the UI groups by name. */
+function toggleFacet<T extends string | null>(
+  selected: T[] | undefined,
+  ids: T[]
+): T[] {
+  const set = new Set<T>(selected ?? []);
+  const active = ids.some((id) => set.has(id));
+  for (const id of ids) {
+    if (active) set.delete(id);
+    else set.add(id);
+  }
   return [...set];
 }
 
@@ -141,6 +213,7 @@ function FiltersPopover({
   objectives,
   integrations,
   projects,
+  groupFacetsByName,
   lockedToMe,
   withNumo,
   onAskNumo,
@@ -150,9 +223,12 @@ function FiltersPopover({
   members: Member[];
   categories: Category[];
   objectives: Objective[];
-  integrations: Integration[];
+  integrations: IntegrationFacet[];
   /** Global board only — a project board has no project facet. */
   projects: Project[];
+  /** Global board: collapse same-named category/objective/integration rows
+      across projects into one (each row then filters all matching ids). */
+  groupFacetsByName: boolean;
   /** System view: the assignee facet is pinned to "@me" and not editable. */
   lockedToMe: boolean;
   withNumo: boolean;
@@ -168,6 +244,19 @@ function FiltersPopover({
   const tf = useTranslations("Field");
   const ts = useTranslations("Status");
   const tp = useTranslations("Priority");
+
+  const categoryOptions = useMemo(
+    () => buildFacetOptions(categories, groupFacetsByName, (c) => c.color),
+    [categories, groupFacetsByName]
+  );
+  const objectiveOptions = useMemo(
+    () => buildFacetOptions(objectives, groupFacetsByName, (o) => o.color),
+    [objectives, groupFacetsByName]
+  );
+  const integrationOptions = useMemo(
+    () => buildFacetOptions(integrations, groupFacetsByName),
+    [integrations, groupFacetsByName]
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -311,32 +400,32 @@ function FiltersPopover({
           </ToggleRow>
         ))}
 
-        {categories.length > 0 && (
+        {categoryOptions.length > 0 && (
           <>
             <Separator className="my-1.5" />
             <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
               {tf("categories")}
             </p>
-            {categories.map((c) => (
+            {categoryOptions.map((o) => (
               <ToggleRow
-                key={c.id}
-                active={!!f.category?.includes(c.id)}
+                key={o.key}
+                active={facetActive(f.category, o.ids)}
                 onClick={() =>
-                  setFilters({ ...f, category: toggle<string>(f.category, c.id) })
+                  setFilters({ ...f, category: toggleFacet(f.category, o.ids) })
                 }
               >
                 <span
                   className="size-2.5 rounded-full"
-                  style={{ backgroundColor: c.color }}
+                  style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
                   aria-hidden
                 />
-                <span className="truncate">{c.name}</span>
+                <span className="truncate">{o.label}</span>
               </ToggleRow>
             ))}
           </>
         )}
 
-        {objectives.length > 0 && (
+        {objectiveOptions.length > 0 && (
           <>
             <Separator className="my-1.5" />
             <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -350,12 +439,12 @@ function FiltersPopover({
             >
               {tf("noObjective")}
             </ToggleRow>
-            {objectives.map((o) => (
+            {objectiveOptions.map((o) => (
               <ToggleRow
-                key={o.id}
-                active={!!f.objective?.includes(o.id)}
+                key={o.key}
+                active={facetActive(f.objective, o.ids)}
                 onClick={() =>
-                  setFilters({ ...f, objective: toggle(f.objective, o.id) })
+                  setFilters({ ...f, objective: toggleFacet(f.objective, o.ids) })
                 }
               >
                 <span
@@ -363,13 +452,13 @@ function FiltersPopover({
                   style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
                   aria-hidden
                 />
-                <span className="truncate">{o.name}</span>
+                <span className="truncate">{o.label}</span>
               </ToggleRow>
             ))}
           </>
         )}
 
-        {integrations.length > 0 && (
+        {integrationOptions.length > 0 && (
           <>
             <Separator className="my-1.5" />
             <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -383,16 +472,16 @@ function FiltersPopover({
             >
               {tf("noIntegration")}
             </ToggleRow>
-            {integrations.map((i) => (
+            {integrationOptions.map((o) => (
               <ToggleRow
-                key={i.id}
-                active={!!f.integration?.includes(i.id)}
+                key={o.key}
+                active={facetActive(f.integration, o.ids)}
                 onClick={() =>
-                  setFilters({ ...f, integration: toggle(f.integration, i.id) })
+                  setFilters({ ...f, integration: toggleFacet(f.integration, o.ids) })
                 }
               >
                 <Plug className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
-                <span className="truncate">{i.name}</span>
+                <span className="truncate">{o.label}</span>
               </ToggleRow>
             ))}
           </>
@@ -518,6 +607,7 @@ export function BoardToolbar({
   objectives,
   integrations,
   projects = [],
+  groupFacetsByName = false,
   dirty,
   onCreateView,
   onUpdateActiveView,
@@ -539,9 +629,12 @@ export function BoardToolbar({
   members: Member[];
   categories: Category[];
   objectives: Objective[];
-  integrations: Integration[];
+  integrations: IntegrationFacet[];
   /** Global board only: enables the project facet in the filters popover. */
   projects?: Project[];
+  /** Global board: collapse same-named category/objective/integration rows
+      across projects into one flat cross-project list. */
+  groupFacetsByName?: boolean;
   dirty: boolean;
   onCreateView: (name: string, description?: string) => Promise<void>;
   onUpdateActiveView: () => Promise<void>;
@@ -768,6 +861,7 @@ export function BoardToolbar({
             objectives={objectives}
             integrations={integrations}
             projects={projects}
+            groupFacetsByName={groupFacetsByName}
             lockedToMe={isSystem}
             withNumo={withNumo}
             onAskNumo={onAskNumo}

@@ -230,11 +230,23 @@ export interface Member {
  *   - categories: projectId → the project's categories
  *   - objectives: projectId → the project's objectives
  */
+/** Slim integration reference the global board needs to offer an integration
+    filter facet across every project (the full Integration row is owner-only
+    detail — here we only need to name and match it). */
+export interface IntegrationRef {
+  id: string;
+  name: string;
+  project_id: string;
+}
+
 export interface GlobalBoardResponse {
   issues: Issue[];
   members: Record<string, Member[]>;
   categories: Record<string, Category[]>;
   objectives: Record<string, Objective[]>;
+  /** Integrations across the user's accessible projects, keyed by project id —
+      feeds the cross-project integration filter (issues carry integration_id). */
+  integrations: Record<string, IntegrationRef[]>;
   /** Stored relation rows across the user's accessible projects (RLS-scoped):
       `blocks` feeds the cycle reco ordering, the full set feeds the cards'
       relation chips and the side panel. */

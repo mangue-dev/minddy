@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, toast } from "mangue-ui";
@@ -62,13 +62,9 @@ function toIdMaps<T extends { id: string }>(
   return out;
 }
 
-// Facets that only mean something inside a project — absent on the global
-// board (BoardToolbar hides a facet when its list is empty). No Numo either
-// (project-scoped), so no view is ever "generating".
-const NO_CATEGORIES: Category[] = [];
-const NO_OBJECTIVES: Objective[] = [];
-const NO_INTEGRATIONS: never[] = [];
-const NO_GENERATING = new Set<string>();
+/** How long a view keeps its "Numo is filling me in" spinner before the safety
+    timeout clears it (mirrors the project board). */
+const NUMO_GENERATION_TIMEOUT_MS = 120_000;
 
 /**
  * The cross-project "Tous les tickets" board (MIN-29). A real kanban: issues
@@ -101,6 +97,7 @@ function GlobalBoardInner() {
     membersByProject,
     categoriesByProject,
     objectivesByProject,
+    integrationsByProject,
     relations,
     cycles,
     loading,
@@ -168,10 +165,83 @@ function GlobalBoardInner() {
     { viewParam, onViewParamConsumed: consumeViewParam }
   );
 
-  const handleCreateView = async (name: string) => {
-    await createViewAndSelect(name);
-    toast.success(tBoard("viewCreated", { name }));
+  // Views Numo is currently filling in (id → the updated_at at hand-off). Same
+  // mechanism as the project board: the pill spins until Numo bumps the view's
+  // updated_at (realtime) or the safety timeout fires.
+  const [generatingViews, setGeneratingViews] = useState<Record<string, string>>(
+    {}
+  );
+  const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const generatingViewIds = useMemo(
+    () => new Set(Object.keys(generatingViews)),
+    [generatingViews]
+  );
+
+  const handleCreateView = async (name: string, description?: string) => {
+    const view = await createViewAndSelect(name);
+    const wish = description?.trim();
+    if (wish) {
+      // Hand the fresh GLOBAL view to Numo (global mode, projectId null): its id
+      // rides along in pageContext so Numo edits this exact view; the board
+      // adopts the new filters live once realtime brings the row back.
+      setGeneratingViews((prev) => ({ ...prev, [view.id]: view.updated_at }));
+      const timer = setTimeout(() => {
+        setGeneratingViews((prev) => {
+          if (!(view.id in prev)) return prev;
+          const next = { ...prev };
+          delete next[view.id];
+          return next;
+        });
+        genTimers.current.delete(view.id);
+      }, NUMO_GENERATION_TIMEOUT_MS);
+      genTimers.current.set(view.id, timer);
+      openAssistant({
+        projectId: null,
+        prompt: tBoard("numoBuildViewPrompt", { name, description: wish }),
+        pageContext: { viewId: view.id, viewName: name },
+      });
+    } else {
+      toast.success(tBoard("viewCreated", { name }));
+    }
   };
+
+  // Let Numo shape the currently selected global view: open the chat in global
+  // mode carrying the active view as context so "cette vue" resolves.
+  const handleAskNumo = () => {
+    openAssistant({
+      projectId: null,
+      pageContext: activeView
+        ? { viewId: activeView.id, viewName: activeView.name }
+        : undefined,
+    });
+  };
+
+  // Clear a view's spinner once Numo touched it (updated_at bumped) or it's gone.
+  useEffect(() => {
+    setGeneratingViews((prev) => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const id of ids) {
+        const v = views.find((x) => x.id === id);
+        if (!v || v.updated_at !== prev[id]) {
+          delete next[id];
+          changed = true;
+          const timer = genTimers.current.get(id);
+          if (timer) clearTimeout(timer);
+          genTimers.current.delete(id);
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [views]);
+
+  // Drop any pending generation timers on unmount.
+  useEffect(() => {
+    const timers = genTimers.current;
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  }, []);
 
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
@@ -216,6 +286,22 @@ function GlobalBoardInner() {
     return [...seen.values()];
   }, [membersByProject]);
 
+  // Flat cross-project facet lists. Each is every project's entities concatenated
+  // — the toolbar's `groupFacetsByName` then collapses same-named rows (e.g. a
+  // "Bug" category in several projects) into one that filters all their ids.
+  const allCategories = useMemo(
+    () => Object.values(categoriesByProject).flat(),
+    [categoriesByProject]
+  );
+  const allObjectives = useMemo(
+    () => Object.values(objectivesByProject).flat(),
+    [objectivesByProject]
+  );
+  const allIntegrations = useMemo(
+    () => Object.values(integrationsByProject).flat(),
+    [integrationsByProject]
+  );
+
   const filtered = useMemo(
     () => filterIssues(scopedIssues, config, { myUserId }),
     [scopedIssues, config, myUserId]
@@ -258,11 +344,14 @@ function GlobalBoardInner() {
     cycleIssues.length > 0 &&
     cycleIssues.every((i) => ["done", "canceled", "duplicate"].includes(i.status));
 
-  // Numo rides along while the cycle is on screen ("remplis mon cycle").
+  // Numo rides along: the cycle while it's on screen ("remplis mon cycle"),
+  // otherwise the active global view so "cette vue" resolves to it.
   useAssistantContext(
     cycleMode && selectedCycle && cycleLabel
       ? { cycleId: selectedCycle.id, cycleLabel }
-      : null
+      : !cycleMode && activeView
+        ? { viewId: activeView.id, viewName: activeView.name }
+        : null
   );
 
   const askNumoAboutCycle = useCallback(
@@ -374,7 +463,7 @@ function GlobalBoardInner() {
           tabOrderScope="global"
           views={views}
           activeViewId={cycleMode ? null : activeViewId}
-          generatingViewIds={NO_GENERATING}
+          generatingViewIds={generatingViewIds}
           onSelectView={(id) => {
             if (cycleMode) switchCycleMode(false);
             selectView(id);
@@ -382,18 +471,19 @@ function GlobalBoardInner() {
           config={config}
           onConfigChange={setConfig}
           members={unionMembers}
-          categories={NO_CATEGORIES}
-          objectives={NO_OBJECTIVES}
-          integrations={NO_INTEGRATIONS}
+          categories={allCategories}
+          objectives={allObjectives}
+          integrations={allIntegrations}
           projects={projects}
+          groupFacetsByName
           dirty={cycleMode ? false : dirty}
           onCreateView={handleCreateView}
           onUpdateActiveView={saveActiveView}
           onRenameView={renameView}
           onDeleteView={deleteView}
-          withNumo={false}
+          withNumo
           withShare={false}
-          onAskNumo={() => {}}
+          onAskNumo={handleAskNumo}
           cycleTab={{
             active: cycleMode,
             onSelect: () => switchCycleMode(true),

@@ -122,13 +122,102 @@ function readCtx(
   };
 }
 
+/** create_view / update_view for both scopes: project mode uses the
+    conversation's project, global mode (ctx.projectId null) targets the user's
+    personal cross-project view. Access is enforced inside create/updateView. */
+async function executeViewTool(
+  toolName: "create_view" | "update_view",
+  args: Record<string, unknown>,
+  ctx: ToolContext
+): Promise<ToolExecution> {
+  const shape = (r: {
+    view: Record<string, unknown>;
+    invalid: string[];
+  }): ToolExecution => ({
+    result: {
+      view: {
+        id: r.view.id,
+        name: r.view.name,
+        kind: r.view.kind,
+      },
+      // Anything sanitizeViewConfig dropped — lets the model self-correct.
+      ...(r.invalid.length > 0 ? { invalid: r.invalid } : {}),
+    },
+    success: true,
+  });
+
+  if (toolName === "create_view") {
+    const result = await createView({
+      projectId: ctx.projectId,
+      actorId: ctx.userId,
+      input: args,
+    });
+    return result.ok ? shape(result) : libError(result);
+  }
+  const viewId = typeof args.view_id === "string" ? args.view_id : "";
+  if (!viewId) return toolError("view_id is required.");
+  const result = await updateView({ viewId, actorId: ctx.userId, input: args });
+  return result.ok ? shape(result) : libError(result);
+}
+
+/** Cross-project category/objective/integration options for global-mode view
+    filters — grouped by name so the same label across projects collapses into
+    one entry carrying every matching id. */
+async function listGlobalFilterOptions(
+  ctx: ToolContext
+): Promise<ToolExecution> {
+  const { data: projectRows, error: pErr } = await ctx.supabase
+    .from("projects")
+    .select("id")
+    .is("deleted_at", null);
+  if (pErr) return toolError(pErr.message);
+  const projectIds = (projectRows ?? []).map((p) => (p as { id: string }).id);
+
+  const [catsRes, objsRes] = await Promise.all([
+    ctx.supabase.from("categories").select("id, name"),
+    ctx.supabase.from("objectives").select("id, name"),
+  ]);
+  if (catsRes.error) return toolError(catsRes.error.message);
+  if (objsRes.error) return toolError(objsRes.error.message);
+
+  // Integrations aren't readable under the user's RLS — service client, scoped
+  // to the projects the user can access (mirrors GET /api/me/board).
+  const { data: intRows } = projectIds.length
+    ? await ctx.service
+        .from("integrations")
+        .select("id, name")
+        .in("project_id", projectIds)
+    : { data: [] as { id: string; name: string }[] };
+
+  const group = (rows: { id: string; name: string }[]) => {
+    const byName = new Map<string, string[]>();
+    for (const r of rows) {
+      const ids = byName.get(r.name);
+      if (ids) ids.push(r.id);
+      else byName.set(r.name, [r.id]);
+    }
+    return [...byName.entries()].map(([name, ids]) => ({ name, ids }));
+  };
+
+  return {
+    result: {
+      categories: group((catsRes.data ?? []) as { id: string; name: string }[]),
+      objectives: group((objsRes.data ?? []) as { id: string; name: string }[]),
+      integrations: group(
+        (intRows ?? []) as { id: string; name: string }[]
+      ),
+    },
+    success: true,
+  };
+}
+
 export async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
   ctx: ToolContext
 ): Promise<ToolExecution> {
   try {
-    // ── Global-only tool ────────────────────────────────────────────────
+    // ── Global-only tools ───────────────────────────────────────────────
     if (toolName === "list_projects") {
       const { data, error } = await ctx.supabase
         .from("projects")
@@ -137,6 +226,17 @@ export async function executeTool(
         .order("created_at", { ascending: true });
       if (error) return toolError(error.message);
       return { result: { projects: data ?? [] }, success: true };
+    }
+    if (toolName === "list_global_filter_options") {
+      return listGlobalFilterOptions(ctx);
+    }
+
+    // ── View tools (scope = the conversation's) ─────────────────────────
+    // Project mode → a project view; global mode (ctx.projectId null) → the
+    // user's cross-project global view (project_id null, personal). create/
+    // updateView enforce access themselves, so no project_id is required here.
+    if (toolName === "create_view" || toolName === "update_view") {
+      return executeViewTool(toolName, args, ctx);
     }
 
     // ── Account tools (the requesting user's own account — no project) ──
@@ -354,49 +454,6 @@ export async function executeTool(
         });
         if (!result.ok) return libError(result);
         return { result: { comment: result.comment }, success: true };
-      }
-
-      case "create_view": {
-        const result = await createView({
-          projectId,
-          actorId: ctx.userId,
-          input: args,
-        });
-        if (!result.ok) return libError(result);
-        return {
-          result: {
-            view: {
-              id: result.view.id,
-              name: result.view.name,
-              kind: result.view.kind,
-            },
-            // Anything sanitizeViewConfig dropped — lets the model self-correct.
-            ...(result.invalid.length > 0 ? { invalid: result.invalid } : {}),
-          },
-          success: true,
-        };
-      }
-
-      case "update_view": {
-        const viewId = typeof args.view_id === "string" ? args.view_id : "";
-        if (!viewId) return toolError("view_id is required.");
-        const result = await updateView({
-          viewId,
-          actorId: ctx.userId,
-          input: args,
-        });
-        if (!result.ok) return libError(result);
-        return {
-          result: {
-            view: {
-              id: result.view.id,
-              name: result.view.name,
-              kind: result.view.kind,
-            },
-            ...(result.invalid.length > 0 ? { invalid: result.invalid } : {}),
-          },
-          success: true,
-        };
       }
 
       case "create_objective": {
