@@ -404,6 +404,7 @@ export async function executeTool(
           projectId,
           actorId: ctx.userId,
           input: args,
+          viaAssistant: true,
         });
         if (!result.ok) return libError(result);
         return { result: { objective: result.objective }, success: true };
@@ -425,6 +426,7 @@ export async function executeTool(
           objectiveId,
           actorId: ctx.userId,
           input: args,
+          viaAssistant: true,
         });
         if (!result.ok) return libError(result);
         return { result: { objective: result.objective }, success: true };

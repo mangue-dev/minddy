@@ -42,6 +42,11 @@ function issueIdOf(change: BroadcastChange): string | null {
   return typeof issueId === "string" ? issueId : null;
 }
 
+function objectiveIdOf(change: BroadcastChange): string | null {
+  const objectiveId = (change.record ?? change.old_record)?.objective_id;
+  return typeof objectiveId === "string" ? objectiveId : null;
+}
+
 function keysForUserEvent(change: BroadcastChange): QueryKey[] {
   switch (change.table) {
     case "notifications":
@@ -86,23 +91,35 @@ function keysForProjectEvent(
     case "project_invitations": // the members view lists both
       return [["members", projectId]];
     case "comments": {
+      // A comment hangs off an issue OR an objective — route to the right cache.
       const issueId = issueIdOf(change);
-      return issueId ? [["comments", issueId]] : [];
+      if (issueId) return [["comments", issueId]];
+      const objectiveId = objectiveIdOf(change);
+      return objectiveId ? [["objective-comments", objectiveId]] : [];
     }
     case "attachments": {
-      // Comment attachments ride the ["comments"] cache; issue-level ones
-      // have their own query.
+      // Comment attachments ride the comments cache; entity-level ones have
+      // their own query.
       const issueId = issueIdOf(change);
-      return issueId
+      if (issueId) {
+        return [
+          ["comments", issueId],
+          ["issue-attachments", issueId],
+        ];
+      }
+      const objectiveId = objectiveIdOf(change);
+      return objectiveId
         ? [
-            ["comments", issueId],
-            ["issue-attachments", issueId],
+            ["objective-comments", objectiveId],
+            ["objective-attachments", objectiveId],
           ]
         : [];
     }
     case "issue_events": {
       const issueId = issueIdOf(change);
-      return issueId ? [["events", issueId]] : [];
+      if (issueId) return [["events", issueId]];
+      const objectiveId = objectiveIdOf(change);
+      return objectiveId ? [["objective-events", objectiveId]] : [];
     }
     default:
       return [];
@@ -130,6 +147,9 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["comments"],
   ["events"],
   ["issue-attachments"],
+  ["objective-comments"],
+  ["objective-events"],
+  ["objective-attachments"],
 ];
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {

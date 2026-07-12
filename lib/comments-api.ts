@@ -47,6 +47,35 @@ export async function addCommentApi(
   );
 }
 
+export async function fetchObjectiveCommentsApi(objectiveId: string): Promise<Comment[]> {
+  return parseJson<Comment[]>(await fetch(`/api/objectives/${objectiveId}/comments`));
+}
+
+export async function fetchObjectiveEventsApi(objectiveId: string): Promise<IssueEvent[]> {
+  return parseJson<IssueEvent[]>(await fetch(`/api/objectives/${objectiveId}/events`));
+}
+
+export async function addObjectiveCommentApi(
+  objectiveId: string,
+  body: string,
+  mentionedUserIds: string[] = [],
+  parentId: string | null = null,
+  attachments: AttachmentInput[] = []
+): Promise<Comment> {
+  return parseJson<Comment>(
+    await fetch(`/api/objectives/${objectiveId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body,
+        mentioned_user_ids: mentionedUserIds,
+        parent_id: parentId,
+        attachments,
+      }),
+    })
+  );
+}
+
 export async function deleteAttachmentApi(attachmentId: string): Promise<void> {
   const response = await fetch(`/api/attachments/${attachmentId}`, {
     method: "DELETE",

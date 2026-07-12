@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
+  ConfirmDeleteDialog,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -182,6 +183,14 @@ export function ObjectiveDialog({
   const tCommon = useTranslations("Common");
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // Closing the discard confirmation lets the dismissing click fall through to
+  // this dialog as an outside click, which would re-open the confirmation just
+  // dismissed. This ref muffles the close signal for the brief window after.
+  const ignoreCloseAfterConfirmRef = useRef(false);
+  // Live emptiness of the description editor — `form.description` alone would
+  // miss text typed but not yet committed (commit happens on blur).
+  const editorNonEmptyRef = useRef(false);
   // Remount the markdown editor to swap its content (it only reads `value` on
   // mount and commits on blur) when the dialog opens on a new/other objective.
   const [editorKey, setEditorKey] = useState(0);
@@ -206,8 +215,45 @@ export function ObjectiveDialog({
           }
         : EMPTY
     );
+    editorNonEmptyRef.current = false;
     setEditorKey((k) => k + 1);
   }, [open, objective]);
+
+  const closeAndReset = () => {
+    setForm(EMPTY);
+    editorNonEmptyRef.current = false;
+    onOpenChange(false);
+  };
+
+  // Typed text is worth guarding — the pickers are two clicks to redo. Only in
+  // create mode; editing lives in the side panel now.
+  const draftHasContent = () =>
+    form.name.trim() !== "" ||
+    form.description.trim() !== "" ||
+    editorNonEmptyRef.current;
+
+  const handleOpenChange = (next: boolean) => {
+    // Swallow close signals while the confirmation owns the decision, and for
+    // the brief window right after it closes (the fall-through click).
+    if (!next && (confirmDiscard || ignoreCloseAfterConfirmRef.current)) return;
+    if (!next && !objective && draftHasContent()) {
+      setConfirmDiscard(true);
+      return;
+    }
+    onOpenChange(next);
+  };
+
+  // Arm the fall-through guard the instant the confirmation closes (keep
+  // editing, Escape, or after confirming).
+  const handleConfirmOpenChange = (openNext: boolean) => {
+    setConfirmDiscard(openNext);
+    if (!openNext) {
+      ignoreCloseAfterConfirmRef.current = true;
+      window.setTimeout(() => {
+        ignoreCloseAfterConfirmRef.current = false;
+      }, 300);
+    }
+  };
 
   // `target` is set only when creating in a different project (dropdown item).
   const submit = async (target?: Project) => {
@@ -243,7 +289,7 @@ export function ObjectiveDialog({
         await onCreate(payload);
         toast.success(t("createdToast"));
       }
-      onOpenChange(false);
+      closeAndReset();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -257,7 +303,8 @@ export function ObjectiveDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="p-8 sm:max-w-2xl"
         onInteractOutside={keepOverlayOpenForPopper}
@@ -284,6 +331,9 @@ export function ObjectiveDialog({
             key={editorKey}
             value={form.description}
             onCommit={(description) => setForm((f) => ({ ...f, description }))}
+            onEmptyChange={(empty) => {
+              editorNonEmptyRef.current = !empty;
+            }}
             placeholder={t("descriptionPlaceholder")}
             className="mt-2 min-h-16"
           />
@@ -350,5 +400,17 @@ export function ObjectiveDialog({
         </form>
       </DialogContent>
     </Dialog>
+
+      {/* Dismissing a non-empty new-objective draft asks first (create only). */}
+      <ConfirmDeleteDialog
+        open={confirmDiscard}
+        onOpenChange={handleConfirmOpenChange}
+        title={t("discardDraftTitle")}
+        description={t("discardDraftDescription")}
+        confirmLabel={t("discardDraftConfirm")}
+        cancelLabel={t("discardDraftKeepEditing")}
+        onConfirm={closeAndReset}
+      />
+    </>
   );
 }

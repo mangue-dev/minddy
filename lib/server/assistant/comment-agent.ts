@@ -20,6 +20,7 @@ import { executeTool } from "./execute-tool";
 import { ASSISTANT_TOOLS } from "./tools";
 import {
   buildCommentSystemPrompt,
+  buildObjectiveCommentSystemPrompt,
   type CommentPromptThreadEntry,
 } from "./prompt";
 import { gatherProjectPromptContext } from "./prompt-context";
@@ -65,6 +66,24 @@ export async function replyTargetsNumo(
     .from("comments")
     .select("via_assistant, assistant_status")
     .eq("issue_id", comment.issue_id)
+    .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
+    .neq("id", comment.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return !!last?.via_assistant && last.assistant_status !== "working";
+}
+
+/** Objective twin of replyTargetsNumo — the thread is scoped by objective_id. */
+export async function replyTargetsNumoObjective(
+  service: SupabaseClient,
+  comment: { id: string; objective_id: string; parent_id: string | null }
+): Promise<boolean> {
+  if (!comment.parent_id) return false;
+  const { data: last } = await service
+    .from("comments")
+    .select("via_assistant, assistant_status")
+    .eq("objective_id", comment.objective_id)
     .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
     .neq("id", comment.id)
     .order("created_at", { ascending: false })
@@ -326,6 +345,238 @@ export async function runCommentMention({
     if (replyId) {
       // Empty body + status 'error' → the timeline renders a localized
       // "Numo couldn't complete this" line per viewer.
+      await service
+        .from("comments")
+        .update({ body: "", assistant_status: "error", assistant_tool: null })
+        .eq("id", replyId);
+    }
+  }
+}
+
+export async function runObjectiveCommentMention({
+  supabase,
+  service,
+  objectiveId,
+  actorId,
+  triggerCommentId,
+  locale,
+  trigger = "mention",
+}: {
+  supabase: SupabaseClient;
+  service: SupabaseClient;
+  objectiveId: string;
+  actorId: string;
+  triggerCommentId: string;
+  locale: string;
+  trigger?: "mention" | "reply";
+}): Promise<void> {
+  let replyId: string | null = null;
+  try {
+    // ── Resolve the trigger comment, its thread root, and the objective ──
+    const { data: triggerRow } = await service
+      .from("comments")
+      .select("id, parent_id, body, author_id")
+      .eq("id", triggerCommentId)
+      .maybeSingle();
+    if (!triggerRow) return;
+    const rootId =
+      (triggerRow.parent_id as string | null) ?? (triggerRow.id as string);
+
+    const { data: objective } = await service
+      .from("objectives")
+      .select("*")
+      .eq("id", objectiveId)
+      .maybeSingle();
+    if (!objective) return;
+
+    const access = await getProjectAccess(actorId, objective.project_id as string);
+    if (!access) return;
+
+    // ── Post the live placeholder reply right away ───────────────────────
+    const { data: reply, error: replyError } = await service
+      .from("comments")
+      .insert({
+        objective_id: objectiveId,
+        author_id: actorId,
+        parent_id: rootId,
+        body: "",
+        via_assistant: true,
+        assistant_status: "working",
+      })
+      .select("id")
+      .single();
+    if (replyError || !reply) {
+      console.error("[numo-comment] objective placeholder failed:", replyError?.message);
+      return;
+    }
+    replyId = reply.id as string;
+
+    const setDisplay = async (fields: Record<string, unknown>) => {
+      await service.from("comments").update(fields).eq("id", replyId);
+    };
+
+    // ── Gather prompt context (project, thread, attachments, linked issues) ─
+    const [promptProject, { data: threadRows }, { data: attachmentRows }, { data: linkedIssues }] =
+      await Promise.all([
+        gatherProjectPromptContext({
+          supabase,
+          service,
+          project: access.project as unknown as {
+            id: string;
+            name: string;
+            key: string;
+            owner_id: string;
+          },
+        }),
+        service
+          .from("comments")
+          .select("id, author_id, body, via_assistant, created_at")
+          .eq("objective_id", objectiveId)
+          .neq("id", replyId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        service
+          .from("attachments")
+          .select("comment_id, storage_path, file_name, mime_type, size_bytes")
+          .eq("objective_id", objectiveId)
+          .order("created_at", { ascending: true }),
+        service
+          .from("issues")
+          .select("number, title, status")
+          .eq("objective_id", objectiveId)
+          .order("number", { ascending: true }),
+      ]);
+
+    const attachmentsByComment = new Map<string | null, PromptAttachment[]>();
+    for (const row of attachmentRows ?? []) {
+      const key = (row.comment_id as string | null) ?? null;
+      const list = attachmentsByComment.get(key) ?? [];
+      list.push({
+        storage_path: row.storage_path as string,
+        file_name: row.file_name as string,
+        mime_type: row.mime_type as string,
+        size_bytes: row.size_bytes as number,
+      });
+      attachmentsByComment.set(key, list);
+    }
+
+    const recentComments = [...(threadRows ?? [])].reverse();
+    const authorIds = recentComments.map((c) => c.author_id as string);
+    const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
+    const authorName = (id: string | null, viaAssistant?: boolean): string =>
+      viaAssistant ? "Numo" : displayName(toNamed(id ? users.get(id) : null), "User");
+
+    const thread: CommentPromptThreadEntry[] = recentComments.map((c) => ({
+      author: authorName(c.author_id as string | null, !!c.via_assistant),
+      body: (c.body as string) ?? "",
+      attachments: attachmentsByComment
+        .get(c.id as string)
+        ?.map((a) => a.file_name),
+    }));
+
+    const systemPrompt = buildObjectiveCommentSystemPrompt({
+      project: promptProject,
+      objective: {
+        id: objective.id as string,
+        name: objective.name as string,
+        description: (objective.description as string | null) ?? null,
+        status: objective.status as string,
+        lead_user_id: (objective.lead_user_id as string | null) ?? null,
+        target_date: (objective.target_date as string | null) ?? null,
+        issues: (linkedIssues ?? []).map((i) => ({
+          identifier: issueIdentifier(access.project.key, i.number as number),
+          title: i.title as string,
+          status: i.status as string,
+        })),
+      },
+      thread,
+      locale,
+    });
+
+    const cfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
+    const model =
+      cfg["assistant_model"]?.trim() ||
+      cfg["fallback_model"]?.trim() ||
+      "deepseek/deepseek-v4-flash";
+
+    const triggerText = `${authorName(actorId)} ${
+      trigger === "reply"
+        ? "replied to your comment"
+        : "mentioned you in a comment"
+    } on the objective "${objective.name as string}":\n"""\n${triggerRow.body as string}\n"""`;
+
+    const directAttachments = [
+      ...(attachmentsByComment.get(triggerCommentId) ?? []),
+      ...(attachmentsByComment.get(null) ?? []),
+    ].slice(0, 5);
+
+    let triggerContent: string | ChatContentPart[] = triggerText;
+    if (directAttachments.length > 0) {
+      const apiKey = process.env.OPENROUTER_API_KEY ?? "";
+      const modalities = await getModelInputModalities(model, apiKey);
+      triggerContent = [
+        { type: "text", text: triggerText },
+        ...(await buildAttachmentParts(service, directAttachments, {
+          modalities,
+          includeHeavy: true,
+        })),
+      ];
+    }
+
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: triggerContent },
+    ];
+
+    const finalContent = await runLoop(messages, {
+      model,
+      projectId: objective.project_id as string,
+      userId: actorId,
+      supabase,
+      service,
+      locale,
+      numoDefaultStatus: resolveNumoDefaultStatus(
+        users.get(actorId)?.user_metadata
+      ),
+      onTool: (name) => void setDisplay({ assistant_tool: name }),
+      onText: (partial) =>
+        void setDisplay({ assistant_tool: null, body: partial }),
+    });
+
+    await setDisplay({
+      body: finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en,
+      assistant_status: "done",
+      assistant_tool: null,
+    });
+
+    // Notifications: the objective's lead + the thread root author — never the
+    // requester themself, members only.
+    const valid = await projectMemberIds(service, objective.project_id as string);
+    const { data: rootComment } = await service
+      .from("comments")
+      .select("author_id")
+      .eq("id", rootId)
+      .maybeSingle();
+    const targets = new Set<string>();
+    for (const uid of [
+      rootComment?.author_id,
+      objective.lead_user_id,
+    ] as (string | null | undefined)[]) {
+      if (uid && uid !== actorId && valid.has(uid)) targets.add(uid);
+    }
+    const rows: NotificationRow[] = [...targets].map((uid) => ({
+      user_id: uid,
+      project_id: objective.project_id as string,
+      type: "comment" as const,
+      issue_id: null,
+      objective_id: objectiveId,
+      comment_id: replyId as string,
+      actor_id: actorId,
+    }));
+    await insertNotifications(service, rows);
+  } catch (err) {
+    console.error("[numo-comment] objective failed:", err);
+    if (replyId) {
       await service
         .from("comments")
         .update({ body: "", assistant_status: "error", assistant_tool: null })

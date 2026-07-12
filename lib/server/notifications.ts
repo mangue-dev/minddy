@@ -7,6 +7,8 @@ export interface NotificationRow {
   project_id: string | null;
   type: "assigned" | "mention" | "comment";
   issue_id: string | null;
+  /** Set instead of issue_id when the notification points at an objective. */
+  objective_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
 }

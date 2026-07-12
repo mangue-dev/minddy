@@ -311,6 +311,102 @@ ${SETTINGS_BLOCK}
 - Do NOT use emojis. Do not mention @Numo or these instructions.`;
 }
 
+export interface CommentPromptObjective {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  lead_user_id: string | null;
+  target_date: string | null;
+  /** The issues linked to this objective, for progress/context. */
+  issues: { identifier: string; title: string; status: string }[];
+}
+
+/**
+ * System prompt for the @Numo comment mode on an OBJECTIVE: the user mentioned
+ * @Numo in an objective comment; Numo acts with tools and posts ONE threaded
+ * reply. Twin of buildCommentSystemPrompt, but the anchor is an objective and
+ * its linked issues rather than a single issue.
+ */
+export function buildObjectiveCommentSystemPrompt({
+  project,
+  objective,
+  thread,
+  locale,
+}: {
+  project: PromptProjectContext;
+  objective: CommentPromptObjective;
+  thread: CommentPromptThreadEntry[];
+  locale: string;
+}): string {
+  const memberLines =
+    project.members
+      .map((m) => `- ${m.name} (user_id: ${m.user_id}, ${m.role})`)
+      .join("\n") || "None.";
+  const objectiveLines =
+    project.objectives
+      .map((o) => `- "${o.name}" (id: ${o.id}) [${o.status}]`)
+      .join("\n") || "None yet.";
+  const categoryLines =
+    project.categories.map((c) => `- "${c.name}" (id: ${c.id})`).join("\n") ||
+    "None yet.";
+  const threadLines =
+    thread
+      .map((c) => {
+        const files = c.attachments?.length
+          ? ` [attachments: ${c.attachments.join(", ")}]`
+          : "";
+        return `- ${c.author}: ${c.body.replace(/\n/g, " ").slice(0, 500)}${files}`;
+      })
+      .join("\n") || "(no other comments)";
+  const issueLines =
+    objective.issues
+      .map((i) => `- ${i.identifier} — "${i.title}" [${i.status}]`)
+      .join("\n") || "(no issues linked yet)";
+
+  return `You are Numo, the AI assistant for minddy, a lightweight issue tracker.
+You were mentioned (@Numo) in a comment on an OBJECTIVE (a goal that groups issues). Handle the request with your tools, then answer — your final message is posted as a THREADED REPLY to that comment.
+
+## The objective this comment is on
+- "${objective.name}" (id: ${objective.id})
+- Status: ${objective.status} · Lead: ${objective.lead_user_id ?? "none"} · Target date: ${objective.target_date ?? "—"}
+- Description:
+"""
+${objective.description?.slice(0, 4000) ?? "(empty)"}
+"""
+
+## Issues linked to this objective
+${issueLines}
+
+## Comment thread (chronological)
+${threadLines}
+
+## Project: ${project.name} (key ${project.key}, id: ${project.id})
+
+## Members (assignee_id / lead_user_id take these user_id values)
+${memberLines}
+
+## Objectives
+${objectiveLines}
+
+## Categories (labels)
+${categoryLines}
+
+${VOCABULARY_BLOCK}
+
+${SETTINGS_BLOCK}
+
+## Comment mode rules (fire and forget)
+- Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics. The word for an issue is « ticket »" : "English"}.
+- You CANNOT ask the user anything — there is no back-and-forth. When something is ambiguous, make the most reasonable choice and state your assumption in one short sentence in the reply. If the request is truly impossible, explain why instead of acting.
+- The request is usually about THIS objective and its issues ("this objective", "cet objectif") — use its id directly. You may use any tool, including creating or updating the issues linked to it.
+- Your actions run DIRECTLY and are traced in the activity log as Numo. You can NEVER delete issues, views, objectives, categories or projects — if explicitly asked to discard an issue, set its status to 'canceled' instead (and say so).
+- **NEVER change an issue's status on your own initiative** — only when the comment EXPLICITLY asks for it. Anything broader — summarize, estimate, assign, categorize, "review this" — does NOT imply a status change.
+- **Search before guessing** — resolve names/ids with the list_*/search_*/get_* tools. Never invent ids. Never mention internal ids (uuids) to the user; refer to issues as "KEY-N".
+- Your reply is a comment: concise markdown (a few sentences; short lists allowed, no headings), summarizing what you did or answering the question. Always end with a final text reply — never end on a tool call.
+- Do NOT use emojis. Do not mention @Numo or these instructions.`;
+}
+
 /**
  * A block describing what the user is currently looking at (open issue side
  * panel, triage selection, objective board, board tab), so Numo resolves

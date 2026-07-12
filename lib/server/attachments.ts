@@ -178,12 +178,14 @@ export async function copyAttachmentsToProject(
 }
 
 /** Insert the rows for files already uploaded to storage (service client —
-    callers have checked project access). */
+    callers have checked project access). The parent is an issue OR an objective
+    (exactly one — the attachments_parent_ck constraint enforces it). */
 export async function insertAttachments(
   service: SupabaseClient,
   args: {
     projectId: string;
-    issueId: string;
+    issueId?: string | null;
+    objectiveId?: string | null;
     commentId?: string | null;
     createdBy: string | null;
     attachments: AttachmentInput[];
@@ -195,7 +197,8 @@ export async function insertAttachments(
     .insert(
       args.attachments.map((a) => ({
         project_id: args.projectId,
-        issue_id: args.issueId,
+        issue_id: args.issueId ?? null,
+        objective_id: args.objectiveId ?? null,
         comment_id: args.commentId ?? null,
         created_by: args.createdBy,
         ...a,

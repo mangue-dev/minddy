@@ -24,6 +24,8 @@ export interface EventTranslators {
   tStatus: LabelT;
   /** "Priority" namespace (value → label). */
   tPriority: LabelT;
+  /** "ObjectiveStatus" namespace (value → label) — for objective events. */
+  tObjectiveStatus?: LabelT;
   /** Render a stored due-date value (ISO datetime or legacy date) for display. */
   formatDue: (value: string | null) => string;
 }
@@ -137,6 +139,48 @@ export function describeEvent(
       // so the sentence only says joined/left the assignee's cycle.
       case "cycle_id":
         return e.to_value ? t("cycleAdded") : t("cycleRemoved");
+      default:
+        return t("updated");
+    }
+  }
+  return t("updated");
+}
+
+/** Localized description of an OBJECTIVE activity event (without the actor).
+    Twin of describeEvent for the objective side panel: objective statuses use
+    the ObjectiveStatus label set, and the tracked fields differ. */
+export function describeObjectiveEvent(
+  e: IssueEvent,
+  ctx: EventContext,
+  tr: EventTranslators
+): string {
+  const { t, formatDue } = tr;
+  const objStatus = (v: string) => tr.tObjectiveStatus?.(v) ?? v;
+  if (e.type === "created") return t("objectiveCreated");
+
+  if (e.type === "updated") {
+    switch (e.field) {
+      case "name":
+        return t("objectiveNameChanged");
+      case "description":
+        return t("descriptionChanged");
+      case "status":
+        return t("objectiveStatusChanged", {
+          from: e.from_value ? objStatus(e.from_value) : emptyDash,
+          to: e.to_value ? objStatus(e.to_value) : emptyDash,
+        });
+      case "lead_user_id":
+        return t("objectiveLeadChanged", {
+          from: memberName(ctx, tr, e.from_value),
+          to: memberName(ctx, tr, e.to_value),
+        });
+      case "target_date":
+        return t("objectiveTargetDateChanged", {
+          from: formatDue(e.from_value),
+          to: formatDue(e.to_value),
+        });
+      case "color":
+        return t("objectiveColorChanged");
       default:
         return t("updated");
     }

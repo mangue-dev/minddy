@@ -132,7 +132,15 @@ export function dispatchWebhooksForEvents(
 
   const run = async () => {
     try {
-      const issueIds = [...new Set(mapped.map((m) => m.row.issue_id))];
+      // Only issue-scoped rows reach here (insertEvents filters objective
+      // events out), but the type is now nullable — narrow defensively.
+      const issueIds = [
+        ...new Set(
+          mapped
+            .map((m) => m.row.issue_id)
+            .filter((id): id is string => typeof id === "string")
+        ),
+      ];
       const { data: issues } = await service
         .from("issues")
         .select("id, project_id, number, title, status, priority, effort, integration_id")

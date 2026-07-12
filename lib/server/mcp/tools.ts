@@ -1055,6 +1055,7 @@ export function registerMinddyTools(server: McpServer): void {
         projectId: scope.access.project.id,
         actorId: scope.userId,
         input: args,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });
@@ -1097,6 +1098,7 @@ export function registerMinddyTools(server: McpServer): void {
         objectiveId: args.objective_id,
         actorId: scope.userId,
         input: args,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });

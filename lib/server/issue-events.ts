@@ -5,7 +5,9 @@ import { dispatchWebhooksForEvents } from "@/lib/server/webhooks";
 import { diffPlanTasks, stripTaskStates, type PlanTaskState } from "@/lib/plan";
 
 export interface EventRow {
-  issue_id: string;
+  /** The parent is an issue OR an objective — exactly one is set. */
+  issue_id?: string | null;
+  objective_id?: string | null;
   /** NULL when the action comes from an integration (no user behind it). */
   actor_id: string | null;
   type: string;
@@ -180,5 +182,66 @@ export async function insertEvents(
   }
   // insertEvents est l'entonnoir unique des événements d'issue : c'est le
   // point de dispatch des webhooks d'intégration (non bloquant, via after()).
-  dispatchWebhooksForEvents(service, rows);
+  // Les événements d'objectif ne portent pas de webhooks — on ne dispatche que
+  // les rows rattachées à une issue.
+  const issueRows = rows.filter((r) => !!r.issue_id);
+  if (issueRows.length > 0) dispatchWebhooksForEvents(service, issueRows);
+}
+
+// Champs d'objectif suivis avec from/to (le journal d'activité du panneau
+// d'objectif). `name` réutilise le libellé « title » côté describe.
+const OBJECTIVE_SCALAR_FIELDS = [
+  "status",
+  "lead_user_id",
+  "target_date",
+  "color",
+] as const;
+
+/**
+ * Build activity events for an objective field-level diff (name, description
+ * and the scalar fields). Like issues, a description change records only that
+ * it changed (no diff). Mirror of buildFieldChangeEvents for objectives.
+ */
+export function buildObjectiveFieldChangeEvents(
+  objectiveId: string,
+  actorId: string,
+  before: Record<string, unknown>,
+  updates: Record<string, unknown>
+): EventRow[] {
+  const events: EventRow[] = [];
+
+  if ("name" in updates && updates.name !== before.name) {
+    events.push({
+      objective_id: objectiveId,
+      actor_id: actorId,
+      type: "updated",
+      field: "name",
+      from_value: s(before.name),
+      to_value: s(updates.name),
+    });
+  }
+  if (
+    "description" in updates &&
+    (updates.description ?? null) !== (before.description ?? null)
+  ) {
+    events.push({
+      objective_id: objectiveId,
+      actor_id: actorId,
+      type: "updated",
+      field: "description",
+    });
+  }
+  for (const f of OBJECTIVE_SCALAR_FIELDS) {
+    if (f in updates && (updates[f] ?? null) !== (before[f] ?? null)) {
+      events.push({
+        objective_id: objectiveId,
+        actor_id: actorId,
+        type: "updated",
+        field: f,
+        from_value: s(before[f]),
+        to_value: s(updates[f]),
+      });
+    }
+  }
+  return events;
 }

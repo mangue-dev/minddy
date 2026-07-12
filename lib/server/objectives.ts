@@ -4,6 +4,13 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
+import {
+  buildObjectiveFieldChangeEvents,
+  insertEvents,
+  stampMcpKey,
+  stampViaAssistant,
+  type EventRow,
+} from "@/lib/server/issue-events";
 
 /**
  * Shared objective core (create + update), used by POST /api/projects/[id]/objectives,
@@ -35,10 +42,16 @@ export async function createObjective({
   projectId,
   actorId,
   input,
+  viaAssistant = false,
+  mcpKeyId = null,
 }: {
   projectId: string;
   actorId: string;
   input: Record<string, unknown>;
+  /** Attribue l'événement « created » à Numo dans le fil d'activité. */
+  viaAssistant?: boolean;
+  /** Attribue l'événement à une clé MCP (agent) au lieu de l'utilisateur. */
+  mcpKeyId?: string | null;
 }): Promise<ObjectiveResult> {
   const name = typeof input.name === "string" ? input.name.trim() : "";
   if (!name) {
@@ -77,6 +90,15 @@ export async function createObjective({
     console.error("[objectives] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+
+  const created: EventRow[] = [
+    { objective_id: data.id as string, actor_id: actorId, type: "created" },
+  ];
+  await insertEvents(
+    service,
+    stampMcpKey(stampViaAssistant(created, viaAssistant), mcpKeyId)
+  );
+
   return { ok: true, objective: data };
 }
 
@@ -84,10 +106,16 @@ export async function updateObjective({
   objectiveId,
   actorId,
   input,
+  viaAssistant = false,
+  mcpKeyId = null,
 }: {
   objectiveId: string;
   actorId: string;
   input: Record<string, unknown>;
+  /** Attribue les événements de changement à Numo dans le fil d'activité. */
+  viaAssistant?: boolean;
+  /** Attribue les événements à une clé MCP (agent) au lieu de l'utilisateur. */
+  mcpKeyId?: string | null;
 }): Promise<ObjectiveResult> {
   const updates: Record<string, unknown> = {};
 
@@ -131,9 +159,11 @@ export async function updateObjective({
 
   const service = getServiceClient();
 
+  // Snapshot the full row before updating: the access check needs project_id,
+  // and the activity diff needs the previous field values.
   const { data: objective } = await service
     .from("objectives")
-    .select("id, project_id")
+    .select("*")
     .eq("id", objectiveId)
     .maybeSingle();
   if (!objective) {
@@ -158,5 +188,17 @@ export async function updateObjective({
   if (!data) {
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
   }
+
+  const events = buildObjectiveFieldChangeEvents(
+    objectiveId,
+    actorId,
+    objective,
+    updates
+  );
+  await insertEvents(
+    service,
+    stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId)
+  );
+
   return { ok: true, objective: data };
 }

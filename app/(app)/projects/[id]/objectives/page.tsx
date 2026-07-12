@@ -30,6 +30,7 @@ import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { initials } from "@/lib/avatar";
 import { displayName } from "@/lib/display-name";
 import { ObjectiveDialog } from "@/components/objective-dialog";
+import { ObjectiveSidePanel } from "@/components/objective-side-panel";
 import type { Objective } from "@/lib/types";
 
 function ObjectivesInner() {
@@ -43,6 +44,7 @@ function ObjectivesInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const newParam = searchParams.get("new");
+  const openParam = searchParams.get("open");
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -53,14 +55,18 @@ function ObjectivesInner() {
   const { members } = useMembersQuery(projectId, !!project);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Objective | null>(null);
+  const [openObjectiveId, setOpenObjectiveId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Objective | null>(null);
 
-  // Publish the objective being edited (else just the project) to Numo.
+  const openObjective = openObjectiveId
+    ? objectives.find((o) => o.id === openObjectiveId) ?? null
+    : null;
+
+  // Publish the objective being viewed (else just the project) to Numo.
   useAssistantContext(
     project
-      ? editing
-        ? { projectId, objectiveId: editing.id, objectiveName: editing.name }
+      ? openObjective
+        ? { projectId, objectiveId: openObjective.id, objectiveName: openObjective.name }
         : { projectId }
       : null
   );
@@ -73,11 +79,18 @@ function ObjectivesInner() {
   // Header "Nouveau → Nouvel objectif": ?new=1 opens the create dialog.
   useEffect(() => {
     if (newParam === "1") {
-      setEditing(null);
       setDialogOpen(true);
       router.replace(pathname);
     }
   }, [newParam, pathname, router]);
+
+  // Deep-link: ?open=<id> opens the objective side panel (notifications land here).
+  useEffect(() => {
+    if (openParam) {
+      setOpenObjectiveId(openParam);
+      router.replace(pathname);
+    }
+  }, [openParam, pathname, router]);
 
   // Objective creation is keyboard-driven by the app-wide `O` shortcut now
   // (see CreateProvider) — no page-local `C` handler.
@@ -101,12 +114,10 @@ function ObjectivesInner() {
   }
 
   const openCreate = () => {
-    setEditing(null);
     setDialogOpen(true);
   };
-  const openEdit = (objective: Objective) => {
-    setEditing(objective);
-    setDialogOpen(true);
+  const openPanel = (objective: Objective) => {
+    setOpenObjectiveId(objective.id);
   };
 
   return (
@@ -146,9 +157,10 @@ function ObjectivesInner() {
                   : null;
                 return (
                   <div key={obj.id} className="flex items-center gap-3 p-3">
-                    <Link
-                      href={`/projects/${project.id}?objective=${obj.id}`}
-                      className="flex min-w-0 flex-1 items-center gap-3"
+                    <button
+                      type="button"
+                      onClick={() => openPanel(obj)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
                       <span
                         className="size-2.5 shrink-0 rounded-full"
@@ -178,7 +190,7 @@ function ObjectivesInner() {
                           {initials(displayName(lead))}
                         </span>
                       )}
-                    </Link>
+                    </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon-sm" aria-label={tCommon("manage")}>
@@ -186,7 +198,7 @@ function ObjectivesInner() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => openEdit(obj)}>
+                        <DropdownMenuItem onSelect={() => openPanel(obj)}>
                           <Pencil />
                           {tCommon("edit")}
                         </DropdownMenuItem>
@@ -211,9 +223,22 @@ function ObjectivesInner() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         members={members}
-        objective={editing}
+        objective={null}
         onCreate={createObjective}
         onUpdate={updateObjective}
+      />
+
+      <ObjectiveSidePanel
+        objective={openObjective}
+        open={!!openObjective}
+        onOpenChange={(next) => {
+          if (!next) setOpenObjectiveId(null);
+        }}
+        projectId={project.id}
+        members={members}
+        issues={issues}
+        onUpdate={updateObjective}
+        onDelete={deleteObjective}
       />
 
       <ConfirmDeleteDialog

@@ -8,6 +8,8 @@ import {
   fetchObjectivesApi,
   updateObjectiveApi,
 } from "./objectives-api";
+import { statusCompletionCredit } from "./cycle";
+import type { IssueStatus } from "./issue-constants";
 import type {
   CreateObjectiveInput,
   Objective,
@@ -70,7 +72,14 @@ export function useObjectivesQuery(projectId: string | null) {
   };
 }
 
-/** Auto progress from linked issues: done / total (plan §6). */
+/**
+ * Auto progress from linked issues. `done`/`total` stay raw counts (fully-done
+ * issues over all linked), but `percent` — the fill of the progress bar — is
+ * graded granularly like the cycle's progression ring: issues in progress and
+ * in review earn partial credit instead of counting for nothing until "done"
+ * (statusCompletionCredit). Count-based (not effort-weighted) so the bar reads
+ * in the same units as the done/total label.
+ */
 export function objectiveProgress(
   objectiveId: string,
   issues: { objective_id: string | null; status: string }[]
@@ -78,6 +87,10 @@ export function objectiveProgress(
   const linked = issues.filter((i) => i.objective_id === objectiveId);
   const total = linked.length;
   const done = linked.filter((i) => i.status === "done").length;
-  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+  const earned = linked.reduce(
+    (sum, i) => sum + statusCompletionCredit(i.status as IssueStatus),
+    0
+  );
+  const percent = total === 0 ? 0 : Math.round((earned / total) * 100);
   return { done, total, percent };
 }

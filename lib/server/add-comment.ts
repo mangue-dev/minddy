@@ -31,6 +31,7 @@ export type AddCommentResult =
       errorKey?:
         | "commentEmpty"
         | "issueNotFound"
+        | "objectiveNotFound"
         | "commentNotFound"
         | "databaseError"
         | "attachmentInvalid";
@@ -190,6 +191,163 @@ export async function addCommentToIssue({
       project_id: issue.project_id as string,
       type: "comment" as const,
       issue_id: issueId,
+      comment_id: data.id as string,
+      actor_id: actorId,
+    })),
+  ];
+  await insertNotifications(service, rows);
+
+  return { ok: true, comment: { ...data, attachments: attachmentRows } };
+}
+
+/**
+ * Objective-thread twin of addCommentToIssue: same reply-threading and
+ * attachment handling, but the parent is an objective. Notifications target the
+ * objective's lead + the thread authors + @mentions. Used by
+ * POST /api/objectives/[id]/comments and the @Numo objective agent.
+ */
+export async function addCommentToObjective({
+  objectiveId,
+  actorId,
+  body,
+  parentId,
+  mentionedUserIds,
+  attachments,
+  viaAssistant = false,
+  mcpKeyId = null,
+}: {
+  objectiveId: string;
+  actorId: string;
+  body: string;
+  parentId?: string | null;
+  mentionedUserIds?: string[];
+  attachments?: unknown;
+  viaAssistant?: boolean;
+  mcpKeyId?: string | null;
+}): Promise<AddCommentResult> {
+  const text = body.trim();
+  const mentioned = (mentionedUserIds ?? []).filter(
+    (v): v is string => typeof v === "string"
+  );
+
+  const service = getServiceClient();
+
+  // The objective resolves the project for the access check and carries the
+  // lead we notify below.
+  const { data: objective } = await service
+    .from("objectives")
+    .select("project_id, lead_user_id")
+    .eq("id", objectiveId)
+    .maybeSingle();
+  if (!objective) {
+    return { ok: false, status: 404, errorKey: "objectiveNotFound" };
+  }
+  const access = await getProjectAccess(actorId, objective.project_id as string);
+  if (!access) {
+    return { ok: false, status: 404, errorKey: "objectiveNotFound" };
+  }
+
+  const parsedAttachments = parseAttachmentsInput(
+    attachments,
+    `projects/${objective.project_id}/`
+  );
+  if (parsedAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  }
+  if (!text && parsedAttachments.length === 0) {
+    return { ok: false, status: 400, errorKey: "commentEmpty" };
+  }
+
+  // Replies: the stored parent_id is always the thread's ROOT comment
+  // (depth ≤ 1); the parent must belong to this objective.
+  let rootId: string | null = null;
+  const threadAuthorIds: (string | null)[] = [];
+  if (parentId) {
+    const { data: parent } = await service
+      .from("comments")
+      .select("id, parent_id, objective_id, author_id")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (!parent || parent.objective_id !== objectiveId) {
+      return { ok: false, status: 404, errorKey: "commentNotFound" };
+    }
+    rootId = (parent.parent_id as string | null) ?? (parent.id as string);
+    threadAuthorIds.push(parent.author_id as string | null);
+    if (parent.parent_id) {
+      const { data: root } = await service
+        .from("comments")
+        .select("author_id")
+        .eq("id", rootId)
+        .maybeSingle();
+      threadAuthorIds.push((root?.author_id as string | null) ?? null);
+    }
+  }
+
+  const { data, error } = await service
+    .from("comments")
+    .insert({
+      objective_id: objectiveId,
+      author_id: actorId,
+      body: text,
+      parent_id: rootId,
+      via_assistant: viaAssistant,
+      via_mcp: !!mcpKeyId,
+      api_key_id: mcpKeyId,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[add-comment] objective create failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  let attachmentRows: Awaited<ReturnType<typeof insertAttachments>> = [];
+  try {
+    attachmentRows = await insertAttachments(service, {
+      projectId: objective.project_id as string,
+      objectiveId,
+      commentId: data.id as string,
+      createdBy: actorId,
+      attachments: parsedAttachments,
+    });
+  } catch (e) {
+    console.error("[add-comment] objective attachments failed:", (e as Error).message);
+  }
+
+  // Notifications: @mentions + the objective's lead + the thread authors —
+  // never the requester themself, members only.
+  const valid = await projectMemberIds(service, objective.project_id as string);
+
+  const mentionSet = new Set(
+    mentioned.filter((uid) => uid !== actorId && valid.has(uid))
+  );
+  const commentSet = new Set<string>();
+  for (const uid of [
+    ...threadAuthorIds,
+    objective.lead_user_id,
+  ] as (string | null)[]) {
+    if (uid && uid !== actorId && valid.has(uid) && !mentionSet.has(uid)) {
+      commentSet.add(uid);
+    }
+  }
+
+  const rows: NotificationRow[] = [
+    ...[...mentionSet].map((uid) => ({
+      user_id: uid,
+      project_id: objective.project_id as string,
+      type: "mention" as const,
+      issue_id: null,
+      objective_id: objectiveId,
+      comment_id: data.id as string,
+      actor_id: actorId,
+    })),
+    ...[...commentSet].map((uid) => ({
+      user_id: uid,
+      project_id: objective.project_id as string,
+      type: "comment" as const,
+      issue_id: null,
+      objective_id: objectiveId,
       comment_id: data.id as string,
       actor_id: actorId,
     })),

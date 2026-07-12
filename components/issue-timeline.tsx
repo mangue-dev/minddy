@@ -29,6 +29,7 @@ import {
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import {
   describeEvent,
+  describeObjectiveEvent,
   type EventContext,
   type EventTranslators,
 } from "@/lib/describe-event";
@@ -54,6 +55,8 @@ import type { AttachmentInput, Comment, Member } from "@/lib/types";
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
 type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
 type TimelineT = ReturnType<typeof useTranslations>;
+/** Which entity's activity we render — picks the event describer + status set. */
+export type ActivityEntity = "issue" | "objective";
 
 /** Compact localized relative time, e.g. "Il y a 7min" / "7min ago". */
 function timeAgo(iso: string, t: TimelineT): string {
@@ -84,12 +87,15 @@ function useEventTranslators(): EventTranslators {
   const tActivity = useTranslations("Activity");
   const tStatus = useTranslations("Status");
   const tPriority = useTranslations("Priority");
+  const tObjectiveStatus = useTranslations("ObjectiveStatus");
   const format = useFormatter();
   return {
     t: (key, values) =>
       tActivity(key as Parameters<typeof tActivity>[0], values as never),
     tStatus: (v) => tStatus(v as Parameters<typeof tStatus>[0]),
     tPriority: (v) => tPriority(v as Parameters<typeof tPriority>[0]),
+    tObjectiveStatus: (v) =>
+      tObjectiveStatus(v as Parameters<typeof tObjectiveStatus>[0]),
     formatDue: (value) => {
       const d = parseDueDate(value);
       return d ? format.dateTime(d, dueDateFormat(d)) : "—";
@@ -231,7 +237,15 @@ function OneLine({ full, children }: { full: string; children: React.ReactNode }
   );
 }
 
-function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
+function EventRow({
+  item,
+  ctx,
+  entity = "issue",
+}: {
+  item: EventItem;
+  ctx: EventContext;
+  entity?: ActivityEntity;
+}) {
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
   const viaSmartAssign = !!item.event.via_smart_assign;
@@ -253,7 +267,10 @@ function EventRow({ item, ctx }: { item: EventItem; ctx: EventContext }) {
         : viaMcp
           ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
           : actor;
-  const summary = describeEvent(item.event, ctx, tr);
+  const summary =
+    entity === "objective"
+      ? describeObjectiveEvent(item.event, ctx, tr)
+      : describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
       {viaSmartAssign ? (
@@ -680,7 +697,15 @@ function CommentCard({
 
 /** A run of events between two comments — collapsed behind "N événements" so
     the surrounding comments stand out. */
-function EventsGroup({ items, ctx }: { items: EventItem[]; ctx: EventContext }) {
+function EventsGroup({
+  items,
+  ctx,
+  entity = "issue",
+}: {
+  items: EventItem[];
+  ctx: EventContext;
+  entity?: ActivityEntity;
+}) {
   const t = useTranslations("Timeline");
   const [open, setOpen] = useState(false);
   return (
@@ -701,7 +726,7 @@ function EventsGroup({ items, ctx }: { items: EventItem[]; ctx: EventContext }) 
       {open && (
         <ol className="mt-3 flex flex-col gap-3">
           {items.map((it) => (
-            <EventRow key={`e-${it.event.id}`} item={it} ctx={ctx} />
+            <EventRow key={`e-${it.event.id}`} item={it} ctx={ctx} entity={entity} />
           ))}
         </ol>
       )}
@@ -740,6 +765,7 @@ export function IssueActivity({
   ctx,
   currentUserId,
   projectId,
+  entity = "issue",
   onReply,
   onEditComment,
   onDeleteComment,
@@ -749,6 +775,8 @@ export function IssueActivity({
   ctx: EventContext;
   currentUserId: string | null;
   projectId: string;
+  /** Renders objective activity (event describer + status set) when "objective". */
+  entity?: ActivityEntity;
   onReply: (
     parentId: string,
     body: string,
@@ -802,10 +830,12 @@ export function IssueActivity({
                 );
               }
               if (row.items.length > 2) {
-                return <EventsGroup key={`g-${i}`} items={row.items} ctx={ctx} />;
+                return (
+                  <EventsGroup key={`g-${i}`} items={row.items} ctx={ctx} entity={entity} />
+                );
               }
               return row.items.map((it) => (
-                <EventRow key={`e-${it.event.id}`} item={it} ctx={ctx} />
+                <EventRow key={`e-${it.event.id}`} item={it} ctx={ctx} entity={entity} />
               ));
             })}
           </ol>

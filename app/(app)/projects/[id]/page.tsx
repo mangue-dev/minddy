@@ -35,7 +35,7 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
-import { ObjectiveDialog } from "@/components/objective-dialog";
+import { ObjectiveSidePanel } from "@/components/objective-side-panel";
 import { createIssueApi } from "@/lib/issues-api";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -74,7 +74,7 @@ function ProjectBoard() {
     useIssueRelationsQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
-  const { objectives, createObjective, updateObjective } = useObjectivesQuery(projectId);
+  const { objectives, updateObjective, deleteObjective } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
@@ -541,16 +541,16 @@ function ProjectBoard() {
         initialTab={openIssueTab}
       />
 
-      {activeObjective && (
-        <ObjectiveDialog
-          open={objectiveEditOpen}
-          onOpenChange={setObjectiveEditOpen}
-          members={members}
-          objective={activeObjective}
-          onCreate={createObjective}
-          onUpdate={updateObjective}
-        />
-      )}
+      <ObjectiveSidePanel
+        objective={activeObjective}
+        open={objectiveEditOpen && !!activeObjective}
+        onOpenChange={setObjectiveEditOpen}
+        projectId={project.id}
+        members={members}
+        issues={issues}
+        onUpdate={updateObjective}
+        onDelete={deleteObjective}
+      />
     </div>
   );
 }

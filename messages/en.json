@@ -35,7 +35,13 @@
     "relationRemoved_blocked_by": "removed the blocked-by relation to {ref}",
     "relationRemoved_related": "removed the related link to {ref}",
     "cycleAdded": "added the issue to the cycle",
-    "cycleRemoved": "removed the issue from the cycle"
+    "cycleRemoved": "removed the issue from the cycle",
+    "objectiveCreated": "created the objective",
+    "objectiveNameChanged": "renamed the objective",
+    "objectiveStatusChanged": "changed status: {from} → {to}",
+    "objectiveLeadChanged": "changed lead: {from} → {to}",
+    "objectiveTargetDateChanged": "changed target date: {from} → {to}",
+    "objectiveColorChanged": "changed the color"
   },
   "ApiErrors": {
     "invalidJson": "Invalid JSON",
@@ -753,7 +759,14 @@
     "createdToast": "Objective created.",
     "createInProject": "Create in {project}",
     "createInOtherProject": "Create in another project",
-    "createdInProjectToast": "Objective created in {project}."
+    "createdInProjectToast": "Objective created in {project}.",
+    "entity": "Objective",
+    "leadFieldLabel": "Lead",
+    "viewLinkedIssues": "View {issues}",
+    "discardDraftTitle": "Discard draft?",
+    "discardDraftDescription": "The objective you're drafting will be lost.",
+    "discardDraftConfirm": "Discard",
+    "discardDraftKeepEditing": "Keep editing"
   },
   "Picker": {
     "search": "Search…",

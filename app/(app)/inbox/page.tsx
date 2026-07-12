@@ -44,7 +44,9 @@ export default function InboxPage() {
 
   const open = (n: MyNotification) => {
     if (!n.read_at) void markRead([n.id]);
-    if (n.project_id && n.issue_id) {
+    if (n.project_id && n.objective_id) {
+      router.push(`/projects/${n.project_id}/objectives?open=${n.objective_id}`);
+    } else if (n.project_id && n.issue_id) {
       router.push(`/projects/${n.project_id}?issue=${n.issue_id}`);
     }
   };
@@ -97,11 +99,17 @@ export default function InboxPage() {
                   <p className="truncate text-sm">
                     <span className="font-medium">{n.actor_name ?? t("someone")}</span>{" "}
                     {t(VERB_KEYS[n.type] as Parameters<typeof t>[0])}{" "}
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {issueRef(n)}
-                    </span>
-                    {n.issue_title && (
-                      <span className="text-muted-foreground"> — {n.issue_title}</span>
+                    {n.objective_id ? (
+                      <span className="text-muted-foreground">{n.objective_name ?? ""}</span>
+                    ) : (
+                      <>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {issueRef(n)}
+                        </span>
+                        {n.issue_title && (
+                          <span className="text-muted-foreground"> — {n.issue_title}</span>
+                        )}
+                      </>
                     )}
                   </p>
                 </div>
