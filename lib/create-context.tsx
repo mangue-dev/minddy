@@ -11,18 +11,26 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "mangue-ui";
 import { useProjects } from "@/lib/projects-context";
+import { useAuth } from "@/lib/auth-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { createIssueApi } from "@/lib/issues-api";
 import { createObjectiveApi } from "@/lib/objectives-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { CreateIssueInput, CreateObjectiveInput } from "@/lib/types";
+import type {
+  CreateIssueInput,
+  CreateObjectiveInput,
+  GlobalBoardResponse,
+  Issue,
+} from "@/lib/types";
 
 // Deferred, like the assistant panel: keeps the create dialogs (markdown editor,
 // dictation, attachments) out of every route's initial bundle. Loaded the first
@@ -75,6 +83,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { projects } = useProjects();
+  const { user } = useAuth();
   // Local undo history (MIN-35): creations from the global dialog record too.
   const { record } = useUndoHistory();
 
@@ -93,20 +102,50 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const { categories } = useCategoriesQuery(target);
   const { objectives } = useObjectivesQuery(target);
 
+  // Optimistic (MIN-40) : la carte apparaît dans le cache du projet ET le board
+  // agrégé dès l'ouverture, le dialog se ferme sans attendre le POST ; réconcilié
+  // au succès, retiré + toast à l'échec. Le realtime propage aux autres clients.
   const createIssueGlobal = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
-      const issue = await createIssueApi(projectId, input);
-      record({
-        kind: "create",
+      const projectKey = ["issues", projectId] as const;
+      const optimistic = buildOptimisticIssue(
+        input,
         projectId,
-        issueId: issue.id,
-        snapshot: snapshotIssue(issue),
-      });
-      void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
-      void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
-      return issue;
+        user?.id ?? null,
+        queryClient.getQueryData<Issue[]>(projectKey) ?? []
+      );
+      queryClient.setQueryData<Issue[]>(projectKey, (old) =>
+        old ? [...old, optimistic] : old
+      );
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old ? { ...old, issues: [...old.issues, optimistic] } : old
+      );
+      void createIssueApi(projectId, input).then(
+        (issue) => {
+          const swap = (i: Issue) => (i.id === optimistic.id ? issue : i);
+          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.map(swap));
+          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+            old ? { ...old, issues: old.issues.map(swap) } : old
+          );
+          record({
+            kind: "create",
+            projectId,
+            issueId: issue.id,
+            snapshot: snapshotIssue(issue),
+          });
+        },
+        (err) => {
+          const drop = (i: Issue) => i.id !== optimistic.id;
+          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.filter(drop));
+          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+            old ? { ...old, issues: old.issues.filter(drop) } : old
+          );
+          toast.error((err as Error).message);
+        }
+      );
+      return optimistic;
     },
-    [queryClient, record]
+    [queryClient, user, record]
   );
 
   const createObjectiveGlobal = useCallback(

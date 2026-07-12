@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
   type ReactNode,
@@ -36,6 +37,16 @@ interface AuthContextValue {
     data?: Record<string, unknown>;
   }) => Promise<void>;
   /**
+   * Écrit un patch dans `user_metadata` de façon MERGE-SAFE et SÉRIALISÉE. Les
+   * toggles de réglages écrivent chacun un champ ; sans sérialisation, deux
+   * toggles rapides lisent le même métadata de base et le dernier écrase le
+   * champ de l'autre. Ici chaque écriture est chaînée et fusionne le patch dans
+   * le métadonnées le plus frais — les toggles peuvent donc rester optimistes et
+   * NON verrouillés (plus de `disabled` pendant la sauvegarde GoTrue). Rejette
+   * si l'écriture échoue, pour que l'appelant puisse revert son état optimiste.
+   */
+  updateUserMetadata: (patch: Record<string, unknown>) => Promise<void>;
+  /**
    * Re-pull the account from Supabase Auth into local state. Needed when
    * `user_metadata` changes OUTSIDE the client session — e.g. Numo editing the
    * account settings server-side via the admin API, which fires no client auth
@@ -54,6 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Snapshot du user le plus frais, lu par updateUserMetadata pour fusionner sur
+  // la bonne base (le state en closure serait périmé dans une chaîne d'écritures).
+  const userRef = useRef<User | null>(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+  // Chaîne d'écritures métadonnées sérialisées (voir updateUserMetadata).
+  const metaWriteChain = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     const supabase = getSupabase();
@@ -143,10 +163,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (attributes: { password?: string; data?: Record<string, unknown> }) => {
       const { data, error } = await getSupabase().auth.updateUser(attributes);
       if (error) throw error;
-      if (data.user) setUser(data.user);
+      if (data.user) {
+        userRef.current = data.user;
+        setUser(data.user);
+      }
     },
     []
   );
+
+  const updateUserMetadata = useCallback((patch: Record<string, unknown>) => {
+    // Chaîne : chaque écriture attend la précédente puis fusionne son patch dans
+    // le métadonnées le PLUS frais (userRef, mis à jour synchroniquement ici pour
+    // que le maillon suivant parte de la bonne base). La chaîne survit à un échec
+    // (catch) mais l'appelant, lui, voit le rejet et peut revert.
+    const run = metaWriteChain.current.then(async () => {
+      const currentMeta = (userRef.current?.user_metadata ?? {}) as Record<
+        string,
+        unknown
+      >;
+      const { data, error } = await getSupabase().auth.updateUser({
+        data: { ...currentMeta, ...patch },
+      });
+      if (error) throw error;
+      if (data.user) {
+        userRef.current = data.user;
+        setUser(data.user);
+      }
+    });
+    metaWriteChain.current = run.catch(() => {});
+    return run;
+  }, []);
 
   const refreshUser = useCallback(async () => {
     const supabase = getSupabase();
@@ -154,13 +200,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // later reload / server request also sees the change) and updates state.
     const { data, error } = await supabase.auth.refreshSession();
     if (!error && data.user) {
+      userRef.current = data.user;
       setUser(data.user);
       if (data.session) setSession(data.session);
       return;
     }
     // Fallback: fetch the fresh account without a token refresh.
     const { data: userData } = await supabase.auth.getUser();
-    if (userData.user) setUser(userData.user);
+    if (userData.user) {
+      userRef.current = userData.user;
+      setUser(userData.user);
+    }
   }, []);
 
   return (
@@ -174,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithOAuth,
         signOut,
         updateUser,
+        updateUserMetadata,
         refreshUser,
       }}
     >

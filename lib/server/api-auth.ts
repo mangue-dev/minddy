@@ -30,17 +30,26 @@ export type AuthedResult =
   | { ok: true; user: User; supabase: SupabaseClient }
   | { ok: false; response: NextResponse };
 
-/** Resolve the authenticated user for a route handler, or a 401 response.
-    Une instance Supabase injoignable (retries réseau épuisés, ~20 s) n'est PAS
-    une session invalide : la déguiser en 401 fait croire à une déconnexion.
-    On répond 503 avec un message explicite dans ce cas. */
+/**
+ * Résout l'utilisateur authentifié d'un route handler, ou une réponse d'erreur.
+ *
+ * On vérifie le JWT via `getClaims()` plutôt que `getUser()`. Avec des clés de
+ * signature ASYMÉTRIQUES (dashboard Supabase → Auth → JWT Signing Keys), la
+ * vérification est LOCALE (WebCrypto + JWKS mis en cache) — aucun aller-retour
+ * réseau vers GoTrue par requête, alors que chaque page fan-out en déclenche
+ * plusieurs en parallèle. Avec l'ancien secret SYMÉTRIQUE (HS256), `getClaims()`
+ * retombe exactement sur `getUser()` : même comportement qu'avant, donc bascule
+ * zéro-régression qui s'active toute seule une fois les clés migrées.
+ *
+ * Une instance Supabase injoignable (retries réseau épuisés, ~20 s) n'est PAS
+ * une session invalide : la déguiser en 401 fait croire à une déconnexion.
+ * On répond 503 avec un message explicite dans ce cas.
+ */
 export async function getAuthedUser(request: NextRequest): Promise<AuthedResult> {
   const supabase = createSupabaseFromRequest(request);
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) {
     if (
       error &&
       (error.name === "AuthRetryableFetchError" || (error.status ?? 0) >= 500)
@@ -59,5 +68,19 @@ export async function getAuthedUser(request: NextRequest): Promise<AuthedResult>
       response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     };
   }
+  // Les claims du JWT vérifié portent tout ce que les handlers lisent (id via
+  // `sub`, email, user_metadata, app_metadata). On reconstruit l'objet `User`
+  // attendu par les appelants à partir de ces claims — pas d'appel réseau
+  // supplémentaire pour aller chercher le compte complet.
+  const user = {
+    id: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : undefined,
+    phone: typeof claims.phone === "string" ? claims.phone : undefined,
+    role: typeof claims.role === "string" ? claims.role : undefined,
+    aud: claims.aud,
+    app_metadata: claims.app_metadata ?? {},
+    user_metadata: claims.user_metadata ?? {},
+    created_at: "",
+  } as unknown as User;
   return { ok: true, user, supabase };
 }

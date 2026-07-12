@@ -37,6 +37,7 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { createIssueApi } from "@/lib/issues-api";
+import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import type {
@@ -152,21 +153,43 @@ function ProjectBoard() {
   // the next time it's viewed. `useIssuesQuery` above only owns the current one.
   const queryClient = useQueryClient();
   const { record } = useUndoHistory();
+  // Optimistic (MIN-40) : le dialog se ferme sans attendre le POST. La carte
+  // est insérée dans le cache du projet cible (visible au prochain affichage),
+  // remplacée par la ligne serveur au succès, retirée + toast à l'échec.
   const createIssueInProject = useCallback(
     async (targetProjectId: string, input: CreateIssueInput) => {
-      const issue = await createIssueApi(targetProjectId, input);
-      record({
-        kind: "create",
-        projectId: targetProjectId,
-        issueId: issue.id,
-        snapshot: snapshotIssue(issue),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["issues", targetProjectId],
-      });
-      return issue;
+      const key = ["issues", targetProjectId] as const;
+      const optimistic = buildOptimisticIssue(
+        input,
+        targetProjectId,
+        myUserId,
+        queryClient.getQueryData<Issue[]>(key) ?? [],
+      );
+      queryClient.setQueryData<Issue[]>(key, (old) =>
+        old ? [...old, optimistic] : old,
+      );
+      void createIssueApi(targetProjectId, input).then(
+        (issue) => {
+          queryClient.setQueryData<Issue[]>(key, (old) =>
+            old?.map((i) => (i.id === optimistic.id ? issue : i)),
+          );
+          record({
+            kind: "create",
+            projectId: targetProjectId,
+            issueId: issue.id,
+            snapshot: snapshotIssue(issue),
+          });
+        },
+        (err) => {
+          queryClient.setQueryData<Issue[]>(key, (old) =>
+            old?.filter((i) => i.id !== optimistic.id),
+          );
+          toast.error((err as Error).message);
+        },
+      );
+      return optimistic;
     },
-    [queryClient, record],
+    [queryClient, myUserId, record],
   );
 
   // Relations (MIN-25): open a related issue by id, add/remove relations.

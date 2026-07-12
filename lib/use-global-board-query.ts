@@ -14,6 +14,7 @@ import {
   addIssueRelationApi,
   removeIssueRelationApi,
 } from "./issue-relations-api";
+import { buildOptimisticIssue } from "./optimistic-issue";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
 import { useUndoHistory } from "./undo/undo-context";
@@ -226,19 +227,50 @@ export function useGlobalBoardQuery() {
     [queryClient, invalidate, record]
   );
 
+  // Optimistic (MIN-40): insère la carte dans le board agrégé ET dans le cache
+  // du projet immédiatement, remplace par la ligne serveur au succès, retire +
+  // toast à l'échec. Le realtime réconcilie ; pas de refetch local.
   const createIssue = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
-      const issue = await createIssueApi(projectId, input);
-      record({
-        kind: "create",
+      const projectKey = ["issues", projectId] as const;
+      const optimistic = buildOptimisticIssue(
+        input,
         projectId,
-        issueId: issue.id,
-        snapshot: snapshotIssue(issue),
-      });
-      invalidate(projectId);
-      return issue;
+        user?.id ?? null,
+        queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues ?? []
+      );
+      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+        old ? { ...old, issues: [...old.issues, optimistic] } : old
+      );
+      queryClient.setQueryData<Issue[]>(projectKey, (old) =>
+        old ? [...old, optimistic] : old
+      );
+      void createIssueApi(projectId, input).then(
+        (issue) => {
+          const swap = (i: Issue) => (i.id === optimistic.id ? issue : i);
+          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+            old ? { ...old, issues: old.issues.map(swap) } : old
+          );
+          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.map(swap));
+          record({
+            kind: "create",
+            projectId,
+            issueId: issue.id,
+            snapshot: snapshotIssue(issue),
+          });
+        },
+        (err) => {
+          const drop = (i: Issue) => i.id !== optimistic.id;
+          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+            old ? { ...old, issues: old.issues.filter(drop) } : old
+          );
+          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.filter(drop));
+          toast.error((err as Error).message);
+        }
+      );
+      return optimistic;
     },
-    [invalidate, record]
+    [queryClient, user, record]
   );
 
   // Relations (MIN-25) on the cross-project board: the writes go through the

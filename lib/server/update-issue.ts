@@ -1,8 +1,8 @@
 import "server-only";
 
+import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
-import { getProjectAccess } from "@/lib/server/project-access";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import {
   buildFieldChangeEvents,
@@ -154,17 +154,33 @@ export async function updateIssueFields({
   const service = getServiceClient();
 
   // Snapshot before the change: it resolves the project for the access check
-  // and is the baseline we diff into activity events.
+  // and is the baseline we diff into activity events. On joint `owner_id` +
+  // `deleted_at` pour trancher l'accès ICI, sans le second SELECT projet que
+  // faisait getProjectAccess (le projet est déjà chargé par ce join).
   const { data: before } = await service
     .from("issues")
-    .select("*, projects(name)")
+    .select("*, projects(name, owner_id, deleted_at)")
     .eq("id", issueId)
     .maybeSingle();
   if (!before) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
-  const access = await getProjectAccess(actorId, before.project_id as string);
-  if (!access) {
+  const beforeProject = before.projects as
+    | { name?: string | null; owner_id?: string; deleted_at?: string | null }
+    | null;
+  // Accès = projet vivant ET (propriétaire OU membre). Même règle que
+  // getProjectAccess/can_access_project ; l'invisibilité RLS devient un 404.
+  let hasAccess = !!beforeProject && !beforeProject.deleted_at;
+  if (hasAccess && beforeProject!.owner_id !== actorId) {
+    const { data: membership } = await service
+      .from("project_members")
+      .select("project_id")
+      .eq("project_id", before.project_id as string)
+      .eq("user_id", actorId)
+      .maybeSingle();
+    hasAccess = !!membership;
+  }
+  if (!hasAccess) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
@@ -206,102 +222,117 @@ export async function updateIssueFields({
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
-  // Activity log (best-effort, service client).
-  const events = buildFieldChangeEvents(issueId, actorId, before, updates);
-  if ("plan" in updates && (updates.plan ?? null) !== (before.plan ?? null)) {
-    events.push(
-      ...buildPlanChangeEvents(
-        issueId,
-        actorId,
-        (before.plan as string) ?? null,
-        (updates.plan as string) ?? null
-      )
-    );
-  }
-  if ("parent_id" in updates && (updates.parent_id ?? null) !== (before.parent_id ?? null)) {
-    events.push({
-      issue_id: issueId,
-      actor_id: actorId,
-      type: "updated",
-      field: "parent",
-      from_value: (before.parent_id as string) ?? null,
-      to_value: (updates.parent_id as string) ?? null,
-    });
-    if (before.parent_id) {
+  // Activité, stats, notifications, touch cycle : best-effort et DÉJÀ
+  // réconciliés côté client via le realtime (broadcasts DB). On les sort du
+  // chemin critique du PATCH — la réponse part dès la ligne écrite, ces
+  // écritures suivent juste après via after(). Hors requête HTTP (assistant en
+  // script, cron) : after() lève, on retombe sur un run best-effort synchrone.
+  const runSideEffects = async () => {
+    const events = buildFieldChangeEvents(issueId, actorId, before, updates);
+    if ("plan" in updates && (updates.plan ?? null) !== (before.plan ?? null)) {
+      events.push(
+        ...buildPlanChangeEvents(
+          issueId,
+          actorId,
+          (before.plan as string) ?? null,
+          (updates.plan as string) ?? null
+        )
+      );
+    }
+    if ("parent_id" in updates && (updates.parent_id ?? null) !== (before.parent_id ?? null)) {
       events.push({
-        issue_id: before.parent_id as string,
-        actor_id: actorId,
-        type: "sub_issue_removed",
-        to_value: issueId,
-      });
-    }
-    if (updates.parent_id) {
-      events.push({
-        issue_id: updates.parent_id as string,
-        actor_id: actorId,
-        type: "sub_issue_added",
-        to_value: issueId,
-      });
-    }
-  }
-  await insertEvents(
-    service,
-    stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId)
-  );
-
-  // Cycle membership changed → touch the affected cycle row(s). Issue writes
-  // broadcast on the project topic only; the cycles UPDATE rides the owner's
-  // user topic so an open /all board refetches live (MIN-32).
-  if ("cycle_id" in updates && (updates.cycle_id ?? null) !== (before.cycle_id ?? null)) {
-    const touched = [updates.cycle_id, before.cycle_id].filter(
-      (id): id is string => typeof id === "string"
-    );
-    for (const cycleId of new Set(touched)) {
-      await service
-        .from("cycles")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", cycleId);
-    }
-  }
-
-  // Ledger de stats : une contribution "terminée" au nom de l'acteur, seulement
-  // sur la TRANSITION vers done (before !== done). Cette garde suffit à
-  // dédupliquer : canceled/duplicate ne matchent pas, done->done non plus. Un
-  // re-passage done->todo->done rajoute volontairement une contribution (compté
-  // brut dans la heatmap ; le total, lui, déduplique par issue au read).
-  if (updates.status === "done" && before.status !== "done") {
-    const projectName =
-      (before.projects as { name?: string | null } | null)?.name ?? null;
-    const statRow: StatEventRow = {
-      user_id: actorId,
-      kind: "issue_completed",
-      occurred_at: (updates.completed_at as string) ?? new Date().toISOString(),
-      project_id: (before.project_id as string) ?? null,
-      project_name: projectName,
-      issue_id: issueId,
-      issue_number: (before.number as number) ?? null,
-      issue_title: (before.title as string) ?? null,
-    };
-    await insertStatEvents(service, [statRow]);
-  }
-
-  // Notify a newly-assigned user (never on self-assign).
-  const newAssignee = updates.assignee_id as string | undefined;
-  if (
-    "assignee_id" in updates &&
-    newAssignee &&
-    newAssignee !== before.assignee_id &&
-    newAssignee !== actorId
-  ) {
-    await insertNotifications(service, [
-      {
-        user_id: newAssignee,
-        project_id: (before.project_id as string) ?? null,
-        type: "assigned",
         issue_id: issueId,
         actor_id: actorId,
-      },
-    ]);
+        type: "updated",
+        field: "parent",
+        from_value: (before.parent_id as string) ?? null,
+        to_value: (updates.parent_id as string) ?? null,
+      });
+      if (before.parent_id) {
+        events.push({
+          issue_id: before.parent_id as string,
+          actor_id: actorId,
+          type: "sub_issue_removed",
+          to_value: issueId,
+        });
+      }
+      if (updates.parent_id) {
+        events.push({
+          issue_id: updates.parent_id as string,
+          actor_id: actorId,
+          type: "sub_issue_added",
+          to_value: issueId,
+        });
+      }
+    }
+    await insertEvents(
+      service,
+      stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId)
+    );
+
+    // Cycle membership changed → touch the affected cycle row(s). Issue writes
+    // broadcast on the project topic only; the cycles UPDATE rides the owner's
+    // user topic so an open /all board refetches live (MIN-32).
+    if ("cycle_id" in updates && (updates.cycle_id ?? null) !== (before.cycle_id ?? null)) {
+      const touched = [updates.cycle_id, before.cycle_id].filter(
+        (id): id is string => typeof id === "string"
+      );
+      for (const cycleId of new Set(touched)) {
+        await service
+          .from("cycles")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", cycleId);
+      }
+    }
+
+    // Ledger de stats : une contribution "terminée" au nom de l'acteur, seulement
+    // sur la TRANSITION vers done (before !== done). Cette garde suffit à
+    // dédupliquer : canceled/duplicate ne matchent pas, done->done non plus. Un
+    // re-passage done->todo->done rajoute volontairement une contribution (compté
+    // brut dans la heatmap ; le total, lui, déduplique par issue au read).
+    if (updates.status === "done" && before.status !== "done") {
+      const projectName =
+        (before.projects as { name?: string | null } | null)?.name ?? null;
+      const statRow: StatEventRow = {
+        user_id: actorId,
+        kind: "issue_completed",
+        occurred_at: (updates.completed_at as string) ?? new Date().toISOString(),
+        project_id: (before.project_id as string) ?? null,
+        project_name: projectName,
+        issue_id: issueId,
+        issue_number: (before.number as number) ?? null,
+        issue_title: (before.title as string) ?? null,
+      };
+      await insertStatEvents(service, [statRow]);
+    }
+
+    // Notify a newly-assigned user (never on self-assign).
+    const newAssignee = updates.assignee_id as string | undefined;
+    if (
+      "assignee_id" in updates &&
+      newAssignee &&
+      newAssignee !== before.assignee_id &&
+      newAssignee !== actorId
+    ) {
+      await insertNotifications(service, [
+        {
+          user_id: newAssignee,
+          project_id: (before.project_id as string) ?? null,
+          type: "assigned",
+          issue_id: issueId,
+          actor_id: actorId,
+        },
+      ]);
+    }
+  };
+  const deferSideEffects = () =>
+    runSideEffects().catch((e) =>
+      console.error("[update-issue] side-effects failed:", (e as Error).message)
+    );
+  try {
+    after(deferSideEffects);
+  } catch {
+    void deferSideEffects();
   }
 
   // Smart Assign (MIN-31): an unassigned issue leaving triage gets an assignee

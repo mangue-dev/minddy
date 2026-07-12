@@ -380,6 +380,14 @@ export async function updateView({
  * projectId null = the global (cross-project) scope, where both are personal.
  * Failures are logged, never thrown: listing views must not break on a seed.
  */
+// (project,user) pairs déjà réconciliés dans cette instance. Les vues baseline
+// (système « Mes tickets » + défaut « Toutes ») ne sont jamais supprimées une
+// fois créées, donc une fois qu'on les a vérifiées/semées pour une paire, les 2
+// SELECT de contrôle sont inutiles sur tous les chargements suivants — et
+// `GET /views` est sur le chemin critique de chaque board. Memo à vie du
+// process (un cold start revérifie une fois), posé UNIQUEMENT sur un run propre.
+const seededBaselines = new Set<string>();
+
 export async function ensureBaselineViews({
   projectId,
   userId,
@@ -391,7 +399,11 @@ export async function ensureBaselineViews({
   systemViewName: string;
   defaultViewName: string;
 }): Promise<void> {
+  const memoKey = `${projectId ?? "global"}:${userId}`;
+  if (seededBaselines.has(memoKey)) return;
   const service = getServiceClient();
+  // Un accroc de lecture laisse la paire non-memoïsée → réessai au prochain GET.
+  let clean = true;
 
   let systemQuery = service
     .from("views")
@@ -405,6 +417,7 @@ export async function ensureBaselineViews({
   const { data: systemRow, error: systemReadError } = await systemQuery.maybeSingle();
   if (systemReadError) {
     console.error("[views] system view lookup failed:", systemReadError.message);
+    clean = false;
   } else if (!systemRow) {
     const { error } = await service.from("views").insert({
       project_id: projectId,
@@ -433,7 +446,7 @@ export async function ensureBaselineViews({
   const { count, error: countError } = await customQuery;
   if (countError) {
     console.error("[views] custom views count failed:", countError.message);
-    return;
+    return; // non-memoïsé : on revérifiera au prochain GET
   }
   if (!count) {
     const { error } = await service.from("views").insert({
@@ -447,6 +460,10 @@ export async function ensureBaselineViews({
     });
     if (error) {
       console.error("[views] default view seed failed:", error.message);
+      clean = false;
     }
   }
+
+  // Baseline confirmée/semée sans accroc → on saute les contrôles la prochaine fois.
+  if (clean) seededBaselines.add(memoKey);
 }

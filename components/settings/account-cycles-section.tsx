@@ -39,31 +39,31 @@ import {
 export function AccountCyclesSection() {
   const t = useTranslations("Cycles");
   const locale = useLocale();
-  const { user, updateUser } = useAuth();
+  const { user, updateUserMetadata } = useAuth();
   const queryClient = useQueryClient();
 
   const [prefs, setPrefs] = useState<CyclePrefs>(resolveCyclePrefs(user?.user_metadata));
-  const [saving, setSaving] = useState(false);
   useEffect(() => {
     setPrefs(resolveCyclePrefs(user?.user_metadata));
   }, [user]);
 
-  /** Optimistic metadata write shared by every control. */
+  /**
+   * Écriture optimiste, NON verrouillée : plus de `saving` partagé qui figeait
+   * toute la section. updateUserMetadata sérialise et fusionne côté serveur, et
+   * l'effet ci-dessus resynchronise depuis le user à jour ; revert + toast à
+   * l'échec.
+   */
   const save = async (metaKey: string, value: unknown, next: Partial<CyclePrefs>) => {
-    if (!user || saving) return;
+    if (!user) return;
     const prev = prefs;
     setPrefs({ ...prefs, ...next }); // optimistic — revert on failure below
-    setSaving(true);
     try {
-      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-      await updateUser({ data: { ...meta, [metaKey]: value } });
+      await updateUserMetadata({ [metaKey]: value });
       // The board read owns the cycle lifecycle — make it reconcile.
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
     } catch (e) {
       setPrefs(prev);
       toast.error((e as Error).message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -74,8 +74,8 @@ export function AccountCyclesSection() {
       new Date(Date.UTC(2024, 0, dow))
     );
 
-  const disabled = saving || !user;
-  const knobsDisabled = disabled || !prefs.enabled;
+  // Le seul verrou légitime : les réglages fins n'ont de sens que cycles activés.
+  const knobsDisabled = !user || !prefs.enabled;
 
   return (
     <>
@@ -87,7 +87,7 @@ export function AccountCyclesSection() {
             onCheckedChange={(v) =>
               void save(CYCLES_ENABLED_META_KEY, v, { enabled: v })
             }
-            disabled={disabled}
+            disabled={!user}
           />
           <label
             htmlFor="cycles-enabled"

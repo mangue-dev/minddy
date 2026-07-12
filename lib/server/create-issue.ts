@@ -1,5 +1,6 @@
 import "server-only";
 
+import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
@@ -233,49 +234,64 @@ export async function createIssueForProject({
     }
   }
 
-  // Activity: creation + "sub-issue added" on the parent.
-  const events: EventRow[] = [
-    { issue_id: data.id, actor_id: actorId, type: "created" },
-  ];
-  if (data.parent_id) {
-    events.push({
-      issue_id: data.parent_id,
-      actor_id: actorId,
-      type: "sub_issue_added",
-      to_value: data.id,
-    });
-  }
-  await insertEvents(
-    service,
-    stampIntegration(
-      stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
-      integrationId
-    )
-  );
-
-  // Ledger de stats : une contribution "créée" (et "terminée" si créée
-  // directement en done) au nom de l'acteur. Skip pour les issues d'intégration
-  // (actorId null) — elles n'appartiennent à aucun utilisateur.
-  if (actorId) {
-    const snapshot = {
-      project_id: projectId,
-      project_name: projectName,
-      issue_id: data.id as string,
-      issue_number: data.number as number,
-      issue_title: data.title as string,
-    };
-    const statRows: StatEventRow[] = [
-      { user_id: actorId, kind: "issue_created", occurred_at: data.created_at as string, ...snapshot },
+  // Activité + ledger de stats : best-effort, sans effet sur l'issue renvoyée
+  // (le client la voit déjà via l'insert optimiste) et reconciliés par le
+  // realtime. Hors du chemin critique du POST via after() — la création répond
+  // dès la ligne + catégories écrites. Hors requête HTTP → run synchrone.
+  const runSideEffects = async () => {
+    // Activity: creation + "sub-issue added" on the parent.
+    const events: EventRow[] = [
+      { issue_id: data.id, actor_id: actorId, type: "created" },
     ];
-    if (data.status === "done") {
-      statRows.push({
-        user_id: actorId,
-        kind: "issue_completed",
-        occurred_at: (data.completed_at as string) ?? (data.created_at as string),
-        ...snapshot,
+    if (data.parent_id) {
+      events.push({
+        issue_id: data.parent_id,
+        actor_id: actorId,
+        type: "sub_issue_added",
+        to_value: data.id,
       });
     }
-    await insertStatEvents(service, statRows);
+    await insertEvents(
+      service,
+      stampIntegration(
+        stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
+        integrationId
+      )
+    );
+
+    // Ledger de stats : une contribution "créée" (et "terminée" si créée
+    // directement en done) au nom de l'acteur. Skip pour les issues d'intégration
+    // (actorId null) — elles n'appartiennent à aucun utilisateur.
+    if (actorId) {
+      const snapshot = {
+        project_id: projectId,
+        project_name: projectName,
+        issue_id: data.id as string,
+        issue_number: data.number as number,
+        issue_title: data.title as string,
+      };
+      const statRows: StatEventRow[] = [
+        { user_id: actorId, kind: "issue_created", occurred_at: data.created_at as string, ...snapshot },
+      ];
+      if (data.status === "done") {
+        statRows.push({
+          user_id: actorId,
+          kind: "issue_completed",
+          occurred_at: (data.completed_at as string) ?? (data.created_at as string),
+          ...snapshot,
+        });
+      }
+      await insertStatEvents(service, statRows);
+    }
+  };
+  const deferSideEffects = () =>
+    runSideEffects().catch((e) =>
+      console.error("[create-issue] side-effects failed:", (e as Error).message)
+    );
+  try {
+    after(deferSideEffects);
+  } catch {
+    void deferSideEffects();
   }
 
   // Smart Assign (MIN-31): an issue born past triage without an assignee gets

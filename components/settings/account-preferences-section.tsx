@@ -51,7 +51,7 @@ export function AccountPreferencesSection() {
   const tStatus = useTranslations("Status");
   const currentLocale = useLocale() as Locale;
   const router = useRouter();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, updateUserMetadata } = useAuth();
   const { theme, setTheme } = useTheme();
   const [switchingLocale, setSwitchingLocale] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -66,23 +66,20 @@ export function AccountPreferencesSection() {
   const [autoAssign, setAutoAssign] = useState(
     user?.user_metadata?.auto_assign_created === true,
   );
-  const [savingAutoAssign, setSavingAutoAssign] = useState(false);
   useEffect(() => {
     setAutoAssign(user?.user_metadata?.auto_assign_created === true);
   }, [user]);
 
+  // Optimiste et NON verrouillé : le switch bascule tout de suite, l'écriture
+  // GoTrue est sérialisée par updateUserMetadata (merge-safe), revert à l'échec.
   const toggleAutoAssign = async (next: boolean) => {
-    if (!user || savingAutoAssign) return;
-    setAutoAssign(next); // optimistic — revert on failure below
-    setSavingAutoAssign(true);
+    if (!user) return;
+    setAutoAssign(next);
     try {
-      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-      await updateUser({ data: { ...meta, auto_assign_created: next } });
+      await updateUserMetadata({ auto_assign_created: next });
     } catch (e) {
       setAutoAssign(!next);
       toast.error((e as Error).message);
-    } finally {
-      setSavingAutoAssign(false);
     }
   };
 
@@ -91,25 +88,18 @@ export function AccountPreferencesSection() {
   const [autoAssignStart, setAutoAssignStart] = useState(
     resolveAutoAssignOnStart(user?.user_metadata),
   );
-  const [savingAutoAssignStart, setSavingAutoAssignStart] = useState(false);
   useEffect(() => {
     setAutoAssignStart(resolveAutoAssignOnStart(user?.user_metadata));
   }, [user]);
 
   const toggleAutoAssignStart = async (next: boolean) => {
-    if (!user || savingAutoAssignStart) return;
-    setAutoAssignStart(next); // optimistic — revert on failure below
-    setSavingAutoAssignStart(true);
+    if (!user) return;
+    setAutoAssignStart(next);
     try {
-      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-      await updateUser({
-        data: { ...meta, [AUTO_ASSIGN_ON_START_META_KEY]: next },
-      });
+      await updateUserMetadata({ [AUTO_ASSIGN_ON_START_META_KEY]: next });
     } catch (e) {
       setAutoAssignStart(!next);
       toast.error((e as Error).message);
-    } finally {
-      setSavingAutoAssignStart(false);
     }
   };
 
@@ -118,25 +108,18 @@ export function AccountPreferencesSection() {
   const [promptAutoStart, setPromptAutoStart] = useState(
     resolvePromptCopyAutoStart(user?.user_metadata),
   );
-  const [savingPromptAutoStart, setSavingPromptAutoStart] = useState(false);
   useEffect(() => {
     setPromptAutoStart(resolvePromptCopyAutoStart(user?.user_metadata));
   }, [user]);
 
   const togglePromptAutoStart = async (next: boolean) => {
-    if (!user || savingPromptAutoStart) return;
-    setPromptAutoStart(next); // optimistic — revert on failure below
-    setSavingPromptAutoStart(true);
+    if (!user) return;
+    setPromptAutoStart(next);
     try {
-      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-      await updateUser({
-        data: { ...meta, [PROMPT_COPY_AUTO_START_META_KEY]: next },
-      });
+      await updateUserMetadata({ [PROMPT_COPY_AUTO_START_META_KEY]: next });
     } catch (e) {
       setPromptAutoStart(!next);
       toast.error((e as Error).message);
-    } finally {
-      setSavingPromptAutoStart(false);
     }
   };
 
@@ -144,24 +127,19 @@ export function AccountPreferencesSection() {
   const [numoStatus, setNumoStatus] = useState<NumoDefaultStatus>(
     resolveNumoDefaultStatus(user?.user_metadata),
   );
-  const [savingNumoStatus, setSavingNumoStatus] = useState(false);
   useEffect(() => {
     setNumoStatus(resolveNumoDefaultStatus(user?.user_metadata));
   }, [user]);
 
   const changeNumoStatus = async (next: NumoDefaultStatus) => {
-    if (!user || savingNumoStatus || next === numoStatus) return;
+    if (!user || next === numoStatus) return;
     const prev = numoStatus;
-    setNumoStatus(next); // optimistic — revert on failure below
-    setSavingNumoStatus(true);
+    setNumoStatus(next);
     try {
-      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-      await updateUser({ data: { ...meta, numo_default_status: next } });
+      await updateUserMetadata({ numo_default_status: next });
     } catch (e) {
       setNumoStatus(prev);
       toast.error((e as Error).message);
-    } finally {
-      setSavingNumoStatus(false);
     }
   };
 
@@ -249,7 +227,7 @@ export function AccountPreferencesSection() {
             id="account-auto-assign"
             checked={autoAssign}
             onCheckedChange={(v) => void toggleAutoAssign(v)}
-            disabled={savingAutoAssign || !user}
+            disabled={!user}
           />
           <label
             htmlFor="account-auto-assign"
@@ -271,7 +249,7 @@ export function AccountPreferencesSection() {
             id="account-auto-assign-start"
             checked={autoAssignStart}
             onCheckedChange={(v) => void toggleAutoAssignStart(v)}
-            disabled={savingAutoAssignStart || !user}
+            disabled={!user}
           />
           <label
             htmlFor="account-auto-assign-start"
@@ -293,7 +271,7 @@ export function AccountPreferencesSection() {
             id="account-prompt-auto-start"
             checked={promptAutoStart}
             onCheckedChange={(v) => void togglePromptAutoStart(v)}
-            disabled={savingPromptAutoStart || !user}
+            disabled={!user}
           />
           <label
             htmlFor="account-prompt-auto-start"
@@ -313,7 +291,7 @@ export function AccountPreferencesSection() {
         <Select
           value={numoStatus}
           onValueChange={(v) => void changeNumoStatus(v as NumoDefaultStatus)}
-          disabled={savingNumoStatus || !user}
+          disabled={!user}
         >
           <SelectTrigger id="account-numo-status" className="max-w-sm">
             <SelectValue />

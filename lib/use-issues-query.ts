@@ -10,6 +10,7 @@ import {
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import { buildOptimisticIssue } from "./optimistic-issue";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
 import { useUndoHistory, type UndoRecord } from "./undo/undo-context";
@@ -81,19 +82,42 @@ export function useIssuesQuery(projectId: string | null) {
     [user]
   );
 
+  // Optimistic: insère une carte immédiatement (le dialog se ferme sans attendre
+  // le POST), remplace par la ligne serveur au succès, retire + toast à l'échec.
+  // Realtime réconcilie les autres clients ; localement pas de refetch.
   const createIssue = useCallback(
     async (input: CreateIssueInput) => {
-      const issue = await createIssueApi(projectId as string, input);
-      record({
-        kind: "create",
-        projectId: projectId as string,
-        issueId: issue.id,
-        snapshot: snapshotIssue(issue),
-      });
-      invalidate();
-      return issue;
+      const pid = projectId as string;
+      const key = issuesKey(pid);
+      const optimistic = buildOptimisticIssue(
+        input,
+        pid,
+        user?.id ?? null,
+        queryClient.getQueryData<Issue[]>(key) ?? []
+      );
+      queryClient.setQueryData<Issue[]>(key, (old) => [...(old ?? []), optimistic]);
+      void createIssueApi(pid, input).then(
+        (issue) => {
+          queryClient.setQueryData<Issue[]>(key, (old) =>
+            (old ?? []).map((i) => (i.id === optimistic.id ? issue : i))
+          );
+          record({
+            kind: "create",
+            projectId: pid,
+            issueId: issue.id,
+            snapshot: snapshotIssue(issue),
+          });
+        },
+        (err) => {
+          queryClient.setQueryData<Issue[]>(key, (old) =>
+            (old ?? []).filter((i) => i.id !== optimistic.id)
+          );
+          toast.error((err as Error).message);
+        }
+      );
+      return optimistic;
     },
-    [projectId, invalidate, record]
+    [projectId, queryClient, user, record]
   );
 
   // Optimistic: patch the cache immediately so edits (incl. inline card pickers)
@@ -130,7 +154,15 @@ export function useIssuesQuery(projectId: string | null) {
         : null;
       try {
         const issue = await request;
-        invalidate();
+        // Réconcilie l'optimiste avec la ligne serveur faisant autorité (assignee
+        // injecté, completed_at, cycle_id…) SANS refetch de tout le projet à
+        // chaque édition de champ. Le realtime propage le changement aux autres
+        // clients ; localement le cache est déjà exact.
+        if (key) {
+          queryClient.setQueryData<Issue[]>(key, (old) =>
+            (old ?? []).map((i) => (i.id === issueId ? { ...i, ...issue } : i))
+          );
+        }
         return issue;
       } catch (err) {
         rec?.retract();
@@ -138,7 +170,7 @@ export function useIssuesQuery(projectId: string | null) {
         throw err;
       }
     },
-    [projectId, queryClient, invalidate, startAssignee, record]
+    [projectId, queryClient, startAssignee, record]
   );
 
   const deleteIssue = useCallback(

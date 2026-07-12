@@ -64,6 +64,11 @@ interface SharedView {
   name: string;
 }
 
+interface FeedbackSettingsData {
+  board: BoardSettings | null;
+  shared_views: SharedView[];
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -245,8 +250,22 @@ export function ProjectFeedbackSettings({
     }
   };
 
-  const patch = (body: Record<string, unknown>) =>
-    mutate(() => api(settingsPath, { method: "PATCH", body: JSON.stringify(body) }));
+  // Optimiste (MIN-40) : patch le cache `board` tout de suite pour que le switch
+  // suive le doigt, puis persiste ; revert + toast à l'échec. (post/mutate
+  // gardent leur spinner : générer un secret SSO n'est pas un simple toggle.)
+  const patchBoard = async (body: Partial<BoardSettings>) => {
+    const key = ["feedback-settings", projectId];
+    const previous = queryClient.getQueryData<FeedbackSettingsData>(key);
+    queryClient.setQueryData<FeedbackSettingsData>(key, (old) =>
+      old && old.board ? { ...old, board: { ...old.board, ...body } } : old,
+    );
+    try {
+      await api(settingsPath, { method: "PATCH", body: JSON.stringify(body) });
+    } catch (e) {
+      queryClient.setQueryData(key, previous);
+      toast.error((e as Error).message);
+    }
+  };
   const post = (action: string) =>
     mutate(() => api(settingsPath, { method: "POST", body: JSON.stringify({ action }) }));
 
@@ -289,8 +308,8 @@ export function ProjectFeedbackSettings({
         control={
           <Switch
             checked={boardOn}
-            disabled={busy || !isOwner}
-            onCheckedChange={(v) => void patch({ enabled: v })}
+            disabled={!isOwner}
+            onCheckedChange={(v) => void patchBoard({ enabled: v })}
           />
         }
       >
@@ -349,8 +368,8 @@ export function ProjectFeedbackSettings({
                 control={
                   <Switch
                     checked={board.show_views}
-                    disabled={busy || !isOwner}
-                    onCheckedChange={(v) => void patch({ show_views: v })}
+                    disabled={!isOwner}
+                    onCheckedChange={(v) => void patchBoard({ show_views: v })}
                   />
                 }
               >
@@ -370,14 +389,14 @@ export function ProjectFeedbackSettings({
                           >
                             <Checkbox
                               checked={checked}
-                              disabled={busy || !isOwner}
+                              disabled={!isOwner}
                               onCheckedChange={(next) => {
                                 const ids = next
                                   ? [...board.visible_view_ids, view.id]
                                   : board.visible_view_ids.filter(
                                       (id) => id !== view.id,
                                     );
-                                void patch({ visible_view_ids: ids });
+                                void patchBoard({ visible_view_ids: ids });
                               }}
                             />
                             {view.name}

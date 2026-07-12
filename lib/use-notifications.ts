@@ -29,19 +29,48 @@ export function useNotifications() {
     [notifications]
   );
 
-  const markRead = useCallback(
-    async (ids: string[]) => {
-      if (ids.length === 0) return;
-      await markReadApi(ids);
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+  // Optimiste (MIN-40) : estampille `read_at` dans le cache tout de suite pour
+  // que le surlignage non-lu ET le badge de la sidebar se vident sans attendre.
+  // Rollback à l'échec ; le realtime réconcilie les autres onglets/clients.
+  const stampRead = useCallback(
+    (matches: (n: MyNotification) => boolean) => {
+      const previous =
+        queryClient.getQueryData<MyNotification[]>(NOTIFICATIONS_KEY);
+      const now = new Date().toISOString();
+      queryClient.setQueryData<MyNotification[]>(NOTIFICATIONS_KEY, (old) =>
+        (old ?? []).map((n) =>
+          n.read_at || !matches(n) ? n : { ...n, read_at: now }
+        )
+      );
+      return () => queryClient.setQueryData(NOTIFICATIONS_KEY, previous);
     },
     [queryClient]
   );
 
+  const markRead = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      const rollback = stampRead((n) => idSet.has(n.id));
+      try {
+        await markReadApi(ids);
+      } catch (err) {
+        rollback();
+        throw err;
+      }
+    },
+    [stampRead]
+  );
+
   const markAllRead = useCallback(async () => {
-    await markAllReadApi();
-    void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
-  }, [queryClient]);
+    const rollback = stampRead(() => true);
+    try {
+      await markAllReadApi();
+    } catch (err) {
+      rollback();
+      throw err;
+    }
+  }, [stampRead]);
 
   return { notifications, unreadCount, loading: isLoading, markRead, markAllRead };
 }

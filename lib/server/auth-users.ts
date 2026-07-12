@@ -34,22 +34,62 @@ export function toNamed(
   };
 }
 
-/** Resolve auth users by id in parallel (best-effort; missing ids are skipped). */
+// Identity cache (id → account) partagé au niveau du module. Chaque
+// `getUserById` est un aller-retour vers l'API admin GoTrue, et les mêmes
+// membres sont résolus à CHAQUE chargement de board / poll de notifications
+// (me/board, notifications, members, invitations) — un N+1 réseau récurrent.
+// Un TTL court suffit : noms/avatars/emails bougent rarement, et Fluid Compute
+// réutilise l'instance donc le cache reste chaud entre requêtes. La 1re vue
+// paie les round-trips ; les suivantes lisent le cache.
+const IDENTITY_TTL_MS = 60_000;
+const identityCache = new Map<string, { user: User; expires: number }>();
+
+/**
+ * Resolve auth users by id (best-effort; missing ids are skipped), servi depuis
+ * un cache mémoire à TTL court. Seuls les ids absents ou périmés touchent l'API
+ * admin, et en parallèle — au lieu d'un round-trip par id à chaque appel.
+ */
 export async function fetchAuthUsersById(
   service: SupabaseClient,
   ids: string[]
 ): Promise<Map<string, User>> {
   const unique = [...new Set(ids)].filter(Boolean);
   if (unique.length === 0) return new Map();
-  const users = await Promise.all(
-    unique.map(async (id) => {
-      const { data, error } = await service.auth.admin.getUserById(id);
-      return error ? null : data.user;
-    })
-  );
-  return new Map(
-    users.filter((u): u is User => !!u).map((u) => [u.id, u])
-  );
+
+  const now = Date.now();
+  const result = new Map<string, User>();
+  const misses: string[] = [];
+  for (const id of unique) {
+    const hit = identityCache.get(id);
+    if (hit && hit.expires > now) {
+      result.set(id, hit.user);
+    } else {
+      misses.push(id);
+    }
+  }
+
+  if (misses.length > 0) {
+    const fetched = await Promise.all(
+      misses.map(async (id) => {
+        const { data, error } = await service.auth.admin.getUserById(id);
+        return error ? null : data.user;
+      })
+    );
+    for (const user of fetched) {
+      if (!user) continue;
+      identityCache.set(user.id, { user, expires: now + IDENTITY_TTL_MS });
+      result.set(user.id, user);
+    }
+  }
+
+  // Élagage opportuniste des entrées périmées pour borner la taille du cache.
+  if (identityCache.size > 2_000) {
+    for (const [id, entry] of identityCache) {
+      if (entry.expires <= now) identityCache.delete(id);
+    }
+  }
+
+  return result;
 }
 
 /** Find an account by email via the admin API (pages through auth.users). */

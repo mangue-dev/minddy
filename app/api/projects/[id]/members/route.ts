@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import {
@@ -20,35 +19,52 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const access = await getProjectAccess(auth.user.id, id);
-  if (!access) {
+  const service = getServiceClient();
+  // Un seul lot parallèle : projet (owner + deleted_at), membres, invitations.
+  // L'accès se déduit du projet + de la liste de membres déjà chargée — plus de
+  // second SELECT project_members (ce que faisait getProjectAccess), et plus de
+  // phase séquentielle avant les reads.
+  const [{ data: project }, { data: memberRows }, { data: inviteRows }] =
+    await Promise.all([
+      service
+        .from("projects")
+        .select("owner_id, deleted_at")
+        .eq("id", id)
+        .maybeSingle(),
+      service
+        .from("project_members")
+        .select("user_id, role, created_at")
+        .eq("project_id", id)
+        .order("created_at", { ascending: true }),
+      service
+        .from("project_invitations")
+        .select("id, project_id, invited_email, invited_user_id, status, created_at")
+        .eq("project_id", id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }),
+    ]);
+
+  // Accès = projet vivant ET (propriétaire OU présent dans la liste de membres).
+  if (!project || project.deleted_at) {
+    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
+  }
+  const ownerId = project.owner_id as string;
+  const isOwner = ownerId === auth.user.id;
+  const isMember =
+    isOwner || (memberRows ?? []).some((m) => m.user_id === auth.user.id);
+  if (!isMember) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
-  const service = getServiceClient();
-  const [{ data: memberRows }, { data: inviteRows }] = await Promise.all([
-    service
-      .from("project_members")
-      .select("user_id, role, created_at")
-      .eq("project_id", id)
-      .order("created_at", { ascending: true }),
-    service
-      .from("project_invitations")
-      .select("id, project_id, invited_email, invited_user_id, status, created_at")
-      .eq("project_id", id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false }),
-  ]);
-
   const usersById = await fetchAuthUsersById(service, [
-    access.project.owner_id,
+    ownerId,
     ...(memberRows ?? []).map((m) => m.user_id as string),
   ]);
 
   const members: Member[] = [
     {
-      user_id: access.project.owner_id,
-      ...toNamed(usersById.get(access.project.owner_id)),
+      user_id: ownerId,
+      ...toNamed(usersById.get(ownerId)),
       role: "owner",
       is_owner: true,
     },
@@ -63,7 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({
     members,
     invitations: (inviteRows ?? []) as Invitation[],
-    isOwner: access.isOwner,
+    isOwner,
   });
 }
 
