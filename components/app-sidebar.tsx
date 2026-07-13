@@ -33,6 +33,7 @@ import {
   Megaphone,
   BarChart3,
   Settings,
+  ArrowUpRight,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
@@ -342,12 +343,14 @@ function FooterRow({
   onClick,
   collapsed,
   active = false,
+  trailingIcon: TrailingIcon,
 }: {
   icon: typeof Megaphone;
   label: string;
   onClick: () => void;
   collapsed: boolean;
   active?: boolean;
+  trailingIcon?: typeof Megaphone;
 }) {
   const btn = (
     <button
@@ -361,6 +364,9 @@ function FooterRow({
     >
       <Icon className="size-[18px] shrink-0" />
       {!collapsed && label}
+      {!collapsed && TrailingIcon && (
+        <TrailingIcon className="ml-auto size-4 shrink-0" />
+      )}
     </button>
   );
   if (collapsed) {
@@ -392,6 +398,7 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         label={t("shareFeedback")}
         collapsed={collapsed}
         onClick={openFeedbackBoard}
+        trailingIcon={ArrowUpRight}
       />
       <AccountButton collapsed={collapsed} />
     </div>
