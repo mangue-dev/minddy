@@ -1,0 +1,200 @@
+/**
+ * ResultItem styles for Global Menu V2
+ *
+ * Compact design without descriptions by default.
+ * Follows Raycast-like styling.
+ */
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin: 0 8px 4px;
+  border-radius: var(--cp-radius-md);
+  cursor: pointer;
+  user-select: none;
+  min-height: 40px;
+  color: var(--cp-fg);
+}
+
+.item:last-child {
+  margin-bottom: 0;
+}
+
+.item.active {
+  background: var(--cp-accent);
+  color: var(--cp-accent-fg);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
+}
+
+/* Icon container - no background, colored by type */
+.icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--cp-muted);
+}
+
+.item.active .icon {
+  color: var(--cp-accent-fg);
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Icon colors by item type */
+.icon[data-item-type="project"] { color: var(--cp-icon-project); }
+.icon[data-item-type="task"] { color: var(--cp-icon-task); }
+.icon[data-item-type="subtask"] { color: var(--cp-icon-subtask); }
+.icon[data-item-type="note"] { color: var(--cp-icon-note); }
+.icon[data-item-type="event"] { color: var(--cp-icon-event); }
+.icon[data-item-type="assignment"] { color: var(--cp-icon-assignment); }
+.icon[data-item-type="friend"] { color: var(--cp-icon-friend); }
+.icon[data-item-type="action"] { color: var(--cp-icon-action); }
+.icon[data-item-type="conversation"] { color: var(--cp-icon-conversation); }
+.icon[data-item-type="setting"] { color: var(--cp-icon-setting); }
+.icon[data-item-type="navigation"] { color: var(--cp-icon-navigation); }
+.icon[data-item-type="shortcut"] { color: var(--cp-icon-shortcut); }
+
+/* Override icon color when item is active */
+.item.active .icon[data-item-type] {
+  color: var(--cp-accent-fg);
+}
+
+/* Content area */
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Title */
+.title {
+  font-size: var(--cp-fs-text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Context info (project name) */
+.context {
+  font-size: 0.75rem;
+  color: var(--cp-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+
+.item.active .context {
+  color: color-mix(in srgb, var(--cp-accent-fg) 70%, transparent);
+}
+
+/* Task status badge */
+.statusBadge {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusBadge.success {
+  background: var(--cp-success);
+}
+
+.statusBadge.muted {
+  background: var(--cp-muted);
+}
+
+.statusBadge.warning {
+  background: var(--cp-warning);
+}
+
+.statusBadge.danger {
+  background: var(--cp-danger);
+}
+
+/* Keyboard shortcut hint */
+.shortcut {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  font-size: var(--cp-fs-kbd);
+  font-family: var(--cp-font-mono, monospace);
+  background: color-mix(in srgb, var(--cp-border) 35%, transparent);
+  border-radius: var(--cp-radius-sm);
+  color: var(--cp-muted);
+}
+
+.item.active .kbd {
+  background: color-mix(in srgb, var(--cp-accent-fg) 20%, transparent);
+  color: var(--cp-accent-fg);
+}
+
+/* Type indicator - shows item type */
+.typeIndicator {
+  font-size: var(--cp-fs-secondary);
+  color: var(--cp-muted);
+  flex-shrink: 0;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.item.active .typeIndicator {
+  color: color-mix(in srgb, var(--cp-accent-fg) 70%, transparent);
+}
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+  .item {
+    padding: 10px 12px;
+    min-height: 44px; /* Touch target */
+    touch-action: manipulation;
+  }
+
+  .icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  /* Hide type indicator on mobile to save space */
+  .typeIndicator {
+    display: none;
+  }
+
+  /* Hide shortcuts on mobile */
+  .shortcut {
+    display: none;
+  }
+}

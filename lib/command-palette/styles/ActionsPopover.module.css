@@ -1,0 +1,334 @@
+/**
+ * ActionsPopover Styles
+ *
+ * Styles for the inline actions popover.
+ * Positioned in the bottom-right corner of the global menu.
+ */
+
+/* =============================================================================
+   POPOVER WRAPPER
+   ============================================================================= */
+
+.popoverWrapper {
+  /* Default: inline positioning (fallback for no anchor) */
+  position: absolute;
+  bottom: 48px;
+  right: 12px;
+  z-index: 9999;
+  /* When using portal, position is set via inline styles (position: fixed, top, left) */
+}
+
+.popover {
+  width: 320px;
+  max-height: 400px;
+  background: var(--cp-bg);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-xl, 12px);
+  box-shadow:
+    0 10px 30px var(--cp-shadow),
+    0 0 0 1px color-mix(in srgb, var(--cp-border) 50%, transparent);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: popoverSlideIn 150ms ease-out;
+  /* Position popover above the anchor point */
+  transform: translateY(-100%);
+}
+
+@keyframes popoverSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% + 10px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-100%);
+  }
+}
+
+/* =============================================================================
+   SEARCH BAR
+   ============================================================================= */
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cp-border);
+}
+
+.searchIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--cp-muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--cp-fs-input);
+  color: var(--cp-fg);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--cp-muted);
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--cp-muted);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.closeButton:hover {
+  background: color-mix(in srgb, var(--cp-border) 50%, transparent);
+  color: var(--cp-fg);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
+}
+
+.closeIcon {
+  width: 14px;
+  height: 14px;
+}
+
+/* =============================================================================
+   ACTIONS LIST
+   ============================================================================= */
+
+.actionsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  scroll-behavior: smooth;
+  max-height: 280px;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--cp-border) transparent;
+}
+
+.actionsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.actionsList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.actionsList::-webkit-scrollbar-thumb {
+  background: var(--cp-border);
+  border-radius: 3px;
+}
+
+.actionsList::-webkit-scrollbar-thumb:hover {
+  background: var(--cp-muted);
+}
+
+.actionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.actionGroup:last-child {
+  margin-bottom: 0;
+}
+
+.categoryLabel {
+  padding: 6px 10px 2px;
+  font-size: var(--cp-fs-secondary);
+  font-weight: 500;
+  color: var(--cp-muted);
+}
+
+/* =============================================================================
+   ACTION ITEM
+   ============================================================================= */
+
+.actionItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: calc(var(--cp-radius-xl) - 6px);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--cp-fg);
+  transition: background-color 100ms ease;
+}
+
+.actionItem.active {
+  background: color-mix(in srgb, var(--cp-border) 50%, transparent);
+}
+
+.actionItem:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: -2px;
+}
+
+.actionItem.danger {
+  color: var(--cp-danger);
+}
+
+.actionItem.danger.active {
+  background: color-mix(in srgb, var(--cp-danger) 10%, transparent);
+}
+
+.actionIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--cp-muted);
+}
+
+.actionItem.danger .actionIcon {
+  color: var(--cp-danger);
+}
+
+.actionLabel {
+  flex: 1;
+  font-size: var(--cp-fs-text);
+  color: var(--cp-fg);
+}
+
+.actionItem.danger .actionLabel {
+  color: var(--cp-danger);
+}
+
+/* =============================================================================
+   SHORTCUT BADGES
+   ============================================================================= */
+
+.shortcut {
+  display: flex;
+  gap: 3px;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--cp-muted);
+  background: color-mix(in srgb, var(--cp-border) 35%, transparent);
+  border: 1px solid var(--cp-border);
+  border-radius: 3px;
+}
+
+/* =============================================================================
+   EMPTY STATE
+   ============================================================================= */
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  font-size: 13px;
+  color: var(--cp-muted);
+}
+
+/* =============================================================================
+   MOBILE STYLES
+   ============================================================================= */
+
+@media (max-width: 767px) {
+  .popoverWrapper {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: 9999;
+  }
+
+  .popover {
+    width: 100%;
+    max-height: 60vh;
+    border-radius: var(--cp-radius-xl, 12px) var(--cp-radius-xl, 12px) 0 0;
+    animation: popoverMobileSlideIn 200ms ease-out;
+    /* Reset transform for mobile (sheet slides from bottom) */
+    transform: none;
+  }
+
+  @keyframes popoverMobileSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .searchContainer {
+    padding: 12px 16px;
+  }
+
+  .actionsList {
+    padding: 8px;
+    max-height: none;
+  }
+
+  .actionItem {
+    padding: 12px;
+    min-height: 44px;
+  }
+
+  .actionIcon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .actionLabel {
+    font-size: 14px;
+  }
+
+  .closeButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .closeIcon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* =============================================================================
+   REDUCED MOTION
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}

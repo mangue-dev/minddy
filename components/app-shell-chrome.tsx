@@ -34,6 +34,7 @@ import {
   type PaletteItem,
 } from "@/components/header-search-pill";
 import { NewMenu } from "@/components/new-menu";
+import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
@@ -107,6 +108,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { unreadCount } = useNotifications();
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
 
+  // Command palette open state — shared by the header search pill and the
+  // global shortcuts (⌘K / ⌘P / F, handled inside <CommandPalette>).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
   const currentProjectId = projectIdFromPath(pathname);
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
   const isInbox = pathname.startsWith("/inbox");
@@ -178,6 +183,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         icon: ListTodo,
         keywords: [...createKw, ti("entity"), currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
+        metaText: currentProject.name,
         onSelect: () => openCreateIssue({ projectId: currentProject.id }),
       });
       createItems.push({
@@ -186,6 +192,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         icon: Target,
         keywords: [...createKw, currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
+        metaText: currentProject.name,
         onSelect: () => openCreateObjective({ projectId: currentProject.id }),
       });
     } else {
@@ -196,6 +203,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           icon: ListTodo,
           keywords: [...createKw, ti("entity"), p.name, p.key],
           meta: projectChip(p),
+          metaText: p.name,
           onSelect: () => openCreateIssue({ projectId: p.id }),
         });
       }
@@ -268,6 +276,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       for (const p of projects) {
         const base = `/projects/${p.id}`;
         const chip = projectChip(p);
+        const metaText = p.name;
         const kw = [p.name, p.key];
         pageItems.push(
           {
@@ -276,6 +285,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: LayoutGrid,
             keywords: kw,
             meta: chip,
+            metaText,
             onSelect: () => router.push(base),
           },
           {
@@ -284,6 +294,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: Target,
             keywords: kw,
             meta: chip,
+            metaText,
             onSelect: () => router.push(`${base}/objectives`),
           },
           {
@@ -292,6 +303,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: Filter,
             keywords: kw,
             meta: chip,
+            metaText,
             onSelect: () => router.push(`${base}/triage`),
           },
           {
@@ -300,6 +312,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: MessagesSquare,
             keywords: kw,
             meta: chip,
+            metaText,
             onSelect: () => router.push(`${base}/feedback`),
           },
           {
@@ -308,6 +321,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: Settings,
             keywords: kw,
             meta: chip,
+            metaText,
             onSelect: () => router.push(`${base}/settings`),
           },
         );
@@ -327,6 +341,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             label: i.title,
             keywords: [id, String(i.number)],
             meta: identifierBadge(id),
+            metaText: id,
+            entityType: "issue",
+            data: i,
             onSelect: () => router.push(`/projects/${currentProject.id}?issue=${i.id}`),
           };
         }),
@@ -518,7 +535,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             // and "Nouveau" to the navbar "+", so the header collapses to the
             // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
             <div className="hidden items-center gap-2 desktop:flex">
-              <HeaderSearchPill groups={paletteGroups} />
+              <HeaderSearchPill onOpen={() => setPaletteOpen(true)} />
               <NewMenu />
             </div>
           }
@@ -537,6 +554,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       {children}
+      {/* Command palette (⌘K / ⌘P / F, header search pill) — mêmes groupes que
+          la recherche du nav mobile, tickets enrichis d'actions (⌘;). */}
+      <CommandPalette
+        groups={paletteGroups}
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+      />
       {/* Objective side panel opened from the command palette — overlays the
           current page (Radix portals to body, so placement here is layout-safe). */}
       {currentProject && panelMounted && (

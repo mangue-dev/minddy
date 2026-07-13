@@ -1,0 +1,82 @@
+/* Theme bridge for the command palette (lib/command-palette).
+   Defines every --cp-* token from the app's mangue-ui tokens instead of using
+   the library's default theme.css — so light/dark follow the app automatically
+   and the palette looks native. Paired with command-palette.tsx. */
+
+:root {
+  /* === Surfaces === */
+  --cp-bg: var(--popover);
+  --cp-bg-secondary: var(--muted);
+  --cp-fg: var(--popover-foreground);
+  --cp-fg-secondary: var(--foreground);
+  --cp-border: var(--border);
+  --cp-border-light: var(--border-subtle, var(--border));
+  --cp-border-hover: var(--ring);
+  --cp-muted: var(--muted-foreground);
+  --cp-hover: var(--accent);
+  --cp-active: var(--accent);
+  --cp-shadow: rgb(0 0 0 / 0.18);
+
+  /* === Selection (same subtle accent as the cmdk palette rows) === */
+  --cp-accent: var(--accent);
+  --cp-accent-fg: var(--accent-foreground);
+  --cp-accent-strong: var(--primary);
+  --cp-accent-subtle: var(--accent);
+
+  /* === Semantic === */
+  --cp-danger: var(--destructive);
+  --cp-danger-subtle: color-mix(in srgb, var(--destructive) 12%, transparent);
+  --cp-success: var(--success, #16a34a);
+  --cp-warning: var(--warning, #f59e0b);
+
+  /* === Typography === */
+  --cp-font-sans: var(--font-sans);
+  --cp-font-mono: var(--font-mono);
+  --cp-fs-input: 0.95rem;
+  --cp-fs-text: 0.875rem;      /* text-sm, comme les rows cmdk actuelles */
+  --cp-fs-secondary: 0.8rem;
+  --cp-fs-kbd: 0.7rem;
+  --cp-fs-base: 1rem;
+  --cp-fs-sm: 0.875rem;
+  --cp-fs-xs: 0.75rem;
+
+  /* === Radii (mangue-ui scale) === */
+  --cp-radius-xl: var(--radius-xl, 1rem);
+  --cp-radius-lg: var(--radius-lg, 0.75rem);
+  --cp-radius-md: var(--radius-md, 0.5rem);
+  /* Pas var(--radius-sm) (12px chez mangue-ui) : sur des chips kbd de 20px ça
+     rend des cercles. 5px = carré arrondi. */
+  --cp-radius-sm: 0.3125rem;
+
+  /* === Spacing scale === */
+  --cp-space-1: 0.25rem;
+  --cp-space-1-5: 0.375rem;
+  --cp-space-2: 0.5rem;
+  --cp-space-3: 0.75rem;
+  --cp-space-4: 1rem;
+  --cp-space-5: 1.25rem;
+  --cp-space-6: 1.5rem;
+  --cp-space-8: 2rem;
+
+  /* === Per-entity icon tints (data-item-type = filterCategory ici).
+     Neutres par défaut ; à ajuster pendant le test si on veut des teintes. === */
+  --cp-icon-issue: var(--muted-foreground);
+  --cp-icon-theme: var(--muted-foreground);
+  --cp-icon-create: var(--muted-foreground);
+  --cp-icon-goto: var(--muted-foreground);
+  --cp-icon-projects: var(--muted-foreground);
+  --cp-icon-pages: var(--muted-foreground);
+  --cp-icon-issues: var(--muted-foreground);
+  --cp-icon-objectives: var(--muted-foreground);
+  --cp-icon-account: var(--muted-foreground);
+}
+
+/* Dark : l'accent mangue-ui (var(--accent)) est quasi invisible sur --popover —
+   l'option sélectionnée doit sauter aux yeux. On force un mix plus contrasté
+   (surlignage des rows + hover/active du popover d'actions). */
+.dark {
+  --cp-accent: color-mix(in oklab, var(--foreground) 17%, var(--popover));
+  --cp-accent-fg: var(--foreground);
+  --cp-hover: color-mix(in oklab, var(--foreground) 12%, var(--popover));
+  --cp-active: color-mix(in oklab, var(--foreground) 12%, var(--popover));
+}

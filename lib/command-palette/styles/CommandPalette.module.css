@@ -1,0 +1,175 @@
+/**
+ * CommandPalette Styles
+ *
+ * Styles for the main command palette shell.
+ * Uses CSS variables from vars.css that handle light/dark mode automatically.
+ */
+
+/* =============================================================================
+   OVERLAY
+   ============================================================================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  backdrop-filter: blur(0.5px);
+  animation: overlayFadeIn 150ms ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* =============================================================================
+   PALETTE CONTAINER
+   ============================================================================= */
+
+.palette {
+  position: relative; /* Required for success overlay and popover positioning */
+  width: 100%;
+  max-width: 740px;
+  min-height: 120px; /* Minimum height for success indicator */
+  max-height: 70vh;
+  background: var(--cp-bg);
+  color: var(--cp-fg);
+  border-radius: var(--cp-radius-xl);
+  border: 1px solid var(--cp-border);
+  box-shadow:
+    0 25px 50px -12px var(--cp-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: paletteSlideIn 200ms ease-out;
+  /* Animate height changes when content changes */
+  transition: height 200ms ease-out;
+}
+
+/* Compact mode: reduced height when collapsed */
+.paletteCompact {
+  min-height: auto;
+}
+
+/* Success state: ensure minimum height for success indicator */
+.paletteSuccess {
+  min-height: 120px;
+}
+
+@keyframes paletteSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* =============================================================================
+   MOBILE STYLES
+   ============================================================================= */
+
+@media (max-width: 767px) {
+  .overlay {
+    padding-top: 0;
+    align-items: flex-end;
+  }
+
+  .palette {
+    max-width: 100%;
+    max-height: 90vh;
+    height: 90vh;
+    height: 90svh;
+    border-radius: var(--cp-radius-xl) var(--cp-radius-xl) 0 0;
+    animation: paletteMobileSlideIn 300ms ease-out;
+  }
+
+  @keyframes paletteMobileSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* =============================================================================
+   SUCCESS INDICATOR
+   ============================================================================= */
+
+.successOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cp-bg);
+  z-index: 10;
+  border-radius: inherit;
+  animation: successFadeIn 150ms ease-out;
+}
+
+.successIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cp-success) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cp-success) 25%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: successCheck 300ms ease-out;
+}
+
+.successCheckIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--cp-success);
+}
+
+@keyframes successFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes successCheck {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =============================================================================
+   REDUCED MOTION
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .palette,
+  .successOverlay,
+  .successIcon,
+  .successCheckIcon {
+    animation: none;
+  }
+}

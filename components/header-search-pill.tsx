@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { Command } from "cmdk";
+import { type ComponentType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Popover, PopoverAnchor, PopoverContent, Kbd } from "mangue-ui";
+import { Kbd } from "mangue-ui";
 import { Search } from "lucide-react";
 
 /**
  * A single command-palette row. Superset of mangue-ui's `CommandMenuItem`: adds
  * a `meta` slot rendered right-aligned (e.g. an issue identifier badge or a
- * project chip), mirroring how AutoKap tags each result with its project.
+ * project chip), mirroring how AutoKap tags each result with its project. This
+ * is the shared "command list" contract consumed by both the mobile nav search
+ * (mangue-ui MobileNav) and the desktop command palette (command-palette.tsx).
  */
 export interface PaletteItem {
   key: string;
@@ -19,6 +20,14 @@ export interface PaletteItem {
   keywords?: string[];
   /** Right-aligned trailing content — identifier badge or project chip. */
   meta?: ReactNode;
+  /** Plain-text version of `meta` (identifier, project name) — the desktop
+   *  command palette renders it as a dim context label next to the title. */
+  metaText?: string;
+  /** Entity type for the palette's contextual-action routing (e.g. "issue"). */
+  entityType?: string;
+  /** Raw entity (e.g. the Issue) — lets the palette derive status icons and wire
+   *  mutations (⌘; actions) without re-querying. Ignored by the mobile search. */
+  data?: unknown;
   onSelect?: () => void;
 }
 
@@ -29,124 +38,24 @@ export interface PaletteGroup {
 }
 
 /**
- * Inline search pill (recreated from AutoKap): a cmdk command anchored to a
- * compact pill, opening a results popover. Focused by pressing F or ⌘K.
+ * Header search affordance: a pill-shaped button that opens the command palette
+ * (command-palette.tsx). The palette owns the global shortcuts (⌘K / ⌘P / F);
+ * this pill is just the pointer entry point in the desktop header.
  */
-export function HeaderSearchPill({ groups }: { groups: PaletteGroup[] }) {
+export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations("Nav");
-  const tc = useTranslations("Common");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const anchorRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      const typing =
-        el &&
-        (el.tagName === "INPUT" ||
-          el.tagName === "TEXTAREA" ||
-          el.isContentEditable);
-      const isCmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
-      const isF = !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === "f";
-      if (isCmdK || (isF && !typing)) {
-        e.preventDefault();
-        inputRef.current?.focus();
-        setOpen(true);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   return (
-    <Command shouldFilter loop label={tc("search")}>
-      <Popover
-        open={open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          if (!o) setQuery("");
-        }}
-      >
-        <PopoverAnchor asChild>
-          <div
-            ref={anchorRef}
-            role="search"
-            onClick={() => {
-              inputRef.current?.focus();
-              setOpen(true);
-            }}
-            className="flex h-8 cursor-text items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[0.8rem] font-medium shadow-xs transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30"
-          >
-            <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={2} />
-            <Command.Input
-              ref={inputRef}
-              value={query}
-              onValueChange={(v) => {
-                setQuery(v);
-                if (!open) setOpen(true);
-              }}
-              onFocus={() => setOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  setOpen(false);
-                  setQuery("");
-                  inputRef.current?.blur();
-                }
-              }}
-              placeholder={t("searchPlaceholder")}
-              className="hidden w-24 bg-transparent outline-none transition-[width] duration-200 ease-out placeholder:text-muted-foreground focus:w-56 sm:inline-block"
-            />
-            <Kbd className="ml-1 hidden opacity-60 sm:inline-flex">F</Kbd>
-          </div>
-        </PopoverAnchor>
-        <PopoverContent
-          align="end"
-          sideOffset={8}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => {
-            if (anchorRef.current?.contains(e.target as Node)) e.preventDefault();
-          }}
-          className="w-[440px] overflow-hidden rounded-xl p-0 shadow-lg"
-        >
-          <Command.List className="max-h-[360px] overflow-y-auto p-1">
-            <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-              {t("noResults")}
-            </Command.Empty>
-            {groups.map((group) => (
-              <Command.Group
-                key={group.key ?? group.heading}
-                heading={group.heading}
-                className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
-              >
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Command.Item
-                      key={item.key}
-                      value={`${item.key} ${item.label} ${(item.keywords ?? []).join(" ")}`}
-                      onSelect={() => {
-                        setOpen(false);
-                        setQuery("");
-                        item.onSelect?.();
-                      }}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm data-[selected=true]:bg-accent"
-                    >
-                      {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {item.meta && (
-                        <span className="ml-2 flex shrink-0 items-center">{item.meta}</span>
-                      )}
-                    </Command.Item>
-                  );
-                })}
-              </Command.Group>
-            ))}
-          </Command.List>
-        </PopoverContent>
-      </Popover>
-    </Command>
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={t("searchPlaceholder")}
+      className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[0.8rem] font-medium text-muted-foreground shadow-xs transition-[border-color,box-shadow] hover:border-ring/60 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+    >
+      <Search className="size-4 shrink-0" strokeWidth={2} />
+      <span className="hidden text-left sm:inline-block">
+        {t("searchPlaceholder")}
+      </span>
+      <Kbd className="ml-1 hidden opacity-60 sm:inline-flex">⌘K</Kbd>
+    </button>
   );
 }

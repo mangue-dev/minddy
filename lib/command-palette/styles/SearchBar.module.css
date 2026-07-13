@@ -1,0 +1,129 @@
+/**
+ * SearchBar styles for Global Menu V2
+ */
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px; /* Fixed height to prevent expansion when tabHint appears */
+  padding: 0 18px;
+  border-bottom: 1px solid var(--cp-border);
+  background: var(--cp-bg);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--cp-muted);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  font-size: var(--cp-fs-input);
+  font-family: inherit;
+  line-height: 24px;
+  color: var(--cp-fg);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--cp-muted);
+  opacity: 0.7;
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--cp-radius-sm);
+  background: color-mix(in srgb, var(--cp-border) 30%, transparent);
+  color: var(--cp-muted);
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+  flex-shrink: 0;
+}
+
+.clearButton:hover {
+  background: color-mix(in srgb, var(--cp-border) 50%, transparent);
+  color: var(--cp-fg);
+}
+
+.clearButton:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
+}
+
+.clearIcon {
+  width: 14px;
+  height: 14px;
+}
+
+/* =============================================================================
+   TAB HINT - "Tab to ask AI" indicator (no background, inline text)
+   ============================================================================= */
+
+.tabHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tabKbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--cp-muted);
+  background: color-mix(in srgb, var(--cp-border) 50%, transparent);
+  border: 1px solid var(--cp-border);
+  border-radius: 4px;
+}
+
+.tabLabel {
+  font-size: var(--cp-fs-secondary);
+  font-weight: 400;
+  color: var(--cp-muted);
+  white-space: nowrap;
+}
+
+/* =============================================================================
+   HISTORY BADGE - Shown when navigating query history
+   ============================================================================= */
+
+.historyBadge {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: var(--cp-radius-sm);
+  background: color-mix(in srgb, var(--cp-muted) 15%, transparent);
+  font-size: var(--cp-fs-secondary);
+  font-weight: 500;
+  color: var(--cp-muted);
+  white-space: nowrap;
+}

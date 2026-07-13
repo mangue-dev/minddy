@@ -1,0 +1,579 @@
+/* Inline Action Input Container */
+.inlineContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  animation: fieldBlurIn 180ms ease-out;
+  position: relative;
+}
+
+/* Blur-in animation for fields on appear */
+@keyframes fieldBlurIn {
+  0% {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* Search bar in inline mode - matches GlobalMenu.module.css .searchBar */
+.inlineSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--cp-bg);
+  border-bottom: 1px solid var(--cp-border);
+  position: relative;
+}
+
+/* Back button - subtle like GlobalMenu clear button */
+.inlineBackButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--cp-radius-sm);
+  background: transparent;
+  color: var(--cp-muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+  align-self: flex-start;
+  margin-top: 0.35rem;
+}
+
+.inlineBackButton:hover {
+  background-color: var(--cp-hover);
+  color: var(--cp-fg);
+}
+
+.inlineBackButton:active {
+  background-color: var(--cp-active);
+}
+
+.inlineBackIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* Fields row - horizontal layout with wrapping */
+.inlineFieldsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Action icon and title - matches GlobalMenu result styles */
+.inlineActionIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--cp-radius-md);
+  background: color-mix(in srgb, var(--cp-border) 35%, transparent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--cp-fg);
+}
+
+.inlineActionIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.inlineActionTitle {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--cp-fg);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inlineSeparator {
+  color: var(--cp-muted);
+  flex-shrink: 0;
+}
+
+/* Individual field wrapper */
+.inlineField {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Model selector field wrapper - same as inlineField but without position:relative */
+.inlineModelField {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.inlineFieldActive {
+  /* Active state handled by input styles */
+}
+
+.inlineFieldLoading {
+  opacity: 0.7;
+}
+
+/* Inline select button - matches GlobalMenu input style */
+.inlineSelect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-space-2);
+  padding: 0.5rem 0.75rem;
+  padding-inline-end: var(--cp-space-8);
+  border-radius: var(--cp-radius-lg);
+  border: 1px solid var(--cp-border);
+  background: var(--cp-bg);
+  color: var(--cp-fg);
+  font-family: var(--cp-font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+  max-width: 200px;
+  position: relative;
+  transition: border-color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.inlineSelect:hover {
+  border-color: color-mix(in srgb, var(--cp-accent) 50%, var(--cp-border));
+  background: color-mix(in srgb, var(--cp-accent) 4%, transparent);
+}
+
+.inlineSelect:focus {
+  outline: none;
+  border-color: var(--cp-accent);
+  background: color-mix(in srgb, var(--cp-accent) 8%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent) 15%, transparent);
+}
+
+.inlineSelect:focus-visible {
+  outline: none;
+  border-color: var(--cp-accent);
+  background: color-mix(in srgb, var(--cp-accent) 8%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent) 15%, transparent);
+}
+
+.inlineSelect:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.inlineSelect:disabled:hover {
+  color: var(--cp-fg);
+  border-color: var(--cp-border);
+  background: var(--cp-bg);
+}
+
+.inlineSelectPlaceholder {
+  color: var(--cp-muted);
+  font-weight: 400;
+}
+
+.inlineSelectValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Color swatch for color picker options */
+.inlineColorSwatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--cp-radius-sm);
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--cp-fg) 15%, transparent);
+}
+
+.inlineSelectIcon {
+  position: absolute;
+  right: 0.75rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: inherit;
+  pointer-events: none;
+  transition: transform 150ms ease-out;
+}
+
+.inlineSelectIconActive {
+  transform: rotate(180deg);
+}
+
+.inlineSelectIconLoading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Inline select input (when dropdown is open) - matches GlobalMenu active input */
+.inlineSelectInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  padding-inline-end: var(--cp-space-8);
+  border: 1px solid var(--cp-accent);
+  border-radius: var(--cp-radius-lg);
+  background: color-mix(in srgb, var(--cp-accent) 8%, transparent);
+  color: var(--cp-fg);
+  font-family: var(--cp-font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  min-width: 140px;
+  max-width: 200px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent) 15%, transparent);
+  transition: border-color 120ms ease-out, background 120ms ease-out;
+}
+
+.inlineSelectInput:focus {
+  outline: none;
+}
+
+.inlineSelectInput::placeholder {
+  color: var(--cp-muted);
+  font-weight: 400;
+}
+
+/* Position dropdown arrow inside input */
+.inlineFieldActive .inlineSelectIcon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  pointer-events: none;
+}
+
+/* Hidden mirror element for width measurement */
+.inlineTextMirror {
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  font-family: var(--cp-font-sans);
+  font-size: var(--cp-fs-base);
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 0.5rem 0.75rem;
+  pointer-events: none;
+}
+
+/* Inline text input (textarea) - matches GlobalMenu input style */
+.inlineTextInput {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-lg);
+  background: var(--cp-bg);
+  color: var(--cp-fg);
+  font-family: var(--cp-font-sans);
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.4;
+  min-width: 150px;
+  max-width: 500px;
+  resize: none;
+  overflow: hidden;
+  transition: border-color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out;
+  /* Prevent default textarea behavior */
+  field-sizing: content;
+}
+
+.inlineTextInput:hover {
+  border-color: color-mix(in srgb, var(--cp-accent) 50%, var(--cp-border));
+  background: color-mix(in srgb, var(--cp-accent) 4%, transparent);
+}
+
+.inlineTextInput:focus {
+  outline: none;
+  border-color: var(--cp-accent);
+  background: color-mix(in srgb, var(--cp-accent) 8%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent) 15%, transparent);
+}
+
+.inlineTextInput::placeholder {
+  color: var(--cp-muted);
+}
+
+.inlineTextInput:disabled {
+  background: color-mix(in srgb, var(--cp-border) 20%, var(--cp-bg));
+  cursor: not-allowed;
+  color: var(--cp-muted);
+}
+
+/* Options dropdown - matches GlobalMenu results container */
+.inlineOptionsDropdown {
+  max-height: 320px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--cp-border);
+  padding: 8px;
+  background: var(--cp-bg);
+  animation: optionsBlurIn 150ms ease-out;
+  /* Smooth scroll with padding for better UX when navigating options */
+  scroll-behavior: smooth;
+  scroll-padding-block: 8px;
+  /* Prevent scroll chaining to parent */
+  overscroll-behavior: contain;
+}
+
+/* Blur-in animation for options dropdown */
+@keyframes optionsBlurIn {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.inlineOptionsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Option items - matches GlobalMenu.module.css resultRow + active */
+.inlineOption {
+  display: flex;
+  align-items: center;
+  gap: var(--cp-space-3);
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--cp-radius-lg);
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: left;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+
+.inlineOptionActive {
+  background: var(--cp-accent);
+  color: var(--cp-accent-fg);
+}
+
+.inlineOptionActive .inlineColorSwatch {
+  border-color: color-mix(in srgb, var(--cp-accent-fg) 30%, transparent);
+}
+
+.inlineOptionDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inlineOptionDisabled .inlineOptionDescription {
+  color: var(--cp-warning);
+}
+
+/* Option icon (e.g., category icon for models) */
+.inlineOptionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--cp-muted);
+}
+
+.inlineOptionIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.inlineOptionActive .inlineOptionIcon {
+  color: inherit;
+}
+
+/* Option label - takes remaining space */
+.inlineOptionLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Option description (e.g., multiplier like "×2.5") */
+.inlineOptionDescription {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: var(--cp-space-2);
+  font-size: var(--cp-fs-xs);
+  color: var(--cp-muted);
+  font-weight: 500;
+}
+
+.inlineOptionActive .inlineOptionDescription {
+  color: color-mix(in srgb, var(--cp-accent-fg) 80%, transparent);
+}
+
+/* Select button icon prefix (for selected option icon) */
+.inlineSelectIconPrefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--cp-muted);
+}
+
+.inlineSelectIconPrefix svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Select button description */
+.inlineSelectDescription {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: var(--cp-space-2);
+  font-size: var(--cp-fs-xs);
+  color: var(--cp-muted);
+  font-weight: 500;
+}
+
+/* Empty options state - matches Select.module.css noResults */
+.inlineEmptyOptions {
+  padding: var(--cp-space-3);
+  text-align: center;
+  color: var(--cp-muted);
+  font-size: var(--cp-fs-sm);
+}
+
+/* Footer hints - matches GlobalMenu.module.css footer */
+.inlineFooter {
+  border-top: 1px solid var(--cp-border);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: color-mix(in srgb, var(--cp-muted) 85%, transparent);
+  font-size: 0.75rem;
+}
+
+.inlineFooterHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inlineFooterHint kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--cp-font-mono);
+  font-size: 0.68rem;
+  padding: 3px 6px;
+  border-radius: var(--cp-radius-sm);
+  border: 1px solid var(--cp-border);
+  background: color-mix(in srgb, var(--cp-border) 40%, transparent);
+}
+
+.inlineShiftIcon {
+  width: 0.65rem;
+  height: 0.65rem;
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  /* Hide keyboard hints footer on mobile */
+  .inlineFooter {
+    display: none;
+  }
+
+  /* Prevent iOS zoom on input focus - requires minimum 16px font-size */
+  /* Using both class and element selectors for higher specificity */
+  .inlineSelect,
+  .inlineSelectInput,
+  .inlineTextInput,
+  .inlineField input,
+  .inlineField textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .inlineSearchBar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .inlineFieldsRow {
+    gap: 8px;
+  }
+
+  .inlineActionTitle {
+    font-size: var(--cp-fs-sm);
+  }
+
+  .inlineSelect,
+  .inlineSelectInput,
+  .inlineField input {
+    max-width: 150px;
+    min-width: 100px;
+    /* Keep 16px to prevent iOS zoom on focus */
+    font-size: 16px;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .inlineTextInput,
+  .inlineField textarea {
+    max-width: 300px;
+    min-width: 100px;
+    /* Keep 16px to prevent iOS zoom on focus */
+    font-size: 16px;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .inlineTextMirror {
+    font-size: var(--cp-fs-sm);
+    padding: 0.4rem 0.6rem;
+  }
+
+  .inlineOption {
+    padding: 8px 10px;
+    font-size: var(--cp-fs-sm);
+  }
+}
+
+/* Reduced motion - disable blur animations and smooth scroll */
+@media (prefers-reduced-motion: reduce) {
+  .inlineContainer,
+  .inlineOptionsDropdown {
+    animation: none !important;
+  }
+
+  .inlineOptionsDropdown {
+    scroll-behavior: auto;
+  }
+}

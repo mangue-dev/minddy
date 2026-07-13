@@ -1,0 +1,160 @@
+/**
+ * Command Palette — default theme
+ *
+ * Every token is prefixed with --cp- so nothing collides with the host app.
+ * Override any of these variables in your own CSS to re-theme the palette:
+ *
+ *   :root { --cp-accent: #0085ff; --cp-accent-fg: #ffffff; }
+ *
+ * Dark mode activates automatically via prefers-color-scheme, or explicitly
+ * when an ancestor (e.g. <html>) carries data-theme="dark" / class="dark".
+ */
+
+:root {
+  /* === Surfaces === */
+  --cp-bg: #ffffff;
+  --cp-bg-secondary: #f5f5f5;
+  --cp-fg: #111111;
+  --cp-fg-secondary: #333333;
+  --cp-border: #e5e7eb;
+  --cp-border-light: #f3f4f6;
+  --cp-border-hover: #9ca3af;
+  --cp-muted: #6b7280;
+  --cp-hover: #f3f4f6;
+  --cp-active: #ebebeb;
+  --cp-shadow: rgba(0, 0, 0, 0.1);
+
+  /* === Accent (selection) — sober monochrome by default === */
+  --cp-accent: #222222;
+  --cp-accent-fg: #ffffff;
+  --cp-accent-strong: #0655ff;
+  --cp-accent-subtle: #f0f0f0;
+
+  /* === Semantic === */
+  --cp-danger: #fc2d2d;
+  --cp-danger-subtle: #fff0f0;
+  --cp-success: #16a34a;
+  --cp-warning: #f59e0b;
+
+  /* === Typography === */
+  --cp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --cp-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --cp-fs-input: 1.05rem;     /* Search input */
+  --cp-fs-text: 0.95rem;      /* Item titles, labels */
+  --cp-fs-secondary: 0.85rem; /* Type indicators, hints */
+  --cp-fs-kbd: 0.7rem;        /* Keyboard shortcuts */
+  --cp-fs-base: 1rem;
+  --cp-fs-sm: 0.875rem;
+  --cp-fs-xs: 0.75rem;
+
+  /* === Radii === */
+  --cp-radius-xl: 1.25rem;    /* Palette container */
+  --cp-radius-lg: 1rem;
+  --cp-radius-md: 0.75rem;    /* Items, popover */
+  --cp-radius-sm: 0.375rem;   /* Kbd chips */
+
+  /* === Spacing scale === */
+  --cp-space-1: 0.25rem;
+  --cp-space-1-5: 0.375rem;
+  --cp-space-2: 0.5rem;
+  --cp-space-3: 0.75rem;
+  --cp-space-4: 1rem;
+  --cp-space-5: 1.25rem;
+  --cp-space-6: 1.5rem;
+  --cp-space-8: 2rem;
+
+  /* === Per-entity icon tints (data-item-type) === */
+  --cp-icon-project: #6a9fe8;      /* Soft blue */
+  --cp-icon-task: #9090e8;         /* Soft purple */
+  --cp-icon-subtask: #a0a0e8;      /* Soft lavender */
+  --cp-icon-note: #e8b54d;         /* Soft amber */
+  --cp-icon-event: #5cc8c8;        /* Soft cyan */
+  --cp-icon-assignment: #e87aa8;   /* Soft pink */
+  --cp-icon-friend: #5cc86a;       /* Soft green */
+  --cp-icon-action: #d4d45c;       /* Soft yellow */
+  --cp-icon-conversation: #6bb8ae; /* Soft teal */
+  --cp-icon-setting: #8a8a8a;      /* Soft gray */
+  --cp-icon-shortcut: #d88050;     /* Soft orange */
+  --cp-icon-navigation: #7a99e8;   /* Soft indigo */
+}
+
+/* =============================================================================
+   DARK THEME
+   ============================================================================= */
+
+[data-theme="dark"],
+.dark {
+  --cp-bg: #121214;
+  --cp-bg-secondary: #1a1a1e;
+  --cp-fg: #e8e8eb;
+  --cp-fg-secondary: #d1d5db;
+  --cp-border: #2a2a2e;
+  --cp-border-light: #222226;
+  --cp-border-hover: #3a3a40;
+  --cp-muted: #9ca3af;
+  --cp-hover: #252529;
+  --cp-active: #1a1a1a;
+  --cp-shadow: rgba(0, 0, 0, 0.5);
+
+  --cp-accent: #f0f0f3;
+  --cp-accent-fg: #121214;
+  --cp-accent-strong: #93c5fd;
+  --cp-accent-subtle: rgba(255, 255, 255, 0.1);
+
+  --cp-danger: #f87171;
+  --cp-danger-subtle: rgba(220, 38, 38, 0.2);
+  --cp-success: #22c55e;
+  --cp-warning: #fbbf24;
+
+  --cp-icon-project: #7cb3f7;
+  --cp-icon-task: #a5a5ff;
+  --cp-icon-subtask: #b8b8ff;
+  --cp-icon-note: #ffcc66;
+  --cp-icon-event: #7dd9d9;
+  --cp-icon-assignment: #ff99c2;
+  --cp-icon-friend: #7dd98b;
+  --cp-icon-action: #e6e67a;
+  --cp-icon-conversation: #8ecfc7;
+  --cp-icon-setting: #a3a3a3;
+  --cp-icon-shortcut: #f0a070;
+  --cp-icon-navigation: #99b3ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(.light) {
+    --cp-bg: #121214;
+    --cp-bg-secondary: #1a1a1e;
+    --cp-fg: #e8e8eb;
+    --cp-fg-secondary: #d1d5db;
+    --cp-border: #2a2a2e;
+    --cp-border-light: #222226;
+    --cp-border-hover: #3a3a40;
+    --cp-muted: #9ca3af;
+    --cp-hover: #252529;
+    --cp-active: #1a1a1a;
+    --cp-shadow: rgba(0, 0, 0, 0.5);
+
+    --cp-accent: #f0f0f3;
+    --cp-accent-fg: #121214;
+    --cp-accent-strong: #93c5fd;
+    --cp-accent-subtle: rgba(255, 255, 255, 0.1);
+
+    --cp-danger: #f87171;
+    --cp-danger-subtle: rgba(220, 38, 38, 0.2);
+    --cp-success: #22c55e;
+    --cp-warning: #fbbf24;
+
+    --cp-icon-project: #7cb3f7;
+    --cp-icon-task: #a5a5ff;
+    --cp-icon-subtask: #b8b8ff;
+    --cp-icon-note: #ffcc66;
+    --cp-icon-event: #7dd9d9;
+    --cp-icon-assignment: #ff99c2;
+    --cp-icon-friend: #7dd98b;
+    --cp-icon-action: #e6e67a;
+    --cp-icon-conversation: #8ecfc7;
+    --cp-icon-setting: #a3a3a3;
+    --cp-icon-shortcut: #f0a070;
+    --cp-icon-navigation: #99b3ff;
+  }
+}
