@@ -9,7 +9,7 @@ import { mergePosts } from "@/lib/server/feedback/merge";
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
 /** POST { canonical_id } — fusion manuelle 1-clic : CE post devient le doublon
-    du canonique (votes unis par identité, facettes transférées, redirect). */
+    du canonique (votes unis par identité, redirect). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);

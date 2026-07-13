@@ -89,7 +89,6 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
           basePath={base}
           projectName={ctx.project.name}
           post={detail.post}
-          facets={detail.facets}
           mergedFromTitles={detail.mergedFromTitles}
           identity={identity}
         />

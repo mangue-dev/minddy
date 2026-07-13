@@ -50,16 +50,6 @@ export function sortFeedbackResolvedLast<T>(
 }
 
 export type FeedbackPostSource = "board" | "api" | "internal";
-export type FeedbackFacetSource = "ai" | "user" | "team";
-
-/** Facette telle que rendue sur le board public (anonymisée). */
-export interface PublicFacet {
-  id: string;
-  text: string;
-  voteCount: number;
-  votedByMe: boolean;
-  isMine: boolean;
-}
 
 /** Post tel que rendu sur le board public (anonymisé). */
 export interface PublicPost {
@@ -70,9 +60,6 @@ export interface PublicPost {
   /** false = retour privé : remonté à l'équipe mais absent du board public. */
   isPublic: boolean;
   voteCount: number;
-  facetCount: number;
-  /** Facettes votables affichées en pills (plafonnées côté serveur). */
-  facets: PublicFacet[];
   createdAt: string;
   authorPseudonym: string | null;
   isMine: boolean;

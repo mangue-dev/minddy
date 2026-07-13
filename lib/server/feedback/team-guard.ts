@@ -49,19 +49,3 @@ export async function getProjectFeedbackPost(
     .maybeSingle();
   return (data as FeedbackPostRow | null) ?? null;
 }
-
-/** Charge une facette et vérifie sa chaîne facette → post → projet. */
-export async function getProjectFeedbackFacet(
-  projectId: string,
-  facetId: string
-): Promise<{ facetId: string; postId: string } | null> {
-  const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_facets")
-    .select("id, post_id, feedback_posts!post_id!inner (project_id)")
-    .eq("id", facetId)
-    .eq("feedback_posts.project_id", projectId)
-    .maybeSingle();
-  if (!data) return null;
-  return { facetId: data.id as string, postId: data.post_id as string };
-}

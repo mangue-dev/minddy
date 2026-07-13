@@ -140,7 +140,7 @@ ${
 function apiPromptFr(input: IntegrationPromptInput, placement: string): string {
   return `# Intégrer le feedback minddy dans cette application (API serveur-à-serveur)
 
-Objectif : collecter le feedback de nos utilisateurs dans l'app et le déposer dans minddy (projet « ${input.projectName} »), au nom de l'utilisateur. minddy déduplique et structure les retours automatiquement (posts votables + facettes).
+Objectif : collecter le feedback de nos utilisateurs dans l'app et le déposer dans minddy (projet « ${input.projectName} »), au nom de l'utilisateur. minddy déduplique les retours automatiquement (posts votables).
 
 ## Où le brancher
 
@@ -184,7 +184,7 @@ ${placement || "À l'endroit le plus naturel (bouton « Feedback » + petite mod
 function apiPromptEn(input: IntegrationPromptInput, placement: string): string {
   return `# Integrate minddy feedback into this application (server-to-server API)
 
-Goal: collect our users' feedback inside the app and submit it to minddy (project "${input.projectName}") on the user's behalf. minddy deduplicates and structures feedback automatically (votable posts + facets).
+Goal: collect our users' feedback inside the app and submit it to minddy (project "${input.projectName}") on the user's behalf. minddy deduplicates feedback automatically (votable posts).
 
 ## Where to wire it
 

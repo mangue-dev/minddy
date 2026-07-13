@@ -55,7 +55,7 @@ export async function createFeedbackPost(input: {
   body?: string | null;
   source: FeedbackPostSource;
   /** Identité de l'auteur (feedback_users.id). Null uniquement pour les posts
-      créés par l'équipe elle-même (conversion facette→post sans auteur). */
+      créés par l'équipe elle-même sans auteur rattaché. */
   authorId: string | null;
   /** Membre qui a saisi le feedback (canal interne uniquement). */
   createdByMember?: string | null;
@@ -95,8 +95,7 @@ export async function createFeedbackPost(input: {
   const post = data as FeedbackPostRow;
   if (!input.authorId) return { ok: true, post };
 
-  // Soumettre = voter : l'auteur soutient évidemment son propre besoin
-  // (et l'invariant voteurs-facette ⊆ voteurs-post en découle).
+  // Soumettre = voter : l'auteur soutient évidemment son propre besoin.
   await service
     .from("feedback_votes")
     .upsert(

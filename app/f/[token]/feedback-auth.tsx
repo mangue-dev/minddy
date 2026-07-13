@@ -20,7 +20,7 @@ import { requestOtpAction, verifyOtpAction } from "./actions";
  * Porte d'identité du board public (MIN-37) : vérification email par code OTP
  * en deux étapes. Jamais d'anonyme — mais les contributions restent
  * pseudonymes côté public. Après vérification, onAuthed() rejoue l'action que
- * l'utilisateur avait engagée (vote, post, facette).
+ * l'utilisateur avait engagée (vote, post).
  */
 export function FeedbackAuthDialog({
   token,

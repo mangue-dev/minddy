@@ -30,25 +30,6 @@ export async function mergePosts(params: {
   return { ok: true, eventId: data as string };
 }
 
-export async function mergeFacets(params: {
-  dupId: string;
-  canonicalId: string;
-  performedBy: "ai" | "team";
-  actorId?: string | null;
-  confidence?: number | null;
-}): Promise<MergeResult> {
-  const service = getServiceClient();
-  const { data, error } = await service.rpc("merge_feedback_facets", {
-    p_dup: params.dupId,
-    p_canonical: params.canonicalId,
-    p_performed_by: params.performedBy,
-    p_actor: params.actorId ?? null,
-    p_confidence: params.confidence ?? null,
-  });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, eventId: data as string };
-}
-
 export async function undoMerge(params: {
   eventId: string;
   actorId?: string | null;

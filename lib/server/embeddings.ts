@@ -116,30 +116,3 @@ export async function matchFeedbackPosts(params: {
   }
   return (data ?? []) as MatchedPost[];
 }
-
-export interface MatchedFacet {
-  id: string;
-  facet_text: string;
-  vote_count: number;
-  similarity: number;
-}
-
-export async function matchFeedbackFacets(params: {
-  postId: string;
-  embedding: number[];
-  exclude?: string | null;
-  limit?: number;
-}): Promise<MatchedFacet[]> {
-  const service = getServiceClient();
-  const { data, error } = await service.rpc("match_feedback_facets", {
-    p_post_id: params.postId,
-    p_embedding: toVectorLiteral(params.embedding),
-    p_exclude: params.exclude ?? null,
-    p_limit: params.limit ?? 5,
-  });
-  if (error) {
-    console.error("[embeddings] match_feedback_facets failed:", error.message);
-    return [];
-  }
-  return (data ?? []) as MatchedFacet[];
-}

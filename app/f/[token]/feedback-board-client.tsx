@@ -36,18 +36,16 @@ import { FeedbackAuthDialog } from "./feedback-auth";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
   FEEDBACK_TO_ISSUE_STATUS,
-  FacetCard,
   FeedbackStatusBadge,
   VoteButton,
 } from "./feedback-bits";
 
 /**
  * Liste du board public (MIN-37) — structure type UserJot : barre de filtres
- * par statut + tri, lignes auteur/titre/extrait avec vote en pill et carrousel
- * de facettes votables directement depuis la liste, sidebar « Partager un
- * retour » (composeur en dialog avec suggestion live « existe peut-être
- * déjà »). Toute action nécessitant une identité passe par la porte OTP puis
- * se rejoue automatiquement.
+ * par statut + tri, lignes auteur/titre/extrait avec vote en pill, sidebar
+ * « Partager un retour » (composeur en dialog avec suggestion live « existe
+ * peut-être déjà »). Toute action nécessitant une identité passe par la porte
+ * OTP puis se rejoue automatiquement.
  */
 
 const SIMILAR_DEBOUNCE_MS = 1000;
@@ -284,22 +282,11 @@ function PostRow({
           </Link>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <FeedbackStatusBadge status={post.status} />
-            {post.facetCount > 0 && (
-              <span>{t("facetCount", { count: post.facetCount })}</span>
-            )}
             <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
           </div>
         </div>
         <VoteButton count={count} voted={voted} onToggle={toggle} />
       </div>
-
-      {post.facets.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {post.facets.map((facet) => (
-            <FacetCard key={facet.id} token={token} facet={facet} onNeedAuth={onNeedAuth} />
-          ))}
-        </div>
-      )}
     </li>
   );
 }

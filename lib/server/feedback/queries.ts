@@ -4,7 +4,6 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
-  type PublicFacet,
   type PublicPost,
 } from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
@@ -18,8 +17,6 @@ import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
  */
 
 const PUBLIC_LIST_LIMIT = 200;
-/** Pills de facettes affichées par post sur la liste (carrousel). */
-const FACET_PILLS_PER_POST = 8;
 
 export type PublicSort = "top" | "recent";
 
@@ -34,9 +31,7 @@ const PUBLIC_POST_SELECT = `${FEEDBACK_POST_SELECT}, feedback_users!author_id (p
 function toPublicPost(
   row: PostWithAuthor,
   viewerId: string | null,
-  votedPostIds: Set<string>,
-  facetCounts: Map<string, number>,
-  facets: PublicFacet[] = []
+  votedPostIds: Set<string>
 ): PublicPost {
   return {
     id: row.id,
@@ -45,8 +40,6 @@ function toPublicPost(
     status: row.status,
     isPublic: row.is_public,
     voteCount: row.vote_count,
-    facetCount: facetCounts.get(row.id) ?? 0,
-    facets,
     createdAt: row.created_at,
     authorPseudonym: row.feedback_users?.pseudonym ?? null,
     isMine: viewerId !== null && row.author_id === viewerId,
@@ -54,58 +47,6 @@ function toPublicPost(
     teamResponse: row.team_response,
     teamResponseAt: row.team_response_at,
   };
-}
-
-/** Facettes vivantes des posts listés, triées par voix, plafonnées par post,
-    avec les votes du visiteur — la matière des pills du carrousel. */
-async function fetchFacetPills(
-  postIds: string[],
-  viewerId: string | null
-): Promise<{ byPost: Map<string, PublicFacet[]>; counts: Map<string, number> }> {
-  const byPost = new Map<string, PublicFacet[]>();
-  const counts = new Map<string, number>();
-  if (postIds.length === 0) return { byPost, counts };
-
-  const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_facets")
-    .select("id, post_id, text, vote_count, created_by")
-    .in("post_id", postIds)
-    .is("merged_into_id", null)
-    .order("vote_count", { ascending: false })
-    .order("created_at", { ascending: true });
-  const rows = (data ?? []) as {
-    id: string;
-    post_id: string;
-    text: string;
-    vote_count: number;
-    created_by: string | null;
-  }[];
-
-  let myVotes = new Set<string>();
-  if (viewerId && rows.length > 0) {
-    const { data: fv } = await service
-      .from("feedback_facet_votes")
-      .select("facet_id")
-      .eq("user_id", viewerId)
-      .in("facet_id", rows.map((r) => r.id));
-    myVotes = new Set((fv ?? []).map((v) => v.facet_id as string));
-  }
-
-  for (const row of rows) {
-    counts.set(row.post_id, (counts.get(row.post_id) ?? 0) + 1);
-    const pills = byPost.get(row.post_id) ?? [];
-    if (pills.length >= FACET_PILLS_PER_POST) continue;
-    pills.push({
-      id: row.id,
-      text: row.text,
-      voteCount: row.vote_count,
-      votedByMe: myVotes.has(row.id),
-      isMine: viewerId !== null && row.created_by === viewerId,
-    });
-    byPost.set(row.post_id, pills);
-  }
-  return { byPost, counts };
 }
 
 async function fetchViewerVotes(
@@ -120,22 +61,6 @@ async function fetchViewerVotes(
     .eq("user_id", viewerId)
     .in("post_id", postIds);
   return new Set((data ?? []).map((v) => v.post_id as string));
-}
-
-async function fetchFacetCounts(postIds: string[]): Promise<Map<string, number>> {
-  if (postIds.length === 0) return new Map();
-  const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_facets")
-    .select("post_id")
-    .in("post_id", postIds)
-    .is("merged_into_id", null);
-  const counts = new Map<string, number>();
-  for (const row of data ?? []) {
-    const id = row.post_id as string;
-    counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return counts;
 }
 
 export async function listPublicPosts(params: {
@@ -162,13 +87,8 @@ export async function listPublicPosts(params: {
   if (error) console.error("[feedback-queries] list failed:", error.message);
   const rows = (data ?? []) as unknown as PostWithAuthor[];
   const ids = rows.map((r) => r.id);
-  const [voted, pills] = await Promise.all([
-    fetchViewerVotes(params.viewerId, ids),
-    fetchFacetPills(ids, params.viewerId),
-  ]);
-  const posts = rows.map((r) =>
-    toPublicPost(r, params.viewerId, voted, pills.counts, pills.byPost.get(r.id) ?? [])
-  );
+  const voted = await fetchViewerVotes(params.viewerId, ids);
+  const posts = rows.map((r) => toPublicPost(r, params.viewerId, voted));
   // Terminés (livrés / refusés) rangés en bas, l'ordre choisi (votes/date)
   // conservé au sein de chaque groupe.
   return sortFeedbackResolvedLast(posts, (p) => p.status);
@@ -178,7 +98,6 @@ export interface PublicPostDetail {
   post: PublicPost;
   /** Renseigné si CE post est un tombstone : rediriger vers le canonique. */
   mergedIntoId: string | null;
-  facets: PublicFacet[];
   /** Titres des posts fusionnés dans celui-ci (mention « fusionné depuis »). */
   mergedFromTitles: string[];
 }
@@ -202,25 +121,15 @@ export async function getPublicPostDetail(params: {
   if (!row.is_public && row.author_id !== params.viewerId) return null;
   if (row.merged_into_id !== null) {
     // Tombstone : le canonique porte tout, l'appelant redirige.
-    const [voted, facetCounts] = [new Set<string>(), new Map<string, number>()];
     return {
-      post: toPublicPost(row, params.viewerId, voted, facetCounts),
+      post: toPublicPost(row, params.viewerId, new Set<string>()),
       mergedIntoId: row.merged_into_id,
-      facets: [],
       mergedFromTitles: [],
     };
   }
 
-  const [voted, facetCounts, facetsRes, mergedFromRes] = await Promise.all([
+  const [voted, mergedFromRes] = await Promise.all([
     fetchViewerVotes(params.viewerId, [row.id]),
-    fetchFacetCounts([row.id]),
-    service
-      .from("feedback_facets")
-      .select("id, text, vote_count, created_by")
-      .eq("post_id", row.id)
-      .is("merged_into_id", null)
-      .order("vote_count", { ascending: false })
-      .order("created_at", { ascending: true }),
     service
       .from("feedback_posts")
       .select("title")
@@ -228,32 +137,9 @@ export async function getPublicPostDetail(params: {
       .order("created_at", { ascending: true }),
   ]);
 
-  const facetRows = (facetsRes.data ?? []) as {
-    id: string;
-    text: string;
-    vote_count: number;
-    created_by: string | null;
-  }[];
-  let myFacetVotes = new Set<string>();
-  if (params.viewerId && facetRows.length > 0) {
-    const { data: fv } = await service
-      .from("feedback_facet_votes")
-      .select("facet_id")
-      .eq("user_id", params.viewerId)
-      .in("facet_id", facetRows.map((f) => f.id));
-    myFacetVotes = new Set((fv ?? []).map((v) => v.facet_id as string));
-  }
-
   return {
-    post: toPublicPost(row, params.viewerId, voted, facetCounts),
+    post: toPublicPost(row, params.viewerId, voted),
     mergedIntoId: null,
-    facets: facetRows.map((f) => ({
-      id: f.id,
-      text: f.text,
-      voteCount: f.vote_count,
-      votedByMe: myFacetVotes.has(f.id),
-      isMine: params.viewerId !== null && f.created_by === params.viewerId,
-    })),
     mergedFromTitles: (mergedFromRes.data ?? []).map((p) => p.title as string),
   };
 }
@@ -331,24 +217,10 @@ export async function listMyFeedback(params: {
   }
 
   const ids = entries.map((e) => e.row.id);
-  const [voted, facetCounts] = await Promise.all([
-    fetchViewerVotes(params.viewerId, ids),
-    fetchFacetCounts(ids),
-  ]);
+  const voted = await fetchViewerVotes(params.viewerId, ids);
   return entries.map((e) => ({
-    post: toPublicPost(e.row, params.viewerId, voted, facetCounts),
+    post: toPublicPost(e.row, params.viewerId, voted),
     relation: e.relation,
     mergedFromTitle: e.mergedFromTitle,
   }));
-}
-
-/** Nombre de facettes vivantes d'un post (seuil du check de similarité). */
-export async function countLiveFacets(postId: string): Promise<number> {
-  const service = getServiceClient();
-  const { count } = await service
-    .from("feedback_facets")
-    .select("id", { count: "exact", head: true })
-    .eq("post_id", postId)
-    .is("merged_into_id", null);
-  return count ?? 0;
 }

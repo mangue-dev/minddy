@@ -9,7 +9,7 @@ import { promoteFeedbackPost } from "@/lib/server/feedback/promote";
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
 /** POST — promotion en issue : crée une issue liée (backlog) dont la
-    description embarque la racine + les facettes avec leurs compteurs. */
+    description embarque le retour et son compteur de votes. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);

@@ -1,37 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Button, Input, Spinner } from "mangue-ui";
-import { ArrowLeft, GitMerge, Plus } from "lucide-react";
+import { ArrowLeft, GitMerge } from "lucide-react";
 import { MessageResponse } from "@/components/ai-elements/message";
-import type { PublicFacet, PublicIdentity, PublicPost } from "@/lib/feedback/types";
-import {
-  addFacetAction,
-  findSimilarFacetsAction,
-  togglePostVoteAction,
-} from "./actions";
+import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
+import { togglePostVoteAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
-import { FacetCard, FeedbackStatusBadge, VoteButton } from "./feedback-bits";
+import { FeedbackStatusBadge, VoteButton } from "./feedback-bits";
 
 /**
- * Page publique d'un post (MIN-37) : racine votable rendue en markdown,
- * facettes votables (chaque facette = une façon de voir le besoin), réponse
- * d'équipe signée « Équipe <projet> », composeur de facette (check de
- * similarité au-delà de ~15 facettes — géré côté serveur). Les facettes
- * remplacent les commentaires : contribution structurée, actionnable.
+ * Page publique d'un post (MIN-37) : besoin votable rendu en markdown, réponse
+ * d'équipe signée « Équipe <projet> ». Toute action nécessitant une identité
+ * passe par la porte OTP puis se rejoue automatiquement.
  */
-
-const SIMILAR_DEBOUNCE_MS = 1000;
 
 export function FeedbackPostClient({
   token,
   basePath,
   projectName,
   post,
-  facets,
   mergedFromTitles,
   identity,
 }: {
@@ -40,7 +30,6 @@ export function FeedbackPostClient({
   basePath: string;
   projectName: string;
   post: PublicPost;
-  facets: PublicFacet[];
   mergedFromTitles: string[];
   identity: PublicIdentity | null;
 }) {
@@ -121,23 +110,6 @@ export function FeedbackPostClient({
         </div>
       )}
 
-      <section className="mt-2 flex flex-col gap-3 border-t pt-5">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="text-sm font-semibold">{t("facetsTitle")}</h3>
-          <p className="text-xs text-muted-foreground">{t("facetsExplainer")}</p>
-        </div>
-
-        {facets.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {facets.map((facet) => (
-              <FacetCard key={facet.id} token={token} facet={facet} onNeedAuth={requireAuth} />
-            ))}
-          </div>
-        )}
-
-        <FacetComposer token={token} postId={post.id} onNeedAuth={requireAuth} />
-      </section>
-
       <FeedbackAuthDialog
         token={token}
         open={authOpen}
@@ -149,95 +121,5 @@ export function FeedbackPostClient({
         }}
       />
     </div>
-  );
-}
-
-function FacetComposer({
-  token,
-  postId,
-  onNeedAuth,
-}: {
-  token: string;
-  postId: string;
-  onNeedAuth: (run: () => void) => void;
-}) {
-  const t = useTranslations("PublicFeedback");
-  const router = useRouter();
-  const [text, setText] = useState("");
-  const [similar, setSimilar] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Check de similarité serveur (actif seulement au-delà de ~15 facettes).
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const trimmed = text.trim();
-    if (trimmed.length < 15) {
-      setSimilar([]);
-      return;
-    }
-    debounceRef.current = setTimeout(() => {
-      void findSimilarFacetsAction(token, postId, trimmed)
-        .then(setSimilar)
-        .catch(() => setSimilar([]));
-    }, SIMILAR_DEBOUNCE_MS);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [text, token, postId]);
-
-  const submit = () => {
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await addFacetAction(token, postId, text.trim());
-        if (!result?.ok) {
-          if (result?.error === "notAuthenticated") {
-            onNeedAuth(submit);
-            return;
-          }
-          setError(result ? result.error : "failed");
-          return;
-        }
-        setText("");
-        setSimilar([]);
-        router.refresh();
-      } catch {
-        setError("failed");
-      }
-    });
-  };
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (text.trim()) submit();
-      }}
-      className="flex flex-col gap-2"
-    >
-      <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-1.5 transition-colors focus-within:border-solid focus-within:border-ring">
-        <Plus className="size-4 shrink-0 text-muted-foreground" />
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t("facetPlaceholder")}
-          maxLength={200}
-          className="h-8 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-        />
-        {text.trim() && (
-          <Button type="submit" size="sm" variant="ghost" disabled={pending}>
-            {pending ? <Spinner /> : t("addFacet")}
-          </Button>
-        )}
-      </div>
-      {similar.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {t("similarFacets")} {similar.join(" · ")}
-        </p>
-      )}
-      {error && <p className="text-sm text-destructive">{t(`errors.${error}`)}</p>}
-    </form>
   );
 }

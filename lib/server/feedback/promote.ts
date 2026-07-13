@@ -6,9 +6,9 @@ import { createIssueForProject } from "@/lib/server/create-issue";
 /**
  * Promotion d'un post de feedback en issue (MIN-37) — le pont entre le board
  * et le tracker. L'issue naît en backlog (le board a déjà fait la
- * qualification), sa description embarque la racine ET les facettes avec leurs
- * compteurs : le cadrage produit arrive pré-mâché. Le post passe en `planned`
- * et son statut public suivra ensuite l'issue (status-sync).
+ * qualification), sa description embarque le retour et son compteur de votes.
+ * Le post passe en `planned` et son statut public suivra ensuite l'issue
+ * (status-sync).
  */
 
 export type PromoteResult =
@@ -36,22 +36,9 @@ export async function promoteFeedbackPost(params: {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
-  const { data: facets } = await service
-    .from("feedback_facets")
-    .select("text, vote_count")
-    .eq("post_id", params.postId)
-    .is("merged_into_id", null)
-    .order("vote_count", { ascending: false });
-
   const sections: string[] = [];
   const body = (post.body as string).trim();
   if (body) sections.push(body);
-  const facetLines = (facets ?? []).map(
-    (f) => `- ${f.text as string} · ${f.vote_count as number} vote${(f.vote_count as number) > 1 ? "s" : ""}`
-  );
-  if (facetLines.length > 0) {
-    sections.push(`## Facets\n\n${facetLines.join("\n")}`);
-  }
   sections.push(
     `---\n\nPromoted from the feedback board · ${post.vote_count as number} vote${(post.vote_count as number) > 1 ? "s" : ""}.`
   );

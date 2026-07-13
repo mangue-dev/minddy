@@ -24,7 +24,6 @@ const AUTHOR_SELECT = "id, pseudonym, email, name, external_id, verified_via";
 
 export interface TeamFeedbackListItem extends FeedbackPostRow {
   author: TeamFeedbackAuthor | null;
-  facet_count: number;
   suggested_title: string | null;
 }
 
@@ -41,16 +40,13 @@ export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackL
   const rows = (data ?? []) as unknown as (FeedbackPostRow & {
     author: TeamFeedbackAuthor | null;
   })[];
-  const ids = rows.map((r) => r.id);
 
-  const [facetCounts, suggestionTitles] = await Promise.all([
-    fetchFacetCounts(ids),
-    fetchTitles(rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)),
-  ]);
+  const suggestionTitles = await fetchTitles(
+    rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)
+  );
 
   const items = rows.map((row) => ({
     ...row,
-    facet_count: facetCounts.get(row.id) ?? 0,
     suggested_title: row.suggested_merge_into_id
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,
@@ -58,22 +54,6 @@ export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackL
   // Terminés (livrés / refusés) en bas de liste, tri par votes conservé au sein
   // de chaque groupe — comme sur le board public.
   return sortFeedbackResolvedLast(items, (item) => item.status);
-}
-
-async function fetchFacetCounts(postIds: string[]): Promise<Map<string, number>> {
-  if (postIds.length === 0) return new Map();
-  const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_facets")
-    .select("post_id")
-    .in("post_id", postIds)
-    .is("merged_into_id", null);
-  const counts = new Map<string, number>();
-  for (const row of data ?? []) {
-    const id = row.post_id as string;
-    counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return counts;
 }
 
 async function fetchTitles(postIds: string[]): Promise<Map<string, string>> {
@@ -84,17 +64,6 @@ async function fetchTitles(postIds: string[]): Promise<Map<string, string>> {
     .select("id, title")
     .in("id", postIds);
   return new Map((data ?? []).map((p) => [p.id as string, p.title as string]));
-}
-
-export interface TeamFacet {
-  id: string;
-  text: string;
-  submitted_text: string | null;
-  vote_count: number;
-  source: "ai" | "user" | "team";
-  review_flag: "root_disguised" | null;
-  created_at: string;
-  author: TeamFeedbackAuthor | null;
 }
 
 export interface TeamMergeEvent {
@@ -108,7 +77,6 @@ export interface TeamMergeEvent {
 
 export interface TeamFeedbackDetail extends FeedbackPostRow {
   author: TeamFeedbackAuthor | null;
-  facets: TeamFacet[];
   suggested_title: string | null;
   merged_from: { id: string; title: string }[];
   /** Fusions actives (non défaites) dont ce post est la cible — undoable. */
@@ -130,16 +98,7 @@ export async function getTeamFeedbackDetail(
   if (!data) return null;
   const row = data as unknown as FeedbackPostRow & { author: TeamFeedbackAuthor | null };
 
-  const [facetsRes, mergedFromRes, eventsRes, suggestionTitles, issueRes] = await Promise.all([
-    service
-      .from("feedback_facets")
-      .select(
-        `id, text, submitted_text, vote_count, source, review_flag, created_at, author:feedback_users!created_by (${AUTHOR_SELECT})`
-      )
-      .eq("post_id", postId)
-      .is("merged_into_id", null)
-      .order("vote_count", { ascending: false })
-      .order("created_at", { ascending: true }),
+  const [mergedFromRes, eventsRes, suggestionTitles, issueRes] = await Promise.all([
     service
       .from("feedback_posts")
       .select("id, title")
@@ -167,7 +126,6 @@ export async function getTeamFeedbackDetail(
 
   return {
     ...row,
-    facets: ((facetsRes.data ?? []) as unknown as TeamFacet[]).map((f) => ({ ...f })),
     suggested_title: row.suggested_merge_into_id
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,

@@ -17,9 +17,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   Input,
   Select,
@@ -44,10 +41,9 @@ import {
   MoreHorizontal,
   Plus,
   Sparkles,
-  TriangleAlert,
   Undo2,
 } from "lucide-react";
-// (ChevronUp sert au compteur de voix des cartes de facettes)
+// (ChevronUp sert au compteur de voix des posts)
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
@@ -74,8 +70,8 @@ import type {
  * Onglet équipe du feedback (MIN-37) — deux panneaux façon triage : liste triée
  * par votes (vraies identités, indicateur de suggestion IA), détail avec
  * édition de la couche canonique (le brut reste visible), merge 1-clic + undo,
- * file de suggestions, gestion des facettes, réponse d'équipe, promotion en
- * issue et saisie interne au nom d'un utilisateur.
+ * file de suggestions, réponse d'équipe, promotion en issue et saisie interne
+ * au nom d'un utilisateur.
  */
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -207,7 +203,7 @@ export function FeedbackTeamPage() {
                       selectedId === post.id && "bg-muted/70"
                     )}
                   >
-                    {/* Même badge de voix que les facettes. */}
+                    {/* Badge de voix du post. */}
                     <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
                       <ChevronUp className="size-3" />
                       {post.vote_count}
@@ -227,7 +223,6 @@ export function FeedbackTeamPage() {
                         {post.suggested_merge_into_id && (
                           <Sparkles className="size-3 text-brand" />
                         )}
-                        {post.facet_count > 0 && <span>{post.facet_count} ⌘</span>}
                         <span>
                           {format.dateTime(new Date(post.created_at), { dateStyle: "short" })}
                         </span>
@@ -399,7 +394,7 @@ function FeedbackDetail({
             {t("title")}
           </button>
           <span className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-            {/* Même badge de voix que les facettes. */}
+            {/* Badge de voix du post. */}
             <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums">
               <ChevronUp className="size-3" />
               {post.vote_count}
@@ -623,12 +618,6 @@ function FeedbackDetail({
           </div>
         )}
 
-        <FacetSection
-          projectId={projectId}
-          post={post}
-          onChanged={refreshDetail}
-        />
-
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">{t("respondTitle")}</h3>
           {post.team_response && !respondEditing ? (
@@ -734,230 +723,6 @@ function FeedbackDetail({
         }}
       />
     </div>
-  );
-}
-
-// ── Facettes ─────────────────────────────────────────────────────────────────
-
-function FacetSection({
-  projectId,
-  post,
-  onChanged,
-}: {
-  projectId: string;
-  post: TeamFeedbackDetail;
-  onChanged: () => void;
-}) {
-  const t = useTranslations("FeedbackBoard");
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [renaming, setRenaming] = useState<{ id: string; text: string } | null>(null);
-  // Facette ouverte en dialog (texte complet, comme sur le board public).
-  const [expanded, setExpanded] = useState<TeamFeedbackDetail["facets"][number] | null>(null);
-
-  const run = async (fn: () => Promise<unknown>) => {
-    setBusy(true);
-    try {
-      await fn();
-      onChanged();
-    } catch (e) {
-      toast.error((e as Error).message || t("errorGeneric"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{t("facets")}</h3>
-      {post.facets.length > 0 && (
-        // Comme sur le board public : cartes arrondies en carrousel.
-        <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {post.facets.map((facet) => (
-            <div
-              key={facet.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                if (renaming?.id !== facet.id) setExpanded(facet);
-              }}
-              onKeyDown={(e) => {
-                if ((e.key === "Enter" || e.key === " ") && renaming?.id !== facet.id) {
-                  e.preventDefault();
-                  setExpanded(facet);
-                }
-              }}
-              className="flex w-56 shrink-0 cursor-pointer flex-col justify-between gap-2 rounded-lg border border-border/70 bg-card/50 px-3 py-2.5 outline-none transition-colors hover:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {renaming?.id === facet.id ? (
-                <Input
-                  autoFocus
-                  value={renaming.text}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => setRenaming({ id: facet.id, text: e.target.value })}
-                  onBlur={() => {
-                    const next = renaming.text.trim();
-                    setRenaming(null);
-                    if (next && next !== facet.text) {
-                      void run(() =>
-                        api(`/api/projects/${projectId}/feedback/facets/${facet.id}`, {
-                          method: "PATCH",
-                          body: JSON.stringify({ text: next }),
-                        })
-                      );
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                    if (e.key === "Escape") setRenaming(null);
-                  }}
-                  className="h-7 text-xs"
-                />
-              ) : (
-                <p className="line-clamp-2 text-xs leading-snug text-foreground/90" title={facet.text}>
-                  {facet.review_flag === "root_disguised" && (
-                    <TriangleAlert
-                      className="mr-1 inline size-3 text-amber-600 dark:text-amber-400"
-                      aria-label={t("reviewFlag")}
-                    />
-                  )}
-                  {facet.text}
-                </p>
-              )}
-              {/* stopPropagation : les actions du pied de carte ne doivent pas
-                  ouvrir le dialog. */}
-              {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
-              <div
-                className="flex items-center justify-between gap-1.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-                  <ChevronUp className="size-3" />
-                  {facet.vote_count}
-                </span>
-                <span className="ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                  {t(`facetSource.${facet.source}`)}
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm" aria-label="…">
-                      <MoreHorizontal className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onSelect={() => setRenaming({ id: facet.id, text: facet.text })}
-                    >
-                      {t("rename")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        void run(() =>
-                          api(
-                            `/api/projects/${projectId}/feedback/facets/${facet.id}/convert`,
-                            { method: "POST", body: JSON.stringify({}) }
-                          )
-                        )
-                      }
-                    >
-                      {t("convertToPost")}
-                    </DropdownMenuItem>
-                    {post.facets.length > 1 && (
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <GitMerge className="size-4" />
-                          {t("mergeFacetInto")}
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          {post.facets
-                            .filter((other) => other.id !== facet.id)
-                            .map((other) => (
-                              <DropdownMenuItem
-                                key={other.id}
-                                disabled={busy}
-                                onSelect={() =>
-                                  void run(() =>
-                                    api(
-                                      `/api/projects/${projectId}/feedback/facets/${facet.id}/merge`,
-                                      {
-                                        method: "POST",
-                                        body: JSON.stringify({ canonical_id: other.id }),
-                                      }
-                                    )
-                                  )
-                                }
-                              >
-                                <span className="max-w-56 truncate">{other.text}</span>
-                              </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                    )}
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onSelect={() =>
-                        void run(() =>
-                          api(`/api/projects/${projectId}/feedback/facets/${facet.id}`, {
-                            method: "DELETE",
-                          })
-                        )
-                      }
-                    >
-                      {t("delete")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Texte complet en dialog, comme sur le board public. */}
-      <Dialog open={!!expanded} onOpenChange={(next) => !next && setExpanded(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogTitle className="sr-only">{t("facets")}</DialogTitle>
-          <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
-            {expanded?.text}
-          </p>
-          {expanded && (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-                <ChevronUp className="size-3" />
-                {expanded.vote_count}
-              </span>
-              <span className="rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                {t(`facetSource.${expanded.source}`)}
-              </span>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const trimmed = text.trim();
-          if (!trimmed) return;
-          void run(() =>
-            api(`/api/projects/${projectId}/feedback/${post.id}/facets`, {
-              method: "POST",
-              body: JSON.stringify({ text: trimmed }),
-            })
-          ).then(() => setText(""));
-        }}
-        className="flex items-center gap-2"
-      >
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t("addFacetPlaceholder")}
-          maxLength={200}
-        />
-        <Button type="submit" variant="outline" disabled={busy || !text.trim()}>
-          {t("add")}
-        </Button>
-      </form>
-    </section>
   );
 }
 

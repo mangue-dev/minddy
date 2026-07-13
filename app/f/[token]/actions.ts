@@ -16,10 +16,8 @@ import {
 } from "@/lib/server/feedback/identity";
 import { requestFeedbackOtp, verifyFeedbackOtp } from "@/lib/server/feedback/otp";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
-import { votePost, unvotePost, voteFacet, unvoteFacet } from "@/lib/server/feedback/votes";
-import { addUserFacet } from "@/lib/server/feedback/facets";
-import { countLiveFacets } from "@/lib/server/feedback/queries";
-import { embedText, matchFeedbackPosts, matchFeedbackFacets } from "@/lib/server/embeddings";
+import { votePost, unvotePost } from "@/lib/server/feedback/votes";
+import { embedText, matchFeedbackPosts } from "@/lib/server/embeddings";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import type { SimilarPost } from "@/lib/feedback/types";
 
@@ -30,9 +28,6 @@ import type { SimilarPost } from "@/lib/feedback/types";
  * revérifie la session — le token seul n'autorise que la lecture.
  */
 
-/** Seuil au-delà duquel le composeur de facette fait un check de similarité
-    (en dessous, la liste est scannable à l'œil). */
-const FACET_SIMILARITY_THRESHOLD_COUNT = 15;
 /** Similarité cosinus minimale pour montrer une suggestion « existe déjà ». */
 const MIN_SUGGESTION_SIMILARITY = 0.4;
 
@@ -197,53 +192,6 @@ export async function togglePostVoteAction(
   return { ok };
 }
 
-export async function toggleFacetVoteAction(
-  token: string,
-  facetId: string,
-  vote: boolean
-): Promise<{ ok: boolean; notAuthenticated?: boolean }> {
-  const resolved = await resolveSession(token);
-  if (!resolved) return { ok: false, notAuthenticated: true };
-  const { session } = resolved;
-
-  const rate = checkSessionRateLimit(session.user.id, "feedback:vote", { limit: 60 });
-  if (!rate.allowed) return { ok: false };
-
-  const ok = vote
-    ? await voteFacet({ facetId, userId: session.user.id })
-    : await unvoteFacet({ facetId, userId: session.user.id });
-  if (ok) revalidatePath(`/f/${token}`, "layout");
-  return { ok };
-}
-
-export type AddFacetState =
-  | { ok: true }
-  | { ok: false; error: "notAuthenticated" | "titleRequired" | "rateLimited" | "failed" }
-  | null;
-
-export async function addFacetAction(
-  token: string,
-  postId: string,
-  text: string
-): Promise<AddFacetState> {
-  const resolved = await resolveSession(token);
-  if (!resolved) return { ok: false, error: "notAuthenticated" };
-  const { session } = resolved;
-
-  const rate = checkSessionRateLimit(session.user.id, "feedback:add-facet", { limit: 20 });
-  if (!rate.allowed) return { ok: false, error: "rateLimited" };
-
-  const result = await addUserFacet({ postId, userId: session.user.id, text });
-  if (!result.ok) {
-    return {
-      ok: false,
-      error: result.errorKey === "titleRequired" ? "titleRequired" : "failed",
-    };
-  }
-  revalidatePath(`/f/${token}`, "layout");
-  return { ok: true };
-}
-
 // ── Suggestions live (« ce post existe peut-être déjà ») ─────────────────────
 
 export async function findSimilarPostsAction(
@@ -281,32 +229,4 @@ export async function findSimilarPostsAction(
       status: m.status,
       voteCount: m.vote_count,
     }));
-}
-
-export async function findSimilarFacetsAction(
-  token: string,
-  postId: string,
-  text: string
-): Promise<string[]> {
-  const ctx = await resolveBoard(token);
-  if (!ctx) return [];
-  const trimmed = text.trim();
-  if (trimmed.length < 15) return [];
-
-  // Check de similarité seulement à partir de ~15 facettes existantes.
-  const count = await countLiveFacets(postId);
-  if (count < FACET_SIMILARITY_THRESHOLD_COUNT) return [];
-
-  const ip = await clientIp();
-  const rate = checkSessionRateLimit(ip, `feedback:similar:${ctx.board.id}`, {
-    limit: 30,
-  });
-  if (!rate.allowed) return [];
-
-  const embedding = await embedText(trimmed, { timeoutMs: 3000 });
-  if (!embedding) return [];
-  const matches = await matchFeedbackFacets({ postId, embedding, limit: 3 });
-  return matches
-    .filter((m) => m.similarity >= MIN_SUGGESTION_SIMILARITY)
-    .map((m) => m.facet_text);
 }
