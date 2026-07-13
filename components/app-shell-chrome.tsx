@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { AppShell, Header, MobileNav } from "mangue-ui";
+import { AppShell, Header, MobileNav, cn } from "mangue-ui";
 import {
   Home,
   ChevronLeft,
@@ -23,6 +24,8 @@ import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { fetchIssuesApi } from "@/lib/issues-api";
+import { useObjectivesQuery } from "@/lib/use-objectives-query";
+import { useMembersQuery } from "@/lib/use-members-query";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import {
@@ -43,6 +46,14 @@ import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 
+// The objective side panel is heavy (markdown editor + activity timeline), so
+// it's deferred like the create dialogs — the chunk loads the first time an
+// objective is opened from the palette, not in every route's initial bundle.
+const ObjectiveSidePanel = dynamic(
+  () => import("@/components/objective-side-panel").then((m) => m.ObjectiveSidePanel),
+  { ssr: false }
+);
+
 /** Right-aligned project tag shown on palette rows (orb + name), à la AutoKap. */
 function projectChip(project: Project) {
   return (
@@ -51,6 +62,29 @@ function projectChip(project: Project) {
       <span className="max-w-[9rem] truncate">{project.name}</span>
     </span>
   );
+}
+
+// The palette icon slot renders `<Icon className="size-4 …" />` with no way to
+// pass a color, so we hand it a per-color component (the objective's dot, like
+// on the objectives page). Cache by color to keep component identity stable
+// across renders — otherwise the dot remounts (mirrors projectOrbIcon).
+const objectiveDotCache = new Map<string, ComponentType<{ className?: string }>>();
+
+function objectiveDotIcon(color: string | null): ComponentType<{ className?: string }> {
+  const key = color ?? "none";
+  const cached = objectiveDotCache.get(key);
+  if (cached) return cached;
+  const Icon = ({ className }: { className?: string }) => (
+    <span className={cn("flex items-center justify-center", className)} aria-hidden>
+      <span
+        className="size-2.5 rounded-full"
+        style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
+      />
+    </span>
+  );
+  Icon.displayName = `ObjectiveDotIcon(${key})`;
+  objectiveDotCache.set(key, Icon);
+  return Icon;
 }
 
 /** Muted monospace identifier badge, e.g. "MIND-42". */
@@ -87,6 +121,29 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     queryFn: () => fetchIssuesApi(currentProjectId as string),
     enabled: !!currentProjectId,
   });
+
+  // Objectives feed both the palette list and the in-place side panel below.
+  // useObjectivesQuery shares the ["objectives", projectId] cache (kept fresh by
+  // realtime) and hands us the update/delete mutations the panel needs.
+  const {
+    objectives: projectObjectives,
+    updateObjective,
+    deleteObjective,
+  } = useObjectivesQuery(currentProjectId);
+  const { members: projectMembers } = useMembersQuery(
+    currentProjectId,
+    !!currentProjectId
+  );
+
+  // Objective whose side panel is open, driven by the palette. Opening it here
+  // (rather than navigating to /objectives?open=) keeps the user on the current
+  // page — the panel just slides over it. `panelMounted` latches on first open
+  // so the deferred chunk loads lazily yet the slide-out animation still plays.
+  const [panelObjectiveId, setPanelObjectiveId] = useState<string | null>(null);
+  const [panelMounted, setPanelMounted] = useState(false);
+  const panelObjective = panelObjectiveId
+    ? projectObjectives.find((o) => o.id === panelObjectiveId) ?? null
+    : null;
 
   // Triage is a hidden issue status — the sidebar counter derives from the
   // same issues cache the board and search already keep fresh.
@@ -276,8 +333,27 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       });
     }
 
+    // ── Objectives (current project) ──────────────────────────────────
+    // Selecting one opens its side panel in place — no navigation, the user
+    // stays on the current page (see ObjectiveSidePanel mounted below).
+    if (currentProject && projectObjectives.length > 0) {
+      groups.push({
+        key: "objectives",
+        heading: t("objectives"),
+        items: projectObjectives.map((o) => ({
+          key: `objective-${o.id}`,
+          label: o.name,
+          icon: objectiveDotIcon(o.color),
+          onSelect: () => {
+            setPanelObjectiveId(o.id);
+            setPanelMounted(true);
+          },
+        })),
+      });
+    }
+
     return groups;
-  }, [projects, currentProject, projectIssues, router, openCreateProject, openCreateIssue, openCreateObjective, t, ti, tk, setCheatsheetOpen]);
+  }, [projects, currentProject, projectIssues, projectObjectives, router, openCreateProject, openCreateIssue, openCreateObjective, t, ti, tk, setCheatsheetOpen]);
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -461,6 +537,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       {children}
+      {/* Objective side panel opened from the command palette — overlays the
+          current page (Radix portals to body, so placement here is layout-safe). */}
+      {currentProject && panelMounted && (
+        <ObjectiveSidePanel
+          objective={panelObjective}
+          open={!!panelObjective}
+          onOpenChange={(next) => {
+            if (!next) setPanelObjectiveId(null);
+          }}
+          projectId={currentProject.id}
+          members={projectMembers}
+          issues={projectIssues ?? []}
+          onUpdate={updateObjective}
+          onDelete={deleteObjective}
+        />
+      )}
     </AppShell>
   );
 }
