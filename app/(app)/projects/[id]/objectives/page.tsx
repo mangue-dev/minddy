@@ -27,7 +27,7 @@ import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-quer
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
-import { initials } from "@/lib/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { ObjectiveSidePanel } from "@/components/objective-side-panel";
@@ -183,12 +183,13 @@ function ObjectivesInner() {
                         </span>
                       </div>
                       {lead && (
-                        <span
-                          className="hidden size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground sm:flex"
+                        <UserAvatar
+                          url={lead.avatar_url}
+                          name={displayName(lead)}
+                          seed={lead.user_id}
                           title={displayName(lead)}
-                        >
-                          {initials(displayName(lead))}
-                        </span>
+                          className="hidden size-7 shrink-0 text-[11px] sm:flex"
+                        />
                       )}
                     </button>
                     <DropdownMenu>

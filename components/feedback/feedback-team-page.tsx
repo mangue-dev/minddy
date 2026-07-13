@@ -582,15 +582,12 @@ function FeedbackDetail({
           </details>
         )}
 
-        {post.author && (
+        {post.author && (post.author.name || post.author.email) && (
           <p className="text-xs text-muted-foreground">
-            {t("author")} : <span className="font-medium">{post.author.pseudonym}</span>
-            {(post.author.name || post.author.email) && (
-              <>
-                {" — "}
-                {[post.author.name, post.author.email].filter(Boolean).join(" · ")}
-              </>
-            )}
+            {t("author")} :{" "}
+            <span className="font-medium">
+              {[post.author.name, post.author.email].filter(Boolean).join(" · ")}
+            </span>
           </p>
         )}
 
