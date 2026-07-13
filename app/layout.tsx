@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Inter, Instrument_Serif } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -32,7 +33,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, headerList] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    headers(),
+  ]);
+
+  // Pages publiques anonymes (board de feedback, vues partagées) : le proxy pose
+  // ce header pour qu'elles suivent la préférence système au lieu d'être forcées
+  // en dark comme l'app interne (MIN-60).
+  const defaultTheme = headerList.get("x-minddy-public") === "1" ? "system" : "dark";
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -41,17 +51,22 @@ export default async function RootLayout({
             mangue-ui ne le fait qu'en useEffect, d'où un flash light→dark à
             chaque chargement, surtout visible sur les pages publiques
             anonymes. Même logique que lui : localStorage "mangue-ui-theme",
-            défaut "dark". */}
+            défaut piloté par le serveur ("dark" pour l'app, "system" pour le
+            public). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("mangue-ui-theme")||"dark";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){document.documentElement.classList.add("dark");}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("mangue-ui-theme")||"${defaultTheme}";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){document.documentElement.classList.toggle("dark",${
+              defaultTheme === "system"
+                ? `matchMedia("(prefers-color-scheme: dark)").matches`
+                : "true"
+            });}})();`,
           }}
         />
       </head>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
-        <ThemeProvider defaultTheme="dark">
+        <ThemeProvider defaultTheme={defaultTheme}>
           <NextIntlClientProvider messages={messages}>
             {children}
             <Toaster />

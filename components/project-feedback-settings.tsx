@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  ColorInput,
   ConfirmDeleteDialog,
   Input,
   Popover,
@@ -35,6 +36,7 @@ import {
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
+import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
   CustomDomainSection,
@@ -55,6 +57,8 @@ interface BoardSettings {
   show_views: boolean;
   visible_view_ids: string[];
   show_categories: boolean;
+  accent_light: string | null;
+  accent_dark: string | null;
   token: string;
   sso_secret: string | null;
   sso_configured: boolean;
@@ -270,6 +274,24 @@ export function ProjectFeedbackSettings({
   const post = (action: string) =>
     mutate(() => api(settingsPath, { method: "POST", body: JSON.stringify({ action }) }));
 
+  // Accent (MIN-59) : le picker `ColorInput` émet en continu pendant le drag. On
+  // patche le cache tout de suite (le swatch suit le doigt) mais on debounce
+  // l'appel réseau pour ne pas spammer la DB. Échec → resync depuis le serveur.
+  const accentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const patchBoardDebounced = (body: Partial<BoardSettings>) => {
+    const key = ["feedback-settings", projectId];
+    queryClient.setQueryData<FeedbackSettingsData>(key, (old) =>
+      old && old.board ? { ...old, board: { ...old.board, ...body } } : old,
+    );
+    if (accentTimer.current) clearTimeout(accentTimer.current);
+    accentTimer.current = setTimeout(() => {
+      api(settingsPath, { method: "PATCH", body: JSON.stringify(body) }).catch((e) => {
+        toast.error((e as Error).message);
+        void queryClient.invalidateQueries({ queryKey: key });
+      });
+    }, 350);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-6">
@@ -424,6 +446,17 @@ export function ProjectFeedbackSettings({
                 }
               />
             )}
+
+            {/* Couleur d'accent du board public (MIN-59) — optionnelle, une par
+                thème ; off par défaut = bleu minddy. */}
+            {board && (
+              <AccentColorSetting
+                board={board}
+                isOwner={isOwner}
+                onToggle={patchBoard}
+                onColorChange={patchBoardDebounced}
+              />
+            )}
           </div>
         )}
       </Channel>
@@ -466,6 +499,74 @@ export function ProjectFeedbackSettings({
         </div>
       </Channel>
     </div>
+  );
+}
+
+/** Couleur d'accent du board (MIN-59) : switch optionnel qui révèle deux
+ *  `ColorInput` (clair/sombre). Off = accents null → bleu minddy par défaut.
+ *  Activer amorce les deux couleurs sur le défaut pour donner un point de départ. */
+function AccentColorSetting({
+  board,
+  isOwner,
+  onToggle,
+  onColorChange,
+}: {
+  board: BoardSettings;
+  isOwner: boolean;
+  onToggle: (body: Partial<BoardSettings>) => void | Promise<void>;
+  onColorChange: (body: Partial<BoardSettings>) => void;
+}) {
+  const t = useTranslations("Settings");
+  const custom = board.accent_light !== null || board.accent_dark !== null;
+
+  return (
+    <Row
+      label={t("feedbackAccentTitle")}
+      hint={t("feedbackAccentDesc")}
+      control={
+        <Switch
+          checked={custom}
+          disabled={!isOwner}
+          onCheckedChange={(v) =>
+            void onToggle(
+              v
+                ? {
+                    accent_light: board.accent_light ?? DEFAULT_BOARD_ACCENT,
+                    accent_dark: board.accent_dark ?? DEFAULT_BOARD_ACCENT,
+                  }
+                : { accent_light: null, accent_dark: null },
+            )
+          }
+        />
+      }
+    >
+      {custom && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("feedbackAccentLight")}
+            </span>
+            <ColorInput
+              value={board.accent_light ?? DEFAULT_BOARD_ACCENT}
+              onChange={(next) => onColorChange({ accent_light: next })}
+              label={t("feedbackAccentLight")}
+              disabled={!isOwner}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("feedbackAccentDark")}
+            </span>
+            <ColorInput
+              value={board.accent_dark ?? DEFAULT_BOARD_ACCENT}
+              onChange={(next) => onColorChange({ accent_dark: next })}
+              label={t("feedbackAccentDark")}
+              disabled={!isOwner}
+            />
+          </div>
+        </div>
+      )}
+    </Row>
   );
 }
 

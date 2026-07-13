@@ -1,4 +1,3 @@
-import { cache } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -6,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { ProjectOrb } from "@/components/project-orb";
 import { PublicPageShell } from "@/components/public-page-shell";
 import { feedbackBasePath, getRequestDomainTarget } from "@/lib/server/custom-domains";
-import { getBoardByToken } from "@/lib/server/feedback/boards";
+import { getBoardContext } from "@/lib/server/feedback/board-context";
 import {
   FEEDBACK_SESSION_COOKIE,
   getFeedbackSession,
@@ -41,8 +40,6 @@ type PageProps = {
     ssoError?: string;
   }>;
 };
-
-const getBoardContext = cache(getBoardByToken);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;

@@ -43,6 +43,19 @@ const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/
 const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/api/", "/auth/", "/_next/", "/.well-known/"];
 const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
 
+// Pages publiques anonymes (board de feedback /f/, vues partagées /share/) : on
+// tague la requête pour que le root layout bascule le thème par défaut sur
+// "system" au lieu de "dark" (MIN-60). Le header étant posé côté serveur, le
+// script anti-FOUC du layout choisit le bon défaut dès le premier paint.
+const PUBLIC_SITE_PREFIXES = ["/f/", "/share/"];
+const PUBLIC_THEME_HEADER = "x-minddy-public";
+
+function withPublicThemeHeader(request: NextRequest): { request: { headers: Headers } } {
+  const headers = new Headers(request.headers);
+  headers.set(PUBLIC_THEME_HEADER, "1");
+  return { request: { headers } };
+}
+
 /**
  * Host custom → réécriture vers la page publique mappée (board de feedback ou
  * vue partagée) : `/` devient `/f/<token>` (resp. `/share/<token>`), les
@@ -57,7 +70,9 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
     CUSTOM_HOST_PASS_ROUTES.has(pathname) ||
     CUSTOM_HOST_PASS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   ) {
-    return NextResponse.next();
+    // Un host custom ne sert que du public → thème "system" (MIN-60). Inoffensif
+    // sur /api, /_next… qui ne rendent pas le layout thémé.
+    return NextResponse.next(withPublicThemeHeader(request));
   }
 
   const target = await lookupCustomDomain(host);
@@ -66,7 +81,7 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
   const base = target.kind === "feedback" ? `/f/${target.token}` : `/share/${target.token}`;
   const url = request.nextUrl.clone();
   url.pathname = pathname === "/" ? base : `${base}${pathname}`;
-  return NextResponse.rewrite(url);
+  return NextResponse.rewrite(url, withPublicThemeHeader(request));
 }
 
 function isSupabaseGetSessionWarning(args: unknown[]): boolean {
@@ -121,6 +136,10 @@ export async function proxy(request: NextRequest) {
       if (session?.user) {
         return NextResponse.redirect(new URL("/home", request.url));
       }
+    }
+    // Board de feedback / vues partagées : thème par défaut "system" (MIN-60).
+    if (PUBLIC_SITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+      return NextResponse.next(withPublicThemeHeader(request));
     }
     return NextResponse.next({ request });
   }

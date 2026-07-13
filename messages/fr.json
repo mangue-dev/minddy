@@ -1032,7 +1032,11 @@
     "feedbackShowViewsDesc": "Affiche les vues cochées comme onglets sur le board.",
     "feedbackNoSharedViews": "Aucune vue partagée pour l'instant.",
     "feedbackShowCategories": "Catégories sur le board public",
-    "feedbackShowCategoriesDesc": "Affiche les catégories des posts sur le board public. Sinon elles restent visibles uniquement pour l'équipe."
+    "feedbackShowCategoriesDesc": "Affiche les catégories des posts sur le board public. Sinon elles restent visibles uniquement pour l'équipe.",
+    "feedbackAccentTitle": "Couleur d'accent",
+    "feedbackAccentDesc": "Personnalise la couleur d'accent du board public, distincte en mode clair et sombre. Sinon, le bleu par défaut est utilisé.",
+    "feedbackAccentLight": "Mode clair",
+    "feedbackAccentDark": "Mode sombre"
   },
   "Sort": {
     "manual": "Manuel",

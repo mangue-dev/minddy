@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
+import { isAccentColor } from "@/lib/feedback/accent";
 import {
   clearSsoSecret,
   disableBoardForProject,
@@ -9,6 +10,7 @@ import {
   getBoardForProject,
   rotateBoardToken,
   rotateSsoSecret,
+  setBoardAccent,
   setBoardShowCategories,
   setBoardShowViews,
   setBoardVisibleViews,
@@ -32,6 +34,8 @@ function boardPayload(
     show_views: board.show_views,
     visible_view_ids: board.visible_view_ids,
     show_categories: board.show_categories,
+    accent_light: board.accent_light,
+    accent_dark: board.accent_dark,
     token: board.token,
     sso_secret: isOwner ? board.sso_secret : null,
     sso_configured: board.sso_secret !== null,
@@ -106,6 +110,24 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
+  // Accent optionnel (MIN-59) : chaque champ est soit un hex valide, soit null
+  // (retour au défaut). Une valeur non-null non-hex est rejetée.
+  const accentPatch: { accent_light?: string | null; accent_dark?: string | null } = {};
+  for (const field of ["accent_light", "accent_dark"] as const) {
+    if (field in body) {
+      const value = body[field];
+      if (value !== null && !isAccentColor(value)) {
+        return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+      }
+      accentPatch[field] = value as string | null;
+    }
+  }
+  if (Object.keys(accentPatch).length > 0) {
+    const ok = await setBoardAccent(id, accentPatch);
+    if (!ok) {
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+  }
   if (body.visible_view_ids !== undefined) {
     if (
       !Array.isArray(body.visible_view_ids) ||
@@ -126,6 +148,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     typeof body.enabled !== "boolean" &&
     typeof body.show_views !== "boolean" &&
     typeof body.show_categories !== "boolean" &&
+    Object.keys(accentPatch).length === 0 &&
     body.visible_view_ids === undefined
   ) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

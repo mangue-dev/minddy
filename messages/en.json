@@ -1032,7 +1032,11 @@
     "feedbackShowViewsDesc": "Shows the checked views as tabs on the board.",
     "feedbackNoSharedViews": "No shared views yet.",
     "feedbackShowCategories": "Categories on the public board",
-    "feedbackShowCategoriesDesc": "Shows post categories on the public board. Otherwise they stay visible to the team only."
+    "feedbackShowCategoriesDesc": "Shows post categories on the public board. Otherwise they stay visible to the team only.",
+    "feedbackAccentTitle": "Accent color",
+    "feedbackAccentDesc": "Customize the public board's accent color, separately for light and dark mode. Otherwise the default blue is used.",
+    "feedbackAccentLight": "Light mode",
+    "feedbackAccentDark": "Dark mode"
   },
   "Sort": {
     "manual": "Manual",

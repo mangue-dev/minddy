@@ -22,13 +22,16 @@ export interface FeedbackBoardRow {
   visible_view_ids: string[];
   /** Opt-in : afficher les catégories des posts sur le board public (MIN-52). */
   show_categories: boolean;
+  /** Accents optionnels du board public (MIN-59), hex par thème ; null = défaut. */
+  accent_light: string | null;
+  accent_dark: string | null;
   sso_secret: string | null;
   created_at: string;
   updated_at: string;
 }
 
 const BOARD_SELECT =
-  "id, project_id, token, enabled, show_views, visible_view_ids, show_categories, sso_secret, created_at, updated_at";
+  "id, project_id, token, enabled, show_views, visible_view_ids, show_categories, accent_light, accent_dark, sso_secret, created_at, updated_at";
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
@@ -136,6 +139,24 @@ export async function setBoardShowCategories(
   const { error } = await service
     .from("feedback_boards")
     .update({ show_categories: showCategories })
+    .eq("project_id", projectId);
+  return !error;
+}
+
+/** Couleur d'accent du board public (MIN-59). N'écrit que les champs fournis
+    (hex validé en amont, ou null pour revenir au défaut). */
+export async function setBoardAccent(
+  projectId: string,
+  patch: { accent_light?: string | null; accent_dark?: string | null }
+): Promise<boolean> {
+  const update: Record<string, string | null> = {};
+  if ("accent_light" in patch) update.accent_light = patch.accent_light ?? null;
+  if ("accent_dark" in patch) update.accent_dark = patch.accent_dark ?? null;
+  if (Object.keys(update).length === 0) return true;
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update(update)
     .eq("project_id", projectId);
   return !error;
 }
