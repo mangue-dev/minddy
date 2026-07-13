@@ -35,6 +35,7 @@ import {
   ChevronLeft,
   ChevronUp,
   GitMerge,
+  Globe,
   Link2,
   Lock,
   MessagesSquare,
@@ -650,6 +651,23 @@ function FeedbackDetail({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {/* Visibilité : bascule public/privé du post sur le board.
+                  L'intitulé annonce l'action à venir (pas l'état actuel). */}
+              <DropdownMenuItem
+                onSelect={() => patch.mutate({ is_public: !post.is_public })}
+              >
+                {post.is_public ? (
+                  <>
+                    <Lock className="size-4" />
+                    {t("makePrivate")}
+                  </>
+                ) : (
+                  <>
+                    <Globe className="size-4" />
+                    {t("makePublic")}
+                  </>
+                )}
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
                 <GitMerge className="size-4" />
                 {t("mergeInto")}

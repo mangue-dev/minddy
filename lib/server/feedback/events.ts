@@ -77,6 +77,20 @@ export function buildFeedbackFieldChangeEvents(
       to_value: updates.team_response ? "set" : "cleared",
     });
   }
+  // Visibilité : on journalise le sens (rendu public / privé) — pas de from/to,
+  // l'action se suffit à elle-même dans le fil.
+  if (
+    "is_public" in updates &&
+    (updates.is_public ?? null) !== (before.is_public ?? null)
+  ) {
+    events.push({
+      feedback_post_id: postId,
+      actor_id: actorId,
+      type: "updated",
+      field: "is_public",
+      to_value: updates.is_public ? "public" : "private",
+    });
+  }
   return events;
 }
 

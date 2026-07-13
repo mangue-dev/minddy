@@ -200,6 +200,14 @@ export async function updateFeedbackPostFields(params: {
     updates.team_response = response || null;
     updates.team_response_at = response ? new Date().toISOString() : null;
   }
+  // Visibilité (MIN-37) : l'équipe peut basculer un post public/privé depuis le
+  // dashboard. false = retiré du board (list, détail non-auteur, suggestions).
+  if ("is_public" in input) {
+    if (typeof input.is_public !== "boolean") {
+      return { ok: false, status: 400, errorKey: "invalidRequest" };
+    }
+    updates.is_public = input.is_public;
+  }
   if (Object.keys(updates).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }

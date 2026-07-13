@@ -230,6 +230,10 @@ export function describeFeedbackEvent(
         return e.to_value === "cleared"
           ? t("feedbackResponseRemoved")
           : t("feedbackResponded");
+      case "is_public":
+        return e.to_value === "private"
+          ? t("feedbackMadePrivate")
+          : t("feedbackMadePublic");
       default:
         return t("updated");
     }
