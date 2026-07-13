@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/feedback/team-guard";
 import { getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
 import { FEEDBACK_TITLE_MAX, FEEDBACK_BODY_MAX } from "@/lib/server/feedback/posts";
+import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import { isFeedbackPostStatus } from "@/lib/feedback/types";
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
@@ -78,6 +79,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     console.error("[feedback] patch failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
+  // Journal d'activité : diff des champs édités, attribué au membre.
+  await emitFeedbackFieldChanges(service, {
+    postId,
+    actorId: guard.userId,
+    before: post as unknown as Record<string, unknown>,
+    updates,
+  });
   const detail = await getTeamFeedbackDetail(id, postId);
   return NextResponse.json({ post: detail });
 }

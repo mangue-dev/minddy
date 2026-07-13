@@ -2,6 +2,11 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { createIssueForProject } from "@/lib/server/create-issue";
+import {
+  emitFeedbackLinked,
+  emitFeedbackPromoted,
+  emitFeedbackUnlinked,
+} from "@/lib/server/feedback/events";
 
 /**
  * Promotion d'un post de feedback en issue (MIN-37) — le pont entre le board
@@ -72,6 +77,12 @@ export async function promoteFeedbackPost(params: {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
+  await emitFeedbackPromoted(service, {
+    postId: params.postId,
+    actorId: params.actorId,
+    issueId,
+  });
+
   return { ok: true, issue: created.issue };
 }
 
@@ -82,6 +93,7 @@ export async function promoteFeedbackPost(params: {
 export async function linkFeedbackIssue(params: {
   postId: string;
   issueId: string;
+  actorId: string | null;
 }): Promise<
   | { ok: true }
   | { ok: false; status: number; errorKey: "issueNotFound" | "feedbackNotFound" | "databaseError" }
@@ -124,15 +136,35 @@ export async function linkFeedbackIssue(params: {
     console.error("[feedback-promote] link existing failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+  await emitFeedbackLinked(service, {
+    postId: params.postId,
+    actorId: params.actorId,
+    issueId: issue.id as string,
+  });
   return { ok: true };
 }
 
 /** Détache l'issue liée (le post garde son dernier statut public). */
-export async function unlinkFeedbackIssue(postId: string): Promise<boolean> {
+export async function unlinkFeedbackIssue(
+  postId: string,
+  actorId: string | null
+): Promise<boolean> {
   const service = getServiceClient();
+  // On lit l'issue liée avant de la nul­ler pour la nommer dans le fil.
+  const { data: before } = await service
+    .from("feedback_posts")
+    .select("issue_id")
+    .eq("id", postId)
+    .maybeSingle();
   const { error } = await service
     .from("feedback_posts")
     .update({ issue_id: null })
     .eq("id", postId);
-  return !error;
+  if (error) return false;
+  await emitFeedbackUnlinked(service, {
+    postId,
+    actorId,
+    issueId: (before?.issue_id as string | null) ?? null,
+  });
+  return true;
 }

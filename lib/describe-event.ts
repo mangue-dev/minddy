@@ -26,6 +26,8 @@ export interface EventTranslators {
   tPriority: LabelT;
   /** "ObjectiveStatus" namespace (value → label) — for objective events. */
   tObjectiveStatus?: LabelT;
+  /** "PublicFeedback" status namespace (value → label) — for feedback events. */
+  tFeedbackStatus?: LabelT;
   /** Render a stored due-date value (ISO datetime or legacy date) for display. */
   formatDue: (value: string | null) => string;
 }
@@ -181,6 +183,53 @@ export function describeObjectiveEvent(
         });
       case "color":
         return t("objectiveColorChanged");
+      default:
+        return t("updated");
+    }
+  }
+  return t("updated");
+}
+
+/** Localized description of a FEEDBACK activity event (without the actor).
+    Twin of describeEvent for the feedback detail panel: feedback posts use the
+    PublicFeedback status label set, and the tracked actions differ (promotion,
+    link, merge, team response). */
+export function describeFeedbackEvent(
+  e: IssueEvent,
+  ctx: EventContext,
+  tr: EventTranslators
+): string {
+  const { t } = tr;
+  const fbStatus = (v: string) => tr.tFeedbackStatus?.(v) ?? v;
+
+  // Entrée dans le système : le canal est porté par `field`.
+  if (e.type === "created") return t(`feedbackCreated_${e.field ?? "board"}`);
+  if (e.type === "promoted")
+    return t("feedbackPromoted", { ref: issueRef(ctx, tr, e.to_value) });
+  if (e.type === "linked")
+    return t("feedbackLinked", { ref: issueRef(ctx, tr, e.to_value) });
+  if (e.type === "unlinked") return t("feedbackUnlinked");
+  // to_value = titre du doublon absorbé.
+  if (e.type === "merged")
+    return t("feedbackMerged", { title: e.to_value ?? "" });
+  if (e.type === "merge_undone")
+    return t("feedbackMergeUndone", { title: e.to_value ?? "" });
+
+  if (e.type === "updated") {
+    switch (e.field) {
+      case "title":
+        return t("feedbackTitleChanged");
+      case "body":
+        return t("feedbackBodyChanged");
+      case "status":
+        return t("feedbackStatusChanged", {
+          from: e.from_value ? fbStatus(e.from_value) : emptyDash,
+          to: e.to_value ? fbStatus(e.to_value) : emptyDash,
+        });
+      case "team_response":
+        return e.to_value === "cleared"
+          ? t("feedbackResponseRemoved")
+          : t("feedbackResponded");
       default:
         return t("updated");
     }

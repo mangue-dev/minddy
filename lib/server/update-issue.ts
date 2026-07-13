@@ -376,7 +376,7 @@ export async function updateIssueFields({
   // Feedback (MIN-37): le statut public d'un post lié suit l'issue
   // (done→shipped, in_progress→in_progress ; toute autre transition = no-op).
   if ("status" in updates && updates.status !== before.status) {
-    scheduleFeedbackStatusSync(issueId, updates.status);
+    scheduleFeedbackStatusSync(issueId, updates.status, actorId);
   }
 
   return { ok: true, issue: mapIssueRow(data) };

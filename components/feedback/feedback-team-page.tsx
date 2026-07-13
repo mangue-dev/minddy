@@ -46,12 +46,16 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { IssueSidePanel } from "@/components/issue-side-panel";
+import { IssueActivity } from "@/components/issue-timeline";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import type { Issue, IssueRelationType } from "@/lib/types";
+import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
+import { useAuth } from "@/lib/auth-context";
+import type { EventContext } from "@/lib/describe-event";
+import type { Issue, IssueRelationType, Member } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -74,6 +78,10 @@ import type {
  * file de suggestions, réponse d'équipe, promotion en issue et saisie interne
  * au nom d'un utilisateur.
  */
+
+/** Placeholder comment handlers — the feedback feed is events-only until MIN-51
+    adds internal comments; IssueActivity never calls these without comments. */
+const noopAsync = async () => {};
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -247,6 +255,8 @@ export function FeedbackTeamPage() {
             projectKey={project?.key ?? ""}
             postId={selectedId}
             allPosts={posts}
+            members={members}
+            issues={issues}
             onBack={() => setMobileDetail(false)}
             onChanged={refresh}
             onOpenIssue={setOpenIssueId}
@@ -304,6 +314,8 @@ function FeedbackDetail({
   projectKey,
   postId,
   allPosts,
+  members,
+  issues,
   onBack,
   onChanged,
   onOpenIssue,
@@ -313,6 +325,9 @@ function FeedbackDetail({
   projectKey: string;
   postId: string;
   allPosts: TeamFeedbackListItem[];
+  /** Project members + issues — resolve actor names and issue refs in the feed. */
+  members: Member[];
+  issues: Issue[];
   onBack: () => void;
   onChanged: () => void;
   /** Ouvre le side panel d'issue directement (pas de navigation). */
@@ -322,6 +337,15 @@ function FeedbackDetail({
   const tStatus = useTranslations("PublicFeedback");
   const format = useFormatter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { items: activityItems } = useFeedbackTimeline(projectId, postId);
+
+  // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
+  // objectives/categories are unused for feedback.
+  const eventCtx = useMemo<EventContext>(
+    () => ({ members, objectives: [], categories: [], issues, projectKey }),
+    [members, issues, projectKey]
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["feedback-detail", projectId, postId],
@@ -347,6 +371,8 @@ function FeedbackDetail({
 
   const refreshDetail = () => {
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
+    // Le fil d'activité n'a pas de realtime : chaque action le rafraîchit.
+    void queryClient.invalidateQueries({ queryKey: ["feedback-events", projectId] });
     onChanged();
   };
 
@@ -692,6 +718,20 @@ function FeedbackDetail({
             </>
           )}
         </section>
+
+        {/* Journal d'activité — parité tickets/objectifs (MIN-57). Events-only
+            pour l'instant : les commentaires internes arrivent avec MIN-51. */}
+        <IssueActivity
+          items={activityItems}
+          ctx={eventCtx}
+          entity="feedback"
+          currentUserId={user?.id ?? null}
+          projectId={projectId}
+          onReply={noopAsync}
+          onEditComment={noopAsync}
+          onDeleteComment={noopAsync}
+          onDeleteAttachment={noopAsync}
+        />
       </div>
 
       <MergeDialog

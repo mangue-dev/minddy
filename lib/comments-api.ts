@@ -55,6 +55,15 @@ export async function fetchObjectiveEventsApi(objectiveId: string): Promise<Issu
   return parseJson<IssueEvent[]>(await fetch(`/api/objectives/${objectiveId}/events`));
 }
 
+export async function fetchFeedbackEventsApi(
+  projectId: string,
+  postId: string
+): Promise<IssueEvent[]> {
+  return parseJson<IssueEvent[]>(
+    await fetch(`/api/projects/${projectId}/feedback/${postId}/events`)
+  );
+}
+
 export async function addObjectiveCommentApi(
   objectiveId: string,
   body: string,

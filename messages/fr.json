@@ -41,7 +41,20 @@
     "objectiveStatusChanged": "a changé le statut : {from} → {to}",
     "objectiveLeadChanged": "a changé le responsable : {from} → {to}",
     "objectiveTargetDateChanged": "a changé la date cible : {from} → {to}",
-    "objectiveColorChanged": "a changé la couleur"
+    "objectiveColorChanged": "a changé la couleur",
+    "feedbackCreated_board": "a soumis ce retour",
+    "feedbackCreated_api": "a soumis ce retour via l'API",
+    "feedbackCreated_internal": "a consigné ce retour",
+    "feedbackTitleChanged": "a renommé le retour",
+    "feedbackBodyChanged": "a modifié la description",
+    "feedbackStatusChanged": "a changé le statut : {from} → {to}",
+    "feedbackResponded": "a publié une réponse d'équipe",
+    "feedbackResponseRemoved": "a retiré la réponse d'équipe",
+    "feedbackPromoted": "a promu en {ref}",
+    "feedbackLinked": "a lié à {ref}",
+    "feedbackUnlinked": "a délié le ticket",
+    "feedbackMerged": "a fusionné « {title} » dans ce retour",
+    "feedbackMergeUndone": "a annulé la fusion de « {title} »"
   },
   "ApiErrors": {
     "invalidJson": "JSON invalide",
@@ -1059,7 +1072,8 @@
     "integrationActor": "L'intégration {name}",
     "mcpActor": "{name} (mcp)",
     "mcpFallback": "Agent",
-    "integrationFallback": "inconnue"
+    "integrationFallback": "inconnue",
+    "boardActor": "Le board"
   },
   "ToolCall": {
     "loadingProjects": "Chargement des projets…",

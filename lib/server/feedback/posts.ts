@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { embedText, toVectorLiteral } from "@/lib/server/embeddings";
+import { emitFeedbackCreated } from "@/lib/server/feedback/events";
 import type { FeedbackPostSource, FeedbackPostStatus } from "@/lib/feedback/types";
 
 /**
@@ -59,6 +60,9 @@ export async function createFeedbackPost(input: {
   authorId: string | null;
   /** Membre qui a saisi le feedback (canal interne uniquement). */
   createdByMember?: string | null;
+  /** Intégration à l'origine du post (canal API) — attribue l'événement
+      « créé » à l'intégration dans le fil d'activité. */
+  integrationId?: string | null;
   /** false = retour privé : collecté par l'équipe mais jamais publié sur le
       board. Par défaut public (choix explicite du visiteur au composeur). */
   isPublic?: boolean;
@@ -93,6 +97,15 @@ export async function createFeedbackPost(input: {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   const post = data as FeedbackPostRow;
+
+  // Activité : l'événement « créé » ancre le fil, attribué au bon canal.
+  await emitFeedbackCreated(service, {
+    postId: post.id,
+    source: input.source,
+    createdByMember: input.createdByMember ?? null,
+    integrationId: input.integrationId ?? null,
+  });
+
   if (!input.authorId) return { ok: true, post };
 
   // Soumettre = voter : l'auteur soutient évidemment son propre besoin.

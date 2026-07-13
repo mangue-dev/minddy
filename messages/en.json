@@ -41,7 +41,20 @@
     "objectiveStatusChanged": "changed status: {from} → {to}",
     "objectiveLeadChanged": "changed lead: {from} → {to}",
     "objectiveTargetDateChanged": "changed target date: {from} → {to}",
-    "objectiveColorChanged": "changed the color"
+    "objectiveColorChanged": "changed the color",
+    "feedbackCreated_board": "submitted this feedback",
+    "feedbackCreated_api": "submitted this feedback via the API",
+    "feedbackCreated_internal": "logged this feedback",
+    "feedbackTitleChanged": "renamed the feedback",
+    "feedbackBodyChanged": "edited the description",
+    "feedbackStatusChanged": "changed status: {from} → {to}",
+    "feedbackResponded": "posted a team response",
+    "feedbackResponseRemoved": "removed the team response",
+    "feedbackPromoted": "promoted to {ref}",
+    "feedbackLinked": "linked to {ref}",
+    "feedbackUnlinked": "unlinked the issue",
+    "feedbackMerged": "merged “{title}” into this feedback",
+    "feedbackMergeUndone": "reverted the merge of “{title}”"
   },
   "ApiErrors": {
     "invalidJson": "Invalid JSON",
@@ -1059,7 +1072,8 @@
     "integrationActor": "Integration {name}",
     "mcpActor": "{name} (mcp)",
     "mcpFallback": "Agent",
-    "integrationFallback": "unknown"
+    "integrationFallback": "unknown",
+    "boardActor": "The board"
   },
   "ToolCall": {
     "loadingProjects": "Loading projects…",

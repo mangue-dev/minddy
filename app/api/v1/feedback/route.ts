@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
     body: typeof body.body === "string" ? body.body : "",
     source: "api",
     authorId: feedbackUser.id,
+    integrationId: auth.integration.id,
   });
   if (!result.ok) {
     console.error("[api/v1/feedback] create failed:", result.errorKey);

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
-  const result = await linkFeedbackIssue({ postId, issueId });
+  const result = await linkFeedbackIssue({ postId, issueId, actorId: guard.userId });
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
@@ -54,7 +54,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("feedbackNotFound") }, { status: 404 });
   }
 
-  const ok = await unlinkFeedbackIssue(postId);
+  const ok = await unlinkFeedbackIssue(postId, guard.userId);
   if (!ok) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }

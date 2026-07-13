@@ -2,6 +2,7 @@ import "server-only";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
+import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
 
 /**
@@ -21,12 +22,16 @@ const ISSUE_TO_FEEDBACK_STATUS: Record<string, FeedbackPostStatus> = {
   canceled: "declined",
 };
 
-export function scheduleFeedbackStatusSync(issueId: string, issueStatus: unknown): void {
+export function scheduleFeedbackStatusSync(
+  issueId: string,
+  issueStatus: unknown,
+  actorId: string | null = null
+): void {
   const mapped =
     typeof issueStatus === "string" ? ISSUE_TO_FEEDBACK_STATUS[issueStatus] : undefined;
   if (!mapped) return;
   after(() =>
-    syncFeedbackStatusForIssue(issueId, mapped).catch((e) =>
+    syncFeedbackStatusForIssue(issueId, mapped, actorId).catch((e) =>
       console.error("[feedback-status-sync] failed:", (e as Error).message)
     )
   );
@@ -34,14 +39,31 @@ export function scheduleFeedbackStatusSync(issueId: string, issueStatus: unknown
 
 export async function syncFeedbackStatusForIssue(
   issueId: string,
-  status: FeedbackPostStatus
+  status: FeedbackPostStatus,
+  actorId: string | null = null
 ): Promise<void> {
   const service = getServiceClient();
+  // On lit les posts qui vont réellement changer pour ne journaliser que les
+  // vraies transitions (from → to), attribuées au membre qui a bougé l'issue.
+  const { data: affected } = await service
+    .from("feedback_posts")
+    .select("id, status")
+    .eq("issue_id", issueId)
+    .neq("status", status);
   const { error } = await service
     .from("feedback_posts")
     .update({ status })
     .eq("issue_id", issueId);
   if (error) {
     console.error("[feedback-status-sync] update failed:", error.message);
+    return;
+  }
+  for (const post of affected ?? []) {
+    await emitFeedbackFieldChanges(service, {
+      postId: post.id as string,
+      actorId,
+      before: { status: post.status },
+      updates: { status },
+    });
   }
 }

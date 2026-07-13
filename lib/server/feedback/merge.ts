@@ -1,6 +1,39 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
+import { emitFeedbackMerged } from "@/lib/server/feedback/events";
+
+/** Journalise une fusion (ou son undo) sur le post canonique, en nommant le
+    doublon absorbé. Best-effort : lit l'event de merge puis le titre du doublon. */
+async function recordMergeActivity(
+  service: SupabaseClient,
+  params: {
+    eventId: string;
+    actorId: string | null;
+    performedBy: "ai" | "team";
+    undone?: boolean;
+  }
+): Promise<void> {
+  const { data: ev } = await service
+    .from("feedback_merge_events")
+    .select("dup_id, canonical_id")
+    .eq("id", params.eventId)
+    .maybeSingle();
+  if (!ev) return;
+  const { data: dup } = await service
+    .from("feedback_posts")
+    .select("title")
+    .eq("id", ev.dup_id as string)
+    .maybeSingle();
+  await emitFeedbackMerged(service, {
+    canonicalPostId: ev.canonical_id as string,
+    actorId: params.actorId,
+    dupTitle: (dup?.title as string | undefined) ?? "",
+    performedBy: params.performedBy,
+    undone: params.undone,
+  });
+}
 
 /**
  * Merge/undo (MIN-37) — wrappers TS des fonctions Postgres. Toute l'atomicité
@@ -27,6 +60,11 @@ export async function mergePosts(params: {
     p_confidence: params.confidence ?? null,
   });
   if (error) return { ok: false, error: error.message };
+  await recordMergeActivity(service, {
+    eventId: data as string,
+    actorId: params.actorId ?? null,
+    performedBy: params.performedBy,
+  });
   return { ok: true, eventId: data as string };
 }
 
@@ -40,6 +78,12 @@ export async function undoMerge(params: {
     p_actor: params.actorId ?? null,
   });
   if (error) return { ok: false, error: error.message };
+  await recordMergeActivity(service, {
+    eventId: params.eventId,
+    actorId: params.actorId ?? null,
+    performedBy: params.actorId ? "team" : "ai",
+    undone: true,
+  });
   return { ok: true };
 }
 

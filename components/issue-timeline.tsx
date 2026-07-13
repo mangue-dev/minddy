@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Ellipsis,
+  MessagesSquare,
   Pencil,
   Plug,
   Trash2,
@@ -29,6 +30,7 @@ import {
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import {
   describeEvent,
+  describeFeedbackEvent,
   describeObjectiveEvent,
   type EventContext,
   type EventTranslators,
@@ -56,7 +58,7 @@ type EventItem = Extract<TimelineItem, { kind: "event" }>;
 type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
 type TimelineT = ReturnType<typeof useTranslations>;
 /** Which entity's activity we render — picks the event describer + status set. */
-export type ActivityEntity = "issue" | "objective";
+export type ActivityEntity = "issue" | "objective" | "feedback";
 
 /** Compact localized relative time, e.g. "Il y a 7min" / "7min ago". */
 function timeAgo(iso: string, t: TimelineT): string {
@@ -88,6 +90,7 @@ function useEventTranslators(): EventTranslators {
   const tStatus = useTranslations("Status");
   const tPriority = useTranslations("Priority");
   const tObjectiveStatus = useTranslations("ObjectiveStatus");
+  const tFeedback = useTranslations("PublicFeedback");
   const format = useFormatter();
   return {
     t: (key, values) =>
@@ -96,6 +99,8 @@ function useEventTranslators(): EventTranslators {
     tPriority: (v) => tPriority(v as Parameters<typeof tPriority>[0]),
     tObjectiveStatus: (v) =>
       tObjectiveStatus(v as Parameters<typeof tObjectiveStatus>[0]),
+    tFeedbackStatus: (v) =>
+      tFeedback(`status.${v}` as Parameters<typeof tFeedback>[0]),
     formatDue: (value) => {
       const d = parseDueDate(value);
       return d ? format.dateTime(d, dueDateFormat(d)) : "—";
@@ -191,6 +196,22 @@ function SmartAssignAvatar({ className }: { className?: string }) {
   );
 }
 
+/** Avatar for feedback submitted through the public board — the anonymous
+    end-user has no team identity, so the board itself stands in as the actor. */
+function BoardAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      <MessagesSquare className="size-3" />
+    </span>
+  );
+}
+
 /** Avatar for issues submitted through a project integration (Feedback API) —
     a plug instead of a user's initials, so external submissions stand out. */
 function IntegrationAvatar({ className }: { className?: string }) {
@@ -253,6 +274,12 @@ function EventRow({
   const viaMcp = !viaSmartAssign && !viaNumo && !!item.event.via_mcp;
   const viaIntegration =
     !viaSmartAssign && !viaNumo && !viaMcp && !!item.event.integration_id;
+  // Soumission board (feedback) : l'auteur est un utilisateur final anonyme
+  // sans identité équipe — le board tient lieu d'acteur.
+  const viaBoard =
+    entity === "feedback" &&
+    item.event.type === "created" &&
+    item.event.field === "board";
   // via_mcp : l'acteur affiché est l'AGENT (nom de la clé API + logo), pas
   // l'utilisateur — l'action peut venir d'un workflow automatisé.
   const actor = actorName(ctx.members, item.event.actor_id, t);
@@ -266,11 +293,15 @@ function EventRow({
           })
         : viaMcp
           ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
-          : actor;
+          : viaBoard
+            ? t("boardActor")
+            : actor;
   const summary =
-    entity === "objective"
-      ? describeObjectiveEvent(item.event, ctx, tr)
-      : describeEvent(item.event, ctx, tr);
+    entity === "feedback"
+      ? describeFeedbackEvent(item.event, ctx, tr)
+      : entity === "objective"
+        ? describeObjectiveEvent(item.event, ctx, tr)
+        : describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
       {viaSmartAssign ? (
@@ -281,6 +312,8 @@ function EventRow({
         <McpAvatar agent={item.event.api_key_agent} />
       ) : viaIntegration ? (
         <IntegrationAvatar />
+      ) : viaBoard ? (
+        <BoardAvatar />
       ) : (
         <ActorAvatar members={ctx.members} id={item.event.actor_id} name={actor} />
       )}
