@@ -665,7 +665,8 @@
     "newObjective": "Nouvel objectif",
     "searchPlaceholder": "Rechercher…",
     "noResults": "Aucun résultat.",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "adminDashboard": "Dashboard administrateur"
   },
   "Keyboard": {
     "then": "puis",
@@ -1263,5 +1264,63 @@
     "refill": "Re-remplir le cycle",
     "refillAdded": "{count, plural, one {# ticket ajouté au cycle} other {# tickets ajoutés au cycle}}",
     "refillEmpty": "Aucun ticket éligible à ajouter — ta réserve assignée est vide."
+  },
+  "Admin": {
+    "title": "Modèles IA",
+    "subtitle": "Configurez les modèles d’IA utilisés par minddy. Le format est provider/model (ex. deepseek/deepseek-v4-flash) ; laissez vide pour revenir à la valeur par défaut.",
+    "loadError": "Impossible de charger la configuration.",
+    "saved": "Modèle enregistré",
+    "groups": {
+      "assistant": {
+        "title": "Assistant",
+        "desc": "Modèles de Numo et des aides à la rédaction."
+      },
+      "voice": {
+        "title": "Voix",
+        "desc": "Dictée vocale et transcription."
+      },
+      "feedback": {
+        "title": "Feedback",
+        "desc": "Traitement du board de retours."
+      }
+    },
+    "fields": {
+      "assistant_model": {
+        "label": "Modèle de Numo",
+        "desc": "Modèle principal de l’assistant (chat, commentaires, actions)."
+      },
+      "fallback_model": {
+        "label": "Modèle de repli",
+        "desc": "Utilisé quand le modèle principal échoue."
+      },
+      "smart_assign_model": {
+        "label": "Assignation intelligente",
+        "desc": "Suggère la personne à assigner sur un ticket."
+      },
+      "dictate_model": {
+        "label": "Dictée → ticket",
+        "desc": "Transforme la transcription vocale en brouillon de ticket."
+      },
+      "transcription_model": {
+        "label": "Transcription vocale",
+        "desc": "Convertit l’audio de la dictée en texte."
+      },
+      "feedback_classify_enabled": {
+        "label": "Classification automatique",
+        "desc": "Classe automatiquement les retours entrants du board."
+      },
+      "feedback_classify_model": {
+        "label": "Modèle de classification",
+        "desc": "Modèle utilisé pour classer les retours."
+      },
+      "feedback_analysis_model": {
+        "label": "Analyse des retours",
+        "desc": "Détecte et fusionne les doublons du board."
+      },
+      "feedback_embedding_model": {
+        "label": "Embeddings des retours",
+        "desc": "Vectorise les retours pour mesurer leur similarité."
+      }
+    }
   }
 }

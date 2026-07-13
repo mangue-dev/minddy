@@ -34,9 +34,11 @@ import {
   BarChart3,
   Settings,
   ArrowUpRight,
+  Shield,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
+import { useIsAdmin } from "@/lib/use-is-admin";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
@@ -283,6 +285,7 @@ function ThemeItem({
 function AccountButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const { user, signOut } = useAuth();
+  const isAdmin = useIsAdmin();
   const firstName = firstNameOf(user, t("accountFallback"));
   const meta = user?.user_metadata as
     | { avatar_url?: string; picture?: string }
@@ -323,6 +326,14 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
             {t("accountSettings")}
           </Link>
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <Shield />
+              {t("adminDashboard")}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <ThemeItem value="light" icon={Sun} label={t("themeLight")} />
         <ThemeItem value="dark" icon={Moon} label={t("themeDark")} />

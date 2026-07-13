@@ -665,7 +665,8 @@
     "newObjective": "New objective",
     "searchPlaceholder": "Search…",
     "noResults": "No results.",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "adminDashboard": "Admin dashboard"
   },
   "Keyboard": {
     "then": "then",
@@ -1263,5 +1264,63 @@
     "refill": "Refill the cycle",
     "refillAdded": "{count, plural, one {# issue added to the cycle} other {# issues added to the cycle}}",
     "refillEmpty": "Nothing eligible to add — your assigned pool is empty."
+  },
+  "Admin": {
+    "title": "AI models",
+    "subtitle": "Configure the AI models minddy uses. Format is provider/model (e.g. deepseek/deepseek-v4-flash); leave empty to fall back to the default.",
+    "loadError": "Couldn’t load the configuration.",
+    "saved": "Model saved",
+    "groups": {
+      "assistant": {
+        "title": "Assistant",
+        "desc": "Numo and the writing helpers."
+      },
+      "voice": {
+        "title": "Voice",
+        "desc": "Voice dictation and transcription."
+      },
+      "feedback": {
+        "title": "Feedback",
+        "desc": "Feedback board processing."
+      }
+    },
+    "fields": {
+      "assistant_model": {
+        "label": "Numo model",
+        "desc": "Primary assistant model (chat, comments, actions)."
+      },
+      "fallback_model": {
+        "label": "Fallback model",
+        "desc": "Used when the primary model fails."
+      },
+      "smart_assign_model": {
+        "label": "Smart assignment",
+        "desc": "Suggests who to assign an issue to."
+      },
+      "dictate_model": {
+        "label": "Dictation → issue",
+        "desc": "Turns the voice transcript into an issue draft."
+      },
+      "transcription_model": {
+        "label": "Speech-to-text",
+        "desc": "Converts dictation audio into text."
+      },
+      "feedback_classify_enabled": {
+        "label": "Automatic classification",
+        "desc": "Automatically classifies incoming board feedback."
+      },
+      "feedback_classify_model": {
+        "label": "Classification model",
+        "desc": "Model used to classify feedback."
+      },
+      "feedback_analysis_model": {
+        "label": "Feedback analysis",
+        "desc": "Detects and merges board duplicates."
+      },
+      "feedback_embedding_model": {
+        "label": "Feedback embeddings",
+        "desc": "Vectorizes feedback to measure similarity."
+      }
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   BarChart3,
   Megaphone,
   Settings,
+  Shield,
   Sun,
   Moon,
   Monitor,
@@ -15,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useIsAdmin } from "@/lib/use-is-admin";
 import { displayName } from "@/lib/display-name";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import type { AppNavSection } from "@/components/app-sidebar";
@@ -64,6 +66,7 @@ export function useAccountActions(): {
   const router = useRouter();
   const { signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const isAdmin = useIsAdmin();
 
   const menuSections: AppNavSection[] = [
     {
@@ -72,6 +75,9 @@ export function useAccountActions(): {
       items: [
         { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
         { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
+        ...(isAdmin
+          ? [{ key: "m-admin", label: t("adminDashboard"), icon: Shield, href: "/admin" }]
+          : []),
         { key: "m-feedback", label: t("shareFeedback"), icon: Megaphone, onClick: openFeedbackBoard },
       ],
     },
@@ -102,6 +108,17 @@ export function useAccountActions(): {
       keywords: ["statistics", "stats", "statistiques"],
       onSelect: () => router.push("/statistics"),
     },
+    ...(isAdmin
+      ? [
+          {
+            key: "cmd-admin",
+            label: t("adminDashboard"),
+            icon: Shield,
+            keywords: ["admin", "administration", "models", "modèles", "modeles", "ia", "ai"],
+            onSelect: () => router.push("/admin"),
+          },
+        ]
+      : []),
     {
       key: "cmd-feedback",
       label: t("shareFeedback"),
