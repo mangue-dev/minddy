@@ -2,8 +2,15 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { embedText, toVectorLiteral } from "@/lib/server/embeddings";
-import { emitFeedbackCreated } from "@/lib/server/feedback/events";
-import type { FeedbackPostSource, FeedbackPostStatus } from "@/lib/feedback/types";
+import {
+  emitFeedbackCreated,
+  emitFeedbackFieldChanges,
+} from "@/lib/server/feedback/events";
+import {
+  isFeedbackPostStatus,
+  type FeedbackPostSource,
+  type FeedbackPostStatus,
+} from "@/lib/feedback/types";
 
 /**
  * Création des posts de feedback (MIN-37) — core partagé des trois canaux
@@ -128,4 +135,94 @@ export async function getFeedbackPost(postId: string): Promise<FeedbackPostRow |
     .eq("id", postId)
     .maybeSingle();
   return (data as FeedbackPostRow | null) ?? null;
+}
+
+export type UpdateFeedbackFieldsResult =
+  | { ok: true; post: FeedbackPostRow }
+  | {
+      ok: false;
+      status: number;
+      errorKey:
+        | "feedbackNotFound"
+        | "titleRequired"
+        | "invalidStatus"
+        | "invalidRequest"
+        | "noFieldsToUpdate"
+        | "databaseError";
+    };
+
+/**
+ * Édition de la couche canonique d'un post (titre, corps, statut manuel,
+ * réponse d'équipe — jamais submitted_*), avec journal d'activité. Core partagé
+ * par la route PATCH et l'outil Numo `respond_to_feedback`, pour une seule
+ * source de vérité sur la validation et l'émission d'événements. Seuls les
+ * champs présents dans `input` sont touchés.
+ */
+export async function updateFeedbackPostFields(params: {
+  postId: string;
+  actorId: string | null;
+  input: Record<string, unknown>;
+  /** Journalise l'action comme venant de Numo (acteur "Numo" dans le fil). */
+  viaAssistant?: boolean;
+  /** Attribue l'action à l'agent MCP (via_mcp + clé) dans le fil. */
+  mcpKeyId?: string | null;
+}): Promise<UpdateFeedbackFieldsResult> {
+  const service = getServiceClient();
+  const { data: before } = await service
+    .from("feedback_posts")
+    .select(FEEDBACK_POST_SELECT)
+    .eq("id", params.postId)
+    .maybeSingle();
+  if (!before) return { ok: false, status: 404, errorKey: "feedbackNotFound" };
+
+  const input = params.input;
+  const updates: Record<string, unknown> = {};
+  if ("title" in input) {
+    const title = typeof input.title === "string" ? input.title.trim() : "";
+    if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
+    updates.title = title.slice(0, FEEDBACK_TITLE_MAX);
+  }
+  if ("body" in input) {
+    if (typeof input.body !== "string") {
+      return { ok: false, status: 400, errorKey: "invalidRequest" };
+    }
+    updates.body = input.body.slice(0, FEEDBACK_BODY_MAX);
+  }
+  if ("status" in input) {
+    if (!isFeedbackPostStatus(input.status)) {
+      return { ok: false, status: 400, errorKey: "invalidStatus" };
+    }
+    updates.status = input.status;
+  }
+  if ("team_response" in input) {
+    const response =
+      typeof input.team_response === "string" ? input.team_response.trim() : "";
+    updates.team_response = response || null;
+    updates.team_response_at = response ? new Date().toISOString() : null;
+  }
+  if (Object.keys(updates).length === 0) {
+    return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
+  }
+
+  const { data, error } = await service
+    .from("feedback_posts")
+    .update(updates)
+    .eq("id", params.postId)
+    .select(FEEDBACK_POST_SELECT)
+    .maybeSingle();
+  if (error || !data) {
+    console.error("[feedback-posts] update failed:", error?.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  await emitFeedbackFieldChanges(service, {
+    postId: params.postId,
+    actorId: params.actorId,
+    before: before as unknown as Record<string, unknown>,
+    updates,
+    viaAssistant: params.viaAssistant,
+    mcpKeyId: params.mcpKeyId,
+  });
+
+  return { ok: true, post: data as FeedbackPostRow };
 }

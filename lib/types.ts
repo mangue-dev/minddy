@@ -21,9 +21,10 @@ export interface Objective {
 export interface Attachment {
   id: string;
   project_id: string;
-  /** Exactly one of issue_id / objective_id is set (the row's parent). */
+  /** Exactly one of issue_id / objective_id / feedback_post_id is the parent. */
   issue_id: string | null;
   objective_id: string | null;
+  feedback_post_id?: string | null;
   comment_id: string | null;
   storage_path: string;
   file_name: string;
@@ -44,9 +45,10 @@ export interface AttachmentInput {
 
 export interface Comment {
   id: string;
-  /** Exactly one of issue_id / objective_id is set (the thread's parent). */
+  /** Exactly one of issue_id / objective_id / feedback_post_id is the parent. */
   issue_id: string | null;
   objective_id?: string | null;
+  feedback_post_id?: string | null;
   author_id: string | null;
   /** Root comment of the thread when this is a reply (depth ≤ 1). */
   parent_id: string | null;
@@ -84,6 +86,9 @@ export interface MyNotification {
   /** Set instead of the issue fields when the notification points at an objective. */
   objective_id: string | null;
   objective_name: string | null;
+  /** Set instead of the issue/objective fields when it points at a feedback post. */
+  feedback_post_id: string | null;
+  feedback_title: string | null;
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;

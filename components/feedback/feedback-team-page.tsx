@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import { IssueActivity } from "@/components/issue-timeline";
+import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -55,7 +55,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
 import { useAuth } from "@/lib/auth-context";
 import type { EventContext } from "@/lib/describe-event";
-import type { Issue, IssueRelationType, Member } from "@/lib/types";
+import type { AttachmentInput, Issue, IssueRelationType, Member } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -79,10 +79,6 @@ import type {
  * au nom d'un utilisateur.
  */
 
-/** Placeholder comment handlers — the feedback feed is events-only until MIN-51
-    adds internal comments; IssueActivity never calls these without comments. */
-const noopAsync = async () => {};
-
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -100,6 +96,10 @@ export function FeedbackTeamPage() {
   const format = useFormatter();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const searchParams = useSearchParams();
+  const postParam = searchParams.get("post");
+  const router = useRouter();
+  const pathname = usePathname();
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId);
   const queryClient = useQueryClient();
@@ -149,6 +149,17 @@ export function FeedbackTeamPage() {
       setSelectedId(posts[0].id);
     }
   }, [posts, selectedId]);
+
+  // Deep link from an Inbox notification: ?post=<id> selects that feedback and
+  // opens the detail on mobile, then strips the param so a background list
+  // refetch can't snap the selection back (same idiom as the objectives ?open).
+  useEffect(() => {
+    if (postParam) {
+      setSelectedId(postParam);
+      setMobileDetail(true);
+      router.replace(pathname);
+    }
+  }, [postParam, pathname, router]);
 
   // Invalide la liste ET tous les détails du projet (préfixe) : un merge/undo
   // change aussi le post canonique, pas seulement celui qu'on regarde. Le
@@ -338,7 +349,30 @@ function FeedbackDetail({
   const format = useFormatter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { items: activityItems } = useFeedbackTimeline(projectId, postId);
+  const {
+    items: activityItems,
+    addComment,
+    updateComment,
+    deleteComment,
+    deleteAttachment,
+  } = useFeedbackTimeline(projectId, postId);
+
+  // IssueActivity is generic — the feedback thread wires the same handlers as
+  // the issue/objective panels (onReply flips the arg order of addComment).
+  const handleReply = useCallback(
+    (
+      parentId: string,
+      body: string,
+      mentionedUserIds: string[],
+      attachments: AttachmentInput[]
+    ) => addComment(body, mentionedUserIds, parentId, attachments),
+    [addComment]
+  );
+  const handleComment = useCallback(
+    (body: string, mentionedUserIds: string[], attachments: AttachmentInput[]) =>
+      addComment(body, mentionedUserIds, null, attachments),
+    [addComment]
+  );
 
   // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
   // objectives/categories are unused for feedback.
@@ -719,19 +753,26 @@ function FeedbackDetail({
           )}
         </section>
 
-        {/* Journal d'activité — parité tickets/objectifs (MIN-57). Events-only
-            pour l'instant : les commentaires internes arrivent avec MIN-51. */}
-        <IssueActivity
-          items={activityItems}
-          ctx={eventCtx}
-          entity="feedback"
-          currentUserId={user?.id ?? null}
-          projectId={projectId}
-          onReply={noopAsync}
-          onEditComment={noopAsync}
-          onDeleteComment={noopAsync}
-          onDeleteAttachment={noopAsync}
-        />
+        {/* Journal d'activité + commentaires internes — parité tickets/objectifs
+            (MIN-51). Commentaires team-only : jamais exposés sur le board public. */}
+        <div className="flex flex-col gap-3">
+          <IssueActivity
+            items={activityItems}
+            ctx={eventCtx}
+            entity="feedback"
+            currentUserId={user?.id ?? null}
+            projectId={projectId}
+            onReply={handleReply}
+            onEditComment={updateComment}
+            onDeleteComment={deleteComment}
+            onDeleteAttachment={deleteAttachment}
+          />
+          <CommentComposer
+            members={members}
+            projectId={projectId}
+            onSubmit={handleComment}
+          />
+        </div>
       </div>
 
       <MergeDialog

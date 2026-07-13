@@ -27,7 +27,19 @@ import {
   removeIssueRelation,
 } from "@/lib/server/issue-relations";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
-import { addCommentToIssue } from "@/lib/server/add-comment";
+import { addCommentToIssue, addCommentToFeedbackPost } from "@/lib/server/add-comment";
+import { getProjectFeedbackPost } from "@/lib/server/feedback/team-guard";
+import {
+  listTeamFeedback,
+  getTeamFeedbackDetail,
+} from "@/lib/server/feedback/team-queries";
+import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
+import {
+  linkFeedbackIssue,
+  promoteFeedbackPost,
+  unlinkFeedbackIssue,
+} from "@/lib/server/feedback/promote";
+import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
 import {
   downloadAttachment,
   signedAttachmentUrl,
@@ -149,6 +161,27 @@ function mcpReadCtx(access: ProjectAccess): ReadContext {
     projectId: access.project.id,
     projectKey: access.project.key,
   };
+}
+
+/** Résout un post de feedback par UUID, épinglé au projet — l'équivalent de
+    resolveIssueRef pour le feedback (pas d'identifiant KEY-N, seulement l'id). */
+async function resolveFeedbackPost(
+  access: ProjectAccess,
+  postId: unknown
+): Promise<{ post: { id: string; title: string; issue_id: string | null } } | { error: ToolResult }> {
+  if (typeof postId !== "string" || !postId) {
+    return {
+      error: fail(
+        "invalid_params",
+        "feedback_post_id is required — a feedback post UUID (from minddy_list_feedback)."
+      ),
+    };
+  }
+  const post = await getProjectFeedbackPost(access.project.id, postId);
+  if (!post) {
+    return { error: fail("feedback_not_found", "Feedback post not found in this project.") };
+  }
+  return { post: { id: post.id, title: post.title, issue_id: post.issue_id } };
 }
 
 /** Les 20 derniers événements d'activité d'un ticket, acteurs résolus en
@@ -1547,6 +1580,280 @@ export function registerMinddyTools(server: McpServer): void {
           });
       }
       return ok({ removed, failed });
+    }
+  );
+
+  // ── Feedback (user requests collected on the project's board / API) ──────
+  server.registerTool(
+    "minddy_list_feedback",
+    {
+      title: "List feedback",
+      description:
+        "List a project's feedback posts (user requests from the feedback board, its " +
+        "API, or internal entry) — id (the feedback_post_id other feedback tools " +
+        "take), title, public status (open/planned/in_progress/shipped/declined), " +
+        "vote_count, whether it's public, source, and the linked tracking issue if " +
+        "any. Sorted by votes; merged duplicates are excluded.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        status: z
+          .array(z.enum(FEEDBACK_POST_STATUSES))
+          .optional()
+          .describe("Only these public statuses. Omit for all."),
+        limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
+      },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const posts = await listTeamFeedback(scope.access.project.id);
+      const statuses = args.status ? new Set(args.status) : null;
+      const rows = posts
+        .filter((p) => !statuses || statuses.has(p.status))
+        .slice(0, args.limit ?? 50)
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          vote_count: p.vote_count,
+          is_public: p.is_public,
+          source: p.source,
+          linked_issue_id: p.issue_id,
+        }));
+      return ok({ feedback: rows });
+    }
+  );
+
+  server.registerTool(
+    "minddy_get_feedback",
+    {
+      title: "Get feedback",
+      description:
+        "Fetch one feedback post in full: title, body (the user's request), the raw " +
+        "submitted text, public status, vote_count, author (real identity), the " +
+        "linked issue if any, and its internal, team-only comment thread.",
+      inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const detail = await getTeamFeedbackDetail(
+        scope.access.project.id,
+        args.feedback_post_id
+      );
+      if (!detail) return fail("feedback_not_found", "Feedback post not found in this project.");
+
+      const service = getServiceClient();
+      const { data: comments } = await service
+        .from("comments")
+        .select("author_id, via_assistant, body, created_at")
+        .eq("feedback_post_id", args.feedback_post_id)
+        .order("created_at", { ascending: true });
+      const users = await fetchAuthUsersById(
+        service,
+        (comments ?? [])
+          .map((c) => c.author_id as string | null)
+          .filter((v): v is string => !!v)
+      );
+
+      return ok({
+        feedback: {
+          id: detail.id,
+          title: detail.title,
+          body: detail.body,
+          submitted_title: detail.submitted_title,
+          submitted_body: detail.submitted_body,
+          status: detail.status,
+          vote_count: detail.vote_count,
+          is_public: detail.is_public,
+          source: detail.source,
+          team_response: detail.team_response,
+          author: detail.author
+            ? { name: detail.author.name, email: detail.author.email }
+            : null,
+          linked_issue: detail.issue
+            ? {
+                id: detail.issue.id,
+                identifier: issueIdentifier(scope.access.project.key, detail.issue.number),
+                status: detail.issue.status,
+              }
+            : null,
+          comments: (comments ?? []).map((c) => ({
+            author: c.via_assistant
+              ? "Numo"
+              : displayName(toNamed(c.author_id ? users.get(c.author_id as string) : null), "User"),
+            body: c.body,
+            created_at: c.created_at,
+          })),
+        },
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_add_feedback_comment",
+    {
+      title: "Add feedback comment",
+      description:
+        "Post an internal, team-only comment on a feedback post (never shown on the " +
+        "public board) — e.g. to leave triage notes. The timeline shows the agent as " +
+        "the author (this API key's name with an '(mcp)' marker), not the key's owner.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+        body: z.string().min(1).describe("Markdown."),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      if ("error" in ref) return ref.error;
+
+      const result = await addCommentToFeedbackPost({
+        postId: ref.post.id,
+        actorId: scope.userId,
+        body: args.body,
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({ comment: result.comment });
+    }
+  );
+
+  server.registerTool(
+    "minddy_promote_feedback",
+    {
+      title: "Promote feedback to issue",
+      description:
+        "Turn a feedback post into a NEW backlog issue and link them: the issue " +
+        "carries the request and its vote count, and the post's public status then " +
+        "follows that issue automatically. Fails if the post is already linked or is " +
+        "a merged duplicate. Use minddy_link_feedback instead when an issue already " +
+        "tracks the request.",
+      inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      if ("error" in ref) return ref.error;
+
+      const result = await promoteFeedbackPost({
+        postId: ref.post.id,
+        actorId: scope.userId,
+        projectName: scope.access.project.name,
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({
+        issue: {
+          ...result.issue,
+          identifier: issueIdentifier(
+            scope.access.project.key,
+            result.issue.number as number
+          ),
+        },
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_link_feedback",
+    {
+      title: "Link feedback to issue",
+      description:
+        "Link a feedback post to an EXISTING issue (the work is already tracked). The " +
+        "post's public status immediately reflects the issue and follows its " +
+        "transitions. Fails if the post is already linked or merged.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+        issue: ISSUE_REF,
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      if ("error" in ref) return ref.error;
+      const issueRef = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in issueRef) return issueRef.error;
+
+      const result = await linkFeedbackIssue({
+        postId: ref.post.id,
+        issueId: issueRef.issue.id,
+        actorId: scope.userId,
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({
+        linked: true,
+        feedback_post_id: ref.post.id,
+        issue: issueRef.issue.identifier,
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_unlink_feedback",
+    {
+      title: "Unlink feedback",
+      description:
+        "Detach the issue currently linked to a feedback post (the post keeps its " +
+        "last public status).",
+      inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      if ("error" in ref) return ref.error;
+
+      const okDone = await unlinkFeedbackIssue(ref.post.id, scope.userId, scope.keyId);
+      if (!okDone) return fail("database_error", "Could not unlink the feedback post.");
+      return ok({ unlinked: true, feedback_post_id: ref.post.id });
+    }
+  );
+
+  server.registerTool(
+    "minddy_respond_feedback",
+    {
+      title: "Respond to feedback",
+      description:
+        "Publish (or update) the official TEAM RESPONSE on a feedback post — the " +
+        "single reply shown PUBLICLY to everyone who submitted it, signed on behalf " +
+        "of the team. This is PUBLIC-facing. Pass an empty string to remove it.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+        response: z.string().describe("Public team response; empty string clears it."),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      if ("error" in ref) return ref.error;
+
+      const result = await updateFeedbackPostFields({
+        postId: ref.post.id,
+        actorId: scope.userId,
+        input: { team_response: args.response },
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({
+        feedback_post_id: ref.post.id,
+        team_response: result.post.team_response,
+      });
     }
   );
 }

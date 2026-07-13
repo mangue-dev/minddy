@@ -8,6 +8,7 @@ import {
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
+import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
 import { locales } from "@/i18n/config";
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
@@ -477,6 +478,121 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["issue_id", "decision"],
+      },
+    },
+  },
+  // ── Feedback board (user requests collected on the project's board / API) ─
+  {
+    type: "function",
+    function: {
+      name: "list_feedback",
+      description:
+        "List the project's feedback posts (user requests from the feedback board / API / internal entry): id, title, status, vote_count, is_public, whether a tracking issue is linked, source. Sorted by votes. Use it to find the feedback the user means before acting. Excludes merged duplicates.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: {
+            type: "array",
+            items: { type: "string", enum: [...FEEDBACK_POST_STATUSES] },
+            description:
+              "Only these public statuses (open, planned, in_progress, shipped, declined). Omit for all.",
+          },
+          limit: { type: "number", description: "Max rows (default 50, max 200)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_feedback",
+      description:
+        "Get one feedback post in full: title, body (the user's request), the raw submitted text, public status, vote_count, author (real identity), the linked issue if any, and its internal comment thread. In a feedback comment thread, omit feedback_post_id to read the post the comment is on.",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description:
+              "Feedback post id. Omit to target the current post (feedback comment mode only).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "promote_feedback_to_issue",
+      description:
+        "Turn a feedback post into a NEW backlog issue and link them: the issue carries the request + its vote count, and the post's public status then follows that issue automatically. Use when no issue tracks this feedback yet. Fails if the post is already linked or is a merged duplicate. Omit feedback_post_id to target the current post (feedback comment mode).",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description: "Feedback post id. Omit to target the current post.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_feedback_to_issue",
+      description:
+        "Link a feedback post to an EXISTING issue (the work is already tracked). The post's public status immediately reflects the issue and follows its transitions. Resolve the issue first with search_issues / list_issues. Fails if the post is already linked or merged. Omit feedback_post_id to target the current post (feedback comment mode).",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description: "Feedback post id. Omit to target the current post.",
+          },
+          issue_id: { type: "string", description: "The existing issue's id." },
+        },
+        required: ["issue_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "unlink_feedback",
+      description:
+        "Detach the issue currently linked to a feedback post (the post keeps its last public status). Omit feedback_post_id to target the current post (feedback comment mode).",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description: "Feedback post id. Omit to target the current post.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "respond_to_feedback",
+      description:
+        "Publish (or update) the official TEAM RESPONSE on a feedback post — the single reply shown PUBLICLY to everyone who submitted it, signed on behalf of the team. This is PUBLIC-facing: only do it when explicitly asked. Pass an empty string to remove the response. Omit feedback_post_id to target the current post (feedback comment mode).",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description: "Feedback post id. Omit to target the current post.",
+          },
+          response: {
+            type: "string",
+            description:
+              "The public team response (markdown/plain text). Empty string clears it.",
+          },
+        },
+        required: ["response"],
       },
     },
   },

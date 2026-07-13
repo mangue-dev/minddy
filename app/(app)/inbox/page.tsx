@@ -46,6 +46,8 @@ export default function InboxPage() {
     if (!n.read_at) void markRead([n.id]);
     if (n.project_id && n.objective_id) {
       router.push(`/projects/${n.project_id}/objectives?open=${n.objective_id}`);
+    } else if (n.project_id && n.feedback_post_id) {
+      router.push(`/projects/${n.project_id}/feedback?post=${n.feedback_post_id}`);
     } else if (n.project_id && n.issue_id) {
       router.push(`/projects/${n.project_id}?issue=${n.issue_id}`);
     }
@@ -101,6 +103,10 @@ export default function InboxPage() {
                     {t(VERB_KEYS[n.type] as Parameters<typeof t>[0])}{" "}
                     {n.objective_id ? (
                       <span className="text-muted-foreground">{n.objective_name ?? ""}</span>
+                    ) : n.feedback_post_id ? (
+                      <span className="text-muted-foreground">
+                        {n.feedback_title ?? ""}
+                      </span>
                     ) : (
                       <>
                         <span className="font-mono text-xs text-muted-foreground">

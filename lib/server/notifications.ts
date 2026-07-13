@@ -9,6 +9,8 @@ export interface NotificationRow {
   issue_id: string | null;
   /** Set instead of issue_id when the notification points at an objective. */
   objective_id?: string | null;
+  /** Set instead of issue_id/objective_id for a feedback-post notification. */
+  feedback_post_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
 }

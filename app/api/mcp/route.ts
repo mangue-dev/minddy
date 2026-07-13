@@ -43,6 +43,14 @@ const handler = createMcpHandler(
       "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +
       "individual issues — adding assigns the issue to the owner and never changes " +
       "its status. " +
+      "A project can also collect user requests on a FEEDBACK board (also fed by its " +
+      "API and internal entry) — separate from issues: a user need with a public " +
+      "status and votes. minddy_list_feedback / minddy_get_feedback read them (the " +
+      "latter includes the internal, team-only comment thread); minddy_promote_feedback " +
+      "turns one into a new linked issue and minddy_link_feedback / " +
+      "minddy_unlink_feedback wire it to an existing one (once linked, the post's " +
+      "public status follows the issue); minddy_add_feedback_comment leaves an " +
+      "internal note; minddy_respond_feedback publishes the team's PUBLIC reply. " +
       "Start with minddy_list_projects to discover project ids.",
   },
   { basePath: "/api", disableSse: true, maxDuration: 60 }

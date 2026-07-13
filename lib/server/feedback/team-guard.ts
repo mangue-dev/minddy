@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -15,7 +16,7 @@ import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
  */
 
 export type TeamGuardResult =
-  | { ok: true; userId: string; access: ProjectAccess }
+  | { ok: true; userId: string; access: ProjectAccess; supabase: SupabaseClient }
   | { ok: false; response: NextResponse };
 
 export async function requireProjectMember(
@@ -32,7 +33,9 @@ export async function requireProjectMember(
       response: NextResponse.json({ error: t("projectNotFound") }, { status: 404 }),
     };
   }
-  return { ok: true, userId: auth.user.id, access };
+  // supabase = the caller's RLS client (still valid inside after()) — the
+  // @Numo feedback agent reads through it, like the issue/objective routes.
+  return { ok: true, userId: auth.user.id, access, supabase: auth.supabase };
 }
 
 /** Charge un post et vérifie qu'il appartient bien au projet de la route. */

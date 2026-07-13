@@ -28,6 +28,8 @@ export async function promoteFeedbackPost(params: {
   postId: string;
   actorId: string;
   projectName?: string | null;
+  /** Attribue la création + l'événement à l'agent MCP (via_mcp) au lieu du membre. */
+  mcpKeyId?: string | null;
 }): Promise<PromoteResult> {
   const service = getServiceClient();
 
@@ -52,6 +54,7 @@ export async function promoteFeedbackPost(params: {
     projectId: post.project_id as string,
     projectName: params.projectName ?? null,
     actorId: params.actorId,
+    mcpKeyId: params.mcpKeyId ?? null,
     input: {
       title: post.title as string,
       description: sections.join("\n\n"),
@@ -81,6 +84,7 @@ export async function promoteFeedbackPost(params: {
     postId: params.postId,
     actorId: params.actorId,
     issueId,
+    mcpKeyId: params.mcpKeyId ?? null,
   });
 
   return { ok: true, issue: created.issue };
@@ -94,6 +98,7 @@ export async function linkFeedbackIssue(params: {
   postId: string;
   issueId: string;
   actorId: string | null;
+  mcpKeyId?: string | null;
 }): Promise<
   | { ok: true }
   | { ok: false; status: number; errorKey: "issueNotFound" | "feedbackNotFound" | "databaseError" }
@@ -140,6 +145,7 @@ export async function linkFeedbackIssue(params: {
     postId: params.postId,
     actorId: params.actorId,
     issueId: issue.id as string,
+    mcpKeyId: params.mcpKeyId ?? null,
   });
   return { ok: true };
 }
@@ -147,7 +153,8 @@ export async function linkFeedbackIssue(params: {
 /** Détache l'issue liée (le post garde son dernier statut public). */
 export async function unlinkFeedbackIssue(
   postId: string,
-  actorId: string | null
+  actorId: string | null,
+  mcpKeyId: string | null = null
 ): Promise<boolean> {
   const service = getServiceClient();
   // On lit l'issue liée avant de la nul­ler pour la nommer dans le fil.
@@ -165,6 +172,7 @@ export async function unlinkFeedbackIssue(
     postId,
     actorId,
     issueId: (before?.issue_id as string | null) ?? null,
+    mcpKeyId,
   });
   return true;
 }

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   insertEvents,
   stampIntegration,
+  stampMcpKey,
   stampViaAssistant,
   type EventRow,
 } from "@/lib/server/issue-events";
@@ -111,62 +112,103 @@ export async function emitFeedbackFieldChanges(
     actorId: string | null;
     before: Record<string, unknown>;
     updates: Record<string, unknown>;
+    /** Attribue le changement à Numo dans le fil (via_assistant). */
+    viaAssistant?: boolean;
+    /** Attribue le changement à l'agent MCP (via_mcp + clé) dans le fil. */
+    mcpKeyId?: string | null;
   }
 ): Promise<void> {
-  await insertEvents(
-    service,
-    buildFeedbackFieldChangeEvents(
-      params.postId,
-      params.actorId,
-      params.before,
-      params.updates
-    )
+  const rows = stampMcpKey(
+    stampViaAssistant(
+      buildFeedbackFieldChangeEvents(
+        params.postId,
+        params.actorId,
+        params.before,
+        params.updates
+      ),
+      !!params.viaAssistant
+    ),
+    params.mcpKeyId
   );
+  await insertEvents(service, rows);
 }
 
 /** Promotion en issue (to_value = id de l'issue créée). */
 export async function emitFeedbackPromoted(
   service: SupabaseClient,
-  params: { postId: string; actorId: string | null; issueId: string }
+  params: {
+    postId: string;
+    actorId: string | null;
+    issueId: string;
+    mcpKeyId?: string | null;
+  }
 ): Promise<void> {
-  await insertEvents(service, [
-    {
-      feedback_post_id: params.postId,
-      actor_id: params.actorId,
-      type: "promoted",
-      to_value: params.issueId,
-    },
-  ]);
+  await insertEvents(
+    service,
+    stampMcpKey(
+      [
+        {
+          feedback_post_id: params.postId,
+          actor_id: params.actorId,
+          type: "promoted",
+          to_value: params.issueId,
+        },
+      ],
+      params.mcpKeyId
+    )
+  );
 }
 
 /** Lien vers une issue existante (to_value = id de l'issue). */
 export async function emitFeedbackLinked(
   service: SupabaseClient,
-  params: { postId: string; actorId: string | null; issueId: string }
+  params: {
+    postId: string;
+    actorId: string | null;
+    issueId: string;
+    mcpKeyId?: string | null;
+  }
 ): Promise<void> {
-  await insertEvents(service, [
-    {
-      feedback_post_id: params.postId,
-      actor_id: params.actorId,
-      type: "linked",
-      to_value: params.issueId,
-    },
-  ]);
+  await insertEvents(
+    service,
+    stampMcpKey(
+      [
+        {
+          feedback_post_id: params.postId,
+          actor_id: params.actorId,
+          type: "linked",
+          to_value: params.issueId,
+        },
+      ],
+      params.mcpKeyId
+    )
+  );
 }
 
 /** Détachement de l'issue liée (from_value = id de l'issue détachée). */
 export async function emitFeedbackUnlinked(
   service: SupabaseClient,
-  params: { postId: string; actorId: string | null; issueId: string | null }
+  params: {
+    postId: string;
+    actorId: string | null;
+    issueId: string | null;
+    mcpKeyId?: string | null;
+  }
 ): Promise<void> {
-  await insertEvents(service, [
-    {
-      feedback_post_id: params.postId,
-      actor_id: params.actorId,
-      type: "unlinked",
-      from_value: params.issueId,
-    },
-  ]);
+  await insertEvents(
+    service,
+    stampMcpKey(
+      [
+        {
+          feedback_post_id: params.postId,
+          actor_id: params.actorId,
+          type: "unlinked",
+          from_value: params.issueId,
+        },
+      ],
+      params.mcpKeyId
+    )
+  );
 }
 
 /** Fusion reçue sur le post canonique (to_value = titre du doublon absorbé).

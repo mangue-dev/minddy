@@ -32,6 +32,7 @@ export type AddCommentResult =
         | "commentEmpty"
         | "issueNotFound"
         | "objectiveNotFound"
+        | "feedbackNotFound"
         | "commentNotFound"
         | "databaseError"
         | "attachmentInvalid";
@@ -348,6 +349,163 @@ export async function addCommentToObjective({
       type: "comment" as const,
       issue_id: null,
       objective_id: objectiveId,
+      comment_id: data.id as string,
+      actor_id: actorId,
+    })),
+  ];
+  await insertNotifications(service, rows);
+
+  return { ok: true, comment: { ...data, attachments: attachmentRows } };
+}
+
+/**
+ * Feedback-thread twin of addCommentToIssue: same reply-threading and
+ * attachment handling, but the parent is a feedback post. Feedback is RLS
+ * deny-all, so access is checked HERE (via the post's project) and the write
+ * uses the service client — the feedback convention. These are INTERNAL,
+ * team-only comments: they never surface on the public board. Notifications
+ * target @mentions + the thread authors (a feedback post has no owner/assignee).
+ * Used by POST /api/projects/[id]/feedback/[postId]/comments and the @Numo
+ * feedback agent.
+ */
+export async function addCommentToFeedbackPost({
+  postId,
+  actorId,
+  body,
+  parentId,
+  mentionedUserIds,
+  attachments,
+  viaAssistant = false,
+  mcpKeyId = null,
+}: {
+  postId: string;
+  actorId: string;
+  body: string;
+  parentId?: string | null;
+  mentionedUserIds?: string[];
+  attachments?: unknown;
+  viaAssistant?: boolean;
+  mcpKeyId?: string | null;
+}): Promise<AddCommentResult> {
+  const text = body.trim();
+  const mentioned = (mentionedUserIds ?? []).filter(
+    (v): v is string => typeof v === "string"
+  );
+
+  const service = getServiceClient();
+
+  // The post resolves the project for the access check.
+  const { data: post } = await service
+    .from("feedback_posts")
+    .select("project_id")
+    .eq("id", postId)
+    .maybeSingle();
+  if (!post) {
+    return { ok: false, status: 404, errorKey: "feedbackNotFound" };
+  }
+  const access = await getProjectAccess(actorId, post.project_id as string);
+  if (!access) {
+    return { ok: false, status: 404, errorKey: "feedbackNotFound" };
+  }
+
+  const parsedAttachments = parseAttachmentsInput(
+    attachments,
+    `projects/${post.project_id}/`
+  );
+  if (parsedAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  }
+  if (!text && parsedAttachments.length === 0) {
+    return { ok: false, status: 400, errorKey: "commentEmpty" };
+  }
+
+  // Replies: the stored parent_id is always the thread's ROOT comment
+  // (depth ≤ 1); the parent must belong to this feedback post.
+  let rootId: string | null = null;
+  const threadAuthorIds: (string | null)[] = [];
+  if (parentId) {
+    const { data: parent } = await service
+      .from("comments")
+      .select("id, parent_id, feedback_post_id, author_id")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (!parent || parent.feedback_post_id !== postId) {
+      return { ok: false, status: 404, errorKey: "commentNotFound" };
+    }
+    rootId = (parent.parent_id as string | null) ?? (parent.id as string);
+    threadAuthorIds.push(parent.author_id as string | null);
+    if (parent.parent_id) {
+      const { data: root } = await service
+        .from("comments")
+        .select("author_id")
+        .eq("id", rootId)
+        .maybeSingle();
+      threadAuthorIds.push((root?.author_id as string | null) ?? null);
+    }
+  }
+
+  const { data, error } = await service
+    .from("comments")
+    .insert({
+      feedback_post_id: postId,
+      author_id: actorId,
+      body: text,
+      parent_id: rootId,
+      via_assistant: viaAssistant,
+      via_mcp: !!mcpKeyId,
+      api_key_id: mcpKeyId,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[add-comment] feedback create failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  let attachmentRows: Awaited<ReturnType<typeof insertAttachments>> = [];
+  try {
+    attachmentRows = await insertAttachments(service, {
+      projectId: post.project_id as string,
+      feedbackPostId: postId,
+      commentId: data.id as string,
+      createdBy: actorId,
+      attachments: parsedAttachments,
+    });
+  } catch (e) {
+    console.error("[add-comment] feedback attachments failed:", (e as Error).message);
+  }
+
+  // Notifications: @mentions + the thread authors — never the requester
+  // themself, members only. (A feedback post has no owner/assignee/lead.)
+  const valid = await projectMemberIds(service, post.project_id as string);
+
+  const mentionSet = new Set(
+    mentioned.filter((uid) => uid !== actorId && valid.has(uid))
+  );
+  const commentSet = new Set<string>();
+  for (const uid of threadAuthorIds) {
+    if (uid && uid !== actorId && valid.has(uid) && !mentionSet.has(uid)) {
+      commentSet.add(uid);
+    }
+  }
+
+  const rows: NotificationRow[] = [
+    ...[...mentionSet].map((uid) => ({
+      user_id: uid,
+      project_id: post.project_id as string,
+      type: "mention" as const,
+      issue_id: null,
+      feedback_post_id: postId,
+      comment_id: data.id as string,
+      actor_id: actorId,
+    })),
+    ...[...commentSet].map((uid) => ({
+      user_id: uid,
+      project_id: post.project_id as string,
+      type: "comment" as const,
+      issue_id: null,
+      feedback_post_id: postId,
       comment_id: data.id as string,
       actor_id: actorId,
     })),

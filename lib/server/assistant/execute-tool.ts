@@ -41,6 +41,16 @@ import {
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
+import { getProjectFeedbackPost } from "@/lib/server/feedback/team-guard";
+import { listTeamFeedback, getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { displayName } from "@/lib/display-name";
+import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
+import {
+  linkFeedbackIssue,
+  promoteFeedbackPost,
+  unlinkFeedbackIssue,
+} from "@/lib/server/feedback/promote";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 
@@ -54,6 +64,9 @@ export interface ToolContext {
   /** Project scope of the conversation; null = global mode. */
   projectId: string | null;
   userId: string;
+  /** The feedback post a @Numo feedback comment is on — the feedback tools
+      default to it when the model omits feedback_post_id. Null otherwise. */
+  feedbackPostId?: string | null;
   /** RLS client bound to the user's session (reads). */
   supabase: SupabaseClient;
   /** Service client (auth admin lookups). */
@@ -551,6 +564,182 @@ export async function executeTool(
         if (!result.ok) return libError(result);
         return {
           result: { decision, issue_id: issueId, status: input.status },
+          success: true,
+        };
+      }
+
+      // ── Feedback board ────────────────────────────────────────────────
+      // Feedback is RLS deny-all → reads/writes go through the service-client
+      // cores. The post is always re-scoped to the project in scope; the
+      // feedback comment mode's current post is the default target.
+      case "list_feedback": {
+        const posts = await listTeamFeedback(projectId);
+        const statuses = Array.isArray(args.status)
+          ? new Set(args.status.filter((v): v is string => typeof v === "string"))
+          : null;
+        const limit =
+          typeof args.limit === "number" ? Math.min(Math.max(1, args.limit), 200) : 50;
+        const rows = posts
+          .filter((p) => !statuses || statuses.has(p.status))
+          .slice(0, limit)
+          .map((p) => ({
+            id: p.id,
+            title: p.title,
+            status: p.status,
+            vote_count: p.vote_count,
+            is_public: p.is_public,
+            source: p.source,
+            linked_issue_id: p.issue_id,
+          }));
+        return { result: { feedback: rows }, success: true };
+      }
+
+      case "get_feedback": {
+        const postId =
+          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          ctx.feedbackPostId ||
+          "";
+        if (!postId) return toolError("feedback_post_id is required.");
+        const detail = await getTeamFeedbackDetail(projectId, postId);
+        if (!detail) return toolError("Feedback post not found in this project.");
+        const { data: comments } = await ctx.service
+          .from("comments")
+          .select("author_id, via_assistant, body, created_at")
+          .eq("feedback_post_id", postId)
+          .order("created_at", { ascending: true });
+        // Resolve author display names (never surface raw uuids to the model).
+        const commentAuthorIds = [
+          ...new Set(
+            (comments ?? [])
+              .map((c) => c.author_id as string | null)
+              .filter((v): v is string => !!v)
+          ),
+        ];
+        const commentUsers = await fetchAuthUsersById(ctx.service, commentAuthorIds);
+        return {
+          result: {
+            feedback: {
+              id: detail.id,
+              title: detail.title,
+              body: detail.body,
+              submitted_title: detail.submitted_title,
+              submitted_body: detail.submitted_body,
+              status: detail.status,
+              vote_count: detail.vote_count,
+              is_public: detail.is_public,
+              source: detail.source,
+              team_response: detail.team_response,
+              author: detail.author
+                ? { name: detail.author.name, email: detail.author.email }
+                : null,
+              linked_issue: detail.issue
+                ? {
+                    id: detail.issue.id,
+                    identifier: issueIdentifier(access.project.key, detail.issue.number),
+                    status: detail.issue.status,
+                  }
+                : null,
+              comments: (comments ?? []).map((c) => ({
+                author: c.via_assistant
+                  ? "Numo"
+                  : displayName(
+                      toNamed(
+                        c.author_id ? commentUsers.get(c.author_id as string) : null
+                      ),
+                      "User"
+                    ),
+                body: c.body,
+                created_at: c.created_at,
+              })),
+            },
+          },
+          success: true,
+        };
+      }
+
+      case "promote_feedback_to_issue": {
+        const postId =
+          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          ctx.feedbackPostId ||
+          "";
+        if (!postId) return toolError("feedback_post_id is required.");
+        const scoped = await getProjectFeedbackPost(projectId, postId);
+        if (!scoped) return toolError("Feedback post not found in this project.");
+        const result = await promoteFeedbackPost({
+          postId,
+          actorId: ctx.userId,
+          projectName: access.project.name,
+        });
+        if (!result.ok) return libError(result);
+        return {
+          result: {
+            issue: {
+              ...result.issue,
+              identifier: issueIdentifier(
+                access.project.key,
+                result.issue.number as number
+              ),
+            },
+          },
+          success: true,
+        };
+      }
+
+      case "link_feedback_to_issue": {
+        const postId =
+          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          ctx.feedbackPostId ||
+          "";
+        if (!postId) return toolError("feedback_post_id is required.");
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        if (!issueId) return toolError("issue_id is required.");
+        const scoped = await getProjectFeedbackPost(projectId, postId);
+        if (!scoped) return toolError("Feedback post not found in this project.");
+        const result = await linkFeedbackIssue({
+          postId,
+          issueId,
+          actorId: ctx.userId,
+        });
+        if (!result.ok) return libError(result);
+        return { result: { linked: true, feedback_post_id: postId, issue_id: issueId }, success: true };
+      }
+
+      case "unlink_feedback": {
+        const postId =
+          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          ctx.feedbackPostId ||
+          "";
+        if (!postId) return toolError("feedback_post_id is required.");
+        const scoped = await getProjectFeedbackPost(projectId, postId);
+        if (!scoped) return toolError("Feedback post not found in this project.");
+        const ok = await unlinkFeedbackIssue(postId, ctx.userId);
+        if (!ok) return toolError("Could not unlink the feedback post.");
+        return { result: { unlinked: true, feedback_post_id: postId }, success: true };
+      }
+
+      case "respond_to_feedback": {
+        const postId =
+          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          ctx.feedbackPostId ||
+          "";
+        if (!postId) return toolError("feedback_post_id is required.");
+        if (typeof args.response !== "string") {
+          return toolError("response must be a string.");
+        }
+        const scoped = await getProjectFeedbackPost(projectId, postId);
+        if (!scoped) return toolError("Feedback post not found in this project.");
+        const result = await updateFeedbackPostFields({
+          postId,
+          actorId: ctx.userId,
+          input: { team_response: args.response },
+          viaAssistant: true,
+        });
+        if (!result.ok) return toolError(result.errorKey);
+        return {
+          result: {
+            feedback_post_id: postId,
+            team_response: result.post.team_response,
+          },
           success: true,
         };
       }

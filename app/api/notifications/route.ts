@@ -30,10 +30,13 @@ export async function GET(request: NextRequest) {
   const service = getServiceClient();
   const issueIds = [...new Set(notifs.map((n) => n.issue_id).filter(Boolean))] as string[];
   const objectiveIds = [...new Set(notifs.map((n) => n.objective_id).filter(Boolean))] as string[];
+  const feedbackPostIds = [
+    ...new Set(notifs.map((n) => n.feedback_post_id).filter(Boolean)),
+  ] as string[];
   const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
   const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
 
-  const [{ data: issues }, { data: objectives }, { data: projects }, actorsById] =
+  const [{ data: issues }, { data: objectives }, { data: feedbackPosts }, { data: projects }, actorsById] =
     await Promise.all([
       issueIds.length
         ? service.from("issues").select("id, number, title").in("id", issueIds)
@@ -41,6 +44,9 @@ export async function GET(request: NextRequest) {
       objectiveIds.length
         ? service.from("objectives").select("id, name").in("id", objectiveIds)
         : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      feedbackPostIds.length
+        ? service.from("feedback_posts").select("id, title").in("id", feedbackPostIds)
+        : Promise.resolve({ data: [] as { id: string; title: string }[] }),
       projectIds.length
         ? service.from("projects").select("id, key").in("id", projectIds)
         : Promise.resolve({ data: [] as { id: string; key: string }[] }),
@@ -49,11 +55,13 @@ export async function GET(request: NextRequest) {
 
   const issueMap = new Map((issues ?? []).map((i) => [i.id, i]));
   const objectiveMap = new Map((objectives ?? []).map((o) => [o.id, o]));
+  const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
 
   const result: MyNotification[] = notifs.map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
     const objective = n.objective_id ? objectiveMap.get(n.objective_id) : undefined;
+    const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
     const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
     return {
@@ -66,6 +74,8 @@ export async function GET(request: NextRequest) {
       issue_title: issue?.title ?? null,
       objective_id: n.objective_id ?? null,
       objective_name: objective?.name ?? null,
+      feedback_post_id: n.feedback_post_id ?? null,
+      feedback_title: feedback?.title ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
       actor_name: actor ? displayName(toNamed(actor)) : null,

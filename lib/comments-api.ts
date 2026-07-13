@@ -64,6 +64,71 @@ export async function fetchFeedbackEventsApi(
   );
 }
 
+// ── Feedback internal comments (service-client routes, team-only) ──────────
+export async function fetchFeedbackCommentsApi(
+  projectId: string,
+  postId: string
+): Promise<Comment[]> {
+  return parseJson<Comment[]>(
+    await fetch(`/api/projects/${projectId}/feedback/${postId}/comments`)
+  );
+}
+
+export async function addFeedbackCommentApi(
+  projectId: string,
+  postId: string,
+  body: string,
+  mentionedUserIds: string[] = [],
+  parentId: string | null = null,
+  attachments: AttachmentInput[] = []
+): Promise<Comment> {
+  return parseJson<Comment>(
+    await fetch(`/api/projects/${projectId}/feedback/${postId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body,
+        mentioned_user_ids: mentionedUserIds,
+        parent_id: parentId,
+        attachments,
+      }),
+    })
+  );
+}
+
+export async function updateFeedbackCommentApi(
+  projectId: string,
+  postId: string,
+  commentId: string,
+  body: string
+): Promise<Comment> {
+  return parseJson<Comment>(
+    await fetch(
+      `/api/projects/${projectId}/feedback/${postId}/comments/${commentId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      }
+    )
+  );
+}
+
+export async function deleteFeedbackCommentApi(
+  projectId: string,
+  postId: string,
+  commentId: string
+): Promise<void> {
+  const response = await fetch(
+    `/api/projects/${projectId}/feedback/${postId}/comments/${commentId}`,
+    { method: "DELETE" }
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error((data as { error?: string } | null)?.error || "Delete failed");
+  }
+}
+
 export async function addObjectiveCommentApi(
   objectiveId: string,
   body: string,

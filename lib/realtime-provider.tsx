@@ -47,6 +47,11 @@ function objectiveIdOf(change: BroadcastChange): string | null {
   return typeof objectiveId === "string" ? objectiveId : null;
 }
 
+function feedbackPostIdOf(change: BroadcastChange): string | null {
+  const postId = (change.record ?? change.old_record)?.feedback_post_id;
+  return typeof postId === "string" ? postId : null;
+}
+
 function keysForUserEvent(change: BroadcastChange): QueryKey[] {
   switch (change.table) {
     case "notifications":
@@ -91,11 +96,14 @@ function keysForProjectEvent(
     case "project_invitations": // the members view lists both
       return [["members", projectId]];
     case "comments": {
-      // A comment hangs off an issue OR an objective — route to the right cache.
+      // A comment hangs off an issue OR an objective OR a feedback post — route
+      // to the right cache. Feedback comment keys carry the project id.
       const issueId = issueIdOf(change);
       if (issueId) return [["comments", issueId]];
       const objectiveId = objectiveIdOf(change);
-      return objectiveId ? [["objective-comments", objectiveId]] : [];
+      if (objectiveId) return [["objective-comments", objectiveId]];
+      const postId = feedbackPostIdOf(change);
+      return postId ? [["feedback-comments", projectId, postId]] : [];
     }
     case "attachments": {
       // Comment attachments ride the comments cache; entity-level ones have
@@ -108,18 +116,22 @@ function keysForProjectEvent(
         ];
       }
       const objectiveId = objectiveIdOf(change);
-      return objectiveId
-        ? [
-            ["objective-comments", objectiveId],
-            ["objective-attachments", objectiveId],
-          ]
-        : [];
+      if (objectiveId) {
+        return [
+          ["objective-comments", objectiveId],
+          ["objective-attachments", objectiveId],
+        ];
+      }
+      const postId = feedbackPostIdOf(change);
+      return postId ? [["feedback-comments", projectId, postId]] : [];
     }
     case "issue_events": {
       const issueId = issueIdOf(change);
       if (issueId) return [["events", issueId]];
       const objectiveId = objectiveIdOf(change);
-      return objectiveId ? [["objective-events", objectiveId]] : [];
+      if (objectiveId) return [["objective-events", objectiveId]];
+      const postId = feedbackPostIdOf(change);
+      return postId ? [["feedback-events", projectId, postId]] : [];
     }
     default:
       return [];
@@ -150,6 +162,8 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["objective-comments"],
   ["objective-events"],
   ["objective-attachments"],
+  ["feedback-comments", projectId],
+  ["feedback-events", projectId],
 ];
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
