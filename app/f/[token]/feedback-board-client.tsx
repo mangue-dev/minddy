@@ -16,6 +16,7 @@ import {
   Spinner,
   Switch,
   cn,
+  toast,
 } from "mangue-ui";
 import { ArrowUpDown, Check, ChevronDown, MessagesSquare, Megaphone } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
@@ -502,6 +503,10 @@ function ComposerDialog({
         }
         reset();
         onOpenChange(false);
+        // Revue avant publication (MIN-54) : un retour public passe d'abord par la
+        // vérification IA (catégorisation + modération) avant d'apparaître ; un
+        // retour privé part directement à l'équipe.
+        toast.success(isPublic ? t("submittedPublic") : t("submittedPrivate"));
         router.refresh();
       } catch {
         setError("failed");

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { ArrowLeft, GitMerge, Lock, UserRound } from "lucide-react";
+import { ArrowLeft, Ban, Clock, GitMerge, Lock, UserRound } from "lucide-react";
 import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
 import { FeedbackAuthDialog } from "../feedback-auth";
 import { FeedbackStatusBadge } from "../feedback-bits";
@@ -84,6 +84,23 @@ export function MyFeedbackClient({
                           {t("private")}
                         </span>
                       )}
+                      {/* Revue avant publication (MIN-54) : l'auteur voit son
+                          retour en attente / écarté tant qu'il n'est pas publié. */}
+                      {entry.relation === "authored" &&
+                        entry.post.isPublic &&
+                        entry.post.reviewState === "pending" && (
+                          <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+                            <Clock className="size-2.5" />
+                            {t("pendingReview")}
+                          </span>
+                        )}
+                      {entry.relation === "authored" &&
+                        entry.post.reviewState === "rejected" && (
+                          <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+                            <Ban className="size-2.5" />
+                            {t("rejected")}
+                          </span>
+                        )}
                       <span>
                         {entry.relation === "authored" ? t("meAuthored") : t("meVoted")}
                       </span>

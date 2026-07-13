@@ -32,8 +32,10 @@ import {
 } from "mangue-ui";
 import {
   ArrowUpRight,
+  Ban,
   ChevronLeft,
   ChevronUp,
+  Clock,
   GitMerge,
   Globe,
   Link2,
@@ -41,6 +43,8 @@ import {
   MessagesSquare,
   MoreHorizontal,
   Plus,
+  Send,
+  ShieldAlert,
   Sparkles,
   Trash2,
   Undo2,
@@ -68,7 +72,11 @@ import {
 } from "@/app/f/[token]/feedback-bits";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { FEEDBACK_POST_STATUSES, type FeedbackPostStatus } from "@/lib/feedback/types";
+import {
+  FEEDBACK_POST_STATUSES,
+  type FeedbackPostStatus,
+  type FeedbackReviewState,
+} from "@/lib/feedback/types";
 import type {
   TeamFeedbackDetail,
   TeamFeedbackListItem,
@@ -118,6 +126,45 @@ function CategorySummary({
       <span className="max-w-[7rem] truncate">{first.name}</span>
       {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
     </span>
+  );
+}
+
+/** Badges d'état de revue IA (MIN-54) : en attente de publication, rejeté (junk),
+    et alerte contenu sensible (le motif est en tooltip). Partagé liste + détail. */
+function ReviewBadges({
+  reviewState,
+  sensitivity,
+  moderationReason,
+}: {
+  reviewState: FeedbackReviewState;
+  sensitivity: string | null;
+  moderationReason: string | null;
+}) {
+  const t = useTranslations("FeedbackBoard");
+  return (
+    <>
+      {reviewState === "pending" && (
+        <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+          <Clock className="size-2.5" />
+          {t("reviewPending")}
+        </span>
+      )}
+      {reviewState === "rejected" && (
+        <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-1.5 py-0.5 text-[10px] text-destructive">
+          <Ban className="size-2.5" />
+          {t("reviewRejected")}
+        </span>
+      )}
+      {sensitivity && (
+        <span
+          title={moderationReason ?? undefined}
+          className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-500"
+        >
+          <ShieldAlert className="size-2.5" />
+          {t("sensitive")}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -286,6 +333,11 @@ export function FeedbackTeamPage() {
                             {t("private")}
                           </span>
                         )}
+                        <ReviewBadges
+                          reviewState={post.review_state}
+                          sensitivity={post.sensitivity}
+                          moderationReason={post.moderation_reason}
+                        />
                         {post.suggested_merge_into_id && (
                           <Sparkles className="size-3 text-brand" />
                         )}
@@ -587,6 +639,11 @@ function FeedbackDetail({
               {t("private")}
             </span>
           )}
+          <ReviewBadges
+            reviewState={post.review_state}
+            sensitivity={post.sensitivity}
+            moderationReason={post.moderation_reason}
+          />
         </span>
         <div className="ml-auto flex items-center gap-1.5">
           {/* Statut public : un select tant que le post est autonome — dès
@@ -668,6 +725,24 @@ function FeedbackDetail({
                   </>
                 )}
               </DropdownMenuItem>
+              {/* Revue IA (MIN-54) : l'équipe peut outrepasser — publier un post en
+                  attente/rejeté, ou rejeter un post publié. */}
+              {post.review_state !== "published" && (
+                <DropdownMenuItem
+                  onSelect={() => patch.mutate({ review_state: "published" })}
+                >
+                  <Send className="size-4" />
+                  {t("publishReview")}
+                </DropdownMenuItem>
+              )}
+              {post.review_state !== "rejected" && (
+                <DropdownMenuItem
+                  onSelect={() => patch.mutate({ review_state: "rejected" })}
+                >
+                  <Ban className="size-4" />
+                  {t("rejectReview")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
                 <GitMerge className="size-4" />
                 {t("mergeInto")}

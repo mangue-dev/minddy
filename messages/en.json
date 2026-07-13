@@ -52,6 +52,8 @@
     "feedbackResponseRemoved": "removed the team response",
     "feedbackMadePublic": "made this feedback public",
     "feedbackMadePrivate": "made this feedback private",
+    "feedbackPublished": "published this feedback",
+    "feedbackRejected": "dismissed this feedback (spam)",
     "feedbackPromoted": "promoted to {ref}",
     "feedbackLinked": "linked to {ref}",
     "feedbackUnlinked": "unlinked the issue",
@@ -339,7 +341,11 @@
     "makePublic": "Make public",
     "makePublicHint": "Visible on the board and votable by everyone.",
     "makePrivateHint": "Private — sent to the team only, not shown on the board.",
-    "private": "Private"
+    "private": "Private",
+    "submittedPublic": "Thanks for your feedback — it will be reviewed and published within the hour.",
+    "submittedPrivate": "Thanks for your feedback — it has been sent to the team.",
+    "pendingReview": "Pending review",
+    "rejected": "Not published"
   },
   "FeedbackBoard": {
     "title": "Feedback",
@@ -359,6 +365,11 @@
     "rejectSuggestion": "Reject",
     "makePublic": "Make public",
     "makePrivate": "Make private",
+    "reviewPending": "Pending",
+    "reviewRejected": "Dismissed",
+    "sensitive": "Sensitive",
+    "publishReview": "Publish",
+    "rejectReview": "Dismiss (spam)",
     "mergeInto": "Merge into…",
     "mergeDialogTitle": "Merge this feedback",
     "mergeDialogDesc": "This post becomes a duplicate: votes union (1 identity = 1 vote) and the public URL redirects to the canonical.",

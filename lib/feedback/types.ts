@@ -51,6 +51,42 @@ export function sortFeedbackResolvedLast<T>(
 
 export type FeedbackPostSource = "board" | "api" | "internal";
 
+/**
+ * État de PUBLICATION d'un post (MIN-54), distinct du choix de visibilité
+ * `is_public` de l'auteur. `pending` = en attente de la revue IA (catégorisation
+ * + modération), invisible du board même si public ; `published` = vérifié, listé
+ * si public ; `rejected` = junk/spam écarté par l'IA (l'équipe peut outrepasser).
+ */
+export const FEEDBACK_REVIEW_STATES = ["pending", "published", "rejected"] as const;
+export type FeedbackReviewState = (typeof FEEDBACK_REVIEW_STATES)[number];
+
+export function isFeedbackReviewState(value: unknown): value is FeedbackReviewState {
+  return (
+    typeof value === "string" &&
+    (FEEDBACK_REVIEW_STATES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Nature de sensibilité détectée par l'IA (MIN-54). Non exhaustif côté modèle :
+ * validé applicativement, `other` sert de fourre-tout. Null = non sensible.
+ */
+export const FEEDBACK_SENSITIVITY_KINDS = [
+  "security",
+  "severe_bug",
+  "personal_data",
+  "legal",
+  "other",
+] as const;
+export type FeedbackSensitivityKind = (typeof FEEDBACK_SENSITIVITY_KINDS)[number];
+
+export function normalizeSensitivityKind(value: unknown): FeedbackSensitivityKind {
+  return typeof value === "string" &&
+    (FEEDBACK_SENSITIVITY_KINDS as readonly string[]).includes(value)
+    ? (value as FeedbackSensitivityKind)
+    : "other";
+}
+
 /** Catégorie telle qu'exposée publiquement (MIN-52) — slice minimal du modèle
     interne : ni project_id ni dates. */
 export interface PublicCategory {
@@ -67,6 +103,9 @@ export interface PublicPost {
   status: FeedbackPostStatus;
   /** false = retour privé : remonté à l'équipe mais absent du board public. */
   isPublic: boolean;
+  /** État de publication (MIN-54). Sur le board public toujours `published` ;
+      informatif sur « mes feedbacks » (l'auteur voit ses posts en attente). */
+  reviewState: FeedbackReviewState;
   voteCount: number;
   createdAt: string;
   authorPseudonym: string | null;

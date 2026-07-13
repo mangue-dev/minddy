@@ -8,8 +8,10 @@ import {
 } from "@/lib/server/feedback/events";
 import {
   isFeedbackPostStatus,
+  isFeedbackReviewState,
   type FeedbackPostSource,
   type FeedbackPostStatus,
+  type FeedbackReviewState,
 } from "@/lib/feedback/types";
 
 /**
@@ -36,6 +38,10 @@ export interface FeedbackPostRow {
   submitted_body: string;
   status: FeedbackPostStatus;
   is_public: boolean;
+  review_state: FeedbackReviewState;
+  sensitivity: string | null;
+  moderation_reason: string | null;
+  classified_at: string | null;
   vote_count: number;
   issue_id: string | null;
   merged_into_id: string | null;
@@ -51,7 +57,7 @@ export interface FeedbackPostRow {
 
 /** Colonnes rendues aux appelants — jamais l'embedding (payload inutile). */
 export const FEEDBACK_POST_SELECT =
-  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, team_response, team_response_at, created_at, updated_at";
+  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, team_response, team_response_at, created_at, updated_at";
 
 export type CreateFeedbackPostResult =
   | { ok: true; post: FeedbackPostRow }
@@ -94,6 +100,10 @@ export async function createFeedbackPost(input: {
       submitted_title: title,
       submitted_body: body,
       is_public: input.isPublic ?? true,
+      // Revue avant publication (MIN-54) : les soumissions board/API attendent la
+      // passe IA (catégorisation + modération) avant d'apparaître sur le board ;
+      // la saisie interne (équipe de confiance) est publiée d'emblée.
+      review_state: input.source === "internal" ? "published" : "pending",
       source: input.source,
       embedding: embedding ? toVectorLiteral(embedding) : null,
     })
@@ -207,6 +217,19 @@ export async function updateFeedbackPostFields(params: {
       return { ok: false, status: 400, errorKey: "invalidRequest" };
     }
     updates.is_public = input.is_public;
+  }
+  // État de publication (MIN-54) : l'équipe peut outrepasser la revue IA —
+  // publier un post en attente/rejeté, ou rejeter un post publié.
+  if ("review_state" in input) {
+    if (!isFeedbackReviewState(input.review_state)) {
+      return { ok: false, status: 400, errorKey: "invalidRequest" };
+    }
+    updates.review_state = input.review_state;
+    // Un override manuel repositionne le post comme classé (il ne doit pas
+    // repasser dans la file de revue IA après décision humaine).
+    if (before.classified_at === null) {
+      updates.classified_at = new Date().toISOString();
+    }
   }
   if (Object.keys(updates).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };

@@ -52,6 +52,8 @@
     "feedbackResponseRemoved": "a retiré la réponse d'équipe",
     "feedbackMadePublic": "a rendu ce retour public",
     "feedbackMadePrivate": "a rendu ce retour privé",
+    "feedbackPublished": "a publié ce retour",
+    "feedbackRejected": "a écarté ce retour (spam)",
     "feedbackPromoted": "a promu en {ref}",
     "feedbackLinked": "a lié à {ref}",
     "feedbackUnlinked": "a délié le ticket",
@@ -339,7 +341,11 @@
     "makePublic": "Rendre public",
     "makePublicHint": "Visible sur le board et votable par tous.",
     "makePrivateHint": "Privé — transmis à l'équipe seule, absent du board.",
-    "private": "Privé"
+    "private": "Privé",
+    "submittedPublic": "Merci pour votre retour, il sera analysé et publié dans l'heure qui suit.",
+    "submittedPrivate": "Merci pour votre retour, il a été transmis à l'équipe.",
+    "pendingReview": "En attente de revue",
+    "rejected": "Non publié"
   },
   "FeedbackBoard": {
     "title": "Feedback",
@@ -359,6 +365,11 @@
     "rejectSuggestion": "Rejeter",
     "makePublic": "Rendre public",
     "makePrivate": "Rendre privé",
+    "reviewPending": "En attente",
+    "reviewRejected": "Écarté",
+    "sensitive": "Sensible",
+    "publishReview": "Publier",
+    "rejectReview": "Écarter (spam)",
     "mergeInto": "Fusionner dans…",
     "mergeDialogTitle": "Fusionner ce feedback",
     "mergeDialogDesc": "Ce post devient un doublon : les votes s'unissent (1 identité = 1 voix) et l'URL publique redirige vers le canonique.",

@@ -9,6 +9,7 @@ import {
   type MatchedPost,
 } from "@/lib/server/embeddings";
 import { mergePosts } from "@/lib/server/feedback/merge";
+import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 
 /**
  * Passe d'analyse IA horaire (MIN-37). Pour chaque post non analysé : backfill
@@ -22,7 +23,6 @@ import { mergePosts } from "@/lib/server/feedback/merge";
  * reste visible non enrichi. Le board n'est JAMAIS bloqué par cette passe.
  */
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
 const DEFAULT_AUTO_THRESHOLD = 0.92;
 const DEFAULT_SUGGEST_FLOOR = 0.6;
@@ -278,7 +278,10 @@ ${candidateBlocks || "(none)"}`;
     required: ["action", "confidence"],
   };
 
-  const args = await forcedToolCall(model, systemPrompt, userMessage, "analyze_feedback", parameters);
+  const args = await forcedToolCall(model, systemPrompt, userMessage, "analyze_feedback", parameters, {
+    xTitle: "Feedback Analysis (minddy)",
+    logPrefix: "[feedback-analyze]",
+  });
   if (!args) return null;
 
   const action = args.action === "merge_into" ? "merge_into" : "new_root";
@@ -299,66 +302,4 @@ function clamp01(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
   if (!Number.isFinite(parsed)) return 0;
   return Math.min(1, Math.max(0, parsed));
-}
-
-/** Un appel OpenRouter à sortie forcée (tools + tool_choice), parse + retour
-    null sur le moindre échec — même contrat que smart-assign. */
-async function forcedToolCall(
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-  toolName: string,
-  parameters: Record<string, unknown>
-): Promise<Record<string, unknown> | null> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
-
-  try {
-    const response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Feedback Analysis (minddy)",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: toolName,
-              description: "Mandatory structured output — you must always call it.",
-              parameters,
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: toolName } },
-        max_tokens: 1024,
-      }),
-      signal: AbortSignal.timeout(45_000),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
-    }
-    const data = (await response.json()) as {
-      choices?: {
-        message?: {
-          tool_calls?: { function?: { name?: string; arguments?: string } }[];
-        };
-      }[];
-    };
-    const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
-    if (call?.name !== toolName) return null;
-    return JSON.parse(call.arguments || "{}") as Record<string, unknown>;
-  } catch (err) {
-    console.error("[feedback-analyze] LLM call failed:", (err as Error).message);
-    return null;
-  }
 }

@@ -234,6 +234,10 @@ export function describeFeedbackEvent(
         return e.to_value === "private"
           ? t("feedbackMadePrivate")
           : t("feedbackMadePublic");
+      case "review_state":
+        return e.to_value === "rejected"
+          ? t("feedbackRejected")
+          : t("feedbackPublished");
       default:
         return t("updated");
     }

@@ -91,6 +91,22 @@ export function buildFeedbackFieldChangeEvents(
       to_value: updates.is_public ? "public" : "private",
     });
   }
+  // État de publication (MIN-54) : publié / rejeté (junk). Émis par la revue IA
+  // (via_assistant) comme par un override équipe. `pending` ne produit pas de
+  // phrase — c'est l'état d'attente initial, sans action à raconter.
+  if (
+    "review_state" in updates &&
+    (updates.review_state ?? null) !== (before.review_state ?? null) &&
+    updates.review_state !== "pending"
+  ) {
+    events.push({
+      feedback_post_id: postId,
+      actor_id: actorId,
+      type: "updated",
+      field: "review_state",
+      to_value: s(updates.review_state),
+    });
+  }
   return events;
 }
 

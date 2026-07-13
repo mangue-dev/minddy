@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { runFeedbackAnalysis } from "@/lib/server/feedback/analyze";
+import { runFeedbackClassification } from "@/lib/server/feedback/classify";
 
 /**
- * Cron horaire (Vercel Cron, vercel.json) : passe d'analyse IA du feedback
- * (MIN-37) + ménage des sessions/OTP expirés. Vercel envoie automatiquement
+ * Cron horaire (Vercel Cron, vercel.json) : passe de merge IA (MIN-37) puis passe
+ * de classification IA (MIN-54 : catégorisation + revue avant publication +
+ * modération), + ménage des sessions/OTP expirés. Vercel envoie automatiquement
  * `Authorization: Bearer ${CRON_SECRET}` quand la variable est configurée ;
  * la route est inutilisable sans ce secret.
  */
@@ -17,7 +19,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Ordre merge → classify : un post absorbé par un merge (tombstone) sort de la
+  // file de classification (claim exclut merged_into_id) et n'est pas publié à part.
   const report = await runFeedbackAnalysis();
+  const classification = await runFeedbackClassification();
 
   // Ménage : codes OTP expirés depuis plus d'un jour, sessions expirées.
   const service = getServiceClient();
@@ -28,5 +33,5 @@ export async function GET(request: NextRequest) {
     service.from("feedback_sessions").delete().lt("expires_at", now),
   ]);
 
-  return NextResponse.json({ ok: true, report });
+  return NextResponse.json({ ok: true, report, classification });
 }

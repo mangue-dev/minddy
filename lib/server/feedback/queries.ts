@@ -41,6 +41,7 @@ function toPublicPost(
     body: row.body,
     status: row.status,
     isPublic: row.is_public,
+    reviewState: row.review_state,
     voteCount: row.vote_count,
     createdAt: row.created_at,
     authorPseudonym: row.feedback_users?.pseudonym ?? null,
@@ -102,6 +103,7 @@ export async function listPublicCategories(projectId: string): Promise<PublicCat
     .select("id")
     .eq("project_id", projectId)
     .eq("is_public", true)
+    .eq("review_state", "published")
     .is("merged_into_id", null);
   const postIds = (posts ?? []).map((p) => p.id as string);
   if (postIds.length === 0) return [];
@@ -153,6 +155,8 @@ export async function listPublicPosts(params: {
     .is("merged_into_id", null)
     // Les retours privés remontent à l'équipe mais ne sont jamais listés ici.
     .eq("is_public", true)
+    // Revue avant publication (MIN-54) : un post en attente/rejeté n'apparaît pas.
+    .eq("review_state", "published")
     .limit(PUBLIC_LIST_LIMIT);
   if (params.status) query = query.eq("status", params.status);
   if (params.categoryId) {
@@ -209,9 +213,11 @@ export async function getPublicPostDetail(params: {
     .maybeSingle();
   if (!data) return null;
   const row = data as unknown as PostWithAuthor;
-  // Retour privé : seul son auteur peut l'ouvrir (les autres → 404). Il reste
-  // visible côté équipe via l'onglet feedback du projet.
-  if (!row.is_public && row.author_id !== params.viewerId) return null;
+  // Visible publiquement uniquement si public ET publié (MIN-54/MIN-37). Un post
+  // privé, en attente de revue ou rejeté n'est ouvrable que par son auteur ; les
+  // autres → 404. Tout reste visible côté équipe via l'onglet feedback du projet.
+  const publiclyVisible = row.is_public && row.review_state === "published";
+  if (!publiclyVisible && row.author_id !== params.viewerId) return null;
   if (row.merged_into_id !== null) {
     // Tombstone : le canonique porte tout, l'appelant redirige.
     return {
