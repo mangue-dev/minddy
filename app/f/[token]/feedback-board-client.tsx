@@ -35,6 +35,7 @@ import {
 import { FeedbackAuthDialog } from "./feedback-auth";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
+  CategoryTag,
   FEEDBACK_TO_ISSUE_STATUS,
   FeedbackStatusBadge,
   VoteButton,
@@ -283,6 +284,9 @@ function PostRow({
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <FeedbackStatusBadge status={post.status} />
             <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
+            {post.categories.map((c) => (
+              <CategoryTag key={c.id} category={c} />
+            ))}
           </div>
         </div>
         <VoteButton count={count} voted={voted} onToggle={toggle} />

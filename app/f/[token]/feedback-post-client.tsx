@@ -9,7 +9,7 @@ import { MessageResponse } from "@/components/ai-elements/message";
 import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
 import { togglePostVoteAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
-import { FeedbackStatusBadge, VoteButton } from "./feedback-bits";
+import { CategoryTag, FeedbackStatusBadge, VoteButton } from "./feedback-bits";
 
 /**
  * Page publique d'un post (MIN-37) : besoin votable rendu en markdown, réponse
@@ -85,6 +85,9 @@ export function FeedbackPostClient({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <FeedbackStatusBadge status={post.status} />
           <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
+          {post.categories.map((c) => (
+            <CategoryTag key={c.id} category={c} />
+          ))}
         </div>
       </div>
 

@@ -46,6 +46,8 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { IssueSidePanel } from "@/components/issue-side-panel";
+import { CategoryPill } from "@/components/category-pill";
+import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
@@ -54,8 +56,9 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
 import { useAuth } from "@/lib/auth-context";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import type { EventContext } from "@/lib/describe-event";
-import type { AttachmentInput, Issue, IssueRelationType, Member } from "@/lib/types";
+import type { AttachmentInput, Category, Issue, IssueRelationType, Member } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -123,6 +126,22 @@ export function FeedbackTeamPage() {
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c])),
+    [categories]
+  );
+
+  // Publie le feedback sélectionné à Numo (MIN-52) : il résout « ce feedback »,
+  // « promeus-le », « réponds-lui » sur ce post sans le chercher — comme le
+  // panneau d'issue publie l'issue ouverte.
+  const selectedPost = posts.find((p) => p.id === selectedId) ?? null;
+  useAssistantContext(
+    project
+      ? selectedPost
+        ? { projectId, feedbackId: selectedPost.id, feedbackTitle: selectedPost.title }
+        : { projectId }
+      : null
+  );
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
   const handleAddRelation = useCallback(
@@ -247,6 +266,16 @@ export function FeedbackTeamPage() {
                           {format.dateTime(new Date(post.created_at), { dateStyle: "short" })}
                         </span>
                       </span>
+                      {post.category_ids.length > 0 && (
+                        <span className="flex flex-wrap items-center gap-1">
+                          {post.category_ids
+                            .map((cid) => categoryMap.get(cid))
+                            .filter((c): c is Category => !!c)
+                            .map((c) => (
+                              <CategoryPill key={c.id} category={c} />
+                            ))}
+                        </span>
+                      )}
                     </span>
                   </button>
                 </li>
@@ -267,6 +296,7 @@ export function FeedbackTeamPage() {
             postId={selectedId}
             allPosts={posts}
             members={members}
+            categories={categories}
             issues={issues}
             onBack={() => setMobileDetail(false)}
             onChanged={refresh}
@@ -326,6 +356,7 @@ function FeedbackDetail({
   postId,
   allPosts,
   members,
+  categories,
   issues,
   onBack,
   onChanged,
@@ -338,6 +369,8 @@ function FeedbackDetail({
   allPosts: TeamFeedbackListItem[];
   /** Project members + issues — resolve actor names and issue refs in the feed. */
   members: Member[];
+  /** Catégories du projet (celles des issues) — réutilisées ici (MIN-52). */
+  categories: Category[];
   issues: Issue[];
   onBack: () => void;
   onChanged: () => void;
@@ -346,6 +379,7 @@ function FeedbackDetail({
 }) {
   const t = useTranslations("FeedbackBoard");
   const tStatus = useTranslations("PublicFeedback");
+  const tField = useTranslations("Field");
   const format = useFormatter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -430,6 +464,17 @@ function FeedbackDetail({
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
 
+  // Catégories du post (MIN-52) : remplacement complet du jeu, comme les issues.
+  const setCategories = useMutation({
+    mutationFn: (categoryIds: string[]) =>
+      api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
+        method: "PUT",
+        body: JSON.stringify({ category_ids: categoryIds }),
+      }),
+    onSuccess: refreshDetail,
+    onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
+  });
+
   if (isLoading || !post) {
     return (
       <div className="flex flex-col gap-4 p-6">
@@ -443,122 +488,130 @@ function FeedbackDetail({
     post.submitted_title !== post.title || post.submitted_body !== post.body;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-5 desktop:px-6">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1 text-xs text-muted-foreground md:hidden"
-          >
-            <ChevronLeft className="size-3.5" />
-            {t("title")}
-          </button>
-          <span className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-            {/* Badge de voix du post. */}
-            <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums">
-              <ChevronUp className="size-3" />
-              {post.vote_count}
-            </span>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Barre du haut, façon triage : retour (mobile) · identifiants (votes,
+          source, date, privé) à gauche · options (statut, promotion/lien,
+          merge, suppression) à droite. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3 md:px-6">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("title")}
+          className="md:hidden"
+          onClick={onBack}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {/* Badge de voix du post. */}
+          <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums">
+            <ChevronUp className="size-3" />
+            {post.vote_count}
+          </span>
+          <span className="hidden sm:inline">
             {t(`source.${post.source}`)} ·{" "}
             {format.dateTime(new Date(post.created_at), { dateStyle: "medium" })}
-            {!post.is_public && (
-              <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                <Lock className="size-2.5" />
-                {t("private")}
-              </span>
-            )}
           </span>
-          <div className="flex items-center gap-1.5">
-            {/* Statut public : un select tant que le post est autonome — dès
-                qu'un ticket est lié, le statut suit l'issue (status-sync) et
-                devient lecture seule. */}
-            {post.issue ? (
-              <FeedbackStatusBadge status={post.status} />
-            ) : (
-              <Select
-                value={post.status}
-                onValueChange={(value) => {
-                  if (value !== post.status) patch.mutate({ status: value });
-                }}
-              >
-                <SelectTrigger size="sm" className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FEEDBACK_POST_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      <StatusIndicator
-                        status={FEEDBACK_TO_ISSUE_STATUS[status]}
-                        className="size-3.5"
-                      />
-                      {tStatus(`status.${status}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {post.issue ? (
-              // Ouvre le side panel ici même — pas de détour par la vue tickets.
-              <button
-                type="button"
-                onClick={() => onOpenIssue(post.issue!.id)}
-                className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t("linkedIssue")} · {issueIdentifier(projectKey, post.issue.number)}
-                <ArrowUpRight className="size-3" />
-              </button>
-            ) : (
-              <SplitButton
-                variant="outline"
-                size="sm"
-                disabled={action.isPending}
-                onClick={() => action.mutate({ path: `${postId}/promote` })}
-                menuLabel={t("linkToIssue")}
-                menu={
-                  <DropdownMenuItem onSelect={() => setLinkOpen(true)}>
-                    <Link2 className="size-4" />
-                    {t("linkToIssue")}
-                  </DropdownMenuItem>
-                }
-              >
-                {t("promote")}
-              </SplitButton>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="…">
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
-                  <GitMerge className="size-4" />
-                  {t("mergeInto")}
+          {!post.is_public && (
+            <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+              <Lock className="size-2.5" />
+              {t("private")}
+            </span>
+          )}
+        </span>
+        <div className="ml-auto flex items-center gap-1.5">
+          {/* Statut public : un select tant que le post est autonome — dès
+              qu'un ticket est lié, le statut suit l'issue (status-sync) et
+              devient lecture seule. */}
+          {post.issue ? (
+            <FeedbackStatusBadge status={post.status} />
+          ) : (
+            <Select
+              value={post.status}
+              onValueChange={(value) => {
+                if (value !== post.status) patch.mutate({ status: value });
+              }}
+            >
+              <SelectTrigger size="sm" className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FEEDBACK_POST_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    <StatusIndicator
+                      status={FEEDBACK_TO_ISSUE_STATUS[status]}
+                      className="size-3.5"
+                    />
+                    {tStatus(`status.${status}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {post.issue ? (
+            // Ouvre le side panel ici même — pas de détour par la vue tickets.
+            <button
+              type="button"
+              onClick={() => onOpenIssue(post.issue!.id)}
+              className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t("linkedIssue")} · {issueIdentifier(projectKey, post.issue.number)}
+              <ArrowUpRight className="size-3" />
+            </button>
+          ) : (
+            <SplitButton
+              variant="outline"
+              size="sm"
+              disabled={action.isPending}
+              onClick={() => action.mutate({ path: `${postId}/promote` })}
+              menuLabel={t("linkToIssue")}
+              menu={
+                <DropdownMenuItem onSelect={() => setLinkOpen(true)}>
+                  <Link2 className="size-4" />
+                  {t("linkToIssue")}
                 </DropdownMenuItem>
-                {post.issue && (
-                  <DropdownMenuItem
-                    onSelect={() =>
-                      void api(`/api/projects/${projectId}/feedback/${postId}/link`, {
-                        method: "DELETE",
-                      })
-                        .then(refreshDetail)
-                        .catch((e: Error) => toast.error(e.message || t("errorGeneric")))
-                    }
-                  >
-                    <Link2 className="size-4" />
-                    {t("unlinkIssue")}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-                  <Trash2 className="size-4" />
-                  {t("deletePost")}
+              }
+            >
+              {t("promote")}
+            </SplitButton>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="…">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
+                <GitMerge className="size-4" />
+                {t("mergeInto")}
+              </DropdownMenuItem>
+              {post.issue && (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    void api(`/api/projects/${projectId}/feedback/${postId}/link`, {
+                      method: "DELETE",
+                    })
+                      .then(refreshDetail)
+                      .catch((e: Error) => toast.error(e.message || t("errorGeneric")))
+                  }
+                >
+                  <Link2 className="size-4" />
+                  {t("unlinkIssue")}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              )}
+              <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                <Trash2 className="size-4" />
+                {t("deletePost")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      </div>
 
+      {/* Corps défilant, centré comme le triage. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
+        <div className="mx-auto flex max-w-3xl flex-col gap-6">
         {post.suggested_merge_into_id && post.suggested_title && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2">
             <Sparkles className="size-3.5 shrink-0 text-brand" />
@@ -622,6 +675,17 @@ function FeedbackDetail({
             className="min-h-16"
           />
         </div>
+
+        {/* Catégories — rangée clé/valeur, mêmes contrôles que le panneau
+            d'issue (MIN-52). Visibles ici pour l'équipe ; leur affichage public
+            est un réglage opt-in du board. */}
+        <PropertyRow label={tField("categories")}>
+          <CategoryValue
+            categories={categories}
+            value={post.category_ids}
+            onChange={(ids) => setCategories.mutate(ids)}
+          />
+        </PropertyRow>
 
         {rawDiffers && (
           <details className="rounded-md border border-border/60 px-3 py-2">
@@ -772,6 +836,7 @@ function FeedbackDetail({
             projectId={projectId}
             onSubmit={handleComment}
           />
+        </div>
         </div>
       </div>
 

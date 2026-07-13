@@ -57,6 +57,8 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     issueTitle: pick("issueTitle"),
     objectiveId: pick("objectiveId"),
     objectiveName: pick("objectiveName"),
+    feedbackId: pick("feedbackId"),
+    feedbackTitle: pick("feedbackTitle"),
     viewId: pick("viewId"),
     viewName: pick("viewName"),
     cycleId: pick("cycleId"),

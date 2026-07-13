@@ -190,6 +190,7 @@
     },
     "contextIssue": "Issue in context",
     "contextObjective": "Objective in context",
+    "contextFeedback": "Feedback in context",
     "contextBoard": "Board in context",
     "contextBoardMy": "My issues",
     "contextBoardAll": "All issues",
@@ -1028,7 +1029,9 @@
     "feedbackWizardDoneKeyNote": "A “Feedback” integration key was created for this prompt — find it (and revoke it if needed) in the Integrations tab.",
     "feedbackShowViews": "Shared view tabs",
     "feedbackShowViewsDesc": "Shows the checked views as tabs on the board.",
-    "feedbackNoSharedViews": "No shared views yet."
+    "feedbackNoSharedViews": "No shared views yet.",
+    "feedbackShowCategories": "Categories on the public board",
+    "feedbackShowCategoriesDesc": "Shows post categories on the public board. Otherwise they stay visible to the team only."
   },
   "Sort": {
     "manual": "Manual",

@@ -535,6 +535,11 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Objective board: "${ctx.objectiveName ?? "(unknown name)"}" (id: ${ctx.objectiveId}).`,
       `When the user says "cet objectif" / "this objective", they mean the objective above.`
     );
+  } else if (ctx.feedbackId) {
+    lines.push(
+      `- Open feedback post: "${ctx.feedbackTitle ?? "(untitled)"}" (id: ${ctx.feedbackId}).`,
+      `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`
+    );
   }
   if (ctx.viewId) {
     lines.push(

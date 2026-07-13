@@ -89,6 +89,9 @@ export interface AssistantPageContext {
   /** The objective whose filtered board is displayed, when any. */
   objectiveId?: string;
   objectiveName?: string;
+  /** The feedback post open in the team dashboard, when any (MIN-52). */
+  feedbackId?: string;
+  feedbackTitle?: string;
   /** The saved kanban view currently selected on the board, when any. */
   viewId?: string;
   viewName?: string;

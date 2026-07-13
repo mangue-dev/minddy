@@ -190,6 +190,7 @@
     },
     "contextIssue": "Ticket en contexte",
     "contextObjective": "Objectif en contexte",
+    "contextFeedback": "Feedback en contexte",
     "contextBoard": "Board en contexte",
     "contextBoardMy": "Mes tickets",
     "contextBoardAll": "Tous les tickets",
@@ -1028,7 +1029,9 @@
     "feedbackWizardDoneKeyNote": "Une clé d'intégration « Feedback » a été créée pour ce prompt — retrouvez-la (et révoquez-la au besoin) dans l'onglet Intégrations.",
     "feedbackShowViews": "Onglets des vues partagées",
     "feedbackShowViewsDesc": "Affiche les vues cochées comme onglets sur le board.",
-    "feedbackNoSharedViews": "Aucune vue partagée pour l'instant."
+    "feedbackNoSharedViews": "Aucune vue partagée pour l'instant.",
+    "feedbackShowCategories": "Catégories sur le board public",
+    "feedbackShowCategoriesDesc": "Affiche les catégories des posts sur le board public. Sinon elles restent visibles uniquement pour l'équipe."
   },
   "Sort": {
     "manual": "Manuel",

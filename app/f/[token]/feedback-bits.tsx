@@ -5,7 +5,7 @@ import { ChevronUp } from "lucide-react";
 import { cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { FeedbackPostStatus } from "@/lib/feedback/types";
+import type { FeedbackPostStatus, PublicCategory } from "@/lib/feedback/types";
 
 /** Petites briques partagées du board public : badge de statut (mêmes icônes
     que les statuts d'issue), vote en pill horizontal (style UserJot) et
@@ -49,6 +49,21 @@ export function FeedbackStatusBadge({ status }: { status: FeedbackPostStatus }) 
         className="size-3.5"
       />
       {t(`status.${status}`)}
+    </span>
+  );
+}
+
+/** Pastille de catégorie du board public (MIN-52) — point coloré + nom, ton
+    neutre pour rester discret sous le titre du post. */
+export function CategoryTag({ category }: { category: PublicCategory }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">
+      <span
+        className="size-2 rounded-full"
+        style={{ backgroundColor: category.color }}
+        aria-hidden
+      />
+      {category.name}
     </span>
   );
 }

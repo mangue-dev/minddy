@@ -35,7 +35,9 @@ export async function promoteFeedbackPost(params: {
 
   const { data: post } = await service
     .from("feedback_posts")
-    .select("id, project_id, title, body, vote_count, issue_id, merged_into_id")
+    .select(
+      "id, project_id, title, body, vote_count, issue_id, merged_into_id, feedback_post_categories(category_id)"
+    )
     .eq("id", params.postId)
     .maybeSingle();
   // Un post mergé ou déjà promu ne se promeut pas (le canonique porte le lien).
@@ -50,6 +52,13 @@ export async function promoteFeedbackPost(params: {
     `---\n\nPromoted from the feedback board · ${post.vote_count as number} vote${(post.vote_count as number) > 1 ? "s" : ""}.`
   );
 
+  // Les catégories du post sont reprises telles quelles par l'issue (même
+  // projet, donc createIssueForProject les résout toutes par id).
+  const categoryIds = (
+    (post as { feedback_post_categories?: { category_id: string }[] | null })
+      .feedback_post_categories ?? []
+  ).map((c) => c.category_id);
+
   const created = await createIssueForProject({
     projectId: post.project_id as string,
     projectName: params.projectName ?? null,
@@ -59,6 +68,7 @@ export async function promoteFeedbackPost(params: {
       title: post.title as string,
       description: sections.join("\n\n"),
       status: "backlog",
+      category_ids: categoryIds,
     },
   });
   if (!created.ok) {

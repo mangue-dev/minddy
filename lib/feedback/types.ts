@@ -51,6 +51,14 @@ export function sortFeedbackResolvedLast<T>(
 
 export type FeedbackPostSource = "board" | "api" | "internal";
 
+/** Catégorie telle qu'exposée publiquement (MIN-52) — slice minimal du modèle
+    interne : ni project_id ni dates. */
+export interface PublicCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
 /** Post tel que rendu sur le board public (anonymisé). */
 export interface PublicPost {
   id: string;
@@ -66,6 +74,8 @@ export interface PublicPost {
   votedByMe: boolean;
   teamResponse: string | null;
   teamResponseAt: string | null;
+  /** Catégories du post — vide sauf si le board a activé show_categories. */
+  categories: PublicCategory[];
 }
 
 /** Onglet de navigation du site public (board + vues partagées du projet). */

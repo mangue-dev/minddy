@@ -54,6 +54,7 @@ interface BoardSettings {
   enabled: boolean;
   show_views: boolean;
   visible_view_ids: string[];
+  show_categories: boolean;
   token: string;
   sso_secret: string | null;
   sso_configured: boolean;
@@ -406,6 +407,22 @@ export function ProjectFeedbackSettings({
                     </div>
                   ))}
               </Row>
+            )}
+
+            {/* Catégories des posts sur le board public (MIN-52) — off par
+                défaut : les catégories restent internes au dashboard équipe. */}
+            {board && (
+              <Row
+                label={t("feedbackShowCategories")}
+                hint={t("feedbackShowCategoriesDesc")}
+                control={
+                  <Switch
+                    checked={board.show_categories}
+                    disabled={!isOwner}
+                    onCheckedChange={(v) => void patchBoard({ show_categories: v })}
+                  />
+                }
+              />
             )}
           </div>
         )}

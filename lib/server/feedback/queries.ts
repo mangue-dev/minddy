@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
+  type PublicCategory,
   type PublicPost,
 } from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
@@ -31,7 +32,8 @@ const PUBLIC_POST_SELECT = `${FEEDBACK_POST_SELECT}, feedback_users!author_id (p
 function toPublicPost(
   row: PostWithAuthor,
   viewerId: string | null,
-  votedPostIds: Set<string>
+  votedPostIds: Set<string>,
+  categories: PublicCategory[] = []
 ): PublicPost {
   return {
     id: row.id,
@@ -46,7 +48,45 @@ function toPublicPost(
     votedByMe: votedPostIds.has(row.id),
     teamResponse: row.team_response,
     teamResponseAt: row.team_response_at,
+    categories,
   };
+}
+
+/**
+ * Résout les catégories publiques (MIN-52) d'un lot de posts, uniquement quand
+ * le board les expose (`include`). Deux lectures : les liens de jonction et les
+ * catégories du projet ; renvoie une map post_id → catégories triées par nom.
+ */
+async function fetchPostCategories(
+  projectId: string,
+  postIds: string[],
+  include: boolean
+): Promise<Map<string, PublicCategory[]>> {
+  if (!include || postIds.length === 0) return new Map();
+  const service = getServiceClient();
+  const [linksRes, catsRes] = await Promise.all([
+    service
+      .from("feedback_post_categories")
+      .select("post_id, category_id")
+      .in("post_id", postIds),
+    service.from("categories").select("id, name, color").eq("project_id", projectId),
+  ]);
+  const catById = new Map<string, PublicCategory>(
+    (catsRes.data ?? []).map((c) => [
+      c.id as string,
+      { id: c.id as string, name: c.name as string, color: c.color as string },
+    ])
+  );
+  const byPost = new Map<string, PublicCategory[]>();
+  for (const link of (linksRes.data ?? []) as { post_id: string; category_id: string }[]) {
+    const cat = catById.get(link.category_id);
+    if (!cat) continue;
+    const arr = byPost.get(link.post_id) ?? [];
+    arr.push(cat);
+    byPost.set(link.post_id, arr);
+  }
+  for (const arr of byPost.values()) arr.sort((a, b) => a.name.localeCompare(b.name));
+  return byPost;
 }
 
 async function fetchViewerVotes(
@@ -68,6 +108,8 @@ export async function listPublicPosts(params: {
   viewerId: string | null;
   sort: PublicSort;
   status?: FeedbackPostStatus | null;
+  /** Board.show_categories : n'expose les catégories que si activé (MIN-52). */
+  includeCategories?: boolean;
 }): Promise<PublicPost[]> {
   const service = getServiceClient();
   let query = service
@@ -87,8 +129,13 @@ export async function listPublicPosts(params: {
   if (error) console.error("[feedback-queries] list failed:", error.message);
   const rows = (data ?? []) as unknown as PostWithAuthor[];
   const ids = rows.map((r) => r.id);
-  const voted = await fetchViewerVotes(params.viewerId, ids);
-  const posts = rows.map((r) => toPublicPost(r, params.viewerId, voted));
+  const [voted, categoriesByPost] = await Promise.all([
+    fetchViewerVotes(params.viewerId, ids),
+    fetchPostCategories(params.projectId, ids, params.includeCategories ?? false),
+  ]);
+  const posts = rows.map((r) =>
+    toPublicPost(r, params.viewerId, voted, categoriesByPost.get(r.id) ?? [])
+  );
   // Terminés (livrés / refusés) rangés en bas, l'ordre choisi (votes/date)
   // conservé au sein de chaque groupe.
   return sortFeedbackResolvedLast(posts, (p) => p.status);
@@ -106,6 +153,8 @@ export async function getPublicPostDetail(params: {
   projectId: string;
   postId: string;
   viewerId: string | null;
+  /** Board.show_categories : n'expose les catégories que si activé (MIN-52). */
+  includeCategories?: boolean;
 }): Promise<PublicPostDetail | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -128,17 +177,18 @@ export async function getPublicPostDetail(params: {
     };
   }
 
-  const [voted, mergedFromRes] = await Promise.all([
+  const [voted, mergedFromRes, categoriesByPost] = await Promise.all([
     fetchViewerVotes(params.viewerId, [row.id]),
     service
       .from("feedback_posts")
       .select("title")
       .eq("merged_into_id", row.id)
       .order("created_at", { ascending: true }),
+    fetchPostCategories(params.projectId, [row.id], params.includeCategories ?? false),
   ]);
 
   return {
-    post: toPublicPost(row, params.viewerId, voted),
+    post: toPublicPost(row, params.viewerId, voted, categoriesByPost.get(row.id) ?? []),
     mergedIntoId: null,
     mergedFromTitles: (mergedFromRes.data ?? []).map((p) => p.title as string),
   };

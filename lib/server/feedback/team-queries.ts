@@ -22,16 +22,33 @@ export interface TeamFeedbackAuthor {
 
 const AUTHOR_SELECT = "id, pseudonym, email, name, external_id, verified_via";
 
+/** Embed N–N des catégories (MIN-52) — aplati en `category_ids` côté client. */
+const CATEGORY_EMBED = "feedback_post_categories(category_id)";
+
+type WithCategoryEmbed = { feedback_post_categories?: { category_id: string }[] | null };
+
+/** Aplati l'embed jonction en liste d'ids, puis retire le champ brut du row. */
+function flattenCategories<T extends WithCategoryEmbed>(
+  row: T
+): Omit<T, "feedback_post_categories"> & { category_ids: string[] } {
+  const { feedback_post_categories, ...rest } = row;
+  return {
+    ...rest,
+    category_ids: (feedback_post_categories ?? []).map((c) => c.category_id),
+  };
+}
+
 export interface TeamFeedbackListItem extends FeedbackPostRow {
   author: TeamFeedbackAuthor | null;
   suggested_title: string | null;
+  category_ids: string[];
 }
 
 export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackListItem[]> {
   const service = getServiceClient();
   const { data } = await service
     .from("feedback_posts")
-    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT})`)
+    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
     .eq("project_id", projectId)
     .is("merged_into_id", null)
     .order("vote_count", { ascending: false })
@@ -39,14 +56,14 @@ export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackL
     .limit(500);
   const rows = (data ?? []) as unknown as (FeedbackPostRow & {
     author: TeamFeedbackAuthor | null;
-  })[];
+  } & WithCategoryEmbed)[];
 
   const suggestionTitles = await fetchTitles(
     rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)
   );
 
   const items = rows.map((row) => ({
-    ...row,
+    ...flattenCategories(row),
     suggested_title: row.suggested_merge_into_id
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,
@@ -78,6 +95,7 @@ export interface TeamMergeEvent {
 export interface TeamFeedbackDetail extends FeedbackPostRow {
   author: TeamFeedbackAuthor | null;
   suggested_title: string | null;
+  category_ids: string[];
   merged_from: { id: string; title: string }[];
   /** Fusions actives (non défaites) dont ce post est la cible — undoable. */
   merge_events: TeamMergeEvent[];
@@ -91,12 +109,16 @@ export async function getTeamFeedbackDetail(
   const service = getServiceClient();
   const { data } = await service
     .from("feedback_posts")
-    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT})`)
+    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
     .eq("id", postId)
     .eq("project_id", projectId)
     .maybeSingle();
   if (!data) return null;
-  const row = data as unknown as FeedbackPostRow & { author: TeamFeedbackAuthor | null };
+  const row = flattenCategories(
+    data as unknown as FeedbackPostRow & {
+      author: TeamFeedbackAuthor | null;
+    } & WithCategoryEmbed
+  );
 
   const [mergedFromRes, eventsRes, suggestionTitles, issueRes] = await Promise.all([
     service

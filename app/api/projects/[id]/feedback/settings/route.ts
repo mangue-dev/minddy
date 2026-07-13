@@ -9,6 +9,7 @@ import {
   getBoardForProject,
   rotateBoardToken,
   rotateSsoSecret,
+  setBoardShowCategories,
   setBoardShowViews,
   setBoardVisibleViews,
 } from "@/lib/server/feedback/boards";
@@ -30,6 +31,7 @@ function boardPayload(
     enabled: board.enabled,
     show_views: board.show_views,
     visible_view_ids: board.visible_view_ids,
+    show_categories: board.show_categories,
     token: board.token,
     sso_secret: isOwner ? board.sso_secret : null,
     sso_configured: board.sso_secret !== null,
@@ -98,6 +100,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
+  if (typeof body.show_categories === "boolean") {
+    const ok = await setBoardShowCategories(id, body.show_categories);
+    if (!ok) {
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+  }
   if (body.visible_view_ids !== undefined) {
     if (
       !Array.isArray(body.visible_view_ids) ||
@@ -117,6 +125,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (
     typeof body.enabled !== "boolean" &&
     typeof body.show_views !== "boolean" &&
+    typeof body.show_categories !== "boolean" &&
     body.visible_view_ids === undefined
   ) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

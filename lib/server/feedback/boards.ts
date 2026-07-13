@@ -20,13 +20,15 @@ export interface FeedbackBoardRow {
   show_views: boolean;
   /** Les vues (views.id) affichées en onglets — chaque vue est opt-in. */
   visible_view_ids: string[];
+  /** Opt-in : afficher les catégories des posts sur le board public (MIN-52). */
+  show_categories: boolean;
   sso_secret: string | null;
   created_at: string;
   updated_at: string;
 }
 
 const BOARD_SELECT =
-  "id, project_id, token, enabled, show_views, visible_view_ids, sso_secret, created_at, updated_at";
+  "id, project_id, token, enabled, show_views, visible_view_ids, show_categories, sso_secret, created_at, updated_at";
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
@@ -121,6 +123,19 @@ export async function setBoardVisibleViews(
   const { error } = await service
     .from("feedback_boards")
     .update({ visible_view_ids: viewIds })
+    .eq("project_id", projectId);
+  return !error;
+}
+
+/** Affichage opt-in des catégories des posts sur le board public (MIN-52). */
+export async function setBoardShowCategories(
+  projectId: string,
+  showCategories: boolean
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update({ show_categories: showCategories })
     .eq("project_id", projectId);
   return !error;
 }

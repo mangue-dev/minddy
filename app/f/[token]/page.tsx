@@ -78,6 +78,7 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     viewerId: session?.user.id ?? null,
     sort,
     status,
+    includeCategories: ctx.board.show_categories,
   });
   const identity = session
     ? { pseudonym: session.user.pseudonym, email: session.user.email }

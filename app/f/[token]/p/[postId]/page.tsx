@@ -59,6 +59,7 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
     projectId: ctx.project.id,
     postId,
     viewerId: session?.user.id ?? null,
+    includeCategories: ctx.board.show_categories,
   });
   if (!detail) notFound();
   if (detail.mergedIntoId) {
