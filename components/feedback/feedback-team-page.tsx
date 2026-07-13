@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
@@ -46,7 +46,6 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import { CategoryPill } from "@/components/category-pill";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -92,6 +91,33 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     | null;
   if (!response.ok) throw new Error(data?.error || "error");
   return data as T;
+}
+
+/** Résumé compact des catégories d'un post dans la liste — même rendu que le
+    trigger du sélecteur : pastille + 1er nom + « +N » pour le reste (MIN-52). */
+function CategorySummary({
+  categoryIds,
+  categoryMap,
+}: {
+  categoryIds: string[];
+  categoryMap: Map<string, Category>;
+}) {
+  const cats = categoryIds
+    .map((id) => categoryMap.get(id))
+    .filter((c): c is Category => !!c);
+  if (cats.length === 0) return null;
+  const [first, ...rest] = cats;
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      <span
+        className="size-2 shrink-0 rounded-full"
+        style={{ backgroundColor: first.color }}
+        aria-hidden
+      />
+      <span className="max-w-[7rem] truncate">{first.name}</span>
+      {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
+    </span>
+  );
 }
 
 export function FeedbackTeamPage() {
@@ -265,17 +291,11 @@ export function FeedbackTeamPage() {
                         <span>
                           {format.dateTime(new Date(post.created_at), { dateStyle: "short" })}
                         </span>
+                        <CategorySummary
+                          categoryIds={post.category_ids}
+                          categoryMap={categoryMap}
+                        />
                       </span>
-                      {post.category_ids.length > 0 && (
-                        <span className="flex flex-wrap items-center gap-1">
-                          {post.category_ids
-                            .map((cid) => categoryMap.get(cid))
-                            .filter((c): c is Category => !!c)
-                            .map((c) => (
-                              <CategoryPill key={c.id} category={c} />
-                            ))}
-                        </span>
-                      )}
                     </span>
                   </button>
                 </li>
@@ -464,16 +484,64 @@ function FeedbackDetail({
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
 
-  // Catégories du post (MIN-52) : remplacement complet du jeu, comme les issues.
-  const setCategories = useMutation({
-    mutationFn: (categoryIds: string[]) =>
+  // Catégories du post (MIN-52) : optimiste + debounce 300 ms, comme les cartes
+  // d'issue. Des toggles rapides patchent le cache tout de suite et fusionnent en
+  // un seul PUT du jeu final (évite le delete-then-insert concurrent sur la
+  // table de jonction). Erreur → toast + refetch autoritatif.
+  const catTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catLatest = useRef<string[] | null>(null);
+  const flushCategories = useCallback(
+    (ids: string[]) =>
       api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
         method: "PUT",
-        body: JSON.stringify({ category_ids: categoryIds }),
+        body: JSON.stringify({ category_ids: ids }),
       }),
-    onSuccess: refreshDetail,
-    onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
-  });
+    [projectId, postId]
+  );
+  const handleCategoriesChange = useCallback(
+    (ids: string[]) => {
+      queryClient.setQueryData<{ post: TeamFeedbackDetail }>(
+        ["feedback-detail", projectId, postId],
+        (old) => (old ? { post: { ...old.post, category_ids: ids } } : old)
+      );
+      queryClient.setQueryData<{ posts: TeamFeedbackListItem[] }>(
+        ["feedback", projectId],
+        (old) =>
+          old
+            ? {
+                posts: old.posts.map((p) =>
+                  p.id === postId ? { ...p, category_ids: ids } : p
+                ),
+              }
+            : old
+      );
+      catLatest.current = ids;
+      if (catTimer.current) clearTimeout(catTimer.current);
+      catTimer.current = setTimeout(() => {
+        catTimer.current = null;
+        const finalIds = catLatest.current ?? ids;
+        catLatest.current = null;
+        void flushCategories(finalIds).catch((e: Error) => {
+          toast.error(e.message || t("errorGeneric"));
+          void queryClient.invalidateQueries({ queryKey: ["feedback", projectId] });
+          void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
+        });
+      }, 300);
+    },
+    [projectId, postId, queryClient, flushCategories, t]
+  );
+  // Quitter le détail avant la fin du debounce ne doit pas perdre l'édition :
+  // on flush l'écriture en attente à l'unmount (le patch optimiste est déjà posé).
+  useEffect(() => {
+    return () => {
+      if (!catTimer.current) return;
+      clearTimeout(catTimer.current);
+      catTimer.current = null;
+      const ids = catLatest.current;
+      catLatest.current = null;
+      if (ids) void flushCategories(ids).catch(() => {});
+    };
+  }, [flushCategories]);
 
   if (isLoading || !post) {
     return (
@@ -683,7 +751,7 @@ function FeedbackDetail({
           <CategoryValue
             categories={categories}
             value={post.category_ids}
-            onChange={(ids) => setCategories.mutate(ids)}
+            onChange={handleCategoriesChange}
           />
         </PropertyRow>
 

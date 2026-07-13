@@ -23,6 +23,7 @@ import { MarkdownEditor } from "@/components/markdown-editor";
 import {
   FEEDBACK_POST_STATUSES,
   type FeedbackPostStatus,
+  type PublicCategory,
   type PublicIdentity,
   type PublicPost,
   type SimilarPost,
@@ -58,6 +59,8 @@ export function FeedbackBoardClient({
   posts,
   sort,
   status,
+  categories,
+  activeCategory,
   identity,
   ssoError,
 }: {
@@ -67,6 +70,9 @@ export function FeedbackBoardClient({
   posts: PublicPost[];
   sort: "top" | "recent";
   status: FeedbackPostStatus | null;
+  /** Catégories filtrables (board show_categories) — vide sinon (MIN-52). */
+  categories: PublicCategory[];
+  activeCategory: string | null;
   identity: PublicIdentity | null;
   ssoError: boolean;
 }) {
@@ -98,14 +104,26 @@ export function FeedbackBoardClient({
           {t("composerTitle")}
         </Button>
 
-        <FilterBar basePath={basePath} sort={sort} status={status} />
+        {categories.length > 0 && (
+          <div className="desktop:hidden">
+            <CategoryFilterList
+              basePath={basePath}
+              categories={categories}
+              sort={sort}
+              status={status}
+              active={activeCategory}
+            />
+          </div>
+        )}
+
+        <FilterBar basePath={basePath} sort={sort} status={status} category={activeCategory} />
 
         {posts.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-12 text-center">
             <MessagesSquare className="size-5 text-muted-foreground" />
             {/* Filtre actif = la vue est vide, pas le board. */}
             <p className="text-sm text-muted-foreground">
-              {status ? t("emptyFiltered") : t("empty")}
+              {status || activeCategory ? t("emptyFiltered") : t("empty")}
             </p>
           </div>
         ) : (
@@ -128,6 +146,17 @@ export function FeedbackBoardClient({
           <Megaphone />
           {t("composerTitle")}
         </Button>
+        {categories.length > 0 && (
+          <div className="mt-5">
+            <CategoryFilterList
+              basePath={basePath}
+              categories={categories}
+              sort={sort}
+              status={status}
+              active={activeCategory}
+            />
+          </div>
+        )}
       </aside>
 
       <ComposerDialog
@@ -156,11 +185,13 @@ export function FeedbackBoardClient({
 function buildHref(
   basePath: string,
   sort: "top" | "recent",
-  status: FeedbackPostStatus | null
+  status: FeedbackPostStatus | null,
+  category: string | null = null
 ): string {
   const params = new URLSearchParams();
   if (sort === "recent") params.set("sort", "recent");
   if (status) params.set("status", status);
+  if (category) params.set("category", category);
   const query = params.toString();
   // basePath "" (domaine personnalisé) : la racine du board est "/".
   return `${basePath || "/"}${query ? `?${query}` : ""}`;
@@ -170,10 +201,13 @@ function FilterBar({
   basePath,
   sort,
   status,
+  category,
 }: {
   basePath: string;
   sort: "top" | "recent";
   status: FeedbackPostStatus | null;
+  /** Filtre catégorie courant — préservé quand on change statut/tri (MIN-52). */
+  category: string | null;
 }) {
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
@@ -188,7 +222,7 @@ function FilterBar({
             <Link
               key={value}
               // re-cliquer le filtre actif le retire
-              href={buildHref(basePath, sort, active ? null : value)}
+              href={buildHref(basePath, sort, active ? null : value, category)}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                 active
@@ -220,7 +254,7 @@ function FilterBar({
           {(["top", "recent"] as const).map((value) => (
             <DropdownMenuItem
               key={value}
-              onSelect={() => router.push(buildHref(basePath, value, status))}
+              onSelect={() => router.push(buildHref(basePath, value, status, category))}
             >
               {value === "top" ? t("sortTop") : t("sortRecent")}
               {sort === value && <Check className="ml-auto size-4" />}
@@ -228,6 +262,55 @@ function FilterBar({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+    </div>
+  );
+}
+
+// ── Filtres par catégorie (sous « Partager un retour ») ───────────────────────
+
+function CategoryFilterList({
+  basePath,
+  categories,
+  sort,
+  status,
+  active,
+}: {
+  basePath: string;
+  categories: PublicCategory[];
+  sort: "top" | "recent";
+  status: FeedbackPostStatus | null;
+  active: string | null;
+}) {
+  const t = useTranslations("PublicFeedback");
+  return (
+    <div className="flex flex-col gap-0.5">
+      <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+        {t("categoriesTitle")}
+      </p>
+      {categories.map((c) => {
+        const isActive = active === c.id;
+        return (
+          <Link
+            key={c.id}
+            // re-cliquer la catégorie active la retire
+            href={buildHref(basePath, sort, status, isActive ? null : c.id)}
+            aria-current={isActive ? "true" : undefined}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+              isActive
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            )}
+          >
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: c.color }}
+              aria-hidden
+            />
+            <span className="min-w-0 truncate">{c.name}</span>
+          </Link>
+        );
+      })}
     </div>
   );
 }

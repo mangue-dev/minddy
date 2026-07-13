@@ -12,8 +12,12 @@ import {
   getFeedbackSession,
 } from "@/lib/server/feedback/identity";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
-import { listPublicPosts, type PublicSort } from "@/lib/server/feedback/queries";
-import { isFeedbackPostStatus } from "@/lib/feedback/types";
+import {
+  listPublicCategories,
+  listPublicPosts,
+  type PublicSort,
+} from "@/lib/server/feedback/queries";
+import { isFeedbackPostStatus, type PublicCategory } from "@/lib/feedback/types";
 import { FeedbackBoardClient } from "./feedback-board-client";
 import { HeaderIdentity } from "./header-identity";
 
@@ -29,7 +33,13 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ sort?: string; status?: string; sso?: string; ssoError?: string }>;
+  searchParams: Promise<{
+    sort?: string;
+    status?: string;
+    category?: string;
+    sso?: string;
+    ssoError?: string;
+  }>;
 };
 
 const getBoardContext = cache(getBoardByToken);
@@ -73,13 +83,22 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
   ]);
   const sort: PublicSort = search.sort === "recent" ? "recent" : "top";
   const status = isFeedbackPostStatus(search.status) ? search.status : null;
-  const posts = await listPublicPosts({
-    projectId: ctx.project.id,
-    viewerId: session?.user.id ?? null,
-    sort,
-    status,
-    includeCategories: ctx.board.show_categories,
-  });
+  const showCategories = ctx.board.show_categories;
+  const activeCategory =
+    showCategories && typeof search.category === "string" ? search.category : null;
+  const [posts, categories] = await Promise.all([
+    listPublicPosts({
+      projectId: ctx.project.id,
+      viewerId: session?.user.id ?? null,
+      sort,
+      status,
+      includeCategories: showCategories,
+      categoryId: activeCategory,
+    }),
+    showCategories
+      ? listPublicCategories(ctx.project.id)
+      : Promise.resolve<PublicCategory[]>([]),
+  ]);
   const identity = session
     ? { pseudonym: session.user.pseudonym, email: session.user.email }
     : null;
@@ -106,6 +125,8 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
           posts={posts}
           sort={sort}
           status={status}
+          categories={categories}
+          activeCategory={activeCategory}
           identity={identity}
           ssoError={search.ssoError === "1"}
         />

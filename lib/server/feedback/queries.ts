@@ -89,6 +89,38 @@ async function fetchPostCategories(
   return byPost;
 }
 
+/**
+ * Catégories réellement portées par au moins un post public du board (MIN-52) —
+ * la matière des filtres par catégorie affichés sous « Partager un retour ». On
+ * n'expose que celles utilisées : pas de filtre mort. Indépendant du filtre
+ * courant (calculé sur tous les posts publics), pour rester stable en filtrant.
+ */
+export async function listPublicCategories(projectId: string): Promise<PublicCategory[]> {
+  const service = getServiceClient();
+  const { data: posts } = await service
+    .from("feedback_posts")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("is_public", true)
+    .is("merged_into_id", null);
+  const postIds = (posts ?? []).map((p) => p.id as string);
+  if (postIds.length === 0) return [];
+  const { data: links } = await service
+    .from("feedback_post_categories")
+    .select("category_id")
+    .in("post_id", postIds);
+  const usedIds = [...new Set((links ?? []).map((l) => l.category_id as string))];
+  if (usedIds.length === 0) return [];
+  const { data: cats } = await service
+    .from("categories")
+    .select("id, name, color")
+    .eq("project_id", projectId)
+    .in("id", usedIds);
+  return (cats ?? [])
+    .map((c) => ({ id: c.id as string, name: c.name as string, color: c.color as string }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 async function fetchViewerVotes(
   viewerId: string | null,
   postIds: string[]
@@ -110,6 +142,8 @@ export async function listPublicPosts(params: {
   status?: FeedbackPostStatus | null;
   /** Board.show_categories : n'expose les catégories que si activé (MIN-52). */
   includeCategories?: boolean;
+  /** Filtre par catégorie (MIN-52) — ne garde que les posts qui la portent. */
+  categoryId?: string | null;
 }): Promise<PublicPost[]> {
   const service = getServiceClient();
   let query = service
@@ -121,6 +155,16 @@ export async function listPublicPosts(params: {
     .eq("is_public", true)
     .limit(PUBLIC_LIST_LIMIT);
   if (params.status) query = query.eq("status", params.status);
+  if (params.categoryId) {
+    // Les ids des posts portant cette catégorie, restreints ensuite par .in().
+    const { data: links } = await service
+      .from("feedback_post_categories")
+      .select("post_id")
+      .eq("category_id", params.categoryId);
+    const ids = (links ?? []).map((l) => l.post_id as string);
+    if (ids.length === 0) return [];
+    query = query.in("id", ids);
+  }
   query =
     params.sort === "top"
       ? query.order("vote_count", { ascending: false }).order("created_at", { ascending: false })
