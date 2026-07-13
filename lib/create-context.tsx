@@ -66,6 +66,14 @@ interface CreateContextValue {
 
 const CreateContext = createContext<CreateContextValue | null>(null);
 
+/** The objective the current project board is filtered to (`?objective=`), read
+ *  at call time so a quick-created issue (the `C` shortcut, the header "New
+ *  issue") inherits it without threading state through every trigger. */
+function activeObjectiveIdFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("objective") || null;
+}
+
 /**
  * App-wide issue/objective creation (MIN-33). Mounts {@link CreateIssueDialog}
  * and {@link ObjectiveDialog} once so "Nouveau ticket/objectif" works from
@@ -167,15 +175,26 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     (opts?: OpenIssueOptions) => {
       const pid = resolveTarget(opts?.projectId);
       if (!pid) return;
+      // On an objective-filtered board (/projects/[id]?objective=X), default the
+      // new issue into that objective — so `C` and the header "New issue" land it
+      // there like the column "+" already does. Only when the caller left the
+      // objective unset AND we're creating in that same board's project (the
+      // `?objective=` param belongs to the current route).
+      const objectiveId =
+        opts?.objectiveId !== undefined
+          ? opts.objectiveId
+          : pid === projectIdFromPath(pathname)
+            ? activeObjectiveIdFromUrl()
+            : null;
       setTarget(pid);
       setIssuePresets({
         status: opts?.status,
-        objectiveId: opts?.objectiveId ?? null,
+        objectiveId,
         assigneeId: opts?.assigneeId ?? null,
       });
       setIssueOpen(true);
     },
-    [resolveTarget]
+    [resolveTarget, pathname]
   );
 
   const openCreateObjective = useCallback(

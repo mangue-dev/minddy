@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Button, Progress } from "mangue-ui";
-import { Pencil, X } from "lucide-react";
+import { Button, Progress, cn } from "mangue-ui";
+import { Pencil, X, Target } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
-import { initials } from "@/lib/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { Member, Objective } from "@/lib/types";
@@ -32,50 +32,108 @@ export function ObjectiveBanner({
   const StatusIcon = status.icon;
   const targetDate = parseDueDate(objective.target_date);
 
+  // Late only while the objective is still open, and only once the whole target
+  // day has passed (a date-only target is local midnight — don't flag it "late"
+  // on its own due day).
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const overdue =
+    targetDate !== null &&
+    targetDate < startOfToday &&
+    objective.status !== "done" &&
+    objective.status !== "canceled";
+
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card px-4 py-3">
-      <span
-        className="size-3 shrink-0 rounded-full"
-        style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
-        aria-hidden
-      />
-      <div className="min-w-0">
-        <p className="truncate font-medium">{objective.name}</p>
-        <div className="mt-0.5 flex items-center gap-1.5">
-          <StatusIcon className={`size-3.5 ${status.color}`} />
-          <span className="text-xs text-muted-foreground">{tStatus(status.value)}</span>
+    <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-card px-4 py-3">
+      {/* Identity — color dot · name · status */}
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className="size-3 shrink-0 rounded-full"
+          style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
+          aria-hidden
+        />
+        <div className="min-w-0">
+          <p className="truncate font-medium leading-tight">{objective.name}</p>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <StatusIcon className={`size-3.5 ${status.color}`} />
+            <span className="text-xs text-muted-foreground">{tStatus(status.value)}</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex w-40 flex-col gap-1">
-        <Progress value={progress.percent} />
-        <span className="text-xs text-muted-foreground">
-          {t("completed", { done: progress.done, total: progress.total })}
-        </span>
+      <div className="hidden h-9 w-px shrink-0 bg-border sm:block" aria-hidden />
+
+      {/* Indicators — progress · lead · target */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex w-32 flex-col gap-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">
+              {t("completed", { done: progress.done, total: progress.total })}
+            </span>
+            <span className="font-semibold tabular-nums">{progress.percent}%</span>
+          </div>
+          <Progress value={progress.percent} />
+        </div>
+
+        {lead && (
+          <div className="flex items-center gap-2">
+            <UserAvatar
+              url={lead.avatar_url}
+              name={displayName(lead)}
+              seed={lead.user_id}
+              title={displayName(lead)}
+              className="size-7 text-[11px]"
+            />
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span className="text-[11px] text-muted-foreground">
+                {t("leadFieldLabel")}
+              </span>
+              <span className="max-w-[9rem] truncate text-xs font-medium">
+                {displayName(lead)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {targetDate && (
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-full",
+                overdue
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-muted text-muted-foreground"
+              )}
+              aria-hidden
+            >
+              <Target className="size-3.5" />
+            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-[11px] text-muted-foreground">
+                {t("targetDatePlaceholder")}
+              </span>
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  overdue && "text-destructive"
+                )}
+              >
+                {format.dateTime(targetDate, dueDateFormat(targetDate))}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {targetDate && (
-        <span className="text-xs text-muted-foreground">
-          {t("targetDate")} {format.dateTime(targetDate, dueDateFormat(targetDate))}
-        </span>
-      )}
-      {lead && (
-        <span
-          className="flex size-7 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground"
-          title={displayName(lead)}
-        >
-          {initials(displayName(lead))}
-        </span>
-      )}
-
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={onEdit}>
           <Pencil />
           {tCommon("edit")}
         </Button>
-        <Button asChild variant="ghost" size="icon-sm" aria-label={t("closeFilter")}>
-          <Link href={`/projects/${projectId}`}>
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/projects/${projectId}`} title={t("closeFilter")}>
             <X />
+            {tCommon("close")}
           </Link>
         </Button>
       </div>
