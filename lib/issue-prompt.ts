@@ -1,6 +1,15 @@
 import { parsePlan } from "@/lib/plan";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { Issue } from "@/lib/types";
+import type { Issue, IssueRelationType } from "@/lib/types";
+
+/** One relation to another issue, resolved from this issue's perspective:
+ *  the relation type (`blocks`/`blocked_by`/`related`), the linked issue's
+ *  identifier (e.g. MIN-10) and its title. */
+export interface PromptRelation {
+  type: IssueRelationType;
+  identifier: string;
+  title: string;
+}
 
 /**
  * « Copier le prompt » (pattern Linear) : un prompt prêt à coller dans
@@ -15,12 +24,49 @@ export function buildIssuePrompt({
   issue,
   projectId,
   projectKey,
+  categories,
+  relations,
+  attachmentCount,
 }: {
   issue: Issue;
   projectId: string;
   projectKey: string;
+  /** The issue's category names, listed in a <categories> block. */
+  categories?: string[];
+  /** This issue's relations to other issues, listed in a <relations> block so
+      the agent knows what blocks it, what it blocks, and what it relates to. */
+  relations?: PromptRelation[];
+  /** Number of issue-level attachments — flagged in an <attachments> block so
+      the agent knows files are attached (fetch them via the MCP if needed). */
+  attachmentCount?: number;
 }): string {
   const identifier = issueIdentifier(projectKey, issue.number);
+
+  const categoriesBlock =
+    categories && categories.length > 0
+      ? [
+          `  <categories>`,
+          ...categories.map((c) => `    <category>${c}</category>`),
+          `  </categories>`,
+        ]
+      : [];
+
+  const relationsBlock =
+    relations && relations.length > 0
+      ? [
+          `  <relations>`,
+          ...relations.map(
+            (r) =>
+              `    <relation type="${r.type}">\n      <identifier>${r.identifier}</identifier>\n      <title>${r.title}</title>\n    </relation>`
+          ),
+          `  </relations>`,
+        ]
+      : [];
+
+  const attachmentsBlock =
+    attachmentCount && attachmentCount > 0
+      ? [`  <attachments count="${attachmentCount}" />`]
+      : [];
 
   const fields = [
     `  <identifier>${identifier}</identifier>`,
@@ -29,9 +75,12 @@ export function buildIssuePrompt({
     `  <priority>${issue.priority}</priority>`,
     ...(issue.effort ? [`  <effort>${issue.effort}</effort>`] : []),
     ...(issue.due_date ? [`  <due_date>${issue.due_date}</due_date>`] : []),
+    ...categoriesBlock,
     ...(issue.description
       ? [`  <description>\n${issue.description}\n  </description>`]
       : []),
+    ...relationsBlock,
+    ...attachmentsBlock,
   ];
 
   const plan = issue.plan ? parsePlan(issue.plan) : null;

@@ -8,8 +8,8 @@ import {
   fetchObjectivesApi,
   updateObjectiveApi,
 } from "./objectives-api";
-import { statusCompletionCredit } from "./cycle";
-import type { IssueStatus } from "./issue-constants";
+import { effortToPoints, statusCompletionCredit } from "./cycle";
+import type { IssueEffort, IssueStatus } from "./issue-constants";
 import type {
   CreateObjectiveInput,
   Objective,
@@ -73,24 +73,29 @@ export function useObjectivesQuery(projectId: string | null) {
 }
 
 /**
- * Auto progress from linked issues. `done`/`total` stay raw counts (fully-done
- * issues over all linked), but `percent` — the fill of the progress bar — is
- * graded granularly like the cycle's progression ring: issues in progress and
- * in review earn partial credit instead of counting for nothing until "done"
- * (statusCompletionCredit). Count-based (not effort-weighted) so the bar reads
- * in the same units as the done/total label.
+ * Auto progress from linked issues. `done`/`total` stay raw issue counts
+ * (fully-done issues over all linked) for the label, but `percent` — the fill
+ * of the progress bar — is the sum of finished EFFORT over total effort, in
+ * hidden Fibonacci points (effortToPoints, xs1 s2 m3 l5 xl8, unsized = m), the
+ * same weighting the cycle's progression ring uses (cycleCompletionPercent):
+ * an XL done + an XS left reads 89 %, not 50 %. Work in flight earns partial
+ * credit (statusCompletionCredit) instead of counting for nothing until "done".
  */
 export function objectiveProgress(
   objectiveId: string,
-  issues: { objective_id: string | null; status: string }[]
+  issues: { objective_id: string | null; status: string; effort?: IssueEffort | null }[]
 ): { done: number; total: number; percent: number } {
   const linked = issues.filter((i) => i.objective_id === objectiveId);
   const total = linked.length;
   const done = linked.filter((i) => i.status === "done").length;
-  const earned = linked.reduce(
-    (sum, i) => sum + statusCompletionCredit(i.status as IssueStatus),
-    0
-  );
-  const percent = total === 0 ? 0 : Math.round((earned / total) * 100);
+  let totalPoints = 0;
+  let earnedPoints = 0;
+  for (const i of linked) {
+    const points = effortToPoints(i.effort);
+    totalPoints += points;
+    earnedPoints += points * statusCompletionCredit(i.status as IssueStatus);
+  }
+  const percent =
+    totalPoints === 0 ? 0 : Math.round((earnedPoints / totalPoints) * 100);
   return { done, total, percent };
 }

@@ -41,6 +41,7 @@ import {
   MoreHorizontal,
   Plus,
   Sparkles,
+  Trash2,
   Undo2,
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
@@ -490,6 +491,7 @@ function FeedbackDetail({
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                  <Trash2 className="size-4" />
                   {t("deletePost")}
                 </DropdownMenuItem>
               </DropdownMenuContent>

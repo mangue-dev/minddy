@@ -776,10 +776,26 @@ export function IssueCard({
     const promptIssue = autoStart
       ? { ...issue, status: "in_progress" as const }
       : issue;
+    // Relations de l'issue (type + identifiant + titre de l'autre issue) — le
+    // titre est résolu depuis candidateIssues (la liste complète du projet),
+    // qui n'existe que dans l'app authentifiée : aucune fuite côté board public.
+    const titleById = new Map((candidateIssues ?? []).map((i) => [i.id, i.title]));
+    const promptRelations = (relations ?? []).map((r) => ({
+      type: r.relation,
+      identifier: issueIdentifier(projectKey, r.otherNumber),
+      title: titleById.get(r.otherId) ?? "",
+    }));
+    // Noms des catégories (les IDs vivent sur l'issue, les noms dans categoryMap).
+    const promptCategories = issue.category_ids
+      .map((cid) => categoryMap.get(cid)?.name)
+      .filter((name): name is string => !!name);
     const prompt = buildIssuePrompt({
       issue: promptIssue,
       projectId,
       projectKey,
+      categories: promptCategories,
+      relations: promptRelations,
+      attachmentCount: issue.attachment_count,
     });
     await navigator.clipboard.writeText(prompt);
     if (autoStart) {

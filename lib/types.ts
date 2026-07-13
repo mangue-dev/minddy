@@ -325,6 +325,10 @@ export interface Issue {
       Invariant (SQL trigger): a cycled issue is assigned to the cycle's owner. */
   cycle_id: string | null;
   category_ids: string[];
+  /** Count of issue-LEVEL attachments (comment attachments excluded). Only the
+      board list endpoint populates it; undefined elsewhere. Used by « copier le
+      prompt » to flag attachments in the XML without a per-card fetch. */
+  attachment_count?: number;
 }
 
 /** A cycle as the board consumes it (MIN-32): the user's personal

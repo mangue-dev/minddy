@@ -30,7 +30,33 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/issues] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json((data ?? []).map(mapIssueRow));
+
+  // Issue-level attachment counts (comment attachments excluded) — one indexed
+  // query, folded onto each issue so « copier le prompt » can flag attachments
+  // in the XML without a per-card fetch. Failure is non-fatal: the board still
+  // renders, just without the counts.
+  const attachmentCounts = new Map<string, number>();
+  const { data: attachmentRows, error: attachmentError } = await auth.supabase
+    .from("attachments")
+    .select("issue_id")
+    .eq("project_id", id)
+    .is("comment_id", null);
+  if (attachmentError) {
+    console.error("[api/issues] attachment counts failed:", attachmentError.message);
+  } else {
+    for (const row of attachmentRows ?? []) {
+      const issueId = row.issue_id as string;
+      attachmentCounts.set(issueId, (attachmentCounts.get(issueId) ?? 0) + 1);
+    }
+  }
+
+  return NextResponse.json(
+    (data ?? []).map((row) => {
+      const mapped = mapIssueRow(row);
+      const issueId = (row as { id: string }).id;
+      return { ...mapped, attachment_count: attachmentCounts.get(issueId) ?? 0 };
+    })
+  );
 }
 
 /** POST /api/projects/[id]/issues — create an issue (assigns CLÉ-number atomically). */

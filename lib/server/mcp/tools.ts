@@ -40,8 +40,8 @@ import {
   getCycleOverview,
   getCyclePrefsForUser,
 } from "@/lib/server/cycles";
-import { todayISO } from "@/lib/cycle";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { effortToPoints, statusCompletionCredit, todayISO } from "@/lib/cycle";
+import { issueIdentifier, type IssueEffort, type IssueStatus } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
 import {
   ok,
@@ -499,7 +499,7 @@ export function registerMinddyTools(server: McpServer): void {
           .order("created_at", { ascending: true }),
         service
           .from("issues")
-          .select("objective_id, status")
+          .select("objective_id, status, effort")
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null),
         // Objective-level attachments (comment_id null) — metadata only; the
@@ -528,14 +528,23 @@ export function registerMinddyTools(server: McpServer): void {
         attachmentsByObjective.set(id, list);
       }
 
-      // Progression = issues done / total des issues liées (plan §6, même
-      // calcul que objectiveProgress dans lib/use-objectives-query.ts).
-      const progress = new Map<string, { done: number; total: number }>();
+      // Progression : done/total restent des comptes bruts de tickets pour le
+      // label, mais percent est pondéré par l'effort en points Fibonacci
+      // (effortToPoints) avec crédit partiel par statut — même calcul que
+      // objectiveProgress dans lib/use-objectives-query.ts (MIN-56).
+      const progress = new Map<
+        string,
+        { done: number; total: number; totalPoints: number; earnedPoints: number }
+      >();
       for (const issue of linkedIssues ?? []) {
         const id = issue.objective_id as string;
-        const entry = progress.get(id) ?? { done: 0, total: 0 };
+        const entry =
+          progress.get(id) ?? { done: 0, total: 0, totalPoints: 0, earnedPoints: 0 };
         entry.total += 1;
         if (issue.status === "done") entry.done += 1;
+        const points = effortToPoints(issue.effort as IssueEffort | null);
+        entry.totalPoints += points;
+        entry.earnedPoints += points * statusCompletionCredit(issue.status as IssueStatus);
         progress.set(id, entry);
       }
 
@@ -547,7 +556,9 @@ export function registerMinddyTools(server: McpServer): void {
       );
       return ok({
         objectives: (data ?? []).map((o) => {
-          const p = progress.get(o.id as string) ?? { done: 0, total: 0 };
+          const p =
+            progress.get(o.id as string) ??
+            { done: 0, total: 0, totalPoints: 0, earnedPoints: 0 };
           const atts = attachmentsByObjective.get(o.id as string);
           return {
             ...o,
@@ -557,7 +568,10 @@ export function registerMinddyTools(server: McpServer): void {
             progress: {
               done: p.done,
               total: p.total,
-              percent: p.total === 0 ? 0 : Math.round((p.done / p.total) * 100),
+              percent:
+                p.totalPoints === 0
+                  ? 0
+                  : Math.round((p.earnedPoints / p.totalPoints) * 100),
             },
             ...(atts ? { attachments: atts } : {}),
           };
