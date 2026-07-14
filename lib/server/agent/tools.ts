@@ -169,6 +169,51 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "apply_edits",
+      description:
+        "Apply several changes across one or more files in a SINGLE call. Use it when your change spans multiple files or multiple spots — cheaper and more coherent than many edit_file calls. Each change is one op: 'update' (apply a list of old_string→new_string edits to a file), 'add' (create a file with content), 'delete' (remove a file), or 'move' (rename a file). Changes apply in order; the result reports per-change success/failure so you can retry only the ones that failed. For a single-spot change in one file, prefer edit_file.",
+      parameters: {
+        type: "object",
+        properties: {
+          changes: {
+            type: "array",
+            description: "Ordered list of file changes.",
+            items: {
+              type: "object",
+              properties: {
+                path: { type: "string", description: "Repo-relative file path." },
+                op: {
+                  type: "string",
+                  enum: ["update", "add", "delete", "move"],
+                  description: "Change type. Defaults to 'update'.",
+                },
+                edits: {
+                  type: "array",
+                  description: "For op 'update': the edits to apply to this file, in order.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      old_string: { type: "string", description: "Exact text to replace (verbatim, unique)." },
+                      new_string: { type: "string", description: "Replacement text." },
+                      replace_all: { type: "boolean", description: "Replace every occurrence." },
+                    },
+                    required: ["old_string", "new_string"],
+                  },
+                },
+                content: { type: "string", description: "For op 'add': the full content of the new file." },
+                move_to: { type: "string", description: "For op 'move': the destination path." },
+              },
+              required: ["path"],
+            },
+          },
+        },
+        required: ["changes"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "write_file",
       description:
         "Create a NEW file with the given full content (parent directories are created as needed). Use this only for files that do not exist yet — to change an existing file, use edit_file instead. Match the existing code style.",
@@ -179,6 +224,37 @@ export const AGENT_TOOLS: AgentToolDef[] = [
           content: { type: "string", description: "The complete file content." },
         },
         required: ["path", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "move_file",
+      description:
+        "Rename or move a file within the repository (uses git so the pull request captures the rename). Refuses if the destination already exists.",
+      parameters: {
+        type: "object",
+        properties: {
+          from: { type: "string", description: "Current repo-relative path." },
+          to: { type: "string", description: "New repo-relative path." },
+        },
+        required: ["from", "to"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_file",
+      description:
+        "Delete a file from the repository (uses git so the deletion appears in the pull request).",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Repo-relative path to delete." },
+        },
+        required: ["path"],
       },
     },
   },
@@ -197,6 +273,36 @@ export const AGENT_TOOLS: AgentToolDef[] = [
           },
         },
         required: ["command"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_plan",
+      description:
+        "Maintain a short ordered checklist of the steps for this task, so the work stays legible in the live view. Call it once early with a few concrete steps, then again whenever a step's status changes. Always send the FULL current plan. Keep exactly one step 'in_progress' at a time and mark steps 'completed' as you finish them. Skip planning for trivial one-step tasks — never make a single-step plan.",
+      parameters: {
+        type: "object",
+        properties: {
+          plan: {
+            type: "array",
+            description: "The full ordered list of steps, in order.",
+            items: {
+              type: "object",
+              properties: {
+                step: { type: "string", description: "Short description of the step." },
+                status: {
+                  type: "string",
+                  enum: ["pending", "in_progress", "completed", "cancelled"],
+                  description: "Status of this step.",
+                },
+              },
+              required: ["step", "status"],
+            },
+          },
+        },
+        required: ["plan"],
       },
     },
   },
@@ -244,4 +350,4 @@ export const AGENT_TOOLS: AgentToolDef[] = [
 ];
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
-export const CONTROL_TOOLS = new Set(["finish", "ask_user"]);
+export const CONTROL_TOOLS = new Set(["finish", "ask_user", "update_plan"]);

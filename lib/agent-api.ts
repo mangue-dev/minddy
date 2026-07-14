@@ -83,7 +83,8 @@ export type AgentEventType =
   | "pr_opened"
   | "error"
   | "summary"
-  | "user_message";
+  | "user_message"
+  | "plan_update";
 
 export interface AgentRunEvent {
   id: string;

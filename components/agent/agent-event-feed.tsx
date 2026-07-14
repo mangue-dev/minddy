@@ -3,7 +3,17 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { AlertTriangle, Bot, GitCommit, GitPullRequest } from "lucide-react";
+import {
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  Circle,
+  CircleDot,
+  CircleSlash,
+  GitCommit,
+  GitPullRequest,
+  ListChecks,
+} from "lucide-react";
 import {
   ChatMessage,
   assistantCopyMessageIds,
@@ -22,9 +32,12 @@ import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types"
 
 type ToolResult = { status: "running" | "complete"; result?: unknown; success?: boolean };
 
+type PlanStep = { step: string; status: string };
+
 type FeedItem =
   | { kind: "message"; message: AssistantMessage }
-  | { kind: "note"; id: string; variant: "pr" | "commit" | "error"; text: string; url?: string };
+  | { kind: "note"; id: string; variant: "pr" | "commit" | "error"; text: string; url?: string }
+  | { kind: "plan"; id: string; steps: PlanStep[] };
 
 function makeMessage(
   id: string,
@@ -136,6 +149,15 @@ function buildFeed(events: AgentRunEvent[]): { items: FeedItem[]; results: Map<s
         items.push({ kind: "note", id: e.id, variant: "commit", text: "" });
         break;
       }
+      case "plan_update": {
+        const steps = (Array.isArray(p.plan) ? p.plan : []) as PlanStep[];
+        // Une seule checklist affichée : on remplace la précédente par la plus récente.
+        const prev = items.findIndex((it) => it.kind === "plan");
+        if (prev !== -1) items.splice(prev, 1);
+        current = null;
+        if (steps.length > 0) items.push({ kind: "plan", id: e.id, steps });
+        break;
+      }
       case "error": {
         current = null;
         const msg = str(p.message) || str(p.text);
@@ -180,6 +202,52 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
     </a>
   ) : (
     content
+  );
+}
+
+function PlanRow({ item }: { item: Extract<FeedItem, { kind: "plan" }> }) {
+  const t = useTranslations("Agent");
+  const done = item.steps.filter((s) => s.status === "completed").length;
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm">
+      <div className="mb-2 flex items-center gap-2 font-medium text-muted-foreground">
+        <ListChecks className="size-4 shrink-0" />
+        <span>{t("plan")}</span>
+        <span className="text-xs tabular-nums">
+          {done}/{item.steps.length}
+        </span>
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {item.steps.map((s, i) => {
+          const Icon =
+            s.status === "completed"
+              ? CheckCircle2
+              : s.status === "in_progress"
+                ? CircleDot
+                : s.status === "cancelled"
+                  ? CircleSlash
+                  : Circle;
+          return (
+            <li
+              key={i}
+              className={cn(
+                "flex items-start gap-2",
+                s.status === "completed" && "text-muted-foreground",
+                s.status === "cancelled" && "text-muted-foreground line-through",
+              )}
+            >
+              <Icon
+                className={cn(
+                  "mt-0.5 size-4 shrink-0",
+                  (s.status === "in_progress" || s.status === "completed") && "text-brand",
+                )}
+              />
+              <span>{s.step}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -238,6 +306,8 @@ export function AgentEventFeed({
             toolCallResults={results}
             showCopyButton={copyIds.has(it.message.id)}
           />
+        ) : it.kind === "plan" ? (
+          <PlanRow key={it.id} item={it} />
         ) : (
           <NoteRow key={it.id} item={it} />
         ),

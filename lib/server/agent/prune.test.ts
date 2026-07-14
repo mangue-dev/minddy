@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { pruneToolOutputs, PRUNE_STUB } from "./prune";
+import { pruneToolOutputs, headTail, PRUNE_STUB } from "./prune";
+
+describe("headTail", () => {
+  it("laisse une chaîne courte intacte", () => {
+    expect(headTail("hello", 100)).toBe("hello");
+  });
+  it("garde début ET fin quand ça dépasse", () => {
+    const s = "A".repeat(100) + "B".repeat(100);
+    const out = headTail(s, 80);
+    expect(out).toMatch(/^A+/); // début préservé
+    expect(out).toMatch(/B+$/); // fin préservée
+    expect(out).toContain("elided");
+    expect(out.length).toBeLessThan(s.length);
+  });
+});
 
 /**
  * Tests de l'élagage des sorties de tools. On vérifie : protection de la fenêtre

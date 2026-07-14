@@ -115,7 +115,16 @@ export function serializeForSummary(messages: ReadonlyArray<CompactMessage>): st
         return `ASSISTANT: ${text}${text && calls ? "\n" : ""}${calls}`.trim();
       }
       if (m.role === "tool") return `TOOL RESULT: ${cap(String(m.content ?? ""), 600)}`;
-      if (m.role === "user") return `USER: ${(m.content ?? "").trim()}`;
+      if (m.role === "user") {
+        const content = (m.content ?? "").trim();
+        // Garde anti-résumé-de-résumé : un résumé de compaction antérieur est déjà
+        // condensé — on le présente comme tel pour que le résumeur préserve ses
+        // faits sans les ré-étendre (drift).
+        if (content.startsWith(COMPACT_SUMMARY_PREFIX)) {
+          return `PRIOR SUMMARY (already condensed — carry its facts forward as-is):\n${content.slice(COMPACT_SUMMARY_PREFIX.length).trim()}`;
+        }
+        return `USER: ${content}`;
+      }
       return `${m.role.toUpperCase()}: ${(m.content ?? "").trim()}`;
     })
     .join("\n\n");

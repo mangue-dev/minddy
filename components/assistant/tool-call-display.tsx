@@ -9,11 +9,15 @@ import {
   FilePen,
   FilePlus2,
   FileSearch,
+  FileStack,
+  FileSymlink,
+  FileX,
   Filter,
   FolderTree,
   IterationCw,
   LayoutGrid,
   List,
+  ListChecks,
   Loader2,
   MailX,
   MessageCircleQuestion,
@@ -392,6 +396,21 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: FilePlus2,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentWriteFile", { path: (args.path as string) || "…" }),
+  },
+  apply_edits: {
+    icon: FileStack,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentApplyEdits", { count: Array.isArray(args.changes) ? args.changes.length : 0 }),
+  },
+  move_file: {
+    icon: FileSymlink,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentMoveFile", { from: (args.from as string) || "…", to: (args.to as string) || "…" }),
+  },
+  delete_file: {
+    icon: FileX,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentDeleteFile", { path: (args.path as string) || "…" }),
   },
   run_command: {
     icon: Terminal,

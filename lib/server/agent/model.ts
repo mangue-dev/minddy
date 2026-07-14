@@ -109,6 +109,41 @@ export async function userHasByokKey(userId: string): Promise<boolean> {
   return (await getUserByok(userId)) != null;
 }
 
+// ── Fenêtre de contexte par modèle (pour dimensionner la compaction) ─────────
+const contextWindowCache = new Map<string, number>();
+let orModelsLoaded = false;
+
+/**
+ * Fenêtre de contexte (tokens) d'un modèle, pour dimensionner le seuil de
+ * compaction (~75 %). Uniquement en provider OpenRouter (index /models qui porte
+ * `context_length`) ; null sinon → l'appelant retombe sur le seuil par défaut.
+ * Best-effort, caché au niveau process.
+ */
+export async function getModelContextWindow(
+  model: string,
+  provider: AgentProviderId,
+  apiKey: string,
+): Promise<number | null> {
+  if (provider !== "openrouter") return null;
+  if (!orModelsLoaded) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { data?: Array<{ id: string; context_length?: number }> };
+        for (const m of body.data ?? []) {
+          if (m.context_length && m.context_length > 0) contextWindowCache.set(m.id, m.context_length);
+        }
+        orModelsLoaded = true;
+      }
+    } catch {
+      // best-effort — l'appelant retombe sur le seuil par défaut
+    }
+  }
+  return contextWindowCache.get(model) ?? null;
+}
+
 export type AgentKeyMode = "platform" | "byok";
 
 export interface ResolvedAgentEndpoint {

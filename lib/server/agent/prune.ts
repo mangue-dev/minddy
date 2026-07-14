@@ -24,6 +24,18 @@ export const PRUNE_MINIMUM_BYTES = 20_000;
 export const PRUNE_STUB =
   "[Tool output elided to save context. Re-read the file or re-run the search if you still need it.]";
 
+/**
+ * Tronque une chaîne en gardant le DÉBUT et la FIN (le milieu élidé). Mieux que
+ * head-only pour les sorties de commandes : la queue (tail d'un test qui échoue,
+ * derniers matchs de grep) est souvent la partie utile.
+ */
+export function headTail(str: string, max: number): string {
+  if (str.length <= max) return str;
+  const keep = Math.max(1, Math.floor((max - 40) / 2));
+  const elided = str.length - keep * 2;
+  return `${str.slice(0, keep)}\n… [${elided} chars elided] …\n${str.slice(-keep)}`;
+}
+
 /** Forme minimale d'un message manipulé (compatible AgentChatMessage). */
 interface PrunableMessage {
   role: string;

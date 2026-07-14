@@ -320,7 +320,29 @@ const ContextAwareReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 9. Toutes les occurrences exactes (support de replaceAll). */
+/**
+ * Normalisation unicode : replie tirets typographiques (U+2010–2015, U+2212),
+ * guillemets courbes (U+2018–201B / U+201C–201F) et espaces insécables/typo vers
+ * l'ASCII des DEUX côtés (les modèles émettent souvent un em-dash/une quote courbe
+ * là où le fichier a de l'ASCII, ou l'inverse).
+ */
+const UnicodeNormalizedReplacer: Replacer = function* (content, find) {
+  const fold = (s: string) =>
+    s
+      .replace(/[\u2010-\u2015\u2212]/g, "-")
+      .replace(/[\u2018-\u201B]/g, "'")
+      .replace(/[\u201C-\u201F]/g, '"')
+      .replace(/[\u00A0\u2002-\u200A\u202F]/g, " ");
+  const foldedFind = fold(find);
+  const lines = content.split("\n");
+  const findLines = find.split("\n");
+  for (let i = 0; i <= lines.length - findLines.length; i++) {
+    const block = lines.slice(i, i + findLines.length).join("\n");
+    if (fold(block) === foldedFind) yield block;
+  }
+};
+
+/** 10. Toutes les occurrences exactes (support de replaceAll). */
 const MultiOccurrenceReplacer: Replacer = function* (content, find) {
   let startIndex = 0;
   for (;;) {
@@ -337,6 +359,7 @@ const REPLACERS: Replacer[] = [
   BlockAnchorReplacer,
   WhitespaceNormalizedReplacer,
   IndentationFlexibleReplacer,
+  UnicodeNormalizedReplacer,
   EscapeNormalizedReplacer,
   TrimmedBoundaryReplacer,
   ContextAwareReplacer,

@@ -3,6 +3,7 @@ import "server-only";
 import { Sandbox } from "@vercel/sandbox";
 
 import { grepPathspecs, globPathspec } from "./git-pathspec";
+import { resolveWithin, assertNotGit } from "./repo-path";
 
 /**
  * Couche Vercel Sandbox de l'agent de code (MIN-46) — les « mains » de l'agent.
@@ -192,9 +193,23 @@ export const READ_MAX_BYTES = 250_000;
 /** Nombre max de fichiers renvoyés par `glob`. */
 export const GLOB_MAX_FILES = 100;
 
-/** Chemin absolu d'un fichier du dépôt à partir d'un chemin relatif. */
+/**
+ * Chemin absolu et VALIDÉ d'un fichier du dépôt. Résout `..` et rejette toute
+ * sortie de REPO_DIR (défense-en-profondeur : la microVM reste la vraie frontière,
+ * mais un chemin `../../x` ne doit jamais toucher l'hôte).
+ */
 function repoPath(relPath: string): string {
-  return `${REPO_DIR}/${relPath.replace(/^\/+/, "")}`;
+  return resolveWithin(REPO_DIR, relPath);
+}
+
+/**
+ * Comme repoPath mais pour les ÉCRITURES : refuse en plus `.git/` (écrire un hook
+ * ou config = escalade possible — exfiltration du token d'installation, backdoor).
+ */
+function writablePath(relPath: string): string {
+  const abs = repoPath(relPath);
+  assertNotGit(REPO_DIR, abs, relPath);
+  return abs;
 }
 
 /** Lit le contenu BRUT d'un fichier du dépôt (utf8), ou null s'il n'existe pas.
@@ -253,12 +268,45 @@ export async function readWorkFileWindow(
   };
 }
 
-/** Écrit (crée/écrase) un fichier du dépôt. Crée les dossiers parents si besoin. */
+/** Écrit (crée/écrase) un fichier du dépôt. Crée les dossiers parents si besoin.
+    Rejette les écritures hors dépôt ou dans `.git/`. */
 export async function writeWorkFile(sandbox: Sandbox, relPath: string, content: string): Promise<void> {
-  const abs = repoPath(relPath);
+  const abs = writablePath(relPath);
   const dir = abs.slice(0, abs.lastIndexOf("/"));
   if (dir) await sandbox.mkDir(dir).catch(() => {});
   await sandbox.writeFiles([{ path: abs, content }]);
+}
+
+/**
+ * Déplace/renomme un fichier suivi (git mv). Refuse la sortie du dépôt / `.git/`
+ * des deux côtés, et l'écrasement d'une destination existante. Passe par git pour
+ * que le commit/PR capture le renommage.
+ */
+export async function moveWorkFile(sandbox: Sandbox, from: string, to: string): Promise<void> {
+  const src = writablePath(from);
+  const dst = writablePath(to);
+  const dstDir = dst.slice(0, dst.lastIndexOf("/"));
+  const cmd = [
+    `set -e`,
+    `test -e ${sq(src)} || { echo "source not found" >&2; exit 3; }`,
+    `test -e ${sq(dst)} && { echo "destination exists" >&2; exit 4; }`,
+    dstDir ? `mkdir -p ${sq(dstDir)}` : `:`,
+    // git mv si le fichier est suivi, sinon mv simple (fichier neuf non commité).
+    `git mv ${sq(src)} ${sq(dst)} 2>/dev/null || mv ${sq(src)} ${sq(dst)}`,
+  ].join("\n");
+  const res = await runShell(sandbox, cmd);
+  if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "move failed");
+}
+
+/** Supprime un fichier suivi (git rm) ou neuf. Refuse hors dépôt / `.git/`. */
+export async function deleteWorkFile(sandbox: Sandbox, relPath: string): Promise<void> {
+  const abs = writablePath(relPath);
+  const cmd = [
+    `test -e ${sq(abs)} || { echo "file not found" >&2; exit 3; }`,
+    `git rm -f ${sq(abs)} 2>/dev/null || rm -f ${sq(abs)}`,
+  ].join("\n");
+  const res = await runShell(sandbox, cmd);
+  if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "delete failed");
 }
 
 /** Liste le contenu d'un dossier du dépôt (noms, dossiers suffixés `/`). */

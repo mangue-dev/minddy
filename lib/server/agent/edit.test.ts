@@ -74,6 +74,16 @@ describe("replace — pas de ligne vide parasite (frontière \\n)", () => {
   });
 });
 
+describe("replace — normalisation unicode", () => {
+  it("matche malgré em-dash / quotes courbes là où le fichier est ASCII", () => {
+    const original = 'const label = "hello - world";\n';
+    // old_string avec guillemets courbes + em-dash (dérive typographique du modèle).
+    const oldStr = 'const label = “hello — world”;';
+    const out = replace(original, oldStr, 'const label = "bye";');
+    expect(out).toBe('const label = "bye";\n');
+  });
+});
+
 describe("replace — replaceAll", () => {
   it("remplace toutes les occurrences", () => {
     expect(replace("a a a", "a", "b", true)).toBe("b b b");

@@ -15,7 +15,7 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import type { AgentToolDef } from "./tools";
-import { pruneToolOutputs } from "./prune";
+import { pruneToolOutputs, headTail } from "./prune";
 import { markSystemPromptCache } from "./caching";
 import {
   estimateTokens,
@@ -28,7 +28,17 @@ import {
   AGENT_COMPACT_TOKEN_THRESHOLD,
   AGENT_COMPACT_KEEP_RECENT_BYTES,
   AGENT_COMPACT_MIN_BUDGET_MS,
+  AGENT_RUN_TIMEOUT_MS,
 } from "@/lib/agent-models";
+import {
+  StreamError,
+  isRetryableStatus,
+  parseRetryAfterMs,
+  backoffMs,
+  sleep,
+  MAX_STREAM_ATTEMPTS,
+  STREAM_IDLE_TIMEOUT_MS,
+} from "./retry";
 
 /**
  * Boucle agentique de l'agent de code (MIN-46) — le « cerveau ». Calquée sur
@@ -51,6 +61,8 @@ import {
 const MAX_ROUNDS_PER_CHUNK = 60;
 /** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
 const MAX_COMPACTIONS_PER_CHUNK = 3;
+/** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
+const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep"]);
 
 /** Un message du protocole chat OpenRouter (identique à celui de processChat). */
 export interface AgentChatMessage {
@@ -70,7 +82,8 @@ export type AgentEventType =
   | "pr_opened"
   | "error"
   | "summary"
-  | "user_message";
+  | "user_message"
+  | "plan_update";
 
 export type EmitAgentEvent = (
   type: AgentEventType,
@@ -103,6 +116,11 @@ export interface RunAgentLoopParams {
   projectId?: string | null;
   /** Budget du chunk courant, mesuré depuis l'entrée dans la boucle. */
   softDeadlineMs: number;
+  /**
+   * Fenêtre de contexte (tokens) du modèle, si connue → seuil de compaction =
+   * 75 % de cette fenêtre. Absent = seuil par défaut `AGENT_COMPACT_TOKEN_THRESHOLD`.
+   */
+  contextWindow?: number | null;
   execTool: ExecuteAgentTool;
   /**
    * Draine les messages de steering en attente (file `agent_run_messages`).
@@ -144,6 +162,29 @@ function previewResult(result: unknown): string {
   return cap(typeof result === "string" ? result : JSON.stringify(result), 400);
 }
 
+export type PlanStepStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export interface PlanStep {
+  step: string;
+  status: PlanStepStatus;
+}
+
+const PLAN_STATUSES = new Set<PlanStepStatus>(["pending", "in_progress", "completed", "cancelled"]);
+
+/** Normalise l'argument `plan` du tool update_plan en étapes valides (borné). */
+export function normalizePlan(raw: unknown): PlanStep[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 40)
+    .map((it) => {
+      const o = (it && typeof it === "object" ? it : {}) as Record<string, unknown>;
+      const step = String(o.step ?? o.text ?? "").slice(0, 300);
+      const s = String(o.status ?? "pending");
+      const status = PLAN_STATUSES.has(s as PlanStepStatus) ? (s as PlanStepStatus) : "pending";
+      return { step, status };
+    })
+    .filter((s) => s.step.trim().length > 0);
+}
+
 /** Résumé compact des args d'un tool pour le live view (jamais le contenu de fichier). */
 function toolArgSummary(name: string, args: Record<string, unknown>): Record<string, unknown> {
   switch (name) {
@@ -151,7 +192,12 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
     case "list_dir":
     case "write_file":
     case "edit_file":
+    case "delete_file":
       return { path: String(args.path ?? "") };
+    case "move_file":
+      return { from: String(args.from ?? ""), to: String(args.to ?? "") };
+    case "apply_edits":
+      return { count: Array.isArray(args.changes) ? args.changes.length : 0 };
     case "glob":
     case "grep":
       return { pattern: String(args.pattern ?? "") };
@@ -171,6 +217,9 @@ interface StreamChunk {
   choices?: Array<{
     delta?: {
       content?: string;
+      // Trace de raisonnement (selon provider). Affichée en live, jamais persistée.
+      reasoning?: string;
+      reasoning_content?: string;
       tool_calls?: Array<{
         index?: number;
         id?: string;
@@ -182,6 +231,8 @@ interface StreamChunk {
 
 interface StreamResult {
   content: string;
+  /** Trace de raisonnement streamée (non round-trippée en chat-completions). */
+  reasoning: string;
   toolCalls: AssistantToolCall[];
   generationId: string | null;
   modelUsed: string | null;
@@ -189,13 +240,13 @@ interface StreamResult {
 }
 
 /**
- * Un tour de complétion streamée (endpoint OpenAI-compatible). Accumule contenu,
+ * UN essai de complétion streamée (endpoint OpenAI-compatible). Accumule contenu,
  * tool-calls et usage. Le corps/headers sont ajustés au provider via son
- * `requestProfile` (le comptage de coût OpenRouter, les headers d'attribution et
- * `max_tokens` ne sont envoyés qu'aux providers qui les tolèrent — cf.
- * lib/agent-providers.ts).
+ * `requestProfile`. Deux timers d'annulation : un timeout DUR (`AGENT_RUN_TIMEOUT_MS`)
+ * et un timeout d'INACTIVITÉ réarmé à chaque octet SSE (stream figé). Lève une
+ * `StreamError` (retryable ou non) que le wrapper `streamCompletion` gère.
  */
-async function streamCompletion(opts: {
+async function streamCompletionOnce(opts: {
   apiKey: string;
   model: string;
   baseUrl: string;
@@ -228,73 +279,150 @@ async function streamCompletion(opts: {
   }
   if (profile.anthropicVersion) headers["anthropic-version"] = "2023-06-01";
 
-  const response = await fetch(chatCompletionsUrl(opts.baseUrl), {
-    method: "POST",
-    headers,
-    body: JSON.stringify(requestBody),
-    signal: opts.signal,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 300)}`);
+  // Timers d'annulation. `timedOut` distingue un abort « nous » (reprenable) d'un
+  // abort externe (annulation utilisateur → non reprenable).
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortTimeout = () => {
+    timedOut = true;
+    controller.abort();
+  };
+  const hardTimer = setTimeout(abortTimeout, AGENT_RUN_TIMEOUT_MS);
+  let idleTimer = setTimeout(abortTimeout, STREAM_IDLE_TIMEOUT_MS);
+  const resetIdle = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(abortTimeout, STREAM_IDLE_TIMEOUT_MS);
+  };
+  if (opts.signal) {
+    if (opts.signal.aborted) controller.abort();
+    else opts.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body from LLM");
+  try {
+    let response: Response;
+    try {
+      response = await fetch(chatCompletionsUrl(opts.baseUrl), {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      // Abort (timeout nous → reprenable ; externe → non) ou erreur réseau (reprenable).
+      const retryable = timedOut || !opts.signal?.aborted;
+      throw new StreamError(`network error: ${(err as Error).message}`, { retryable });
+    }
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let content = "";
-  let generationId: string | null = null;
-  let modelUsed: string | null = null;
-  let usageRaw: OpenRouterUsage | null = null;
-  const acc = new Map<number, { id: string; name: string; arguments: string }>();
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new StreamError(`LLM error (${response.status}): ${errorText.slice(0, 300)}`, {
+        retryable: isRetryableStatus(response.status),
+        status: response.status,
+        retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after"), Date.now()) ?? undefined,
+      });
+    }
 
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (data === "[DONE]") continue;
-      let parsed: StreamChunk;
+    const reader = response.body?.getReader();
+    if (!reader) throw new StreamError("No response body from LLM", { retryable: true });
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";
+    let reasoning = "";
+    let generationId: string | null = null;
+    let modelUsed: string | null = null;
+    let usageRaw: OpenRouterUsage | null = null;
+    const acc = new Map<number, { id: string; name: string; arguments: string }>();
+
+    for (;;) {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
       try {
-        parsed = JSON.parse(data) as StreamChunk;
-      } catch {
-        continue;
+        chunk = await reader.read();
+      } catch (err) {
+        throw new StreamError(`stream interrupted: ${(err as Error).message}`, {
+          retryable: timedOut || !opts.signal?.aborted,
+        });
       }
-      if (parsed.id && !generationId) generationId = parsed.id;
-      if (parsed.model) modelUsed = parsed.model;
-      if (parsed.usage) usageRaw = parsed.usage;
-      const delta = parsed.choices?.[0]?.delta;
-      if (!delta) continue;
-      if (delta.content) content += delta.content;
-      if (delta.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          const idx = tc.index ?? 0;
-          if (!acc.has(idx)) {
-            acc.set(idx, { id: tc.id || "", name: tc.function?.name || "", arguments: "" });
+      if (chunk.done) break;
+      resetIdle();
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") continue;
+        let parsed: StreamChunk;
+        try {
+          parsed = JSON.parse(data) as StreamChunk;
+        } catch {
+          continue;
+        }
+        if (parsed.id && !generationId) generationId = parsed.id;
+        if (parsed.model) modelUsed = parsed.model;
+        if (parsed.usage) usageRaw = parsed.usage;
+        const delta = parsed.choices?.[0]?.delta;
+        if (!delta) continue;
+        if (delta.content) content += delta.content;
+        if (delta.reasoning) reasoning += delta.reasoning;
+        if (delta.reasoning_content) reasoning += delta.reasoning_content;
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0;
+            if (!acc.has(idx)) {
+              acc.set(idx, { id: tc.id || "", name: tc.function?.name || "", arguments: "" });
+            }
+            const a = acc.get(idx)!;
+            if (tc.id) a.id = tc.id;
+            if (tc.function?.name) a.name = tc.function.name;
+            if (tc.function?.arguments) a.arguments += tc.function.arguments;
           }
-          const a = acc.get(idx)!;
-          if (tc.id) a.id = tc.id;
-          if (tc.function?.name) a.name = tc.function.name;
-          if (tc.function?.arguments) a.arguments += tc.function.arguments;
         }
       }
     }
+
+    const toolCalls: AssistantToolCall[] = [...acc.values()].map((a) => ({
+      id: a.id,
+      type: "function",
+      function: { name: a.name, arguments: a.arguments },
+    }));
+
+    return { content, reasoning, toolCalls, generationId, modelUsed, usage: parseOpenRouterUsage(usageRaw) };
+  } finally {
+    clearTimeout(hardTimer);
+    clearTimeout(idleTimer);
   }
+}
 
-  const toolCalls: AssistantToolCall[] = [...acc.values()].map((a) => ({
-    id: a.id,
-    type: "function",
-    function: { name: a.name, arguments: a.arguments },
-  }));
-
-  return { content, toolCalls, generationId, modelUsed, usage: parseOpenRouterUsage(usageRaw) };
+/**
+ * Complétion streamée avec REPRISES : retente les erreurs reprenables (429, 5xx,
+ * réseau, stream figé) avec backoff (Retry-After sinon exponentiel + jitter).
+ * Après épuisement, relève la `StreamError` (l'appelant décide : suspendre le run
+ * plutôt qu'échouer si elle est reprenable).
+ */
+async function streamCompletion(opts: {
+  apiKey: string;
+  model: string;
+  baseUrl: string;
+  provider: AgentProviderId;
+  messages: AgentChatMessage[];
+  tools: AgentToolDef[];
+  signal?: AbortSignal;
+}): Promise<StreamResult> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < MAX_STREAM_ATTEMPTS; attempt++) {
+    try {
+      return await streamCompletionOnce(opts);
+    } catch (err) {
+      lastErr = err;
+      const retryable = err instanceof StreamError ? err.retryable : true;
+      if (!retryable || attempt === MAX_STREAM_ATTEMPTS - 1) throw err;
+      const wait =
+        (err instanceof StreamError ? err.retryAfterMs : undefined) ?? backoffMs(attempt);
+      await sleep(wait);
+    }
+  }
+  throw lastErr;
 }
 
 /**
@@ -312,6 +440,13 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   let costUsd = 0;
   let round = 0;
   let compactions = 0;
+  // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut.
+  const compactThreshold = params.contextWindow
+    ? Math.floor(params.contextWindow * 0.75)
+    : AGENT_COMPACT_TOKEN_THRESHOLD;
+  // Taille de contexte réelle du dernier appel (prompt_tokens rapportés) — plus
+  // fiable que l'estimation caractères/4 pour décider de compacter.
+  let lastPromptTokens: number | null = null;
 
   for (;;) {
     // Frontière sûre : suspend AVANT le prochain appel LLM.
@@ -343,7 +478,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     if (
       compactions < MAX_COMPACTIONS_PER_CHUNK &&
       params.softDeadlineMs - elapsed() > AGENT_COMPACT_MIN_BUDGET_MS &&
-      estimateTokens(messages) >= AGENT_COMPACT_TOKEN_THRESHOLD
+      (lastPromptTokens ?? estimateTokens(messages)) >= compactThreshold
     ) {
       const plan = planCompaction(messages, { keepRecentBytes: AGENT_COMPACT_KEEP_RECENT_BYTES });
       if (plan) {
@@ -351,63 +486,81 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         // relancer un sous-appel LLM payant à chaque round sans plafond.
         compactions++;
         const tokensBefore = estimateTokens(messages);
-        const summaryStream = await streamCompletion({
-          apiKey,
-          model,
-          baseUrl,
-          provider,
-          messages: [
-            { role: "system", content: SUMMARIZE_INSTRUCTION },
-            { role: "user", content: serializeForSummary(plan.toSummarize) },
-          ],
-          tools: [],
-          signal: params.signal,
-        });
-        await recordAiUsage({
-          runId,
-          seq: seq++,
-          feature: "agent_code",
-          model: summaryStream.modelUsed ?? model,
-          generationId: summaryStream.generationId,
-          promptTokens: summaryStream.usage.promptTokens,
-          completionTokens: summaryStream.usage.completionTokens,
-          totalTokens: summaryStream.usage.totalTokens,
-          cost: summaryStream.usage.cost,
-          userId: params.userId ?? null,
-          projectId: params.projectId ?? null,
-        });
-        costUsd += summaryStream.usage.cost ?? 0;
-
-        const summaryText = summaryStream.content.trim();
-        if (summaryText) {
-          const summaryMsg: AgentChatMessage = {
-            role: "user",
-            content: `${COMPACT_SUMMARY_PREFIX}\n\n${summaryText}`,
-          };
-          const rebuilt: AgentChatMessage[] = [
-            ...(plan.systemMessage ? [plan.systemMessage] : []),
-            summaryMsg,
-            ...plan.tail,
-          ];
-          messages.splice(0, messages.length, ...rebuilt);
-          await emit("status", {
-            phase: "compacted",
-            tokensBefore,
-            tokensAfter: estimateTokens(messages),
+        try {
+          const summaryStream = await streamCompletion({
+            apiKey,
+            model,
+            baseUrl,
+            provider,
+            messages: [
+              { role: "system", content: SUMMARIZE_INSTRUCTION },
+              { role: "user", content: serializeForSummary(plan.toSummarize) },
+            ],
+            tools: [],
+            signal: params.signal,
           });
+          await recordAiUsage({
+            runId,
+            seq: seq++,
+            feature: "agent_code",
+            model: summaryStream.modelUsed ?? model,
+            generationId: summaryStream.generationId,
+            promptTokens: summaryStream.usage.promptTokens,
+            completionTokens: summaryStream.usage.completionTokens,
+            totalTokens: summaryStream.usage.totalTokens,
+            cost: summaryStream.usage.cost,
+            userId: params.userId ?? null,
+            projectId: params.projectId ?? null,
+          });
+          costUsd += summaryStream.usage.cost ?? 0;
+
+          const summaryText = summaryStream.content.trim();
+          if (summaryText) {
+            const summaryMsg: AgentChatMessage = {
+              role: "user",
+              content: `${COMPACT_SUMMARY_PREFIX}\n\n${summaryText}`,
+            };
+            const rebuilt: AgentChatMessage[] = [
+              ...(plan.systemMessage ? [plan.systemMessage] : []),
+              summaryMsg,
+              ...plan.tail,
+            ];
+            messages.splice(0, messages.length, ...rebuilt);
+            lastPromptTokens = null; // contexte réduit → recalculé au prochain appel
+            await emit("status", {
+              phase: "compacted",
+              tokensBefore,
+              tokensAfter: estimateTokens(messages),
+            });
+          }
+        } catch {
+          // Compaction best-effort : si le sous-appel de résumé échoue, on continue
+          // sans compacter ce round (la tentative est déjà comptée → pas de boucle).
         }
       }
     }
 
-    const stream = await streamCompletion({
-      apiKey,
-      model,
-      baseUrl,
-      provider,
-      messages,
-      tools,
-      signal: params.signal,
-    });
+    let stream: StreamResult;
+    try {
+      stream = await streamCompletion({
+        apiKey,
+        model,
+        baseUrl,
+        provider,
+        messages,
+        tools,
+        signal: params.signal,
+      });
+    } catch (err) {
+      // Erreur transitoire épuisée (429/5xx/réseau) → SUSPENDRE le run (reprise au
+      // chunk suivant, fonction fraîche) plutôt qu'échouer. Une erreur fatale (4xx,
+      // requête invalide) remonte et échoue le run.
+      if (err instanceof StreamError && err.retryable) {
+        await emit("status", { phase: "transient_error", message: cap(err.message, 300) });
+        return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+      }
+      throw err;
+    }
 
     await recordAiUsage({
       runId,
@@ -423,7 +576,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       projectId: params.projectId ?? null,
     });
     costUsd += stream.usage.cost ?? 0;
+    // Taille de contexte réelle pour la décision de compaction du prochain round.
+    lastPromptTokens = stream.usage.promptTokens ?? lastPromptTokens;
 
+    // Reasoning : affiché en live mais JAMAIS poussé dans `messages` (chat-completions
+    // ne le round-trippe pas ; le persister gonflerait/rejouerait le contexte).
+    if (stream.reasoning.trim()) await emit("thinking", { text: cap(stream.reasoning, 2000) });
     if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
 
     // Arrêt naturel sans tool-call → tâche considérée terminée.
@@ -456,10 +614,53 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       return { status: "completed", messages, finish, costUsd, usageSeqEnd: seq, rounds: round };
     }
 
+    // Fast-path : si TOUS les tool-calls du round sont read-only (exploration), on
+    // les exécute EN PARALLÈLE — les tools sont des round-trips réseau au Sandbox.
+    // Résultats poussés dans l'ordre d'origine → pairing tool_call↔résultat préservé.
+    if (
+      stream.toolCalls.length > 1 &&
+      stream.toolCalls.every((t) => READ_ONLY_TOOLS.has(t.function.name))
+    ) {
+      for (const tc of stream.toolCalls) {
+        const args = safeParse(tc.function.arguments);
+        await emit("tool_call", { id: tc.id, name: tc.function.name, ...toolArgSummary(tc.function.name, args) });
+      }
+      const outcomes = await Promise.all(
+        stream.toolCalls.map(async (tc) => {
+          const args = safeParse(tc.function.arguments);
+          try {
+            const { result, success } = await execTool(tc.function.name, args);
+            return { tc, result, success };
+          } catch (err) {
+            return { tc, result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+          }
+        }),
+      );
+      for (const o of outcomes) {
+        messages.push({ role: "tool", tool_call_id: o.tc.id, content: headTail(JSON.stringify(o.result), 6000) });
+        await emit("tool_result", {
+          id: o.tc.id,
+          name: o.tc.function.name,
+          success: o.success,
+          preview: previewResult(o.result),
+        });
+      }
+      continue;
+    }
+
     let pauseQuestion: string | null = null;
     for (const tc of stream.toolCalls) {
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
+
+      // update_plan : tool de contrôle légère — n'émet QUE l'event plan_update (le
+      // feed le rend en checklist), répond au tool-call, et ne passe pas au Sandbox.
+      if (name === "update_plan") {
+        await emit("plan_update", { plan: normalizePlan(args.plan) });
+        messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ ok: true }) });
+        continue;
+      }
+
       await emit("tool_call", { id: tc.id, name, ...toolArgSummary(name, args) });
 
       if (name === "ask_user") {
@@ -479,7 +680,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
       }
-      messages.push({ role: "tool", tool_call_id: tc.id, content: cap(JSON.stringify(result), 6000) });
+      messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), 6000) });
       await emit("tool_result", { id: tc.id, name, success, preview: previewResult(result) });
     }
 

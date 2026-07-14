@@ -16,6 +16,8 @@ import {
   readWorkFile,
   readWorkFileWindow,
   writeWorkFile,
+  moveWorkFile,
+  deleteWorkFile,
   listDir,
   grepRepo,
   globRepo,
@@ -32,8 +34,8 @@ import {
   type ExecuteAgentTool,
 } from "./agent-loop";
 import { AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
-import { buildAgentSystemPrompt } from "./prompt";
-import { resolveAgentApiKey } from "./model";
+import { buildAgentSystemPrompt, buildAgentTaskMessage } from "./prompt";
+import { resolveAgentApiKey, getModelContextWindow } from "./model";
 import { ensurePullRequest, GithubApiError } from "./pr";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import {
@@ -160,6 +162,60 @@ function makeExecTool(sandbox: Sandbox): ExecuteAgentTool {
         await writeWorkFile(sandbox, String(args.path ?? ""), String(args.content ?? ""));
         return { result: `Wrote ${args.path}`, success: true };
       }
+      case "move_file": {
+        await moveWorkFile(sandbox, String(args.from ?? ""), String(args.to ?? ""));
+        return { result: `Moved ${args.from} → ${args.to}`, success: true };
+      }
+      case "delete_file": {
+        await deleteWorkFile(sandbox, String(args.path ?? ""));
+        return { result: `Deleted ${args.path}`, success: true };
+      }
+      case "apply_edits": {
+        const changes = Array.isArray(args.changes) ? (args.changes as Array<Record<string, unknown>>) : [];
+        const applied: Array<Record<string, unknown>> = [];
+        for (const ch of changes) {
+          const path = String(ch.path ?? "");
+          const op = String(ch.op ?? "update");
+          try {
+            if (op === "delete") {
+              await deleteWorkFile(sandbox, path);
+              applied.push({ path, op, ok: true });
+            } else if (op === "move") {
+              const to = String(ch.move_to ?? "");
+              await moveWorkFile(sandbox, path, to);
+              applied.push({ path, op, ok: true, move_to: to });
+            } else if (op === "add") {
+              await writeWorkFile(sandbox, path, String(ch.content ?? ""));
+              applied.push({ path, op, ok: true });
+            } else {
+              // update : applique tous les edits en mémoire, puis écrit une fois (atomique/fichier).
+              const original = await readWorkFile(sandbox, path);
+              if (original === null) throw new Error(`File not found: ${path}`);
+              const edits = Array.isArray(ch.edits) ? (ch.edits as Array<Record<string, unknown>>) : [];
+              let content = original;
+              let additions = 0;
+              let deletions = 0;
+              for (const e of edits) {
+                const r = applyEdit(
+                  path,
+                  content,
+                  String(e.old_string ?? ""),
+                  String(e.new_string ?? ""),
+                  e.replace_all === true,
+                );
+                content = r.content;
+                additions += r.additions;
+                deletions += r.deletions;
+              }
+              await writeWorkFile(sandbox, path, content);
+              applied.push({ path, op: "update", ok: true, additions, deletions });
+            }
+          } catch (err) {
+            applied.push({ path, op, ok: false, error: err instanceof Error ? err.message : String(err) });
+          }
+        }
+        return { result: { applied }, success: applied.every((r) => r.ok === true) };
+      }
       case "run_command": {
         const r = await runShell(sandbox, String(args.command ?? ""), {
           timeoutMs: RUN_COMMAND_TIMEOUT_MS,
@@ -177,6 +233,35 @@ function makeExecTool(sandbox: Sandbox): ExecuteAgentTool {
         return { result: `Unknown tool: ${name}`, success: false };
     }
   };
+}
+
+/** Fichiers d'instructions repo lus à la racine du clone (ordre = priorité d'affichage). */
+const REPO_INSTRUCTION_FILES = ["AGENTS.md", "CLAUDE.md"];
+/** Cap des instructions repo injectées (miroir du project_doc_max_bytes de Codex). */
+const REPO_INSTRUCTIONS_MAX_BYTES = 32_000;
+
+/**
+ * Lit les instructions du dépôt (AGENTS.md / CLAUDE.md à la racine) et les emballe
+ * en un message délimité, ou null s'il n'y en a pas. Lu UNE fois à l'amorce (le
+ * checkpoint le transporte ensuite). C'est là qu'un repo déclare ses commandes de
+ * build/test, ses conventions et ses interdits — le carburant d'un diff correct.
+ */
+async function readRepoInstructions(sandbox: Sandbox): Promise<string | null> {
+  const parts: string[] = [];
+  for (const name of REPO_INSTRUCTION_FILES) {
+    try {
+      const content = await readWorkFile(sandbox, name);
+      if (content?.trim()) parts.push(`## ${name}\n${content.trim()}`);
+    } catch {
+      // fichier absent / illisible → on ignore
+    }
+  }
+  if (parts.length === 0) return null;
+  let body = parts.join("\n\n");
+  if (body.length > REPO_INSTRUCTIONS_MAX_BYTES) {
+    body = `${body.slice(0, REPO_INSTRUCTIONS_MAX_BYTES)}… [truncated]`;
+  }
+  return `# Repository instructions\nThe repository ships these instructions. Follow them; they override the general conventions on project-specific matters (build/test commands, structure, forbidden areas).\n\n<REPO_INSTRUCTIONS>\n${body}\n</REPO_INSTRUCTIONS>`;
 }
 
 interface IssueContext {
@@ -253,7 +338,8 @@ export async function executeAgentRun(
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
     } else {
-      const system = buildAgentSystemPrompt({
+      const system = buildAgentSystemPrompt({ locale: commentLocale });
+      const taskMsg = buildAgentTaskMessage({
         issue: {
           identifier: issue.identifier,
           title: issue.title,
@@ -262,19 +348,20 @@ export async function executeAgentRun(
         },
         repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
         projectName: issue.projectName,
-        extraInstructions: run.prompt,
-        locale: commentLocale,
+        extraInstructions: run.prompt, // injecté UNE fois (plus de double-injection)
       });
-      const userMsg = run.prompt?.trim()
-        ? run.prompt.trim()
-        : `Implement issue ${issue.identifier}: ${issue.title}.`;
       messages = [
         { role: "system", content: system },
-        { role: "user", content: userMsg },
+        { role: "user", content: taskMsg },
       ];
+      // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après la tâche.
+      const repoInstructions = await readRepoInstructions(sandbox);
+      if (repoInstructions) messages.push({ role: "user", content: repoInstructions });
     }
 
     const { apiKey, baseUrl, provider } = await resolveAgentApiKey(run.created_by);
+    // Fenêtre de contexte du modèle (OpenRouter) → seuil de compaction adapté.
+    const contextWindow = await getModelContextWindow(run.model, provider, apiKey).catch(() => null);
 
     // Budget du chunk : temps restant du drain − marge, borné par la config.
     const elapsedSetup = Date.now() - callStart;
@@ -294,6 +381,7 @@ export async function executeAgentRun(
       userId: run.created_by,
       projectId: run.project_id,
       softDeadlineMs,
+      contextWindow,
       execTool: makeExecTool(sandbox),
       pullSteering: () => pullPendingMessages(run.id),
       emit,

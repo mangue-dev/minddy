@@ -983,6 +983,7 @@
     "viewPullRequest": "Voir la pull request",
     "activityTitle": "Activité de l'agent",
     "noActivity": "Aucune activité pour l'instant.",
+    "plan": "Plan",
     "replyPlaceholder": "Répondre à l'agent…",
     "steerPlaceholder": "Orienter l'agent…"
   },
@@ -1315,7 +1316,10 @@
     "agentGlob": "Fichiers {pattern}",
     "agentGrep": "Recherche de {pattern}",
     "agentEditFile": "Édition de {path}",
+    "agentApplyEdits": "Édition de {count} fichier(s)",
     "agentWriteFile": "Création de {path}",
+    "agentMoveFile": "Renommage {from} → {to}",
+    "agentDeleteFile": "Suppression de {path}",
     "agentRunCommand": "Commande {command}",
     "processing": "Traitement…",
     "done": "Terminé",
