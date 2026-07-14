@@ -18,6 +18,7 @@
     "parentDetached": "a détaché le ticket de son parent",
     "planChanged": "a modifié le plan",
     "planTaskCompleted": "a terminé la tâche « {text} »",
+    "agentLaunched": "a lancé l'agent de code ({model})",
     "planTaskStarted": "a commencé la tâche « {text} »",
     "planTaskCancelled": "a annulé la tâche « {text} »",
     "planTaskReopened": "a rouvert la tâche « {text} »",
@@ -957,7 +958,14 @@
     "prClose": "Fermer",
     "prMergedToast": "PR fusionnée.",
     "prClosedToast": "PR fermée.",
-    "prNoDiff": "Aucune modification à afficher."
+    "prNoDiff": "Aucune modification à afficher.",
+    "working": "L'agent travaille…",
+    "commitLabel": "Commit",
+    "toolRead": "Lecture",
+    "toolList": "Exploration",
+    "toolSearch": "Recherche",
+    "toolEdit": "Édition",
+    "toolRun": "Commande"
   },
   "Projects": {
     "newProject": "Nouveau Projet",

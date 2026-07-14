@@ -111,6 +111,22 @@ function previewResult(result: unknown): string {
   return cap(typeof result === "string" ? result : JSON.stringify(result), 400);
 }
 
+/** Résumé compact des args d'un tool pour le live view (jamais le contenu de fichier). */
+function toolArgSummary(name: string, args: Record<string, unknown>): Record<string, unknown> {
+  switch (name) {
+    case "read_file":
+    case "list_dir":
+    case "write_file":
+      return { path: String(args.path ?? "") };
+    case "grep":
+      return { pattern: String(args.pattern ?? "") };
+    case "run_command":
+      return { command: cap(String(args.command ?? ""), 100) };
+    default:
+      return {};
+  }
+}
+
 interface StreamChunk {
   id?: string;
   model?: string;
@@ -301,7 +317,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     for (const tc of stream.toolCalls) {
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
-      await emit("tool_call", { id: tc.id, name, args: cap(JSON.stringify(args), 500) });
+      await emit("tool_call", { id: tc.id, name, ...toolArgSummary(name, args) });
 
       if (name === "ask_user") {
         const question = String(args.question ?? "").trim();

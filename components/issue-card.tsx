@@ -43,6 +43,7 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { useAgentActive } from "@/components/agent/agent-activity-context";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
@@ -725,6 +726,7 @@ export function IssueCard({
   const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
+  const agentActive = useAgentActive(issue.id);
 
   // Drop de fichiers depuis l'OS directement sur la carte (MIN-24) — chaque
   // fichier est enregistré sur l'issue dès que son upload aboutit. Distinct du
@@ -862,7 +864,11 @@ export function IssueCard({
       {...drop.handlers}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
-      className={cn("relative cursor-pointer rounded-xl", isDragging && "opacity-40")}
+      className={cn(
+        "relative cursor-pointer rounded-xl",
+        isDragging && "opacity-40",
+        agentActive && "agent-active-glow",
+      )}
     >
       <DropOverlay
         show={drop.dragging}

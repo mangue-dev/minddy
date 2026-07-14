@@ -14,7 +14,11 @@ import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export const maxDuration = 60;
+// Le kick de launch draine le premier chunk dans after() : il faut la même
+// fenêtre que la route cron (270s de budget) sinon la fonction est tuée en plein
+// round et le run reste bloqué en 'running'.
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 const RUN_COLUMNS =
   "id, status, model, model_forced, key_mode, triggered_by, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at";

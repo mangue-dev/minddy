@@ -24,8 +24,11 @@ export function buildAgentSystemPrompt(input: {
   repo: AgentRepoContext;
   projectName?: string | null;
   extraInstructions?: string | null;
+  /** Langue du résumé final (celle du lanceur) — le reste (code, PR) en anglais. */
+  locale?: string | null;
 }): string {
   const { issue, repo } = input;
+  const summaryLanguage = input.locale === "fr" ? "French" : "English";
 
   const planBlock = issue.plan?.trim()
     ? `\n\n## Implementation plan (from the issue)\n${issue.plan.trim()}`
@@ -45,7 +48,7 @@ export function buildAgentSystemPrompt(input: {
 1. **Explore first.** Use \`list_dir\`, \`read_file\` and \`grep\` to understand the codebase, its conventions, and where the change belongs. Never assume file contents — read them.
 2. **Make focused edits.** Use \`write_file\` with the COMPLETE new content of each file. Match the surrounding code's style, naming, and patterns. Change only what the task needs — no drive-by refactors.
 3. **Verify.** Use \`run_command\` to install dependencies if required, then run the project's linter / type-check / build / tests to confirm your changes work. Read failures and fix them. Prefer the project's own scripts (e.g. from package.json).
-4. **Finish.** When the change is complete and verified, call \`finish\` with a clear PR title and a markdown body (what changed, why, how you verified). The system will commit, push **${repo.workBranch}**, and open the pull request.
+4. **Finish.** When the change is complete and verified, call \`finish\` with a clear PR title and a markdown body (what changed, why, how you verified). The system will commit, push **${repo.workBranch}**, and open the pull request. Write the \`finish\` **summary** field in ${summaryLanguage} (it is posted as an issue comment for the user); keep code, identifiers and the PR title/body in English.
 
 ## Rules
 - Stay within this repository; do not touch unrelated files.

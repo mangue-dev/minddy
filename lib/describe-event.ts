@@ -82,6 +82,8 @@ export function describeEvent(
       ref: issueRef(ctx, tr, e.to_value),
     });
   // Plan task transitions: to_value carries the task text.
+  if (e.type === "agent_launched")
+    return t("agentLaunched", { model: e.to_value ?? "" });
   if (e.type === "plan_task_completed")
     return t("planTaskCompleted", { text: e.to_value ?? "" });
   if (e.type === "plan_task_started")

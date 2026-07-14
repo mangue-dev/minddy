@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectLink } from "@/lib/server/git/repo-links";
+import { insertEvents } from "@/lib/server/issue-events";
 import { resolveAgentModel } from "./model";
 import { checkAgentQuota, type AgentQuota } from "./quota";
 import { createRun, activeRunForIssue, type AgentRun } from "./runs";
@@ -77,6 +78,16 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     keyMode: quota.mode,
     triggeredBy: input.triggeredBy,
   });
+
+  // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
+  await insertEvents(service, [
+    {
+      issue_id: input.issueId,
+      actor_id: input.userId,
+      type: "agent_launched",
+      to_value: model,
+    },
+  ]);
 
   kickAgentDrain(service);
   return { ok: true, run };

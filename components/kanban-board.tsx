@@ -30,6 +30,7 @@ import { issueComparator } from "@/lib/view-filter";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
+import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
@@ -252,6 +253,7 @@ export function KanbanBoard({
   };
 
   return (
+    <AgentActivityProvider projectId={projectId}>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -327,6 +329,7 @@ export function KanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </AgentActivityProvider>
   );
 }
 

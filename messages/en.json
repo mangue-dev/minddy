@@ -18,6 +18,7 @@
     "parentDetached": "detached the issue from its parent",
     "planChanged": "edited the plan",
     "planTaskCompleted": "completed task “{text}”",
+    "agentLaunched": "launched the code agent ({model})",
     "planTaskStarted": "started task “{text}”",
     "planTaskCancelled": "cancelled task “{text}”",
     "planTaskReopened": "reopened task “{text}”",
@@ -957,7 +958,14 @@
     "prClose": "Close",
     "prMergedToast": "PR merged.",
     "prClosedToast": "PR closed.",
-    "prNoDiff": "No changes to show."
+    "prNoDiff": "No changes to show.",
+    "working": "The agent is working…",
+    "commitLabel": "Commit",
+    "toolRead": "Read",
+    "toolList": "List",
+    "toolSearch": "Search",
+    "toolEdit": "Edit",
+    "toolRun": "Command"
   },
   "Projects": {
     "newProject": "New Project",

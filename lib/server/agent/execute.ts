@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { getAccountSettings } from "@/lib/server/account-settings";
+import { defaultLocale, type Locale } from "@/i18n/config";
 import {
   AGENT_SOFT_DEADLINE_MS,
   AGENT_MAX_CONTINUATIONS,
@@ -152,6 +154,8 @@ export async function executeAgentRun(
     if (!target) throw new Error("No repository linked to this project");
 
     const issue = await loadIssueContext(run);
+    // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner).
+    const commentLocale = await resolveRunLocale(run);
     const baseBranch = run.base_branch ?? target.defaultBranch;
     const workBranch =
       run.branch_name ?? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`;
@@ -186,6 +190,7 @@ export async function executeAgentRun(
         repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
         projectName: issue.projectName,
         extraInstructions: run.prompt,
+        locale: commentLocale,
       });
       const userMsg = run.prompt?.trim()
         ? run.prompt.trim()
@@ -247,7 +252,7 @@ export async function executeAgentRun(
           body: prBody,
         });
         await emit("pr_opened", { number: pr.number, url: pr.url });
-        await postSummaryComment(run, issue.identifier, finish.summary, pr.url);
+        await postSummaryComment(run, issue.identifier, finish.summary, pr.url, commentLocale);
         await stopSandbox(sandbox);
         await stampRun(run.id, {
           status: "completed",
@@ -264,7 +269,7 @@ export async function executeAgentRun(
         // Aucune modification produite (422 « No commits between… ») → complété sans PR.
         if (err instanceof GithubApiError && err.status === 422) {
           await emit("summary", { text: "No changes were produced." });
-          await postSummaryComment(run, issue.identifier, finish.summary, null);
+          await postSummaryComment(run, issue.identifier, finish.summary, null, commentLocale);
           await stopSandbox(sandbox);
           await stampRun(run.id, {
             status: "completed",
@@ -351,19 +356,65 @@ export async function executeAgentRun(
   }
 }
 
+const COMMENT_STRINGS: Record<
+  Locale,
+  { header: (id: string) => string; viewPr: string; noChanges: string }
+> = {
+  fr: {
+    header: (id) => `Agent numo — ${id}`,
+    viewPr: "Voir la pull request",
+    noChanges: "Aucune modification produite.",
+  },
+  en: {
+    header: (id) => `Numo agent — ${id}`,
+    viewPr: "View the pull request",
+    noChanges: "No changes were produced.",
+  },
+};
+
+/**
+ * Langue du run = celle du lanceur (préférence de compte user_metadata.locale),
+ * défaut owner du projet, puis défaut de l'app. Utilisée pour le résumé de
+ * l'agent et le commentaire d'issue.
+ */
+async function resolveRunLocale(run: AgentRun): Promise<Locale> {
+  if (run.created_by) {
+    const r = await getAccountSettings({ userId: run.created_by });
+    if (r.ok) return r.settings.locale;
+  }
+  try {
+    const service = getServiceClient();
+    const { data } = await service
+      .from("projects")
+      .select("owner_id")
+      .eq("id", run.project_id)
+      .maybeSingle();
+    const ownerId = (data as { owner_id?: string } | null)?.owner_id;
+    if (ownerId) {
+      const r = await getAccountSettings({ userId: ownerId });
+      if (r.ok) return r.settings.locale;
+    }
+  } catch {
+    // ignore — on retombe sur le défaut
+  }
+  return defaultLocale;
+}
+
 /** Poste le résumé du run (+ lien PR) en commentaire d'issue, attribué à Numo. */
 async function postSummaryComment(
   run: AgentRun,
   identifier: string,
   summary: string,
   prUrl: string | null,
+  locale: Locale,
 ): Promise<void> {
   if (!run.created_by) return;
   try {
     const service = getServiceClient();
+    const s = COMMENT_STRINGS[locale] ?? COMMENT_STRINGS.en;
     const body = prUrl
-      ? `**Agent numo — ${identifier}**\n\n${summary}\n\n🔗 [Voir la pull request](${prUrl})`
-      : `**Agent numo — ${identifier}**\n\n${summary}\n\n_Aucune modification produite._`;
+      ? `**${s.header(identifier)}**\n\n${summary}\n\n🔗 [${s.viewPr}](${prUrl})`
+      : `**${s.header(identifier)}**\n\n${summary}\n\n_${s.noChanges}_`;
     await service.from("comments").insert({
       issue_id: run.issue_id,
       author_id: run.created_by,
