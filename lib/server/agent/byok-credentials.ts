@@ -1,0 +1,55 @@
+import "server-only";
+
+import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
+
+/**
+ * Chiffrement au repos des clés « BYOK » OpenRouter que les utilisateurs
+ * fournissent (MIN-46 / MIN-10). Même enveloppe AES-256-GCM que les tokens git
+ * (lib/server/encryption.ts) mais avec un secret dédié : le ciphertext stocké
+ * est `JSON.stringify(encrypt(plain, secret))`, rangé dans
+ * user_ai_keys.key_encrypted (service-role uniquement). La clé ne quitte jamais
+ * le serveur et n'est jamais loguée en clair.
+ *
+ * Fail-closed : secret absent → lève au chiffrement (on ne stocke JAMAIS une clé
+ * en clair) ; le déchiffrement renvoie null (jamais d'exception) → un secret
+ * tourné se traduit par « reconfigure ta clé » en amont plutôt qu'un crash.
+ */
+function getAiKeySecret(): string {
+  const secret = process.env.AI_KEY_ENCRYPTION_SECRET;
+  if (!secret) {
+    throw new Error("Missing AI_KEY_ENCRYPTION_SECRET for BYOK key encryption");
+  }
+  return secret;
+}
+
+export function encryptUserAiKey(plain: string): string {
+  return JSON.stringify(encrypt(plain, getAiKeySecret()));
+}
+
+export function decryptUserAiKey(encrypted: string | null | undefined): string | null {
+  if (!encrypted) return null;
+  let envelope: unknown;
+  try {
+    envelope = JSON.parse(encrypted);
+  } catch {
+    return null;
+  }
+  if (!isEncryptedEnvelope(envelope)) return null;
+  try {
+    return decrypt(envelope, getAiKeySecret());
+  } catch (err) {
+    console.warn(
+      `[byok-credentials] failed to decrypt key: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    return null;
+  }
+}
+
+/** Aperçu non-sensible d'une clé pour l'affichage (préfixe + ellipse). */
+export function keyPrefix(plain: string): string {
+  const trimmed = plain.trim();
+  if (trimmed.length <= 12) return `${trimmed.slice(0, 4)}…`;
+  return `${trimmed.slice(0, 12)}…`;
+}

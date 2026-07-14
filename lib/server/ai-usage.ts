@@ -24,7 +24,8 @@ export type AiFeature =
   | "smart_assign"
   | "feedback_classify"
   | "feedback_analyze"
-  | "embedding";
+  | "embedding"
+  | "agent_code";
 
 /** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {
