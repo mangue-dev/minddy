@@ -15,6 +15,7 @@ import {
   toast,
 } from "mangue-ui";
 import {
+  GitBranch,
   LogOut,
   MessagesSquare,
   Plug,
@@ -32,6 +33,7 @@ import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
 import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
+import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import {
@@ -297,6 +299,19 @@ export default function ProjectSettingsPage() {
           description={t("feedbackSectionDesc")}
         >
           <ProjectFeedbackSettings projectId={project.id} isOwner={isOwner} />
+        </SettingsSection>
+      ),
+    },
+    {
+      value: "git",
+      label: t("gitTab"),
+      icon: GitBranch,
+      content: (
+        <SettingsSection
+          title={t("gitTab")}
+          description={t("gitSectionDesc")}
+        >
+          <ProjectGitSection projectId={project.id} />
         </SettingsSection>
       ),
     },

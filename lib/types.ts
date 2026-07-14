@@ -1,6 +1,7 @@
 import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants";
 import type { ObjectiveStatus } from "./objective-constants";
 import type { CycleIntensity } from "./cycle-prefs";
+import type { RepoProviderId } from "./repo-providers";
 
 export interface Objective {
   id: string;
@@ -564,4 +565,51 @@ export type ViewShareLevel = "private" | "password" | "public";
 export interface ViewShare {
   level: Exclude<ViewShareLevel, "private">;
   token: string;
+}
+
+// ── Intégration git (MIN-47) ────────────────────────────────────────────────
+
+/** Projet minddy liant une connexion git (affiché lors du disconnect). */
+export interface GitConnectionProjectRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * Une connexion git au niveau compte (git_connections), SANITISÉE : aucune
+ * colonne de token n'est jamais exposée au client. `projects` = les projets qui
+ * réutilisent cette connexion (pour prévenir « déconnecter délie ces projets »).
+ */
+export interface GitConnection {
+  id: string;
+  provider: RepoProviderId;
+  account_login: string | null;
+  account_type: string | null;
+  installation_id: number | null;
+  created_at: string;
+  updated_at: string;
+  projects: GitConnectionProjectRef[];
+}
+
+/** La liaison projet ↔ dépôt (project_git_links), telle que renvoyée à l'UI. */
+export interface ProjectGitLink {
+  id: string;
+  provider: RepoProviderId;
+  connection_id: string;
+  external_repo_id: string;
+  repo_owner: string | null;
+  repo_name: string | null;
+  repo_full_name: string | null;
+  default_branch: string | null;
+  account_login: string | null;
+  created_at: string;
+}
+
+/** Un dépôt candidat proposé dans le sélecteur (neutre GitHub/GitLab). */
+export interface CandidateRepo {
+  external_repo_id: string;
+  owner: string | null;
+  name: string;
+  full_name: string;
+  default_branch: string | null;
 }

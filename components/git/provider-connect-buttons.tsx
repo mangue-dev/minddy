@@ -1,0 +1,74 @@
+"use client";
+
+import { ArrowRight, Github, Gitlab, Loader2, type LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button, cn } from "mangue-ui";
+import {
+  ACTIVE_PROVIDERS,
+  type RepoProviderIconName,
+  type RepoProviderId,
+} from "@/lib/repo-providers";
+
+/**
+ * Surface de connexion des dépôts (MIN-47), portée d'AutoKap : une action
+ * « Connecter {provider} » par provider ACTIF. Lit le catalogue depuis
+ * `@/lib/repo-providers` — un nouveau provider apparaît automatiquement.
+ */
+const ICONS: Record<RepoProviderIconName, LucideIcon> = {
+  github: Github,
+  gitlab: Gitlab,
+};
+
+interface ProviderConnectButtonsProps {
+  onConnect: (provider: RepoProviderId) => void;
+  /** Le provider en cours de connexion (spinner + verrouille les autres). */
+  connecting?: RepoProviderId | null;
+  /** Restreint à ces providers (ceux configurés côté serveur). */
+  only?: RepoProviderId[];
+  disabled?: boolean;
+  className?: string;
+}
+
+export function ProviderConnectButtons({
+  onConnect,
+  connecting,
+  only,
+  disabled,
+  className,
+}: ProviderConnectButtonsProps) {
+  const t = useTranslations("Settings");
+  const providers = only
+    ? ACTIVE_PROVIDERS.filter((p) => (only as string[]).includes(p.id))
+    : ACTIVE_PROVIDERS;
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      {providers.map((provider) => {
+        const Icon = ICONS[provider.iconName];
+        const isConnecting = connecting === provider.id;
+        return (
+          <Button
+            key={provider.id}
+            type="button"
+            variant="outline"
+            className="h-auto w-full justify-start gap-2.5 px-3 py-2.5 text-sm font-normal"
+            disabled={disabled || connecting != null}
+            onClick={() => onConnect(provider.id)}
+          >
+            {isConnecting ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            ) : (
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="flex-1 truncate text-left font-medium">
+              {t("gitConnectWith", { provider: provider.displayName })}
+            </span>
+            {!isConnecting && (
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
