@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Skeleton, Tooltip, TooltipTrigger, TooltipContent } from "mangue-ui";
 import {
   FilePlus2,
@@ -9,12 +9,34 @@ import {
   FolderKanban,
   CircleDot,
   Flame,
+  Layers,
+  CalendarClock,
+  Timer,
   Info,
   type LucideIcon,
 } from "lucide-react";
 import { useStatsQuery } from "@/lib/use-stats-query";
 import { ContributionHeatmap } from "@/components/contribution-heatmap";
-import type { HeatmapDay, StatProjectBucket } from "@/lib/types";
+import { EFFORT_MAP } from "@/lib/issue-constants";
+import type { HeatmapDay, StatProjectBucket, StatsCycles } from "@/lib/types";
+
+/** Nombre → chaîne localisée (virgule FR, point EN), 1 décimale par défaut. */
+function fmtNum(value: number, locale: string, digits = 1): string {
+  return value.toLocaleString(locale, { maximumFractionDigits: digits });
+}
+
+/** Durée de complétion lisible : minutes < 90 min, heures < 48 h, sinon jours.
+ *  Renvoie la clé de message d'unité + la valeur déjà arrondie. */
+function durationParts(seconds: number): {
+  key: "durationMinutes" | "durationHours" | "durationDays";
+  value: number;
+} {
+  const minutes = seconds / 60;
+  if (minutes < 90) return { key: "durationMinutes", value: Math.round(minutes) };
+  const hours = seconds / 3600;
+  if (hours < 48) return { key: "durationHours", value: Math.round(hours * 10) / 10 };
+  return { key: "durationDays", value: Math.round((seconds / 86400) * 10) / 10 };
+}
 
 /** Streak courant (jours consécutifs finissant à aujourd'hui, avec grâce si le
  *  jour courant est encore vide) + record sur la fenêtre. */
@@ -128,6 +150,105 @@ function ProjectBar({
   );
 }
 
+/** Section « Cycles » (MIN-58) : tickets moyens par cycle, cadence de
+ *  complétion vs échéance, et durée moyenne de complétion par effort. Masquée
+ *  tant qu'aucune de ces trois métriques n'a de donnée. */
+function CyclesSection({ cycles }: { cycles: StatsCycles }) {
+  const t = useTranslations("Stats");
+  const locale = useLocale();
+
+  const showPerCycle = cycles.cycleCount > 0;
+  const showCadence = cycles.completionOffsetSample > 0;
+  const showEffort = cycles.byEffort.length > 0;
+  if (!showPerCycle && !showCadence && !showEffort) return null;
+
+  // Cadence : |écart| en jours, avec le sens (avance / retard / à l'heure).
+  const offset = cycles.avgCompletionOffsetDays;
+  let cadenceValue = "—";
+  let cadenceHint: string | undefined;
+  if (offset !== null) {
+    const rounded = Math.round(Math.abs(offset) * 10) / 10;
+    if (rounded < 0.05) {
+      cadenceValue = t("cadenceOnTimeValue");
+      cadenceHint = t("cadenceOnTime");
+    } else {
+      cadenceValue = t("cadenceDays", { value: fmtNum(rounded, locale) });
+      cadenceHint = offset < 0 ? t("cadenceEarly") : t("cadenceLate");
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-xl border border-border bg-card p-5 text-card-foreground">
+      <div className="mb-4 flex items-center gap-1.5">
+        <h2 className="text-sm font-semibold tracking-tight">{t("cycles")}</h2>
+        <InfoHint text={t("cyclesInfo")} />
+      </div>
+
+      {(showPerCycle || showCadence) && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {showPerCycle && (
+            <StatCard
+              icon={Layers}
+              value={
+                cycles.avgIssuesPerCycle !== null
+                  ? fmtNum(cycles.avgIssuesPerCycle, locale)
+                  : "—"
+              }
+              label={t("cycleTickets")}
+              hint={t("cycleCount", { count: cycles.cycleCount })}
+              info={t("cycleTicketsInfo")}
+            />
+          )}
+          {showCadence && (
+            <StatCard
+              icon={CalendarClock}
+              value={cadenceValue}
+              label={t("cadence")}
+              hint={cadenceHint}
+              info={t("cadenceInfo")}
+            />
+          )}
+        </div>
+      )}
+
+      {showEffort && (
+        <div className={showPerCycle || showCadence ? "mt-5" : undefined}>
+          <div className="mb-3 flex items-center gap-1.5 text-muted-foreground">
+            <Timer className="size-4 shrink-0" />
+            <h3 className="text-sm font-medium text-foreground">
+              {t("effortDuration")}
+            </h3>
+            <InfoHint text={t("effortDurationInfo")} />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {cycles.byEffort.map((e) => {
+              const parts = durationParts(e.avgSeconds);
+              return (
+                <div
+                  key={e.effort}
+                  className="rounded-lg border border-border bg-muted/30 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                      {EFFORT_MAP[e.effort].label}
+                    </span>
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      {t("effortSample", { count: e.sample })}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 text-lg font-semibold tabular-nums tracking-tight text-foreground">
+                    {t(parts.key, { value: fmtNum(parts.value, locale) })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function StatisticsPage() {
   const t = useTranslations("Stats");
   const { stats, loading } = useStatsQuery();
@@ -200,6 +321,9 @@ export default function StatisticsPage() {
           info={t("streakInfo")}
         />
       </div>
+
+      {/* Statistiques de cycle (MIN-58) */}
+      <CyclesSection cycles={stats.cycles} />
 
       {/* Heatmap de contributions */}
       <section className="mt-8 rounded-xl border border-border bg-card p-5 text-card-foreground">

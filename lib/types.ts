@@ -133,11 +133,37 @@ export interface StatsWorkload {
   inProgress: number;
 }
 
+/** Temps moyen de complétion pour un niveau d'effort (MIN-58). */
+export interface StatsCycleEffort {
+  effort: "xs" | "s" | "m" | "l" | "xl";
+  /** Moyenne du « cycle time » (premier in_progress → done), en secondes. */
+  avgSeconds: number;
+  /** Nombre de tickets terminés dans cette moyenne. */
+  sample: number;
+}
+
+/** Statistiques liées aux cycles (MIN-58), toutes scopées à l'utilisateur. */
+export interface StatsCycles {
+  /** Écart moyen complétion↔échéance, en jours ; négatif = en avance, positif =
+   *  en retard. null s'il n'y a aucun ticket terminé avec une échéance. */
+  avgCompletionOffsetDays: number | null;
+  /** Nombre de tickets dans la moyenne de cadence. */
+  completionOffsetSample: number;
+  /** Nombre moyen de tickets par cycle démarré ; null si aucun cycle. */
+  avgIssuesPerCycle: number | null;
+  /** Nombre de cycles démarrés pris en compte. */
+  cycleCount: number;
+  /** Durée moyenne de complétion par effort (xs→xl), efforts sans échantillon
+   *  omis. */
+  byEffort: StatsCycleEffort[];
+}
+
 export interface UserStats {
   totals: StatsTotals;
   perProject: StatProjectBucket[];
   heatmap: StatsHeatmap;
   workload: StatsWorkload;
+  cycles: StatsCycles;
 }
 
 export interface IssueEvent {

@@ -2,7 +2,14 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CLOSED_STATUSES } from "@/lib/server/issue-reads";
-import type { HeatmapDay, StatsWorkload, UserStats } from "@/lib/types";
+import { EFFORTS } from "@/lib/issue-constants";
+import type {
+  HeatmapDay,
+  StatsCycleEffort,
+  StatsCycles,
+  StatsWorkload,
+  UserStats,
+} from "@/lib/types";
 
 /** Forme brute renvoyée par la fonction SQL get_user_stats. */
 interface RawStats {
@@ -15,6 +22,47 @@ interface RawStats {
     completed: number;
   }>;
   days: Array<{ date: string; count: number }>;
+}
+
+/** Forme brute renvoyée par la fonction SQL get_cycle_stats (MIN-58). */
+interface RawCycleStats {
+  avg_completion_offset_days: number | null;
+  completion_offset_sample: number | null;
+  avg_issues_per_cycle: number | null;
+  cycle_count: number | null;
+  by_effort: Array<{
+    effort: StatsCycleEffort["effort"];
+    avg_seconds: number | null;
+    sample: number | null;
+  }>;
+}
+
+/** Ordre d'affichage des efforts (xs→xl) — indexe le tri du by_effort brut. */
+const EFFORT_ORDER = new Map(EFFORTS.map((e, i) => [e.value, i] as const));
+
+/** Nombre fini ou null (le RPC renvoie des numériques Postgres = string|number). */
+function num(value: unknown): number | null {
+  const n = typeof value === "string" ? Number(value) : (value as number);
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+/** Mappe la sortie brute du RPC cycles vers la forme cliente (MIN-58). */
+function toCycles(raw: RawCycleStats | null): StatsCycles {
+  const byEffort = (raw?.by_effort ?? [])
+    .map((r) => ({
+      effort: r.effort,
+      avgSeconds: num(r.avg_seconds) ?? 0,
+      sample: num(r.sample) ?? 0,
+    }))
+    .filter((r) => r.sample > 0 && EFFORT_ORDER.has(r.effort))
+    .sort((a, b) => (EFFORT_ORDER.get(a.effort)! - EFFORT_ORDER.get(b.effort)!));
+  return {
+    avgCompletionOffsetDays: num(raw?.avg_completion_offset_days),
+    completionOffsetSample: num(raw?.completion_offset_sample) ?? 0,
+    avgIssuesPerCycle: num(raw?.avg_issues_per_cycle),
+    cycleCount: num(raw?.cycle_count) ?? 0,
+    byEffort,
+  };
 }
 
 const DAY_MS = 86_400_000;
@@ -71,7 +119,7 @@ export async function getUserStats(
 ): Promise<UserStats> {
   const { start, end, since } = heatmapWindow(tz);
 
-  const [statsRes, workloadRes] = await Promise.all([
+  const [statsRes, workloadRes, cycleRes] = await Promise.all([
     supabase.rpc("get_user_stats", { p_tz: tz, p_since: since }),
     // Charge actuelle : issues ouvertes qui me sont assignées (live, RLS scope
     // les projets accessibles). Détaché non requis — c'est un instantané du présent.
@@ -80,10 +128,21 @@ export async function getUserStats(
       .select("status")
       .eq("assignee_id", userId)
       .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
+    // Stats de cycle (MIN-58) : cadence, tickets/cycle, durée par effort.
+    supabase.rpc("get_cycle_stats", { p_tz: tz }),
   ]);
 
   if (statsRes.error) throw new Error(statsRes.error.message);
   const raw = (statsRes.data ?? {}) as RawStats;
+
+  // Best-effort : une erreur du RPC cycles (ex. fonction pas encore déployée)
+  // n'invalide pas la page — on retombe sur une section cycles vide.
+  if (cycleRes.error) {
+    console.error("[api/stats] cycle stats failed:", cycleRes.error.message);
+  }
+  const cycles = toCycles(
+    cycleRes.error ? null : ((cycleRes.data ?? null) as RawCycleStats | null)
+  );
 
   const days = densify(start, end, raw.days ?? []);
   const max = days.reduce((m, d) => Math.max(m, d.count), 0);
@@ -109,5 +168,6 @@ export async function getUserStats(
     })),
     heatmap: { tz, start, end, max, days },
     workload,
+    cycles,
   };
 }
