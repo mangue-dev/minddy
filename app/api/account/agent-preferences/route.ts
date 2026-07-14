@@ -6,12 +6,16 @@ import { getAuthedUser } from "@/lib/server/api-auth";
  * Préférences agent de l'utilisateur (MIN-46) : son modèle par défaut. RLS
  * self-manage (user_agent_preferences) → on utilise le cookie client. null =
  * suit le défaut racine (app_config.agent_model). Un modèle explicite est un id
- * OpenRouter `provider/model` libre (comme au lancement) — pas d'allowlist ; la
- * clé effective (BYOK ou plateforme) est résolue à l'exécution du run.
+ * libre (comme au lancement) — pas d'allowlist ; la clé effective (BYOK ou
+ * plateforme) est résolue à l'exécution du run.
  */
 
-/** Id OpenRouter attendu : `provider/model` (garde-fou léger, non exhaustif). */
-const MODEL_ID_RE = /^[\w.-]+\/[\w.:@-]+$/;
+/**
+ * Garde-fou léger sur l'id modèle. Accepte les deux formes rencontrées :
+ * `provider/model` (OpenRouter, ex. deepseek/deepseek-v4-flash:free) ET les ids
+ * natifs sans slash (OpenAI `gpt-4o`, Anthropic `claude-opus-4-1`, Gemini…).
+ */
+const MODEL_ID_RE = /^[\w./:@-]{1,200}$/;
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
