@@ -1331,6 +1331,10 @@
         "title": "Assistant",
         "desc": "Modèles de Numo et des aides à la rédaction."
       },
+      "agent": {
+        "title": "Agent de code",
+        "desc": "Modèle par défaut de l’agent de code cloud (surchargeable par l’utilisateur et par run)."
+      },
       "voice": {
         "title": "Voix",
         "desc": "Dictée vocale et transcription."
@@ -1348,6 +1352,10 @@
       "fallback_model": {
         "label": "Modèle de repli",
         "desc": "Utilisé quand le modèle principal échoue."
+      },
+      "agent_model": {
+        "label": "Modèle de l’agent de code",
+        "desc": "Défaut racine de l’agent de code cloud. L’utilisateur peut définir son propre défaut ou forcer un modèle par run."
       },
       "smart_assign_model": {
         "label": "Assignation intelligente",

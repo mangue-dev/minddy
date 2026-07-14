@@ -13,7 +13,7 @@
  */
 export type AiConfigKind = "model" | "flag";
 
-export type AiConfigGroup = "assistant" | "voice" | "feedback";
+export type AiConfigGroup = "assistant" | "agent" | "voice" | "feedback";
 
 export interface AiConfigField {
   /** `app_config` key. */
@@ -31,6 +31,8 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Agent de code cloud (MIN-46) — défaut racine, surchargé par user puis par run
+  { key: "agent_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "agent" },
   // Voix (dictée → ticket)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
   { key: "transcription_model", kind: "model", fallback: "openai/whisper-large-v3", group: "voice" },
@@ -42,7 +44,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
 ];
 
 /** Display order of the dashboard sections. */
-export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = ["assistant", "voice", "feedback"];
+export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = ["assistant", "agent", "voice", "feedback"];
 
 /** Fast membership check for the admin API (write allowlist). */
 export const AI_MODEL_CONFIG_KEYS = new Set(AI_MODEL_CONFIG_FIELDS.map((f) => f.key));

@@ -64,6 +64,7 @@ export function AdminModelsDashboard() {
   const fieldsByGroup = useMemo(() => {
     const map: Record<AiConfigGroup, AiConfigField[]> = {
       assistant: [],
+      agent: [],
       voice: [],
       feedback: [],
     };

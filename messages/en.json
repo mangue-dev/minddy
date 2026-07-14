@@ -1331,6 +1331,10 @@
         "title": "Assistant",
         "desc": "Numo and the writing helpers."
       },
+      "agent": {
+        "title": "Code agent",
+        "desc": "Default model for the cloud code agent (overridable per user and per run)."
+      },
       "voice": {
         "title": "Voice",
         "desc": "Voice dictation and transcription."
@@ -1348,6 +1352,10 @@
       "fallback_model": {
         "label": "Fallback model",
         "desc": "Used when the primary model fails."
+      },
+      "agent_model": {
+        "label": "Code agent model",
+        "desc": "Root default for the cloud code agent. Users can set their own default or force a model per run."
       },
       "smart_assign_model": {
         "label": "Smart assignment",
