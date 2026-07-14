@@ -27,6 +27,14 @@ export interface ProviderRequestProfile {
   attribution?: boolean;
   /** Ajoute `anthropic-version` (couche compat Anthropic). */
   anthropicVersion?: boolean;
+  /**
+   * Marque le prompt système d'un cache breakpoint `cache_control:{ephemeral}`.
+   * Réservé aux providers qui l'acceptent : OpenRouter le transmet aux modèles qui
+   * supportent le prompt caching (gros gain sur Claude) et l'ignore sans erreur
+   * ailleurs. À NE PAS activer pour les couches compat OpenAI/Anthropic/Gemini
+   * directes (risque de rejet du champ).
+   */
+  promptCaching?: boolean;
 }
 
 export interface AgentProviderDef {
@@ -58,7 +66,13 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-or-v1-…",
     logoModel: "openrouter/x",
     listStrategy: "openrouter",
-    requestProfile: { usageAccounting: true, streamUsage: true, maxTokens: 8192, attribution: true },
+    requestProfile: {
+      usageAccounting: true,
+      streamUsage: true,
+      maxTokens: 8192,
+      attribution: true,
+      promptCaching: true,
+    },
     keysUrl: "https://openrouter.ai/keys",
   },
   {

@@ -16,6 +16,19 @@ import {
 } from "@/lib/agent-providers";
 import type { AgentToolDef } from "./tools";
 import { pruneToolOutputs } from "./prune";
+import { markSystemPromptCache } from "./caching";
+import {
+  estimateTokens,
+  planCompaction,
+  serializeForSummary,
+  SUMMARIZE_INSTRUCTION,
+  COMPACT_SUMMARY_PREFIX,
+} from "./compact";
+import {
+  AGENT_COMPACT_TOKEN_THRESHOLD,
+  AGENT_COMPACT_KEEP_RECENT_BYTES,
+  AGENT_COMPACT_MIN_BUDGET_MS,
+} from "@/lib/agent-models";
 
 /**
  * Boucle agentique de l'agent de code (MIN-46) — le « cerveau ». Calquée sur
@@ -36,6 +49,8 @@ import { pruneToolOutputs } from "./prune";
  */
 
 const MAX_ROUNDS_PER_CHUNK = 60;
+/** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
+const MAX_COMPACTIONS_PER_CHUNK = 3;
 
 /** Un message du protocole chat OpenRouter (identique à celui de processChat). */
 export interface AgentChatMessage {
@@ -193,7 +208,9 @@ async function streamCompletion(opts: {
 
   const requestBody: Record<string, unknown> = {
     model: opts.model,
-    messages: opts.messages,
+    // Prompt caching : marque le système d'un cache breakpoint pour les providers
+    // qui l'acceptent (OpenRouter). Transient — l'historique reste en content:string.
+    messages: profile.promptCaching ? markSystemPromptCache(opts.messages) : opts.messages,
     stream: true,
   };
   if (profile.streamUsage) requestBody.stream_options = { include_usage: true };
@@ -294,6 +311,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   let seq = params.usageSeqStart ?? 0;
   let costUsd = 0;
   let round = 0;
+  let compactions = 0;
 
   for (;;) {
     // Frontière sûre : suspend AVANT le prochain appel LLM.
@@ -318,6 +336,66 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // récents). Réduit le coût par appel et la taille du checkpoint. No-op tant
     // qu'il n'y a pas ≥20 Ko à récupérer → sans effet sur les runs courts.
     pruneToolOutputs(messages);
+
+    // Compaction : si l'historique reste énorme après élagage et qu'il reste du
+    // budget, résume le milieu périmé en un message unique (préserve système +
+    // queue récente). Rare — ne se déclenche que sur les runs très longs.
+    if (
+      compactions < MAX_COMPACTIONS_PER_CHUNK &&
+      params.softDeadlineMs - elapsed() > AGENT_COMPACT_MIN_BUDGET_MS &&
+      estimateTokens(messages) >= AGENT_COMPACT_TOKEN_THRESHOLD
+    ) {
+      const plan = planCompaction(messages, { keepRecentBytes: AGENT_COMPACT_KEEP_RECENT_BYTES });
+      if (plan) {
+        const tokensBefore = estimateTokens(messages);
+        const summaryStream = await streamCompletion({
+          apiKey,
+          model,
+          baseUrl,
+          provider,
+          messages: [
+            { role: "system", content: SUMMARIZE_INSTRUCTION },
+            { role: "user", content: serializeForSummary(plan.toSummarize) },
+          ],
+          tools: [],
+          signal: params.signal,
+        });
+        await recordAiUsage({
+          runId,
+          seq: seq++,
+          feature: "agent_code",
+          model: summaryStream.modelUsed ?? model,
+          generationId: summaryStream.generationId,
+          promptTokens: summaryStream.usage.promptTokens,
+          completionTokens: summaryStream.usage.completionTokens,
+          totalTokens: summaryStream.usage.totalTokens,
+          cost: summaryStream.usage.cost,
+          userId: params.userId ?? null,
+          projectId: params.projectId ?? null,
+        });
+        costUsd += summaryStream.usage.cost ?? 0;
+
+        const summaryText = summaryStream.content.trim();
+        if (summaryText) {
+          const summaryMsg: AgentChatMessage = {
+            role: "user",
+            content: `${COMPACT_SUMMARY_PREFIX}\n\n${summaryText}`,
+          };
+          const rebuilt: AgentChatMessage[] = [
+            ...(plan.systemMessage ? [plan.systemMessage] : []),
+            summaryMsg,
+            ...plan.tail,
+          ];
+          messages.splice(0, messages.length, ...rebuilt);
+          compactions++;
+          await emit("status", {
+            phase: "compacted",
+            tokensBefore,
+            tokensAfter: estimateTokens(messages),
+          });
+        }
+      }
+    }
 
     const stream = await streamCompletion({
       apiKey,

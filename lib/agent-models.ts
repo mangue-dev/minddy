@@ -51,3 +51,13 @@ export const AGENT_SOFT_DEADLINE_MS = 250_000;
 export const AGENT_RUN_TIMEOUT_MS = 210_000;
 /** Garde-fou anti-runaway : nombre max de reprises (suspend→resume) d'un run. */
 export const AGENT_MAX_CONTINUATIONS = 20;
+
+// ── Compaction du contexte (durcissement, runs très longs) ────────────────────
+/** Au-delà de cette estimation de tokens, on résume le milieu de l'historique.
+    Conservateur (proxy caractères/4 qui sous-estime le code) : sûr sur les modèles
+    à large fenêtre (DeepSeek, Claude…). */
+export const AGENT_COMPACT_TOKEN_THRESHOLD = 70_000;
+/** Taille (octets) de la queue récente préservée verbatim lors d'une compaction. */
+export const AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000;
+/** On ne lance pas de compaction (appel LLM en plus) s'il reste moins que ça de budget. */
+export const AGENT_COMPACT_MIN_BUDGET_MS = 60_000;
