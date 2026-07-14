@@ -38,6 +38,7 @@ import { buildAgentSystemPrompt, buildAgentTaskMessage } from "./prompt";
 import { resolveAgentApiKey, getModelContextWindow } from "./model";
 import { ensurePullRequest, GithubApiError } from "./pr";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
+import { syncIssuePlanStates } from "./plan-sync";
 import {
   stampRun,
   appendEvent,
@@ -384,6 +385,8 @@ export async function executeAgentRun(
       contextWindow,
       execTool: makeExecTool(sandbox),
       pullSteering: () => pullPendingMessages(run.id),
+      // Miroir des états du checklist de l'agent vers le plan de l'issue liée.
+      syncPlan: (steps) => syncIssuePlanStates(run.issue_id, steps),
       emit,
       usageSeqStart,
     });

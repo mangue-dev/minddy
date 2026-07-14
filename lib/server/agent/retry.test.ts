@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isRetryableStatus, parseRetryAfterMs, backoffMs, StreamError } from "./retry";
+import {
+  isRetryableStatus,
+  isContextLengthError,
+  parseRetryAfterMs,
+  backoffMs,
+  StreamError,
+} from "./retry";
 
 describe("isRetryableStatus", () => {
   it("429 et 5xx sont reprenables", () => {
@@ -13,6 +19,28 @@ describe("isRetryableStatus", () => {
     expect(isRetryableStatus(404)).toBe(false);
     expect(isRetryableStatus(422)).toBe(false);
     expect(isRetryableStatus(200)).toBe(false);
+  });
+});
+
+describe("isContextLengthError", () => {
+  it("matche les tournures de dépassement de contexte (insensible à la casse)", () => {
+    expect(isContextLengthError("This model's maximum context length is 8192 tokens")).toBe(true);
+    expect(isContextLengthError("MAXIMUM CONTEXT reached")).toBe(true);
+    expect(isContextLengthError("The context window has been exceeded")).toBe(true);
+    expect(isContextLengthError("Error code: context_length_exceeded")).toBe(true);
+    expect(isContextLengthError("There are too many tokens in the request")).toBe(true);
+    expect(isContextLengthError("Please reduce the length of your messages")).toBe(true);
+    expect(isContextLengthError("The input is too long for this model")).toBe(true);
+    expect(isContextLengthError("Your prompt is too long")).toBe(true);
+    expect(isContextLengthError("Requested 5000 but the maximum is 4096 tokens")).toBe(true);
+  });
+  it("ne matche pas les autres erreurs 400/génériques", () => {
+    expect(isContextLengthError("Invalid API key")).toBe(false);
+    expect(isContextLengthError("model not found")).toBe(false);
+    expect(isContextLengthError("rate limit exceeded")).toBe(false);
+    expect(isContextLengthError("too many requests")).toBe(false);
+    expect(isContextLengthError("internal server error")).toBe(false);
+    expect(isContextLengthError("")).toBe(false);
   });
 });
 

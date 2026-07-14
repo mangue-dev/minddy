@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { getRun, appendEvent } from "@/lib/server/agent/runs";
+import { getRun } from "@/lib/server/agent/runs";
 import { getServiceClient } from "@/lib/supabase-service";
 import { createOrReconnectSandbox, stopSandbox } from "@/lib/server/agent/sandbox";
 
@@ -31,13 +31,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ ok: true, status: run.status });
   }
 
+  // Signale l'annulation UNIQUEMENT via run.status (l'UI le reflète) : on n'écrit
+  // PAS d'event ici — un seul écrivain d'events (le claimer), sinon collision de seq.
   const service = getServiceClient();
   await service
     .from("agent_runs")
     .update({ status: "canceled", checkpoint: null })
     .eq("id", runId)
     .in("status", ACTIVE);
-  await appendEvent(runId, "status", { status: "canceled" });
 
   // Best-effort : libère la microVM (elle expirerait sinon d'elle-même).
   if (run.sandbox_id) {

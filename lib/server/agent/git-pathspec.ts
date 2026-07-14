@@ -16,14 +16,24 @@ function joinWithin(path: string, glob: string): string {
 }
 
 /**
+ * Rend un glob récursif s'il ne contient PAS de `/` : convention ripgrep/Claude
+ * Code où `*.ts` matche à toute profondeur. En pathspec `:(glob)` git, `*` ne
+ * traverse pas `/`, donc un `*.ts` nu ne matcherait que la racine — surprenant
+ * pour le modèle. On préfixe alors par un segment doublestar récursif.
+ */
+function recursive(glob: string): string {
+  return glob.includes("/") ? glob : `**/${glob}`;
+}
+
+/**
  * Pathspecs (NON quotés) pour `git grep`. Intersecte `path` et `glob` quand les
  * deux sont fournis. Renvoie un tableau (0 ou 1 élément) à quoter par l'appelant.
  */
 export function grepPathspecs(path?: string | null, glob?: string | null): string[] {
   const p = path?.trim();
   const g = glob?.trim();
-  if (p && g) return [`:(glob)${joinWithin(p, g)}`];
-  if (g) return [`:(glob)${g}`];
+  if (p && g) return [`:(glob)${joinWithin(p, recursive(g))}`];
+  if (g) return [`:(glob)${recursive(g)}`];
   if (p) return [p];
   return [];
 }
@@ -31,5 +41,5 @@ export function grepPathspecs(path?: string | null, glob?: string | null): strin
 /** Pathspec (NON quoté) unique pour `git ls-files` (tool `glob`). */
 export function globPathspec(pattern: string, path?: string | null): string {
   const p = path?.trim();
-  return p ? `:(glob)${joinWithin(p, pattern)}` : `:(glob)${pattern}`;
+  return p ? `:(glob)${joinWithin(p, recursive(pattern))}` : `:(glob)${recursive(pattern)}`;
 }

@@ -379,6 +379,28 @@ function isDisproportionateMatch(search: string, oldString: string): boolean {
 }
 
 /**
+ * Réalignement du saut de ligne de frontière : les replacers tolérants yield un
+ * span SANS le `\n` final de la dernière ligne. Si ce `\n` subsiste dans le contenu
+ * (juste après le match) et que `newString` en porte un aussi, on insérerait une
+ * ligne vide parasite. On absorbe ce `\n` des DEUX côtés → exactement un saut de
+ * ligne préservé (jamais de doublon, jamais de fusion de lignes).
+ */
+function realignBoundary(
+  content: string,
+  index: number,
+  search: string,
+  newString: string,
+): { span: string; replacement: string } {
+  if (!search.endsWith("\n") && content[index + search.length] === "\n") {
+    return {
+      span: `${search}\n`,
+      replacement: newString.endsWith("\n") ? newString : `${newString}\n`,
+    };
+  }
+  return { span: search, replacement: newString };
+}
+
+/**
  * Applique la substitution `oldString` → `newString` sur `content` via la
  * cascade. Lève si introuvable, ambigu (plusieurs matchs sans replaceAll), ou
  * si le match est disproportionné. Renvoie le nouveau contenu.
@@ -409,20 +431,23 @@ export function replace(
           "Refusing replacement because the matched span is much larger than oldString. Re-read the file and provide the full exact oldString for the intended replacement.",
         );
       }
-      if (replaceAll) return content.replaceAll(search, newString);
-      if (index !== content.lastIndexOf(search)) continue; // ambigu → replacer suivant
-
-      // Réalignement du saut de ligne de frontière : les replacers tolérants
-      // yield un span SANS le `\n` final de la dernière ligne. Si ce `\n` subsiste
-      // dans le contenu et que `newString` en porte un aussi, on insérerait une
-      // ligne vide parasite. On absorbe ce `\n` des DEUX côtés → exactement un saut
-      // de ligne préservé (jamais de doublon, jamais de fusion de lignes).
-      let span = search;
-      let replacement = newString;
-      if (!span.endsWith("\n") && content[index + span.length] === "\n") {
-        span += "\n";
-        replacement = replacement.endsWith("\n") ? replacement : `${replacement}\n`;
+      if (replaceAll) {
+        // Remplace CHAQUE occurrence littérale de `search`, en réalignant le `\n`
+        // de frontière à chacune (comme le chemin single-match) — sinon un
+        // new_string terminé par `\n` insère une ligne vide parasite après chaque bloc.
+        let result = "";
+        let pos = 0;
+        for (;;) {
+          const idx = content.indexOf(search, pos);
+          if (idx === -1) break;
+          const { span, replacement } = realignBoundary(content, idx, search, newString);
+          result += content.slice(pos, idx) + replacement;
+          pos = idx + span.length;
+        }
+        return result + content.slice(pos);
       }
+      if (index !== content.lastIndexOf(search)) continue; // ambigu → replacer suivant
+      const { span, replacement } = realignBoundary(content, index, search, newString);
       return content.substring(0, index) + replacement + content.substring(index + span.length);
     }
   }

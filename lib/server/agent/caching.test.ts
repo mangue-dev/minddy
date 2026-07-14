@@ -19,17 +19,30 @@ describe("markSystemPromptCache", () => {
     });
   });
 
-  it("laisse les messages non-système inchangés", () => {
+  it("marque AUSSI la fin du préfixe de seed, mais rien après le premier assistant", () => {
     const messages = [
       { role: "system", content: "sys" },
-      { role: "user", content: "hi" },
+      { role: "user", content: "task" }, // fin du seed → marqué
       { role: "assistant", content: null },
       { role: "tool", content: "result", tool_call_id: "a" },
     ];
-    const out = markSystemPromptCache(messages);
-    expect(out[1]).toEqual({ role: "user", content: "hi" });
+    const out = markSystemPromptCache(messages) as Array<Record<string, unknown>>;
+    // Système marqué.
+    expect(out[0].content).toEqual([{ type: "text", text: "sys", cache_control: { type: "ephemeral" } }]);
+    // Dernier message non-assistant du seed marqué.
+    expect(out[1].content).toEqual([{ type: "text", text: "task", cache_control: { type: "ephemeral" } }]);
+    // Rien après le premier assistant n'est touché.
     expect(out[2]).toEqual({ role: "assistant", content: null });
     expect(out[3]).toEqual({ role: "tool", content: "result", tool_call_id: "a" });
+  });
+
+  it("ne marque qu'un breakpoint quand le seed = le système seul", () => {
+    const out = markSystemPromptCache([
+      { role: "system", content: "sys" },
+      { role: "assistant", content: "go" },
+    ]) as Array<Record<string, unknown>>;
+    expect(out[0].content).toEqual([{ type: "text", text: "sys", cache_control: { type: "ephemeral" } }]);
+    expect(out[1]).toEqual({ role: "assistant", content: "go" });
   });
 
   it("ignore un système à contenu vide ou null", () => {

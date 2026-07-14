@@ -50,8 +50,12 @@ export function estimateTokens(messages: ReadonlyArray<CompactMessage>): number 
 }
 
 export interface CompactionPlan<T extends CompactMessage> {
-  /** Message système à conserver en tête (ou null s'il n'y en a pas). */
-  systemMessage: T | null;
+  /**
+   * Préfixe de seed préservé VERBATIM : la suite de messages non-assistant en tête
+   * (système + message de tâche + instructions repo + résumés antérieurs). Contient
+   * les critères d'acceptation et les conventions — on ne les paraphrase JAMAIS.
+   */
+  seedPrefix: T[];
   /** Bloc du milieu à résumer. */
   toSummarize: T[];
   /** Queue récente à préserver verbatim. */
@@ -60,23 +64,24 @@ export interface CompactionPlan<T extends CompactMessage> {
 
 /**
  * Calcule un plan de compaction sûr, ou null s'il n'y a rien à compacter utilement.
- * `keepRecentBytes` fixe la taille (approx.) de la queue préservée. On recule depuis
- * la fin en accumulant les octets jusqu'à ce budget, puis on avance le curseur de
- * queue tant qu'il pointe sur un message `tool` (jamais commencer la queue sur un
- * résultat orphelin).
+ * On préserve le PRÉFIXE DE SEED (messages non-assistant en tête) verbatim, on recule
+ * depuis la fin jusqu'au budget de queue, puis on avance le curseur de queue tant
+ * qu'il pointe sur un message `tool` (jamais commencer la queue sur un résultat
+ * orphelin). Le milieu restant est résumé.
  */
 export function planCompaction<T extends CompactMessage>(
   messages: T[],
   opts: { keepRecentBytes: number },
 ): CompactionPlan<T> | null {
-  const hasSystem = messages[0]?.role === "system";
-  const systemMessage = hasSystem ? messages[0] : null;
-  const bodyStart = hasSystem ? 1 : 0;
+  // Préfixe de seed = messages non-assistant en tête (même logique que dropOldestRound).
+  let prefixEnd = 0;
+  while (prefixEnd < messages.length && messages[prefixEnd].role !== "assistant") prefixEnd++;
+  const seedPrefix = messages.slice(0, prefixEnd);
 
   // Recule depuis la fin jusqu'au budget de queue.
   let bytes = 0;
   let k = messages.length;
-  for (let i = messages.length - 1; i >= bodyStart; i--) {
+  for (let i = messages.length - 1; i >= prefixEnd; i--) {
     bytes += messageBytes(messages[i]);
     k = i;
     if (bytes >= opts.keepRecentBytes) break;
@@ -87,10 +92,46 @@ export function planCompaction<T extends CompactMessage>(
 
   // Rien de sûr à préserver, ou rien de significatif à résumer → on s'abstient.
   if (k >= messages.length) return null;
-  const toSummarize = messages.slice(bodyStart, k);
+  const toSummarize = messages.slice(prefixEnd, k);
   if (toSummarize.length < MIN_SUMMARIZE_MESSAGES) return null;
 
-  return { systemMessage, toSummarize, tail: messages.slice(k) };
+  return { seedPrefix, toSummarize, tail: messages.slice(k) };
+}
+
+/**
+ * Élague le round le plus ancien de l'historique EN PLACE, en préservant le préfixe
+ * de seed ET l'appariement tool_call↔résultat. Dernier recours quand le provider
+ * renvoie un 400 « contexte trop long » : on retente le même appel avec un
+ * historique raccourci.
+ *
+ *   • Préfixe de seed = messages[0] s'il est `system`, PLUS tous les messages non-
+ *     assistant en tête jusqu'au (exclu) PREMIER message `assistant` — c.-à-d.
+ *     système + message de tâche + instructions repo + éventuels résumés/messages
+ *     user antérieurs. Jamais élagué.
+ *   • Round le plus ancien = ce premier `assistant`, avec ses résultats `tool`
+ *     immédiatement suivants (s'il porte des tool_calls). Bloc contigu retiré tel quel.
+ *
+ * Retourne false (et ne mute rien) s'il n'y a aucun `assistant` à retirer. Après
+ * retrait, l'invariant tient : pas de `tool` orphelin, chaque assistant(tool_calls)
+ * immédiatement suivi de ses résultats.
+ */
+export function dropOldestRound<T extends CompactMessage>(messages: T[]): boolean {
+  // Le premier `assistant` marque la fin du préfixe de seed.
+  let start = -1;
+  for (let i = 0; i < messages.length; i++) {
+    if (messages[i].role === "assistant") {
+      start = i;
+      break;
+    }
+  }
+  if (start === -1) return false; // rien à élaguer
+
+  // Le round = l'assistant + tous ses résultats `tool` contigus (jamais orphelins).
+  let end = start + 1;
+  while (end < messages.length && messages[end].role === "tool") end++;
+
+  messages.splice(start, end - start);
+  return true;
 }
 
 /** Coupe une chaîne à `max` caractères (les résultats de tools sont compactés). */

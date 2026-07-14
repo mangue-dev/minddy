@@ -21,15 +21,25 @@ export interface EphemeralTextPart {
 }
 
 /**
- * Renvoie une COPIE des messages où le message système (contenu string non vide)
- * porte un cache breakpoint. Les autres messages sont inchangés. N'altère pas
- * l'entrée.
+ * Renvoie une COPIE des messages avec DEUX cache breakpoints (pour les providers
+ * qui les supportent) : le message système, ET la fin du PRÉFIXE DE SEED (dernier
+ * message non-assistant en tête = tâche + instructions repo). Ça cache le plus gros
+ * bloc STABLE d'un run (au lieu du seul système), gros gain sur Anthropic via
+ * OpenRouter. N'altère pas l'entrée (l'historique-checkpoint reste en string).
  */
 export function markSystemPromptCache(
   messages: ReadonlyArray<{ role: string; content?: string | null }>,
 ): unknown[] {
-  return messages.map((m) => {
-    if (m.role === "system" && typeof m.content === "string" && m.content.length > 0) {
+  // Fin du préfixe de seed : dernier index avant le premier message `assistant`.
+  let seedEnd = -1;
+  for (let i = 0; i < messages.length; i++) {
+    if (messages[i].role === "assistant") break;
+    seedEnd = i;
+  }
+  return messages.map((m, i) => {
+    const isSystem = i === 0 && m.role === "system";
+    const isSeedEnd = i === seedEnd && seedEnd > 0; // >0 : distinct du système seul
+    if ((isSystem || isSeedEnd) && typeof m.content === "string" && m.content.length > 0) {
       const part: EphemeralTextPart = {
         type: "text",
         text: m.content,

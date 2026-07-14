@@ -21,6 +21,7 @@ import {
   estimateTokens,
   planCompaction,
   serializeForSummary,
+  dropOldestRound,
   SUMMARIZE_INSTRUCTION,
   COMPACT_SUMMARY_PREFIX,
 } from "./compact";
@@ -33,10 +34,12 @@ import {
 import {
   StreamError,
   isRetryableStatus,
+  isContextLengthError,
   parseRetryAfterMs,
   backoffMs,
   sleep,
   MAX_STREAM_ATTEMPTS,
+  MAX_RETRY_WAIT_MS,
   STREAM_IDLE_TIMEOUT_MS,
 } from "./retry";
 
@@ -61,6 +64,8 @@ import {
 const MAX_ROUNDS_PER_CHUNK = 60;
 /** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
 const MAX_COMPACTIONS_PER_CHUNK = 3;
+/** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
+const MAX_CONTEXT_TRIMS = 4;
 /** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
 const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep"]);
 
@@ -129,6 +134,12 @@ export interface RunAgentLoopParams {
    * d'un `ask_user`. Optionnel (absent = pas de steering).
    */
   pullSteering?: () => Promise<string[]>;
+  /**
+   * Miroir best-effort des états du checklist (tool update_plan) vers le plan de
+   * l'issue liée. Appelé après l'event `plan_update`, jamais bloquant (les erreurs
+   * sont avalées). Absent = pas de synchro (ex. run hors issue).
+   */
+  syncPlan?: (steps: PlanStep[]) => Promise<void>;
   emit: EmitAgentEvent;
   /** Index de départ des lignes ai_usage (ordre d'affichage). */
   usageSeqStart?: number;
@@ -408,6 +419,8 @@ async function streamCompletion(opts: {
   messages: AgentChatMessage[];
   tools: AgentToolDef[];
   signal?: AbortSignal;
+  /** Deadline absolue (Date.now() ms) du chunk : au-delà, on ne dort pas, on relève. */
+  deadlineAt?: number;
 }): Promise<StreamResult> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < MAX_STREAM_ATTEMPTS; attempt++) {
@@ -417,8 +430,14 @@ async function streamCompletion(opts: {
       lastErr = err;
       const retryable = err instanceof StreamError ? err.retryable : true;
       if (!retryable || attempt === MAX_STREAM_ATTEMPTS - 1) throw err;
-      const wait =
-        (err instanceof StreamError ? err.retryAfterMs : undefined) ?? backoffMs(attempt);
+      // Attente plafonnée (un Retry-After absurde ne doit pas nous faire dormir au-
+      // delà de maxDuration) ET budget-aware : si dormir puis retenter dépasse la
+      // deadline du chunk, on relève → l'appelant suspend (reprise, fonction fraîche).
+      const wait = Math.min(
+        (err instanceof StreamError ? err.retryAfterMs : undefined) ?? backoffMs(attempt),
+        MAX_RETRY_WAIT_MS,
+      );
+      if (opts.deadlineAt && Date.now() + wait >= opts.deadlineAt) throw err;
       await sleep(wait);
     }
   }
@@ -498,6 +517,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             ],
             tools: [],
             signal: params.signal,
+            deadlineAt: startedAt + params.softDeadlineMs,
           });
           await recordAiUsage({
             runId,
@@ -520,11 +540,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
               role: "user",
               content: `${COMPACT_SUMMARY_PREFIX}\n\n${summaryText}`,
             };
-            const rebuilt: AgentChatMessage[] = [
-              ...(plan.systemMessage ? [plan.systemMessage] : []),
-              summaryMsg,
-              ...plan.tail,
-            ];
+            const rebuilt: AgentChatMessage[] = [...plan.seedPrefix, summaryMsg, ...plan.tail];
             messages.splice(0, messages.length, ...rebuilt);
             lastPromptTokens = null; // contexte réduit → recalculé au prochain appel
             await emit("status", {
@@ -541,25 +557,44 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     }
 
     let stream: StreamResult;
-    try {
-      stream = await streamCompletion({
-        apiKey,
-        model,
-        baseUrl,
-        provider,
-        messages,
-        tools,
-        signal: params.signal,
-      });
-    } catch (err) {
-      // Erreur transitoire épuisée (429/5xx/réseau) → SUSPENDRE le run (reprise au
-      // chunk suivant, fonction fraîche) plutôt qu'échouer. Une erreur fatale (4xx,
-      // requête invalide) remonte et échoue le run.
-      if (err instanceof StreamError && err.retryable) {
-        await emit("status", { phase: "transient_error", message: cap(err.message, 300) });
-        return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+    let contextTrims = 0;
+    for (;;) {
+      try {
+        stream = await streamCompletion({
+          apiKey,
+          model,
+          baseUrl,
+          provider,
+          messages,
+          tools,
+          signal: params.signal,
+          deadlineAt: startedAt + params.softDeadlineMs,
+        });
+        break;
+      } catch (err) {
+        // 400 « contexte trop long » : dernier recours — retire le round le plus
+        // ancien (sûr pour l'appariement) et retente le MÊME appel, jusqu'à
+        // MAX_CONTEXT_TRIMS. On ne touche ni au système ni au message de tâche.
+        if (
+          err instanceof StreamError &&
+          err.status === 400 &&
+          isContextLengthError(err.message) &&
+          contextTrims < MAX_CONTEXT_TRIMS &&
+          dropOldestRound(messages)
+        ) {
+          contextTrims++;
+          await emit("status", { phase: "context_trim" });
+          continue;
+        }
+        // Erreur transitoire épuisée (429/5xx/réseau) → SUSPENDRE le run (reprise au
+        // chunk suivant, fonction fraîche) plutôt qu'échouer. Une erreur fatale (4xx,
+        // requête invalide) remonte et échoue le run.
+        if (err instanceof StreamError && err.retryable) {
+          await emit("status", { phase: "transient_error", message: cap(err.message, 300) });
+          return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+        }
+        throw err;
       }
-      throw err;
     }
 
     await recordAiUsage({
@@ -601,19 +636,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
 
     messages.push({ role: "assistant", content: stream.content || null, tool_calls: stream.toolCalls });
 
-    // `finish` court-circuite (terminal).
-    const finishCall = stream.toolCalls.find((t) => t.function.name === "finish");
-    if (finishCall) {
-      const args = safeParse(finishCall.function.arguments);
-      const finish: AgentFinish = {
-        summary: String(args.summary ?? "").trim() || "Changes applied.",
-        prTitle: typeof args.pr_title === "string" ? args.pr_title : undefined,
-        prBody: typeof args.pr_body === "string" ? args.pr_body : undefined,
-      };
-      await emit("summary", { text: finish.summary });
-      return { status: "completed", messages, finish, costUsd, usageSeqEnd: seq, rounds: round };
-    }
-
     // Fast-path : si TOUS les tool-calls du round sont read-only (exploration), on
     // les exécute EN PARALLÈLE — les tools sont des round-trips réseau au Sandbox.
     // Résultats poussés dans l'ordre d'origine → pairing tool_call↔résultat préservé.
@@ -649,6 +671,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     }
 
     let pauseQuestion: string | null = null;
+    let finishResult: AgentFinish | null = null;
     for (const tc of stream.toolCalls) {
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
@@ -656,7 +679,24 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       // update_plan : tool de contrôle légère — n'émet QUE l'event plan_update (le
       // feed le rend en checklist), répond au tool-call, et ne passe pas au Sandbox.
       if (name === "update_plan") {
-        await emit("plan_update", { plan: normalizePlan(args.plan) });
+        const plan = normalizePlan(args.plan);
+        await emit("plan_update", { plan });
+        // Miroir vers le plan de l'issue — best-effort, ne bloque jamais le run.
+        await params.syncPlan?.(plan).catch(() => {});
+        messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ ok: true }) });
+        continue;
+      }
+
+      // `finish` est terminal, mais on le CAPTURE et on continue : les tool-calls
+      // frères du même tour (edit_file…) doivent d'abord s'exécuter, sinon leurs
+      // mutations n'atteignent jamais le Sandbox et la PR décrirait des changements
+      // absents. On honore finish APRÈS la boucle (le pause l'emporte s'il survient).
+      if (name === "finish") {
+        finishResult = {
+          summary: String(args.summary ?? "").trim() || "Changes applied.",
+          prTitle: typeof args.pr_title === "string" ? args.pr_title : undefined,
+          prBody: typeof args.pr_body === "string" ? args.pr_body : undefined,
+        };
         messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ ok: true }) });
         continue;
       }
@@ -684,6 +724,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       await emit("tool_result", { id: tc.id, name, success, preview: previewResult(result) });
     }
 
+    // Un pause l'emporte sur un finish concurrent (l'agent pose une question).
     if (pauseQuestion !== null) {
       return {
         status: "needs_input",
@@ -693,6 +734,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         usageSeqEnd: seq,
         rounds: round,
       };
+    }
+
+    // finish (honoré APRÈS l'exécution des tool-calls frères) → terminal.
+    if (finishResult) {
+      await emit("summary", { text: finishResult.summary });
+      return { status: "completed", messages, finish: finishResult, costUsd, usageSeqEnd: seq, rounds: round };
     }
     // sinon on reboucle
   }

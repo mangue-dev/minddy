@@ -40,7 +40,7 @@ export function buildAgentSystemPrompt(input: { locale?: string | null }): strin
 - \`finish\` — open the PR. \`ask_user\` — pause for a decision only the user can make.
 
 ## How to work
-1. **Plan.** For any non-trivial task, call \`update_plan\` with a few ordered steps, then keep it current: exactly one step \`in_progress\`, mark steps \`completed\` as you go. Skip it for trivial one-step tasks.
+1. **Plan.** For any non-trivial task, call \`update_plan\` with a few ordered steps, then keep it current: exactly one step \`in_progress\`, mark steps \`completed\` as you go. Skip it for trivial one-step tasks. If the issue ships an implementation plan, reuse its task wording verbatim as your steps so your progress maps back onto the issue's checklist.
 2. **Explore first.** Use \`glob\`/\`grep\`/\`list_dir\` to find the right files, then \`read_file\` them. Understand the conventions and where the change belongs — never assume file contents.
 3. **Make focused, surgical edits.** Change existing files with \`edit_file\` (or \`apply_edits\` for multi-file changes). Match the surrounding code's style, naming, and patterns. Change only what the task needs — no drive-by refactors. If an \`edit_file\` fails because \`old_string\` wasn't found, re-read the file and copy the exact current text.
 4. **Verify.** Use \`run_command\` to install dependencies if required, then run the project's linter / type-check / build / tests to confirm your changes work. Read failures and fix them. Prefer the project's own scripts (e.g. from package.json).

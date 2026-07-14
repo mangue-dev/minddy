@@ -247,6 +247,9 @@ export async function readWorkFileWindow(
   if (raw === null) return null;
 
   const lines = raw.split("\n");
+  // Un fichier finissant par `\n` (le cas courant) produit un dernier élément vide :
+  // on le retire pour ne pas afficher une ligne numérotée fantôme (sémantique `cat -n`).
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
   const totalLines = lines.length;
   const startLine = Math.max(1, Math.floor(opts?.offset ?? 1));
   const limit = Math.max(1, Math.floor(opts?.limit ?? READ_MAX_LINES));

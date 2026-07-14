@@ -23,8 +23,12 @@ describe("grepPathspecs", () => {
     expect(grepPathspecs(undefined, undefined)).toEqual([]);
   });
 
-  it("normalise les slashes de bord", () => {
-    expect(grepPathspecs("/lib/server/", "*.ts")).toEqual([":(glob)lib/server/*.ts"]);
+  it("normalise les slashes de bord et rend le glob nu récursif", () => {
+    expect(grepPathspecs("/lib/server/", "*.ts")).toEqual([":(glob)lib/server/**/*.ts"]);
+  });
+
+  it("rend un glob nu (sans /) récursif", () => {
+    expect(grepPathspecs(undefined, "*.ts")).toEqual([":(glob)**/*.ts"]);
   });
 });
 
@@ -35,5 +39,9 @@ describe("globPathspec", () => {
 
   it("sans path → pattern seul", () => {
     expect(globPathspec("**/*.ts")).toBe(":(glob)**/*.ts");
+  });
+
+  it("rend un pattern nu récursif", () => {
+    expect(globPathspec("*.ts")).toBe(":(glob)**/*.ts");
   });
 });

@@ -92,6 +92,15 @@ describe("replace — replaceAll", () => {
   it("refuse une occurrence ambiguë sans replaceAll", () => {
     expect(() => replace("a a a", "a", "b")).toThrow(/multiple matches/i);
   });
+
+  it("ne double pas le \\n de frontière sur un match tolérant (régression)", () => {
+    // Deux blocs identiquement indentés ; old_string dé-indenté → LineTrimmed matche
+    // et yield un span sans le \n final. new_string finit par \n.
+    const original = "if (x) {\n  do()\n}\nif (x) {\n  do()\n}\n";
+    const out = replace(original, "if (x) {\ndo()\n}", "if (y) {\n  do()\n}\n", true);
+    expect(out).toBe("if (y) {\n  do()\n}\nif (y) {\n  do()\n}\n");
+    expect(out).not.toContain("}\n\n"); // aucune ligne vide parasite
+  });
 });
 
 describe("replace — échecs bruyants", () => {
