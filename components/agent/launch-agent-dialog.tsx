@@ -18,6 +18,8 @@ import {
 import { launchAgentRunApi } from "@/lib/agent-api";
 import { issueAgentRunsQueryKey } from "@/lib/use-agent-runs";
 import { useAiKeysQuery } from "@/lib/use-ai-keys-query";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { ModelCombobox } from "./model-combobox";
 
 /**
@@ -38,11 +40,17 @@ export function LaunchAgentDialog({
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
   const { keys } = useAiKeysQuery();
-  const hasByok = keys.some((k) => k.provider === "openrouter");
+  const { provider } = useAgentModelsQuery();
+  const { defaultModel } = useAgentPreferencesQuery();
+  const hasByok = keys.length > 0;
 
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [launching, setLaunching] = useState(false);
+
+  // Un provider BYOK non-OpenRouter n'a pas de défaut racine : l'utilisateur doit
+  // choisir un modèle (ici, ou comme défaut perso).
+  const modelRequired = provider !== "openrouter" && !defaultModel && !model;
 
   const launch = async () => {
     if (launching) return;
@@ -83,8 +91,12 @@ export function LaunchAgentDialog({
               placeholder={t("modelSearchPlaceholder")}
               emptyLabel={t("modelSearchEmpty")}
               loadingLabel={t("modelSearchLoading")}
+              freeTextLabel={(q) => t("modelUseCustom", { model: q })}
               disabled={launching}
             />
+            {modelRequired ? (
+              <p className="text-xs text-amber-600 dark:text-amber-500">{t("modelRequired")}</p>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -103,7 +115,7 @@ export function LaunchAgentDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" onClick={() => void launch()} disabled={launching}>
+          <Button type="button" onClick={() => void launch()} disabled={launching || modelRequired}>
             {launching && <Spinner />}
             {t("launch")}
           </Button>

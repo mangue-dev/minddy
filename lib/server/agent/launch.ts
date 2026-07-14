@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectLink } from "@/lib/server/git/repo-links";
 import { insertEvents } from "@/lib/server/issue-events";
-import { resolveAgentModel } from "./model";
+import { resolveAgentModel, AgentModelRequiredError } from "./model";
 import { checkAgentQuota, type AgentQuota } from "./quota";
 import { createRun, activeRunForIssue, type AgentRun } from "./runs";
 import { drainAgentRuns } from "./drain";
@@ -25,7 +25,8 @@ export type LaunchError =
   | "noRepo"
   | "unsupportedProvider"
   | "alreadyRunning"
-  | "quotaExceeded";
+  | "quotaExceeded"
+  | "noModelForProvider";
 
 export type LaunchResult =
   | { ok: true; run: AgentRun }
@@ -70,7 +71,15 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   const quota = await checkAgentQuota(input.userId);
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
 
-  const model = await resolveAgentModel({ perRunModel: input.model, userId: input.userId });
+  let model: string;
+  try {
+    model = await resolveAgentModel({ perRunModel: input.model, userId: input.userId });
+  } catch (err) {
+    if (err instanceof AgentModelRequiredError) {
+      return { ok: false, error: "noModelForProvider" };
+    }
+    throw err;
+  }
 
   const run = await createRun({
     projectId,

@@ -1,11 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
 
 /**
- * Catalogue de modèles OpenRouter pour le picker de l'agent (MIN-46). Alimenté
- * par `/api/agent/models` (proxy caché serveur). `staleTime` long : le
- * catalogue bouge lentement, inutile de le refetcher à chaque ouverture.
+ * Catalogue de modèles du provider ACTIF (BYOK ou clé plateforme) pour le picker
+ * de l'agent (MIN-46). Alimenté par `/api/agent/models`. `staleTime` long : le
+ * catalogue bouge lentement. La clé de query est invalidée quand le BYOK change
+ * (cf. account-ai-keys-section) → le provider et la liste se rafraîchissent.
  */
 
 export interface AgentModel {
@@ -15,11 +17,11 @@ export interface AgentModel {
 
 export const agentModelsQueryKey = ["agent-models"] as const;
 
-async function fetchAgentModels(): Promise<AgentModel[]> {
+async function fetchAgentModels(): Promise<{ provider: AgentProviderId; models: AgentModel[] }> {
   const res = await fetch("/api/agent/models");
-  if (!res.ok) return [];
-  const data = (await res.json()) as { models?: AgentModel[] };
-  return data.models ?? [];
+  if (!res.ok) return { provider: DEFAULT_AGENT_PROVIDER, models: [] };
+  const data = (await res.json()) as { provider?: AgentProviderId; models?: AgentModel[] };
+  return { provider: data.provider ?? DEFAULT_AGENT_PROVIDER, models: data.models ?? [] };
 }
 
 export function useAgentModelsQuery() {
@@ -28,5 +30,9 @@ export function useAgentModelsQuery() {
     queryFn: fetchAgentModels,
     staleTime: 60 * 60 * 1000,
   });
-  return { models: data ?? [], loading: isLoading };
+  return {
+    provider: data?.provider ?? DEFAULT_AGENT_PROVIDER,
+    models: data?.models ?? [],
+    loading: isLoading,
+  };
 }

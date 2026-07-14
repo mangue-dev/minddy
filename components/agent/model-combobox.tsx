@@ -15,18 +15,17 @@ import {
   PopoverTrigger,
   Spinner,
 } from "mangue-ui";
-import { ModelLogo } from "@/components/model-logo";
+import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 
 /**
- * Picker de modèle recherchable de l'agent (MIN-46). Remplace le `Select` figé à
- * 3 modèles : recherche dans tout le catalogue OpenRouter (BYOK ou clé
- * plateforme, même liste), chaque entrée avec son logo (`ModelLogo`) et son nom
- * reformaté (`formatModelName`, sans provider ni tirets). `value` vaut "" pour
- * « mon défaut », sinon l'id OpenRouter brut. On filtre/score nous-mêmes
- * (`shouldFilter={false}`) et on tronque à MAX_RESULTS pour ne pas monter les
- * ~300 entrées du catalogue.
+ * Picker de modèle recherchable de l'agent (MIN-46). Recherche dans le catalogue
+ * du provider ACTIF (BYOK ou clé plateforme), chaque entrée avec son logo et son
+ * nom reformaté (`formatModelName`). `value` vaut "" pour « mon défaut », sinon
+ * l'id du modèle. Saisie libre autorisée (`freeTextLabel`) : indispensable pour
+ * un provider générique dont `/models` peut être vide/indisponible. On
+ * filtre/score nous-mêmes (`shouldFilter={false}`) et on tronque à MAX_RESULTS.
  */
 
 const MAX_RESULTS = 50;
@@ -38,18 +37,21 @@ export function ModelCombobox({
   placeholder,
   emptyLabel,
   loadingLabel,
+  freeTextLabel,
   disabled,
 }: {
-  /** "" = suit mon modèle par défaut ; sinon un id OpenRouter `provider/model`. */
+  /** "" = suit mon modèle par défaut ; sinon un id de modèle. */
   value: string;
   onChange: (value: string) => void;
   defaultLabel: string;
   placeholder: string;
   emptyLabel: string;
   loadingLabel: string;
+  /** Libellé de l'option « utiliser tel quel » (saisie libre). */
+  freeTextLabel: (query: string) => string;
   disabled?: boolean;
 }) {
-  const { models, loading } = useAgentModelsQuery();
+  const { provider, models, loading } = useAgentModelsQuery();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -63,6 +65,17 @@ export function ModelCombobox({
       .slice(0, MAX_RESULTS)
       .map((r) => r.m);
   }, [models, query]);
+
+  // Logo : OpenRouter → par id (`vendor/model`) ; sinon logo du provider actif.
+  const logoFor = (modelId: string) =>
+    provider === "openrouter" ? (
+      <ModelLogo model={modelId} />
+    ) : (
+      <ProviderLogo provider={provider} />
+    );
+
+  const trimmed = query.trim();
+  const showFreeText = trimmed.length > 0 && !models.some((m) => m.id === trimmed);
 
   const select = (next: string) => {
     onChange(next);
@@ -89,7 +102,7 @@ export function ModelCombobox({
         >
           {value ? (
             <span className="flex min-w-0 items-center gap-2">
-              <ModelLogo model={value} />
+              {logoFor(value)}
               <span className="truncate">{formatModelName(value)}</span>
             </span>
           ) : (
@@ -108,7 +121,7 @@ export function ModelCombobox({
             </CommandItem>
             {results.map((m) => (
               <CommandItem key={m.id} value={m.id} onSelect={() => select(m.id)}>
-                <ModelLogo model={m.id} />
+                {logoFor(m.id)}
                 <span className="flex-1 truncate" title={m.id}>
                   {formatModelName(m.id)}
                 </span>
@@ -117,7 +130,16 @@ export function ModelCombobox({
                 />
               </CommandItem>
             ))}
-            {results.length === 0 ? (
+            {showFreeText ? (
+              <CommandItem value={`__free__${trimmed}`} onSelect={() => select(trimmed)}>
+                {logoFor(trimmed)}
+                <span className="flex-1 truncate">{freeTextLabel(trimmed)}</span>
+                <Check
+                  className={cn("size-4 shrink-0", value === trimmed ? "opacity-100" : "opacity-0")}
+                />
+              </CommandItem>
+            ) : null}
+            {results.length === 0 && !showFreeText ? (
               <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                 {loading ? (
                   <>

@@ -8,6 +8,12 @@ import {
   type OpenRouterUsage,
   type NormalizedUsage,
 } from "@/lib/server/ai-usage";
+import {
+  chatCompletionsUrl,
+  getAgentProvider,
+  DEFAULT_AGENT_PROVIDER,
+  type AgentProviderId,
+} from "@/lib/agent-providers";
 import type { AgentToolDef } from "./tools";
 
 /**
@@ -28,7 +34,6 @@ import type { AgentToolDef } from "./tools";
  * `execTool` (fourni par execute.ts, qui détient le Sandbox).
  */
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_ROUNDS_PER_CHUNK = 60;
 
 /** Un message du protocole chat OpenRouter (identique à celui de processChat). */
@@ -72,6 +77,10 @@ export interface RunAgentLoopParams {
   tools: AgentToolDef[];
   model: string;
   apiKey: string;
+  /** Base URL OpenAI-compatible du provider (sans /chat/completions). */
+  baseUrl: string;
+  /** Provider effectif (OpenRouter par défaut) — pilote headers/body. */
+  provider?: AgentProviderId;
   runId: string;
   userId?: string | null;
   projectId?: string | null;
@@ -153,32 +162,47 @@ interface StreamResult {
   usage: NormalizedUsage;
 }
 
-/** Un tour de complétion streamée : accumule contenu, tool-calls et usage. */
+/**
+ * Un tour de complétion streamée (endpoint OpenAI-compatible). Accumule contenu,
+ * tool-calls et usage. Le corps/headers sont ajustés au provider via son
+ * `requestProfile` (le comptage de coût OpenRouter, les headers d'attribution et
+ * `max_tokens` ne sont envoyés qu'aux providers qui les tolèrent — cf.
+ * lib/agent-providers.ts).
+ */
 async function streamCompletion(opts: {
   apiKey: string;
   model: string;
+  baseUrl: string;
+  provider: AgentProviderId;
   messages: AgentChatMessage[];
   tools: AgentToolDef[];
   signal?: AbortSignal;
 }): Promise<StreamResult> {
+  const profile = getAgentProvider(opts.provider)?.requestProfile ?? {};
+
   const requestBody: Record<string, unknown> = {
     model: opts.model,
     messages: opts.messages,
     stream: true,
-    stream_options: { include_usage: true },
-    usage: OPENROUTER_USAGE_INCLUDE,
-    max_tokens: 8192,
   };
+  if (profile.streamUsage) requestBody.stream_options = { include_usage: true };
+  if (profile.usageAccounting) requestBody.usage = OPENROUTER_USAGE_INCLUDE;
+  if (profile.maxTokens) requestBody.max_tokens = profile.maxTokens;
   if (opts.tools.length > 0) requestBody.tools = opts.tools;
 
-  const response = await fetch(OPENROUTER_URL, {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${opts.apiKey}`,
+    "Content-Type": "application/json",
+  };
+  if (profile.attribution) {
+    headers["HTTP-Referer"] = "https://minddy.app";
+    headers["X-Title"] = "Numo agent (minddy)";
+  }
+  if (profile.anthropicVersion) headers["anthropic-version"] = "2023-06-01";
+
+  const response = await fetch(chatCompletionsUrl(opts.baseUrl), {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${opts.apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://minddy.app",
-      "X-Title": "Numo agent (minddy)",
-    },
+    headers,
     body: JSON.stringify(requestBody),
     signal: opts.signal,
   });
@@ -251,7 +275,8 @@ async function streamCompletion(opts: {
  * Renvoie le checkpoint (`messages`) à persister, le coût du chunk et l'issue.
  */
 export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoopResult> {
-  const { messages, tools, model, apiKey, runId, execTool, emit } = params;
+  const { messages, tools, model, apiKey, baseUrl, runId, execTool, emit } = params;
+  const provider = params.provider ?? DEFAULT_AGENT_PROVIDER;
   const startedAt = Date.now();
   const elapsed = () => Date.now() - startedAt;
 
@@ -266,7 +291,15 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     }
     round++;
 
-    const stream = await streamCompletion({ apiKey, model, messages, tools, signal: params.signal });
+    const stream = await streamCompletion({
+      apiKey,
+      model,
+      baseUrl,
+      provider,
+      messages,
+      tools,
+      signal: params.signal,
+    });
 
     await recordAiUsage({
       runId,

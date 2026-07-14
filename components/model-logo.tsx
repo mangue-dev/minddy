@@ -48,6 +48,26 @@ const PROVIDER_LOGOS: Record<string, ComponentType<LobeLogo>> = {
   openrouter: OpenRouter,
 };
 
+function LogoBySlug({
+  slug,
+  size,
+  className,
+}: {
+  slug: string;
+  size: number;
+  className?: string;
+}) {
+  const Logo = slug ? PROVIDER_LOGOS[slug] : undefined;
+  if (Logo) return <Logo size={size} className={cn("shrink-0", className)} />;
+  return (
+    <Cpu
+      className={cn("shrink-0 text-muted-foreground", className)}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+/** Logo déduit d'un id modèle `provider/model` (ex. "openai/gpt-4o"). */
 export function ModelLogo({
   model,
   size = 14,
@@ -57,13 +77,18 @@ export function ModelLogo({
   size?: number;
   className?: string;
 }) {
-  const provider = providerFromModel(model);
-  const Logo = provider ? PROVIDER_LOGOS[provider] : undefined;
-  if (Logo) return <Logo size={size} className={cn("shrink-0", className)} />;
-  return (
-    <Cpu
-      className={cn("shrink-0 text-muted-foreground", className)}
-      style={{ width: size, height: size }}
-    />
-  );
+  return <LogoBySlug slug={providerFromModel(model)} size={size} className={className} />;
+}
+
+/** Logo déduit d'un slug provider direct (ex. "openai", "anthropic", "google"). */
+export function ProviderLogo({
+  provider,
+  size = 14,
+  className,
+}: {
+  provider: string | null | undefined;
+  size?: number;
+  className?: string;
+}) {
+  return <LogoBySlug slug={(provider ?? "").toLowerCase()} size={size} className={className} />;
 }

@@ -47,6 +47,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   unsupportedProvider: 409,
   alreadyRunning: 409,
   quotaExceeded: 402,
+  noModelForProvider: 400,
 };
 
 function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {

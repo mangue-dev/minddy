@@ -3,18 +3,27 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
+import {
+  DEFAULT_AGENT_PROVIDER,
+  resolveProviderBaseUrl,
+  type AgentProviderId,
+} from "@/lib/agent-providers";
 import { decryptUserAiKey } from "./byok-credentials";
 
 /**
- * Résolution du modèle et de la clé API de l'agent de code (MIN-46).
+ * Résolution du modèle et de l'endpoint de l'agent de code (MIN-46).
  *
  * MODÈLE — cascade à 3 niveaux, précédence run > user > racine :
  *   1. override du run (choisi au lancement, ou forcé par numo),
  *   2. défaut perso de l'user (user_agent_preferences.default_model),
- *   3. défaut racine (app_config.agent_model, fallback AGENT_ROOT_MODEL_FALLBACK).
+ *   3. défaut racine OpenRouter (app_config.agent_model / fallback code).
+ * Un BYOK non-OpenRouter n'a pas de défaut racine fiable (namespaces de modèles
+ * distincts) : sans (1) ni (2), on lève `AgentModelRequiredError` — l'utilisateur
+ * doit choisir un modèle (le picker liste ceux de son provider).
  *
- * CLÉ — BYOK de l'user si présente (usage illimité, à ses frais), sinon la clé
- * plateforme OPENROUTER_API_KEY (plafonnée mensuellement, cf. quota.ts).
+ * ENDPOINT — un seul BYOK actif par compte : provider + base URL + clé de l'user
+ * si présent (usage illimité, à ses frais), sinon la clé plateforme OpenRouter
+ * OPENROUTER_API_KEY (plafonnée mensuellement, cf. quota.ts).
  */
 
 /** Défaut racine (admin) : app_config.agent_model ou le fallback code. */
@@ -33,9 +42,20 @@ export async function getUserDefaultModel(userId: string): Promise<string | null
   return (data as { default_model: string | null } | null)?.default_model ?? null;
 }
 
+/** Levée quand un provider BYOK non-OpenRouter n'a aucun modèle résolu. */
+export class AgentModelRequiredError extends Error {
+  code = "noModelForProvider" as const;
+  constructor(public provider: string) {
+    super(`No default model for provider ${provider}; a model must be selected`);
+    this.name = "AgentModelRequiredError";
+  }
+}
+
 /**
- * Résout le modèle à figer sur un run. `perRunModel` (override/forçage) gagne, sinon
- * le défaut perso de l'user, sinon le défaut racine.
+ * Résout le modèle à figer sur un run. `perRunModel` (override/forçage) gagne,
+ * sinon le défaut perso, sinon — uniquement en provider OpenRouter — le défaut
+ * racine. Lève `AgentModelRequiredError` si un BYOK non-OpenRouter est actif
+ * sans modèle explicite.
  */
 export async function resolveAgentModel(opts: {
   perRunModel?: string | null;
@@ -45,42 +65,71 @@ export async function resolveAgentModel(opts: {
   if (perRun) return perRun;
   const userDefault = await getUserDefaultModel(opts.userId);
   if (userDefault) return userDefault;
+  const byok = await getUserByok(opts.userId);
+  if (byok && byok.provider !== "openrouter") {
+    throw new AgentModelRequiredError(byok.provider);
+  }
   return getRootDefaultModel();
 }
 
-/** Clé BYOK OpenRouter déchiffrée de l'utilisateur, ou null. */
-export async function getUserByokKey(userId: string): Promise<string | null> {
+// ── Endpoint (provider + base URL + clé) ─────────────────────────────────────
+
+export interface UserByok {
+  provider: AgentProviderId;
+  apiKey: string;
+  /** Base URL effective (registre, ou custom pour 'generic'). */
+  baseUrl: string;
+}
+
+/**
+ * BYOK actif de l'utilisateur (un seul), déchiffré et résolu en endpoint, ou
+ * null. Ignore une ligne dont la base URL n'est pas résoluble (generic sans URL)
+ * ou dont la clé ne déchiffre plus (secret tourné → « reconfigure ta clé »).
+ */
+export async function getUserByok(userId: string): Promise<UserByok | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("user_ai_keys")
-    .select("key_encrypted")
+    .select("provider, key_encrypted, base_url")
     .eq("user_id", userId)
-    .eq("provider", "openrouter")
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
-  const encrypted = (data as { key_encrypted: string } | null)?.key_encrypted;
-  return encrypted ? decryptUserAiKey(encrypted) : null;
+  const row = data as { provider: string; key_encrypted: string; base_url: string | null } | null;
+  if (!row) return null;
+  const apiKey = decryptUserAiKey(row.key_encrypted);
+  if (!apiKey) return null;
+  const baseUrl = resolveProviderBaseUrl(row.provider, row.base_url);
+  if (!baseUrl) return null;
+  return { provider: row.provider as AgentProviderId, apiKey, baseUrl };
 }
 
-/** True si l'utilisateur a une clé BYOK utilisable (→ usage illimité). */
+/** True si l'utilisateur a un BYOK utilisable (→ usage illimité). */
 export async function userHasByokKey(userId: string): Promise<boolean> {
-  return (await getUserByokKey(userId)) != null;
+  return (await getUserByok(userId)) != null;
 }
 
 export type AgentKeyMode = "platform" | "byok";
 
-export interface ResolvedAgentApiKey {
+export interface ResolvedAgentEndpoint {
   apiKey: string;
   mode: AgentKeyMode;
+  provider: AgentProviderId;
+  /** Base URL OpenAI-compatible (sans /chat/completions). */
+  baseUrl: string;
 }
 
 /**
- * Résout la clé OpenRouter effective : BYOK de l'user si présente, sinon la clé
- * plateforme. Lève si aucune clé n'est disponible.
+ * Résout l'endpoint effectif : BYOK de l'user si présent (provider + base URL +
+ * clé), sinon la clé plateforme OpenRouter. Lève si aucune clé plateforme.
  */
-export async function resolveAgentApiKey(userId: string): Promise<ResolvedAgentApiKey> {
-  const byok = await getUserByokKey(userId);
-  if (byok) return { apiKey: byok, mode: "byok" };
+export async function resolveAgentApiKey(userId: string): Promise<ResolvedAgentEndpoint> {
+  const byok = await getUserByok(userId);
+  if (byok) {
+    return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
+  }
   const platform = process.env.OPENROUTER_API_KEY;
   if (!platform) throw new Error("OPENROUTER_API_KEY not configured");
-  return { apiKey: platform, mode: "platform" };
+  const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
+  return { apiKey: platform, mode: "platform", provider: DEFAULT_AGENT_PROVIDER, baseUrl: baseUrl! };
 }

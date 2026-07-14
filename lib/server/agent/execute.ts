@@ -202,7 +202,7 @@ export async function executeAgentRun(
       ];
     }
 
-    const { apiKey } = await resolveAgentApiKey(run.created_by);
+    const { apiKey, baseUrl, provider } = await resolveAgentApiKey(run.created_by);
 
     // Budget du chunk : temps restant du drain − marge, borné par la config.
     const elapsedSetup = Date.now() - callStart;
@@ -216,6 +216,8 @@ export async function executeAgentRun(
       tools: AGENT_TOOLS,
       model: run.model,
       apiKey,
+      baseUrl,
+      provider,
       runId: run.run_id ?? run.id,
       userId: run.created_by,
       projectId: run.project_id,

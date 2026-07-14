@@ -25,6 +25,7 @@ export interface AiKey {
   id: string;
   provider: string;
   key_prefix: string | null;
+  base_url: string | null;
   created_at: string;
   last_used_at: string | null;
 }
@@ -33,25 +34,24 @@ export async function fetchAiKeysApi(): Promise<{ keys: AiKey[] }> {
   return parseJson(await fetch("/api/account/ai-keys"));
 }
 
-export async function addAiKeyApi(
-  key: string,
-  provider = "openrouter",
-): Promise<{ key: AiKey }> {
+/** Enregistre le BYOK actif (remplace l'existant). `baseUrl` requis pour 'generic'. */
+export async function addAiKeyApi(input: {
+  provider: string;
+  key: string;
+  baseUrl?: string;
+}): Promise<{ key: AiKey }> {
   return parseJson(
     await fetch("/api/account/ai-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, provider }),
+      body: JSON.stringify({ provider: input.provider, key: input.key, base_url: input.baseUrl }),
     }),
   );
 }
 
-export async function deleteAiKeyApi(provider = "openrouter"): Promise<void> {
-  await parseJson(
-    await fetch(`/api/account/ai-keys?provider=${encodeURIComponent(provider)}`, {
-      method: "DELETE",
-    }),
-  );
+/** Retire le BYOK actif (single-active : pas de provider à préciser). */
+export async function deleteAiKeyApi(): Promise<void> {
+  await parseJson(await fetch("/api/account/ai-keys", { method: "DELETE" }));
 }
 
 export async function fetchAgentPreferencesApi(): Promise<{ default_model: string | null }> {
