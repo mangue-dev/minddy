@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { isAllowedAgentModel } from "@/lib/agent-models";
 
 /**
  * Préférences agent de l'utilisateur (MIN-46) : son modèle par défaut. RLS
  * self-manage (user_agent_preferences) → on utilise le cookie client. null =
- * suit le défaut racine (app_config.agent_model). Un modèle explicite doit
- * appartenir à l'allowlist du picker.
+ * suit le défaut racine (app_config.agent_model). Un modèle explicite est un id
+ * OpenRouter `provider/model` libre (comme au lancement) — pas d'allowlist ; la
+ * clé effective (BYOK ou plateforme) est résolue à l'exécution du run.
  */
+
+/** Id OpenRouter attendu : `provider/model` (garde-fou léger, non exhaustif). */
+const MODEL_ID_RE = /^[\w.-]+\/[\w.:@-]+$/;
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -35,7 +38,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const model = body.default_model ?? null;
-  if (model !== null && (typeof model !== "string" || !isAllowedAgentModel(model))) {
+  if (model !== null && (typeof model !== "string" || !MODEL_ID_RE.test(model.trim()))) {
     return NextResponse.json({ error: "Invalid model" }, { status: 400 });
   }
 

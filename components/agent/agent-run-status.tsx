@@ -36,11 +36,6 @@ export const STATUS_META: Record<
   canceled: { key: "statusCanceled", cls: "border-border bg-muted text-muted-foreground", icon: Ban },
 };
 
-/** Modèle raccourci (dernier segment de `provider/model`). */
-export function shortModel(model: string | null): string | null {
-  return model ? (model.split("/").pop() ?? model) : null;
-}
-
 /** Pastille de statut (icône + libellé traduit). */
 export function AgentStatusBadge({ status }: { status: AgentRunStatus }) {
   const t = useTranslations("Agent");

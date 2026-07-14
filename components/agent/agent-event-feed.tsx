@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { AlertTriangle, Bot, GitCommit, GitPullRequest } from "lucide-react";
@@ -194,9 +194,12 @@ export function AgentEventFeed({
     [items],
   );
 
-  useEffect(() => {
-    if (active && feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
-  }, [items.length, active]);
+  // Cale le flux en bas dès l'ouverture (même run terminé) puis à chaque nouvel
+  // event tant qu'il est actif. useLayoutEffect → pas de flash « scroll depuis
+  // le haut » avant peinture.
+  useLayoutEffect(() => {
+    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  }, [items.length]);
 
   if (items.length === 0) {
     return (

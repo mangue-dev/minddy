@@ -12,8 +12,9 @@ import {
   stopAgentRunApi,
   type AgentRunSummary,
 } from "@/lib/agent-api";
+import { ModelBadge } from "@/components/model-badge";
 import { AgentActivityPanel } from "./agent-activity-panel";
-import { AgentStatusBadge, shortModel } from "./agent-run-status";
+import { AgentStatusBadge } from "./agent-run-status";
 
 /**
  * Résumé compact d'un run d'agent (MIN-46) dans le panneau d'issue : statut +
@@ -29,8 +30,6 @@ export function AgentRunPanel({ issueId, run }: { issueId: string; run: AgentRun
   const active = isAgentRunActive(run.status);
   const [stopping, setStopping] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
-
-  const model = shortModel(run.model);
 
   const stop = async () => {
     if (stopping) return;
@@ -49,20 +48,16 @@ export function AgentRunPanel({ issueId, run }: { issueId: string; run: AgentRun
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <ModelBadge model={run.model} className="min-w-0" />
+        <div className="flex shrink-0 items-center gap-2">
           <AgentStatusBadge status={run.status} />
-          {model ? (
-            <span className="truncate rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              {model}
-            </span>
+          {active ? (
+            <Button type="button" size="sm" variant="ghost" onClick={() => void stop()} disabled={stopping}>
+              {stopping ? <Spinner /> : <Square className="size-3.5" />}
+              {t("stop")}
+            </Button>
           ) : null}
         </div>
-        {active ? (
-          <Button type="button" size="sm" variant="ghost" onClick={() => void stop()} disabled={stopping}>
-            {stopping ? <Spinner /> : <Square className="size-3.5" />}
-            {t("stop")}
-          </Button>
-        ) : null}
       </div>
 
       {run.status === "failed" && run.error_message ? (

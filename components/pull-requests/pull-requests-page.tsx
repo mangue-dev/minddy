@@ -16,6 +16,7 @@ import {
 } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
+import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
 import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -61,6 +62,8 @@ export function PullRequestsPage() {
   const [filter, setFilter] = useState<Filter>(runParam ? "all" : "open");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(runParam);
   const [mobileDetail, setMobileDetail] = useState(!!runParam);
+  // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
+  const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
 
   // Suit les changements de param (navigation client vers un autre run).
   useEffect(() => {
@@ -213,6 +216,7 @@ export function PullRequestsPage() {
             item={selected}
             onBack={() => setMobileDetail(false)}
             onRefetchList={() => void refetch()}
+            onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
           />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">
@@ -220,6 +224,16 @@ export function PullRequestsPage() {
           </div>
         )}
       </div>
+
+      {/* Panneau latéral de l'issue liée — overlay par-dessus la page (pas de nav). */}
+      {panel ? (
+        <PrIssuePanel
+          key={`${panel.projectId}:${panel.issueId}`}
+          projectId={panel.projectId}
+          issueId={panel.issueId}
+          onClose={() => setPanel(null)}
+        />
+      ) : null}
     </div>
   );
 }

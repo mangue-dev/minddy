@@ -12,14 +12,14 @@ import {
   TooltipTrigger,
 } from "mangue-ui";
 import { Maximize2, Minimize2, X } from "lucide-react";
-import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import {
   panelSheetClassName,
   panelOverlayClassName,
   type PanelDisplayMode,
 } from "@/components/assistant/panel-geometry";
-import { isAgentRunActive, type AgentRunSummary } from "@/lib/agent-api";
+import type { AgentRunSummary } from "@/lib/agent-api";
+import { ModelBadge } from "@/components/model-badge";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentStatusBadge } from "./agent-run-status";
 
@@ -48,8 +48,6 @@ export function AgentActivityPanel({
   const toggleDisplayMode = () =>
     setDisplayMode((prev) => (prev === "compact" ? "expanded" : "compact"));
 
-  const active = isAgentRunActive(run.status);
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -62,14 +60,10 @@ export function AgentActivityPanel({
         <SheetTitle className="sr-only">{t("activityTitle")}</SheetTitle>
 
         <div className="flex h-full flex-col overflow-hidden">
-          {/* En-tête : icône Numo + titre + statut/modèle, puis expand/close.
+          {/* En-tête : modèle (identité) + statut, puis expand/close.
               (Pas d'historique ni de nouvelle conversation — agent en direct.) */}
           <div className="flex shrink-0 items-center gap-2 px-3 py-2.5">
-            <NumoIcon
-              state={active ? "thinking" : "idle"}
-              className="size-5 shrink-0 text-foreground"
-            />
-            <span className="truncate text-sm font-medium">{t("activityTitle")}</span>
+            <ModelBadge model={run.model} className="min-w-0 shrink" />
             <AgentStatusBadge status={run.status} />
 
             <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -113,7 +107,7 @@ export function AgentActivityPanel({
           </div>
 
           {/* Flux d'événements du run. */}
-          <div className="min-h-0 flex-1 border-t border-border">
+          <div className="min-h-0 flex-1">
             <AgentEventFeed
               runId={run.id}
               status={run.status}

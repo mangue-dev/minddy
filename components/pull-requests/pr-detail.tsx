@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Avatar,
@@ -52,10 +51,13 @@ export function PrDetail({
   item,
   onBack,
   onRefetchList,
+  onOpenIssue,
 }: {
   item: PullRequestListItem;
   onBack: () => void;
   onRefetchList: () => void;
+  /** Ouvre l'issue liée dans le panneau latéral, par-dessus la page (pas de navigation). */
+  onOpenIssue: (issueId: string, projectId: string) => void;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
@@ -160,12 +162,15 @@ export function PrDetail({
           <ChevronLeft />
         </Button>
         {item.issue && item.project ? (
-          <Link
-            href={`/projects/${item.project.id}?issue=${item.issue.id}`}
-            className="font-mono text-sm text-muted-foreground hover:text-foreground hover:underline"
+          <button
+            type="button"
+            onClick={() => {
+              if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
+            }}
+            className="font-mono text-sm text-muted-foreground outline-none hover:text-foreground hover:underline"
           >
             {identifier}
-          </Link>
+          </button>
         ) : (
           <span className="font-mono text-sm text-muted-foreground">{identifier}</span>
         )}

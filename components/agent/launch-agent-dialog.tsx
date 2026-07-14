@@ -11,22 +11,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Spinner,
   Textarea,
   toast,
 } from "mangue-ui";
-import { AGENT_ALLOWED_MODELS } from "@/lib/agent-models";
 import { launchAgentRunApi } from "@/lib/agent-api";
 import { issueAgentRunsQueryKey } from "@/lib/use-agent-runs";
 import { useAiKeysQuery } from "@/lib/use-ai-keys-query";
-
-/** Valeur du picker = « utiliser mon défaut » (n'envoie aucun modèle). */
-const DEFAULT_VALUE = "__default__";
+import { ModelCombobox } from "./model-combobox";
 
 /**
  * Dialogue « Lancer l'agent de code » (MIN-46) : picker de modèle (défaut perso
@@ -48,7 +40,7 @@ export function LaunchAgentDialog({
   const { keys } = useAiKeysQuery();
   const hasByok = keys.some((k) => k.provider === "openrouter");
 
-  const [model, setModel] = useState(DEFAULT_VALUE);
+  const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [launching, setLaunching] = useState(false);
 
@@ -58,12 +50,12 @@ export function LaunchAgentDialog({
     try {
       await launchAgentRunApi(issueId, {
         prompt: prompt.trim() || undefined,
-        model: model === DEFAULT_VALUE ? undefined : model,
+        model: model || undefined,
       });
       await queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) });
       toast.success(t("launchedToast"));
       setPrompt("");
-      setModel(DEFAULT_VALUE);
+      setModel("");
       onOpenChange(false);
       onLaunched?.();
     } catch (err) {
@@ -84,20 +76,15 @@ export function LaunchAgentDialog({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">{t("modelLabel")}</label>
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={DEFAULT_VALUE}>{t("modelDefault")}</SelectItem>
-                {AGENT_ALLOWED_MODELS.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.label}
-                    {m.hint ? ` · ${m.hint}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ModelCombobox
+              value={model}
+              onChange={setModel}
+              defaultLabel={t("modelDefault")}
+              placeholder={t("modelSearchPlaceholder")}
+              emptyLabel={t("modelSearchEmpty")}
+              loadingLabel={t("modelSearchLoading")}
+              disabled={launching}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

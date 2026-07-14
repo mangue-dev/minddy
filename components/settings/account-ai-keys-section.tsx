@@ -3,19 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Spinner,
-  toast,
-} from "mangue-ui";
+import { Button, Input, Spinner, toast } from "mangue-ui";
 import { SettingsSection } from "@/components/settings-shell";
-import { AGENT_ALLOWED_MODELS } from "@/lib/agent-models";
+import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   addAiKeyApi,
   deleteAiKeyApi,
@@ -27,9 +17,6 @@ import {
   useAgentPreferencesQuery,
 } from "@/lib/use-agent-preferences-query";
 
-/** Valeur du picker représentant « pas de défaut perso » (→ défaut racine). */
-const ROOT_VALUE = "__root__";
-
 /**
  * Section « Agent de code » des paramètres du compte (MIN-46) : modèle par défaut
  * perso (cascade : run > CE défaut > défaut racine) + clé BYOK OpenRouter (usage
@@ -37,6 +24,7 @@ const ROOT_VALUE = "__root__";
  */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
+  const tAgent = useTranslations("Agent");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
 
@@ -48,7 +36,7 @@ export function AccountAiKeysSection() {
   const [savingKey, setSavingKey] = useState(false);
 
   const onModelChange = async (value: string) => {
-    const next = value === ROOT_VALUE ? null : value;
+    const next = value || null;
     try {
       await saveAgentPreferencesApi(next);
       await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
@@ -90,20 +78,16 @@ export function AccountAiKeysSection() {
         {prefLoading ? (
           <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
         ) : (
-          <Select value={defaultModel ?? ROOT_VALUE} onValueChange={(v) => void onModelChange(v)}>
-            <SelectTrigger className="max-w-md">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ROOT_VALUE}>{t("agentModelRoot")}</SelectItem>
-              {AGENT_ALLOWED_MODELS.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.label}
-                  {m.hint ? ` · ${m.hint}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="max-w-md">
+            <ModelCombobox
+              value={defaultModel ?? ""}
+              onChange={(v) => void onModelChange(v)}
+              defaultLabel={t("agentModelRoot")}
+              placeholder={tAgent("modelSearchPlaceholder")}
+              emptyLabel={tAgent("modelSearchEmpty")}
+              loadingLabel={tAgent("modelSearchLoading")}
+            />
+          </div>
         )}
       </SettingsSection>
 

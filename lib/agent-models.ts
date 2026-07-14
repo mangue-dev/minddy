@@ -24,20 +24,17 @@ export interface AgentModelOption {
 export const AGENT_ROOT_MODEL_FALLBACK = "deepseek/deepseek-v4-flash";
 
 /**
- * Modèles proposés dans le picker (utilisateur + numo). L'admin change le défaut
- * racine via `app_config.agent_model` ; un modèle explicite (override d'un run
- * ou forçage numo) peut viser HORS de cette liste — l'allowlist ne régit que le
- * picker. Ids à confirmer contre l'index OpenRouter `/models`.
+ * Libellés curatés d'une poignée de modèles phares. Le picker (lancement +
+ * défaut perso) n'est PLUS limité à cette liste : il recherche tout l'index
+ * OpenRouter (`/api/agent/models`) et formate les noms via `formatModelName`.
+ * Cette liste ne sert qu'à fournir de jolis labels connus (cf. `model-display`)
+ * pour ces ids précis. Ids à confirmer contre l'index OpenRouter `/models`.
  */
 export const AGENT_ALLOWED_MODELS: AgentModelOption[] = [
   { id: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", hint: "Économique · défaut" },
   { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5", hint: "Équilibré, fort en code" },
   { id: "anthropic/claude-opus-4.8", label: "Claude Opus 4.8", hint: "Qualité maximale" },
 ];
-
-export function isAllowedAgentModel(id: string): boolean {
-  return AGENT_ALLOWED_MODELS.some((m) => m.id === id);
-}
 
 // ── Clés app_config (surcharge admin sans redeploy) ──────────────────────────
 /** Défaut racine du modèle de l'agent. */
