@@ -70,7 +70,7 @@ export function PrDiff({
     });
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
           {t("fileCount", { count: files.length })}
@@ -102,14 +102,14 @@ export function PrDiff({
               <button
                 type="button"
                 onClick={() => toggle(f.filename)}
-                className="flex w-full items-center gap-2 bg-muted px-2 py-1.5 text-left outline-none hover:bg-muted/80"
+                className="flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60"
               >
                 {isCollapsed ? (
-                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 ) : (
-                  <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                 )}
-                <span className="min-w-0 flex-1 truncate font-mono text-[11px]">
+                <span className="min-w-0 flex-1 truncate font-mono text-xs">
                   {f.filename}
                 </span>
                 <span className="shrink-0 text-[11px] tabular-nums text-emerald-600 dark:text-emerald-400">
@@ -120,7 +120,7 @@ export function PrDiff({
                 </span>
               </button>
               {isCollapsed ? null : parsed ? (
-                <div className="overflow-x-auto text-xs">
+                <div className="overflow-x-auto text-[13px]">
                   <Diff
                     viewType={viewType}
                     diffType={parsed.type as DiffType}

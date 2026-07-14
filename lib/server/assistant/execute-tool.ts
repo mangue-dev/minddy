@@ -54,6 +54,8 @@ import {
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import { getPullRequest, listPullRequestFiles } from "@/lib/server/agent/pr";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -509,6 +511,59 @@ export async function executeTool(
         if (!result.ok) return toolError(launchErrorMessage(result));
         return {
           result: { launched: true, run_id: result.run.id, status: result.run.status, model: result.run.model },
+          success: true,
+        };
+      }
+
+      case "read_pull_request": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        if (!scoped.ok) return toolError(scoped.error);
+
+        // Canonical run for the issue's PR (earliest run that opened it).
+        const { data: run } = await ctx.supabase
+          .from("agent_runs")
+          .select("pr_number, pr_url, pr_state, branch_name, base_branch")
+          .eq("issue_id", issueId)
+          .not("pr_number", "is", null)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        const prNumber = (run as { pr_number?: number } | null)?.pr_number;
+        if (!run || prNumber == null) {
+          return toolError("This issue has no pull request opened by the code agent yet.");
+        }
+
+        const target = await resolveRepoCloneTarget(projectId);
+        if (!target) return toolError("This project has no linked GitHub repository.");
+
+        const [pr, files] = await Promise.all([
+          getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+          listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+        ]);
+
+        // Cap patch size so a huge diff doesn't blow the context window.
+        const PATCH_CAP = 4000;
+        return {
+          result: {
+            number: pr.number,
+            url: pr.url,
+            state: pr.merged ? "merged" : pr.state,
+            title: pr.title,
+            body: pr.body,
+            head: pr.head,
+            base: pr.base,
+            files: files.map((f) => ({
+              filename: f.filename,
+              status: f.status,
+              additions: f.additions,
+              deletions: f.deletions,
+              patch:
+                f.patch && f.patch.length > PATCH_CAP
+                  ? f.patch.slice(0, PATCH_CAP) + "\n… (diff truncated)"
+                  : f.patch ?? null,
+            })),
+          },
           success: true,
         };
       }

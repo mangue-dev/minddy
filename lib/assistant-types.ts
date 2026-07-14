@@ -92,6 +92,12 @@ export interface AssistantPageContext {
   /** The feedback post open in the team dashboard, when any (MIN-52). */
   feedbackId?: string;
   feedbackTitle?: string;
+  /** The pull request open on the Pull Requests page, when any (MIN-66). It maps
+      to `issueId` above (the issue the code agent implemented). */
+  prNumber?: number;
+  prState?: string;
+  /** Canonical agent run id backing the PR — what read_pull_request resolves. */
+  prRunId?: string;
   /** The saved kanban view currently selected on the board, when any. */
   viewId?: string;
   viewName?: string;

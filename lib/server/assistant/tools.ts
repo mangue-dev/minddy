@@ -1012,6 +1012,25 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "read_pull_request",
+      description:
+        "Read the pull request the code agent opened for an issue: its title, description, state, branch, and the per-file diffs (patches, capped). Use it to explain what a PR changes, review it, or answer questions about its content. Requires the issue to have an agent-opened PR.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to read (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+        },
+        required: ["issue_id"],
+      },
+    },
+  },
 ];
 
 // Tools that operate on the requesting user's own account, not on a project —

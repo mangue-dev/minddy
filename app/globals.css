@@ -19,6 +19,32 @@
   --primary: #3098D0;
 }
 
+/* ── Vue diff des Pull Requests (MIN-66) ──────────────────────────────────────
+   react-diff-view expose des variables --diff-* ; ses défauts sont des pastels
+   pensés pour un fond clair et peu lisibles (surtout en sombre). On les remplace
+   par des surcouches translucides vert/rouge qui gardent un bon contraste sur
+   les deux thèmes, et une police monospace plus nette. */
+.pr-diff-view {
+  --diff-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* Sans ça react-diff-view garde `color: initial` (noir) → illisible en sombre. */
+  --diff-text-color: var(--foreground);
+  --diff-code-insert-background-color: rgb(46 160 67 / 0.20);
+  --diff-code-delete-background-color: rgb(248 81 73 / 0.18);
+  --diff-gutter-insert-background-color: rgb(46 160 67 / 0.30);
+  --diff-gutter-delete-background-color: rgb(248 81 73 / 0.28);
+  --diff-code-insert-edit-background-color: rgb(46 160 67 / 0.42);
+  --diff-code-delete-edit-background-color: rgb(248 81 73 / 0.42);
+  --diff-selection-background-color: rgb(48 152 208 / 0.30);
+}
+.dark .pr-diff-view {
+  --diff-code-insert-background-color: rgb(63 185 80 / 0.22);
+  --diff-code-delete-background-color: rgb(248 81 73 / 0.20);
+  --diff-gutter-insert-background-color: rgb(63 185 80 / 0.32);
+  --diff-gutter-delete-background-color: rgb(248 81 73 / 0.30);
+  --diff-code-insert-edit-background-color: rgb(63 185 80 / 0.45);
+  --diff-code-delete-edit-background-color: rgb(248 81 73 / 0.45);
+}
+
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
    White chrome (sidebar + header) over a light-gray content area. The AppShell
    root uses --background (gray) and shows through the transparent <main>; the

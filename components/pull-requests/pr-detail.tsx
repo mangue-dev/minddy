@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Avatar,
   AvatarFallback,
@@ -22,6 +22,8 @@ import {
 } from "mangue-ui";
 import { Check, ChevronLeft, ExternalLink, GitPullRequest, X } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { NumoIcon } from "@/components/numo-icon";
+import { ProjectOrb } from "@/components/project-orb";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { useAgentRunPrQuery, usePrCommentsQuery } from "@/lib/use-agent-runs";
 import {
@@ -57,6 +59,7 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
+  const now = useNow();
 
   const { pr, files, loading, refetch: refetchPr } = useAgentRunPrQuery(item.runId, true);
   const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
@@ -64,6 +67,7 @@ export function PrDetail({
   );
 
   const [acting, setActing] = useState<null | "merge" | "close">(null);
+  const [confirmAction, setConfirmAction] = useState<null | "merge" | "close">(null);
   const [requesting, setRequesting] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const [changeMessage, setChangeMessage] = useState("");
@@ -88,6 +92,7 @@ export function PrDetail({
   const act = async (action: "merge" | "close") => {
     if (acting) return;
     setActing(action);
+    setConfirmAction(null);
     try {
       await actOnAgentPrApi(item.runId, action);
       toast.success(action === "merge" ? t("mergedToast") : t("closedToast"));
@@ -137,6 +142,10 @@ export function PrDetail({
     ? issueIdentifier(item.project.key, item.issue.number)
     : `#${item.pr_number}`;
 
+  // Corps GitHub de la PR, sans le suffixe auto « 🤖 Généré par l'agent numo… »
+  // (redondant avec le badge « Généré par Numo »).
+  const prDescription = (pr?.body ?? "").replace(/\n*🤖[^\n]*$/u, "").trim();
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Header : retour (mobile) · identifiant · actions */}
@@ -183,7 +192,7 @@ export function PrDetail({
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => void act("close")}
+              onClick={() => setConfirmAction("close")}
               disabled={!!acting || isWorking}
             >
               {acting === "close" ? <Spinner /> : <X />}
@@ -191,7 +200,7 @@ export function PrDetail({
             </Button>
             <Button
               size="sm"
-              onClick={() => void act("merge")}
+              onClick={() => setConfirmAction("merge")}
               disabled={!!acting || isWorking}
             >
               {acting === "merge" ? <Spinner /> : <Check />}
@@ -203,13 +212,21 @@ export function PrDetail({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
-          {/* Titre issue + méta PR */}
-          <div className="flex flex-col gap-1.5">
+          {/* Titre issue + méta PR + description */}
+          <div className="flex flex-col gap-2">
             <h1 className="font-display text-2xl leading-tight font-semibold">
               {item.issue?.title ?? pr?.title ?? identifier}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              {item.project ? <span>{item.project.name}</span> : null}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+              <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
+                {t("generatedByNumo")}
+              </Badge>
+              {item.project ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <ProjectOrb seed={item.project.id} className="size-3.5" />
+                  {item.project.name}
+                </span>
+              ) : null}
               {pr ? (
                 <a
                   href={pr.url}
@@ -221,12 +238,12 @@ export function PrDetail({
                   {t("prNumber", { number: pr.number })}
                 </a>
               ) : null}
-              {pr?.head && pr?.base ? (
-                <span className="font-mono">
-                  {pr.head} → {pr.base}
-                </span>
-              ) : null}
             </div>
+            {prDescription ? (
+              <Markdown className="mt-1 text-sm text-muted-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+                {prDescription}
+              </Markdown>
+            ) : null}
           </div>
 
           {/* Diff */}
@@ -266,7 +283,7 @@ export function PrDetail({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">{c.user?.login ?? "—"}</span>
                         <span className="text-xs text-muted-foreground">
-                          {format.relativeTime(new Date(c.created_at))}
+                          {format.relativeTime(new Date(c.created_at), now)}
                         </span>
                       </div>
                       <Markdown className="text-sm text-foreground">{c.body}</Markdown>
@@ -283,7 +300,7 @@ export function PrDetail({
                 onChange={(e) => setCommentBody(e.target.value)}
                 placeholder={t("commentPlaceholder")}
                 rows={3}
-                className="resize-none"
+                className="resize-none bg-card"
               />
               <div className="flex justify-end">
                 <Button
@@ -299,6 +316,40 @@ export function PrDetail({
           </section>
         </div>
       </div>
+
+      {/* Confirmation accepter / refuser */}
+      <Dialog
+        open={!!confirmAction}
+        onOpenChange={(next) => {
+          if (!next && !acting) setConfirmAction(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAction === "merge" ? t("confirmAcceptTitle") : t("confirmRejectTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {confirmAction === "merge"
+              ? t("confirmAcceptDescription")
+              : t("confirmRejectDescription")}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
+              {t("cancel")}
+            </Button>
+            <Button
+              variant={confirmAction === "close" ? "destructive" : "default"}
+              disabled={!!acting}
+              onClick={() => confirmAction && void act(confirmAction)}
+            >
+              {acting ? <Spinner /> : null}
+              {confirmAction === "merge" ? t("accept") : t("reject")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialogue « demander des changements » */}
       <Dialog
@@ -318,7 +369,7 @@ export function PrDetail({
             placeholder={t("requestChangesPlaceholder")}
             rows={4}
             autoFocus
-            className="resize-none"
+            className="resize-none bg-card"
           />
           <DialogFooter>
             <Button variant="outline" disabled={requesting} onClick={() => setChangeOpen(false)}>

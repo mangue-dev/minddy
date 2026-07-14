@@ -533,9 +533,15 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   const lines: string[] = [];
   if (ctx.issueId) {
     lines.push(
-      `- Open issue: ${ctx.issueIdentifier ?? "(unknown identifier)"}${ctx.issueTitle ? ` — "${ctx.issueTitle}"` : ""} (id: ${ctx.issueId}).`,
-      `When the user says "ce ticket", "cette issue", "this issue", or similar, they mean the issue above — use its id directly, do not search for it.`
+      `- Open issue: ${ctx.issueIdentifier ?? "(unknown identifier)"}${ctx.issueTitle ? ` — "${ctx.issueTitle}"` : ""} (id: ${ctx.issueId})${ctx.projectId ? ` in project (id: ${ctx.projectId})` : ""}.`,
+      `When the user says "ce ticket", "cette issue", "this issue", or similar, they mean the issue above — use its id directly, do not search for it.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`
     );
+    if (ctx.prNumber != null) {
+      lines.push(
+        `- Open pull request: #${ctx.prNumber}${ctx.prState ? ` (${ctx.prState})` : ""}, opened by the code agent for that issue.`,
+        `When the user says "cette PR", "this pull request", "la PR", "le diff", they mean this PR. To read or explain what it changes, call read_pull_request with the issue id above. To make changes to it, launch_code_agent on that same issue.`
+      );
+    }
   } else if (ctx.objectiveId) {
     lines.push(
       `- Objective board: "${ctx.objectiveName ?? "(unknown name)"}" (id: ${ctx.objectiveId}).`,

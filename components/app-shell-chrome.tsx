@@ -402,6 +402,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           items: [
             inboxItem,
             {
+              key: "pull-requests",
+              label: t("pullRequests"),
+              icon: GitPullRequest,
+              href: "/pull-requests",
+              active: pathname.startsWith("/pull-requests"),
+              shortcut: "R",
+            },
+            {
               key: "home-back",
               label: t("home"),
               icon: ChevronLeft,

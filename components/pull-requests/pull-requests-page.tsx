@@ -2,17 +2,30 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Badge, SegmentedControl, Skeleton, Spinner, cn } from "mangue-ui";
+import {
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+  Spinner,
+  cn,
+} from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
+import { ProjectOrb } from "@/components/project-orb";
 import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
 /**
  * Page Pull Requests (MIN-66) — vue liste/détail façon triage : à gauche toutes
  * les PR de Numo (tous projets accessibles), à droite le diff + commentaires +
- * actions. Alimentée par /api/pull-requests (dédoublonné par PR).
+ * actions. Alimentée par /api/pull-requests (dédoublonné par PR). La PR
+ * sélectionnée est publiée dans le contexte de Numo (il peut la lire / agir).
  */
 
 type Filter = "open" | "merged" | "closed" | "all";
@@ -49,6 +62,22 @@ export function PullRequestsPage() {
 
   const selected = filtered.find((p) => p.runId === selectedRunId) ?? null;
 
+  // Publie la PR sélectionnée à Numo : il résout « cette PR », la lit
+  // (read_pull_request) et peut lancer des changements sur l'issue liée.
+  useAssistantContext(
+    selected && selected.project && selected.issue
+      ? {
+          projectId: selected.project.id,
+          issueId: selected.issue.id,
+          issueIdentifier: issueIdentifier(selected.project.key, selected.issue.number),
+          issueTitle: selected.issue.title,
+          prNumber: selected.pr_number,
+          prState: selected.pr_state ?? undefined,
+          prRunId: selected.runId,
+        }
+      : null,
+  );
+
   // Garde une sélection valide : défaut = 1re PR, avance quand elle quitte le filtre.
   useEffect(() => {
     if (filtered.length === 0) {
@@ -80,16 +109,17 @@ export function PullRequestsPage() {
           <span className="text-sm tabular-nums text-muted-foreground">{filtered.length}</span>
         </div>
         <div className="px-3 pb-2">
-          <SegmentedControl
-            value={filter}
-            onChange={setFilter}
-            options={[
-              { value: "open", label: t("filterOpen") },
-              { value: "merged", label: t("filterMerged") },
-              { value: "closed", label: t("filterClosed") },
-              { value: "all", label: t("filterAll") },
-            ]}
-          />
+          <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">{t("filterOpen")}</SelectItem>
+              <SelectItem value="merged">{t("filterMerged")}</SelectItem>
+              <SelectItem value="closed">{t("filterClosed")}</SelectItem>
+              <SelectItem value="all">{t("filterAll")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -143,8 +173,9 @@ export function PullRequestsPage() {
                     {pr.issue?.title ?? identifier}
                   </span>
                   {pr.project ? (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {pr.project.name}
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                      <ProjectOrb seed={pr.project.id} className="size-3.5 shrink-0" />
+                      <span className="truncate">{pr.project.name}</span>
                     </span>
                   ) : null}
                 </button>
