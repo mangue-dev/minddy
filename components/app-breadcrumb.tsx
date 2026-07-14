@@ -142,6 +142,7 @@ function MobileBreadcrumb({
   isInbox,
   isAccountSettings,
   isStatistics,
+  isAdmin,
   isAllGlobal,
 }: {
   project: Project | null;
@@ -150,6 +151,7 @@ function MobileBreadcrumb({
   isInbox: boolean;
   isAccountSettings: boolean;
   isStatistics: boolean;
+  isAdmin: boolean;
   isAllGlobal: boolean;
 }) {
   const t = useTranslations("Nav");
@@ -174,6 +176,10 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("statistics")}</CurrentLabel>;
+  } else if (isAdmin) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("adminDashboard")}</CurrentLabel>;
   } else if (isAllGlobal) {
     backHref = "/home";
     backIcon = homeIcon;
@@ -243,6 +249,7 @@ export function AppBreadcrumb() {
   const isInbox = pathname.startsWith("/inbox");
   const isAccountSettings = pathname.startsWith("/settings");
   const isStatistics = pathname.startsWith("/statistics");
+  const isAdmin = pathname.startsWith("/admin");
   const isAllGlobal = pathname === "/all";
 
   return (
@@ -275,6 +282,12 @@ export function AppBreadcrumb() {
           </span>
         </BreadcrumbLevel>
 
+        <BreadcrumbLevel show={isAdmin} levelKey="admin">
+          <span className="text-sm font-medium text-foreground">
+            {t("adminDashboard")}
+          </span>
+        </BreadcrumbLevel>
+
         <BreadcrumbLevel show={isAllGlobal} levelKey="all-global">
           <span className="text-sm font-medium text-foreground">
             {t("allIssues")}
@@ -303,6 +316,7 @@ export function AppBreadcrumb() {
         isInbox={isInbox}
         isAccountSettings={isAccountSettings}
         isStatistics={isStatistics}
+        isAdmin={isAdmin}
         isAllGlobal={isAllGlobal}
       />
     </>
