@@ -179,17 +179,76 @@ export async function commitAndPush(
   return { committed: dirty, headSha: head.stdout.trim() };
 }
 
-// ── Helpers fichiers (utilisés par les tools de l'agent, Phase 2) ────────────
+// ── Helpers fichiers (utilisés par les tools de l'agent) ─────────────────────
+
+/** Nombre max de lignes renvoyées par un `read_file` sans offset/limit. */
+export const READ_MAX_LINES = 2000;
+/** Longueur max d'une ligne renvoyée (au-delà, tronquée). */
+export const READ_MAX_LINE_CHARS = 2000;
+/** Taille max d'un fichier lu (au-delà, on lit quand même mais on borne les lignes). */
+export const READ_MAX_BYTES = 250_000;
+/** Nombre max de fichiers renvoyés par `glob`. */
+export const GLOB_MAX_FILES = 100;
 
 /** Chemin absolu d'un fichier du dépôt à partir d'un chemin relatif. */
 function repoPath(relPath: string): string {
   return `${REPO_DIR}/${relPath.replace(/^\/+/, "")}`;
 }
 
-/** Lit un fichier du dépôt (utf8), ou null s'il n'existe pas. */
+/** Lit le contenu BRUT d'un fichier du dépôt (utf8), ou null s'il n'existe pas.
+    Sert à l'édition (`edit_file`), qui a besoin du contenu exact non annoté. */
 export async function readWorkFile(sandbox: Sandbox, relPath: string): Promise<string | null> {
   const buf = await sandbox.readFileToBuffer({ path: repoPath(relPath) });
   return buf ? buf.toString("utf8") : null;
+}
+
+export interface ReadWindow {
+  /** Contenu annoté : une ligne `<n>\t<contenu>` par ligne source (1-based). */
+  content: string;
+  /** Nombre total de lignes du fichier. */
+  totalLines: number;
+  /** Index (1-based) de la première ligne renvoyée. */
+  startLine: number;
+  /** Nombre de lignes renvoyées. */
+  returnedLines: number;
+  /** true si des lignes ont été omises (fenêtre plus petite que le fichier). */
+  truncated: boolean;
+}
+
+/**
+ * Lit une FENÊTRE d'un fichier avec numéros de ligne (format `cat -n` : `n\t…`),
+ * ce qui rend les éditions ciblables et borne le contexte. `offset` (1-based) et
+ * `limit` fenêtrent ; par défaut les `READ_MAX_LINES` premières lignes. Les
+ * lignes très longues sont tronquées. Renvoie null si le fichier n'existe pas.
+ */
+export async function readWorkFileWindow(
+  sandbox: Sandbox,
+  relPath: string,
+  opts?: { offset?: number; limit?: number },
+): Promise<ReadWindow | null> {
+  const raw = await readWorkFile(sandbox, relPath);
+  if (raw === null) return null;
+
+  const lines = raw.split("\n");
+  const totalLines = lines.length;
+  const startLine = Math.max(1, Math.floor(opts?.offset ?? 1));
+  const limit = Math.max(1, Math.floor(opts?.limit ?? READ_MAX_LINES));
+  const from = startLine - 1;
+  const slice = lines.slice(from, from + limit);
+
+  const numbered = slice.map((line, i) => {
+    const n = startLine + i;
+    const text = line.length > READ_MAX_LINE_CHARS ? `${line.slice(0, READ_MAX_LINE_CHARS)}… [line truncated]` : line;
+    return `${n}\t${text}`;
+  });
+
+  return {
+    content: numbered.join("\n"),
+    totalLines,
+    startLine,
+    returnedLines: slice.length,
+    truncated: from > 0 || from + slice.length < totalLines,
+  };
 }
 
 /** Écrit (crée/écrase) un fichier du dépôt. Crée les dossiers parents si besoin. */
@@ -206,14 +265,69 @@ export async function listDir(sandbox: Sandbox, relPath = "."): Promise<string> 
   return res.stdout;
 }
 
+export type GrepOutputMode = "content" | "files_with_matches" | "count";
+
+export interface GrepOptions {
+  /** Motif (regex étendue POSIX). */
+  pattern: string;
+  /** Sous-arbre à limiter (pathspec). */
+  path?: string;
+  /** Glob de fichiers, ex. `**\/*.ts` (pathspec `:(glob)`). */
+  glob?: string;
+  outputMode?: GrepOutputMode;
+  /** Insensible à la casse. */
+  ignoreCase?: boolean;
+  /** Lignes de contexte autour de chaque match (mode `content`). */
+  context?: number;
+  /** Cap de lignes renvoyées. */
+  headLimit?: number;
+}
+
 /**
- * Recherche `pattern` dans les fichiers du dépôt (hors .git). Renvoie les lignes
- * `fichier:ligne:contenu`. L'appelant tronque si nécessaire.
+ * Recherche via `git grep` : gitignore-aware (fichiers suivis + non suivis, hors
+ * ignorés), rapide, sans dépendance à installer. `content` → `fichier:ligne:…`,
+ * `files_with_matches` → chemins, `count` → `fichier:compte`.
  */
-export async function grepRepo(sandbox: Sandbox, pattern: string): Promise<string> {
-  const res = await runShell(
-    sandbox,
-    `grep -rn --exclude-dir=.git -e ${sq(pattern)} . || true`,
-  );
+export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<string> {
+  const flags: string[] = ["--no-color", "-I", "-E", "--untracked"];
+  if (opts.ignoreCase) flags.push("-i");
+  const mode = opts.outputMode ?? "content";
+  if (mode === "files_with_matches") flags.push("-l");
+  else if (mode === "count") flags.push("-c");
+  else {
+    flags.push("-n");
+    if (opts.context && opts.context > 0) flags.push(`-C ${Math.min(opts.context, 20)}`);
+  }
+
+  const pathspecs: string[] = [];
+  if (opts.path) pathspecs.push(sq(opts.path));
+  if (opts.glob) pathspecs.push(sq(`:(glob)${opts.glob}`));
+  const pathspecPart = pathspecs.length ? ` -- ${pathspecs.join(" ")}` : "";
+
+  const head = opts.headLimit && opts.headLimit > 0 ? ` | head -n ${Math.floor(opts.headLimit)}` : "";
+  const cmd = `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}${head} || true`;
+  const res = await runShell(sandbox, cmd);
   return res.stdout;
+}
+
+export interface GlobResult {
+  files: string[];
+  truncated: boolean;
+}
+
+/**
+ * Liste les fichiers du dépôt correspondant à un glob (pathspec `:(glob)`),
+ * gitignore-aware (suivis + non suivis, hors ignorés). Capé à `GLOB_MAX_FILES`.
+ */
+export async function globRepo(
+  sandbox: Sandbox,
+  pattern: string,
+  path?: string,
+): Promise<GlobResult> {
+  const specs: string[] = [sq(`:(glob)${pattern}`)];
+  if (path) specs.unshift(sq(path));
+  const cmd = `git ls-files --cached --others --exclude-standard -- ${specs.join(" ")} | sort | head -n ${GLOB_MAX_FILES + 1} || true`;
+  const res = await runShell(sandbox, cmd);
+  const all = res.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
+  return { files: all.slice(0, GLOB_MAX_FILES), truncated: all.length > GLOB_MAX_FILES };
 }

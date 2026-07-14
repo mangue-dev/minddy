@@ -14,13 +14,17 @@ import {
   commitAndPush,
   runShell,
   readWorkFile,
+  readWorkFileWindow,
   writeWorkFile,
   listDir,
   grepRepo,
+  globRepo,
   stopSandbox,
   sandboxName,
+  type GrepOutputMode,
   type Sandbox,
 } from "./sandbox";
+import { applyEdit } from "./edit";
 import {
   runAgentLoop,
   type AgentChatMessage,
@@ -68,21 +72,85 @@ function slugForBranch(identifier: string): string {
   return identifier.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+/** Cap du diff renvoyé au modèle après une édition (le diff complet n'est pas utile). */
+const EDIT_DIFF_CAP = 4000;
+
+function toNum(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /** Les tools « métier » de l'agent, exécutés dans le Sandbox du run. */
 function makeExecTool(sandbox: Sandbox): ExecuteAgentTool {
   return async (name, args) => {
     switch (name) {
       case "read_file": {
-        const content = await readWorkFile(sandbox, String(args.path ?? ""));
-        return { result: content ?? "(file not found)", success: content !== null };
+        const win = await readWorkFileWindow(sandbox, String(args.path ?? ""), {
+          offset: toNum(args.offset),
+          limit: toNum(args.limit),
+        });
+        if (!win) return { result: "(file not found)", success: false };
+        const footer = win.truncated
+          ? `\n\n[Showing lines ${win.startLine}-${win.startLine + win.returnedLines - 1} of ${win.totalLines}. Use offset/limit to read more.]`
+          : "";
+        return { result: (win.content || "(empty file)") + footer, success: true };
       }
       case "list_dir": {
         const content = await listDir(sandbox, args.path ? String(args.path) : ".");
         return { result: content || "(empty)", success: true };
       }
+      case "glob": {
+        const { files, truncated } = await globRepo(
+          sandbox,
+          String(args.pattern ?? ""),
+          args.path ? String(args.path) : undefined,
+        );
+        if (files.length === 0) return { result: "(no files matched)", success: true };
+        const note = truncated ? `\n… (capped at ${files.length} files)` : "";
+        return { result: files.join("\n") + note, success: true };
+      }
       case "grep": {
-        const content = await grepRepo(sandbox, String(args.pattern ?? ""));
-        return { result: content || "(no matches)", success: true };
+        const out = await grepRepo(sandbox, {
+          pattern: String(args.pattern ?? ""),
+          path: args.path ? String(args.path) : undefined,
+          glob: args.glob ? String(args.glob) : undefined,
+          outputMode: (args.output_mode as GrepOutputMode) ?? undefined,
+          ignoreCase: args.ignore_case === true,
+          context: toNum(args.context),
+          headLimit: toNum(args.head_limit),
+        });
+        return { result: out || "(no matches)", success: true };
+      }
+      case "edit_file": {
+        const path = String(args.path ?? "");
+        const original = await readWorkFile(sandbox, path);
+        if (original === null) {
+          return {
+            result: { error: `File not found: ${path}. Use write_file to create a new file.` },
+            success: false,
+          };
+        }
+        try {
+          const edit = applyEdit(
+            path,
+            original,
+            String(args.old_string ?? ""),
+            String(args.new_string ?? ""),
+            args.replace_all === true,
+          );
+          await writeWorkFile(sandbox, path, edit.content);
+          return {
+            result: {
+              path,
+              additions: edit.additions,
+              deletions: edit.deletions,
+              diff: cap(edit.diff, EDIT_DIFF_CAP),
+            },
+            success: true,
+          };
+        } catch (err) {
+          return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+        }
       }
       case "write_file": {
         await writeWorkFile(sandbox, String(args.path ?? ""), String(args.content ?? ""));

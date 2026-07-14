@@ -373,13 +373,23 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, _r, _s, _st, t) =>
       t("agentListDir", { path: (args.path as string) || "…" }),
   },
+  glob: {
+    icon: FileSearch,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentGlob", { pattern: (args.pattern as string) || "…" }),
+  },
   grep: {
     icon: Search,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentGrep", { pattern: (args.pattern as string) || "…" }),
   },
-  write_file: {
+  edit_file: {
     icon: FilePen,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentEditFile", { path: (args.path as string) || "…" }),
+  },
+  write_file: {
+    icon: FilePlus2,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentWriteFile", { path: (args.path as string) || "…" }),
   },

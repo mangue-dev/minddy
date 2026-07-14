@@ -126,7 +126,9 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
     case "read_file":
     case "list_dir":
     case "write_file":
+    case "edit_file":
       return { path: String(args.path ?? "") };
+    case "glob":
     case "grep":
       return { pattern: String(args.pattern ?? "") };
     case "run_command":

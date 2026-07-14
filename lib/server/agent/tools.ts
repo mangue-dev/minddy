@@ -3,13 +3,13 @@ import "server-only";
 /**
  * Tools de l'agent de code (MIN-46), format function-calling OpenRouter (même
  * forme que lib/server/assistant/tools.ts). Ils opèrent sur le dépôt cloné dans
- * le Sandbox ; leur exécution est câblée dans execute.ts (Phase 3) via la couche
+ * le Sandbox ; leur exécution est câblée dans execute.ts via la couche
  * lib/server/agent/sandbox.ts.
  *
- * Jeu minimal et robuste :
- *  - exploration : read_file, list_dir, grep
- *  - édition     : write_file (contenu COMPLET — pas de patch flou ; l'agent peut
- *                  aussi appliquer un diff via run_command `git apply`)
+ * Jeu d'un VRAI éditeur de code :
+ *  - exploration : read_file (numéroté, fenêtré), list_dir, glob, grep (git grep)
+ *  - édition     : edit_file (remplacement de chaîne robuste — cascade opencode,
+ *                  cf. edit.ts), write_file (création de fichiers neufs uniquement)
  *  - vérif       : run_command (install/lint/build/tests, git, etc.)
  *  - contrôle    : finish (terminé → ouvre la PR), ask_user (pause)
  * Les commits sont pilotés par le harnais (commit+push au suspend et à la fin) —
@@ -38,13 +38,21 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     function: {
       name: "read_file",
       description:
-        "Read a file from the repository. Returns its full text content (truncated if very large). Use before editing to see the exact current content.",
+        "Read a file from the repository. Returns its content with 1-based line numbers ('lineno\\tcontent'), so you can target edits precisely. By default returns up to 2000 lines from the top; use 'offset' and 'limit' to read a specific window of a large file. Very long lines are truncated. Always read a file before editing it — the edit tool needs the exact current text.",
       parameters: {
         type: "object",
         properties: {
           path: {
             type: "string",
             description: "Repo-relative path, e.g. 'src/app/page.tsx'.",
+          },
+          offset: {
+            type: "number",
+            description: "1-based line number to start reading from. Optional; defaults to 1.",
+          },
+          limit: {
+            type: "number",
+            description: "Max number of lines to return. Optional; defaults to 2000.",
           },
         },
         required: ["path"],
@@ -71,15 +79,19 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
-      name: "grep",
+      name: "glob",
       description:
-        "Search the repository for a text pattern (like grep -rn, .git excluded). Returns matching 'file:line:content' rows. Use to locate symbols, usages, or config.",
+        "Find files by glob pattern (gitignore-aware; tracked and new files, ignored files excluded). Returns up to 100 repo-relative paths. Use '**' to match across directories, e.g. '**/*.tsx' or 'src/**/use-*.ts'. Use this to locate files by name/shape before reading them.",
       parameters: {
         type: "object",
         properties: {
           pattern: {
             type: "string",
-            description: "Text or basic regex to search for.",
+            description: "Glob pattern, e.g. '**/*.ts' or 'app/**/route.ts'.",
+          },
+          path: {
+            type: "string",
+            description: "Optional subtree to search within (repo-relative).",
           },
         },
         required: ["pattern"],
@@ -89,14 +101,82 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "grep",
+      description:
+        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'glob'/'path' and cap noisy searches with 'head_limit'.",
+      parameters: {
+        type: "object",
+        properties: {
+          pattern: {
+            type: "string",
+            description: "POSIX extended regex to search for, e.g. 'function\\s+foo' or 'useState'.",
+          },
+          path: {
+            type: "string",
+            description: "Optional subtree (repo-relative) to limit the search to.",
+          },
+          glob: {
+            type: "string",
+            description: "Optional file glob to limit the search, e.g. '**/*.ts'.",
+          },
+          output_mode: {
+            type: "string",
+            enum: ["content", "files_with_matches", "count"],
+            description:
+              "'content' (default) → file:line:text rows; 'files_with_matches' → just file paths; 'count' → matches per file.",
+          },
+          ignore_case: { type: "boolean", description: "Case-insensitive search." },
+          context: {
+            type: "number",
+            description: "Lines of context around each match (content mode only, max 20).",
+          },
+          head_limit: {
+            type: "number",
+            description: "Cap the number of output lines returned.",
+          },
+        },
+        required: ["pattern"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_file",
+      description:
+        "Edit an existing file by replacing an exact snippet. Provide 'old_string' — the exact text to replace (copy it verbatim from read_file, including indentation) — and 'new_string'. 'old_string' must be UNIQUE in the file; include a few surrounding lines to make it unique, or set replace_all to change every occurrence. This is the primary way to change code: prefer it over rewriting whole files. Read the file first so old_string matches.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Repo-relative file path to edit." },
+          old_string: {
+            type: "string",
+            description: "The exact existing text to replace (must be unique unless replace_all).",
+          },
+          new_string: {
+            type: "string",
+            description: "The replacement text. Must differ from old_string.",
+          },
+          replace_all: {
+            type: "boolean",
+            description: "Replace every occurrence of old_string (default false).",
+          },
+        },
+        required: ["path", "old_string", "new_string"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "write_file",
       description:
-        "Create or overwrite a file with the given FULL content (parent directories are created as needed). Always send the complete file, not a fragment. Keep changes focused and consistent with the existing code style.",
+        "Create a NEW file with the given full content (parent directories are created as needed). Use this only for files that do not exist yet — to change an existing file, use edit_file instead. Match the existing code style.",
       parameters: {
         type: "object",
         properties: {
           path: { type: "string", description: "Repo-relative file path." },
-          content: { type: "string", description: "The complete new file content." },
+          content: { type: "string", description: "The complete file content." },
         },
         required: ["path", "content"],
       },

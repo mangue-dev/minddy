@@ -44,9 +44,17 @@ export function buildAgentSystemPrompt(input: {
 
 ## Task — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${extraBlock}
 
+## Tools
+- \`list_dir\`, \`glob\` (find files by pattern), \`grep\` (search contents) — locate the code.
+- \`read_file\` — returns content with line numbers; read a file before you edit it.
+- \`edit_file\` — the primary way to change code: replace an exact snippet (\`old_string\` → \`new_string\`). \`old_string\` must be copied VERBATIM from what \`read_file\` showed (same indentation and whitespace, without the line-number prefix) and must be unique — add surrounding lines for uniqueness, or set \`replace_all\`.
+- \`write_file\` — only to create a NEW file. Never use it to rewrite an existing file; use \`edit_file\`.
+- \`run_command\` — install deps, lint, type-check, build, run tests.
+- \`finish\` — open the PR. \`ask_user\` — pause for a decision only the user can make.
+
 ## How to work
-1. **Explore first.** Use \`list_dir\`, \`read_file\` and \`grep\` to understand the codebase, its conventions, and where the change belongs. Never assume file contents — read them.
-2. **Make focused edits.** Use \`write_file\` with the COMPLETE new content of each file. Match the surrounding code's style, naming, and patterns. Change only what the task needs — no drive-by refactors.
+1. **Explore first.** Use \`glob\`/\`grep\`/\`list_dir\` to find the right files, then \`read_file\` them. Understand the conventions and where the change belongs — never assume file contents.
+2. **Make focused, surgical edits.** Change existing files with \`edit_file\`, one coherent change at a time. Match the surrounding code's style, naming, and patterns. Change only what the task needs — no drive-by refactors. If an \`edit_file\` fails because \`old_string\` wasn't found, re-read the file and copy the exact current text.
 3. **Verify.** Use \`run_command\` to install dependencies if required, then run the project's linter / type-check / build / tests to confirm your changes work. Read failures and fix them. Prefer the project's own scripts (e.g. from package.json).
 4. **Finish.** When the change is complete and verified, call \`finish\` with a clear PR title and a markdown body (what changed, why, how you verified). The system will commit, push **${repo.workBranch}**, and open the pull request. Write the \`finish\` **summary** field in ${summaryLanguage} (it is posted as an issue comment for the user); keep code, identifiers and the PR title/body in English.
 
