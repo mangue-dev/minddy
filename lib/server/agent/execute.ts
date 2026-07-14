@@ -111,7 +111,7 @@ function makeExecTool(sandbox: Sandbox): ExecuteAgentTool {
         return { result: files.join("\n") + note, success: true };
       }
       case "grep": {
-        const out = await grepRepo(sandbox, {
+        const r = await grepRepo(sandbox, {
           pattern: String(args.pattern ?? ""),
           path: args.path ? String(args.path) : undefined,
           glob: args.glob ? String(args.glob) : undefined,
@@ -120,7 +120,10 @@ function makeExecTool(sandbox: Sandbox): ExecuteAgentTool {
           context: toNum(args.context),
           headLimit: toNum(args.head_limit),
         });
-        return { result: out || "(no matches)", success: true };
+        if (!r.ok) {
+          return { result: { error: `grep failed: ${r.error || "invalid pattern or options"}` }, success: false };
+        }
+        return { result: r.output || "(no matches)", success: true };
       }
       case "edit_file": {
         const path = String(args.path ?? "");

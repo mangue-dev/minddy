@@ -388,7 +388,19 @@ export function replace(
       }
       if (replaceAll) return content.replaceAll(search, newString);
       if (index !== content.lastIndexOf(search)) continue; // ambigu → replacer suivant
-      return content.substring(0, index) + newString + content.substring(index + search.length);
+
+      // Réalignement du saut de ligne de frontière : les replacers tolérants
+      // yield un span SANS le `\n` final de la dernière ligne. Si ce `\n` subsiste
+      // dans le contenu et que `newString` en porte un aussi, on insérerait une
+      // ligne vide parasite. On absorbe ce `\n` des DEUX côtés → exactement un saut
+      // de ligne préservé (jamais de doublon, jamais de fusion de lignes).
+      let span = search;
+      let replacement = newString;
+      if (!span.endsWith("\n") && content[index + span.length] === "\n") {
+        span += "\n";
+        replacement = replacement.endsWith("\n") ? replacement : `${replacement}\n`;
+      }
+      return content.substring(0, index) + replacement + content.substring(index + span.length);
     }
   }
 

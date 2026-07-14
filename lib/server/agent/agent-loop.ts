@@ -347,6 +347,9 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     ) {
       const plan = planCompaction(messages, { keepRecentBytes: AGENT_COMPACT_KEEP_RECENT_BYTES });
       if (plan) {
+        // Compte la TENTATIVE (pas seulement le succès) : un résumé vide ne doit pas
+        // relancer un sous-appel LLM payant à chaque round sans plafond.
+        compactions++;
         const tokensBefore = estimateTokens(messages);
         const summaryStream = await streamCompletion({
           apiKey,
@@ -387,7 +390,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             ...plan.tail,
           ];
           messages.splice(0, messages.length, ...rebuilt);
-          compactions++;
           await emit("status", {
             phase: "compacted",
             tokensBefore,

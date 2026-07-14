@@ -44,6 +44,36 @@ describe("replace — tolérance", () => {
   });
 });
 
+describe("replace — pas de ligne vide parasite (frontière \\n)", () => {
+  it("n'insère pas de ligne vide quand un replacer tolérant matche et que old/new finissent par \\n", () => {
+    // Ligne 1 avec espaces de fin (dérive whitespace) → SimpleReplacer échoue,
+    // LineTrimmedReplacer matche (span sans le \n final).
+    const original = "  const a = 1;  \n  const b = 2;\n  return a + b;\n";
+    const oldStr = "  const a = 1;\n  const b = 2;\n"; // finit par \n
+    const newStr = "  const a = 1;\n  const b = 3;\n"; // finit par \n
+    const out = replace(original, oldStr, newStr);
+    expect(out).toBe("  const a = 1;\n  const b = 3;\n  return a + b;\n");
+    expect(out).not.toContain("\n\n"); // aucune ligne vide insérée
+  });
+
+  it("ne fusionne pas les lignes quand new_string ne finit pas par \\n", () => {
+    const original = "  const a = 1;  \n  const b = 2;\n  return a + b;\n";
+    // new_string sans \n final → l'ancien comportement (correct) doit être préservé.
+    const out = replace(original, "  const a = 1;\n  const b = 2;", "  const a = 1;\n  const b = 3;");
+    expect(out).toBe("  const a = 1;\n  const b = 3;\n  return a + b;\n");
+  });
+
+  it("applyEdit ne gonfle pas le diff (pas de ligne vide) sur ce cas", () => {
+    const original = "  const a = 1;  \n  const b = 2;\n  return a + b;\n";
+    const res = applyEdit("f.ts", original, "  const a = 1;\n  const b = 2;\n", "  const a = 1;\n  const b = 3;\n");
+    expect(res.content).toBe("  const a = 1;\n  const b = 3;\n  return a + b;\n");
+    // La dérive whitespace normalise aussi la ligne 1 (2 lignes changées), mais
+    // AUCUNE ligne vide ne s'ajoute → le bug gonflait à additions=3.
+    expect(res.additions).toBe(2);
+    expect(res.deletions).toBe(2);
+  });
+});
+
 describe("replace — replaceAll", () => {
   it("remplace toutes les occurrences", () => {
     expect(replace("a a a", "a", "b", true)).toBe("b b b");

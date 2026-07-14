@@ -2,6 +2,8 @@ import "server-only";
 
 import { Sandbox } from "@vercel/sandbox";
 
+import { grepPathspecs, globPathspec } from "./git-pathspec";
+
 /**
  * Couche Vercel Sandbox de l'agent de code (MIN-46) — les « mains » de l'agent.
  * Une microVM isolée (node24) où l'on clone le dépôt lié, édite, lance
@@ -283,12 +285,24 @@ export interface GrepOptions {
   headLimit?: number;
 }
 
+export interface GrepResult {
+  /** Lignes de sortie (peut être vide = aucun match). */
+  output: string;
+  /** false → git grep a ÉCHOUÉ (regex/option invalide) — pas « aucun match ». */
+  ok: boolean;
+  /** Message d'erreur si ok=false. */
+  error?: string;
+}
+
 /**
  * Recherche via `git grep` : gitignore-aware (fichiers suivis + non suivis, hors
  * ignorés), rapide, sans dépendance à installer. `content` → `fichier:ligne:…`,
- * `files_with_matches` → chemins, `count` → `fichier:compte`.
+ * `files_with_matches` → chemins, `count` → `fichier:compte`. `path` et `glob`
+ * s'INTERSECTENT (glob dans path). Les erreurs git (regex invalide, option
+ * invalide) NE sont PAS masquées : on lit l'exit code (≥2 = erreur) au lieu de
+ * `|| true`/`| head` qui les avaleraient — le cap de lignes se fait en JS.
  */
-export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<string> {
+export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<GrepResult> {
   const flags: string[] = ["--no-color", "-I", "-E", "--untracked"];
   if (opts.ignoreCase) flags.push("-i");
   const mode = opts.outputMode ?? "content";
@@ -296,18 +310,24 @@ export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<str
   else if (mode === "count") flags.push("-c");
   else {
     flags.push("-n");
-    if (opts.context && opts.context > 0) flags.push(`-C ${Math.min(opts.context, 20)}`);
+    const ctx = opts.context != null ? Math.floor(opts.context) : 0;
+    if (ctx > 0) flags.push(`-C ${Math.min(ctx, 20)}`);
   }
 
-  const pathspecs: string[] = [];
-  if (opts.path) pathspecs.push(sq(opts.path));
-  if (opts.glob) pathspecs.push(sq(`:(glob)${opts.glob}`));
-  const pathspecPart = pathspecs.length ? ` -- ${pathspecs.join(" ")}` : "";
-
-  const head = opts.headLimit && opts.headLimit > 0 ? ` | head -n ${Math.floor(opts.headLimit)}` : "";
-  const cmd = `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}${head} || true`;
+  const specs = grepPathspecs(opts.path, opts.glob).map(sq);
+  const pathspecPart = specs.length ? ` -- ${specs.join(" ")}` : "";
+  const cmd = `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}`;
   const res = await runShell(sandbox, cmd);
-  return res.stdout;
+
+  // git grep : 0 = matchs, 1 = aucun match, ≥2 = ERREUR (regex/option invalide…).
+  if (res.exitCode >= 2) {
+    return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
+  }
+  let output = res.stdout;
+  if (opts.headLimit != null && opts.headLimit > 0) {
+    output = output.split("\n").slice(0, Math.floor(opts.headLimit)).join("\n");
+  }
+  return { output, ok: true };
 }
 
 export interface GlobResult {
@@ -317,17 +337,24 @@ export interface GlobResult {
 
 /**
  * Liste les fichiers du dépôt correspondant à un glob (pathspec `:(glob)`),
- * gitignore-aware (suivis + non suivis, hors ignorés). Capé à `GLOB_MAX_FILES`.
+ * gitignore-aware (suivis + non suivis, hors ignorés). `path` et `pattern`
+ * s'INTERSECTENT (glob dans path). Tri + cap (`GLOB_MAX_FILES`) faits en JS pour
+ * ne pas masquer l'exit code de git derrière un pipe.
  */
 export async function globRepo(
   sandbox: Sandbox,
   pattern: string,
   path?: string,
 ): Promise<GlobResult> {
-  const specs: string[] = [sq(`:(glob)${pattern}`)];
-  if (path) specs.unshift(sq(path));
-  const cmd = `git ls-files --cached --others --exclude-standard -- ${specs.join(" ")} | sort | head -n ${GLOB_MAX_FILES + 1} || true`;
+  const spec = sq(globPathspec(pattern, path));
+  const cmd = `git ls-files --cached --others --exclude-standard -- ${spec}`;
   const res = await runShell(sandbox, cmd);
-  const all = res.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (res.exitCode !== 0) return { files: [], truncated: false }; // pathspec invalide, etc.
+
+  const all = res.stdout
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .sort();
   return { files: all.slice(0, GLOB_MAX_FILES), truncated: all.length > GLOB_MAX_FILES };
 }
