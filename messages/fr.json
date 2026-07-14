@@ -912,7 +912,21 @@
     "mcpTab": "MCP",
     "mcpSectionTitle": "Connecter un agent",
     "mcpSectionDesc": "Connecte un agent IA au serveur MCP de minddy. Aucune clé à coller — le navigateur s'ouvre pour autoriser l'agent à la première utilisation.",
-    "cyclesTab": "Cycles"
+    "cyclesTab": "Cycles",
+    "agentTab": "Agent de code",
+    "agentModelTitle": "Modèle par défaut de l'agent",
+    "agentModelDesc": "Le modèle utilisé par défaut quand vous lancez l'agent de code. Vous pouvez aussi choisir un modèle précis à chaque lancement.",
+    "agentModelRoot": "Défaut du service",
+    "agentModelSavedToast": "Préférence enregistrée.",
+    "aiKeysTitle": "Clé OpenRouter (BYOK)",
+    "aiKeysDesc": "Fournissez votre propre clé OpenRouter pour un usage illimité de l'agent de code, à vos frais. Sans clé, l'agent utilise celle de minddy dans la limite d'un plafond mensuel.",
+    "aiKeyPlaceholder": "sk-or-v1-…",
+    "aiKeySave": "Enregistrer la clé",
+    "aiKeyAddedToast": "Clé enregistrée.",
+    "aiKeyRemovedToast": "Clé supprimée.",
+    "aiKeyRemove": "Supprimer",
+    "aiKeyPresent": "Clé active : {prefix}",
+    "aiKeyEmpty": "Aucune clé — l'agent utilise celle de minddy (plafond mensuel)."
   },
   "Projects": {
     "newProject": "Nouveau Projet",

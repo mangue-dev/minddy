@@ -912,7 +912,21 @@
     "mcpTab": "MCP",
     "mcpSectionTitle": "Connect an agent",
     "mcpSectionDesc": "Connect an AI agent to minddy's MCP server. No key to paste — your browser opens to authorize the agent on first use.",
-    "cyclesTab": "Cycles"
+    "cyclesTab": "Cycles",
+    "agentTab": "Code agent",
+    "agentModelTitle": "Default agent model",
+    "agentModelDesc": "The model used by default when you launch the code agent. You can also pick a specific model at each launch.",
+    "agentModelRoot": "Service default",
+    "agentModelSavedToast": "Preference saved.",
+    "aiKeysTitle": "OpenRouter key (BYOK)",
+    "aiKeysDesc": "Provide your own OpenRouter key for unlimited code-agent usage, billed to you. Without a key, the agent uses minddy's key within a monthly cap.",
+    "aiKeyPlaceholder": "sk-or-v1-…",
+    "aiKeySave": "Save key",
+    "aiKeyAddedToast": "Key saved.",
+    "aiKeyRemovedToast": "Key removed.",
+    "aiKeyRemove": "Remove",
+    "aiKeyPresent": "Active key: {prefix}",
+    "aiKeyEmpty": "No key — the agent uses minddy's key (monthly cap)."
   },
   "Projects": {
     "newProject": "New Project",
