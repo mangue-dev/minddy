@@ -21,6 +21,7 @@ import {
   buildSystemPrompt,
 } from "@/lib/server/assistant/prompt";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
+import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import {
   getModelInputModalities,
   modelSupportsCaching,
@@ -386,6 +387,28 @@ export async function POST(request: NextRequest) {
         });
 
         clearTimeout(timeout);
+
+        // Suivi des coûts : chaque round du loop est un appel LLM ; ils partagent
+        // le même runId (cette réponse Numo = un run). Best-effort, ne bloque rien.
+        if (result.generations.length > 0) {
+          const runId = newRunId();
+          await recordAiUsage(
+            result.generations.map((g, i) => ({
+              runId,
+              seq: i,
+              feature: "numo_chat" as const,
+              model: g.model,
+              generationId: g.generationId,
+              promptTokens: g.promptTokens,
+              completionTokens: g.completionTokens,
+              totalTokens: g.totalTokens,
+              cost: g.cost,
+              userId: user.id,
+              projectId: projectId ?? null,
+              conversationId: finalConvId,
+            }))
+          );
+        }
 
         // Save final assistant message (text-only response after tools)
         if (result.fullContent) {

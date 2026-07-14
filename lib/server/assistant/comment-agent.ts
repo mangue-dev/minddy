@@ -26,6 +26,7 @@ import {
 } from "./prompt";
 import { gatherProjectPromptContext } from "./prompt-context";
 import { buildAttachmentParts, type PromptAttachment } from "./attachment-parts";
+import { recordAiUsage, newRunId, type AiUsageInput } from "@/lib/server/ai-usage";
 import {
   getModelInputModalities,
   serializeToolResult,
@@ -871,6 +872,9 @@ async function runLoop(
   let finalContent = "";
   let continueLoop = true;
   let roundCount = 0;
+  // Suivi des coûts : un run = ce @numo ; chaque round est un appel.
+  const runId = newRunId();
+  const usageRows: AiUsageInput[] = [];
 
   while (continueLoop) {
     continueLoop = false;
@@ -890,6 +894,8 @@ async function runLoop(
         model: ctx.model,
         messages,
         stream: true,
+        stream_options: { include_usage: true },
+        usage: { include: true },
         max_tokens: 4096,
         ...(lastRound ? {} : { tools: COMMENT_TOOLS }),
       }),
@@ -905,6 +911,11 @@ async function runLoop(
     let buffer = "";
     let fullContent = "";
     let lastTextUpdate = 0;
+    let generationId: string | null = null;
+    let modelUsed: string | null = null;
+    let usageInfo:
+      | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number }
+      | null = null;
     const toolCallAccumulators: Map<
       number,
       { id: string; name: string; arguments: string }
@@ -927,6 +938,10 @@ async function runLoop(
         } catch {
           continue;
         }
+        if (parsed.id && !generationId) generationId = parsed.id;
+        if (parsed.model) modelUsed = parsed.model;
+        if (parsed.usage) usageInfo = parsed.usage;
+
         const delta = parsed.choices?.[0]?.delta;
         if (!delta) continue;
 
@@ -958,6 +973,20 @@ async function runLoop(
         }
       }
     }
+
+    usageRows.push({
+      runId,
+      seq: roundCount - 1,
+      feature: "numo_comment",
+      model: modelUsed,
+      generationId,
+      promptTokens: usageInfo?.prompt_tokens ?? null,
+      completionTokens: usageInfo?.completion_tokens ?? null,
+      totalTokens: usageInfo?.total_tokens ?? null,
+      cost: usageInfo?.cost ?? null,
+      userId: ctx.userId,
+      projectId: ctx.projectId,
+    });
 
     if (toolCallAccumulators.size > 0) {
       const assistantToolCalls: AssistantToolCall[] = [...toolCallAccumulators.values()].map(
@@ -1001,6 +1030,8 @@ async function runLoop(
       finalContent = fullContent;
     }
   }
+
+  await recordAiUsage(usageRows);
 
   return finalContent;
 }

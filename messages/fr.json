@@ -1266,6 +1266,10 @@
     "refillEmpty": "Aucun ticket éligible à ajouter — ta réserve assignée est vide."
   },
   "Admin": {
+    "tabs": {
+      "models": "Modèles",
+      "costs": "Coûts IA"
+    },
     "title": "Modèles IA",
     "subtitle": "Configurez les modèles d’IA utilisés par minddy. Le format est provider/model (ex. deepseek/deepseek-v4-flash) ; laissez vide pour revenir à la valeur par défaut.",
     "loadError": "Impossible de charger la configuration.",
@@ -1320,6 +1324,42 @@
       "feedback_embedding_model": {
         "label": "Embeddings des retours",
         "desc": "Vectorise les retours pour mesurer leur similarité."
+      }
+    },
+    "costs": {
+      "title": "Coûts IA",
+      "subtitle": "Coût de chaque appel LLM, regroupé par run agentique et par type d’IA. Source : coût rapporté par OpenRouter.",
+      "window": "{days} j",
+      "loadError": "Impossible de charger les coûts.",
+      "empty": "Aucun appel sur cette période.",
+      "byType": "Par type d’IA",
+      "recentRuns": "Runs récents",
+      "recentRunsHint": "Un run regroupe les appels d’une même action. Dépliez pour voir chaque appel.",
+      "totalCost": "Coût total",
+      "totalRuns": "Runs",
+      "totalCalls": "Appels",
+      "totalTokens": "Tokens",
+      "colType": "Type",
+      "colCost": "Coût",
+      "colRuns": "Runs",
+      "colCalls": "Appels",
+      "colAvgRun": "Moy./run",
+      "colAvgCall": "Moy./appel",
+      "colTokens": "Tokens",
+      "colModel": "Modèle",
+      "colPrompt": "Prompt",
+      "colCompletion": "Complétion",
+      "callCount": "{count} appels",
+      "loadingCalls": "Chargement des appels…",
+      "features": {
+        "numo_chat": "Numo — chat",
+        "numo_comment": "Numo — commentaires",
+        "dictation": "Dictée → ticket",
+        "transcription": "Transcription vocale",
+        "smart_assign": "Assignation intelligente",
+        "feedback_classify": "Classification feedback",
+        "feedback_analyze": "Analyse feedback",
+        "embedding": "Embeddings"
       }
     }
   }

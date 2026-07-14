@@ -212,7 +212,10 @@ export async function findSimilarPostsAction(
 
   // 5 s : le premier appel à froid (config + OpenRouter) peut dépasser 3 s,
   // et un échec ici est silencieux pour le visiteur.
-  const embedding = await embedText(trimmed, { timeoutMs: 5000 });
+  const embedding = await embedText(trimmed, {
+    timeoutMs: 5000,
+    record: { projectId: ctx.project.id },
+  });
   if (!embedding) return [];
   const matches = await matchFeedbackPosts({
     projectId: ctx.project.id,

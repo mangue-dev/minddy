@@ -1266,6 +1266,10 @@
     "refillEmpty": "Nothing eligible to add — your assigned pool is empty."
   },
   "Admin": {
+    "tabs": {
+      "models": "Models",
+      "costs": "AI costs"
+    },
     "title": "AI models",
     "subtitle": "Configure the AI models minddy uses. Format is provider/model (e.g. deepseek/deepseek-v4-flash); leave empty to fall back to the default.",
     "loadError": "Couldn’t load the configuration.",
@@ -1320,6 +1324,42 @@
       "feedback_embedding_model": {
         "label": "Feedback embeddings",
         "desc": "Vectorizes feedback to measure similarity."
+      }
+    },
+    "costs": {
+      "title": "AI costs",
+      "subtitle": "Cost of every LLM call, grouped by agentic run and by AI type. Source: cost reported by OpenRouter.",
+      "window": "{days}d",
+      "loadError": "Couldn’t load the costs.",
+      "empty": "No calls in this window.",
+      "byType": "By AI type",
+      "recentRuns": "Recent runs",
+      "recentRunsHint": "A run groups the calls of one action. Expand to see each call.",
+      "totalCost": "Total cost",
+      "totalRuns": "Runs",
+      "totalCalls": "Calls",
+      "totalTokens": "Tokens",
+      "colType": "Type",
+      "colCost": "Cost",
+      "colRuns": "Runs",
+      "colCalls": "Calls",
+      "colAvgRun": "Avg/run",
+      "colAvgCall": "Avg/call",
+      "colTokens": "Tokens",
+      "colModel": "Model",
+      "colPrompt": "Prompt",
+      "colCompletion": "Completion",
+      "callCount": "{count} calls",
+      "loadingCalls": "Loading calls…",
+      "features": {
+        "numo_chat": "Numo — chat",
+        "numo_comment": "Numo — comments",
+        "dictation": "Dictation → issue",
+        "transcription": "Speech-to-text",
+        "smart_assign": "Smart assignment",
+        "feedback_classify": "Feedback classification",
+        "feedback_analyze": "Feedback analysis",
+        "embedding": "Embeddings"
       }
     }
   }

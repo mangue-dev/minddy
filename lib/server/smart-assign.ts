@@ -9,6 +9,12 @@ import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
+import {
+  recordAiUsage,
+  newRunId,
+  parseOpenRouterUsage,
+  type OpenRouterUsage,
+} from "@/lib/server/ai-usage";
 import { isStatus } from "@/lib/issue-validation";
 
 /**
@@ -104,6 +110,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
     chosen =
       (await chooseAssigneeViaAI({
         service,
+        projectId: params.projectId,
         projectName: (project.name as string) ?? "",
         issue,
         memberIds,
@@ -152,6 +159,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
     the validated id, or null on any failure (no key, HTTP error, bad output). */
 async function chooseAssigneeViaAI({
   service,
+  projectId,
   projectName,
   issue,
   memberIds,
@@ -159,6 +167,7 @@ async function chooseAssigneeViaAI({
   rules,
 }: {
   service: SupabaseClient;
+  projectId: string;
   projectName: string;
   issue: Record<string, unknown>;
   memberIds: string[];
@@ -247,6 +256,7 @@ ${memberLines}`;
           },
         ],
         tool_choice: { type: "function", function: { name: "choose_assignee" } },
+        usage: { include: true },
         max_tokens: 256,
       }),
     });
@@ -260,7 +270,25 @@ ${memberLines}`;
           tool_calls?: { function?: { name?: string; arguments?: string } }[];
         };
       }[];
+      id?: string;
+      model?: string;
+      usage?: OpenRouterUsage;
     };
+    // Suivi des coûts : appel unique (un run d'un seul appel), job de fond → userId null.
+    const u = parseOpenRouterUsage(data.usage);
+    after(() =>
+      recordAiUsage({
+        runId: newRunId(),
+        feature: "smart_assign",
+        model: data.model ?? model,
+        generationId: data.id ?? null,
+        promptTokens: u.promptTokens,
+        completionTokens: u.completionTokens,
+        totalTokens: u.totalTokens,
+        cost: u.cost,
+        projectId,
+      }),
+    );
     const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
     if (call?.name !== "choose_assignee") return null;
     const args = JSON.parse(call.arguments || "{}") as { user_id?: unknown };

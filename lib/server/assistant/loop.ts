@@ -33,6 +33,8 @@ export interface GenerationInfo {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
+  /** Coût USD rapporté par OpenRouter (null si non fourni). */
+  cost: number | null;
 }
 
 export interface ProcessChatResult {
@@ -159,6 +161,8 @@ export async function processChat(
       messages,
       stream: true,
       stream_options: { include_usage: true },
+      // Fait renvoyer `usage.cost` (USD) par OpenRouter → suivi des coûts.
+      usage: { include: true },
       max_tokens: 4096,
     };
     if (tools.length > 0) {
@@ -196,6 +200,7 @@ export async function processChat(
       prompt_tokens?: number;
       completion_tokens?: number;
       total_tokens?: number;
+      cost?: number;
     } | null = null;
     let modelUsed: string | null = null;
     const toolCallAccumulators: Map<
@@ -279,6 +284,7 @@ export async function processChat(
       promptTokens: usageInfo?.prompt_tokens ?? null,
       completionTokens: usageInfo?.completion_tokens ?? null,
       totalTokens: usageInfo?.total_tokens ?? null,
+      cost: usageInfo?.cost ?? null,
     });
 
     // Process completed tool calls

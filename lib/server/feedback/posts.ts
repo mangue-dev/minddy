@@ -87,6 +87,7 @@ export async function createFeedbackPost(input: {
 
   const embedding = await embedText(body ? `${title}\n\n${body}` : title, {
     timeoutMs: EMBED_TIMEOUT_MS,
+    record: { projectId: input.projectId, userId: input.authorId },
   });
 
   const { data, error } = await service

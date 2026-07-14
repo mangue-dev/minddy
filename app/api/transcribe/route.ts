@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, after } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -6,6 +6,7 @@ import {
   transcribeAudio,
   type TranscribeAudioFormat,
 } from "@/lib/server/openrouter-transcribe";
+import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_AUDIO_SECONDS = 90;
@@ -111,6 +112,21 @@ export async function POST(request: NextRequest) {
         `[/api/transcribe] audio length ${result.seconds}s exceeds ${MAX_AUDIO_SECONDS}s limit (user ${user.id})`,
       );
     }
+
+    // Suivi des coûts : appel unique (un run d'un seul appel). Best-effort.
+    after(() =>
+      recordAiUsage({
+        runId: newRunId(),
+        feature: "transcription",
+        model,
+        promptTokens: result.inputTokens || null,
+        completionTokens: result.outputTokens || null,
+        totalTokens:
+          (result.inputTokens || 0) + (result.outputTokens || 0) || null,
+        cost: result.cost || null,
+        userId: user.id,
+      }),
+    );
 
     return Response.json({
       text: result.text,

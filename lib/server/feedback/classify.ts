@@ -285,7 +285,11 @@ ${categoryBlock}`;
     userMessage,
     "review_feedback",
     { type: "object", properties, required: ["is_junk", "is_sensitive"] },
-    { xTitle: "Feedback Classification (minddy)", logPrefix: "[feedback-classify]" }
+    {
+      xTitle: "Feedback Classification (minddy)",
+      logPrefix: "[feedback-classify]",
+      record: { feature: "feedback_classify", projectId: post.project_id },
+    }
   );
   if (!args) return null;
 

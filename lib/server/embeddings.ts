@@ -3,6 +3,18 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
+import {
+  recordAiUsage,
+  newRunId,
+  parseOpenRouterUsage,
+  type OpenRouterUsage,
+} from "@/lib/server/ai-usage";
+
+/** Contexte de suivi de coût pour un appel d'embeddings (un appel = un run). */
+export interface EmbeddingUsageRecord {
+  projectId?: string | null;
+  userId?: string | null;
+}
 
 /**
  * Client d'embeddings via OpenRouter (même gateway et même clé que les appels
@@ -23,7 +35,7 @@ const DEFAULT_TIMEOUT_MS = 8000;
 
 export async function embedTexts(
   texts: string[],
-  opts?: { timeoutMs?: number }
+  opts?: { timeoutMs?: number; record?: EmbeddingUsageRecord }
 ): Promise<(number[] | null)[]> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey || texts.length === 0) return texts.map(() => null);
@@ -39,7 +51,7 @@ export async function embedTexts(
         "HTTP-Referer": "https://minddy.app",
         "X-Title": "Feedback (minddy)",
       },
-      body: JSON.stringify({ model, input }),
+      body: JSON.stringify({ model, input, usage: { include: true } }),
       signal: AbortSignal.timeout(opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
     if (!response.ok) {
@@ -48,7 +60,26 @@ export async function embedTexts(
     }
     const data = (await response.json()) as {
       data?: { index?: number; embedding?: number[] }[];
+      id?: string;
+      model?: string;
+      usage?: OpenRouterUsage;
     };
+    // Suivi des coûts : un appel d'embeddings = un run d'un seul appel. Best-effort.
+    if (opts?.record) {
+      const u = parseOpenRouterUsage(data.usage);
+      await recordAiUsage({
+        runId: newRunId(),
+        feature: "embedding",
+        model: data.model ?? model,
+        generationId: data.id ?? null,
+        promptTokens: u.promptTokens,
+        completionTokens: u.completionTokens,
+        totalTokens: u.totalTokens,
+        cost: u.cost,
+        projectId: opts.record.projectId ?? null,
+        userId: opts.record.userId ?? null,
+      });
+    }
     const byIndex = new Map<number, number[]>();
     for (const [i, item] of (data.data ?? []).entries()) {
       const embedding = item.embedding;
@@ -69,7 +100,7 @@ export async function embedTexts(
 
 export async function embedText(
   text: string,
-  opts?: { timeoutMs?: number }
+  opts?: { timeoutMs?: number; record?: EmbeddingUsageRecord }
 ): Promise<number[] | null> {
   const [embedding] = await embedTexts([text], opts);
   return embedding ?? null;

@@ -1,7 +1,14 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import {
+  recordAiUsage,
+  newRunId,
+  parseOpenRouterUsage,
+  type AiUsageInput,
+  type OpenRouterUsage,
+} from "@/lib/server/ai-usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
@@ -397,6 +404,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // until the model answers with plain text (or the round cap hits).
   const merged: IssueDraftPatch = {};
   let reply = "";
+  // Suivi des coûts : un run = cette dictée ; chaque round est un appel.
+  const runId = newRunId();
+  const usageRows: AiUsageInput[] = [];
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const response = await fetch(OPENROUTER_URL, {
@@ -411,6 +421,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           model,
           messages,
           tools: [UPDATE_DRAFT_TOOL],
+          usage: { include: true },
           max_tokens: 4096,
         }),
       });
@@ -420,7 +431,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
       const data = (await response.json()) as {
         choices?: { message?: OpenRouterMessage }[];
+        id?: string;
+        model?: string;
+        usage?: OpenRouterUsage;
       };
+      const u = parseOpenRouterUsage(data.usage);
+      usageRows.push({
+        runId,
+        seq: round,
+        feature: "dictation",
+        model: data.model ?? model,
+        generationId: data.id ?? null,
+        promptTokens: u.promptTokens,
+        completionTokens: u.completionTokens,
+        totalTokens: u.totalTokens,
+        cost: u.cost,
+        userId: auth.user.id,
+        projectId,
+      });
       const message = data.choices?.[0]?.message;
       if (!message) throw new Error("Empty LLM response");
       messages.push(message);
@@ -455,8 +483,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   } catch (err) {
     console.error("[api/dictate-issue] loop failed:", err);
+    if (usageRows.length > 0) after(() => recordAiUsage(usageRows));
     return NextResponse.json({ error: "Dictation processing failed" }, { status: 502 });
   }
 
+  if (usageRows.length > 0) after(() => recordAiUsage(usageRows));
   return NextResponse.json({ patch: merged, reply });
 }

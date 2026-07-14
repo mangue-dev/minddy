@@ -143,7 +143,8 @@ async function analyzePost(
     embedding = await embedText(
       post.submitted_body
         ? `${post.submitted_title}\n\n${post.submitted_body}`
-        : post.submitted_title
+        : post.submitted_title,
+      { record: { projectId: post.project_id } }
     );
     if (!embedding) return false;
     await service
@@ -281,6 +282,7 @@ ${candidateBlocks || "(none)"}`;
   const args = await forcedToolCall(model, systemPrompt, userMessage, "analyze_feedback", parameters, {
     xTitle: "Feedback Analysis (minddy)",
     logPrefix: "[feedback-analyze]",
+    record: { feature: "feedback_analyze", projectId: post.project_id },
   });
   if (!args) return null;
 
