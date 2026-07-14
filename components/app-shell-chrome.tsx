@@ -14,7 +14,7 @@ import {
   Inbox,
   LayoutGrid,
   Target,
-  Filter,
+  CircleDotDashed,
   MessagesSquare,
   Settings,
   ListTodo,
@@ -300,7 +300,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-triage-${p.id}`,
             label: t("triage"),
-            icon: Filter,
+            icon: CircleDotDashed,
             keywords: kw,
             meta: chip,
             metaText,
@@ -424,7 +424,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "triage",
               label: t("triage"),
-              icon: Filter,
+              icon: CircleDotDashed,
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
               shortcut: "T",
