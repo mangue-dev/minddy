@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchAgentRunEventsApi,
   fetchAgentRunPrApi,
+  fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
+  fetchPrCommentsApi,
   isAgentRunActive,
 } from "./agent-api";
 
@@ -48,4 +50,33 @@ export function useAgentRunPrQuery(runId: string, enabled: boolean) {
     enabled,
   });
   return { pr: data?.pr ?? null, files: data?.files ?? [], loading: isLoading, refetch };
+}
+
+/** Clé de cache de la liste globale des PR (MIN-66). */
+export const allPullRequestsQueryKey = ["pull-requests", "all"] as const;
+
+/**
+ * Liste globale des PR de Numo (page Pull Requests). Polling ~5 s tant qu'une PR
+ * a un run actif (Numo retravaille dessus), sinon pas de polling.
+ */
+export function useAllPullRequestsQuery() {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: allPullRequestsQueryKey,
+    queryFn: fetchAllPullRequestsApi,
+    refetchInterval: (query) => {
+      const prs = query.state.data?.pullRequests ?? [];
+      return prs.some((p) => p.activeRunId) ? 5000 : false;
+    },
+  });
+  return { pullRequests: data?.pullRequests ?? [], loading: isLoading, refetch };
+}
+
+/** Fil de conversation d'une PR (commentaires GitHub). */
+export function usePrCommentsQuery(runId: string | null) {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["pr-comments", runId],
+    queryFn: () => fetchPrCommentsApi(runId as string),
+    enabled: !!runId,
+  });
+  return { comments: data?.comments ?? [], loading: isLoading, refetch };
 }

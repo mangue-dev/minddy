@@ -78,6 +78,12 @@ export interface CreateRunInput {
   modelForced: boolean;
   keyMode: "platform" | "byok";
   triggeredBy: "button" | "chat" | "mention";
+  /**
+   * Branche à reprendre (au lieu d'en générer une neuve) : la « demande de
+   * changements » sur une PR relance Numo sur SA branche → même PR mise à jour.
+   */
+  baseBranch?: string | null;
+  branchName?: string | null;
 }
 
 /** Crée un run en `queued`, prêt à être drainé. */
@@ -97,6 +103,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       model: input.model,
       model_forced: input.modelForced,
       key_mode: input.keyMode,
+      base_branch: input.baseBranch ?? null,
+      branch_name: input.branchName ?? null,
       run_id: randomUUID(),
     })
     .select("*")

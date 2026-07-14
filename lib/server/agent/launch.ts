@@ -41,6 +41,12 @@ export interface LaunchAgentInput {
   model?: string | null;
   /** true si le modèle est imposé (numo « utilise tel modèle »). */
   forced?: boolean;
+  /**
+   * Reprise d'une branche existante (demande de changements sur une PR) : le run
+   * repart de cette branche au lieu d'en créer une neuve → met à jour la MÊME PR.
+   */
+  branchName?: string | null;
+  baseBranch?: string | null;
 }
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
@@ -77,6 +83,8 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     modelForced: !!input.forced,
     keyMode: quota.mode,
     triggeredBy: input.triggeredBy,
+    branchName: input.branchName ?? null,
+    baseBranch: input.baseBranch ?? null,
   });
 
   // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.

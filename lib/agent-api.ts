@@ -142,3 +142,66 @@ export async function actOnAgentPrApi(
     }),
   );
 }
+
+/** Demande des changements à Numo : relance l'agent sur la même PR (MIN-66). */
+export async function requestAgentPrChangesApi(
+  runId: string,
+  message: string,
+): Promise<{ ok: true; run: { id: string } }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/pr`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request_changes", message }),
+    }),
+  );
+}
+
+// ── Page Pull Requests globale (MIN-66) ──────────────────────────────────────
+
+export interface PullRequestListItem {
+  runId: string;
+  pr_number: number;
+  pr_url: string | null;
+  pr_state: "draft" | "open" | "merged" | "closed" | null;
+  model: string | null;
+  created_at: string;
+  updated_at: string;
+  issue: { id: string; number: number; title: string } | null;
+  project: { id: string; key: string; name: string } | null;
+  /** Un run encore actif sur cette PR = « Numo retravaille ». */
+  activeRunId: string | null;
+}
+
+export interface PullRequestComment {
+  id: number;
+  body: string;
+  user: { login: string; avatar_url: string | null } | null;
+  created_at: string;
+  html_url: string;
+}
+
+export async function fetchAllPullRequestsApi(): Promise<{
+  pullRequests: PullRequestListItem[];
+}> {
+  return parseJson(await fetch(`/api/pull-requests`));
+}
+
+export async function fetchPrCommentsApi(
+  runId: string,
+): Promise<{ comments: PullRequestComment[] }> {
+  return parseJson(await fetch(`/api/agent-runs/${runId}/comments`));
+}
+
+export async function postPrCommentApi(
+  runId: string,
+  body: string,
+): Promise<{ comment: PullRequestComment }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    }),
+  );
+}

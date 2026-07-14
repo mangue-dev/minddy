@@ -19,6 +19,7 @@ import {
   Settings,
   ListTodo,
   Keyboard,
+  GitPullRequest,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -235,6 +236,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       items: [
         { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+        {
+          key: "go-pull-requests",
+          label: t("pullRequests"),
+          icon: GitPullRequest,
+          onSelect: () => router.push("/pull-requests"),
+        },
         {
           key: "go-all-global",
           label: t("allIssues"),
@@ -465,6 +472,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       {
         items: [
           inboxItem,
+          {
+            key: "pull-requests",
+            label: t("pullRequests"),
+            icon: GitPullRequest,
+            href: "/pull-requests",
+            active: pathname.startsWith("/pull-requests"),
+            shortcut: "R",
+          },
           {
             key: "home",
             label: t("home"),

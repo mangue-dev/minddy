@@ -1,28 +1,18 @@
 "use client";
 
-import "react-diff-view/style/index.css";
-
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Spinner, toast } from "mangue-ui";
 import { ExternalLink } from "lucide-react";
-import { parseDiff, Diff, Hunk, type DiffType } from "react-diff-view";
 import { useAgentRunPrQuery } from "@/lib/use-agent-runs";
-import { actOnAgentPrApi, type PullRequestFile } from "@/lib/agent-api";
+import { actOnAgentPrApi } from "@/lib/agent-api";
+import { PrDiff } from "@/components/pull-requests/pr-diff";
 
 /**
- * Review in-app de la PR d'un run (MIN-46) : diff par fichier (react-diff-view),
+ * Review in-app de la PR d'un run (MIN-46) : diff par fichier (via <PrDiff>),
  * boutons Merge / Close, lien GitHub. Alimentée par /api/agent-runs/[runId]/pr.
+ * Le rendu du diff est mutualisé avec la page Pull Requests (MIN-66).
  */
-
-/** Reconstruit un diff unifié complet à partir du patch par-fichier de l'API GitHub. */
-function toUnifiedDiff(f: PullRequestFile): string {
-  if (!f.patch) return "";
-  const oldPath = f.status === "added" ? "/dev/null" : `a/${f.filename}`;
-  const newPath = f.status === "removed" ? "/dev/null" : `b/${f.filename}`;
-  return `diff --git a/${f.filename} b/${f.filename}\n--- ${oldPath}\n+++ ${newPath}\n${f.patch}\n`;
-}
-
 export function PrReview({ runId }: { runId: string }) {
   const t = useTranslations("Agent");
   const { pr, files, loading, refetch } = useAgentRunPrQuery(runId, true);
@@ -45,8 +35,6 @@ export function PrReview({ runId }: { runId: string }) {
   if (loading) return <p className="text-xs text-muted-foreground">{t("prLoading")}</p>;
   if (!pr) return null;
 
-  const diffText = files.map(toUnifiedDiff).filter(Boolean).join("\n");
-  const parsed = diffText ? parseDiff(diffText) : [];
   const isTerminal = pr.merged || pr.state === "closed";
   const stateKey = pr.merged ? "prMerged" : pr.state === "closed" ? "prClosed" : "prOpen";
 
@@ -82,25 +70,9 @@ export function PrReview({ runId }: { runId: string }) {
         ) : null}
       </div>
 
-      {parsed.length > 0 ? (
-        <div className="max-h-96 overflow-auto rounded-md border border-border text-xs">
-          {parsed.map((file, i) => {
-            const path = file.newPath !== "/dev/null" ? file.newPath : file.oldPath;
-            return (
-              <div key={`${path}-${i}`}>
-                <div className="sticky top-0 z-10 bg-muted px-2 py-1 font-mono text-[11px]">
-                  {path}
-                </div>
-                <Diff viewType="unified" diffType={file.type as DiffType} hunks={file.hunks}>
-                  {(hunks) => hunks.map((h) => <Hunk key={h.content} hunk={h} />)}
-                </Diff>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">{t("prNoDiff")}</p>
-      )}
+      <div className="max-h-96 overflow-auto">
+        <PrDiff files={files} prUrl={pr.url} />
+      </div>
     </div>
   );
 }

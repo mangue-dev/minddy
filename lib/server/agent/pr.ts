@@ -29,6 +29,15 @@ export interface PullRequestFile {
   patch?: string;
 }
 
+/** Commentaire de conversation d'une PR (endpoint issues/{n}/comments de GitHub). */
+export interface PullRequestComment {
+  id: number;
+  body: string;
+  user: { login: string; avatar_url: string | null } | null;
+  created_at: string;
+  html_url: string;
+}
+
 /** Erreur d'API GitHub avec le status HTTP (permet de distinguer 422 « no commits »). */
 export class GithubApiError extends Error {
   status: number;
@@ -215,4 +224,59 @@ export async function closePullRequest(opts: {
       body: JSON.stringify({ state: "closed" }),
     },
   );
+}
+
+interface RawComment {
+  id: number;
+  body?: string;
+  user?: { login?: string; avatar_url?: string } | null;
+  created_at: string;
+  html_url: string;
+}
+
+function toComment(c: RawComment): PullRequestComment {
+  return {
+    id: c.id,
+    body: c.body ?? "",
+    user: c.user ? { login: c.user.login ?? "", avatar_url: c.user.avatar_url ?? null } : null,
+    created_at: c.created_at,
+    html_url: c.html_url,
+  };
+}
+
+/**
+ * Commentaires de conversation de la PR (fil de discussion). Sur GitHub une PR
+ * EST une issue, donc ses commentaires vivent sous `issues/{n}/comments`.
+ */
+export async function listPullRequestComments(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PullRequestComment[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const comments = await ghJson<RawComment[]>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/comments?per_page=100`,
+    opts.token,
+  );
+  return comments.map(toComment);
+}
+
+/** Ajoute un commentaire à la conversation de la PR (auteur = la GitHub App minddy). */
+export async function createPullRequestComment(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  body: string;
+}): Promise<PullRequestComment> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const created = await ghJson<RawComment>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/comments`,
+    opts.token,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toComment(created);
 }
