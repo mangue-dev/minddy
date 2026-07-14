@@ -967,7 +967,12 @@
     "toolList": "List",
     "toolSearch": "Search",
     "toolEdit": "Edit",
-    "toolRun": "Command"
+    "toolRun": "Command",
+    "viewActivity": "View activity",
+    "viewPullRequest": "View pull request",
+    "activityTitle": "Agent activity",
+    "noActivity": "No activity yet.",
+    "replyPlaceholder": "Reply to the agent (coming soon)…"
   },
   "Projects": {
     "newProject": "New Project",
@@ -1293,6 +1298,11 @@
     "askingUser": "Asking you a question…",
     "questionAsked": "Question asked",
     "otherOption": "Other…",
+    "agentReadFile": "Read {path}",
+    "agentListDir": "List {path}",
+    "agentGrep": "Search {pattern}",
+    "agentWriteFile": "Edit {path}",
+    "agentRunCommand": "Run {command}",
     "processing": "Processing…",
     "done": "Done",
     "toolCallSummary": "{count} actions",

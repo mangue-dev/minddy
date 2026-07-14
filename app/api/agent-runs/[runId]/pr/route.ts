@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun, setRunPrState } from "@/lib/server/agent/runs";
+import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
@@ -149,10 +150,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (action === "merge") {
       await mergePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
       await setRunPrState(runId, "merged");
+      // PR mergée → l'issue passe en done (MIN-46). Acteur = le membre qui merge.
+      await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "merged" });
       return NextResponse.json({ ok: true, pr_state: "merged" });
     }
     await closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
     await setRunPrState(runId, "closed");
+    // PR fermée (refusée) → l'issue passe en canceled (MIN-46).
+    await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "closed" });
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {
     const status = err instanceof GithubApiError ? 502 : 500;

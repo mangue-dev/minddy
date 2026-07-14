@@ -219,25 +219,38 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
   }
 }
 
+/** Run affecté par une synchro PR (pour aligner le statut d'issue côté appelant). */
+export interface SyncedPrRun {
+  id: string;
+  issueId: string;
+  createdBy: string | null;
+}
+
 /**
  * Synchronise l'état PR des runs qui ont ouvert la PR `prNumber` sur le dépôt
  * `repoFullName` (appelé par le webhook GitHub). Un numéro de PR est unique dans
  * un dépôt ; plusieurs projets peuvent lier le même dépôt, d'où le filtre par les
- * liaisons de ce dépôt. Best-effort.
+ * liaisons de ce dépôt. Best-effort. Renvoie les runs touchés pour que l'appelant
+ * aligne le statut de leur issue (in_review / done / canceled).
  */
 export async function syncPrState(opts: {
   repoFullName: string;
   prNumber: number;
   prState: AgentRun["pr_state"];
   prUrl?: string | null;
-}): Promise<void> {
+}): Promise<SyncedPrRun[]> {
   const service = getServiceClient();
   const { data: links } = await service
     .from("project_git_links")
     .select("id")
     .eq("repo_full_name", opts.repoFullName);
   const linkIds = ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
-  if (linkIds.length === 0) return;
+  if (linkIds.length === 0) return [];
+  const { data: runs } = await service
+    .from("agent_runs")
+    .select("id, issue_id, created_by")
+    .eq("pr_number", opts.prNumber)
+    .in("repo_link_id", linkIds);
   const update: Record<string, unknown> = { pr_state: opts.prState };
   if (opts.prUrl) update.pr_url = opts.prUrl;
   await service
@@ -245,6 +258,9 @@ export async function syncPrState(opts: {
     .update(update)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
+  return ((runs ?? []) as Array<{ id: string; issue_id: string; created_by: string | null }>).map(
+    (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
+  );
 }
 
 /** Met à jour l'état PR d'un run précis (action de review in-app : merge/close). */

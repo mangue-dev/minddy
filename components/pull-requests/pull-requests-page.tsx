@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Badge,
@@ -51,9 +52,23 @@ export function PullRequestsPage() {
   const format = useFormatter();
   const { pullRequests, loading, refetch } = useAllPullRequestsQuery();
 
-  const [filter, setFilter] = useState<Filter>("open");
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [mobileDetail, setMobileDetail] = useState(false);
+  // Deep-link depuis la sidebar d'issue (« Voir la pull request ») : ?run=<id>
+  // présélectionne la PR de ce run et bascule le filtre sur « tous » pour qu'elle
+  // soit toujours visible quel que soit son état.
+  const searchParams = useSearchParams();
+  const runParam = searchParams.get("run");
+
+  const [filter, setFilter] = useState<Filter>(runParam ? "all" : "open");
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(runParam);
+  const [mobileDetail, setMobileDetail] = useState(!!runParam);
+
+  // Suit les changements de param (navigation client vers un autre run).
+  useEffect(() => {
+    if (!runParam) return;
+    setSelectedRunId(runParam);
+    setFilter("all");
+    setMobileDetail(true);
+  }, [runParam]);
 
   const filtered = useMemo(
     () => pullRequests.filter((p) => matchesFilter(p.pr_state, filter)),
@@ -78,12 +93,12 @@ export function PullRequestsPage() {
       : null,
   );
 
-  // Garde une sélection valide : défaut = 1re PR, avance quand elle quitte le filtre.
+  // Garde une sélection valide : défaut = 1re PR, avance quand elle quitte le
+  // filtre. On ne remet PAS à null sur liste vide : pendant le chargement la
+  // liste est vide et cela écraserait une présélection deep-link (?run=) avant
+  // que les données arrivent. `selected` renvoie null tout seul si l'id n'existe pas.
   useEffect(() => {
-    if (filtered.length === 0) {
-      if (selectedRunId !== null) setSelectedRunId(null);
-      return;
-    }
+    if (filtered.length === 0) return;
     if (!selectedRunId || !filtered.some((p) => p.runId === selectedRunId)) {
       setSelectedRunId(filtered[0].runId);
     }

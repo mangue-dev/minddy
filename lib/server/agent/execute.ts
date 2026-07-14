@@ -31,6 +31,7 @@ import { AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
 import { buildAgentSystemPrompt } from "./prompt";
 import { resolveAgentApiKey } from "./model";
 import { ensurePullRequest, GithubApiError } from "./pr";
+import { syncIssueStatusFromPr } from "./issue-status-sync";
 import {
   stampRun,
   appendEvent,
@@ -264,6 +265,15 @@ export async function executeAgentRun(
           cost_usd: newCost,
           outcome: finish.summary,
         });
+        // La PR est ouverte → l'issue passe en revue (MIN-46). L'acteur est
+        // l'auteur du run (il a l'accès projet) ; best-effort.
+        if (run.created_by) {
+          await syncIssueStatusFromPr({
+            issueId: run.issue_id,
+            actorId: run.created_by,
+            prState: (pr.state as AgentRun["pr_state"]) ?? "open",
+          });
+        }
         return "completed";
       } catch (err) {
         // Aucune modification produite (422 « No commits between… ») → complété sans PR.

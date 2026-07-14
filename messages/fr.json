@@ -967,7 +967,12 @@
     "toolList": "Exploration",
     "toolSearch": "Recherche",
     "toolEdit": "Édition",
-    "toolRun": "Commande"
+    "toolRun": "Commande",
+    "viewActivity": "Voir l'activité",
+    "viewPullRequest": "Voir la pull request",
+    "activityTitle": "Activité de l'agent",
+    "noActivity": "Aucune activité pour l'instant.",
+    "replyPlaceholder": "Répondre à l'agent (bientôt disponible)…"
   },
   "Projects": {
     "newProject": "Nouveau Projet",
@@ -1293,6 +1298,11 @@
     "askingUser": "Question en cours…",
     "questionAsked": "Question posée",
     "otherOption": "Autre…",
+    "agentReadFile": "Lecture de {path}",
+    "agentListDir": "Exploration de {path}",
+    "agentGrep": "Recherche de {pattern}",
+    "agentWriteFile": "Édition de {path}",
+    "agentRunCommand": "Commande {command}",
     "processing": "Traitement…",
     "done": "Terminé",
     "toolCallSummary": "{count} actions",

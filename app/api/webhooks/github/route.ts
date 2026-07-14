@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { syncPrState } from "@/lib/server/agent/runs";
+import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import type { AgentRun } from "@/lib/server/agent/runs";
 
 /**
@@ -62,12 +63,23 @@ export async function POST(request: NextRequest) {
       const repoFullName = payload.repository?.full_name;
       const prState = mapPrState(action, !!payload.pull_request?.merged);
       if (prState && number != null && repoFullName) {
-        await syncPrState({
+        const runs = await syncPrState({
           repoFullName,
           prNumber: number,
           prState,
           prUrl: payload.pull_request?.html_url ?? null,
         });
+        // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
+        // merged→done, closed→canceled, reopened/ready_for_review→in_review.
+        for (const run of runs) {
+          if (run.createdBy) {
+            await syncIssueStatusFromPr({
+              issueId: run.issueId,
+              actorId: run.createdBy,
+              prState,
+            });
+          }
+        }
       }
     } catch (err) {
       // Best-effort : on acquitte quand même pour que GitHub ne re-livre pas.

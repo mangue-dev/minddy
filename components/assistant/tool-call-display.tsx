@@ -10,6 +10,7 @@ import {
   FilePlus2,
   FileSearch,
   Filter,
+  FolderTree,
   IterationCw,
   LayoutGrid,
   List,
@@ -24,6 +25,7 @@ import {
   Tag,
   Tags,
   Target,
+  Terminal,
   User,
   UserCog,
   UserMinus,
@@ -359,6 +361,32 @@ const TOOL_META: Record<string, ToolMeta> = {
       if (status === "running") return t("askingUser");
       return (args.question as string) || t("questionAsked");
     },
+  },
+  // ── Agent de code (MIN-46) : mêmes lignes de tool-call que Numo. ──────────
+  read_file: {
+    icon: FileSearch,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentReadFile", { path: (args.path as string) || "…" }),
+  },
+  list_dir: {
+    icon: FolderTree,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentListDir", { path: (args.path as string) || "…" }),
+  },
+  grep: {
+    icon: Search,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentGrep", { pattern: (args.pattern as string) || "…" }),
+  },
+  write_file: {
+    icon: FilePen,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentWriteFile", { path: (args.path as string) || "…" }),
+  },
+  run_command: {
+    icon: Terminal,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentRunCommand", { command: (args.command as string) || "…" }),
   },
 };
 

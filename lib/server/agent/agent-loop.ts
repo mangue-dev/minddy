@@ -122,6 +122,8 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { pattern: String(args.pattern ?? "") };
     case "run_command":
       return { command: cap(String(args.command ?? ""), 100) };
+    case "ask_user":
+      return { question: cap(String(args.question ?? ""), 300) };
     default:
       return {};
   }
