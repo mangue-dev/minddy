@@ -48,6 +48,34 @@ export function isGithubAppConfigured(): boolean {
   );
 }
 
+export function isGithubWebhookConfigured(): boolean {
+  return !!process.env.GITHUB_WEBHOOK_SECRET;
+}
+
+/**
+ * Vérifie la signature HMAC d'un webhook GitHub (`X-Hub-Signature-256: sha256=<hex>`)
+ * en temps constant. Renvoie false — jamais d'exception — sur en-tête manquant/
+ * malformé ou toute divergence (fail closed). Le récepteur webhook est INERTE
+ * pour l'instant (il acquitte sans traiter) ; MIN-46 branchera la logique.
+ */
+export function verifyGithubSignature(
+  rawBody: string,
+  signatureHeader: string | null | undefined,
+  secret: string,
+): boolean {
+  if (!signatureHeader) return false;
+  const expected =
+    "sha256=" + crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  try {
+    const provided = Buffer.from(signatureHeader);
+    const computed = Buffer.from(expected);
+    if (provided.length !== computed.length) return false;
+    return crypto.timingSafeEqual(provided, computed);
+  } catch {
+    return false;
+  }
+}
+
 // --- Authentification de l'app ---------------------------------------------
 
 function base64url(input: Buffer | string): string {
