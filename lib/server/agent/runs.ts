@@ -210,6 +210,43 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
 }
 
 /**
+ * Synchronise l'état PR des runs qui ont ouvert la PR `prNumber` sur le dépôt
+ * `repoFullName` (appelé par le webhook GitHub). Un numéro de PR est unique dans
+ * un dépôt ; plusieurs projets peuvent lier le même dépôt, d'où le filtre par les
+ * liaisons de ce dépôt. Best-effort.
+ */
+export async function syncPrState(opts: {
+  repoFullName: string;
+  prNumber: number;
+  prState: AgentRun["pr_state"];
+  prUrl?: string | null;
+}): Promise<void> {
+  const service = getServiceClient();
+  const { data: links } = await service
+    .from("project_git_links")
+    .select("id")
+    .eq("repo_full_name", opts.repoFullName);
+  const linkIds = ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
+  if (linkIds.length === 0) return;
+  const update: Record<string, unknown> = { pr_state: opts.prState };
+  if (opts.prUrl) update.pr_url = opts.prUrl;
+  await service
+    .from("agent_runs")
+    .update(update)
+    .eq("pr_number", opts.prNumber)
+    .in("repo_link_id", linkIds);
+}
+
+/** Met à jour l'état PR d'un run précis (action de review in-app : merge/close). */
+export async function setRunPrState(
+  runId: string,
+  prState: AgentRun["pr_state"],
+): Promise<void> {
+  const service = getServiceClient();
+  await service.from("agent_runs").update({ pr_state: prState }).eq("id", runId);
+}
+
+/**
  * Ajoute un event au flux du live view (seq monotone par run). Best-effort : le
  * suivi ne doit jamais faire échouer le run. Un run n'a qu'UN écrivain à la fois
  * (le claimer), donc le max(seq)+1 est sûr.
