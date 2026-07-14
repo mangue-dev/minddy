@@ -15,6 +15,7 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import type { AgentToolDef } from "./tools";
+import { pruneToolOutputs } from "./prune";
 
 /**
  * Boucle agentique de l'agent de code (MIN-46) — le « cerveau ». Calquée sur
@@ -312,6 +313,11 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         await emit("user_message", { text: cap(text, 4000) });
       }
     }
+
+    // Durcissement : élague les sorties de tools périmées (protège les ~40 Ko
+    // récents). Réduit le coût par appel et la taille du checkpoint. No-op tant
+    // qu'il n'y a pas ≥20 Ko à récupérer → sans effet sur les runs courts.
+    pruneToolOutputs(messages);
 
     const stream = await streamCompletion({
       apiKey,
