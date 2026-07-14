@@ -1,7 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchIssueAgentRunsApi, isAgentRunActive } from "./agent-api";
+import {
+  fetchAgentRunEventsApi,
+  fetchAgentRunPrApi,
+  fetchIssueAgentRunsApi,
+  isAgentRunActive,
+} from "./agent-api";
 
 /** Clé de cache des runs d'agent d'une issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
@@ -23,4 +28,24 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     },
   });
   return { runs: data?.runs ?? [], loading: isLoading };
+}
+
+/** Events du live view d'un run : polling ~2 s tant que le run est actif. */
+export function useAgentRunEventsQuery(runId: string, active: boolean) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["agent-run-events", runId],
+    queryFn: () => fetchAgentRunEventsApi(runId),
+    refetchInterval: active ? 2000 : false,
+  });
+  return { events: data?.events ?? [], loading: isLoading };
+}
+
+/** PR d'un run (metadata + fichiers/patches) pour la review in-app. */
+export function useAgentRunPrQuery(runId: string, enabled: boolean) {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["agent-run-pr", runId],
+    queryFn: () => fetchAgentRunPrApi(runId),
+    enabled,
+  });
+  return { pr: data?.pr ?? null, files: data?.files ?? [], loading: isLoading, refetch };
 }

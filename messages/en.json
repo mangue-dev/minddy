@@ -949,7 +949,15 @@
     "platformCapped": "Uses minddy's key (monthly cap).",
     "prOpen": "PR opened",
     "prMerged": "PR merged",
-    "prClosed": "PR closed"
+    "prClosed": "PR closed",
+    "stop": "Stop",
+    "stoppedToast": "Agent stopped.",
+    "prLoading": "Loading pull request…",
+    "prMerge": "Merge",
+    "prClose": "Close",
+    "prMergedToast": "PR merged.",
+    "prClosedToast": "PR closed.",
+    "prNoDiff": "No changes to show."
   },
   "Projects": {
     "newProject": "New Project",

@@ -3,31 +3,16 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { Bot, ExternalLink } from "lucide-react";
+import { Bot } from "lucide-react";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
-import { isAgentRunActive, type AgentRunStatus } from "@/lib/agent-api";
+import { isAgentRunActive } from "@/lib/agent-api";
 import { LaunchAgentDialog } from "./launch-agent-dialog";
-
-const STATUS_KEY: Record<AgentRunStatus, string> = {
-  queued: "statusQueued",
-  running: "statusRunning",
-  needs_input: "statusNeedsInput",
-  completed: "statusCompleted",
-  failed: "statusFailed",
-  canceled: "statusCanceled",
-};
-
-const PR_STATE_KEY: Record<string, string> = {
-  merged: "prMerged",
-  closed: "prClosed",
-  open: "prOpen",
-  draft: "prOpen",
-};
+import { AgentRunPanel } from "./agent-run-panel";
 
 /**
- * Bouton « Lancer un agent » du panneau d'issue (MIN-46) : lance l'agent de code
- * (dialogue avec picker de modèle), reflète l'état d'un run actif, et lie la PR
- * du dernier run. La vue live détaillée arrive en Phase 7.
+ * Section « Agent de code » du panneau d'issue (MIN-46) : le lanceur (dialogue
+ * avec picker de modèle) et, s'il existe un run, sa vue live (statut, événements,
+ * stop, review de PR). Un seul run actif à la fois par issue.
  */
 export function LaunchAgentButton({ issueId }: { issueId: string }) {
   const t = useTranslations("Agent");
@@ -49,22 +34,11 @@ export function LaunchAgentButton({ issueId }: { issueId: string }) {
           disabled={!!activeRun}
         >
           <Bot className="size-4" />
-          {activeRun ? t(STATUS_KEY[activeRun.status]) : t("launchButton")}
+          {t("launchButton")}
         </Button>
       </div>
 
-      {latest?.pr_url ? (
-        <a
-          href={latest.pr_url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-brand hover:underline"
-        >
-          <ExternalLink className="size-3" />
-          {t(PR_STATE_KEY[latest.pr_state ?? "open"] ?? "prOpen")}
-          {latest.pr_number ? ` #${latest.pr_number}` : ""}
-        </a>
-      ) : null}
+      {latest ? <AgentRunPanel issueId={issueId} run={latest} /> : null}
 
       <LaunchAgentDialog open={open} onOpenChange={setOpen} issueId={issueId} />
     </div>

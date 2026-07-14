@@ -949,7 +949,15 @@
     "platformCapped": "Utilise la clé de minddy (quota mensuel).",
     "prOpen": "PR ouverte",
     "prMerged": "PR fusionnée",
-    "prClosed": "PR fermée"
+    "prClosed": "PR fermée",
+    "stop": "Arrêter",
+    "stoppedToast": "Agent arrêté.",
+    "prLoading": "Chargement de la PR…",
+    "prMerge": "Fusionner",
+    "prClose": "Fermer",
+    "prMergedToast": "PR fusionnée.",
+    "prClosedToast": "PR fermée.",
+    "prNoDiff": "Aucune modification à afficher."
   },
   "Projects": {
     "newProject": "Nouveau Projet",

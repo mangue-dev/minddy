@@ -71,3 +71,74 @@ export async function launchAgentRunApi(
     }),
   );
 }
+
+// ── Run détail / events / stop / PR ──────────────────────────────────────────
+
+export type AgentEventType =
+  | "status"
+  | "thinking"
+  | "tool_call"
+  | "tool_result"
+  | "commit"
+  | "pr_opened"
+  | "error"
+  | "summary";
+
+export interface AgentRunEvent {
+  id: string;
+  seq: number;
+  type: AgentEventType;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export async function fetchAgentRunEventsApi(
+  runId: string,
+  after?: number,
+): Promise<{ events: AgentRunEvent[] }> {
+  const q = after != null ? `?after=${after}` : "";
+  return parseJson(await fetch(`/api/agent-runs/${runId}/events${q}`));
+}
+
+export async function stopAgentRunApi(runId: string): Promise<void> {
+  await parseJson(await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }));
+}
+
+export interface PullRequestRef {
+  number: number;
+  url: string;
+  state: string;
+  draft?: boolean;
+  merged?: boolean;
+  title?: string;
+  body?: string | null;
+  head?: string;
+  base?: string;
+}
+
+export interface PullRequestFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  patch?: string;
+}
+
+export async function fetchAgentRunPrApi(
+  runId: string,
+): Promise<{ pr: PullRequestRef | null; files: PullRequestFile[] }> {
+  return parseJson(await fetch(`/api/agent-runs/${runId}/pr`));
+}
+
+export async function actOnAgentPrApi(
+  runId: string,
+  action: "merge" | "close",
+): Promise<{ ok: true; pr_state: string }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/pr`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    }),
+  );
+}
