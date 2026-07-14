@@ -53,7 +53,8 @@ export type AgentEventType =
   | "commit"
   | "pr_opened"
   | "error"
-  | "summary";
+  | "summary"
+  | "user_message";
 
 export type EmitAgentEvent = (
   type: AgentEventType,
@@ -87,6 +88,13 @@ export interface RunAgentLoopParams {
   /** Budget du chunk courant, mesuré depuis l'entrée dans la boucle. */
   softDeadlineMs: number;
   execTool: ExecuteAgentTool;
+  /**
+   * Draine les messages de steering en attente (file `agent_run_messages`).
+   * Appelé au SOMMET de chaque round : les messages renvoyés sont injectés comme
+   * messages `user` avant le prochain appel LLM → orientation à chaud + reprise
+   * d'un `ask_user`. Optionnel (absent = pas de steering).
+   */
+  pullSteering?: () => Promise<string[]>;
   emit: EmitAgentEvent;
   /** Index de départ des lignes ai_usage (ordre d'affichage). */
   usageSeqStart?: number;
@@ -292,6 +300,18 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
     round++;
+
+    // Steering : draine les messages user en attente et les injecte comme messages
+    // `user` AVANT le prochain appel (frontière sûre, aucun appel en vol). Sert à
+    // orienter un run en cours ET à répondre à un `ask_user` (reprise du run).
+    if (params.pullSteering) {
+      const injected = await params.pullSteering();
+      for (const text of injected) {
+        if (!text.trim()) continue;
+        messages.push({ role: "user", content: text });
+        await emit("user_message", { text: cap(text, 4000) });
+      }
+    }
 
     const stream = await streamCompletion({
       apiKey,

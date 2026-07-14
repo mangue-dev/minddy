@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Sheet,
@@ -10,6 +11,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  toast,
 } from "mangue-ui";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -18,7 +20,7 @@ import {
   panelOverlayClassName,
   type PanelDisplayMode,
 } from "@/components/assistant/panel-geometry";
-import type { AgentRunSummary } from "@/lib/agent-api";
+import { isAgentRunActive, steerAgentRunApi, type AgentRunSummary } from "@/lib/agent-api";
 import { ModelBadge } from "@/components/model-badge";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentStatusBadge } from "./agent-run-status";
@@ -26,9 +28,9 @@ import { AgentStatusBadge } from "./agent-run-status";
 /**
  * Modal d'activité d'un run de l'agent de code (MIN-46). Réutilise le shell du
  * chat Numo (même Sheet flottant + morph compact/étendu) mais pour un agent EN
- * DIRECT : pas d'historique de conversations ni de « nouvelle conversation »,
- * juste l'en-tête (statut + modèle), le flux d'événements, et un composer
- * présent mais non branché (la réponse à l'agent arrivera plus tard).
+ * DIRECT : pas d'historique de conversations, juste l'en-tête (statut + modèle),
+ * le flux d'événements, et un composer de STEERING — orienter le run à chaud ou
+ * répondre à un `ask_user` (le message est injecté à la frontière de round).
  */
 export function AgentActivityPanel({
   open,
@@ -42,11 +44,24 @@ export function AgentActivityPanel({
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
   const ta = useTranslations("Assistant");
+  const queryClient = useQueryClient();
 
   const [displayMode, setDisplayMode] = useState<PanelDisplayMode>("compact");
   const isExpanded = displayMode === "expanded";
   const toggleDisplayMode = () =>
     setDisplayMode((prev) => (prev === "compact" ? "expanded" : "compact"));
+
+  const active = isAgentRunActive(run.status);
+  const sendSteer = async (message: string) => {
+    const text = message.trim();
+    if (!text) return;
+    try {
+      await steerAgentRunApi(run.id, text);
+      await queryClient.invalidateQueries({ queryKey: ["agent-run-events", run.id] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -115,14 +130,14 @@ export function AgentActivityPanel({
             />
           </div>
 
-          {/* Composer présent mais NON branché pour l'instant (répondre à
-              l'agent en direct arrivera plus tard). */}
+          {/* Composer de steering : actif tant que le run tourne (queued/running/
+              needs_input). Le message rejoint la file et est injecté au round suivant. */}
           <div className="shrink-0">
             <ChatInput
-              onSend={() => {}}
-              disabled
+              onSend={(message) => void sendSteer(message)}
+              disabled={!active}
               hideAttach
-              placeholder={t("replyPlaceholder")}
+              placeholder={run.status === "needs_input" ? t("replyPlaceholder") : t("steerPlaceholder")}
             />
           </div>
         </div>

@@ -82,7 +82,8 @@ export type AgentEventType =
   | "commit"
   | "pr_opened"
   | "error"
-  | "summary";
+  | "summary"
+  | "user_message";
 
 export interface AgentRunEvent {
   id: string;
@@ -102,6 +103,23 @@ export async function fetchAgentRunEventsApi(
 
 export async function stopAgentRunApi(runId: string): Promise<void> {
   await parseJson(await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }));
+}
+
+/**
+ * Steering d'un run actif (MIN-46) : envoie un message à l'agent (orientation à
+ * chaud, ou réponse à un `ask_user` qui reprend le run).
+ */
+export async function steerAgentRunApi(
+  runId: string,
+  message: string,
+): Promise<{ ok: true; status: AgentRunStatus }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/steer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }),
+  );
 }
 
 export interface PullRequestRef {

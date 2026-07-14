@@ -39,6 +39,7 @@ import { syncIssueStatusFromPr } from "./issue-status-sync";
 import {
   stampRun,
   appendEvent,
+  pullPendingMessages,
   type AgentRun,
   type AgentCheckpoint,
 } from "./runs";
@@ -291,6 +292,7 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       execTool: makeExecTool(sandbox),
+      pullSteering: () => pullPendingMessages(run.id),
       emit,
       usageSeqStart,
     });

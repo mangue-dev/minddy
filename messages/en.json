@@ -983,7 +983,8 @@
     "viewPullRequest": "View pull request",
     "activityTitle": "Agent activity",
     "noActivity": "No activity yet.",
-    "replyPlaceholder": "Reply to the agent (coming soon)…"
+    "replyPlaceholder": "Reply to the agent…",
+    "steerPlaceholder": "Steer the agent…"
   },
   "Projects": {
     "newProject": "New Project",

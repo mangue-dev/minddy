@@ -26,11 +26,15 @@ type FeedItem =
   | { kind: "message"; message: AssistantMessage }
   | { kind: "note"; id: string; variant: "pr" | "commit" | "error"; text: string; url?: string };
 
-function makeMessage(id: string, content: string | null): AssistantMessage {
+function makeMessage(
+  id: string,
+  content: string | null,
+  role: "assistant" | "user" = "assistant",
+): AssistantMessage {
   return {
     id,
     conversation_id: "",
-    role: "assistant",
+    role,
     content,
     tool_calls: null,
     tool_call_id: null,
@@ -83,6 +87,15 @@ function buildFeed(events: AgentRunEvent[]): { items: FeedItem[]; results: Map<s
         if (last?.kind === "message" && (last.message.content ?? "").trim() === text.trim()) break;
         current = makeMessage(e.id, text);
         items.push({ kind: "message", message: current });
+        break;
+      }
+      case "user_message": {
+        const text = str(p.text);
+        if (!text.trim()) break;
+        // Message de steering de l'utilisateur : bulle user, ne rattache pas les
+        // tool-calls suivants (ils appartiennent au prochain tour de l'agent).
+        current = null;
+        items.push({ kind: "message", message: makeMessage(e.id, text, "user") });
         break;
       }
       case "tool_call": {

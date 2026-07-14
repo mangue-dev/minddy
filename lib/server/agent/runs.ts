@@ -273,6 +273,40 @@ export async function setRunPrState(
 }
 
 /**
+ * Ajoute un message utilisateur à la file de steering d'un run (drainé par la
+ * boucle à la frontière de round). Service client — l'endpoint authentifie avant.
+ */
+export async function insertRunMessage(
+  runId: string,
+  userId: string | null,
+  content: string,
+): Promise<void> {
+  const service = getServiceClient();
+  await service
+    .from("agent_run_messages")
+    .insert({ run_id: runId, created_by: userId, content });
+}
+
+/**
+ * Draine (atomiquement) les messages de steering non consommés d'un run : les
+ * marque consommés et renvoie leur contenu, ordre chronologique. Appelé au SOMMET
+ * de chaque round de la boucle. Un run n'a qu'UN écrivain à la fois (le claimer).
+ */
+export async function pullPendingMessages(runId: string): Promise<string[]> {
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("agent_run_messages")
+    .update({ consumed_at: new Date().toISOString() })
+    .eq("run_id", runId)
+    .is("consumed_at", null)
+    .select("content, created_at");
+  if (error || !data) return [];
+  return (data as Array<{ content: string; created_at: string }>)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((r) => r.content);
+}
+
+/**
  * Ajoute un event au flux du live view (seq monotone par run). Best-effort : le
  * suivi ne doit jamais faire échouer le run. Un run n'a qu'UN écrivain à la fois
  * (le claimer), donc le max(seq)+1 est sûr.
