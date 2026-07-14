@@ -53,6 +53,7 @@ import {
 } from "@/lib/server/feedback/promote";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
+import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -75,6 +76,8 @@ export interface ToolContext {
   /** Landing status for issues Numo creates without an explicit status —
       the user's Account → Preferences choice. Defaults to 'triage'. */
   numoDefaultStatus?: IssueStatusValue;
+  /** Where a launch_code_agent call comes from (chat vs @numo comment). */
+  triggerSource?: "chat" | "mention";
 }
 
 export interface ToolExecution {
@@ -89,6 +92,24 @@ function toolError(message: string): ToolExecution {
 /** Map a lib/server/* failure into a readable tool error. */
 function libError(r: { errorKey?: string; rawMessage?: string }): ToolExecution {
   return toolError(r.rawMessage ?? r.errorKey ?? "Request failed");
+}
+
+/** Readable message for a failed launch_code_agent (relayed to the user by Numo). */
+function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
+  switch (r.error) {
+    case "issueNotFound":
+      return "Issue not found.";
+    case "noRepo":
+      return "This project has no linked GitHub repository. Link one in the project's Git settings first.";
+    case "unsupportedProvider":
+      return "The code agent currently supports GitHub repositories only.";
+    case "alreadyRunning":
+      return "An agent run is already in progress on this issue.";
+    case "quotaExceeded":
+      return "Monthly code-agent usage limit reached. Add your own OpenRouter key (BYOK) in Account settings for unlimited usage.";
+    default:
+      return "Could not launch the code agent.";
+  }
 }
 
 /** Readable messages for the settings cores' errorKeys — the assistant does not
@@ -467,6 +488,29 @@ export async function executeTool(
         });
         if (!result.ok) return libError(result);
         return { result: { comment: result.comment }, success: true };
+      }
+
+      case "launch_code_agent": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        if (!scoped.ok) return toolError(scoped.error);
+        const model =
+          typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
+        const prompt =
+          typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
+        const result = await launchAgentRun({
+          issueId,
+          userId: ctx.userId,
+          triggeredBy: ctx.triggerSource ?? "chat",
+          prompt,
+          model,
+          forced: !!model,
+        });
+        if (!result.ok) return toolError(launchErrorMessage(result));
+        return {
+          result: { launched: true, run_id: result.run.id, status: result.run.status, model: result.run.model },
+          success: true,
+        };
       }
 
       case "create_objective": {

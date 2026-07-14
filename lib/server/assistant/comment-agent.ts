@@ -1018,6 +1018,7 @@ async function runLoop(
           service: ctx.service,
           locale: ctx.locale,
           numoDefaultStatus: ctx.numoDefaultStatus,
+          triggerSource: "mention",
         });
         messages.push({
           role: "tool",

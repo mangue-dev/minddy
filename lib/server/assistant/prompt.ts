@@ -130,6 +130,12 @@ export function buildSharedRules(
 - NEVER mention internal ids (uuids) to the user. Refer to issues as "KEY-N — title", to
   everything else by name.
 - When you change something, briefly say what changed (e.g. "MIND-12 passé en In Progress").
+- **Code agent (launch_code_agent)** — when the user asks you to IMPLEMENT, fix, or write the code
+  for an issue (not just describe or plan it), call launch_code_agent with the issue's id. It runs
+  in the cloud, edits the project's linked GitHub repo, and opens a pull request (a linked GitHub
+  repo is required). Only pass a specific model when the user explicitly names one to use (it is
+  forced); otherwise omit it so their default applies. Tell them the agent has started and that
+  they can follow it on the issue.
 
 ## Asking clarifying questions
 When unsure about what the user wants, call the ask_user tool with a clear, specific question.

@@ -30,6 +30,7 @@ import {
 } from "@/components/issue-property-fields";
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { RelationsSection } from "@/components/relations-section";
+import { LaunchAgentButton } from "@/components/agent/launch-agent-button";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { resolveRelations } from "@/lib/relation-constants";
 import {
@@ -457,6 +458,8 @@ export function IssueSidePanel({
                   onAddRelation={onAddRelation}
                   onRemoveRelation={onRemoveRelation}
                 />
+
+                <LaunchAgentButton issueId={issue.id} />
 
                 <IssueActivity
                   items={items}
