@@ -63,6 +63,13 @@ interface ChatInputProps {
    * qu'une réponse se génère.
    */
   beam?: boolean;
+  /**
+   * Pendant une réponse en cours (`isStreaming`), autorise l'ENVOI : le bouton Stop
+   * n'apparaît que si l'input est vide ; dès qu'on tape, il devient un bouton
+   * d'envoi. L'agent conversationnel l'active (envoyer = interrompre + steerer en
+   * priorité). Défaut : off (le chat Numo garde Stop tant qu'il génère).
+   */
+  sendWhileStreaming?: boolean;
 }
 
 export interface ChatInputHandle {
@@ -83,6 +90,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       initialValue,
       leadingControls,
       beam,
+      sendWhileStreaming,
     },
     ref
   ) {
@@ -334,7 +342,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 visuellement identique (le cluster d'envoi collé à droite). */}
             <div className="flex min-w-0 items-center gap-1.5">{leadingControls}</div>
             <div className="flex shrink-0 items-center gap-1.5">
-              {isStreaming ? (
+              {isStreaming && (isEmpty || !sendWhileStreaming) ? (
                 <Button
                   size="icon-sm"
                   variant="outline"
@@ -346,7 +354,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 </Button>
               ) : (
                 <>
-                  {!hideAttach && (
+                  {!isStreaming && !hideAttach && (
                     <>
                       <input
                         ref={fileInputRef}
@@ -372,10 +380,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       </Button>
                     </>
                   )}
-                  <DictateButton
-                    onTranscription={appendDictated}
-                    disabled={disabled}
-                  />
+                  {!isStreaming && (
+                    <DictateButton
+                      onTranscription={appendDictated}
+                      disabled={disabled}
+                    />
+                  )}
                   {!isEmpty && (
                     <SendButtonWithCost
                       cost={null}

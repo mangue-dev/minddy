@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
@@ -14,16 +15,17 @@ import {
 } from "mangue-ui";
 import { AgentBeam } from "@/components/agent-beam";
 import {
-  Bot,
   Calendar,
   ChevronRight,
   ClipboardCopy,
+  GitPullRequest,
   IterationCw,
   Link2,
   ListChecks,
   Triangle,
   User,
 } from "lucide-react";
+import { NumoIcon } from "@/components/numo-icon";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -45,7 +47,12 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
-import { useAgentActive, useAgentHasSession } from "@/components/agent/agent-activity-context";
+import {
+  useAgentActive,
+  useAgentHasSession,
+  useAgentPr,
+  type IssuePr,
+} from "@/components/agent/agent-activity-context";
 import { AgentChatModal } from "@/components/agent/agent-chat-modal";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
@@ -477,6 +484,45 @@ function PlanPick({
   );
 }
 
+/** « PR disponible » sur l'en-tête de la carte, à la place du plan quand une pull
+    request existe pour ce ticket. Cliquer ouvre la review de la PR. Read-only (span
+    sans handler) dans le drag overlay / board public. */
+function PrPick({ onOpen }: { onOpen?: () => void }) {
+  const t = useTranslations("Agent");
+  const content = (
+    <>
+      <GitPullRequest className="size-3.5 shrink-0" />
+      <span className="truncate">{t("prBadge")}</span>
+    </>
+  );
+  if (!onOpen) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-500">
+        {content}
+      </span>
+    );
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("viewPullRequest")}
+          onClick={(e) => {
+            stop(e);
+            onOpen();
+          }}
+          onPointerDown={stop}
+          className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-emerald-600 outline-none transition-colors hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10 dark:text-emerald-500"
+        >
+          {content}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t("viewPullRequest")}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Presentational card body — shared by the sortable card and the drag overlay. */
 export function IssueCardBody({
   issue,
@@ -494,6 +540,8 @@ export function IssueCardBody({
   onSetCategories,
   inCurrentCycle,
   dragging,
+  pr,
+  onOpenPr,
 }: {
   issue: Issue;
   projectKey: string;
@@ -516,6 +564,10 @@ export function IssueCardBody({
   onOpenRelated?: (issueId: string) => void;
   /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
   onOpenPlan?: () => void;
+  /** PR disponible pour ce ticket → chip « PR disponible » À LA PLACE du plan. */
+  pr?: IssuePr | null;
+  /** Ouvre la review de la pull request (clic sur le chip « PR disponible »). */
+  onOpenPr?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
   onUpdate?: (patch: IssueUpdateInput) => void;
   /** When set, the category indicator becomes an inline multi-select picker. */
@@ -620,7 +672,12 @@ export function IssueCardBody({
           )}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          {plan.total > 0 && <PlanPick progress={plan} onOpen={onOpenPlan} />}
+          {/* PR disponible → remplace l'indicateur de plan ; sinon le plan. */}
+          {pr ? (
+            <PrPick onOpen={onOpenPr} />
+          ) : plan.total > 0 ? (
+            <PlanPick progress={plan} onOpen={onOpenPlan} />
+          ) : null}
           <AssigneePick
             assignee={assignee}
             members={[...memberMap.values()]}
@@ -734,6 +791,12 @@ export function IssueCard({
   // Une session d'agent (reprennable) existe déjà sur l'issue → l'action « ouvre »
   // la conversation au lieu d'en lancer une nouvelle.
   const agentHasSession = useAgentHasSession(issue.id);
+  // PR disponible pour ce ticket → chip « PR disponible » sur la carte + option menu.
+  const pr = useAgentPr(issue.id);
+  const router = useRouter();
+  const openPr = pr
+    ? () => router.push(`/pull-requests?run=${pr.runId}`)
+    : undefined;
 
   // Drop de fichiers depuis l'OS directement sur la carte (MIN-24) — chaque
   // fichier est enregistré sur l'issue dès que son upload aboutit. Distinct du
@@ -846,11 +909,23 @@ export function IssueCard({
     {
       id: "launch-agent",
       label: agentHasSession ? tAgent("openAgent") : tAgent("menuLaunch"),
-      keywords: ["agent", "launch", "lancer", "open", "ouvrir", "code", "ai"],
-      icon: <Bot className="size-4" />,
+      keywords: ["agent", "launch", "lancer", "open", "ouvrir", "code", "ai", "numo"],
+      icon: <NumoIcon className="size-4" />,
       shortcut: "⇧A",
       onSelect: () => setLaunchOpen(true),
     },
+    // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
+    ...(pr && openPr
+      ? [
+          {
+            id: "open-pr",
+            label: tAgent("viewPullRequest"),
+            keywords: ["pull request", "pr", "review", "github", "merge"],
+            icon: <GitPullRequest className="size-4" />,
+            onSelect: openPr,
+          },
+        ]
+      : []),
     // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
     // leaf opens the target-issue picker at the pointer. Shown only when the
     // board wired the relation handlers.
@@ -920,6 +995,8 @@ export function IssueCard({
             onOpenParent={onOpenParent}
             onOpenRelated={onOpenRelated}
             onOpenPlan={onOpenPlan}
+            pr={pr}
+            onOpenPr={openPr}
             onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
             onSetCategories={(ids) => onSetCategories(issue.id, ids)}
             inCurrentCycle={inCurrentCycle}

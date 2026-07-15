@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { Bot } from "lucide-react";
+import { NumoIcon } from "@/components/numo-icon";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunActive } from "@/lib/agent-api";
 import { AgentChatModal } from "./agent-chat-modal";
@@ -39,7 +39,7 @@ export function LaunchAgentButton({
           onClick={() => setOpen(true)}
           disabled={!!activeRun}
         >
-          <Bot className="size-4" />
+          <NumoIcon className="size-4" />
           {t("launchButton")}
         </Button>
       </div>

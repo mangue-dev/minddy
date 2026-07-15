@@ -14,6 +14,9 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "mangue-ui";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
@@ -40,6 +43,7 @@ export function ModelCombobox({
   loadingLabel,
   freeTextLabel,
   disabled,
+  disabledTooltip,
   variant = "field",
 }: {
   /** "" = suit mon modèle par défaut ; sinon un id de modèle. */
@@ -54,6 +58,11 @@ export function ModelCombobox({
   /** Libellé de l'option « utiliser tel quel » (saisie libre). */
   freeTextLabel: (query: string) => string;
   disabled?: boolean;
+  /**
+   * Tooltip affiché quand le picker est verrouillé (variante `compact`) : le modèle
+   * est figé pour la session, ex. « pour en changer, lancez un nouvel agent ».
+   */
+  disabledTooltip?: string;
   /**
    * `field` (défaut) : trigger pleine largeur façon champ de formulaire.
    * `compact` : petit pill (logo + nom) pour la barre d'un composer de chat.
@@ -104,6 +113,28 @@ export function ModelCombobox({
       ) : null}
     </span>
   );
+
+  // Verrouillé (agent lancé) : chip statique + tooltip, SANS popover. Le <span>
+  // extérieur porte le hover (un bouton `disabled` n'émet pas d'événement pointer,
+  // donc le tooltip ne s'ouvrirait pas si on le mettait sur le bouton).
+  if (variant === "compact" && disabled && disabledTooltip) {
+    const shown = value || defaultModelId || "";
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex cursor-not-allowed">
+            <span className="pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
+              {shown ? logoFor(shown) : null}
+              <span className="max-w-[9rem] truncate">
+                {shown ? formatModelName(shown) : defaultLabel}
+              </span>
+            </span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">{disabledTooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
     <Popover

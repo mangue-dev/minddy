@@ -11,6 +11,7 @@ import { checkAgentQuota, type AgentQuota } from "./quota";
 import {
   createRun,
   activeRunForIssue,
+  resumableRunForIssue,
   insertRunMessage,
   bumpRunActivity,
   stampRun,
@@ -133,22 +134,24 @@ export type ContinueResult =
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
 ): Promise<ContinueResult> {
-  const active = await activeRunForIssue(input.issueId);
-  if (active) {
+  // Session persistante : on reprend le run reprennable le plus récent (y compris
+  // `completed` après une PR → itération sur la même branche/PR).
+  const existing = await resumableRunForIssue(input.issueId);
+  if (existing) {
     const text = (input.prompt ?? "").trim();
-    if (text) await insertRunMessage(active.id, input.userId, text);
-    await bumpRunActivity(active.id);
-    // Au repos → nouveau tour : requeue + kick (reprise immédiate). Au travail → le
-    // message rejoint la file et la boucle le draine à la frontière de round.
-    if (active.status === "needs_input") {
+    if (text) await insertRunMessage(existing.id, input.userId, text);
+    await bumpRunActivity(existing.id);
+    // Repos OU terminé → nouveau tour : requeue + kick (reprise immédiate). Au
+    // travail → le message rejoint la file, drainé à la frontière de round.
+    if (["needs_input", "completed", "canceled"].includes(existing.status)) {
       const resumed = await stampRun(
-        active.id,
+        existing.id,
         { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
-        { guard: ["needs_input"] },
+        { guard: ["needs_input", "completed", "canceled"] },
       );
       if (resumed) kickAgentDrain(getServiceClient());
     }
-    return { ok: true, run: active, continued: true };
+    return { ok: true, run: existing, continued: true };
   }
   const result = await launchAgentRun(input);
   return result.ok ? { ok: true, run: result.run, continued: false } : result;

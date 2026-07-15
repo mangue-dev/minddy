@@ -67,6 +67,16 @@ export function isAgentRunWorking(status: AgentRunStatus): boolean {
   return status === "queued" || status === "running";
 }
 
+/**
+ * La session est-elle REPRENNABLE ? La session ne se ferme jamais (MIN-46) : même
+ * après une PR (`completed`) ou une annulation, on peut relancer l'agent sur la
+ * MÊME branche/PR pour itérer. Seule une erreur d'amorçage (`failed` : pas de
+ * dépôt/modèle) n'est pas reprennable.
+ */
+export function isAgentRunResumable(status: AgentRunStatus): boolean {
+  return status !== "failed";
+}
+
 export async function fetchIssueAgentRunsApi(
   issueId: string,
 ): Promise<{ runs: AgentRunSummary[] }> {

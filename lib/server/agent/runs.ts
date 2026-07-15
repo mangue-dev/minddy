@@ -152,6 +152,24 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
   return (data as AgentRun | null) ?? null;
 }
 
+/**
+ * Run REPRENNABLE le plus récent de l'issue (tout sauf `failed`) — inclut donc un
+ * run `completed` après une PR : la session ne se ferme jamais, on peut itérer
+ * dessus. `limit(1)` + tri décroissant (plusieurs runs possibles dans le temps).
+ */
+export async function resumableRunForIssue(issueId: string): Promise<AgentRun | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("issue_id", issueId)
+    .neq("status", "failed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as AgentRun | null) ?? null;
+}
+
 export interface StampFields {
   status?: AgentRunStatus;
   checkpoint?: AgentCheckpoint | null;

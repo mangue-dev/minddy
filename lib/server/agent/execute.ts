@@ -386,6 +386,15 @@ export async function executeAgentRun(
         { role: "system", content: system },
         { role: "user", content: taskMsg },
       ];
+      // Reprise d'un tour SANS checkpoint mais AVEC une PR déjà ouverte (le contexte
+      // de conversation a été perdu) : on signale à l'agent qu'il ITÈRE sur une
+      // branche déjà avancée — ne pas tout refaire, lire l'état actuel et enchaîner.
+      if (run.pr_number != null) {
+        messages.push({
+          role: "user",
+          content: `You are CONTINUING an existing session. The working branch **${workBranch}** already has committed work and an open pull request (#${run.pr_number}). Do NOT start over: read the current state of the code on this branch first, then handle the follow-up request that follows. Keep iterating on the SAME branch and pull request.`,
+        });
+      }
       // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après la tâche.
       const repoInstructions = await readRepoInstructions(sandbox);
       if (repoInstructions) messages.push({ role: "user", content: repoInstructions });

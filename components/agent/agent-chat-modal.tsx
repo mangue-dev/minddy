@@ -14,7 +14,8 @@ import {
   TooltipTrigger,
   toast,
 } from "mangue-ui";
-import { Bot, Maximize2, Minimize2, X } from "lucide-react";
+import { Maximize2, Minimize2, X } from "lucide-react";
+import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import {
   panelSheetClassName,
@@ -24,7 +25,7 @@ import {
 import {
   heartbeatAgentRunApi,
   interruptAgentRunApi,
-  isAgentRunActive,
+  isAgentRunResumable,
   isAgentRunWorking,
   launchAgentRunApi,
   steerAgentRunApi,
@@ -39,7 +40,6 @@ import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
-import { AgentStatusBadge } from "./agent-run-status";
 
 /** Codes d'erreur bruts renvoyés par la route de lancement → clés i18n Agent. */
 const LAUNCH_ERROR_KEYS: Record<string, string> = {
@@ -101,11 +101,11 @@ export function AgentChatModal({
   const { runs, loading } = useIssueAgentRunsQuery(open ? issueId : null);
   const liveRun = run
     ? runs.find((r) => r.id === run.id) ?? run
-    : runs.find((r) => isAgentRunActive(r.status)) ?? null;
+    : runs.find((r) => isAgentRunResumable(r.status)) ?? null;
   const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
-  // Steerable = la session accepte un message (travail ou repos). Un run terminal
-  // (failed / ancien completed-canceled) ne l'est pas → composer désactivé.
-  const steerable = liveRun ? isAgentRunActive(liveRun.status) : false;
+  // Steerable = la session est REPRENNABLE (travail, repos, OU terminée après PR).
+  // On peut toujours relancer l'agent pour itérer — seul `failed` est bloqué.
+  const steerable = liveRun ? isAgentRunResumable(liveRun.status) : false;
 
   // Heartbeat tant que la modal est ouverte sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
@@ -178,6 +178,16 @@ export function AgentChatModal({
     }
   };
 
+  // Envoi depuis le composer live. Si l'agent TRAVAILLE : on met d'abord le message
+  // en file PUIS on interrompt → le tour en cours s'arrête et reprend en traitant
+  // ce message en priorité (steering). Au repos : simple relance.
+  const sendLive = async (message: string) => {
+    const text = message.trim();
+    if (!text) return;
+    await steer(text);
+    if (working) await interrupt();
+  };
+
   const phase: "live" | "loading" | "compose" = liveRun
     ? "live"
     : loading
@@ -196,16 +206,15 @@ export function AgentChatModal({
         <SheetTitle className="sr-only">{t("dialogTitle")}</SheetTitle>
 
         <div className="flex h-full flex-col overflow-hidden">
-          {/* En-tête : en live, modèle + statut ; sinon l'issue ciblée. */}
+          {/* En-tête : en live, juste le modèle (PAS de badge d'état — la session
+              n'est jamais « terminée » : le beam de l'input signale le travail, le
+              composer ouvert signale qu'on peut continuer) ; sinon l'issue ciblée. */}
           <div className="flex shrink-0 items-center gap-2 px-3 py-2.5">
             {liveRun ? (
-              <>
-                <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
-                <AgentStatusBadge status={liveRun.status} />
-              </>
+              <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
             ) : (
               <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                <Bot className="size-4 shrink-0 text-muted-foreground" />
+                <NumoIcon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="truncate">
                   {t("sectionTitle")}
                   <span className="text-muted-foreground">
@@ -271,7 +280,7 @@ export function AgentChatModal({
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card">
-                  <Bot className="size-6 text-muted-foreground" />
+                  <NumoIcon className="size-6 text-muted-foreground" />
                 </div>
                 <p className="max-w-sm text-sm text-muted-foreground">
                   {t("dialogDescription")}
@@ -286,18 +295,35 @@ export function AgentChatModal({
               {liveRun ? (
                 <ChatInput
                   key={liveRun.id}
-                  onSend={(message) => void steer(message)}
+                  onSend={(message) => void sendLive(message)}
                   onAbort={() => void interrupt()}
                   isStreaming={working}
+                  sendWhileStreaming
                   beam={working}
-                  disabled={working || !steerable}
+                  disabled={!steerable}
                   hideAttach
                   placeholder={
-                    working
-                      ? t("workingPlaceholder")
-                      : steerable
-                        ? t("continuePlaceholder")
-                        : t("endedPlaceholder")
+                    !steerable
+                      ? t("endedPlaceholder")
+                      : working
+                        ? t("livePlaceholder")
+                        : t("restPlaceholder")
+                  }
+                  leadingControls={
+                    // Modèle figé pour la session : picker verrouillé + tooltip.
+                    <ModelCombobox
+                      variant="compact"
+                      value={liveRun.model ?? ""}
+                      onChange={() => {}}
+                      defaultLabel={t("modelDefault")}
+                      defaultModelId={liveRun.model}
+                      placeholder={t("modelSearchPlaceholder")}
+                      emptyLabel={t("modelSearchEmpty")}
+                      loadingLabel={t("modelSearchLoading")}
+                      freeTextLabel={(q) => t("modelUseCustom", { model: q })}
+                      disabled
+                      disabledTooltip={t("modelLocked")}
+                    />
                   }
                 />
               ) : (

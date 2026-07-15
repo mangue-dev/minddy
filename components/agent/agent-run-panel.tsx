@@ -9,7 +9,6 @@ import { isAgentRunWorking, type AgentRunSummary } from "@/lib/agent-api";
 import { ModelBadge } from "@/components/model-badge";
 import { AgentBeam } from "@/components/agent-beam";
 import { AgentChatModal } from "./agent-chat-modal";
-import { AgentStatusBadge } from "./agent-run-status";
 
 /**
  * Résumé compact de la session d'agent (MIN-46) dans le panneau d'issue : statut +
@@ -29,9 +28,9 @@ export function AgentRunPanel({
   const t = useTranslations("Agent");
   const router = useRouter();
   const [chatOpen, setChatOpen] = useState(false);
-  // L'agent travaille → le container porte le liseré animé (comme les cartes) et
-  // on masque le badge « En cours » : le beam signale l'activité (les autres
-  // statuts — terminé/attente/échec — gardent leur badge).
+  // L'agent travaille → le container porte le liseré animé (comme les cartes), aucun
+  // badge. Au repos, la session n'est jamais « terminée » : on n'affiche donc PAS de
+  // badge d'état — seulement « Pull request disponible » quand une PR existe.
   const working = isAgentRunWorking(run.status);
 
   return (
@@ -39,7 +38,12 @@ export function AgentRunPanel({
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ModelBadge model={run.model} className="min-w-0" />
-        {!working ? <AgentStatusBadge status={run.status} /> : null}
+        {!working && run.pr_number != null ? (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-500">
+            <GitPullRequest className="size-3.5" />
+            {t("prAvailable")}
+          </span>
+        ) : null}
       </div>
 
       {run.status === "failed" && run.error_message ? (

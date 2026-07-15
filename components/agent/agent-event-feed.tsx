@@ -56,6 +56,11 @@ function makeMessage(
 
 /** Args du tool_call reconstruits en chaîne JSON (ce qu'attend ToolCallList). */
 function toolArguments(payload: Record<string, unknown>): string {
+  // Ancien format d'event (runs existants) : arguments COMPLETS sérialisés sous la
+  // clé `args`. On la renvoie telle quelle → `args.command` / `args.pattern` sont
+  // à nouveau lisibles (rétro-compatible avec les runs déjà enregistrés).
+  if (typeof payload.args === "string") return payload.args;
+  // Format actuel : résumé d'args à plat (command, pattern, path…).
   const rest: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(payload)) {
     if (k === "id" || k === "name") continue;
