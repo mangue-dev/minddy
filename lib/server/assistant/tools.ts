@@ -989,9 +989,27 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "list_agent_models",
+      description:
+        "List the AI models available to the minddy code agent for THIS user, resolved by their active provider — their own BYOK provider (OpenAI, Anthropic, Google, OpenRouter or a generic OpenAI-compatible endpoint), or the minddy platform quota on OpenRouter when they have no key. Returns the active provider, the user's effective default model, and matching model ids. Call it (1) to resolve the EXACT model id before forcing one in launch_code_agent when the user names a model loosely ('use GPT-5', 'run it on Claude Sonnet'), and (2) to answer 'which models can I use for the agent?'. Always pass `query` to narrow — the catalog (OpenRouter especially) can hold hundreds of models.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "Case-insensitive substring to filter models by id or name (e.g. 'gpt', 'claude', 'sonnet', 'deepseek', 'gemini'). Omit only to sample the top of the catalog.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "launch_code_agent",
       description:
-        "Launch the minddy cloud code agent on an issue: it clones the project's linked GitHub repository in a sandbox, implements the issue, and opens a pull request. Requires a linked GitHub repo. Use when the user asks to IMPLEMENT, fix, or write code for an issue — not merely describe it. Pass `model` ONLY when the user explicitly names a model to use (it will be forced); otherwise omit it and their default applies.",
+        "Launch the minddy cloud code agent on an issue: it clones the project's linked GitHub repository in a sandbox, implements the issue, and opens a pull request. Requires a linked GitHub repo. Use when the user asks to IMPLEMENT, fix, or write code for an issue — not merely describe it. Pass `model` ONLY when the user explicitly names a model to use — resolve the exact id with list_agent_models first so it matches their active provider (a model absent from that provider will fail); otherwise omit `model` and their default applies.",
       parameters: {
         type: "object",
         properties: {
@@ -1039,6 +1057,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
 export const ACCOUNT_TOOLS = new Set([
   "get_account_settings",
   "update_account_settings",
+  "list_agent_models",
   "get_cycle",
   "fill_cycle",
   "add_issues_to_cycle",

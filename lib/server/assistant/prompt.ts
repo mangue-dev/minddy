@@ -134,8 +134,11 @@ export function buildSharedRules(
   for an issue (not just describe or plan it), call launch_code_agent with the issue's id. It runs
   in the cloud, edits the project's linked GitHub repo, and opens a pull request (a linked GitHub
   repo is required). Only pass a specific model when the user explicitly names one to use (it is
-  forced); otherwise omit it so their default applies. Tell them the agent has started and that
-  they can follow it on the issue.
+  forced); otherwise omit it so their default applies. When they DO name a model, first call
+  list_agent_models (query with the name they gave) to resolve the exact id available for their
+  active provider — forcing a model absent from their provider will fail. Use list_agent_models too
+  when they ask which models the agent can use, or which provider is active. Tell them the agent has
+  started and that they can follow it on the issue.
 
 ## Asking clarifying questions
 When unsure about what the user wants, call the ask_user tool with a clear, specific question.

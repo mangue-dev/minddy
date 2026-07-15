@@ -54,6 +54,7 @@ import {
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { getPullRequest, listPullRequestFiles } from "@/lib/server/agent/pr";
 
@@ -109,6 +110,8 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
       return "An agent run is already in progress on this issue.";
     case "quotaExceeded":
       return "Monthly code-agent usage limit reached. Add your own OpenRouter key (BYOK) in Account settings for unlimited usage.";
+    case "noModelForProvider":
+      return "The active provider has no default model, so a model must be chosen. Call list_agent_models to find an available model id for this provider, then relaunch with that model (or the user can set a default in Account settings).";
     default:
       return "Could not launch the code agent.";
   }
@@ -287,6 +290,36 @@ export async function executeTool(
       return r.ok
         ? { result: { settings: r.settings }, success: true }
         : toolError(r.error);
+    }
+
+    // ── Agent model catalog (per-account: resolved by the active provider) ──
+    if (toolName === "list_agent_models") {
+      const catalog = await getAgentModelsForUser(ctx.userId);
+      const q = typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
+      const matched = q
+        ? catalog.models.filter(
+            (m) =>
+              m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+          )
+        : catalog.models;
+      // Keep Numo's context lean: a provider catalog can hold hundreds of ids.
+      const CAP = 40;
+      const truncated = matched.length > CAP;
+      return {
+        result: {
+          provider: catalog.provider,
+          default_model: catalog.defaultModel,
+          total_matched: matched.length,
+          truncated,
+          note: truncated
+            ? `Showing the first ${CAP} of ${matched.length} matches — pass a more specific query to narrow.`
+            : catalog.models.length === 0
+              ? "The provider returned no model list (a generic endpoint may not expose one); the user can still type any exact model id."
+              : undefined,
+          models: matched.slice(0, CAP),
+        },
+        success: true,
+      };
     }
 
     // ── Cycle tools (the user's personal cross-project cycle — MIN-32) ──
