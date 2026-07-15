@@ -9,7 +9,7 @@ import {
 } from "@/lib/agent-models";
 import { resolveRepoCloneTarget } from "./repo-access";
 import {
-  createOrReconnectSandbox,
+  getOrCreateAgentSandbox,
   cloneRepo,
   commitAndPush,
   runShell,
@@ -21,7 +21,6 @@ import {
   listDir,
   grepRepo,
   globRepo,
-  stopSandbox,
   sandboxName,
   type GrepOutputMode,
   type Sandbox,
@@ -43,30 +42,41 @@ import {
   stampRun,
   appendEvent,
   pullPendingMessages,
+  readInterruptFlag,
+  clearInterrupt,
   type AgentRun,
   type AgentCheckpoint,
 } from "./runs";
 
 /**
- * Exécute UN chunk d'un run d'agent (MIN-46). Reconnecte/clone le Sandbox,
- * rehydrate le checkpoint, fait tourner la boucle jusqu'à la soft-deadline, puis :
- *   - suspended  → commit+push WIP, checkpoint persisté, run re-`queued` (le drain
- *                  le reprend, en process ou via l'auto-invoke) ;
- *   - needs_input → commit+push WIP, run `needs_input` (attend la réponse user) ;
- *   - completed  → commit+push final, PR ouverte, commentaire d'issue, run `completed`.
- * Toute exception → run `failed`. Le drain appelle cette fonction après claim.
+ * Exécute UN chunk d'une SESSION d'agent (MIN-46, agent conversationnel). Réveille
+ * (snapshot persistant) ou clone le Sandbox, rehydrate le checkpoint, fait tourner
+ * la boucle jusqu'à la soft-deadline, puis :
+ *   - suspended  → commit+push WIP, checkpoint persisté, run re-`queued` (continue
+ *                  le tour, en process ou via l'auto-invoke) ;
+ *   - completed  → fin de tour : commit+push, PR ouverte/mise à jour S'IL Y A un
+ *                  diff, puis REPOS (`needs_input`) — la session n'est PAS fermée ;
+ *   - needs_input → `ask_user` : REPOS (attend la réponse user) ;
+ *   - interrupted → « Stop » : round partiel jeté, REPOS.
+ * La session ne se termine jamais : elle repose et reste reprennable. Seule une
+ * erreur d'AMORÇAGE (repo/modèle) → `failed`. Le drain appelle après claim.
  */
 
 /** Marge (ms) réservée après la boucle pour commit+push+PR+stamp. */
 const COMMIT_MARGIN_MS = 25_000;
 /** Soft-deadline plancher d'un chunk (si le budget restant est très court). */
 const MIN_SOFT_DEADLINE_MS = 20_000;
-/** Wall-clock global max d'un run (garde-fou anti-runaway). */
+/** Wall-clock max d'UN TOUR (garde-fou anti-runaway ; réinitialisé à chaque tour). */
 const MAX_WALL_CLOCK_MS = 60 * 60_000;
 /** Taille max du checkpoint sérialisé. */
 const MAX_CHECKPOINT_BYTES = 8_000_000;
 
-export type ExecuteOutcome = "completed" | "suspended" | "needs_input" | "failed";
+export type ExecuteOutcome =
+  | "completed"
+  | "suspended"
+  | "needs_input"
+  | "interrupted"
+  | "failed";
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -308,6 +318,20 @@ export async function executeAgentRun(
     if (!run.created_by) throw new Error("Run has no owner");
     if (!run.model) throw new Error("Run has no model");
 
+    // Interruption demandée alors que le run était EN FILE (entre deux tours) : on
+    // repasse au repos sans même réveiller la sandbox.
+    if (run.interrupt_requested) {
+      await clearInterrupt(run.id);
+      await stampRun(run.id, {
+        status: "needs_input",
+        continuations: 0,
+        window_started_at: null,
+        last_activity_at: new Date().toISOString(),
+        interrupt_requested: false,
+      });
+      return "interrupted";
+    }
+
     // Cible de clone (token d'installation frais pour ce chunk).
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) throw new Error("No repository linked to this project");
@@ -319,16 +343,22 @@ export async function executeAgentRun(
     const workBranch =
       run.branch_name ?? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`;
 
-    // Sandbox : reconnecte si la microVM est vivante, sinon clone à neuf.
-    const { sandbox: sb, reconnected } = await createOrReconnectSandbox(run.sandbox_id);
+    // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
+    // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
+    // Nom déterministe → même microVM/snapshot d'un tour à l'autre.
+    const { sandbox: sb } = await getOrCreateAgentSandbox({
+      name: `agent-${run.id}`,
+      onCreate: async (fresh) => {
+        await cloneRepo(fresh, { authUrl: target.authUrl, baseBranch, workBranch });
+      },
+    });
     sandbox = sb;
-    if (!reconnected) {
-      await cloneRepo(sandbox, { authUrl: target.authUrl, baseBranch, workBranch });
-    }
 
     // Persiste l'identité du Sandbox + les branches AVANT la boucle (reprise si crash).
+    // sandbox_stopped_at:null → la microVM est de nouveau vivante (le reaper l'ignore).
     await stampRun(run.id, {
       sandbox_id: sandboxName(sandbox),
+      sandbox_stopped_at: null,
       base_branch: baseBranch,
       branch_name: workBranch,
     });
@@ -385,6 +415,9 @@ export async function executeAgentRun(
       contextWindow,
       execTool: makeExecTool(sandbox),
       pullSteering: () => pullPendingMessages(run.id),
+      // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
+      // vol et renvoie `interrupted` (round partiel jeté).
+      checkInterrupt: () => readInterruptFlag(run.id),
       // Miroir des états du checklist de l'agent vers le plan de l'issue liée.
       syncPlan: (steps) => syncIssuePlanStates(run.issue_id, steps),
       emit,
@@ -392,22 +425,33 @@ export async function executeAgentRun(
     });
 
     const newCost = run.cost_usd + result.costUsd;
+    const checkpoint: AgentCheckpoint = { messages: result.messages, usageSeq: result.usageSeqEnd };
+    const nowIso = new Date().toISOString();
 
-    // ── Terminé : commit final + PR + commentaire ────────────────────────────
+    // Champs communs à toute mise au REPOS (fin de tour / ask_user / interruption /
+    // budget épuisé) : session reprennable, microVM gardée chaude (le reaper la
+    // coupera après ~5 min d'inactivité), budget de tour remis à zéro.
+    const restFields = {
+      continuations: 0,
+      window_started_at: null,
+      cost_usd: newCost,
+      sandbox_id: sandboxName(sandbox),
+      sandbox_stopped_at: null,
+      last_activity_at: nowIso,
+      interrupt_requested: false,
+    } satisfies Partial<Parameters<typeof stampRun>[1]>;
+
+    // ── Fin de tour : commit + PR (si diff) → REPOS (session PAS fermée) ───────
     if (result.status === "completed") {
       const finish = result.finish ?? { summary: "Changes applied." };
       const freshTarget = await resolveRepoCloneTarget(run.project_id);
       const authUrl = freshTarget?.authUrl ?? target.authUrl;
       const token = freshTarget?.token ?? target.token;
 
-      await commitAndPush(sandbox, {
-        authUrl,
-        workBranch,
-        message: finish.prTitle?.trim() || `${issue.identifier}: ${issue.title}`,
-      });
-
       const prTitle = finish.prTitle?.trim() || `${issue.identifier}: ${issue.title}`;
       const prBody = `${finish.prBody?.trim() || finish.summary}\n\n---\n🤖 Généré par l'agent numo (minddy) · issue ${issue.identifier}`;
+
+      await commitAndPush(sandbox, { authUrl, workBranch, message: prTitle });
 
       try {
         const pr = await ensurePullRequest({
@@ -420,19 +464,16 @@ export async function executeAgentRun(
         });
         await emit("pr_opened", { number: pr.number, url: pr.url });
         await postSummaryComment(run, issue.identifier, finish.summary, pr.url, commentLocale);
-        await stopSandbox(sandbox);
         await stampRun(run.id, {
-          status: "completed",
+          status: "needs_input",
+          ...restFields,
+          checkpoint,
           pr_number: pr.number,
           pr_url: pr.url,
           pr_state: (pr.state as AgentRun["pr_state"]) ?? "open",
-          checkpoint: null,
-          continuations: 0,
-          cost_usd: newCost,
           outcome: finish.summary,
         });
-        // La PR est ouverte → l'issue passe en revue (MIN-46). L'acteur est
-        // l'auteur du run (il a l'accès projet) ; best-effort.
+        // PR ouverte/mise à jour → l'issue passe en revue (MIN-46). Best-effort.
         if (run.created_by) {
           await syncIssueStatusFromPr({
             issueId: run.issue_id,
@@ -442,17 +483,15 @@ export async function executeAgentRun(
         }
         return "completed";
       } catch (err) {
-        // Aucune modification produite (422 « No commits between… ») → complété sans PR.
+        // Aucune modification produite (422 « No commits between… ») → repos sans PR.
         if (err instanceof GithubApiError && err.status === 422) {
           await emit("summary", { text: "No changes were produced." });
           await postSummaryComment(run, issue.identifier, finish.summary, null, commentLocale);
-          await stopSandbox(sandbox);
           await stampRun(run.id, {
-            status: "completed",
-            checkpoint: null,
-            continuations: 0,
-            cost_usd: newCost,
-            outcome: `${finish.summary} (no diff)`,
+            status: "needs_input",
+            ...restFields,
+            checkpoint,
+            outcome: finish.summary,
           });
           return "completed";
         }
@@ -460,10 +499,7 @@ export async function executeAgentRun(
       }
     }
 
-    // ── Suspend / attente user : push WIP + persiste le checkpoint ────────────
-    const checkpoint: AgentCheckpoint = { messages: result.messages, usageSeq: result.usageSeqEnd };
-    usageSeqStart = result.usageSeqEnd;
-
+    // ── needs_input / interrupted / suspended : push WIP + persiste le checkpoint ─
     await commitAndPush(sandbox, {
       authUrl: target.authUrl,
       workBranch,
@@ -473,18 +509,34 @@ export async function executeAgentRun(
       console.error("[agent-execute] WIP push failed:", (err as Error).message);
     });
 
+    // ask_user → REPOS (attend la réponse de l'utilisateur).
     if (result.status === "needs_input") {
       await stampRun(run.id, {
         status: "needs_input",
+        ...restFields,
         checkpoint,
-        sandbox_id: sandboxName(sandbox),
-        cost_usd: newCost,
         outcome: result.question ?? null,
       });
       return "needs_input";
     }
 
-    // suspended — garde-fous anti-runaway.
+    // « Interrompre » → REPOS (round partiel déjà jeté par la boucle).
+    if (result.status === "interrupted") {
+      await clearInterrupt(run.id);
+      await stampRun(run.id, { status: "needs_input", ...restFields, checkpoint });
+      return "interrupted";
+    }
+
+    // suspended, mais une interruption a été demandée pendant le chunk → REPOS
+    // plutôt que re-queue (course : le drapeau est arrivé après le retour de boucle).
+    if (await readInterruptFlag(run.id)) {
+      await clearInterrupt(run.id);
+      await stampRun(run.id, { status: "needs_input", ...restFields, checkpoint });
+      return "interrupted";
+    }
+
+    // suspended — garde-fous anti-runaway PAR TOUR : au-delà, on REPOSE (avec un
+    // event d'erreur) au lieu d'échouer — la session reste reprennable.
     const nextContinuations = run.continuations + 1;
     const wallClock = run.window_started_at
       ? Date.now() - Date.parse(run.window_started_at)
@@ -496,39 +548,54 @@ export async function executeAgentRun(
       wallClock > MAX_WALL_CLOCK_MS ||
       checkpointTooBig
     ) {
-      await emit("error", { message: "Run budget exhausted (continuations / time / size)." });
-      await stopSandbox(sandbox);
-      await stampRun(run.id, {
-        status: "failed",
-        error_message: "Run budget exhausted",
-        checkpoint: null,
-        continuations: 0,
-        cost_usd: newCost,
+      await emit("error", {
+        message: "Tour trop long (budget épuisé) — envoie un message pour continuer.",
       });
-      return "failed";
+      await stampRun(run.id, { status: "needs_input", ...restFields, checkpoint });
+      return "needs_input";
     }
 
+    // Continuation du MÊME tour : re-queue immédiat (window_started_at conservé).
     await stampRun(run.id, {
       status: "queued",
       checkpoint,
       sandbox_id: sandboxName(sandbox),
+      sandbox_stopped_at: null,
       continuations: nextContinuations,
       attempts: 0,
-      not_before: new Date().toISOString(),
+      not_before: nowIso,
       cost_usd: newCost,
     });
     return "suspended";
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await emit("error", { message });
-    if (sandbox) await stopSandbox(sandbox);
+    // Erreur d'AMORÇAGE (repo/modèle/clone : sandbox jamais acquise) → non
+    // reprenable, la session échoue.
+    if (!sandbox) {
+      await stampRun(run.id, {
+        status: "failed",
+        error_message: cap(message, 1000),
+        checkpoint: null,
+        continuations: 0,
+      });
+      return "failed";
+    }
+    // Erreur EN COURS DE TOUR → la session reste reprennable : REPOS, checkpoint du
+    // dernier état sain conservé (non écrasé), microVM gardée. L'utilisateur peut
+    // renvoyer un message pour reprendre.
+    await clearInterrupt(run.id).catch(() => {});
     await stampRun(run.id, {
-      status: "failed",
+      status: "needs_input",
       error_message: cap(message, 1000),
-      checkpoint: null,
       continuations: 0,
+      window_started_at: null,
+      sandbox_id: sandboxName(sandbox),
+      sandbox_stopped_at: null,
+      last_activity_at: new Date().toISOString(),
+      interrupt_requested: false,
     });
-    return "failed";
+    return "needs_input";
   }
 }
 

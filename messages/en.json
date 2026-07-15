@@ -986,7 +986,11 @@
     "replyPlaceholder": "Reply to the agent…",
     "steerPlaceholder": "Steer the agent…",
     "composeDefaultPrompt": "Work on {id}",
-    "composePlaceholder": "Describe what the agent should do…"
+    "composePlaceholder": "Describe what the agent should do…",
+    "continuePlaceholder": "Send a message to continue…",
+    "workingPlaceholder": "The agent is working — stop to reply",
+    "openConversation": "Open conversation",
+    "openAgent": "Open agent"
   },
   "Projects": {
     "newProject": "New Project",

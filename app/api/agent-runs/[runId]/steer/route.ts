@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { getRun, insertRunMessage, stampRun } from "@/lib/server/agent/runs";
+import { getRun, insertRunMessage, stampRun, bumpRunActivity } from "@/lib/server/agent/runs";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { getServiceClient } from "@/lib/supabase-service";
 
@@ -48,8 +48,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   await insertRunMessage(runId, auth.user.id, message);
+  // Un message relance l'horloge d'inactivité (empêche le reaping imminent).
+  await bumpRunActivity(runId);
 
-  // Reprise d'un run en attente de réponse (ask_user).
+  // Reprise d'un run au repos (ask_user OU fin de tour) : nouveau tour.
   if (run.status === "needs_input") {
     const resumed = await stampRun(
       runId,

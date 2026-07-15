@@ -144,10 +144,29 @@ export interface RunAgentLoopParams {
   /** Index de départ des lignes ai_usage (ordre d'affichage). */
   usageSeqStart?: number;
   signal?: AbortSignal;
+  /**
+   * « Interrompre la réponse en cours » : polé à la frontière de round ET pendant
+   * le stream LLM (via un timer). Si true, la boucle abandonne l'appel en cours et
+   * renvoie `interrupted` — SANS ajouter le round partiel (checkpoint = dernier
+   * round complet). L'exécuteur repasse alors la session au repos.
+   */
+  checkInterrupt?: () => Promise<boolean>;
 }
 
+/** Interruption utilisateur de la réponse en cours — distincte d'une StreamError
+ *  (non reprenable : on ne retente pas, on renvoie `interrupted`). */
+export class InterruptedError extends Error {
+  constructor() {
+    super("interrupted");
+    this.name = "InterruptedError";
+  }
+}
+
+/** Fréquence de poll du drapeau d'interruption pendant un stream. */
+const INTERRUPT_POLL_MS = 2000;
+
 export interface AgentLoopResult {
-  status: "completed" | "suspended" | "needs_input";
+  status: "completed" | "suspended" | "needs_input" | "interrupted";
   messages: AgentChatMessage[];
   finish?: AgentFinish;
   question?: string;
@@ -265,6 +284,7 @@ async function streamCompletionOnce(opts: {
   messages: AgentChatMessage[];
   tools: AgentToolDef[];
   signal?: AbortSignal;
+  checkInterrupt?: () => Promise<boolean>;
 }): Promise<StreamResult> {
   const profile = getAgentProvider(opts.provider)?.requestProfile ?? {};
 
@@ -309,6 +329,24 @@ async function streamCompletionOnce(opts: {
     else opts.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
 
+  // Interruption utilisateur (« Stop ») : polée en tâche de fond pendant le stream.
+  // Dès qu'elle est demandée, on abort le fetch → l'erreur est reconnue comme une
+  // InterruptedError (non reprenable). Distinct des timeouts (reprenables).
+  let interrupted = false;
+  const interruptTimer = opts.checkInterrupt
+    ? setInterval(() => {
+        void opts
+          .checkInterrupt!()
+          .then((yes) => {
+            if (yes) {
+              interrupted = true;
+              controller.abort();
+            }
+          })
+          .catch(() => {});
+      }, INTERRUPT_POLL_MS)
+    : undefined;
+
   try {
     let response: Response;
     try {
@@ -319,6 +357,7 @@ async function streamCompletionOnce(opts: {
         signal: controller.signal,
       });
     } catch (err) {
+      if (interrupted) throw new InterruptedError();
       // Abort (timeout nous → reprenable ; externe → non) ou erreur réseau (reprenable).
       const retryable = timedOut || !opts.signal?.aborted;
       throw new StreamError(`network error: ${(err as Error).message}`, { retryable });
@@ -350,6 +389,7 @@ async function streamCompletionOnce(opts: {
       try {
         chunk = await reader.read();
       } catch (err) {
+        if (interrupted) throw new InterruptedError();
         throw new StreamError(`stream interrupted: ${(err as Error).message}`, {
           retryable: timedOut || !opts.signal?.aborted,
         });
@@ -398,10 +438,15 @@ async function streamCompletionOnce(opts: {
       function: { name: a.name, arguments: a.arguments },
     }));
 
+    // Le stream s'est terminé proprement mais une interruption a pu être demandée
+    // à la toute fin (abort sans erreur de lecture) → on la fait remonter.
+    if (interrupted) throw new InterruptedError();
+
     return { content, reasoning, toolCalls, generationId, modelUsed, usage: parseOpenRouterUsage(usageRaw) };
   } finally {
     clearTimeout(hardTimer);
     clearTimeout(idleTimer);
+    if (interruptTimer) clearInterval(interruptTimer);
   }
 }
 
@@ -419,6 +464,7 @@ async function streamCompletion(opts: {
   messages: AgentChatMessage[];
   tools: AgentToolDef[];
   signal?: AbortSignal;
+  checkInterrupt?: () => Promise<boolean>;
   /** Deadline absolue (Date.now() ms) du chunk : au-delà, on ne dort pas, on relève. */
   deadlineAt?: number;
 }): Promise<StreamResult> {
@@ -428,6 +474,8 @@ async function streamCompletion(opts: {
       return await streamCompletionOnce(opts);
     } catch (err) {
       lastErr = err;
+      // Interruption utilisateur : jamais retentée — on la fait remonter.
+      if (err instanceof InterruptedError) throw err;
       const retryable = err instanceof StreamError ? err.retryable : true;
       if (!retryable || attempt === MAX_STREAM_ATTEMPTS - 1) throw err;
       // Attente plafonnée (un Retry-After absurde ne doit pas nous faire dormir au-
@@ -468,6 +516,11 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   let lastPromptTokens: number | null = null;
 
   for (;;) {
+    // Interruption demandée entre deux rounds → repos, SANS round partiel (le
+    // checkpoint reste au dernier round complet).
+    if (params.checkInterrupt && (await params.checkInterrupt())) {
+      return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
+    }
     // Frontière sûre : suspend AVANT le prochain appel LLM.
     if (elapsed() >= params.softDeadlineMs || round >= MAX_ROUNDS_PER_CHUNK) {
       return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
@@ -568,6 +621,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           messages,
           tools,
           signal: params.signal,
+          checkInterrupt: params.checkInterrupt,
           deadlineAt: startedAt + params.softDeadlineMs,
         });
         break;
@@ -592,6 +646,10 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         if (err instanceof StreamError && err.retryable) {
           await emit("status", { phase: "transient_error", message: cap(err.message, 300) });
           return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+        }
+        // Interruption utilisateur pendant le stream → repos, round partiel jeté.
+        if (err instanceof InterruptedError) {
+          return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
         }
         throw err;
       }

@@ -19,7 +19,7 @@ import {
   assistantCopyMessageIds,
 } from "@/components/assistant/chat-message";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
-import { isAgentRunActive, type AgentRunEvent, type AgentRunStatus } from "@/lib/agent-api";
+import { isAgentRunWorking, type AgentRunEvent, type AgentRunStatus } from "@/lib/agent-api";
 import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types";
 
 /**
@@ -261,7 +261,9 @@ export function AgentEventFeed({
   className?: string;
 }) {
   const t = useTranslations("Agent");
-  const active = isAgentRunActive(status);
+  // On ne poll les events (et n'affiche l'indicateur « travaille ») que tant que
+  // l'agent TRAVAILLE ; au repos (needs_input) le fil est figé jusqu'à relance.
+  const active = isAgentRunWorking(status);
   const { events, loading } = useAgentRunEventsQuery(runId, active);
   const feedRef = useRef<HTMLDivElement>(null);
 

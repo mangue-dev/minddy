@@ -7,7 +7,7 @@ import {
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchPrCommentsApi,
-  isAgentRunActive,
+  isAgentRunWorking,
 } from "./agent-api";
 
 /** Clé de cache des runs d'agent d'une issue. */
@@ -16,8 +16,10 @@ export function issueAgentRunsQueryKey(issueId: string) {
 }
 
 /**
- * Runs de l'agent d'une issue, avec polling adaptatif : ~4 s tant qu'un run est
- * actif (queued/running/needs_input), sinon pas de polling.
+ * Runs de l'agent d'une issue, avec polling adaptatif : ~3 s tant que l'agent
+ * TRAVAILLE (queued/running), sinon pas de polling. Une session au repos
+ * (needs_input) ne change pas toute seule — une action utilisateur (steer/relance)
+ * invalide la query et relance le polling quand l'agent repart.
  */
 export function useIssueAgentRunsQuery(issueId: string | null) {
   const { data, isLoading } = useQuery({
@@ -26,7 +28,7 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     enabled: !!issueId,
     refetchInterval: (query) => {
       const runs = query.state.data?.runs ?? [];
-      return runs.some((r) => isAgentRunActive(r.status)) ? 4000 : false;
+      return runs.some((r) => isAgentRunWorking(r.status)) ? 3000 : false;
     },
   });
   return { runs: data?.runs ?? [], loading: isLoading };

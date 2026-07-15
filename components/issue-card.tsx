@@ -45,7 +45,7 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
-import { useAgentActive } from "@/components/agent/agent-activity-context";
+import { useAgentActive, useAgentHasSession } from "@/components/agent/agent-activity-context";
 import { AgentChatModal } from "@/components/agent/agent-chat-modal";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
@@ -731,6 +731,9 @@ export function IssueCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
   const agentActive = useAgentActive(issue.id);
+  // Une session d'agent (reprennable) existe déjà sur l'issue → l'action « ouvre »
+  // la conversation au lieu d'en lancer une nouvelle.
+  const agentHasSession = useAgentHasSession(issue.id);
 
   // Drop de fichiers depuis l'OS directement sur la carte (MIN-24) — chaque
   // fichier est enregistré sur l'issue dès que son upload aboutit. Distinct du
@@ -818,15 +821,13 @@ export function IssueCard({
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
   // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
-  // ouvre le dialogue de lancement d'agent (sauf si un agent tourne déjà).
+  // ouvre la conversation de l'agent (la lance si aucune session, sinon la reprend).
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
     !isDragging,
     {
       " ": onOpen,
       "shift+p": () => void copyPrompt(),
-      "shift+a": () => {
-        if (!agentActive) setLaunchOpen(true);
-      },
+      "shift+a": () => setLaunchOpen(true),
     }
   );
 
@@ -839,21 +840,17 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
-    // Lancer un agent de code sur ce ticket : ouvre le dialogue (choix du modèle
-    // + instructions optionnelles), ne lance pas directement. Masqué quand un
-    // agent tourne déjà sur l'issue (le liseré animé le signale).
-    ...(!agentActive
-      ? [
-          {
-            id: "launch-agent",
-            label: tAgent("menuLaunch"),
-            keywords: ["agent", "launch", "lancer", "code", "ai"],
-            icon: <Bot className="size-4" />,
-            shortcut: "⇧A",
-            onSelect: () => setLaunchOpen(true),
-          },
-        ]
-      : []),
+    // Ouvre la conversation de l'agent de code sur ce ticket (modal grand format) :
+    // la LANCE si aucune session, sinon REPREND la session existante. Toujours
+    // disponible — même pendant que l'agent travaille (pour suivre / interrompre).
+    {
+      id: "launch-agent",
+      label: agentHasSession ? tAgent("openAgent") : tAgent("menuLaunch"),
+      keywords: ["agent", "launch", "lancer", "open", "ouvrir", "code", "ai"],
+      icon: <Bot className="size-4" />,
+      shortcut: "⇧A",
+      onSelect: () => setLaunchOpen(true),
+    },
     // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
     // leaf opens the target-issue picker at the pointer. Shown only when the
     // board wired the relation handlers.

@@ -2,19 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
+import { getRun, bumpRunActivity } from "@/lib/server/agent/runs";
 
 /**
- * « Interrompre la réponse en cours » d'une session d'agent (MIN-46). Pose le
- * drapeau d'interruption : le chunk qui tourne abandonne l'appel LLM en cours (à la
- * frontière de round ou en plein stream) et revient AU REPOS. N'ANNULE PAS la
- * session, ne touche ni au checkpoint ni à la sandbox — tout reste reprennable.
- * (L'endpoint reste /stop côté client.) Membre du projet requis.
+ * Heartbeat d'une session d'agent (MIN-46). Rafraîchit `last_activity_at` tant que
+ * la conversation est ouverte côté client (~toutes les 45 s), pour que le reaper ne
+ * coupe pas la microVM pendant que l'utilisateur lit ou écrit. Membre du projet
+ * requis. Léger — juste un bump de timestamp.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
-
-const WORKING = ["queued", "running"];
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { runId } = await params;
@@ -27,10 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const access = await getProjectAccess(auth.user.id, run.project_id);
   if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  // On n'interrompt qu'un run qui TRAVAILLE ; au repos il n'y a rien à interrompre.
-  if (WORKING.includes(run.status)) {
-    await requestInterrupt(runId);
-  }
+  await bumpRunActivity(runId);
 
-  return NextResponse.json({ ok: true, status: run.status });
+  return NextResponse.json({ ok: true });
 }

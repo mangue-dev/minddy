@@ -11,18 +11,26 @@ import { resolveWithin, assertNotGit } from "./repo-path";
  * install/build/tests, commit et push. Le reste de l'agent (boucle LLM, tools,
  * orchestration) est bâti au-dessus dans lib/server/agent/*.
  *
- * IDENTITÉ & REPRISE : un Sandbox est identifié par son `name` (persisté dans
- * agent_runs.sandbox_id). `createOrReconnectSandbox` tente d'abord de rejoindre
- * la microVM encore vivante ; si elle a expiré, il en crée une neuve et
- * l'appelant re-clone la branche de travail (l'état du repo est durable dans git,
- * pas dans le Sandbox). AUTH : réutilise VERCEL_TOKEN/TEAM_ID/PROJECT_ID (comme
- * les domaines custom, MIN-36) ; sur Vercel l'OIDC suffit.
+ * IDENTITÉ & REPRISE : un Sandbox est identifié par un `name` DÉTERMINISTE
+ * (`agent-<run.id>`, persisté dans agent_runs.sandbox_id). `getOrCreateAgentSandbox`
+ * est idempotent : si la microVM (ou son SNAPSHOT persistant) existe encore, elle
+ * est RÉVEILLÉE avec son filesystem restauré (reprise rapide, pas de re-clone) ;
+ * sinon `onCreate` clone la branche de travail sur une VM neuve. On active donc
+ * `persistent: true` (restauration automatique du FS entre sessions via snapshots)
+ * + `snapshotExpiration`. Le git (branche WIP poussée à chaque pause) reste le
+ * filet durable au-delà de l'expiration du snapshot. AUTH : réutilise
+ * VERCEL_TOKEN/TEAM_ID/PROJECT_ID (comme les domaines custom, MIN-36) ; sur Vercel
+ * l'OIDC suffit.
  */
 
 /** Runtime de la microVM. */
 const SANDBOX_RUNTIME = "node24";
-/** Durée de vie max de la microVM (elle doit survivre au gap entre deux chunks). */
+/** Durée de vie max d'une session de la microVM (survit au gap entre deux chunks).
+ *  Backstop : l'inactivité réelle est gérée par le reaper (coupe après ~5 min). */
 const SANDBOX_TIMEOUT_MS = 45 * 60_000;
+/** Rétention des snapshots persistants (reprise rapide). Au-delà, on retombe sur
+ *  le re-clone de la branche git (durable pour toujours). */
+const SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 * 24 * 60 * 60_000;
 /** Où le dépôt est cloné dans la microVM. */
 export const REPO_DIR = "/vercel/sandbox/repo";
 /** Home par défaut du Sandbox (parent de REPO_DIR). */
@@ -54,31 +62,31 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
 }
 
 /**
- * Rejoint la microVM `sandboxName` si elle est encore vivante, sinon en crée une
- * neuve (depuis le snapshot AGENT_SANDBOX_SNAPSHOT_ID si présent, pour un boot
- * quasi instantané). `reconnected=false` signale à l'appelant qu'il faut
- * re-cloner la branche de travail.
+ * Récupère la microVM nommée `name` en RÉVEILLANT sa session (filesystem restauré
+ * depuis le snapshot persistant → reprise rapide, `onCreate` NON appelé), sinon en
+ * crée une neuve et appelle `onCreate` (qui clone la branche de travail). Un snapshot
+ * expiré est traité comme « introuvable » → recrée + `onCreate`. Boot optionnel
+ * depuis AGENT_SANDBOX_SNAPSHOT_ID (image pré-chauffée) pour la création fraîche.
  */
-export async function createOrReconnectSandbox(
-  sandboxName?: string | null,
-): Promise<{ sandbox: Sandbox; reconnected: boolean }> {
+export async function getOrCreateAgentSandbox(opts: {
+  name: string;
+  onCreate: (sandbox: Sandbox) => Promise<void>;
+}): Promise<{ sandbox: Sandbox }> {
   const creds = sandboxCredentials();
-
-  if (sandboxName) {
-    try {
-      const sandbox = await Sandbox.get({ ...creds, name: sandboxName, resume: true });
-      return { sandbox, reconnected: true };
-    } catch {
-      // Expirée / introuvable → on repart d'une microVM neuve.
-    }
-  }
-
   const snapshotId = process.env.AGENT_SANDBOX_SNAPSHOT_ID?.trim();
+  const base = {
+    ...creds,
+    name: opts.name,
+    timeout: SANDBOX_TIMEOUT_MS,
+    persistent: true,
+    snapshotExpiration: SANDBOX_SNAPSHOT_EXPIRATION_MS,
+    resume: true,
+    onCreate: opts.onCreate,
+  };
   const sandbox = snapshotId
-    ? await Sandbox.create({ ...creds, source: { type: "snapshot", snapshotId }, timeout: SANDBOX_TIMEOUT_MS })
-    : await Sandbox.create({ ...creds, runtime: SANDBOX_RUNTIME, timeout: SANDBOX_TIMEOUT_MS });
-
-  return { sandbox, reconnected: false };
+    ? await Sandbox.getOrCreate({ ...base, source: { type: "snapshot", snapshotId } })
+    : await Sandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
+  return { sandbox };
 }
 
 /** Nom stable de la microVM à persister dans agent_runs.sandbox_id. */
@@ -86,12 +94,19 @@ export function sandboxName(sandbox: Sandbox): string {
   return sandbox.name;
 }
 
-/** Arrête la microVM (best-effort — ne lève jamais). */
-export async function stopSandbox(sandbox: Sandbox): Promise<void> {
+/**
+ * Arrête une microVM par son NOM sans la réveiller (`resume: false`), pour le reaper
+ * d'inactivité : on coupe la VM au repos tout en gardant son snapshot persistant, de
+ * sorte que la session reste reprennable (réveil rapide au prochain message).
+ * Best-effort — ne lève jamais (déjà arrêtée / expirée / introuvable).
+ */
+export async function stopSandboxByName(name: string): Promise<void> {
   try {
+    const creds = sandboxCredentials();
+    const sandbox = await Sandbox.get({ ...creds, name, resume: false });
     await sandbox.stop();
   } catch {
-    // best-effort : la microVM finira par expirer d'elle-même.
+    // best-effort.
   }
 }
 

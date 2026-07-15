@@ -4,19 +4,37 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 /**
- * Contexte « quelles issues ont un agent en cours » (MIN-46). Le provider poll
- * (adaptatif : 4 s quand au moins un run tourne, sinon 15 s) l'endpoint projet et
- * expose l'ensemble des issue_ids actifs ; les cartes s'y abonnent pour afficher
- * le halo arc-en-ciel. Un seul poll par board (pas un par carte).
+ * Contexte « état de l'agent par issue » (MIN-46). Un seul poll par board expose
+ * deux ensembles d'issue_ids :
+ *   • working  — l'agent TRAVAILLE (queued/running) → halo animé sur la carte ;
+ *   • session  — une session reprennable existe (working OU au repos needs_input)
+ *                → l'entrée de la carte propose « Ouvrir l'agent » plutôt que
+ *                  « Lancer un agent ».
+ * Polling adaptatif : rapide tant qu'un agent travaille, lent sinon (les sessions
+ * au repos ne changent pas d'elles-mêmes).
  */
 
-const AgentActivityContext = createContext<Set<string>>(new Set());
+interface AgentActivity {
+  working: Set<string>;
+  session: Set<string>;
+}
 
-async function fetchActiveIssueIds(projectId: string): Promise<string[]> {
+const EMPTY: AgentActivity = { working: new Set(), session: new Set() };
+const AgentActivityContext = createContext<AgentActivity>(EMPTY);
+
+async function fetchAgentActivity(
+  projectId: string,
+): Promise<{ workingIssueIds: string[]; sessionIssueIds: string[] }> {
   const res = await fetch(`/api/projects/${projectId}/agent-runs`);
-  if (!res.ok) return [];
-  const data = (await res.json()) as { activeIssueIds?: string[] };
-  return data.activeIssueIds ?? [];
+  if (!res.ok) return { workingIssueIds: [], sessionIssueIds: [] };
+  const data = (await res.json()) as {
+    workingIssueIds?: string[];
+    sessionIssueIds?: string[];
+  };
+  return {
+    workingIssueIds: data.workingIssueIds ?? [],
+    sessionIssueIds: data.sessionIssueIds ?? [],
+  };
 }
 
 export function AgentActivityProvider({
@@ -28,22 +46,39 @@ export function AgentActivityProvider({
 }) {
   const { data } = useQuery({
     queryKey: ["agent-active-issues", projectId],
-    queryFn: () => fetchActiveIssueIds(projectId),
+    queryFn: () => fetchAgentActivity(projectId),
     enabled: !!projectId,
-    refetchInterval: (query) => ((query.state.data?.length ?? 0) > 0 ? 4000 : 15000),
+    // Rapide tant qu'un agent travaille ; lent sinon (les sessions au repos sont
+    // stables jusqu'à une action utilisateur).
+    refetchInterval: (query) =>
+      (query.state.data?.workingIssueIds?.length ?? 0) > 0 ? 4000 : 15000,
   });
 
-  const ids = data ?? [];
-  const key = ids.slice().sort().join(",");
-  // Set stable tant que la liste d'ids ne change pas (évite de re-render toutes
+  const working = data?.workingIssueIds ?? [];
+  const session = data?.sessionIssueIds ?? [];
+  const workingKey = working.slice().sort().join(",");
+  const sessionKey = session.slice().sort().join(",");
+  // Sets stables tant que les listes ne changent pas (évite de re-render toutes
   // les cartes à chaque poll).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const set = useMemo(() => new Set(ids), [key]);
+  const value = useMemo(
+    () => ({ working: new Set(working), session: new Set(session) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workingKey, sessionKey],
+  );
 
-  return <AgentActivityContext.Provider value={set}>{children}</AgentActivityContext.Provider>;
+  return (
+    <AgentActivityContext.Provider value={value}>
+      {children}
+    </AgentActivityContext.Provider>
+  );
 }
 
-/** True si un agent tourne actuellement sur cette issue. */
+/** True si un agent TRAVAILLE actuellement sur cette issue (pilote le halo). */
 export function useAgentActive(issueId: string): boolean {
-  return useContext(AgentActivityContext).has(issueId);
+  return useContext(AgentActivityContext).working.has(issueId);
+}
+
+/** True si une session d'agent reprennable existe sur cette issue (travail ou repos). */
+export function useAgentHasSession(issueId: string): boolean {
+  return useContext(AgentActivityContext).session.has(issueId);
 }

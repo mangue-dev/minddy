@@ -47,10 +47,24 @@ export interface AgentRunSummary {
   updated_at: string;
 }
 
+/**
+ * Statuts d'une SESSION reprennable (jamais fermée) : l'agent travaille
+ * (queued/running) ou se repose en attendant l'utilisateur (needs_input). Sert à
+ * décider si on peut steerer / rouvrir la conversation.
+ */
 export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running", "needs_input"];
 
 export function isAgentRunActive(status: AgentRunStatus): boolean {
   return ACTIVE_AGENT_STATUSES.includes(status);
+}
+
+/**
+ * L'agent est-il en train de TRAVAILLER (par opposition au repos `needs_input`) ?
+ * Pilote le halo animé des cartes, le polling d'events, et l'affichage du bouton
+ * « Interrompre » dans la conversation.
+ */
+export function isAgentRunWorking(status: AgentRunStatus): boolean {
+  return status === "queued" || status === "running";
 }
 
 export async function fetchIssueAgentRunsApi(
@@ -102,8 +116,27 @@ export async function fetchAgentRunEventsApi(
   return parseJson(await fetch(`/api/agent-runs/${runId}/events${q}`));
 }
 
-export async function stopAgentRunApi(runId: string): Promise<void> {
+/**
+ * « Interrompre la réponse en cours » : demande au chunk qui tourne de suspendre
+ * proprement l'appel LLM en cours et de revenir au repos. N'annule PAS la session,
+ * n'efface PAS le contexte, n'arrête PAS la sandbox — tout reste reprennable.
+ * (L'endpoint reste /stop côté serveur.)
+ */
+export async function interruptAgentRunApi(runId: string): Promise<void> {
   await parseJson(await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }));
+}
+
+/**
+ * Heartbeat : rafraîchit l'horloge d'inactivité du run tant que la conversation
+ * est ouverte, pour que la sandbox ne soit pas coupée pendant que l'utilisateur
+ * lit ou écrit. Best-effort (ignore les erreurs réseau).
+ */
+export async function heartbeatAgentRunApi(runId: string): Promise<void> {
+  try {
+    await fetch(`/api/agent-runs/${runId}/heartbeat`, { method: "POST" });
+  } catch {
+    // best-effort : le prochain heartbeat rattrapera.
+  }
 }
 
 /**

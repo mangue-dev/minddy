@@ -56,6 +56,13 @@ export interface AgentRun {
   cost_usd: number;
   outcome: string | null;
   error_message: string | null;
+  /** Horloge d'inactivité : heartbeat client + steer + entrée au repos. Pilote le
+   *  reaping de la sandbox idle. */
+  last_activity_at: string;
+  /** « Interrompre la réponse en cours » : lu par le chunk actif qui suspend. */
+  interrupt_requested: boolean;
+  /** microVM coupée par le reaper (null = vivante/inconnue). */
+  sandbox_stopped_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -161,6 +168,9 @@ export interface StampFields {
   outcome?: string | null;
   error_message?: string | null;
   window_started_at?: string | null;
+  last_activity_at?: string;
+  interrupt_requested?: boolean;
+  sandbox_stopped_at?: string | null;
 }
 
 /**
@@ -304,6 +314,56 @@ export async function pullPendingMessages(runId: string): Promise<string[]> {
   return (data as Array<{ content: string; created_at: string }>)
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((r) => r.content);
+}
+
+/**
+ * Rafraîchit l'horloge d'inactivité du run (heartbeat client, steer, entrée au
+ * repos). Best-effort. Empêche le reaper de couper la sandbox pendant l'usage.
+ */
+export async function bumpRunActivity(runId: string): Promise<void> {
+  try {
+    const service = getServiceClient();
+    await service
+      .from("agent_runs")
+      .update({ last_activity_at: new Date().toISOString() })
+      .eq("id", runId);
+  } catch (err) {
+    console.error("[agent-runs] bumpRunActivity failed:", (err as Error).message);
+  }
+}
+
+/**
+ * Demande l'interruption de la réponse en cours (« Stop »). Ne pose le drapeau que
+ * sur un run qui TRAVAILLE (queued/running) — le chunk actif le lit et suspend
+ * proprement au repos. N'annule rien, ne touche ni checkpoint ni sandbox.
+ */
+export async function requestInterrupt(runId: string): Promise<void> {
+  const service = getServiceClient();
+  await service
+    .from("agent_runs")
+    .update({ interrupt_requested: true })
+    .eq("id", runId)
+    .in("status", ["queued", "running"]);
+}
+
+/** Lit le drapeau d'interruption (poll par la boucle : frontière de round + stream). */
+export async function readInterruptFlag(runId: string): Promise<boolean> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("interrupt_requested")
+    .eq("id", runId)
+    .maybeSingle();
+  return Boolean((data as { interrupt_requested?: boolean } | null)?.interrupt_requested);
+}
+
+/** Réinitialise le drapeau d'interruption (une fois consommé par l'exécuteur). */
+export async function clearInterrupt(runId: string): Promise<void> {
+  const service = getServiceClient();
+  await service
+    .from("agent_runs")
+    .update({ interrupt_requested: false })
+    .eq("id", runId);
 }
 
 /**
