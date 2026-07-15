@@ -74,7 +74,17 @@ export function AgentSessionDetail({
         headerTitle={headerTitle}
         headerClassName="border-b border-border"
         headerActions={
-          item.pr_number != null ? (
+          // S'adapte à l'état de la PR : rien (pas encore de PR), bouton (PR
+          // disponible), ou simple lien texte vert (PR fusionnée). Tous ouvrent la PR.
+          item.pr_number == null ? undefined : item.pr_state === "merged" ? (
+            <button
+              type="button"
+              onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
+              className="text-sm font-medium text-emerald-600 outline-none hover:underline dark:text-emerald-500"
+            >
+              {t("prMerged")}
+            </button>
+          ) : (
             <Button
               type="button"
               size="sm"
@@ -84,7 +94,7 @@ export function AgentSessionDetail({
               <GitPullRequest className="size-3.5" />
               {t("openPullRequest")}
             </Button>
-          ) : undefined
+          )
         }
       />
     </div>

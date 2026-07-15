@@ -116,8 +116,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Ordre STABLE par date de création (la plus récente en haut) : contrairement à
+  // updated_at (bougé par les synchros PR / webhooks), created_at ne change pas →
+  // la liste ne se réordonne pas toute seule.
   const sessions = [...byIssue.values()].sort((a, b) =>
-    a.updated_at < b.updated_at ? 1 : -1,
+    a.created_at < b.created_at ? 1 : -1,
   );
   return NextResponse.json({ sessions });
 }

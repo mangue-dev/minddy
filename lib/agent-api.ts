@@ -36,6 +36,8 @@ export interface AgentRunSummary {
   model_forced: boolean;
   key_mode: "platform" | "byok";
   triggered_by: "button" | "chat" | "mention";
+  /** Prompt de lancement (bulle « originelle » de la conversation). */
+  prompt: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;

@@ -137,7 +137,7 @@ export function ChatMessage({
               )}
             {message.content && (
               <>
-                <div className="relative rounded-2xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background">
+                <div className="chat-selectable relative rounded-2xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background">
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 </div>
                 <div className="-mt-0.5">
@@ -150,7 +150,7 @@ export function ChatMessage({
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             {message.content && (
               <>
-                <MessageContent className="relative px-0 py-0 text-sm leading-relaxed text-foreground">
+                <MessageContent className="chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground">
                   <AssistantText content={message.content} />
                 </MessageContent>
                 {showCopyButton && (

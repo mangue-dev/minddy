@@ -1,7 +1,15 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useNow, useTranslations } from "next-intl";
 import {
   Collapsible,
   CollapsibleContent,
@@ -16,11 +24,11 @@ import {
   CircleDot,
   CircleSlash,
   GitCommit,
-  GitPullRequest,
   ListChecks,
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { NumoIcon } from "@/components/numo-icon";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunWorking, type AgentRunEvent, type AgentRunStatus } from "@/lib/agent-api";
 import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types";
@@ -57,16 +65,29 @@ type FeedItem =
   | {
       kind: "note";
       id: string;
-      variant: "pr" | "commit" | "error";
+      variant: "commit" | "error";
       text: string;
-      url?: string;
       createdAt: string;
     }
   | { kind: "plan"; id: string; steps: PlanStep[]; createdAt: string };
 
-/** Un TOUR terminé (résumé final) : son travail se replie, le résumé reste visible. */
+/**
+ * Un TOUR : accordéon du déroulé.
+ *  • ACTIF (agent au travail) → ouvert par défaut, chrono live « Travail depuis X ».
+ *  • TERMINÉ (résumé final) → se referme tout seul, « A travaillé pendant X » + résumé.
+ * `key` dérive du 1er item de travail (stable entre l'état actif et terminé du même
+ * tour) → la MÊME instance persiste, d'où l'animation de fermeture auto.
+ */
 type Block =
-  | { type: "turn"; key: string; work: FeedItem[]; summary: MessageItem; durationMs: number }
+  | {
+      type: "turn";
+      key: string;
+      work: FeedItem[];
+      summary: MessageItem | null;
+      startedAt: string;
+      endedAt: string | null;
+      active: boolean;
+    }
   | { type: "loose"; item: FeedItem };
 
 function makeMessage(
@@ -112,11 +133,27 @@ function str(v: unknown): string {
  * + une Map des résultats de tools (running/complete/succès). Chaque item porte le
  * `created_at` de son event ; le message `summary` est marqué `isSummary`.
  */
-function buildFeed(events: AgentRunEvent[]): { items: FeedItem[]; results: Map<string, ToolResult> } {
+function buildFeed(
+  events: AgentRunEvent[],
+  initialPrompt?: string | null,
+): { items: FeedItem[]; results: Map<string, ToolResult> } {
   const ordered = [...events].sort((a, b) => a.seq - b.seq);
   const items: FeedItem[] = [];
   const results = new Map<string, ToolResult>();
   let current: MessageItem | null = null;
+
+  // Bulle « originelle » : le prompt de lancement n'est PAS dans le flux d'events
+  // (il alimente le message de tâche du LLM). On l'affiche en tête comme 1re bulle
+  // utilisateur, à parité avec le chat Numo. Les messages de STEERING, eux, sont déjà
+  // émis en events `user_message` et rendus par la boucle ci-dessous.
+  const prompt = (initialPrompt ?? "").trim();
+  if (prompt) {
+    items.push({
+      kind: "message",
+      message: makeMessage("initial-prompt", prompt, "user"),
+      createdAt: "",
+    });
+  }
 
   const openMessage = (item: MessageItem) => {
     items.push(item);
@@ -189,15 +226,9 @@ function buildFeed(events: AgentRunEvent[]): { items: FeedItem[]; results: Map<s
         break;
       }
       case "pr_opened": {
+        // La PR est accessible depuis l'en-tête de la conversation (bouton /
+        // lien selon son état) → pas de chip redondant dans le fil.
         current = null;
-        items.push({
-          kind: "note",
-          id: e.id,
-          variant: "pr",
-          text: `#${str(p.number) || String(p.number ?? "")}`,
-          url: str(p.url) || undefined,
-          createdAt: e.created_at,
-        });
         break;
       }
       case "commit": {
@@ -235,7 +266,12 @@ function buildFeed(events: AgentRunEvent[]): { items: FeedItem[]; results: Map<s
  * (déroulé repliable + résumé final), le reste (messages user, tour en cours ou en
  * pause sans résumé) reste en items `loose` affichés tels quels.
  */
-function buildBlocks(items: FeedItem[]): Block[] {
+/** Clé stable d'un item (id d'event) — sert de clé de tour via son 1er travail. */
+function itemKey(it: FeedItem): string {
+  return it.kind === "message" ? it.message.id : it.id;
+}
+
+function buildBlocks(items: FeedItem[], active: boolean): Block[] {
   const blocks: Block[] = [];
   let work: FeedItem[] = [];
   const flush = () => {
@@ -254,10 +290,15 @@ function buildBlocks(items: FeedItem[]): Block[] {
     // Résumé final : referme le tour. Son travail se replie ; le résumé reste visible.
     if (it.kind === "message" && it.isSummary) {
       if (work.length > 0) {
-        const start = work[0].createdAt || it.createdAt;
-        const end = it.endedAt || it.createdAt;
-        const durationMs = Math.max(0, Date.parse(end) - Date.parse(start));
-        blocks.push({ type: "turn", key: it.message.id, work, summary: it, durationMs });
+        blocks.push({
+          type: "turn",
+          key: itemKey(work[0]),
+          work,
+          summary: it,
+          startedAt: work[0].createdAt || it.createdAt,
+          endedAt: it.endedAt || it.createdAt,
+          active: false,
+        });
         work = [];
       } else {
         // Aucun travail à replier → on montre le résumé tel quel.
@@ -266,6 +307,20 @@ function buildBlocks(items: FeedItem[]): Block[] {
       continue;
     }
     work.push(it);
+  }
+  // Travail restant sans résumé : si l'agent TRAVAILLE → tour ACTIF (accordéon ouvert,
+  // chrono live) ; sinon (pause `ask_user`) → déplié tel quel.
+  if (active && work.length > 0) {
+    blocks.push({
+      type: "turn",
+      key: itemKey(work[0]),
+      work,
+      summary: null,
+      startedAt: work[0].createdAt,
+      endedAt: null,
+      active: true,
+    });
+    work = [];
   }
   flush();
   return blocks;
@@ -293,44 +348,79 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
   return <NoteRow key={it.id} item={it} />;
 }
 
-/** Libellé « A travaillé pendant X min Y s » (min omises sous 60 s). */
-function useWorkedLabel(durationMs: number): string {
-  const t = useTranslations("Agent");
-  const totalSec = Math.max(1, Math.round(durationMs / 1000));
-  const minutes = Math.floor(totalSec / 60);
-  const seconds = totalSec % 60;
-  return minutes > 0
-    ? t("workedForMinutes", { minutes, seconds })
-    : t("workedForSeconds", { seconds });
-}
-
-/** Un tour terminé : accordéon repliable du déroulé + résumé final visible. */
+/**
+ * Un tour : accordéon du déroulé (ouvert en direct pendant le travail, refermé tout
+ * seul une fois terminé) + résumé final visible dessous.
+ *  • `active` → ouvert par défaut, en-tête « Travail depuis X » qui compte en direct.
+ *  • terminé → l'en-tête devient « A travaillé pendant X » et l'accordéon se referme
+ *    automatiquement (restant repliable/dépliable à la main).
+ */
 function TurnGroup({
   work,
   summary,
-  durationMs,
+  startedAt,
+  endedAt,
+  active,
   ctx,
 }: {
   work: FeedItem[];
-  summary: MessageItem;
-  durationMs: number;
+  summary: MessageItem | null;
+  startedAt: string;
+  endedAt: string | null;
+  active: boolean;
   ctx: RenderContext;
 }) {
-  const label = useWorkedLabel(durationMs);
+  const t = useTranslations("Agent");
+
+  // Ouvert par défaut tant que l'agent TRAVAILLE ; se referme automatiquement au
+  // passage travail → terminé, tout en restant repliable à la main.
+  const [open, setOpen] = useState(active);
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (wasActive.current && !active) setOpen(false);
+    wasActive.current = active;
+  }, [active]);
+
+  // Chrono : compte en direct (tick 1 s) tant qu'actif, sinon durée figée.
+  const now = useNow({ updateInterval: active ? 1000 : undefined });
+  const startMs = Date.parse(startedAt);
+  const safeStart = Number.isNaN(startMs) ? now.getTime() : startMs;
+  const ms = active
+    ? Math.max(0, now.getTime() - safeStart)
+    : Math.max(0, Date.parse(endedAt ?? startedAt) - safeStart);
+  const totalSec = Math.max(1, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSec / 60);
+  const seconds = totalSec % 60;
+  const label = active
+    ? minutes > 0
+      ? t("workingSinceMinutes", { minutes, seconds })
+      : t("workingSinceSeconds", { seconds })
+    : minutes > 0
+      ? t("workedForMinutes", { minutes, seconds })
+      : t("workedForSeconds", { seconds });
+
   return (
     <div className="flex flex-col gap-3">
-      <Collapsible>
-        <CollapsibleTrigger className="group flex items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="group flex w-full items-center gap-1.5 pb-2.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
           <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-          {label}
+          <span className={cn(active && "text-shimmer")}>{label}</span>
         </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="mt-3 flex flex-col gap-3 border-l border-border pl-3">
+        {/* Bordure fixe pleine largeur sous le toggle : sépare l'indicateur des
+            messages. Toujours visible (ouvert comme fermé), elle ne se déplace pas —
+            le contenu s'anime en dessous. */}
+        <div className="border-t border-border" />
+        {/* La classe d'ouverture est répétée ICI À DESSEIN : mangue-ui la déclare bien
+            sur CollapsibleContent, mais son scanner Tailwind ne l'émet pas (collée à
+            un `${}`), d'où l'absence d'animation à l'OUVERTURE. La citer proprement
+            dans notre source force la génération de l'utilitaire. Ne pas retirer. */}
+        <CollapsibleContent className="data-[state=open]:animate-[collapsible-down_220ms_ease-out]">
+          <div className="flex flex-col gap-3 pt-3">
             {work.map((it) => renderItem(it, ctx))}
           </div>
         </CollapsibleContent>
       </Collapsible>
-      {renderItem(summary, ctx)}
+      {summary ? renderItem(summary, ctx) : null}
     </div>
   );
 }
@@ -345,26 +435,12 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
       </div>
     );
   }
-  if (item.variant === "commit") {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <GitCommit className="size-4 shrink-0" />
-        {t("commitLabel")}
-      </div>
-    );
-  }
-  const content = (
-    <span className="inline-flex items-center gap-2 text-sm font-medium text-brand">
-      <GitPullRequest className="size-4 shrink-0" />
-      {t("prOpen")} {item.text}
-    </span>
-  );
-  return item.url ? (
-    <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline">
-      {content}
-    </a>
-  ) : (
-    content
+  // commit
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <GitCommit className="size-4 shrink-0" />
+      {t("commitLabel")}
+    </div>
   );
 }
 
@@ -417,10 +493,13 @@ function PlanRow({ item }: { item: Extract<FeedItem, { kind: "plan" }> }) {
 export function AgentEventFeed({
   runId,
   status,
+  prompt,
   className,
 }: {
   runId: string;
   status: AgentRunStatus;
+  /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
+  prompt?: string | null;
   className?: string;
 }) {
   const t = useTranslations("Agent");
@@ -429,9 +508,19 @@ export function AgentEventFeed({
   const active = isAgentRunWorking(status);
   const { events, loading } = useAgentRunEventsQuery(runId, active);
   const feedRef = useRef<HTMLDivElement>(null);
+  // Fade doux en haut/bas du fil (même pattern que les colonnes Kanban) → on voit
+  // qu'il reste du contenu au-dessus / en dessous. On fusionne son ref avec le nôtre.
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
+  const setScrollNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      feedRef.current = node;
+      fadeRef(node);
+    },
+    [fadeRef],
+  );
 
-  const { items, results } = useMemo(() => buildFeed(events), [events]);
-  const blocks = useMemo(() => buildBlocks(items), [items]);
+  const { items, results } = useMemo(() => buildFeed(events, prompt), [events, prompt]);
+  const blocks = useMemo(() => buildBlocks(items, active), [items, active]);
 
   // Bouton copy UNIQUEMENT sous le DERNIER message de l'agent (avec du texte) —
   // les messages intermédiaires ne sont pas copiables individuellement.
@@ -454,7 +543,7 @@ export function AgentEventFeed({
 
   if (items.length === 0) {
     return (
-      <div className={cn("flex items-center justify-center text-center", className)}>
+      <div className={cn("flex items-center justify-center px-3 text-center", className)}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           {active ? (
             <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
@@ -482,31 +571,44 @@ export function AgentEventFeed({
   }
 
   const ctx: RenderContext = { results, lastCopyableId, lastMessageId };
+  // Le tour actif (accordéon ouvert « Travail depuis X ») porte déjà le signal
+  // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore
+  // (ex. juste après le lancement : prompt affiché, aucun pas produit).
+  const hasActiveTurn = blocks.some((b) => b.type === "turn" && b.active);
 
   return (
     <div
-      ref={feedRef}
-      className={cn("flex flex-col gap-3 overflow-y-auto overscroll-contain", className)}
+      ref={setScrollNode}
+      {...scrollProps}
+      className={cn("flex flex-col overflow-y-auto overscroll-contain", className)}
     >
-      {blocks.map((block) =>
-        block.type === "turn" ? (
-          <TurnGroup
-            key={block.key}
-            work={block.work}
-            summary={block.summary}
-            durationMs={block.durationMs}
-            ctx={ctx}
-          />
-        ) : (
-          renderItem(block.item, ctx)
-        ),
-      )}
-      {active ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
-          <span className="text-shimmer">{t("working")}</span>
-        </div>
-      ) : null}
+      {/* `mt-auto` colle le contenu en BAS (proche de l'input) tant qu'il est court,
+          puis remonte et défile normalement quand il déborde. Largeur bornée +
+          centrée, avec le MÊME retrait horizontal (px-3) que le composer `ChatInput`
+          → messages et input strictement à la même largeur. */}
+      <div className="mx-auto mt-auto flex w-full max-w-[800px] flex-col gap-3 px-3">
+        {blocks.map((block) =>
+          block.type === "turn" ? (
+            <TurnGroup
+              key={block.key}
+              work={block.work}
+              summary={block.summary}
+              startedAt={block.startedAt}
+              endedAt={block.endedAt}
+              active={block.active}
+              ctx={ctx}
+            />
+          ) : (
+            renderItem(block.item, ctx)
+          ),
+        )}
+        {active && !hasActiveTurn ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
+            <span className="text-shimmer">{t("working")}</span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

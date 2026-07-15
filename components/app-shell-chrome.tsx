@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { AppShell, Header, MobileNav, cn } from "mangue-ui";
+import { AppShell, Header, MobileNav, Spinner, cn } from "mangue-ui";
 import {
   Home,
   ChevronLeft,
@@ -27,7 +27,7 @@ import { useNotifications } from "@/lib/use-notifications";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useMembersQuery } from "@/lib/use-members-query";
-import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
+import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import {
@@ -186,6 +186,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const openPrCount = pullRequests.filter(
     (p) => p.pr_state === "open" || p.pr_state === "draft" || p.pr_state == null
   ).length;
+
+  // Agents : un spinner sur l'onglet dès qu'une session TRAVAILLE (génération en
+  // cours), tous projets confondus.
+  const { sessions: agentSessions } = useAgentSessionsQuery();
+  const anyAgentWorking = agentSessions.some((s) => s.working);
 
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
@@ -445,6 +450,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: NumoNavIcon,
               href: "/agents",
               active: pathname.startsWith("/agents"),
+              badge: anyAgentWorking ? (
+                <Spinner className="size-3.5 text-muted-foreground" />
+              ) : undefined,
             },
             {
               key: "home-back",
@@ -537,6 +545,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: NumoNavIcon,
             href: "/agents",
             active: pathname.startsWith("/agents"),
+            badge: anyAgentWorking ? (
+              <Spinner className="size-3.5 text-muted-foreground" />
+            ) : undefined,
           },
           {
             key: "home",
@@ -574,7 +585,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, openCreateProject, t]);
+  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, openCreateProject, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

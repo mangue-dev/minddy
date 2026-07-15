@@ -194,3 +194,17 @@ nav[aria-label="Navigation"]
     -webkit-text-fill-color: var(--muted-foreground);
   }
 }
+
+/* ─── Sélection du texte des bulles de conversation (agent + Numo) ────────
+   Deux règles empêchent la sélection : le reset global `user-select: none` de
+   mangue-ui, ET — surtout — Streamdown (rendu markdown de l'assistant) qui pose
+   `style="user-select:none"` EN INLINE sur son contenu. Un style inline bat toute
+   règle CSS non-`!important` (peu importe la spécificité), d'où l'`!important` ici :
+   c'est la seule façon de ré-autoriser la sélection sur les bulles `.chat-selectable`
+   et leurs descendants. On garde le reset général intact partout ailleurs. */
+.chat-selectable,
+.chat-selectable
+  *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}

@@ -219,7 +219,8 @@ export function AgentConversation({
           <AgentEventFeed
             runId={liveRun.id}
             status={liveRun.status}
-            className="h-full p-4"
+            prompt={liveRun.prompt}
+            className="h-full py-4"
           />
         ) : phase === "loading" ? (
           <div className="flex h-full items-center justify-center">
@@ -237,9 +238,11 @@ export function AgentConversation({
         )}
       </div>
 
-      {/* Composer : steering/interruption (live) ou lancement pré-écrit (compose). */}
+      {/* Composer : steering/interruption (live) ou lancement pré-écrit (compose).
+          Borné à la même largeur max que le fil et centré. */}
       {phase !== "loading" && (
         <div className="shrink-0">
+          <div className="mx-auto w-full max-w-[800px]">
           {liveRun ? (
             <ChatInput
               key={liveRun.id}
@@ -298,6 +301,7 @@ export function AgentConversation({
               }
             />
           )}
+          </div>
         </div>
       )}
     </div>

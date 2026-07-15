@@ -134,6 +134,8 @@ export function AgentsPage() {
                       <AgentStatusBadge
                         status={s.status}
                         working={s.working}
+                        prNumber={s.pr_number}
+                        prState={s.pr_state}
                         className="h-5 px-2 text-[10px]"
                       />
                       <span className="text-xs text-muted-foreground">{fmtDay(s.updated_at)}</span>
