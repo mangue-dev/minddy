@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { resolveAgentApiKey } from "@/lib/server/agent/model";
+import { getRootDefaultModel, resolveAgentApiKey } from "@/lib/server/agent/model";
 import {
   getAgentProvider,
+  getProviderDefaultModel,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
   DEFAULT_AGENT_PROVIDER,
@@ -119,16 +120,22 @@ export async function GET(request: NextRequest) {
     // Pas de clé plateforme : liste OpenRouter publique (baseUrl déjà par défaut).
   }
 
+  // Défaut effectif du provider actif : frontier du provider BYOK, sinon défaut
+  // racine (quota minddy / OpenRouter BYOK) ; null pour un générique.
+  const providerDefault = getProviderDefaultModel(provider);
+  const defaultModel =
+    providerDefault ?? (provider === "generic" ? null : await getRootDefaultModel());
+
   const cacheKey = `${provider}|${baseUrl}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) {
-    return NextResponse.json({ provider, models: hit.models });
+    return NextResponse.json({ provider, defaultModel, models: hit.models });
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
     cache.set(cacheKey, { at: Date.now(), models });
-    return NextResponse.json({ provider, models });
+    return NextResponse.json({ provider, defaultModel, models });
   } catch {
-    return NextResponse.json({ provider, models: hit?.models ?? [] });
+    return NextResponse.json({ provider, defaultModel, models: hit?.models ?? [] });
   }
 }

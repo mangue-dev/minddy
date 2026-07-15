@@ -17,11 +17,26 @@ export interface AgentModel {
 
 export const agentModelsQueryKey = ["agent-models"] as const;
 
-async function fetchAgentModels(): Promise<{ provider: AgentProviderId; models: AgentModel[] }> {
+interface AgentModelsResult {
+  provider: AgentProviderId;
+  /** Modèle par défaut du provider actif (frontier BYOK ou défaut racine), ou null. */
+  defaultModel: string | null;
+  models: AgentModel[];
+}
+
+async function fetchAgentModels(): Promise<AgentModelsResult> {
   const res = await fetch("/api/agent/models");
-  if (!res.ok) return { provider: DEFAULT_AGENT_PROVIDER, models: [] };
-  const data = (await res.json()) as { provider?: AgentProviderId; models?: AgentModel[] };
-  return { provider: data.provider ?? DEFAULT_AGENT_PROVIDER, models: data.models ?? [] };
+  if (!res.ok) return { provider: DEFAULT_AGENT_PROVIDER, defaultModel: null, models: [] };
+  const data = (await res.json()) as {
+    provider?: AgentProviderId;
+    defaultModel?: string | null;
+    models?: AgentModel[];
+  };
+  return {
+    provider: data.provider ?? DEFAULT_AGENT_PROVIDER,
+    defaultModel: data.defaultModel ?? null,
+    models: data.models ?? [],
+  };
 }
 
 export function useAgentModelsQuery() {
@@ -32,6 +47,7 @@ export function useAgentModelsQuery() {
   });
   return {
     provider: data?.provider ?? DEFAULT_AGENT_PROVIDER,
+    defaultModel: data?.defaultModel ?? null,
     models: data?.models ?? [],
     loading: isLoading,
   };

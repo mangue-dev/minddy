@@ -40,7 +40,7 @@ export function LaunchAgentDialog({
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
   const { keys } = useAiKeysQuery();
-  const { provider } = useAgentModelsQuery();
+  const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
   const hasByok = keys.length > 0;
 
@@ -48,9 +48,9 @@ export function LaunchAgentDialog({
   const [prompt, setPrompt] = useState("");
   const [launching, setLaunching] = useState(false);
 
-  // Un provider BYOK non-OpenRouter n'a pas de défaut racine : l'utilisateur doit
-  // choisir un modèle (ici, ou comme défaut perso).
-  const modelRequired = provider !== "openrouter" && !defaultModel && !model;
+  // Seul un BYOK générique n'a aucun défaut résoluble (namespace inconnu) :
+  // l'utilisateur doit choisir un modèle (ici, ou comme défaut perso).
+  const modelRequired = provider === "generic" && !defaultModel && !model;
 
   const launch = async () => {
     if (launching) return;
@@ -88,6 +88,7 @@ export function LaunchAgentDialog({
               value={model}
               onChange={setModel}
               defaultLabel={t("modelDefault")}
+              defaultModelId={defaultModel ?? providerDefaultModel}
               placeholder={t("modelSearchPlaceholder")}
               emptyLabel={t("modelSearchEmpty")}
               loadingLabel={t("modelSearchLoading")}

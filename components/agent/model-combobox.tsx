@@ -34,6 +34,7 @@ export function ModelCombobox({
   value,
   onChange,
   defaultLabel,
+  defaultModelId,
   placeholder,
   emptyLabel,
   loadingLabel,
@@ -44,6 +45,8 @@ export function ModelCombobox({
   value: string;
   onChange: (value: string) => void;
   defaultLabel: string;
+  /** Modèle vers lequel « le défaut » résout (affiché en aparté sur l'option défaut). */
+  defaultModelId?: string | null;
   placeholder: string;
   emptyLabel: string;
   loadingLabel: string;
@@ -83,6 +86,19 @@ export function ModelCombobox({
     setOpen(false);
   };
 
+  // Rendu de l'option « défaut » : libellé + modèle résolu (logo + nom) en aparté.
+  const defaultRow = (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      {defaultModelId ? logoFor(defaultModelId) : null}
+      <span className="truncate text-muted-foreground">{defaultLabel}</span>
+      {defaultModelId ? (
+        <span className="truncate text-xs text-muted-foreground/70">
+          {formatModelName(defaultModelId)}
+        </span>
+      ) : null}
+    </span>
+  );
+
   return (
     <Popover
       open={open}
@@ -106,7 +122,7 @@ export function ModelCombobox({
               <span className="truncate">{formatModelName(value)}</span>
             </span>
           ) : (
-            <span className="text-muted-foreground">{defaultLabel}</span>
+            defaultRow
           )}
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
@@ -114,9 +130,11 @@ export function ModelCombobox({
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
-          <CommandList>
+          {/* mt-1.5 : respire sous l'input ; px-1 : aligne la largeur des options
+              sur celle du champ de recherche (même retrait de 8px des bords). */}
+          <CommandList className="mt-1.5 px-1">
             <CommandItem value="__default__" onSelect={() => select("")}>
-              <span className="flex-1 truncate">{defaultLabel}</span>
+              {defaultRow}
               <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
             </CommandItem>
             {results.map((m) => (

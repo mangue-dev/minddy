@@ -5,6 +5,7 @@ import { getAppConfigValue } from "@/lib/server/app-config";
 import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
 import {
   DEFAULT_AGENT_PROVIDER,
+  getProviderDefaultModel,
   resolveProviderBaseUrl,
   type AgentProviderId,
 } from "@/lib/agent-providers";
@@ -16,10 +17,12 @@ import { decryptUserAiKey } from "./byok-credentials";
  * MODÈLE — cascade à 3 niveaux, précédence run > user > racine :
  *   1. override du run (choisi au lancement, ou forcé par numo),
  *   2. défaut perso de l'user (user_agent_preferences.default_model),
- *   3. défaut racine OpenRouter (app_config.agent_model / fallback code).
- * Un BYOK non-OpenRouter n'a pas de défaut racine fiable (namespaces de modèles
- * distincts) : sans (1) ni (2), on lève `AgentModelRequiredError` — l'utilisateur
- * doit choisir un modèle (le picker liste ceux de son provider).
+ *   3. défaut frontier du provider BYOK (openai/anthropic/google),
+ *   4. défaut racine OpenRouter (app_config.agent_model / fallback code) —
+ *      utilisé par le quota minddy ET par OpenRouter BYOK (même endpoint).
+ * Seul le provider « generic » n'a aucun défaut fiable (namespace inconnu) :
+ * sans (1) ni (2), on lève `AgentModelRequiredError` — l'utilisateur doit
+ * choisir un modèle (le picker liste ceux de son provider).
  *
  * ENDPOINT — un seul BYOK actif par compte : provider + base URL + clé de l'user
  * si présent (usage illimité, à ses frais), sinon la clé plateforme OpenRouter
@@ -53,9 +56,9 @@ export class AgentModelRequiredError extends Error {
 
 /**
  * Résout le modèle à figer sur un run. `perRunModel` (override/forçage) gagne,
- * sinon le défaut perso, sinon — uniquement en provider OpenRouter — le défaut
- * racine. Lève `AgentModelRequiredError` si un BYOK non-OpenRouter est actif
- * sans modèle explicite.
+ * sinon le défaut perso, sinon le défaut frontier du provider BYOK, sinon —
+ * quota minddy ou OpenRouter BYOK — le défaut racine. Lève
+ * `AgentModelRequiredError` seulement pour un BYOK générique sans modèle.
  */
 export async function resolveAgentModel(opts: {
   perRunModel?: string | null;
@@ -66,9 +69,14 @@ export async function resolveAgentModel(opts: {
   const userDefault = await getUserDefaultModel(opts.userId);
   if (userDefault) return userDefault;
   const byok = await getUserByok(opts.userId);
+  // Défaut frontier du provider (openai/anthropic/google).
+  const providerDefault = byok ? getProviderDefaultModel(byok.provider) : undefined;
+  if (providerDefault) return providerDefault;
+  // Générique BYOK : aucun défaut fiable → l'utilisateur doit choisir.
   if (byok && byok.provider !== "openrouter") {
     throw new AgentModelRequiredError(byok.provider);
   }
+  // Quota minddy (plateforme) ou OpenRouter BYOK : défaut racine app_config.
   return getRootDefaultModel();
 }
 

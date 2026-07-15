@@ -44,6 +44,13 @@ export interface AgentProviderDef {
   baseUrl?: string;
   /** true → l'utilisateur DOIT fournir une base URL (generic). */
   requiresBaseUrl?: boolean;
+  /**
+   * Modèle par défaut (frontier) de ce provider en BYOK — pré-rempli dans le
+   * sélecteur et utilisé comme fallback de résolution (cf. `resolveAgentModel`).
+   * Absent pour OpenRouter (reprend le défaut racine = quota minddy) et pour le
+   * générique (namespace inconnu → l'utilisateur doit choisir).
+   */
+  defaultModel?: string;
   /** Placeholder de clé affiché dans le wizard. */
   keyPlaceholder: string;
   /**
@@ -63,6 +70,8 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "openrouter",
     label: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
+    // Pas de défaut propre : reprend le défaut racine app_config.agent_model,
+    // exactement comme le quota minddy (même endpoint OpenRouter).
     keyPlaceholder: "sk-or-v1-…",
     logoModel: "openrouter/x",
     listStrategy: "openrouter",
@@ -79,6 +88,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "openai",
     label: "OpenAI",
     baseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-5.6-sol",
     keyPlaceholder: "sk-…",
     logoModel: "openai/x",
     listStrategy: "openai",
@@ -89,6 +99,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "anthropic",
     label: "Anthropic",
     baseUrl: "https://api.anthropic.com/v1",
+    defaultModel: "claude-sonnet-5",
     keyPlaceholder: "sk-ant-…",
     logoModel: "anthropic/x",
     listStrategy: "anthropic",
@@ -100,6 +111,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "google",
     label: "Google (Gemini)",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    defaultModel: "gemini-3.5-flash",
     keyPlaceholder: "AIza…",
     logoModel: "google/x",
     listStrategy: "openai",
@@ -120,8 +132,24 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
 /** Provider par défaut quand aucun BYOK : clé plateforme OpenRouter. */
 export const DEFAULT_AGENT_PROVIDER: AgentProviderId = "openrouter";
 
+/**
+ * Option « quota minddy » du sélecteur : mode plateforme (aucun BYOK), l'agent
+ * tourne sur la clé OpenRouter de minddy dans la limite du plafond mensuel.
+ * PSEUDO-provider réservé à l'UI — n'appartient PAS à `AGENT_PROVIDERS` (ce n'est
+ * pas un provider BYOK ; côté serveur, « quota minddy » = absence de clé BYOK).
+ */
+export const MINDDY_QUOTA_PROVIDER_ID = "minddy";
+
 export function getAgentProvider(id: string | null | undefined): AgentProviderDef | undefined {
   return AGENT_PROVIDERS.find((p) => p.id === id);
+}
+
+/**
+ * Modèle par défaut (frontier) d'un provider, ou undefined s'il n'en a pas de
+ * propre : OpenRouter (reprend le défaut racine = quota minddy) et le générique.
+ */
+export function getProviderDefaultModel(id: string | null | undefined): string | undefined {
+  return getAgentProvider(id)?.defaultModel;
 }
 
 export function isKnownAgentProvider(id: string): id is AgentProviderId {
