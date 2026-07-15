@@ -84,6 +84,17 @@ export function describeEvent(
   // Plan task transitions: to_value carries the task text.
   if (e.type === "agent_launched")
     return t("agentLaunched", { model: e.to_value ?? "" });
+  // Review PR (to_value = numéro de la PR). Seules les actions accepter /
+  // refuser / approuver / demander des changements sont tracées — pas les
+  // commentaires. Émises in-app (acteur = membre) ou par le webhook GitHub.
+  if (e.type === "pr_approved")
+    return t("prApproved", { number: e.to_value ?? "" });
+  if (e.type === "pr_accepted")
+    return t("prAccepted", { number: e.to_value ?? "" });
+  if (e.type === "pr_rejected")
+    return t("prRejected", { number: e.to_value ?? "" });
+  if (e.type === "pr_changes_requested")
+    return t("prChangesRequested", { number: e.to_value ?? "" });
   if (e.type === "plan_task_completed")
     return t("planTaskCompleted", { text: e.to_value ?? "" });
   if (e.type === "plan_task_started")

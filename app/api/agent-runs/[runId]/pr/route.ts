@@ -4,6 +4,8 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun, setRunPrState } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
+import { getServiceClient } from "@/lib/supabase-service";
+import { insertEvents } from "@/lib/server/issue-events";
 import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
@@ -40,6 +42,24 @@ function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
     { error: result.error, code: result.error, quota: result.quota },
     { status },
   );
+}
+
+/**
+ * Trace une action de review PR dans le journal d'activité de l'issue liée :
+ * accepter (merge), refuser (close) ou demander des changements. Acteur = le
+ * membre qui agit (jamais Numo). Les simples commentaires GitHub passent par
+ * une autre route (/comments) et ne produisent volontairement aucune activité.
+ * Best-effort : insertEvents avale ses erreurs, la synchro ne casse pas le flux.
+ */
+async function recordPrActionEvent(
+  issueId: string,
+  actorId: string,
+  type: "pr_accepted" | "pr_rejected" | "pr_changes_requested",
+  prNumber: number,
+): Promise<void> {
+  await insertEvents(getServiceClient(), [
+    { issue_id: issueId, actor_id: actorId, type, to_value: String(prNumber) },
+  ]);
 }
 
 export const maxDuration = 60;
@@ -143,6 +163,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       baseBranch: run.base_branch,
     });
     if (!result.ok) return launchErrorResponse(result);
+    // Trace « a demandé des changements sur la PR » dans l'activité de l'issue.
+    await recordPrActionEvent(run.issue_id, auth.user.id, "pr_changes_requested", run.pr_number);
     return NextResponse.json({ ok: true, run: { id: result.run.id } });
   }
 
@@ -155,12 +177,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       await setRunPrState(runId, "merged");
       // PR mergée → l'issue passe en done (MIN-46). Acteur = le membre qui merge.
       await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "merged" });
+      // Trace « a accepté la PR » dans l'activité de l'issue.
+      await recordPrActionEvent(run.issue_id, auth.user.id, "pr_accepted", run.pr_number);
       return NextResponse.json({ ok: true, pr_state: "merged" });
     }
     await closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
     await setRunPrState(runId, "closed");
     // PR refusée → l'issue retourne « à faire » (todo, jamais annulée) — MIN-46.
     await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "closed" });
+    // Trace « a refusé la PR » dans l'activité de l'issue.
+    await recordPrActionEvent(run.issue_id, auth.user.id, "pr_rejected", run.pr_number);
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {
     const status = err instanceof GithubApiError ? 502 : 500;

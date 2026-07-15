@@ -254,12 +254,46 @@ export interface SyncedPrRun {
   createdBy: string | null;
 }
 
+/** Ids des liaisons projet↔dépôt pour `repoFullName` (un numéro de PR est unique
+    par dépôt ; plusieurs projets peuvent lier le même dépôt). */
+async function repoLinkIds(
+  service: ReturnType<typeof getServiceClient>,
+  repoFullName: string,
+): Promise<string[]> {
+  const { data: links } = await service
+    .from("project_git_links")
+    .select("id")
+    .eq("repo_full_name", repoFullName);
+  return ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
+}
+
+/**
+ * Runs ayant ouvert la PR `prNumber` sur le dépôt `repoFullName` (lecture seule,
+ * sans toucher à l'état PR). Utilisé par le webhook des reviews GitHub, qui doit
+ * retrouver l'issue liée sans modifier le cycle draft/open/merged/closed.
+ */
+export async function findRunsForPr(opts: {
+  repoFullName: string;
+  prNumber: number;
+}): Promise<SyncedPrRun[]> {
+  const service = getServiceClient();
+  const linkIds = await repoLinkIds(service, opts.repoFullName);
+  if (linkIds.length === 0) return [];
+  const { data: runs } = await service
+    .from("agent_runs")
+    .select("id, issue_id, created_by")
+    .eq("pr_number", opts.prNumber)
+    .in("repo_link_id", linkIds);
+  return ((runs ?? []) as Array<{ id: string; issue_id: string; created_by: string | null }>).map(
+    (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
+  );
+}
+
 /**
  * Synchronise l'état PR des runs qui ont ouvert la PR `prNumber` sur le dépôt
- * `repoFullName` (appelé par le webhook GitHub). Un numéro de PR est unique dans
- * un dépôt ; plusieurs projets peuvent lier le même dépôt, d'où le filtre par les
- * liaisons de ce dépôt. Best-effort. Renvoie les runs touchés pour que l'appelant
- * aligne le statut de leur issue (in_review / done / canceled).
+ * `repoFullName` (appelé par le webhook GitHub). Best-effort. Renvoie les runs
+ * touchés pour que l'appelant aligne le statut de leur issue (in_review / done /
+ * canceled).
  */
 export async function syncPrState(opts: {
   repoFullName: string;
@@ -268,11 +302,7 @@ export async function syncPrState(opts: {
   prUrl?: string | null;
 }): Promise<SyncedPrRun[]> {
   const service = getServiceClient();
-  const { data: links } = await service
-    .from("project_git_links")
-    .select("id")
-    .eq("repo_full_name", opts.repoFullName);
-  const linkIds = ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
+  const linkIds = await repoLinkIds(service, opts.repoFullName);
   if (linkIds.length === 0) return [];
   const { data: runs } = await service
     .from("agent_runs")

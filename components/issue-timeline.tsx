@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Ellipsis,
+  Github,
   MessagesSquare,
   Pencil,
   Plug,
@@ -28,6 +29,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
+import { isGithubPrEvent } from "@/lib/pr-events";
 import {
   describeEvent,
   describeFeedbackEvent,
@@ -212,6 +214,23 @@ function BoardAvatar({ className }: { className?: string }) {
   );
 }
 
+/** Avatar for pull-request actions performed directly on GitHub (accepted /
+    rejected / approved / changes requested via the webhook) — the GitHub mark,
+    the actor being the GitHub user rather than a minddy member. */
+function GithubAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      <Github className="size-3" />
+    </span>
+  );
+}
+
 /** Avatar for issues submitted through a project integration (Feedback API) —
     a plug instead of a user's initials, so external submissions stand out. */
 function IntegrationAvatar({ className }: { className?: string }) {
@@ -274,6 +293,9 @@ function EventRow({
   const viaMcp = !viaSmartAssign && !viaNumo && !!item.event.via_mcp;
   const viaIntegration =
     !viaSmartAssign && !viaNumo && !viaMcp && !!item.event.integration_id;
+  // Action PR faite directement sur GitHub : pas d'utilisateur minddy, le login
+  // GitHub (from_value) tient lieu d'acteur, avec le logo GitHub.
+  const viaGithub = isGithubPrEvent(item.event);
   // Soumission board (feedback) : l'auteur est un utilisateur final anonyme
   // sans identité équipe — le board tient lieu d'acteur.
   const viaBoard =
@@ -287,15 +309,17 @@ function EventRow({
     ? "Smart Assign"
     : viaNumo
       ? "Numo"
-      : viaIntegration
-        ? t("integrationActor", {
-            name: item.event.integration_name ?? t("integrationFallback"),
-          })
-        : viaMcp
-          ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
-          : viaBoard
-            ? t("boardActor")
-            : actor;
+      : viaGithub
+        ? item.event.from_value || "GitHub"
+        : viaIntegration
+          ? t("integrationActor", {
+              name: item.event.integration_name ?? t("integrationFallback"),
+            })
+          : viaMcp
+            ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
+            : viaBoard
+              ? t("boardActor")
+              : actor;
   const summary =
     entity === "feedback"
       ? describeFeedbackEvent(item.event, ctx, tr)
@@ -308,6 +332,8 @@ function EventRow({
         <SmartAssignAvatar />
       ) : viaNumo ? (
         <NumoAvatar />
+      ) : viaGithub ? (
+        <GithubAvatar />
       ) : viaMcp ? (
         <McpAvatar agent={item.event.api_key_agent} />
       ) : viaIntegration ? (
