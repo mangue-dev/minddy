@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Spinner, cn, toast } from "mangue-ui";
+import { Spinner, toast } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import {
@@ -36,6 +36,7 @@ const AGENT_ERROR_KEYS: Record<string, string> = {
   quotaExceeded: "errorQuotaExceeded",
   noModelForProvider: "errorNoModelForProvider",
   supersededRun: "errorSupersededRun",
+  prMerged: "errorPrMerged",
 };
 
 /**
@@ -70,7 +71,6 @@ export function AgentConversation({
   active = true,
   headerTitle,
   headerActions,
-  headerClassName,
 }: {
   issueId: string;
   /** Identifiant lisible (MIN-42) — pré-écrit dans le prompt en phase compose. */
@@ -87,8 +87,6 @@ export function AgentConversation({
   headerTitle?: ReactNode;
   /** Bloc d'actions à droite de l'en-tête. */
   headerActions?: ReactNode;
-  /** Classe additionnelle sur la barre d'en-tête (ex. `border-b` sur la page). */
-  headerClassName?: string;
 }) {
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
@@ -122,6 +120,13 @@ export function AgentConversation({
   // « Lancer un nouvel agent » demandé explicitement : force la phase compose même
   // si l'issue a des runs passées (sinon on rouvrirait la dernière).
   const [composing, setComposing] = useState(false);
+  // Messages envoyés dont l'écho serveur n'est pas encore arrivé (bulles optimistes).
+  const [pendingMessages, setPendingMessages] = useState<string[]>([]);
+  // 1er message d'une session en cours de création : le POST de lancement fait les
+  // pré-checks (dépôt, quota, modèle) avant de rendre la session, et pendant ce
+  // temps il n'y a rien à afficher — le message a quitté le composer et n'existe
+  // encore nulle part. On le tient ici pour le montrer tout de suite.
+  const [launchText, setLaunchText] = useState<string | null>(null);
   useEffect(() => {
     setSelectedId(initialRunId);
     setComposing(false);
@@ -147,12 +152,26 @@ export function AgentConversation({
   // runs[0] désignerait la run précédente → on afficherait « run passée, composer
   // désactivé » sur la run que l'utilisateur vient de démarrer.
   const isLatest = liveRun ? knownRuns[0]?.id === liveRun.id : false;
+  // Sa PR est fusionnée → run LIVRÉE : la réveiller pousserait sur une branche déjà
+  // dans la base et rouvrirait un cycle de PR sur du travail fini (409 `prMerged`).
+  const delivered = liveRun?.pr_state === "merged";
   // Le composer parle-t-il à cette run ? Oui même terminée (reprise à chaud) — seul
   // `failed` n'a rien à reprendre. Mais SEULE la dernière run est reprennable : les
   // runs d'une issue partagent la branche, et une run passée est restée sur un état
   // dépassé (son push serait rejeté). On la consulte ; pour continuer, on en lance
-  // une nouvelle. Le serveur applique la même règle (409 `supersededRun`).
-  const steerable = liveRun ? isAgentRunResumable(liveRun.status) && isLatest : false;
+  // une nouvelle. Le serveur applique les mêmes règles (409 `supersededRun` /
+  // `prMerged`).
+  const steerable = liveRun
+    ? isAgentRunResumable(liveRun.status) && isLatest && !delivered
+    : false;
+
+  // Changer de run vide les bulles optimistes : elles appartiennent à la
+  // conversation qu'on quitte, pas à celle qu'on ouvre. `launchText` part avec :
+  // la session lancée existe désormais et son prompt vient du serveur.
+  useEffect(() => {
+    setPendingMessages([]);
+    setLaunchText(null);
+  }, [liveRun?.id]);
 
   // Heartbeat tant que le composant est actif sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
@@ -180,17 +199,26 @@ export function AgentConversation({
     }
     const prompt = message.trim();
     setLaunching(true);
+    // Affichage OPTIMISTE du 1er message, comme pour un follow-up : le POST enchaîne
+    // les pré-checks (issue, dépôt, quota, résolution du modèle) avant de rendre la
+    // session, et pendant ce temps le message n'existe nulle part — ni dans le
+    // composer (vidé à l'envoi), ni dans le fil (aucune session à afficher).
+    if (prompt) setLaunchText(prompt);
     try {
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
         model: model || undefined,
       });
-      // La run neuve devient la run ouverte → bascule live immédiate.
+      // La session neuve devient la session ouverte → bascule live immédiate. Son
+      // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
       setLaunched(started);
       setSelectedId(started.id);
       setComposing(false);
       await refreshRuns();
     } catch (err) {
+      // Refusé (quota, pas de dépôt, une session tourne déjà…) : la session n'existe
+      // pas → on retire la bulle plutôt que de laisser croire au lancement.
+      setLaunchText(null);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -202,6 +230,11 @@ export function AgentConversation({
     if (!liveRun) return;
     const text = message.trim();
     if (!text) return;
+    // Affichage OPTIMISTE : la bulle ne reviendrait du serveur qu'au drainage de la
+    // boucle (réveil de sandbox compris, plusieurs secondes) — d'ici là l'utilisateur
+    // aurait l'impression d'avoir tapé dans le vide. Le feed la retire dès que son
+    // écho arrive. En cas d'échec, on la retire nous-mêmes (le message n'existe pas).
+    setPendingMessages((p) => [...p, text]);
     try {
       await steerAgentRunApi(liveRun.id, text);
       await Promise.all([
@@ -209,8 +242,13 @@ export function AgentConversation({
         queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),
       ]);
     } catch (err) {
-      // Course : une run plus récente a pu naître depuis le rendu (autre onglet,
-      // coéquipier) → le serveur refuse la reprise, on le dit en clair.
+      // Refusé (PR fusionnée, run dépassée, course avec une run plus récente lancée
+      // dans un autre onglet…) : le message n'existe nulle part → on retire sa bulle
+      // plutôt que de laisser croire qu'il est parti.
+      setPendingMessages((p) => {
+        const i = p.indexOf(text);
+        return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
+      });
       toast.error(agentErrorMessage(err));
     }
   };
@@ -253,14 +291,12 @@ export function AgentConversation({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* En-tête : bloc de gauche fourni par l'hôte (défaut : modèle en live / issue
-          ciblée en compose — la session n'est jamais « terminée ») + actions à droite. */}
-      <div
-        className={cn(
-          "flex shrink-0 items-center gap-2 px-3 py-2.5",
-          headerClassName,
-        )}
-      >
+      {/* En-tête : bloc de gauche fourni par l'hôte (défaut : modèle de la session en
+          live / issue ciblée en compose) + actions à droite. Sans bordure : le fil
+          respire jusqu'en haut, et l'en-tête ne se lit pas comme une barre séparée.
+          Bas volontairement plus serré que le haut (`pb-2.5`) : l'espace sous le
+          titre est déjà donné par le `pt-3` de la barre de sessions juste dessous. */}
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
         {headerTitle ??
           (liveRun ? (
             <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
@@ -282,8 +318,10 @@ export function AgentConversation({
         ) : null}
       </div>
 
-      {/* Historique : navigation entre les runs successives de l'issue (≥ 2 runs).
-          « Lancer un nouvel agent » n'y figure que si aucune run n'est active. */}
+      {/* Historique : navigation entre les runs successives de l'issue. « Lancer un
+          nouvel agent » n'y figure que si aucune run n'est active. La barre se
+          décolle de l'en-tête (`pt-3`) — sans quoi elle touche sa bordure sur la
+          page Agents et se lit comme une partie de l'en-tête plutôt que du fil. */}
       {phase !== "loading" ? (
         <AgentRunHistory
           runs={knownRuns}
@@ -300,17 +338,29 @@ export function AgentConversation({
                   setComposing(true);
                 }
           }
-          className="shrink-0 pb-1"
+          className="shrink-0 pt-3 pb-1"
         />
       ) : null}
 
-      {/* Fil : flux d'événements (live), spinner (chargement) ou intro (compose). */}
+      {/* Fil : flux d'événements (live), lancement en vol, spinner ou intro. */}
       <div className="min-h-0 flex-1">
         {phase === "live" && liveRun ? (
           <AgentEventFeed
             runId={liveRun.id}
             status={liveRun.status}
             prompt={liveRun.prompt}
+            pendingUserMessages={pendingMessages}
+            className="h-full py-4"
+          />
+        ) : launchText ? (
+          // Session en cours de création : pas encore de session à interroger, mais
+          // le MÊME fil, qui n'affiche que la bulle du 1er message + « travaille ».
+          // Réutiliser le feed (plutôt qu'une bulle ad hoc) garantit qu'au moment où
+          // la session prend le relais, la bulle ne bouge pas d'un pixel.
+          <AgentEventFeed
+            runId={null}
+            status="queued"
+            pendingUserMessages={[launchText]}
             className="h-full py-4"
           />
         ) : phase === "loading" ? (
@@ -354,11 +404,14 @@ export function AgentConversation({
                   ? working
                     ? t("livePlaceholder")
                     : t("restPlaceholder")
-                  : // Run passée : consultation seule (une run plus récente a repris
-                    // la branche). Sinon : run `failed`, rien à reprendre.
-                    isLatest
-                    ? t("endedPlaceholder")
-                    : t("pastRunPlaceholder")
+                  : delivered
+                    ? // Travail livré : on ne rouvre pas un cycle de PR dessus.
+                      t("mergedRunPlaceholder")
+                    : // Run passée : consultation seule (une run plus récente a
+                      // repris la branche). Sinon : run `failed`, rien à reprendre.
+                      isLatest
+                      ? t("endedPlaceholder")
+                      : t("pastRunPlaceholder")
               }
               leadingControls={
                 // Modèle figé pour la session : picker verrouillé + tooltip.

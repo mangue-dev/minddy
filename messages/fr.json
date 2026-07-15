@@ -1003,13 +1003,14 @@
     "workingPlaceholder": "L'agent travaille — arrête pour répondre",
     "openConversation": "Ouvrir la conversation",
     "openAgent": "Ouvrir l'agent",
-    "endedPlaceholder": "Ce run est terminé.",
-    "pastRunPlaceholder": "Run passée (consultation) — lance un nouvel agent pour continuer.",
+    "endedPlaceholder": "Cette session est terminée.",
+    "pastRunPlaceholder": "Session passée (consultation) — lance un nouvel agent pour continuer.",
+    "mergedRunPlaceholder": "Travail fusionné et livré — lance un nouvel agent pour continuer.",
     "livePlaceholder": "Préparer une réponse ou diriger l'agent",
     "restPlaceholder": "Répondre…",
     "composeInheritsPr": "Le nouvel agent repart d'un contexte vierge, mais reprend la branche et la pull request #{number} : il lit le travail déjà fait, les commentaires de review, puis enchaîne.",
-    "runNumbered": "Run {number}/{total}",
-    "runHistory": "{total, plural, one {# run} other {# runs}}",
+    "runNumbered": "Session {number}/{total}",
+    "runHistory": "{total, plural, one {# session} other {# sessions}}",
     "newRun": "Lancer un nouvel agent",
     "prAvailable": "Pull request disponible",
     "prBadge": "PR disponible",
@@ -1018,7 +1019,8 @@
     "errorAlreadyRunning": "Un agent tourne déjà sur ce ticket.",
     "errorQuotaExceeded": "Limite d'usage mensuelle de l'agent atteinte.",
     "errorNoModelForProvider": "Choisis un modèle pour ce provider.",
-    "errorSupersededRun": "Une run plus récente a repris ce ticket — lance un nouvel agent pour continuer."
+    "errorSupersededRun": "Une session plus récente a repris ce ticket — lance un nouvel agent pour continuer.",
+    "errorPrMerged": "La pull request de cette session est fusionnée : son travail est livré. Lance un nouvel agent — il repartira d'une branche neuve."
   },
   "Projects": {
     "newProject": "Nouveau Projet",
@@ -1409,7 +1411,7 @@
     "commentPlaceholder": "Laisser un commentaire sur cette PR…",
     "postComment": "Commenter",
     "requestChangesTitle": "Demander des changements à Numo",
-    "requestChangesDescription": "Décrivez ce qu'il faut changer. Numo repart sur la même branche et met à jour cette PR.",
+    "requestChangesDescription": "Décrivez ce qu'il faut changer. Numo lance une nouvelle session qui reprend cette PR et la met à jour.",
     "requestChangesPlaceholder": "Que doit changer Numo ?",
     "sendToNumo": "Envoyer à Numo",
     "cancel": "Annuler",
@@ -1493,7 +1495,8 @@
   "Admin": {
     "tabs": {
       "models": "Modèles",
-      "costs": "Coûts IA"
+      "costs": "Coûts IA",
+      "quotas": "Quotas"
     },
     "title": "Modèles IA",
     "subtitle": "Configurez les modèles d’IA utilisés par minddy. Le format est provider/model (ex. deepseek/deepseek-v4-flash) ; laissez vide pour revenir à la valeur par défaut.",
@@ -1506,7 +1509,7 @@
       },
       "agent": {
         "title": "Agent de code",
-        "desc": "Modèle par défaut de l’agent de code cloud (surchargeable par l’utilisateur et par run)."
+        "desc": "Modèle par défaut de l’agent de code cloud (surchargeable par l’utilisateur et par session)."
       },
       "voice": {
         "title": "Voix",
@@ -1528,7 +1531,7 @@
       },
       "agent_model": {
         "label": "Modèle de l’agent de code",
-        "desc": "Défaut racine de l’agent de code cloud. L’utilisateur peut définir son propre défaut ou forcer un modèle par run."
+        "desc": "Défaut racine de l’agent de code cloud. L’utilisateur peut définir son propre défaut ou forcer un modèle par session."
       },
       "smart_assign_model": {
         "label": "Assignation intelligente",
@@ -1594,6 +1597,28 @@
         "feedback_analyze": "Analyse feedback",
         "embedding": "Embeddings"
       }
+    },
+    "quotas": {
+      "capTitle": "Plafond mensuel de l'agent",
+      "capDescription": "Dépense maximale par utilisateur et par mois sur la clé plateforme. Un utilisateur avec sa propre clé (BYOK) n'est jamais plafonné.",
+      "capSave": "Enregistrer",
+      "capSaved": "Plafond enregistré.",
+      "capInvalid": "Entre un montant supérieur à 0.",
+      "capDefaultHint": "Défaut : {value}/mois",
+      "usersTitle": "Utilisateurs de l'agent ce mois-ci",
+      "usersDescription": "Remettre à zéro repart le décompte du plafond à maintenant. Aucune donnée de coût n'est supprimée : la dépense réelle reste entière pour les analyses.",
+      "empty": "Aucun usage de l'agent ce mois-ci.",
+      "counted": "compté pour le plafond",
+      "realSpend": "dépense réelle",
+      "blocked": "Bloqué",
+      "resetOn": "Remis à zéro le {at}",
+      "lastUsed": "Dernier usage {at}",
+      "calls": "{count, plural, one {# appel} other {# appels}}",
+      "reset": "Remettre à zéro",
+      "resetToast": "Quota de {name} remis à zéro.",
+      "undo": "Annuler",
+      "undoToast": "Remise à zéro annulée pour {name}.",
+      "footnote": "Une remise à zéro déplace seulement le début de la fenêtre comptée. Le ledger de coûts (ai_usage) n'est jamais modifié — l'onglet Coûts IA continue d'afficher la dépense complète."
     }
   }
 }

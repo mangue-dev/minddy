@@ -77,6 +77,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   //
   // Un run qui travaille déjà (queued/running) n'est pas concerné : il EST le plus
   // récent, son message rejoint simplement la file.
+  // Sa PR est FUSIONNÉE → ce run est LIVRÉ, on ne le réveille pas (MIN-68). Sa
+  // branche est déjà dans la base : y remettre l'agent au travail rouvrirait un
+  // cycle de PR sur du travail livré — concrètement le harnais pousserait de
+  // nouveaux commits sur la branche mergée et ouvrirait une PR de plus, ce qui fait
+  // régresser l'issue de `done` à `in_review`. La règle « merged → branche neuve »
+  // ne vivait que dans `inheritablePrForIssue` (chemin FROID) ; la reprise à chaud,
+  // qui garde sa propre branche, la contournait. Pour continuer : nouvelle run.
+  if (run.pr_state === "merged") {
+    return NextResponse.json({ error: "prMerged", code: "prMerged" }, { status: 409 });
+  }
+
   let resumed = false;
   if (RESUME_FROM.includes(run.status)) {
     const [newer, active] = await Promise.all([

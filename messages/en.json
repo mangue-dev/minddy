@@ -1003,13 +1003,14 @@
     "workingPlaceholder": "The agent is working — stop to reply",
     "openConversation": "Open conversation",
     "openAgent": "Open agent",
-    "endedPlaceholder": "This run has ended.",
-    "pastRunPlaceholder": "Past run (read-only) — launch a new agent to carry on.",
+    "endedPlaceholder": "This session has ended.",
+    "pastRunPlaceholder": "Past session (read-only) — launch a new agent to carry on.",
+    "mergedRunPlaceholder": "Work merged and shipped — launch a new agent to carry on.",
     "livePlaceholder": "Draft a reply or steer the agent",
     "restPlaceholder": "Reply…",
     "composeInheritsPr": "The new agent starts from a clean context but picks up the branch and pull request #{number}: it reads the work already done and the review comments, then carries on.",
-    "runNumbered": "Run {number}/{total}",
-    "runHistory": "{total, plural, one {# run} other {# runs}}",
+    "runNumbered": "Session {number}/{total}",
+    "runHistory": "{total, plural, one {# session} other {# sessions}}",
     "newRun": "Launch a new agent",
     "prAvailable": "Pull request available",
     "prBadge": "PR available",
@@ -1018,7 +1019,8 @@
     "errorAlreadyRunning": "An agent is already running on this issue.",
     "errorQuotaExceeded": "Monthly agent usage limit reached.",
     "errorNoModelForProvider": "Pick a model for this provider.",
-    "errorSupersededRun": "A newer run has taken over this issue — launch a new agent to carry on."
+    "errorSupersededRun": "A newer session has taken over this issue — launch a new agent to carry on.",
+    "errorPrMerged": "This session's pull request is merged: its work is shipped. Launch a new agent — it will start from a fresh branch."
   },
   "Projects": {
     "newProject": "New Project",
@@ -1409,7 +1411,7 @@
     "commentPlaceholder": "Leave a comment on this PR…",
     "postComment": "Comment",
     "requestChangesTitle": "Request changes from Numo",
-    "requestChangesDescription": "Describe what to change. Numo re-runs on the same branch and updates this PR.",
+    "requestChangesDescription": "Describe what to change. Numo launches a new session that picks up this PR and updates it.",
     "requestChangesPlaceholder": "What should Numo change?",
     "sendToNumo": "Send to Numo",
     "cancel": "Cancel",
@@ -1493,7 +1495,8 @@
   "Admin": {
     "tabs": {
       "models": "Models",
-      "costs": "AI costs"
+      "costs": "AI costs",
+      "quotas": "Quotas"
     },
     "title": "AI models",
     "subtitle": "Configure the AI models minddy uses. Format is provider/model (e.g. deepseek/deepseek-v4-flash); leave empty to fall back to the default.",
@@ -1506,7 +1509,7 @@
       },
       "agent": {
         "title": "Code agent",
-        "desc": "Default model for the cloud code agent (overridable per user and per run)."
+        "desc": "Default model for the cloud code agent (overridable per user and per session)."
       },
       "voice": {
         "title": "Voice",
@@ -1528,7 +1531,7 @@
       },
       "agent_model": {
         "label": "Code agent model",
-        "desc": "Root default for the cloud code agent. Users can set their own default or force a model per run."
+        "desc": "Root default for the cloud code agent. Users can set their own default or force a model per session."
       },
       "smart_assign_model": {
         "label": "Smart assignment",
@@ -1594,6 +1597,28 @@
         "feedback_analyze": "Feedback analysis",
         "embedding": "Embeddings"
       }
+    },
+    "quotas": {
+      "capTitle": "Agent monthly cap",
+      "capDescription": "Maximum spend per user per month on the platform key. A user with their own key (BYOK) is never capped.",
+      "capSave": "Save",
+      "capSaved": "Cap saved.",
+      "capInvalid": "Enter an amount greater than 0.",
+      "capDefaultHint": "Default: {value}/month",
+      "usersTitle": "Agent users this month",
+      "usersDescription": "Resetting restarts the cap's count from now. No cost data is deleted: real spend stays intact for analytics.",
+      "empty": "No agent usage this month.",
+      "counted": "counted toward cap",
+      "realSpend": "real spend",
+      "blocked": "Blocked",
+      "resetOn": "Reset on {at}",
+      "lastUsed": "Last used {at}",
+      "calls": "{count, plural, one {# call} other {# calls}}",
+      "reset": "Reset",
+      "resetToast": "{name}'s quota reset.",
+      "undo": "Undo",
+      "undoToast": "Reset undone for {name}.",
+      "footnote": "A reset only moves the start of the counted window. The cost ledger (ai_usage) is never modified — the AI costs tab still shows the full spend."
     }
   }
 }

@@ -76,7 +76,6 @@ export function AgentSessionDetail({
         initialRunId={item.runId}
         active
         headerTitle={headerTitle}
-        headerClassName="border-b border-border"
         headerActions={
           // S'adapte à l'état de la PR : rien (pas encore de PR), bouton (PR
           // disponible), ou simple lien texte vert (PR fusionnée). Tous ouvrent la PR.

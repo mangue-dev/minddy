@@ -41,11 +41,16 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
   return { runs: data?.runs ?? [], loading: isLoading };
 }
 
-/** Events du live view d'un run : polling ~2 s tant que le run est actif. */
-export function useAgentRunEventsQuery(runId: string, active: boolean) {
+/**
+ * Events du live view d'un run : polling ~2 s tant que le run est actif.
+ * `runId` null = la session n'existe pas encore (POST de lancement en vol) : rien à
+ * interroger, le fil n'affiche que la bulle optimiste du 1er message.
+ */
+export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   const { data, isLoading } = useQuery({
     queryKey: ["agent-run-events", runId],
-    queryFn: () => fetchAgentRunEventsApi(runId),
+    queryFn: () => fetchAgentRunEventsApi(runId as string),
+    enabled: !!runId,
     refetchInterval: active ? 2000 : false,
   });
   return { events: data?.events ?? [], loading: isLoading };

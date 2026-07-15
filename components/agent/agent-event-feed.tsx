@@ -29,6 +29,7 @@ import {
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { NumoIcon } from "@/components/numo-icon";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { unechoedMessages } from "@/lib/agent-pending";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunWorking, type AgentRunEvent, type AgentRunStatus } from "@/lib/agent-api";
 import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types";
@@ -328,7 +329,7 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
 
 interface RenderContext {
   results: Map<string, ToolResult>;
-  lastCopyableId: string | null;
+  copyableIds: Set<string>;
   lastMessageId: string | null;
 }
 
@@ -339,7 +340,7 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
         key={it.message.id}
         message={it.message}
         toolCallResults={ctx.results}
-        showCopyButton={it.message.id === ctx.lastCopyableId}
+        showCopyButton={ctx.copyableIds.has(it.message.id)}
         isLatestMessage={it.message.id === ctx.lastMessageId}
       />
     );
@@ -495,12 +496,26 @@ export function AgentEventFeed({
   status,
   prompt,
   className,
+  pendingUserMessages = [],
 }: {
-  runId: string;
+  /**
+   * Session à suivre, ou `null` quand elle n'existe pas ENCORE : le POST de
+   * lancement est en vol. Le fil n'a alors rien à interroger et se contente
+   * d'afficher la bulle optimiste du 1er message — même composant, même mise en
+   * page, donc aucun saut visuel quand la vraie session prend le relais.
+   */
+  runId: string | null;
   status: AgentRunStatus;
   /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
   prompt?: string | null;
   className?: string;
+  /**
+   * Messages que l'utilisateur vient d'envoyer, pas encore revenus du serveur.
+   * Un message de steering ne devient un event `user_message` que lorsque la BOUCLE
+   * le draine — réveil de sandbox compris, soit plusieurs secondes. Sans eux, on
+   * taperait dans le vide : la bulle n'apparaîtrait qu'une fois l'agent reparti.
+   */
+  pendingUserMessages?: string[];
 }) {
   const t = useTranslations("Agent");
   // On ne poll les events (et n'affiche l'indicateur « travaille ») que tant que
@@ -522,16 +537,26 @@ export function AgentEventFeed({
   const { items, results } = useMemo(() => buildFeed(events, prompt), [events, prompt]);
   const blocks = useMemo(() => buildBlocks(items, active), [items, active]);
 
-  // Bouton copy UNIQUEMENT sous le DERNIER message de l'agent (avec du texte) —
-  // les messages intermédiaires ne sont pas copiables individuellement.
-  const lastCopyableId = useMemo(() => {
-    for (let i = items.length - 1; i >= 0; i--) {
-      const it = items[i];
-      if (it.kind === "message" && it.message.role === "assistant" && it.message.content) {
-        return it.message.id;
-      }
+  // Bouton copy sous la RÉPONSE DE CHAQUE TOUR (le résumé qui le clôt), pas sous le
+  // seul dernier message de la session : une session en compte plusieurs et chacune
+  // de ces réponses se copie. Les messages intermédiaires (déroulé du travail) n'en
+  // ont pas — ils ne sont pas des réponses.
+  //
+  // Ce n'est pas que du confort : le bouton occupe une ligne SOUS le message, donc
+  // son absence collait la réponse au message suivant. Le rendre systématique par
+  // tour rend l'espacement régulier d'un bout à l'autre du fil.
+  const copyableIds = useMemo(() => {
+    const ids = new Set<string>();
+    let lastAssistant: string | null = null;
+    for (const it of items) {
+      if (it.kind !== "message" || it.message.role !== "assistant" || !it.message.content) continue;
+      lastAssistant = it.message.id;
+      if (it.isSummary) ids.add(it.message.id);
     }
-    return null;
+    // Tour EN COURS (pas encore de résumé) : sa tête reste copiable, sinon la
+    // réponse en direct serait la seule du fil sans bouton.
+    if (lastAssistant) ids.add(lastAssistant);
+    return ids;
   }, [items]);
 
   // Cale le flux en bas dès l'ouverture (même run terminé) puis à chaque nouvel
@@ -541,7 +566,16 @@ export function AgentEventFeed({
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   }, [items.length]);
 
-  if (items.length === 0) {
+  // Bulles optimistes encore à afficher : celles dont l'écho serveur n'est pas
+  // encore arrivé (cf. lib/agent-pending.ts). Calculé AVANT le vide ci-dessous : au
+  // lancement d'une session, le fil n'a aucun event et c'est justement la bulle
+  // optimiste qui doit s'afficher — sortir ici l'aurait masquée.
+  const echoedTexts = items
+    .filter((it) => it.kind === "message" && it.message.role === "user")
+    .map((it) => ((it as MessageItem).message.content ?? "").trim());
+  const stillPending = unechoedMessages(pendingUserMessages, echoedTexts);
+
+  if (items.length === 0 && stillPending.length === 0) {
     return (
       <div className={cn("flex items-center justify-center px-3 text-center", className)}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -570,7 +604,7 @@ export function AgentEventFeed({
     }
   }
 
-  const ctx: RenderContext = { results, lastCopyableId, lastMessageId };
+  const ctx: RenderContext = { results, copyableIds, lastMessageId };
   // Le tour actif (accordéon ouvert « Travail depuis X ») porte déjà le signal
   // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore
   // (ex. juste après le lancement : prompt affiché, aucun pas produit).
@@ -602,6 +636,16 @@ export function AgentEventFeed({
             renderItem(block.item, ctx)
           ),
         )}
+        {/* Envoyés, pas encore revenus du serveur. Rendus APRÈS les blocs (et non
+            injectés dans `items`) : un message user referme le tour en cours, donc
+            les glisser dans le flux replierait l'accordéon du travail en direct. */}
+        {stillPending.map((text, i) => (
+          <ChatMessage
+            key={`pending-${i}-${text}`}
+            message={makeMessage(`pending-${i}`, text, "user")}
+            toolCallResults={results}
+          />
+        ))}
         {active && !hasActiveTurn ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />

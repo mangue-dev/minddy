@@ -370,6 +370,27 @@ async function buildInheritedPrContext(
 }
 
 /**
+ * La branche du run a déjà été fusionnée pendant son tour : il n'y a plus de PR à
+ * mettre à jour et on refuse d'en ouvrir une nouvelle depuis une branche livrée.
+ */
+class MergedBranchError extends Error {
+  prNumber: number;
+  constructor(prNumber: number) {
+    super(`Pull request #${prNumber} is already merged`);
+    this.name = "MergedBranchError";
+    this.prNumber = prNumber;
+  }
+}
+
+/** Message de fin de tour quand la branche a été fusionnée sous les pieds du run. */
+const MERGED_BRANCH_STRINGS: Record<Locale, (n: number) => string> = {
+  fr: (n) =>
+    `La pull request #${n} a été fusionnée pendant ce tour : le travail de cette branche est livré. Aucune nouvelle pull request n'a été ouverte — lance un nouvel agent pour continuer, il repartira d'une branche neuve.`,
+  en: (n) =>
+    `Pull request #${n} was merged during this turn: this branch's work is shipped. No new pull request was opened — launch a new agent to carry on, it will start from a fresh branch.`,
+};
+
+/**
  * PR du run après le push : l'héritée mise à jour (MIN-68) — rouverte si elle avait
  * été REFUSÉE, puisque la run vient de répondre aux objections — ou une PR neuve.
  * Une PR déjà mergée n'est pas réutilisable : on en ouvre une nouvelle sur la
@@ -397,6 +418,13 @@ async function openOrUpdatePullRequest(opts: {
       repoFullName: opts.repoFullName,
       number: opts.inheritedNumber,
     }).catch(() => null);
+    // PR déjà FUSIONNÉE : le travail de cette branche est livré. En ouvrir une
+    // nouvelle DEPUIS elle ressusciterait un cycle de revue sur du fini (et ferait
+    // régresser l'issue de `done` à `in_review`). Une run ne devrait jamais arriver
+    // là — /steer refuse de réveiller une run mergée, et `inheritablePrForIssue`
+    // n'hérite jamais d'une PR mergée — mais si la PR a été mergée pendant le tour,
+    // on s'arrête ici plutôt que de polluer le dépôt : le tour se conclut sans PR.
+    if (current?.merged) throw new MergedBranchError(opts.inheritedNumber);
     if (current && !current.merged) {
       // Le push a déjà mis la PR à jour (GitHub suit la tête de branche) : il ne
       // reste qu'à la remettre en revue si elle avait été fermée.
@@ -653,6 +681,18 @@ export async function executeAgentRun(
         }
         return "completed";
       } catch (err) {
+        // Branche fusionnée sous les pieds du run → fin de tour SANS PR : on ne
+        // rouvre pas de cycle de revue sur du travail livré, et on ne touche pas au
+        // statut de l'issue (elle reste `done`).
+        if (err instanceof MergedBranchError) {
+          const message = (MERGED_BRANCH_STRINGS[commentLocale] ?? MERGED_BRANCH_STRINGS.en)(
+            err.prNumber,
+          );
+          await emit("error", { message });
+          await postSummaryComment(run, issue.identifier, message, null, commentLocale);
+          await restStamp({ checkpoint, outcome: finish.summary }, "completed");
+          return "completed";
+        }
         // Aucune modification produite (422 « No commits between… ») → fin de tour
         // sans PR.
         if (err instanceof GithubApiError && err.status === 422) {

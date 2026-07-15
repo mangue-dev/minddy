@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
 import { GitPullRequest, MessagesSquare } from "lucide-react";
 import { isAgentRunWorking, type AgentRunSummary } from "@/lib/agent-api";
 import { ModelBadge } from "@/components/model-badge";
@@ -33,16 +33,36 @@ export function AgentRunPanel({
   // badge. Au repos, on n'affiche PAS de badge d'état (le résultat qui compte est la
   // PR) — seulement « Pull request disponible » quand une PR existe.
   const working = isAgentRunWorking(run.status);
+  // Un ticket peut enchaîner plusieurs runs sur la même PR (MIN-68) : l'indicateur
+  // doit dire où en est CETTE PR — disponible, fusionnée (livrée) ou fermée.
+  const prLabel =
+    run.pr_state === "merged"
+      ? t("prMerged")
+      : run.pr_state === "closed"
+        ? t("prClosed")
+        : t("prAvailable");
 
   return (
     <AgentBeam active={working} className="rounded-xl">
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ModelBadge model={run.model} className="min-w-0" />
-        {!working && run.pr_number != null ? (
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-500">
+        {/* L'état de la PR, pas sa simple existence : `pr_number` survit au merge et
+            à la fermeture, donc s'y fier annonçait « disponible » sur du travail
+            déjà livré ou refusé. */}
+        {!working && run.pr_number != null && prLabel ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+              run.pr_state === "merged"
+                ? "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                : run.pr_state === "closed"
+                  ? "border-border bg-muted text-muted-foreground"
+                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500",
+            )}
+          >
             <GitPullRequest className="size-3.5" />
-            {t("prAvailable")}
+            {prLabel}
           </span>
         ) : null}
       </div>
