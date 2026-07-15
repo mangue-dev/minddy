@@ -27,6 +27,9 @@ interface ChatMessageProps {
    *  (text that precedes a tool call / a later assistant reply) read as one
    *  continuous answer, so they stay button-less and tighter. */
   showCopyButton?: boolean;
+  /** Ce message est-il la tête vivante de la conversation (aucun message plus
+   *  récent, agent au travail) ? → son accordéon de tool-calls fermé shimmer. */
+  isLatestMessage?: boolean;
 }
 
 // True for messages that ChatMessage renders nothing for, so they don't break
@@ -106,6 +109,7 @@ export function ChatMessage({
   toolCallResults,
   onSuggestionClick,
   showCopyButton = true,
+  isLatestMessage = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
 
@@ -171,6 +175,7 @@ export function ChatMessage({
                   };
                 })}
                 onSuggestionClick={onSuggestionClick}
+                isLatest={isLatestMessage}
               />
             )}
           </div>

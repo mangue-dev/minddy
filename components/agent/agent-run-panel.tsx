@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { GitPullRequest, MessagesSquare } from "lucide-react";
-import { type AgentRunSummary } from "@/lib/agent-api";
+import { isAgentRunWorking, type AgentRunSummary } from "@/lib/agent-api";
 import { ModelBadge } from "@/components/model-badge";
+import { AgentBeam } from "@/components/agent-beam";
 import { AgentChatModal } from "./agent-chat-modal";
 import { AgentStatusBadge } from "./agent-run-status";
 
@@ -28,12 +29,17 @@ export function AgentRunPanel({
   const t = useTranslations("Agent");
   const router = useRouter();
   const [chatOpen, setChatOpen] = useState(false);
+  // L'agent travaille → le container porte le liseré animé (comme les cartes) et
+  // on masque le badge « En cours » : le beam signale l'activité (les autres
+  // statuts — terminé/attente/échec — gardent leur badge).
+  const working = isAgentRunWorking(run.status);
 
   return (
+    <AgentBeam active={working} className="rounded-xl">
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ModelBadge model={run.model} className="min-w-0" />
-        <AgentStatusBadge status={run.status} />
+        {!working ? <AgentStatusBadge status={run.status} /> : null}
       </div>
 
       {run.status === "failed" && run.error_message ? (
@@ -75,5 +81,6 @@ export function AgentRunPanel({
         initialRun={run}
       />
     </div>
+    </AgentBeam>
   );
 }

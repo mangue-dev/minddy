@@ -29,6 +29,7 @@ import { issueComparator } from "@/lib/view-filter";
 import { resolveRelations } from "@/lib/relation-constants";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
+import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -241,6 +242,9 @@ export function GlobalKanbanBoard({
   };
 
   return (
+    // Halo « agent en cours » sur les cartes cross-projet : provider en mode GLOBAL
+    // (pas de projectId → endpoint /api/agent-activity, borné par la RLS).
+    <AgentActivityProvider>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -306,5 +310,6 @@ export function GlobalKanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </AgentActivityProvider>
   );
 }

@@ -548,6 +548,7 @@ export const AssistantShell = forwardRef<
                 onSend={handleSend}
                 onAbort={abort}
                 isStreaming={isBusy}
+                beam={isBusy}
                 noBorder
                 pageContext={pageContext}
               />
@@ -615,6 +616,7 @@ export const AssistantShell = forwardRef<
                 onSend={handleSend}
                 onAbort={abort}
                 isStreaming={isStreaming}
+                beam={isBusy}
                 pageContext={pageContext}
               />
             </div>

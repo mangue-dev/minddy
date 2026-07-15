@@ -149,3 +149,48 @@ nav[aria-label="Navigation"]
 [cmdk-list].flex-1 {
   max-height: none !important;
 }
+
+/* Effet « shimmer » sur du texte (agent : dernière action en cours, accordéon de
+   tool-calls fermé). Une bande claire balaie un texte estompé — piloté par
+   `currentColor`, donc s'adapte à la couleur héritée (muted/destructive) et au
+   thème. Retiré si l'utilisateur préfère moins d'animation. */
+/* Plage 0→100% avec un dégradé DEUX FOIS plus large (200%) + no-repeat : à toute
+   position dans [0,100%] l'image couvre TOUT le texte (aucun trou transparent), et
+   la bande claire (à 50% du dégradé) balaie de droite à gauche. */
+@keyframes text-shimmer {
+  from {
+    background-position: 0% center;
+  }
+  to {
+    background-position: 100% center;
+  }
+}
+.text-shimmer {
+  /* NB : `background-clip: text` exige `color: transparent`, ce qui rend
+     `currentColor` transparent (il RÉSOUT vers `color`) → on n'utilise donc PAS
+     currentColor mais les tokens de thème directement. Base = muted-foreground
+     (couleur normale des labels), bande = foreground (plus clair) qui balaie. */
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: text-shimmer 1.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer {
+    animation: none;
+    background: none;
+    color: var(--muted-foreground);
+    -webkit-text-fill-color: var(--muted-foreground);
+  }
+}

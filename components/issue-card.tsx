@@ -12,7 +12,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { BorderBeam } from "border-beam";
+import { AgentBeam } from "@/components/agent-beam";
 import {
   Bot,
   Calendar,
@@ -925,21 +925,12 @@ export function IssueCard({
             inCurrentCycle={inCurrentCycle}
           />
         );
-        // Agent en cours : liseré animé qui parcourt le bord (lib `border-beam`).
-        // On n'enveloppe que dans ce cas : les cards normales restent intactes.
-        // Le wrapper a `overflow: hidden` → on lui reporte le `shadow-sm` de la card.
-        return agentActive ? (
-          <BorderBeam
-            size="pulse-inner"
-            duration={4}
-            colorVariant="colorful"
-            theme="auto"
-            className="rounded-xl shadow-sm"
-          >
+        // Agent en cours : liseré animé qui parcourt le bord (wrapper `AgentBeam`
+        // partagé). Le wrapper a `overflow: hidden` → on lui reporte le `shadow-sm`.
+        return (
+          <AgentBeam active={agentActive} className="rounded-xl shadow-sm">
             {body}
-          </BorderBeam>
-        ) : (
-          body
+          </AgentBeam>
         );
       })()}
       <IssueContextMenu

@@ -51,6 +51,12 @@ interface ToolCallListProps {
   items: ToolCallItem[];
   /** Callback when a user clicks a suggested answer (ask_user tool) */
   onSuggestionClick?: (text: string) => void;
+  /**
+   * Ce groupe d'actions est-il la TÊTE VIVANTE de la conversation (aucun message
+   * plus récent) ? Alors l'accordéon fermé montre sa dernière action avec un effet
+   * shimmer. Retiré dès qu'un message plus récent apparaît (isLatest=false).
+   */
+  isLatest?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -492,9 +498,12 @@ function AskUserCallout({
 function ToolCallRow({
   item,
   t,
+  shimmer = false,
 }: {
   item: ToolCallItem;
   t: TranslateFn;
+  /** Effet shimmer sur le label (action actuellement en cours, tête vivante). */
+  shimmer?: boolean;
 }) {
   const { Icon, label } = getToolView(item, t);
   const isRunning = item.status === "running";
@@ -508,7 +517,7 @@ function ToolCallRow({
       )}
     >
       <Icon className="h-3 w-3 shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
+      <span className={cn("flex-1 truncate", shimmer && "text-shimmer")}>{label}</span>
       {isRunning ? (
         <Loader2 className="h-3 w-3 shrink-0 animate-spin opacity-70" />
       ) : isError ? (
@@ -518,7 +527,7 @@ function ToolCallRow({
   );
 }
 
-export function ToolCallList({ items, onSuggestionClick }: ToolCallListProps) {
+export function ToolCallList({ items, onSuggestionClick, isLatest = false }: ToolCallListProps) {
   const t = useTranslations("ToolCall");
   const [expanded, setExpanded] = useState(false);
 
@@ -535,15 +544,21 @@ export function ToolCallList({ items, onSuggestionClick }: ToolCallListProps) {
     if (rowItems.length === 0) return null;
 
     if (rowItems.length === 1) {
-      return <ToolCallRow item={rowItems[0]} t={t} />;
+      // Action unique : shimmer si elle est en cours ET tête vivante.
+      return (
+        <ToolCallRow
+          item={rowItems[0]}
+          t={t}
+          shimmer={isLatest && rowItems[0].status === "running"}
+        />
+      );
     }
 
     const anyRunning = rowItems.some((i) => i.status === "running");
-    const anyError = rowItems.some(
-      (i) => i.status === "complete" && i.success === false
-    );
 
     if (expanded) {
+      // Ligne de résumé NEUTRE : plus de rouge global si une action a échoué —
+      // seules les lignes d'action fautives (ci-dessous) apparaissent en rouge.
       return (
         <div className="flex flex-col">
           <Button
@@ -551,12 +566,7 @@ export function ToolCallList({ items, onSuggestionClick }: ToolCallListProps) {
             variant="ghost"
             size="sm"
             onClick={() => setExpanded(false)}
-            className={cn(
-              "group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal hover:bg-transparent",
-              anyError
-                ? "text-destructive"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
           >
             <ChevronRight className="h-3 w-3 shrink-0 rotate-90 transition-transform" />
             <span className="flex-1 truncate">
@@ -575,6 +585,12 @@ export function ToolCallList({ items, onSuggestionClick }: ToolCallListProps) {
       );
     }
 
+    // Accordéon FERMÉ : on n'affiche que la DERNIÈRE action en date. Rouge UNIQUEMENT
+    // si CETTE action a échoué (pas si une autre action du groupe a échoué). Shimmer
+    // tant que c'est la tête vivante de la conversation (isLatest, hors erreur).
+    const lastItem = rowItems[rowItems.length - 1];
+    const lastLabel = getToolView(lastItem, t).label;
+    const lastError = lastItem.status === "complete" && lastItem.success === false;
     return (
       <Button
         type="button"
@@ -583,18 +599,24 @@ export function ToolCallList({ items, onSuggestionClick }: ToolCallListProps) {
         onClick={() => setExpanded(true)}
         className={cn(
           "group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal hover:bg-transparent",
-          anyError
+          lastError
             ? "text-destructive"
             : "text-muted-foreground hover:text-foreground"
         )}
       >
         <ChevronRight className="h-3 w-3 shrink-0 transition-transform" />
-        <span className="flex-1 truncate">
-          {rowItems.map((i) => getToolView(i, t).label).join(", ")}
+        <span
+          className={cn(
+            "flex-1 truncate",
+            // Shimmer si l'action affichée (la dernière) est actuellement en cours.
+            isLatest && lastItem.status === "running" && "text-shimmer"
+          )}
+        >
+          {lastLabel}
         </span>
         {anyRunning ? (
           <Loader2 className="h-3 w-3 shrink-0 animate-spin opacity-70" />
-        ) : anyError ? (
+        ) : lastError ? (
           <X className="h-3 w-3 shrink-0" />
         ) : null}
       </Button>

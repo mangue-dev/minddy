@@ -12,6 +12,9 @@ import { useQuery } from "@tanstack/react-query";
  *                  « Lancer un agent ».
  * Polling adaptatif : rapide tant qu'un agent travaille, lent sinon (les sessions
  * au repos ne changent pas d'elles-mêmes).
+ *
+ * Deux modes : `projectId` fourni → un projet ; `projectId` absent → GLOBAL (board
+ * « Tous les tickets », cross-projet — la RLS borne aux projets accessibles).
  */
 
 interface AgentActivity {
@@ -23,9 +26,12 @@ const EMPTY: AgentActivity = { working: new Set(), session: new Set() };
 const AgentActivityContext = createContext<AgentActivity>(EMPTY);
 
 async function fetchAgentActivity(
-  projectId: string,
+  projectId: string | null | undefined,
 ): Promise<{ workingIssueIds: string[]; sessionIssueIds: string[] }> {
-  const res = await fetch(`/api/projects/${projectId}/agent-runs`);
+  const url = projectId
+    ? `/api/projects/${projectId}/agent-runs`
+    : `/api/agent-activity`;
+  const res = await fetch(url);
   if (!res.ok) return { workingIssueIds: [], sessionIssueIds: [] };
   const data = (await res.json()) as {
     workingIssueIds?: string[];
@@ -41,13 +47,13 @@ export function AgentActivityProvider({
   projectId,
   children,
 }: {
-  projectId: string;
+  /** Absent/null → mode GLOBAL (tous projets accessibles). */
+  projectId?: string | null;
   children: ReactNode;
 }) {
   const { data } = useQuery({
-    queryKey: ["agent-active-issues", projectId],
+    queryKey: ["agent-active-issues", projectId ?? "__global__"],
     queryFn: () => fetchAgentActivity(projectId),
-    enabled: !!projectId,
     // Rapide tant qu'un agent travaille ; lent sinon (les sessions au repos sont
     // stables jusqu'à une action utilisateur).
     refetchInterval: (query) =>

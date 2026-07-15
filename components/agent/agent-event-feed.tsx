@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
   AlertTriangle,
-  Bot,
   CheckCircle2,
   Circle,
   CircleDot,
@@ -14,10 +13,8 @@ import {
   GitPullRequest,
   ListChecks,
 } from "lucide-react";
-import {
-  ChatMessage,
-  assistantCopyMessageIds,
-} from "@/components/assistant/chat-message";
+import { ChatMessage } from "@/components/assistant/chat-message";
+import { NumoIcon } from "@/components/numo-icon";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunWorking, type AgentRunEvent, type AgentRunStatus } from "@/lib/agent-api";
 import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types";
@@ -269,13 +266,21 @@ export function AgentEventFeed({
 
   const { items, results } = useMemo(() => buildFeed(events), [events]);
 
-  const copyIds = useMemo(
-    () =>
-      assistantCopyMessageIds(
-        items.flatMap((it) => (it.kind === "message" ? [it.message] : [])),
-      ),
-    [items],
-  );
+  // Bouton copy UNIQUEMENT sous le DERNIER message de l'agent (avec du texte) —
+  // les messages intermédiaires ne sont pas copiables individuellement.
+  const lastCopyableId = useMemo(() => {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (
+        it.kind === "message" &&
+        it.message.role === "assistant" &&
+        it.message.content
+      ) {
+        return it.message.id;
+      }
+    }
+    return null;
+  }, [items]);
 
   // Cale le flux en bas dès l'ouverture (même run terminé) puis à chaque nouvel
   // event tant qu'il est actif. useLayoutEffect → pas de flash « scroll depuis
@@ -288,17 +293,35 @@ export function AgentEventFeed({
     return (
       <div className={cn("flex items-center justify-center text-center", className)}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {active ? <Bot className="size-4 shrink-0 animate-pulse" /> : null}
-          <span>{loading || active ? t("working") : t("noActivity")}</span>
+          {active ? (
+            <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
+          ) : null}
+          <span className={cn(active && "text-shimmer")}>
+            {loading || active ? t("working") : t("noActivity")}
+          </span>
         </div>
       </div>
     );
   }
 
+  // Tête vivante : le DERNIER item message, tant que l'agent travaille. Son
+  // accordéon de tool-calls fermé shimmer ; dès qu'un message plus récent arrive,
+  // il n'est plus le dernier → shimmer retiré.
+  let lastMessageId: string | null = null;
+  if (active) {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (it.kind === "message") {
+        lastMessageId = it.message.id;
+        break;
+      }
+    }
+  }
+
   return (
     <div
       ref={feedRef}
-      className={cn("flex flex-col gap-6 overflow-y-auto overscroll-contain", className)}
+      className={cn("flex flex-col gap-3 overflow-y-auto overscroll-contain", className)}
     >
       {items.map((it) =>
         it.kind === "message" ? (
@@ -306,7 +329,8 @@ export function AgentEventFeed({
             key={it.message.id}
             message={it.message}
             toolCallResults={results}
-            showCopyButton={copyIds.has(it.message.id)}
+            showCopyButton={it.message.id === lastCopyableId}
+            isLatestMessage={it.message.id === lastMessageId}
           />
         ) : it.kind === "plan" ? (
           <PlanRow key={it.id} item={it} />
@@ -316,8 +340,8 @@ export function AgentEventFeed({
       )}
       {active ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Bot className="size-4 shrink-0 animate-pulse" />
-          <span>{t("working")}</span>
+          <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
+          <span className="text-shimmer">{t("working")}</span>
         </div>
       ) : null}
     </div>

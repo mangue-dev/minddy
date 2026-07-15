@@ -289,6 +289,7 @@ export function AgentChatModal({
                   onSend={(message) => void steer(message)}
                   onAbort={() => void interrupt()}
                   isStreaming={working}
+                  beam={working}
                   disabled={working || !steerable}
                   hideAttach
                   placeholder={

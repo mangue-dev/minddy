@@ -12,6 +12,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Button, SendButtonWithCost, cn } from "mangue-ui";
 import { Paperclip, Square } from "lucide-react";
+import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { PageContextBadge } from "@/components/assistant/page-context-badge";
 import { AttachmentPills, DropOverlay, useFileDrop } from "@/components/attachments";
@@ -56,6 +57,12 @@ interface ChatInputProps {
    * cluster stays right). The agent launch composer drops its model picker here.
    */
   leadingControls?: ReactNode;
+  /**
+   * Liseré animé « réponse en cours » autour de la surface (même effet que les
+   * cartes d'issue). Le chat Numo et la conversation de l'agent l'activent tant
+   * qu'une réponse se génère.
+   */
+  beam?: boolean;
 }
 
 export interface ChatInputHandle {
@@ -75,6 +82,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       pageContext = null,
       initialValue,
       leadingControls,
+      beam,
     },
     ref
   ) {
@@ -258,6 +266,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         className={noBorder ? "px-3 pb-3" : "px-3 py-3"}
         onMouseDown={handleContainerMouseDown}
       >
+        <AgentBeam active={!!beam} className="rounded-2xl">
         <div
           className={cn(
             "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
@@ -382,6 +391,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
           </div>
         </div>
+        </AgentBeam>
       </div>
     );
   }
