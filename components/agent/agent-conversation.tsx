@@ -17,6 +17,7 @@ import {
   type AgentRunSummary,
 } from "@/lib/agent-api";
 import {
+  allAgentSessionsQueryKey,
   issueAgentRunsQueryKey,
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
@@ -99,6 +100,19 @@ export function AgentConversation({
     return key ? t(key) : msg;
   };
 
+  /**
+   * Rafraîchit les runs de l'issue ET la liste globale des sessions (page Agents).
+   * Cette liste ne poll QUE si une session travaille déjà — sans invalidation
+   * explicite, lancer ou reprendre une run depuis la page la laisse figée sur le
+   * statut de la run précédente jusqu'au prochain rechargement complet.
+   */
+  const refreshRuns = async (): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) }),
+      queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey }),
+    ]);
+  };
+
   // Run explicitement ouverte : `initialRunId`, une run choisie dans l'historique,
   // ou celle qu'on vient de lancer. `null` → on retombe sur la run ACTIVE de l'issue.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
@@ -114,18 +128,25 @@ export function AgentConversation({
   }, [initialRunId]);
 
   const { runs, loading } = useIssueAgentRunsQuery(active ? issueId : null);
-  const activeRun = runs.find((r) => isAgentRunActive(r.status)) ?? null;
+  // La run tout juste lancée est active mais pas encore dans `runs` : sans elle, on
+  // proposerait « lancer un nouvel agent » sur une issue déjà occupée (→ 409).
+  const knownRuns =
+    launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
+  const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Résolution de la run affichée. Une run TERMINÉE n'est jamais reprise d'office :
   // sans run désignée ni run active, on compose une nouvelle run froide (MIN-68).
   const liveRun = composing
     ? null
     : selectedId
-      ? runs.find((r) => r.id === selectedId) ??
-        (launched?.id === selectedId ? launched : null)
+      ? knownRuns.find((r) => r.id === selectedId) ?? null
       : activeRun;
   const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
   // `runs` arrive trié du plus récent au plus ancien : runs[0] est la dernière run.
-  const isLatest = liveRun ? runs[0]?.id === liveRun.id : false;
+  // La run qu'on vient de lancer compte AUSSI comme la dernière : entre le POST et
+  // l'arrivée du refetch, `runs` est encore la liste d'AVANT, et la comparer à
+  // runs[0] désignerait la run précédente → on afficherait « run passée, composer
+  // désactivé » sur la run que l'utilisateur vient de démarrer.
+  const isLatest = liveRun ? knownRuns[0]?.id === liveRun.id : false;
   // Le composer parle-t-il à cette run ? Oui même terminée (reprise à chaud) — seul
   // `failed` n'a rien à reprendre. Mais SEULE la dernière run est reprennable : les
   // runs d'une issue partagent la branche, et une run passée est restée sur un état
@@ -168,9 +189,7 @@ export function AgentConversation({
       setLaunched(started);
       setSelectedId(started.id);
       setComposing(false);
-      await queryClient.invalidateQueries({
-        queryKey: issueAgentRunsQueryKey(issueId),
-      });
+      await refreshRuns();
     } catch (err) {
       toast.error(agentErrorMessage(err));
     } finally {
@@ -186,7 +205,7 @@ export function AgentConversation({
     try {
       await steerAgentRunApi(liveRun.id, text);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) }),
+        refreshRuns(),
         queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),
       ]);
     } catch (err) {
@@ -201,7 +220,7 @@ export function AgentConversation({
     if (!liveRun) return;
     try {
       await interruptAgentRunApi(liveRun.id);
-      await queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) });
+      await refreshRuns();
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -267,7 +286,7 @@ export function AgentConversation({
           « Lancer un nouvel agent » n'y figure que si aucune run n'est active. */}
       {phase !== "loading" ? (
         <AgentRunHistory
-          runs={runs}
+          runs={knownRuns}
           selectedId={liveRun?.id ?? null}
           onSelect={(picked) => {
             setComposing(false);

@@ -438,11 +438,20 @@ export async function executeAgentRun(
 
     // Interruption demandée alors que le run était EN FILE (entre deux tours) : on
     // repasse au repos sans même réveiller la sandbox.
+    //
+    // Sauf s'il reste un message NON CONSOMMÉ : le composer envoie toujours le
+    // couple steer PUIS interrupt quand l'agent « travaille » (et `queued` compte
+    // comme tel), donc le message peut être arrivé juste avant le drapeau. Reposer
+    // ici l'avalerait — personne ne draine un run au repos, et l'utilisateur verrait
+    // l'agent mourir sans avoir lu sa consigne. On re-queue pour le traiter.
     if (run.interrupt_requested) {
       await clearInterrupt(run.id);
+      const pending = await hasPendingRunMessages(run.id);
       await stampRun(run.id, {
-        status: "needs_input",
+        status: pending ? "queued" : "needs_input",
+        ...(pending ? { not_before: new Date().toISOString() } : {}),
         continuations: 0,
+        attempts: 0,
         window_started_at: null,
         last_activity_at: new Date().toISOString(),
         interrupt_requested: false,
@@ -561,6 +570,14 @@ export async function executeAgentRun(
     // coupera après ~5 min d'inactivité), budget de tour remis à zéro.
     const restFields = {
       continuations: 0,
+      // `attempts` compte les claims d'un tour pour la reprise sur crash
+      // (`requeueStuckRuns`), et `claim_agent_run` l'incrémente à CHAQUE claim. Sans
+      // remise à zéro ici, il s'accumule sur la vie entière du run — or MIN-68 fait
+      // du multi-tours la vie normale d'un run (chaque reprise à chaud = un claim de
+      // plus). Passé le budget, un crash ne requeue plus : il marque `failed` ET
+      // efface le checkpoint → conversation morte pour de bon. Un tour qui arrive au
+      // repos est un tour SAIN : son successeur repart avec son budget entier.
+      attempts: 0,
       window_started_at: null,
       cost_usd: newCost,
       sandbox_id: sandboxName(sandbox),
@@ -744,6 +761,10 @@ export async function executeAgentRun(
       status: "needs_input",
       error_message: cap(message, 1000),
       continuations: 0,
+      // Comme `restFields` : ce run revient au repos sain, son budget de reprise sur
+      // crash repart entier (sinon il s'épuise sur la vie du run et le prochain
+      // crash effacerait son checkpoint).
+      attempts: 0,
       window_started_at: null,
       sandbox_id: sandboxName(sandbox),
       sandbox_stopped_at: null,

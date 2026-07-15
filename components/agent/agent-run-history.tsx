@@ -21,9 +21,10 @@ import { isAgentRunActive, type AgentRunSummary } from "@/lib/agent-api";
  * affichée, les précédentes restent consultables ici — leur fil d'événements, leur
  * modèle et leur PR sont intacts.
  *
- * La barre ne s'affiche que si elle a quelque chose à offrir : plusieurs runs à
- * parcourir, ou une nouvelle run à lancer. Sur une issue à run unique dont l'agent
- * travaille, elle ne serait que du bruit.
+ * La barre s'affiche dès qu'il existe une run : elle est le seul chemin de RETOUR
+ * vers une conversation depuis la phase compose. La masquer quand l'issue n'a qu'une
+ * run enfermait l'utilisateur sur le composer vierge, sans rien pour revenir au fil
+ * de cette run. Sur une issue SANS run, il n'y a rien à offrir → masquée.
  *
  * « Lancer un nouvel agent » n'apparaît que si AUCUNE run n'est active : une seule
  * run à la fois par issue. Tant qu'une run tourne (ou attend une réponse), la seule
@@ -48,7 +49,6 @@ export function AgentRunHistory({
   const t = useTranslations("Agent");
   const format = useFormatter();
 
-  if (runs.length < 2 && !onNewRun) return null;
   if (runs.length === 0) return null;
 
   const fmt = (at: string): string =>

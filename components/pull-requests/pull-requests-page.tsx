@@ -78,7 +78,14 @@ export function PullRequestsPage() {
     [pullRequests, filter],
   );
 
-  const selected = filtered.find((p) => p.runId === selectedRunId) ?? null;
+  // Une PR est partagée par TOUS les runs successifs de son issue (MIN-68) : les
+  // liens « voir la pull request » portent le run le plus récent, alors que l'item
+  // est identifié par le run canonique (le plus ancien). On matche donc sur
+  // n'importe quel run de la PR — sinon le deep-link tombe à côté et l'effet de
+  // garde ci-dessous ouvrirait la PR d'un autre ticket sans rien signaler.
+  const holdsRun = (p: PullRequestListItem, runId: string | null): boolean =>
+    !!runId && (p.runIds?.includes(runId) ?? p.runId === runId);
+  const selected = filtered.find((p) => holdsRun(p, selectedRunId)) ?? null;
 
   // Publie la PR sélectionnée à Numo : il résout « cette PR », la lit
   // (read_pull_request) et peut lancer des changements sur l'issue liée.
@@ -102,9 +109,10 @@ export function PullRequestsPage() {
   // que les données arrivent. `selected` renvoie null tout seul si l'id n'existe pas.
   useEffect(() => {
     if (filtered.length === 0) return;
-    if (!selectedRunId || !filtered.some((p) => p.runId === selectedRunId)) {
+    if (!selectedRunId || !filtered.some((p) => holdsRun(p, selectedRunId))) {
       setSelectedRunId(filtered[0].runId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered, selectedRunId]);
 
   const fmtDay = (at: string): string =>

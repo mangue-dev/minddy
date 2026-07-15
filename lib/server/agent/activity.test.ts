@@ -62,4 +62,31 @@ describe("buildAgentActivity", () => {
     ]);
     expect(out.pullRequests).toEqual({});
   });
+
+  it("garde une PR FUSIONNÉE dans le chip (seule `closed` est exclue)", () => {
+    // `merged` est le seul état de PR que MIN-68 traite à part (inheritablePrForIssue
+    // renvoie null → branche neuve) : on verrouille ici qu'il reste néanmoins
+    // affiché, sinon le lien vers le travail livré disparaîtrait de la carte.
+    const out = buildAgentActivity([
+      row({ status: "completed", pr_number: 7, pr_state: "merged" }),
+    ]);
+    expect(out.pullRequests["issue-1"]).toEqual({ runId: "run-1", prNumber: 7 });
+  });
+
+  it("dédoublonne par issue : chaque issue a sa propre PR et son propre état", () => {
+    const out = buildAgentActivity([
+      row({ issue_id: "issue-A", id: "a1", status: "running", pr_number: 1, pr_state: "open" }),
+      row({ issue_id: "issue-B", id: "b1", status: "completed", pr_number: 2, pr_state: "open" }),
+    ]);
+    expect(out.workingIssueIds).toEqual(["issue-A"]);
+    expect(out.sessionIssueIds).toEqual(["issue-A"]);
+    expect(out.pullRequests).toEqual({
+      "issue-A": { runId: "a1", prNumber: 1 },
+      "issue-B": { runId: "b1", prNumber: 2 },
+    });
+  });
+
+  it("une run annulée n'occupe pas l'issue", () => {
+    expect(buildAgentActivity([row({ status: "canceled" })]).sessionIssueIds).toEqual([]);
+  });
 });

@@ -54,6 +54,14 @@ export interface PullRequestListItem {
   activeRunId: string | null;
   /** Un run ACTIF occupe l'issue → pas de nouvelle demande de changements (MIN-68). */
   busyRunId: string | null;
+  /**
+   * TOUS les runs qui portent cette PR (MIN-68 : une PR est partagée par les runs
+   * successives d'une issue). `runId` n'en est qu'un — le canonique. Les liens
+   * « voir la pull request » de l'app pointent, eux, le run le plus RÉCENT : sans
+   * cette liste, leur deep-link `?run=` ne matcherait aucun item et la page
+   * sélectionnerait silencieusement la PR d'un autre ticket.
+   */
+  runIds: string[];
 }
 
 export async function GET(request: NextRequest) {
@@ -94,9 +102,11 @@ export async function GET(request: NextRequest) {
         project: r.project,
         activeRunId: isWorking ? r.id : null,
         busyRunId: isActive ? r.id : null,
+        runIds: [r.id],
       });
       continue;
     }
+    existing.runIds.push(r.id);
     if (r.updated_at > existing.updated_at) {
       existing.pr_state = r.pr_state;
       existing.pr_url = r.pr_url ?? existing.pr_url;

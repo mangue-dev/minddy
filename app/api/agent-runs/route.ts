@@ -116,9 +116,10 @@ export async function GET(request: NextRequest) {
       existing.pr_number = r.pr_number;
       existing.pr_url = r.pr_url;
       existing.pr_state = r.pr_state;
-      // La session « existe » depuis son 1er run ; on garde la date d'activité la
-      // plus fraîche pour le tri (created_at du représentant peut être plus ancien).
-      existing.created_at = r.created_at;
+      // `created_at` n'est PAS repris du nouveau représentant : les lignes arrivent
+      // DESC, donc `r` est plus ANCIEN qu'`existing` et l'écraser ferait reculer la
+      // session dans le tri final. On garde la date du run le plus récent de
+      // l'issue — c'est elle qui date la session.
     }
   }
 

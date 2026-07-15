@@ -42,6 +42,36 @@ describe("buildInheritedPrMessage", () => {
     expect(msg).toContain("Ajout du champ de recherche et de son index.");
   });
 
+  it("injecte la description de la PR (ce que la PR annonce déjà)", () => {
+    const msg = buildInheritedPrMessage({
+      repo,
+      pr: {
+        number: 12,
+        state: "open",
+        comments: [],
+        body: "Ajoute /api/search et son index trigram.",
+      },
+    });
+    expect(msg).toContain("Ajoute /api/search et son index trigram.");
+  });
+
+  it("plafonne la description et le résumé (contexte hérité borné)", () => {
+    const msg = buildInheritedPrMessage({
+      repo,
+      pr: {
+        number: 12,
+        state: "open",
+        comments: [],
+        body: "b".repeat(9000),
+        previousSummary: "s".repeat(9000),
+      },
+    });
+    // Chacun est tronqué à 4000 : aucun des deux ne passe en entier.
+    expect(msg).not.toContain("b".repeat(4100));
+    expect(msg).not.toContain("s".repeat(4100));
+    expect(msg.split("[truncated]").length - 1).toBe(2);
+  });
+
   it("injecte les commentaires de review avec leur auteur", () => {
     const msg = buildInheritedPrMessage({
       repo,
@@ -87,12 +117,14 @@ describe("buildInheritedPrMessage", () => {
     expect(msg).not.toMatch(/REJECTED/);
   });
 
-  it("tronque un commentaire fleuve plutôt que d'inonder le contexte", () => {
+  it("tronque un commentaire fleuve au cap par commentaire (2000)", () => {
     const msg = buildInheritedPrMessage({
       repo,
       pr: { number: 12, state: "open", comments: [{ author: "alice", body: "x".repeat(9000) }] },
     });
     expect(msg).toContain("[truncated]");
-    expect(msg.length).toBeLessThan(6000);
+    // Le cap est à 2000 : 2100 « x » d'affilée ne peuvent pas survivre.
+    expect(msg).toContain("x".repeat(2000));
+    expect(msg).not.toContain("x".repeat(2100));
   });
 });

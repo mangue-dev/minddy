@@ -247,6 +247,8 @@ export interface PullRequestListItem {
   activeRunId: string | null;
   /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */
   busyRunId: string | null;
+  /** Tous les runs portant cette PR — un deep-link `?run=` matche n'importe lequel. */
+  runIds: string[];
 }
 
 export interface PullRequestComment {
