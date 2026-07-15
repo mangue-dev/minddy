@@ -944,6 +944,7 @@
   "Agent": {
     "sectionTitle": "Code agent",
     "launchButton": "Launch an agent",
+    "launchNewButton": "Launch a new agent",
     "menuLaunch": "Launch an agent…",
     "statusQueued": "Queued",
     "statusRunning": "Running",
@@ -1003,15 +1004,21 @@
     "openConversation": "Open conversation",
     "openAgent": "Open agent",
     "endedPlaceholder": "This run has ended.",
+    "pastRunPlaceholder": "Past run (read-only) — launch a new agent to carry on.",
     "livePlaceholder": "Draft a reply or steer the agent",
     "restPlaceholder": "Reply…",
+    "composeInheritsPr": "The new agent starts from a clean context but picks up the branch and pull request #{number}: it reads the work already done and the review comments, then carries on.",
+    "runNumbered": "Run {number}/{total}",
+    "runHistory": "{total, plural, one {# run} other {# runs}}",
+    "newRun": "Launch a new agent",
     "prAvailable": "Pull request available",
     "prBadge": "PR available",
     "errorNoRepo": "This project has no linked GitHub repository.",
     "errorUnsupportedProvider": "Only GitHub repositories are supported.",
     "errorAlreadyRunning": "An agent is already running on this issue.",
     "errorQuotaExceeded": "Monthly agent usage limit reached.",
-    "errorNoModelForProvider": "Pick a model for this provider."
+    "errorNoModelForProvider": "Pick a model for this provider.",
+    "errorSupersededRun": "A newer run has taken over this issue — launch a new agent to carry on."
   },
   "Projects": {
     "newProject": "New Project",

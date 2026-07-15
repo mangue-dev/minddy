@@ -17,7 +17,6 @@ import {
   panelOverlayClassName,
   type PanelDisplayMode,
 } from "@/components/assistant/panel-geometry";
-import type { AgentRunSummary } from "@/lib/agent-api";
 import { AgentConversation } from "./agent-conversation";
 
 /**
@@ -27,22 +26,24 @@ import { AgentConversation } from "./agent-conversation";
  * agrandir/replier/fermer sont fournis en `headerActions` ; l'en-tête gauche (modèle
  * en live / issue ciblée en compose) et tout le comportement viennent du cœur.
  *
- * `initialRun` pré-sélectionne la session (bouton « Ouvrir la conversation »).
+ * `initialRunId` ouvre une run précise (« Ouvrir la conversation »). Sans lui, la
+ * modal ouvre la run active de l'issue, ou compose une NOUVELLE run à froid — c'est
+ * la modal du bouton « Lancer un agent » (MIN-68).
  */
 export function AgentChatModal({
   open,
   onOpenChange,
   issueId,
   issueIdentifier,
-  initialRun = null,
+  initialRunId = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issueId: string;
   /** Identifiant lisible (MIN-42) — pré-écrit dans le prompt en phase compose. */
   issueIdentifier: string;
-  /** Pré-sélectionne une session existante (sinon on la déduit des runs). */
-  initialRun?: AgentRunSummary | null;
+  /** Ouvre CETTE run (sinon : run active de l'issue, à défaut nouvelle run). */
+  initialRunId?: string | null;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
@@ -69,7 +70,7 @@ export function AgentChatModal({
           active={open}
           issueId={issueId}
           issueIdentifier={issueIdentifier}
-          initialRun={initialRun}
+          initialRunId={initialRunId}
           headerActions={
             <>
               <Tooltip>

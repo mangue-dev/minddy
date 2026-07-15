@@ -11,10 +11,11 @@ import { checkAgentQuota, type AgentQuota } from "./quota";
 import {
   createRun,
   activeRunForIssue,
-  resumableRunForIssue,
+  inheritablePrForIssue,
   insertRunMessage,
   bumpRunActivity,
   stampRun,
+  ActiveRunExistsError,
   type AgentRun,
 } from "./runs";
 import { drainAgentRuns } from "./drain";
@@ -22,11 +23,17 @@ import { chainAgentDrain } from "./drain-chain";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 
 /**
- * Point d'entrée UNIQUE pour démarrer un run d'agent (MIN-46). Appelé par TOUS
- * les triggers (bouton, chat numo via tool call, @numo en commentaire). Résout et
- * FIGE le modèle sur le run (cascade run > user > racine), fait les pré-checks
- * (dépôt lié, quota/BYOK, pas de run déjà actif), crée le run `queued`, puis kicke
- * le drain en `after()` (réponse immédiate à l'utilisateur).
+ * Point d'entrée UNIQUE pour démarrer un run FROID (MIN-46 + MIN-68). Appelé par
+ * tous les triggers de LANCEMENT (sidebar, clic droit, « demander des changements »,
+ * chat numo). Résout et FIGE le modèle sur le run (cascade run > user > racine), fait
+ * les pré-checks (dépôt lié, quota/BYOK, pas de run déjà actif), fait HÉRITER la PR
+ * de l'issue si elle est encore pertinente, crée le run `queued`, puis kicke le drain
+ * en `after()` (réponse immédiate à l'utilisateur).
+ *
+ * Froid = une run NEUVE : aucun checkpoint, aucun message LLM repris. Elle hérite
+ * seulement de l'ARTEFACT (branche + PR) et du résumé de la run précédente, injectés
+ * dans son prompt d'amorce par `execute.ts`. La reprise à CHAUD (même session, même
+ * contexte) est un chemin distinct : `/steer`, depuis le composer d'une conversation.
  */
 
 export type LaunchError =
@@ -51,12 +58,6 @@ export interface LaunchAgentInput {
   model?: string | null;
   /** true si le modèle est imposé (numo « utilise tel modèle »). */
   forced?: boolean;
-  /**
-   * Reprise d'une branche existante (demande de changements sur une PR) : le run
-   * repart de cette branche au lieu d'en créer une neuve → met à jour la MÊME PR.
-   */
-  branchName?: string | null;
-  baseBranch?: string | null;
 }
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
@@ -90,20 +91,41 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     throw err;
   }
 
-  const run = await createRun({
-    projectId,
-    issueId: input.issueId,
-    repoLinkId: link.id,
-    connectionId: link.connection_id,
-    createdBy: input.userId,
-    prompt: input.prompt ?? null,
-    model,
-    modelForced: !!input.forced,
-    keyMode: quota.mode,
-    triggeredBy: input.triggeredBy,
-    branchName: input.branchName ?? null,
-    baseBranch: input.baseBranch ?? null,
-  });
+  // Héritage de la PR (MIN-68) : tant que la PR de l'issue est pertinente (open /
+  // draft / closed), la run froide repart de SA branche et porte ses `pr_*` dès la
+  // création → `execute.ts` pousse sur la bonne branche et met à jour la MÊME PR
+  // (une `closed` est rouverte au moment du push). Après un merge, plus rien à
+  // hériter : branche neuve + nouvelle PR.
+  const inherited = await inheritablePrForIssue(input.issueId);
+
+  let run: AgentRun;
+  try {
+    run = await createRun({
+      projectId,
+      issueId: input.issueId,
+      repoLinkId: link.id,
+      connectionId: link.connection_id,
+      createdBy: input.userId,
+      prompt: input.prompt ?? null,
+      model,
+      modelForced: !!input.forced,
+      keyMode: quota.mode,
+      triggeredBy: input.triggeredBy,
+      branchName: inherited?.branchName ?? null,
+      baseBranch: inherited?.baseBranch ?? null,
+      prNumber: inherited?.prNumber ?? null,
+      prUrl: inherited?.prUrl ?? null,
+      prState: inherited?.prState ?? null,
+    });
+  } catch (err) {
+    // Course perdue contre un lancement concurrent (double-clic, deux onglets) :
+    // l'index unique a tranché. Même réponse que le pré-check, pas un 500.
+    if (err instanceof ActiveRunExistsError) {
+      const winner = await activeRunForIssue(input.issueId);
+      return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
+    }
+    throw err;
+  }
 
   // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
   await insertEvents(service, [
@@ -115,8 +137,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     },
   ]);
 
-  // Agent lancé, aucune PR encore ouverte → l'issue passe « en cours » (MIN-46).
-  await syncIssueStatusOnAgentStart({ issueId: input.issueId, actorId: input.userId });
+  // Agent lancé → l'issue passe « en cours » (MIN-46). Exception : la run hérite
+  // d'une PR encore en revue (open/draft) — c'est SON état qui gouverne le statut
+  // (in_review), on ne le fait pas régresser le temps d'une itération. Une PR
+  // refusée (closed → issue `todo`) repasse bien « en cours ».
+  if (inherited?.prState !== "open" && inherited?.prState !== "draft") {
+    await syncIssueStatusOnAgentStart({ issueId: input.issueId, actorId: input.userId });
+  }
 
   kickAgentDrain(service);
   return { ok: true, run };
@@ -127,46 +154,48 @@ export type ContinueResult =
   | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
 
 /**
- * Démarre OU CONTINUE une session d'agent (MIN-46, agent conversationnel). La
- * session étant persistante, une issue n'a qu'UNE session : si elle existe déjà
- * (au travail OU au repos), on n'en relance pas une seconde — on lui envoie le
- * message comme STEERING (et on la relance si elle était au repos). Sinon on lance
- * une nouvelle session. Utilisé par tous les triggers CONVERSATIONNELS (@numo,
- * chat numo, « demander des changements » sur une PR) là où l'ancien
- * `launchAgentRun` renvoyait `alreadyRunning` à tort.
+ * Démarre OU CONTINUE un run d'agent, pour les triggers CONVERSATIONNELS où « une
+ * run tourne déjà » ne doit pas être une erreur (@numo en commentaire, chat numo) :
+ *   • une run est ACTIVE (au travail, ou au repos sur un `ask_user`) → le message
+ *     lui parvient en STEERING, à chaud, dans sa session ; on la relance si elle
+ *     attendait l'utilisateur ;
+ *   • sinon (aucune run, ou la dernière est terminée) → nouvelle run FROIDE, qui
+ *     hérite de la PR de l'issue.
+ * Contrairement à avant MIN-68, une run `completed` n'est plus reprise ici : le
+ * tour est fini, la relance mérite une run neuve (et son propre choix de modèle).
+ * La reprise à chaud d'une run terminée reste possible, mais seulement depuis le
+ * composer de SA conversation (`/steer`).
  */
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
 ): Promise<ContinueResult> {
-  // Session persistante : on reprend le run reprennable le plus récent (y compris
-  // `completed` après une PR → itération sur la même branche/PR).
-  const existing = await resumableRunForIssue(input.issueId);
-  if (existing) {
+  const active = await activeRunForIssue(input.issueId);
+  if (active) {
     const text = (input.prompt ?? "").trim();
-    if (text) await insertRunMessage(existing.id, input.userId, text);
-    await bumpRunActivity(existing.id);
-    // Repos OU terminé → nouveau tour : requeue + kick (reprise immédiate). Au
-    // travail → le message rejoint la file, drainé à la frontière de round.
-    if (["needs_input", "completed", "canceled"].includes(existing.status)) {
+    if (text) await insertRunMessage(active.id, input.userId, text);
+    await bumpRunActivity(active.id);
+    // Au repos (`needs_input`) → nouveau tour : requeue + kick (reprise immédiate).
+    // Au travail → le message rejoint la file, drainé à la frontière de round.
+    if (active.status === "needs_input") {
       const resumed = await stampRun(
-        existing.id,
+        active.id,
         { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
-        { guard: ["needs_input", "completed", "canceled"] },
+        { guard: ["needs_input"] },
       );
       if (resumed) {
-        // Reprise d'une session SANS PR ouverte → retour « en cours ». Si une PR
-        // existe déjà (open/draft/merged/closed), son état gouverne le statut
-        // (in_review / done / todo), on n'y touche pas.
-        if (existing.pr_state == null) {
+        // Reprise SANS PR ouverte → retour « en cours ». Si une PR existe déjà
+        // (open/draft/merged/closed), son état gouverne le statut (in_review /
+        // done / todo), on n'y touche pas.
+        if (active.pr_state == null) {
           await syncIssueStatusOnAgentStart({
-            issueId: existing.issue_id,
+            issueId: active.issue_id,
             actorId: input.userId,
           });
         }
         kickAgentDrain(getServiceClient());
       }
     }
-    return { ok: true, run: existing, continued: true };
+    return { ok: true, run: active, continued: true };
   }
   const result = await launchAgentRun(input);
   return result.ok ? { ok: true, run: result.run, continued: false } : result;

@@ -533,9 +533,11 @@ export async function executeTool(
           typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
         const prompt =
           typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
-        // Session persistante : si l'issue a déjà une session (au travail ou au
-        // repos), on la CONTINUE (le prompt devient un message de steering) au lieu
-        // d'échouer avec « alreadyRunning ». Sinon on en lance une nouvelle.
+        // Si une run est ACTIVE sur l'issue (au travail, ou suspendue en attente de
+        // l'utilisateur), on la CONTINUE — le prompt devient un message de steering —
+        // au lieu d'échouer avec « alreadyRunning ». Sinon (aucune run, ou la
+        // dernière est terminée) on lance une run FROIDE, qui hérite de la PR de
+        // l'issue (MIN-68).
         const result = await continueOrLaunchAgentRun({
           issueId,
           userId: ctx.userId,

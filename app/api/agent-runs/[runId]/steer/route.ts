@@ -3,8 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
+  activeRunForIssue,
   getRun,
   insertRunMessage,
+  newerRunExistsForIssue,
   stampRun,
   bumpRunActivity,
   type AgentRunStatus,
@@ -13,15 +15,20 @@ import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Steering d'un run d'agent de code (MIN-46) : l'utilisateur envoie un message. La
- * session ne se ferme JAMAIS → on accepte tout run REPRENNABLE (tout sauf `failed`),
- * y compris un run `completed` après une PR : on le relance pour itérer sur la MÊME
- * branche/PR. Le message rejoint la file `agent_run_messages` ; la boucle le draine à
- * la frontière de round et l'injecte comme message `user`. Cas :
+ * Reprise à CHAUD d'un run d'agent (MIN-46 + MIN-68) : l'utilisateur envoie un
+ * message DEPUIS la conversation du run. C'est le seul chemin qui reprend un run
+ * existant dans son contexte (checkpoint + sandbox) — tous les autres points
+ * d'entrée (sidebar, carte, « demander des changements ») lancent une run FROIDE.
+ * On accepte donc tout run reprennable (tout sauf `failed`), y compris `completed` :
+ * on enchaîne un tour de plus sur la même branche/PR. Le message rejoint la file
+ * `agent_run_messages` ; la boucle le draine à la frontière de round et l'injecte
+ * comme message `user`. Cas :
  *   • running / queued          → orientation à chaud (drainé au round suivant) ;
  *   • needs_input / completed /
  *     canceled                  → nouveau tour : on repasse le run `queued`, budget
  *                                 de tour réinitialisé, et on kicke le drain.
+ * Seule la DERNIÈRE run de l'issue est reprennable — les précédentes sont un
+ * historique (voir le refus `supersededRun` plus bas).
  * Membre du projet requis. Un seul écrivain d'events = le claimer.
  */
 
@@ -57,20 +64,60 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run is not resumable" }, { status: 409 });
   }
 
-  await insertRunMessage(runId, auth.user.id, message);
-  // Un message relance l'horloge d'inactivité (empêche le reaping imminent).
-  await bumpRunActivity(runId);
-
-  // Reprise d'un run au repos OU terminé (après PR) : nouveau tour sur la même
-  // branche/PR (window de tour réinitialisée → claim ré-ancre le wall-clock).
+  // Réveiller un run AU REPOS le remet en file. Deux refus (MIN-68) :
+  //
+  //  • une run PLUS RÉCENTE existe sur l'issue. Les runs d'une issue partagent la
+  //    branche : la plus récente l'a fait avancer, alors que la sandbox de ce run
+  //    est restée à SON état. Le reprendre commiterait par-dessus un ancêtre et le
+  //    push serait rejeté (non-fast-forward) — le run finirait `needs_input` et
+  //    bloquerait l'issue pour de bon. Une run passée est un HISTORIQUE : on la
+  //    consulte, on ne la réveille pas ; pour continuer, on en lance une nouvelle
+  //    (qui, elle, clone la branche à jour).
+  //  • une AUTRE run est active (course : elle vient d'être créée).
+  //
+  // Un run qui travaille déjà (queued/running) n'est pas concerné : il EST le plus
+  // récent, son message rejoint simplement la file.
+  let resumed = false;
   if (RESUME_FROM.includes(run.status)) {
-    const resumed = await stampRun(
+    const [newer, active] = await Promise.all([
+      newerRunExistsForIssue(run.issue_id, run.created_at),
+      activeRunForIssue(run.issue_id),
+    ]);
+    if (newer) {
+      return NextResponse.json(
+        { error: "supersededRun", code: "supersededRun" },
+        { status: 409 },
+      );
+    }
+    if (active && active.id !== runId) {
+      return NextResponse.json(
+        { error: "alreadyRunning", code: "alreadyRunning" },
+        { status: 409 },
+      );
+    }
+
+    // Requeue AVANT d'enregistrer le message : si la garde ne matche pas (course
+    // perdue), on refuse au lieu d'accepter un message que personne ne drainerait.
+    // Nouveau tour sur la même branche/PR (window de tour réinitialisée → le claim
+    // ré-ancre le wall-clock).
+    const stamped = await stampRun(
       runId,
       { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
       { guard: RESUME_FROM },
     );
-    if (resumed) kickAgentDrain(getServiceClient());
+    if (!stamped) {
+      return NextResponse.json(
+        { error: "alreadyRunning", code: "alreadyRunning" },
+        { status: 409 },
+      );
+    }
+    resumed = true;
   }
+
+  await insertRunMessage(runId, auth.user.id, message);
+  // Un message relance l'horloge d'inactivité (empêche le reaping imminent).
+  await bumpRunActivity(runId);
+  if (resumed) kickAgentDrain(getServiceClient());
 
   return NextResponse.json({ ok: true, status: run.status });
 }

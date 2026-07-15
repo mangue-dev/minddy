@@ -11,10 +11,11 @@ import { AgentBeam } from "@/components/agent-beam";
 import { AgentChatModal } from "./agent-chat-modal";
 
 /**
- * Résumé compact de la session d'agent (MIN-46) dans le panneau d'issue : statut +
- * modèle, et deux actions — ouvrir la conversation (modal grand format, où l'on
- * suit / interrompt / relance l'agent) et voir la pull request. L'interruption et
- * le flux d'événements vivent dans la modal ; la review de PR sur la page dédiée.
+ * Résumé compact de la DERNIÈRE run d'agent de l'issue (MIN-46 + MIN-68) dans le
+ * panneau d'issue : modèle, PR liée, et deux actions — ouvrir sa conversation (modal
+ * grand format : on l'y suit, on l'interrompt, on lui parle à chaud, et on navigue
+ * dans les runs précédentes) et voir la pull request. Lancer une run NEUVE est
+ * l'affaire du bouton au-dessus (`LaunchAgentButton`), pas de ce panneau.
  */
 export function AgentRunPanel({
   issueId,
@@ -29,8 +30,8 @@ export function AgentRunPanel({
   const router = useRouter();
   const [chatOpen, setChatOpen] = useState(false);
   // L'agent travaille → le container porte le liseré animé (comme les cartes), aucun
-  // badge. Au repos, la session n'est jamais « terminée » : on n'affiche donc PAS de
-  // badge d'état — seulement « Pull request disponible » quand une PR existe.
+  // badge. Au repos, on n'affiche PAS de badge d'état (le résultat qui compte est la
+  // PR) — seulement « Pull request disponible » quand une PR existe.
   const working = isAgentRunWorking(run.status);
 
   return (
@@ -77,12 +78,14 @@ export function AgentRunPanel({
         ) : null}
       </div>
 
+      {/* Ouvre CETTE run (la dernière), pas un nouveau lancement : c'est le chemin
+          de reprise à chaud, et d'accès à l'historique des runs de l'issue. */}
       <AgentChatModal
         open={chatOpen}
         onOpenChange={setChatOpen}
         issueId={issueId}
         issueIdentifier={issueIdentifier}
-        initialRun={run}
+        initialRunId={run.id}
       />
     </div>
     </AgentBeam>

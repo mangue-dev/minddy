@@ -7,12 +7,14 @@ import { getAuthedUser } from "@/lib/server/api-auth";
  * confondus — alimente la page Agents. RLS `agent_runs` = can_access_project → le
  * cookie client suffit, aucun filtre projet manuel.
  *
- * Une SESSION est persistante et scoppée à une ISSUE (un run reprennable par issue,
- * MIN-46). On DÉDOUBLONNE donc par `issue_id` : le représentant est le run que la
- * conversation reprendrait — le plus récent NON `failed` (cohérent avec la
- * résolution `runs.find(isAgentRunResumable)` de la conversation) ; à défaut (issue
- * n'ayant que des runs `failed`) le run le plus récent. `working` signale qu'un run
- * de l'issue TRAVAILLE (queued/running) — pilote le spinner de la liste.
+ * Une SESSION est scoppée à une ISSUE, mais une issue a désormais PLUSIEURS runs
+ * successives (MIN-68). On DÉDOUBLONNE donc par `issue_id` en gardant un
+ * REPRÉSENTANT : le run le plus récent NON `failed` — c'est-à-dire le run actif s'il
+ * y en a un (un run actif interdit tout run plus récent), sinon le dernier run
+ * terminé ; à défaut (issue n'ayant que des runs `failed`) le run le plus récent.
+ * `runCount` expose la profondeur de l'historique : la conversation de l'issue liste
+ * et rend consultables les runs passées. `working` signale qu'un run de l'issue
+ * TRAVAILLE (queued/running) — pilote le spinner de la liste.
  */
 
 export const runtime = "nodejs";
@@ -57,6 +59,8 @@ export interface AgentSessionListItem {
   project: RunRow["project"];
   /** Un run de l'issue TRAVAILLE (queued/running) → « Numo travaille ». */
   working: boolean;
+  /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique (MIN-68). */
+  runCount: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -95,9 +99,11 @@ export async function GET(request: NextRequest) {
         issue: r.issue,
         project: r.project,
         working: isWorking,
+        runCount: 1,
       });
       continue;
     }
+    existing.runCount++;
     // Un run plus ancien peut toujours porter l'info « travaille » de l'issue.
     if (isWorking) existing.working = true;
     // Promotion du représentant : si l'actuel est `failed` mais qu'on croise un run

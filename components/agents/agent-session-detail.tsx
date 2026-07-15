@@ -13,7 +13,8 @@ import type { AgentSessionListItem } from "@/lib/agent-api";
  * mobile · titre cliquable · bouton « Ouvrir la pull request ») au-dessus de la MÊME
  * conversation que la modal (`AgentConversation`, inline ici). Cliquer le titre ouvre
  * la sidebar du ticket EN INLINE sur la page (pas de navigation vers le Kanban). La
- * conversation est scoppée à l'issue → elle reprend la session persistante de l'issue.
+ * conversation ouvre la run représentante de l'issue, et donne accès à ses runs
+ * précédentes (MIN-68).
  */
 export function AgentSessionDetail({
   item,
@@ -70,6 +71,9 @@ export function AgentSessionDetail({
         key={issue.id}
         issueId={issue.id}
         issueIdentifier={identifier}
+        // La page liste des SESSIONS : on ouvre la run représentante de l'issue (la
+        // dernière), jamais un composer vierge — même quand elle est terminée.
+        initialRunId={item.runId}
         active
         headerTitle={headerTitle}
         headerClassName="border-b border-border"

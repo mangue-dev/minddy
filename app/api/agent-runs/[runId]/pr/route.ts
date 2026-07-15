@@ -6,7 +6,7 @@ import { getRun, setRunPrState } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
-import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
   getPullRequest,
@@ -18,11 +18,11 @@ import {
 } from "@/lib/server/agent/pr";
 
 /**
- * Review in-app de la PR d'un run d'agent (MIN-46 + MIN-66).
+ * Review in-app de la PR d'un run d'agent (MIN-46 + MIN-66 + MIN-68).
  *  GET  → metadata PR + fichiers/patches (diff rendu dans minddy).
  *  POST → { action: 'merge' | 'close' }                    (membre du projet requis)
- *       | { action: 'request_changes', message }           → relance Numo sur la
- *         MÊME branche (donc même PR) avec la consigne (MIN-66).
+ *       | { action: 'request_changes', message, model? }   → poste la review sur la
+ *         PR puis lance une NOUVELLE run froide qui hérite de cette PR (MIN-68).
  * Le token d'installation (Pull requests R/W) est minté à la volée.
  */
 
@@ -99,9 +99,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  let body: { action?: string; message?: string };
+  let body: { action?: string; message?: string; model?: string };
   try {
-    body = (await request.json()) as { action?: string; message?: string };
+    body = (await request.json()) as { action?: string; message?: string; model?: string };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -120,15 +120,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "This run has no pull request" }, { status: 400 });
   }
 
-  // Demande de changements : on relance Numo sur SA branche → même PR mise à jour.
-  // Interdit après merge/close : la branche tête peut être supprimée, une relance
-  // forkerait une nouvelle branche + une nouvelle PR (ce qu'on ne veut pas).
+  // Demande de changements : NOUVELLE run froide (MIN-68), avec son propre modèle.
+  // Elle hérite de la branche et de la PR (`launchAgentRun` → inheritablePrForIssue)
+  // → même PR mise à jour, et rouverte si elle avait été refusée. Interdit après un
+  // merge : le travail est livré, une relance forkerait une nouvelle PR — ce que ce
+  // bouton ne promet pas.
   if (action === "request_changes") {
     const message = typeof body.message === "string" ? body.message.trim() : "";
     if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
-    if (run.pr_state !== "open") {
+    if (run.pr_state === "merged") {
       return NextResponse.json(
-        { error: "Pull request is not open", code: "prNotOpen" },
+        { error: "Pull request is merged", code: "prMerged" },
         { status: 409 },
       );
     }
@@ -151,16 +153,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: (err as Error).message }, { status });
     }
 
-    // Session persistante : la PR appartient à la session de l'issue → on la
-    // CONTINUE (message de steering, reprise si au repos) sur sa branche → même PR
-    // mise à jour. Sinon (aucune session), on en lance une sur la branche existante.
-    const result = await continueOrLaunchAgentRun({
+    const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : undefined;
+    const result = await launchAgentRun({
       issueId: run.issue_id,
       userId: auth.user.id,
       triggeredBy: "button",
       prompt: message,
-      branchName: run.branch_name,
-      baseBranch: run.base_branch,
+      model,
+      forced: !!model,
     });
     if (!result.ok) return launchErrorResponse(result);
     // Trace « a demandé des changements sur la PR » dans l'activité de l'issue.

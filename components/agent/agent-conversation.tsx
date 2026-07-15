@@ -9,6 +9,7 @@ import { ChatInput } from "@/components/assistant/chat-input";
 import {
   heartbeatAgentRunApi,
   interruptAgentRunApi,
+  isAgentRunActive,
   isAgentRunResumable,
   isAgentRunWorking,
   launchAgentRunApi,
@@ -24,27 +25,34 @@ import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
+import { AgentRunHistory } from "./agent-run-history";
 
-/** Codes d'erreur bruts renvoyés par la route de lancement → clés i18n Agent. */
-const LAUNCH_ERROR_KEYS: Record<string, string> = {
+/** Codes d'erreur bruts des routes agent (lancement ET reprise) → clés i18n Agent. */
+const AGENT_ERROR_KEYS: Record<string, string> = {
   noRepo: "errorNoRepo",
   unsupportedProvider: "errorUnsupportedProvider",
   alreadyRunning: "errorAlreadyRunning",
   quotaExceeded: "errorQuotaExceeded",
   noModelForProvider: "errorNoModelForProvider",
+  supersededRun: "errorSupersededRun",
 };
 
 /**
- * Cœur réutilisable de la conversation de l'agent de code (MIN-46), extrait de la
- * modal pour être hébergé aussi bien dans le `Sheet` flottant (AgentChatModal) que
- * DIRECTEMENT dans la page Agents (liste/détail, sans modal). La SESSION est
- * persistante et jamais fermée : elle repose entre les tours et se reprend à tout
- * moment (y compris pour redemander des changements sur une PR plus tard).
+ * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait
+ * de la modal pour être hébergé aussi bien dans le `Sheet` flottant (AgentChatModal)
+ * que DIRECTEMENT dans la page Agents (liste/détail, sans modal).
  *
- *  • COMPOSE (aucune session) — intro + composer pré-écrit « Travaille sur MIN-42 »,
- *    picker de modèle dans la barre. Envoyer LANCE la session.
- *  • LIVE — le fil devient le flux d'événements. L'agent TRAVAILLE (bouton
- *    « Interrompre la réponse en cours ») ou est AU REPOS (composer actif).
+ * Une issue porte une SUITE de runs, dont une seule peut être active. Ce composant
+ * tient les deux modes de (re)lancement, qui se distinguent par le POINT D'ENTRÉE :
+ *
+ *  • FROID (`compose`) — aucune run active, et aucune run explicitement ouverte :
+ *    intro + composer pré-écrit « Travaille sur MIN-42 » + picker de modèle. Envoyer
+ *    lance une run NEUVE, qui héritera côté serveur de la branche/PR de l'issue.
+ *    C'est ce que voient la sidebar, le clic droit et « demander des changements ».
+ *  • CHAUD (`live`) — une run est ouverte (active par défaut, ou choisie dans
+ *    l'historique) : le fil est son flux d'événements et le composer lui parle
+ *    DIRECTEMENT (`/steer`), dans son contexte. Même terminée, une run reste
+ *    reprennable ainsi — c'est le seul chemin de reprise à chaud.
  *
  * Tant que le composant est `active`, un heartbeat rafraîchit l'horloge d'inactivité
  * du run pour que la sandbox ne soit pas coupée pendant qu'on lit ou écrit.
@@ -57,7 +65,7 @@ const LAUNCH_ERROR_KEYS: Record<string, string> = {
 export function AgentConversation({
   issueId,
   issueIdentifier,
-  initialRun = null,
+  initialRunId = null,
   active = true,
   headerTitle,
   headerActions,
@@ -66,8 +74,12 @@ export function AgentConversation({
   issueId: string;
   /** Identifiant lisible (MIN-42) — pré-écrit dans le prompt en phase compose. */
   issueIdentifier: string;
-  /** Pré-sélectionne une session existante (sinon on la déduit des runs). */
-  initialRun?: AgentRunSummary | null;
+  /**
+   * Ouvre CETTE run (le panneau d'issue et la page Agents désignent la dernière).
+   * Absent → on ouvre la run ACTIVE de l'issue, et à défaut on compose une nouvelle
+   * run froide : c'est ce que veut un point d'entrée « lancer un agent ».
+   */
+  initialRunId?: string | null;
   /** Le composant est-il visible/vivant ? Gate la query et le heartbeat. */
   active?: boolean;
   /** Bloc de gauche de l'en-tête (défaut : modèle en live / issue en compose). */
@@ -80,20 +92,46 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
 
-  // Snapshot local du run (bascule live instantanée au lancement), resynchronisé
-  // depuis la query. Sans snapshot, on reprend la session active de l'issue.
-  const [run, setRun] = useState<AgentRunSummary | null>(initialRun);
+  /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
+  const agentErrorMessage = (err: unknown): string => {
+    const msg = (err as Error).message;
+    const key = AGENT_ERROR_KEYS[msg];
+    return key ? t(key) : msg;
+  };
+
+  // Run explicitement ouverte : `initialRunId`, une run choisie dans l'historique,
+  // ou celle qu'on vient de lancer. `null` → on retombe sur la run ACTIVE de l'issue.
+  const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
+  // Run tout juste lancée : la query ne l'a pas encore renvoyée, on l'affiche depuis
+  // la réponse du POST → bascule live instantanée, sans flash de la phase compose.
+  const [launched, setLaunched] = useState<AgentRunSummary | null>(null);
+  // « Lancer un nouvel agent » demandé explicitement : force la phase compose même
+  // si l'issue a des runs passées (sinon on rouvrirait la dernière).
+  const [composing, setComposing] = useState(false);
   useEffect(() => {
-    setRun(initialRun);
-  }, [initialRun]);
+    setSelectedId(initialRunId);
+    setComposing(false);
+  }, [initialRunId]);
+
   const { runs, loading } = useIssueAgentRunsQuery(active ? issueId : null);
-  const liveRun = run
-    ? runs.find((r) => r.id === run.id) ?? run
-    : runs.find((r) => isAgentRunResumable(r.status)) ?? null;
+  const activeRun = runs.find((r) => isAgentRunActive(r.status)) ?? null;
+  // Résolution de la run affichée. Une run TERMINÉE n'est jamais reprise d'office :
+  // sans run désignée ni run active, on compose une nouvelle run froide (MIN-68).
+  const liveRun = composing
+    ? null
+    : selectedId
+      ? runs.find((r) => r.id === selectedId) ??
+        (launched?.id === selectedId ? launched : null)
+      : activeRun;
   const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
-  // Steerable = la session est REPRENNABLE (travail, repos, OU terminée après PR).
-  // On peut toujours relancer l'agent pour itérer — seul `failed` est bloqué.
-  const steerable = liveRun ? isAgentRunResumable(liveRun.status) : false;
+  // `runs` arrive trié du plus récent au plus ancien : runs[0] est la dernière run.
+  const isLatest = liveRun ? runs[0]?.id === liveRun.id : false;
+  // Le composer parle-t-il à cette run ? Oui même terminée (reprise à chaud) — seul
+  // `failed` n'a rien à reprendre. Mais SEULE la dernière run est reprennable : les
+  // runs d'une issue partagent la branche, et une run passée est restée sur un état
+  // dépassé (son push serait rejeté). On la consulte ; pour continuer, on en lance
+  // une nouvelle. Le serveur applique la même règle (409 `supersededRun`).
+  const steerable = liveRun ? isAgentRunResumable(liveRun.status) && isLatest : false;
 
   // Heartbeat tant que le composant est actif sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
@@ -126,14 +164,15 @@ export function AgentConversation({
         prompt: prompt || undefined,
         model: model || undefined,
       });
-      setRun(started);
+      // La run neuve devient la run ouverte → bascule live immédiate.
+      setLaunched(started);
+      setSelectedId(started.id);
+      setComposing(false);
       await queryClient.invalidateQueries({
         queryKey: issueAgentRunsQueryKey(issueId),
       });
     } catch (err) {
-      const msg = (err as Error).message;
-      const key = LAUNCH_ERROR_KEYS[msg];
-      toast.error(key ? t(key) : msg);
+      toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
     }
@@ -151,7 +190,9 @@ export function AgentConversation({
         queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),
       ]);
     } catch (err) {
-      toast.error((err as Error).message);
+      // Course : une run plus récente a pu naître depuis le rendu (autre onglet,
+      // coéquipier) → le serveur refuse la reprise, on le dit en clair.
+      toast.error(agentErrorMessage(err));
     }
   };
 
@@ -181,6 +222,15 @@ export function AgentConversation({
     : loading
       ? "loading"
       : "compose";
+
+  // PR dont la prochaine run froide héritera — miroir EXACT de
+  // `inheritablePrForIssue` : on prend la PR la plus récente, et si elle est
+  // fusionnée il n'y a rien à hériter (branche neuve). Surtout pas « la plus récente
+  // non fusionnée » : on promettrait d'itérer sur une vieille PR que le serveur ne
+  // touchera pas.
+  const latestPrRun = runs.find((r) => r.pr_number != null) ?? null;
+  const inheritedPr =
+    latestPrRun && latestPrRun.pr_state !== "merged" ? latestPrRun.pr_number : null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -213,6 +263,28 @@ export function AgentConversation({
         ) : null}
       </div>
 
+      {/* Historique : navigation entre les runs successives de l'issue (≥ 2 runs).
+          « Lancer un nouvel agent » n'y figure que si aucune run n'est active. */}
+      {phase !== "loading" ? (
+        <AgentRunHistory
+          runs={runs}
+          selectedId={liveRun?.id ?? null}
+          onSelect={(picked) => {
+            setComposing(false);
+            setSelectedId(picked.id);
+          }}
+          onNewRun={
+            activeRun || phase === "compose"
+              ? undefined
+              : () => {
+                  setSelectedId(null);
+                  setComposing(true);
+                }
+          }
+          className="shrink-0 pb-1"
+        />
+      ) : null}
+
       {/* Fil : flux d'événements (live), spinner (chargement) ou intro (compose). */}
       <div className="min-h-0 flex-1">
         {phase === "live" && liveRun ? (
@@ -232,7 +304,12 @@ export function AgentConversation({
               <NumoIcon className="size-6 text-muted-foreground" />
             </div>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {t("dialogDescription")}
+              {/* Une run froide part d'un contexte vierge, mais reprend la PR de
+                  l'issue : on l'annonce, sinon « nouvel agent » laisse craindre de
+                  repartir de zéro et de perdre le travail déjà en revue. */}
+              {inheritedPr
+                ? t("composeInheritsPr", { number: inheritedPr })
+                : t("dialogDescription")}
             </p>
           </div>
         )}
@@ -254,11 +331,15 @@ export function AgentConversation({
               disabled={!steerable}
               hideAttach
               placeholder={
-                !steerable
-                  ? t("endedPlaceholder")
-                  : working
+                steerable
+                  ? working
                     ? t("livePlaceholder")
                     : t("restPlaceholder")
+                  : // Run passée : consultation seule (une run plus récente a repris
+                    // la branche). Sinon : run `failed`, rien à reprendre.
+                    isLatest
+                    ? t("endedPlaceholder")
+                    : t("pastRunPlaceholder")
               }
               leadingControls={
                 // Modèle figé pour la session : picker verrouillé + tooltip.

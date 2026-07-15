@@ -226,6 +226,30 @@ export async function closePullRequest(opts: {
   );
 }
 
+/**
+ * Rouvre une PR refusée (MIN-68) : une run froide qui hérite d'une PR `closed`
+ * retravaille SA branche — on remet la PR en revue plutôt que d'en ouvrir une
+ * seconde sur la même branche. Renvoie la PR rouverte. Échoue (422) si la branche
+ * tête a été supprimée entre-temps : l'appelant retombe alors sur une PR neuve.
+ */
+export async function reopenPullRequest(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PullRequestRef> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const pr = await ghJson<RawPull>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: "open" }),
+    },
+  );
+  return toRef(pr);
+}
+
 interface RawComment {
   id: number;
   body?: string;

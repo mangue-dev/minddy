@@ -33,34 +33,51 @@ import {
   type ExecuteAgentTool,
 } from "./agent-loop";
 import { AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
-import { buildAgentSystemPrompt, buildAgentTaskMessage } from "./prompt";
+import {
+  buildAgentSystemPrompt,
+  buildAgentTaskMessage,
+  buildInheritedPrMessage,
+  type AgentRepoContext,
+} from "./prompt";
 import { resolveAgentApiKey, getModelContextWindow } from "./model";
-import { ensurePullRequest, GithubApiError } from "./pr";
+import {
+  ensurePullRequest,
+  getPullRequest,
+  listPullRequestComments,
+  reopenPullRequest,
+  GithubApiError,
+  type PullRequestRef,
+} from "./pr";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
 import {
   stampRun,
   appendEvent,
   pullPendingMessages,
+  previousRunSummaryForIssue,
   readInterruptFlag,
   clearInterrupt,
   hasPendingRunMessages,
   type AgentRun,
+  type AgentRunStatus,
   type AgentCheckpoint,
 } from "./runs";
 
 /**
- * Exécute UN chunk d'une SESSION d'agent (MIN-46, agent conversationnel). Réveille
- * (snapshot persistant) ou clone le Sandbox, rehydrate le checkpoint, fait tourner
- * la boucle jusqu'à la soft-deadline, puis :
+ * Exécute UN chunk d'un RUN d'agent (MIN-46 + MIN-68). Réveille (snapshot
+ * persistant) ou clone le Sandbox, rehydrate le checkpoint, fait tourner la boucle
+ * jusqu'à la soft-deadline, puis :
  *   - suspended  → commit+push WIP, checkpoint persisté, run re-`queued` (continue
  *                  le tour, en process ou via l'auto-invoke) ;
  *   - completed  → fin de tour : commit+push, PR ouverte/mise à jour S'IL Y A un
- *                  diff, puis REPOS (`needs_input`) — la session n'est PAS fermée ;
- *   - needs_input → `ask_user` : REPOS (attend la réponse user) ;
- *   - interrupted → « Stop » : round partiel jeté, REPOS.
- * La session ne se termine jamais : elle repose et reste reprennable. Seule une
- * erreur d'AMORÇAGE (repo/modèle) → `failed`. Le drain appelle après claim.
+ *                  diff, puis run `completed` — le tour est fini, l'issue est libre
+ *                  d'accueillir une nouvelle run froide ;
+ *   - needs_input → `ask_user` / interruption / erreur LLM : REPOS. La run reste
+ *                  ACTIVE (elle attend l'utilisateur DANS sa conversation) et bloque
+ *                  donc toute nouvelle run sur l'issue.
+ * Un run terminé (`completed`) reste reprennable à CHAUD depuis le composer de sa
+ * conversation (checkpoint + snapshot conservés) ; c'est le seul chemin de reprise.
+ * Seule une erreur d'AMORÇAGE (repo/modèle) → `failed`. Le drain appelle après claim.
  */
 
 /** Marge (ms) réservée après la boucle pour commit+push+PR+stamp. */
@@ -305,6 +322,106 @@ async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
   };
 }
 
+/**
+ * Assemble le message d'amorce d'une run FROIDE qui hérite d'une PR (MIN-68), ou
+ * null si la run n'hérite de rien (premier lancement). La PR et son fil de review
+ * sont lus À CHAUD sur GitHub — pas figés au lancement : entre la création de la run
+ * et son exécution, un reviewer a pu commenter, et c'est souvent CE commentaire qui
+ * motive la relance. Le résumé de la run précédente vient de la base (`outcome`).
+ *
+ * Best-effort : GitHub indisponible ne doit pas faire échouer la run — on retombe
+ * sur le contexte minimal (« tu itères sur cette branche, va la lire »).
+ */
+async function buildInheritedPrContext(
+  run: AgentRun,
+  opts: {
+    token: string;
+    repoFullName: string;
+    repo: AgentRepoContext;
+  },
+): Promise<string | null> {
+  if (run.pr_number == null) return null;
+  const number = run.pr_number;
+
+  const [pr, comments, previousSummary] = await Promise.all([
+    getPullRequest({ token: opts.token, repoFullName: opts.repoFullName, number }).catch(
+      () => null,
+    ),
+    listPullRequestComments({
+      token: opts.token,
+      repoFullName: opts.repoFullName,
+      number,
+    }).catch(() => []),
+    previousRunSummaryForIssue(run.issue_id, run.id).catch(() => null),
+  ]);
+
+  return buildInheritedPrMessage({
+    repo: opts.repo,
+    pr: {
+      number,
+      title: pr?.title ?? null,
+      body: pr?.body ?? null,
+      // PR illisible → on se rabat sur l'état figé au lancement.
+      state: pr ? (pr.merged ? "merged" : pr.state) : run.pr_state,
+      comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
+      previousSummary,
+    },
+  });
+}
+
+/**
+ * PR du run après le push : l'héritée mise à jour (MIN-68) — rouverte si elle avait
+ * été REFUSÉE, puisque la run vient de répondre aux objections — ou une PR neuve.
+ * Une PR déjà mergée n'est pas réutilisable : on en ouvre une nouvelle sur la
+ * branche (cas de course — la PR a été mergée après la création du run).
+ *
+ * Toute défaillance sur la PR héritée (illisible, réouverture refusée parce que sa
+ * branche tête avait été supprimée à la fermeture puis recréée par notre push…)
+ * retombe sur l'ouverture d'une PR neuve : le travail vient d'être poussé, il DOIT
+ * finir sous une pull request — sans ce repli, l'erreur remonterait au 422 « aucune
+ * modification » et le run se conclurait sur « rien produit » avec des commits
+ * orphelins.
+ */
+async function openOrUpdatePullRequest(opts: {
+  token: string;
+  repoFullName: string;
+  inheritedNumber: number | null;
+  head: string;
+  base: string;
+  title: string;
+  body: string;
+}): Promise<PullRequestRef> {
+  if (opts.inheritedNumber != null) {
+    const current = await getPullRequest({
+      token: opts.token,
+      repoFullName: opts.repoFullName,
+      number: opts.inheritedNumber,
+    }).catch(() => null);
+    if (current && !current.merged) {
+      // Le push a déjà mis la PR à jour (GitHub suit la tête de branche) : il ne
+      // reste qu'à la remettre en revue si elle avait été fermée.
+      if (current.state !== "closed") return current;
+      const reopened = await reopenPullRequest({
+        token: opts.token,
+        repoFullName: opts.repoFullName,
+        number: opts.inheritedNumber,
+      }).catch((err) => {
+        console.error("[agent-execute] PR reopen failed:", (err as Error).message);
+        return null;
+      });
+      if (reopened) return reopened;
+    }
+  }
+  return await ensurePullRequest({
+    token: opts.token,
+    repoFullName: opts.repoFullName,
+    head: opts.head,
+    base: opts.base,
+    title: opts.title,
+    body: opts.body,
+  });
+}
+
 export async function executeAgentRun(
   run: AgentRun,
   opts: { deadlineMs: number },
@@ -386,15 +503,16 @@ export async function executeAgentRun(
         { role: "system", content: system },
         { role: "user", content: taskMsg },
       ];
-      // Reprise d'un tour SANS checkpoint mais AVEC une PR déjà ouverte (le contexte
-      // de conversation a été perdu) : on signale à l'agent qu'il ITÈRE sur une
-      // branche déjà avancée — ne pas tout refaire, lire l'état actuel et enchaîner.
-      if (run.pr_number != null) {
-        messages.push({
-          role: "user",
-          content: `You are CONTINUING an existing session. The working branch **${workBranch}** already has committed work and an open pull request (#${run.pr_number}). Do NOT start over: read the current state of the code on this branch first, then handle the follow-up request that follows. Keep iterating on the SAME branch and pull request.`,
-        });
-      }
+      // Run FROIDE héritant d'une PR (MIN-68) : elle n'a aucun checkpoint, mais la
+      // branche porte déjà du travail. On lui donne sa seule mémoire de ce passé —
+      // résumé de la run précédente, PR, fil de review — pour qu'elle itère au lieu
+      // de tout refaire.
+      const inheritedPr = await buildInheritedPrContext(run, {
+        token: target.token,
+        repoFullName: target.repoFullName,
+        repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+      });
+      if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
       // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après la tâche.
       const repoInstructions = await readRepoInstructions(sandbox);
       if (repoInstructions) messages.push({ role: "user", content: repoInstructions });
@@ -439,7 +557,7 @@ export async function executeAgentRun(
     const nowIso = new Date().toISOString();
 
     // Champs communs à toute mise au REPOS (fin de tour / ask_user / interruption /
-    // budget épuisé) : session reprennable, microVM gardée chaude (le reaper la
+    // budget épuisé) : run reprennable à chaud, microVM gardée chaude (le reaper la
     // coupera après ~5 min d'inactivité), budget de tour remis à zéro.
     const restFields = {
       continuations: 0,
@@ -451,23 +569,30 @@ export async function executeAgentRun(
       interrupt_requested: false,
     } satisfies Partial<Parameters<typeof stampRun>[1]>;
 
-    // Enregistre le REPOS. Si un message de steering est arrivé APRÈS la dernière
-    // frontière de round (fenêtre de finalisation : commit+push+PR), on RE-QUEUE au
-    // lieu de reposer → le drain relance la boucle qui le draine aussitôt (L1) ;
-    // sinon la session repose (needs_input).
+    // Enregistre le REPOS. Deux repos distincts (MIN-68) :
+    //   • `completed` — le tour est FINI (l'agent a appelé `finish`). Le run n'est
+    //     plus actif : l'issue peut accueillir une nouvelle run froide. Il reste
+    //     reprennable à chaud depuis le composer de SA conversation.
+    //   • `needs_input` — le run est SUSPENDU et attend l'utilisateur dans sa
+    //     conversation (ask_user, interruption, erreur, budget épuisé). Il reste
+    //     ACTIF, donc bloque toute nouvelle run sur l'issue.
+    // Si un message de steering est arrivé APRÈS la dernière frontière de round
+    // (fenêtre de finalisation : commit+push+PR), on RE-QUEUE au lieu de reposer →
+    // le drain relance la boucle qui le draine aussitôt.
     const restStamp = async (
       extra: Partial<Parameters<typeof stampRun>[1]>,
+      restStatus: AgentRunStatus = "needs_input",
     ): Promise<void> => {
       const pending = await hasPendingRunMessages(run.id);
       await stampRun(run.id, {
-        status: pending ? "queued" : "needs_input",
+        status: pending ? "queued" : restStatus,
         ...restFields,
         ...(pending ? { not_before: new Date().toISOString() } : {}),
         ...extra,
       });
     };
 
-    // ── Fin de tour : commit + PR (si diff) → REPOS (session PAS fermée) ───────
+    // ── Fin de tour : commit + PR (si diff) → run `completed` ─────────────────
     if (result.status === "completed") {
       const finish = result.finish ?? { summary: "Changes applied." };
       const freshTarget = await resolveRepoCloneTarget(run.project_id);
@@ -480,9 +605,10 @@ export async function executeAgentRun(
       await commitAndPush(sandbox, { authUrl, workBranch, message: prTitle });
 
       try {
-        const pr = await ensurePullRequest({
+        const pr = await openOrUpdatePullRequest({
           token,
           repoFullName: target.repoFullName,
+          inheritedNumber: run.pr_number,
           head: workBranch,
           base: baseBranch,
           title: prTitle,
@@ -490,13 +616,16 @@ export async function executeAgentRun(
         });
         await emit("pr_opened", { number: pr.number, url: pr.url });
         await postSummaryComment(run, issue.identifier, finish.summary, pr.url, commentLocale);
-        await restStamp({
-          checkpoint,
-          pr_number: pr.number,
-          pr_url: pr.url,
-          pr_state: (pr.state as AgentRun["pr_state"]) ?? "open",
-          outcome: finish.summary,
-        });
+        await restStamp(
+          {
+            checkpoint,
+            pr_number: pr.number,
+            pr_url: pr.url,
+            pr_state: (pr.state as AgentRun["pr_state"]) ?? "open",
+            outcome: finish.summary,
+          },
+          "completed",
+        );
         // PR ouverte/mise à jour → l'issue passe en revue (MIN-46). Best-effort.
         if (run.created_by) {
           await syncIssueStatusFromPr({
@@ -507,11 +636,12 @@ export async function executeAgentRun(
         }
         return "completed";
       } catch (err) {
-        // Aucune modification produite (422 « No commits between… ») → repos sans PR.
+        // Aucune modification produite (422 « No commits between… ») → fin de tour
+        // sans PR.
         if (err instanceof GithubApiError && err.status === 422) {
           await emit("summary", { text: "No changes were produced." });
           await postSummaryComment(run, issue.identifier, finish.summary, null, commentLocale);
-          await restStamp({ checkpoint, outcome: finish.summary });
+          await restStamp({ checkpoint, outcome: finish.summary }, "completed");
           return "completed";
         }
         throw err;

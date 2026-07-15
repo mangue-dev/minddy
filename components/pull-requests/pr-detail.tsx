@@ -16,6 +16,9 @@ import {
   Skeleton,
   Spinner,
   Textarea,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -24,6 +27,9 @@ import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { ModelCombobox } from "@/components/agent/model-combobox";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useAgentRunPrQuery, usePrCommentsQuery } from "@/lib/use-agent-runs";
 import {
   actOnAgentPrApi,
@@ -60,8 +66,11 @@ export function PrDetail({
   onOpenIssue: (issueId: string, projectId: string) => void;
 }) {
   const t = useTranslations("PullRequests");
+  const tAgent = useTranslations("Agent");
   const format = useFormatter();
   const now = useNow();
+  const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
+  const { defaultModel } = useAgentPreferencesQuery();
 
   const { pr, files, loading, refetch: refetchPr } = useAgentRunPrQuery(item.runId, true);
   const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
@@ -73,6 +82,9 @@ export function PrDetail({
   const [requesting, setRequesting] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const [changeMessage, setChangeMessage] = useState("");
+  // Modèle de la run à lancer — vide = le défaut du compte (MIN-68 : une demande de
+  // changements est un lancement à froid, elle a donc son propre choix de modèle).
+  const [model, setModel] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
 
@@ -112,7 +124,9 @@ export function PrDetail({
     if (!message || requesting) return;
     setRequesting(true);
     try {
-      await requestAgentPrChangesApi(item.runId, message);
+      // MIN-68 : poste la review sur la PR puis lance une run NEUVE (le modèle est
+      // choisi ici, comme à un premier lancement) qui hérite de cette PR.
+      await requestAgentPrChangesApi(item.runId, message, model || undefined);
       toast.success(t("changesRequestedToast"));
       setChangeOpen(false);
       setChangeMessage("");
@@ -186,14 +200,27 @@ export function PrDetail({
 
         {!isTerminal ? (
           <div className="ml-auto flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setChangeOpen(true)}
-              disabled={isWorking}
-            >
-              {t("requestChanges")}
-            </Button>
+            {/* Une demande de changements LANCE une run : impossible tant qu'une run
+                occupe l'issue (le serveur renvoie 409). Merger/refuser reste permis,
+                d'où `busyRunId` plutôt que `isWorking`. */}
+            {item.busyRunId ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button variant="outline" size="sm" disabled>
+                      {t("requestChanges")}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {tAgent("errorAlreadyRunning")}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setChangeOpen(true)}>
+                {t("requestChanges")}
+              </Button>
+            )}
             <Button
               variant="destructive"
               size="sm"
@@ -376,17 +403,33 @@ export function PrDetail({
             autoFocus
             className="resize-none bg-card"
           />
-          <DialogFooter>
-            <Button variant="outline" disabled={requesting} onClick={() => setChangeOpen(false)}>
-              {t("cancel")}
-            </Button>
-            <Button
-              disabled={requesting || !changeMessage.trim()}
-              onClick={() => void submitChangeRequest()}
-            >
-              {requesting ? <Spinner /> : null}
-              {t("sendToNumo")}
-            </Button>
+          <DialogFooter className="sm:justify-between">
+            {/* Nouvelle run = nouveau choix de modèle (identique à un premier
+                lancement) ; vide = le modèle par défaut du compte. */}
+            <ModelCombobox
+              variant="compact"
+              value={model}
+              onChange={setModel}
+              defaultLabel={tAgent("modelDefault")}
+              defaultModelId={defaultModel ?? providerDefaultModel}
+              placeholder={tAgent("modelSearchPlaceholder")}
+              emptyLabel={tAgent("modelSearchEmpty")}
+              loadingLabel={tAgent("modelSearchLoading")}
+              freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+              disabled={requesting}
+            />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" disabled={requesting} onClick={() => setChangeOpen(false)}>
+                {t("cancel")}
+              </Button>
+              <Button
+                disabled={requesting || !changeMessage.trim()}
+                onClick={() => void submitChangeRequest()}
+              >
+                {requesting ? <Spinner /> : null}
+                {t("sendToNumo")}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -16,11 +16,15 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 
 export const runtime = "nodejs";
 
-// « Numo retravaille » = l'agent TRAVAILLE (queued/running). Une session au REPOS
-// (needs_input) n'est PAS en train de retravailler la PR — sinon la PR resterait
-// « en cours » pour toujours (la session est désormais persistante) et les actions
-// merge/reject seraient bloquées indéfiniment.
+// « Numo retravaille » = l'agent TRAVAILLE (queued/running). Un run au REPOS n'est
+// PAS en train de retravailler la PR — sinon la PR resterait « en cours » pour
+// toujours et les actions merge/reject seraient bloquées indéfiniment.
 const WORKING_STATUSES = ["queued", "running"];
+// Un run OCCUPE l'issue (MIN-68) : il travaille, ou il est suspendu en attente de
+// l'utilisateur. Tant qu'il y en a un, aucune nouvelle run ne peut être lancée —
+// « demander des changements » est donc indisponible (le serveur renvoie 409).
+// Distinct de WORKING_STATUSES : merger/refuser une PR reste possible dans ce cas.
+const ACTIVE_STATUSES = ["queued", "running", "needs_input"];
 
 interface RunRow {
   id: string;
@@ -48,6 +52,8 @@ export interface PullRequestListItem {
   project: RunRow["project"];
   /** Un run qui TRAVAILLE (queued/running) sur cette PR = « Numo retravaille ». */
   activeRunId: string | null;
+  /** Un run ACTIF occupe l'issue → pas de nouvelle demande de changements (MIN-68). */
+  busyRunId: string | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -73,6 +79,7 @@ export async function GET(request: NextRequest) {
     if (r.pr_number == null) continue;
     const key = `${r.repo_link_id ?? ""}:${r.pr_number}`;
     const isWorking = WORKING_STATUSES.includes(r.status);
+    const isActive = ACTIVE_STATUSES.includes(r.status);
     const existing = byPr.get(key);
     if (!existing) {
       byPr.set(key, {
@@ -86,6 +93,7 @@ export async function GET(request: NextRequest) {
         issue: r.issue,
         project: r.project,
         activeRunId: isWorking ? r.id : null,
+        busyRunId: isActive ? r.id : null,
       });
       continue;
     }
@@ -95,6 +103,7 @@ export async function GET(request: NextRequest) {
       existing.updated_at = r.updated_at;
     }
     if (isWorking && !existing.activeRunId) existing.activeRunId = r.id;
+    if (isActive && !existing.busyRunId) existing.busyRunId = r.id;
   }
 
   const pullRequests = [...byPr.values()].sort((a, b) =>

@@ -50,9 +50,10 @@ export interface AgentRunSummary {
 }
 
 /**
- * Statuts d'une SESSION reprennable (jamais fermée) : l'agent travaille
- * (queued/running) ou se repose en attendant l'utilisateur (needs_input). Sert à
- * décider si on peut steerer / rouvrir la conversation.
+ * Statuts d'un run qui OCCUPE l'issue : l'agent travaille (queued/running) ou il est
+ * suspendu en attendant l'utilisateur dans sa conversation (needs_input : ask_user,
+ * interruption, erreur). Un seul run actif par issue (MIN-68) : tant qu'il y en a
+ * un, on n'en lance pas de nouveau — on ouvre le sien.
  */
 export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running", "needs_input"];
 
@@ -70,10 +71,15 @@ export function isAgentRunWorking(status: AgentRunStatus): boolean {
 }
 
 /**
- * La session est-elle REPRENNABLE ? La session ne se ferme jamais (MIN-46) : même
- * après une PR (`completed`) ou une annulation, on peut relancer l'agent sur la
- * MÊME branche/PR pour itérer. Seule une erreur d'amorçage (`failed` : pas de
- * dépôt/modèle) n'est pas reprennable.
+ * Ce run précis peut-il être repris à CHAUD (message dans SA conversation) ? Oui
+ * même s'il est terminé : son checkpoint et sa sandbox sont conservés, on enchaîne
+ * un tour de plus dans le même contexte. Seule une erreur d'amorçage (`failed` :
+ * pas de dépôt/modèle) n'a rien à reprendre.
+ *
+ * ⚠ Ne PAS s'en servir pour décider quelle conversation ouvrir : depuis la sidebar
+ * ou la carte, une run terminée ne se rouvre pas — on en lance une NOUVELLE, à
+ * froid, avec son propre modèle (MIN-68). C'est `isAgentRunActive` qui répond à
+ * « une run occupe-t-elle l'issue ? ».
  */
 export function isAgentRunResumable(status: AgentRunStatus): boolean {
   return status !== "failed";
@@ -207,16 +213,20 @@ export async function actOnAgentPrApi(
   );
 }
 
-/** Demande des changements à Numo : relance l'agent sur la même PR (MIN-66). */
+/**
+ * Demande des changements à Numo (MIN-66 + MIN-68) : poste la review sur la PR, puis
+ * lance une NOUVELLE run froide (modèle au choix) qui itère sur cette même PR.
+ */
 export async function requestAgentPrChangesApi(
   runId: string,
   message: string,
+  model?: string,
 ): Promise<{ ok: true; run: { id: string } }> {
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/pr`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "request_changes", message }),
+      body: JSON.stringify({ action: "request_changes", message, model }),
     }),
   );
 }
@@ -233,8 +243,10 @@ export interface PullRequestListItem {
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string } | null;
-  /** Un run encore actif sur cette PR = « Numo retravaille ». */
+  /** Un run TRAVAILLE sur cette PR (queued/running) = « Numo retravaille ». */
   activeRunId: string | null;
+  /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */
+  busyRunId: string | null;
 }
 
 export interface PullRequestComment {
@@ -260,10 +272,11 @@ export async function fetchPrCommentsApi(
 // ── Page Agents (liste globale des sessions) ─────────────────────────────────
 
 /**
- * Une SESSION de l'agent = une issue (un run reprennable persistant par issue).
- * L'endpoint global dédoublonne les runs par issue et renvoie le run représentant
- * (celui que la conversation reprendrait). Le « titre » de la session est dérivé du
- * titre de l'issue liée (aucun champ propre).
+ * Une SESSION de l'agent = une issue, et une issue peut avoir plusieurs runs
+ * successives (MIN-68). L'endpoint global dédoublonne par issue et renvoie le run
+ * REPRÉSENTANT (le plus récent non `failed` : le run actif s'il y en a un, sinon le
+ * dernier terminé). Le « titre » de la session est dérivé du titre de l'issue liée
+ * (aucun champ propre).
  */
 export interface AgentSessionListItem {
   runId: string;
@@ -279,6 +292,8 @@ export interface AgentSessionListItem {
   project: { id: string; key: string; name: string } | null;
   /** Un run de l'issue TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
+  /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique. */
+  runCount: number;
 }
 
 export async function fetchAgentSessionsApi(): Promise<{

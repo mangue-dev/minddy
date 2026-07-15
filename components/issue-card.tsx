@@ -788,8 +788,8 @@ export function IssueCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: issue.id });
   const agentActive = useAgentActive(issue.id);
-  // Une session d'agent (reprennable) existe déjà sur l'issue → l'action « ouvre »
-  // la conversation au lieu d'en lancer une nouvelle.
+  // Une run d'agent est ACTIVE sur l'issue → l'action OUVRE sa conversation. Sinon
+  // (aucune run, ou toutes terminées) elle en LANCE une nouvelle, à froid (MIN-68).
   const agentHasSession = useAgentHasSession(issue.id);
   // PR disponible pour ce ticket → chip « PR disponible » sur la carte + option menu.
   const pr = useAgentPr(issue.id);
@@ -884,7 +884,7 @@ export function IssueCard({
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
   // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
-  // ouvre la conversation de l'agent (la lance si aucune session, sinon la reprend).
+  // ouvre l'agent (nouvelle run à froid, ou la run active s'il y en a une).
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
     !isDragging,
     {
@@ -903,9 +903,9 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
-    // Ouvre la conversation de l'agent de code sur ce ticket (modal grand format) :
-    // la LANCE si aucune session, sinon REPREND la session existante. Toujours
-    // disponible — même pendant que l'agent travaille (pour suivre / interrompre).
+    // Ouvre l'agent de code sur ce ticket (modal grand format) : LANCE une nouvelle
+    // run à froid, ou OUVRE la run active s'il y en a une (pour la suivre /
+    // l'interrompre / lui répondre). Toujours disponible.
     {
       id: "launch-agent",
       label: agentHasSession ? tAgent("openAgent") : tAgent("menuLaunch"),

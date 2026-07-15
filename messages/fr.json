@@ -944,6 +944,7 @@
   "Agent": {
     "sectionTitle": "Agent de code",
     "launchButton": "Lancer un agent",
+    "launchNewButton": "Lancer un nouvel agent",
     "menuLaunch": "Lancer un agent…",
     "statusQueued": "En file",
     "statusRunning": "En cours",
@@ -1003,15 +1004,21 @@
     "openConversation": "Ouvrir la conversation",
     "openAgent": "Ouvrir l'agent",
     "endedPlaceholder": "Ce run est terminé.",
+    "pastRunPlaceholder": "Run passée (consultation) — lance un nouvel agent pour continuer.",
     "livePlaceholder": "Préparer une réponse ou diriger l'agent",
     "restPlaceholder": "Répondre…",
+    "composeInheritsPr": "Le nouvel agent repart d'un contexte vierge, mais reprend la branche et la pull request #{number} : il lit le travail déjà fait, les commentaires de review, puis enchaîne.",
+    "runNumbered": "Run {number}/{total}",
+    "runHistory": "{total, plural, one {# run} other {# runs}}",
+    "newRun": "Lancer un nouvel agent",
     "prAvailable": "Pull request disponible",
     "prBadge": "PR disponible",
     "errorNoRepo": "Ce projet n'a pas de dépôt GitHub lié.",
     "errorUnsupportedProvider": "Seuls les dépôts GitHub sont supportés.",
     "errorAlreadyRunning": "Un agent tourne déjà sur ce ticket.",
     "errorQuotaExceeded": "Limite d'usage mensuelle de l'agent atteinte.",
-    "errorNoModelForProvider": "Choisis un modèle pour ce provider."
+    "errorNoModelForProvider": "Choisis un modèle pour ce provider.",
+    "errorSupersededRun": "Une run plus récente a repris ce ticket — lance un nouvel agent pour continuer."
   },
   "Projects": {
     "newProject": "Nouveau Projet",

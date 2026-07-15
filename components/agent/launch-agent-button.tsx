@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunActive } from "@/lib/agent-api";
@@ -10,9 +10,14 @@ import { AgentChatModal } from "./agent-chat-modal";
 import { AgentRunPanel } from "./agent-run-panel";
 
 /**
- * Section « Agent de code » du panneau d'issue (MIN-46) : le lanceur (modal
- * conversationnelle avec picker de modèle) et, s'il existe un run, sa vue live
- * (statut, événements, stop, review de PR). Un seul run actif à la fois par issue.
+ * Section « Agent de code » du panneau d'issue (MIN-46 + MIN-68) : le lanceur et,
+ * s'il existe un run, sa vue live (statut, événements, PR).
+ *
+ * Le bouton lance TOUJOURS une run NEUVE (modal en phase compose, avec picker de
+ * modèle) — il ne rouvre jamais la dernière run terminée ; c'est le point d'entrée
+ * « froid ». La reprise à chaud passe par « Ouvrir la conversation » du panneau
+ * ci-dessous. Une seule run à la fois par issue : tant qu'une run est active, le
+ * bouton est désactivé et renvoie vers sa conversation.
  */
 export function LaunchAgentButton({
   issueId,
@@ -28,20 +33,37 @@ export function LaunchAgentButton({
   const activeRun = runs.find((r) => isAgentRunActive(r.status)) ?? null;
   const latest = runs[0] ?? null;
 
+  const launchButton = (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={() => setOpen(true)}
+      disabled={!!activeRun}
+    >
+      <NumoIcon className="size-4" />
+      {latest ? t("launchNewButton") : t("launchButton")}
+    </Button>
+  );
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium">{t("sectionTitle")}</span>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setOpen(true)}
-          disabled={!!activeRun}
-        >
-          <NumoIcon className="size-4" />
-          {t("launchButton")}
-        </Button>
+        {activeRun ? (
+          <Tooltip>
+            {/* Un bouton désactivé n'émet pas d'événement de survol : le trigger
+                doit envelopper, pas remplacer. */}
+            <TooltipTrigger asChild>
+              <span tabIndex={0}>{launchButton}</span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="end">
+              {t("errorAlreadyRunning")}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          launchButton
+        )}
       </div>
 
       {latest ? (
@@ -52,6 +74,7 @@ export function LaunchAgentButton({
         />
       ) : null}
 
+      {/* Aucun `initialRun` → la modal s'ouvre en compose : une NOUVELLE run. */}
       <AgentChatModal
         open={open}
         onOpenChange={setOpen}

@@ -1,13 +1,17 @@
-import "server-only";
+// Construction PURE des prompts (sans DB, sans import server-only) : testable en
+// node/vitest, comme prune.ts / caching.ts. Ne rien y mettre qui touche aux secrets
+// ou à la base — l'appelant fournit déjà tout le contexte.
 
 /**
- * Prompt système de l'agent de code cloud (MIN-46). Deux morceaux :
+ * Prompt système de l'agent de code cloud (MIN-46). Trois morceaux :
  *  - `buildAgentSystemPrompt` : STABLE (persona + tools + discipline + règles).
  *    Dépend uniquement de la langue du résumé → préfixe identique d'un run à
  *    l'autre, donc réellement partagé par le prompt caching (cf. caching.ts).
  *  - `buildAgentTaskMessage` : le message UTILISATEUR d'amorce (contexte dépôt +
  *    tâche = issue + plan + consigne libre). Tout ce qui varie par run vit ici,
  *    injecté UNE SEULE FOIS (plus de double-injection de la consigne).
+ *  - `buildInheritedPrMessage` : l'amorce d'une run FROIDE qui hérite d'une PR
+ *    (MIN-68) — sa seule mémoire du travail déjà poussé sur la branche.
  */
 
 export interface AgentIssueContext {
@@ -59,6 +63,73 @@ This is a CONVERSATION, not a one-shot job. After you finish a turn the user may
 - Do not fabricate APIs, files, or test results — everything you claim must be real and verified via tools.
 - Keep the diff as small as reasonably possible while fully solving the task.
 - Never print secrets or the git remote URL.`;
+}
+
+/** Cap par commentaire de review injecté (un fil de PR peut être très bavard). */
+const PR_COMMENT_MAX_CHARS = 2000;
+/** Nombre de commentaires de PR injectés (les plus RÉCENTS — la demande du jour). */
+const PR_COMMENTS_MAX = 10;
+
+export interface InheritedPrContext {
+  number: number;
+  title?: string | null;
+  body?: string | null;
+  state?: string | null;
+  /** Fil de review GitHub, ordre chronologique (le plus ancien d'abord). */
+  comments: Array<{ author: string | null; body: string }>;
+  /** Résumé écrit par la run PRÉCÉDENTE en appelant `finish`. */
+  previousSummary?: string | null;
+}
+
+function cap(str: string, max: number): string {
+  return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
+}
+
+/**
+ * Message d'amorce d'une run FROIDE qui hérite d'une PR (MIN-68). Une run froide
+ * repart de zéro côté modèle — aucun checkpoint, aucun message de la run
+ * précédente — mais la BRANCHE, elle, porte déjà du travail. Ce message est son
+ * seul lien avec ce passé : ce qu'a fait la run précédente (son résumé), ce que la
+ * PR annonce, et ce que les reviewers ont demandé. Sans lui, l'agent recommencerait
+ * le ticket depuis le début sur une branche déjà avancée.
+ *
+ * Le diff n'est PAS injecté : l'agent lit la branche lui-même (`git diff`, tools de
+ * lecture) — bien moins coûteux en contexte, et toujours à jour.
+ */
+export function buildInheritedPrMessage(input: {
+  repo: AgentRepoContext;
+  pr: InheritedPrContext;
+}): string {
+  const { pr, repo } = input;
+  const reopened =
+    pr.state === "closed"
+      ? " The pull request was REJECTED (closed) — the reviewer refused this work as it stands; address their objections, and the harness will reopen the pull request when you push."
+      : "";
+
+  const summaryBlock = pr.previousSummary?.trim()
+    ? `\n\n## What the previous run did (its own summary)\n${cap(pr.previousSummary.trim(), 4000)}`
+    : "";
+
+  const recent = pr.comments.slice(-PR_COMMENTS_MAX);
+  const commentsBlock =
+    recent.length > 0
+      ? `\n\n## Review comments on the pull request (oldest first)\n${recent
+          .map((c) => `### @${c.author ?? "unknown"}\n${cap(c.body.trim(), PR_COMMENT_MAX_CHARS)}`)
+          .join("\n\n")}`
+      : "";
+
+  const bodyBlock = pr.body?.trim()
+    ? `\n\n## Pull request description\n${cap(pr.body.trim(), 4000)}`
+    : "";
+
+  return `# You are ITERATING on existing work
+The working branch **${repo.workBranch}** already carries committed work, and pull request **#${pr.number}**${pr.title ? ` ("${pr.title}")` : ""} is open on it.${reopened}
+
+You are a FRESH run: you did NOT write that code and you have none of the previous conversation — only what follows. So do NOT start the task over. **First read the current state of the branch**: run \`git diff ${repo.defaultBranch}\` to see everything this branch already changed, then \`read_file\` what matters. Only then act on the request. Keep iterating on the SAME branch and the SAME pull request — the harness pushes ${repo.workBranch} and updates #${pr.number}.
+
+(The clone is shallow: \`git diff ${repo.defaultBranch}\` works, but three-dot diffs and deep \`git log\` have no common history to walk — don't rely on them.)${summaryBlock}${bodyBlock}${commentsBlock}
+
+Everything above is context. The request to act on is the "Additional instructions" of the task message (or, failing that, the review comments above).`;
 }
 
 /**

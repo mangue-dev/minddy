@@ -1,4 +1,5 @@
-import "server-only";
+// Dérivation PURE (sans DB, sans import server-only) : testable en node/vitest,
+// comme prune.ts / caching.ts.
 
 /**
  * Construction partagée de la réponse « activité de l'agent par issue » (MIN-46),
@@ -15,10 +16,17 @@ export interface AgentRunRow {
   created_at: string;
 }
 
+/** Une run occupe l'issue : au travail, ou suspendue en attente de l'utilisateur. */
+const ACTIVE_STATUSES = ["queued", "running", "needs_input"];
+
 export interface AgentActivityResponse {
   /** L'agent TRAVAILLE (queued/running) → halo animé sur la carte. */
   workingIssueIds: string[];
-  /** Session REPRENNABLE (tout sauf failed) → entrée carte « Ouvrir l'agent ». */
+  /**
+   * Une run est ACTIVE sur l'issue (queued/running/needs_input) → l'entrée de la
+   * carte OUVRE cette run au lieu d'en lancer une nouvelle (MIN-68 : une run
+   * terminée ne compte plus — elle se relance à froid, pas en la rouvrant).
+   */
   sessionIssueIds: string[];
   /** PR la plus récente par issue (open/draft/merged, pas closed) → chip
    *  « PR disponible » sur la carte, cliquable vers la review. */
@@ -33,7 +41,11 @@ export function buildAgentActivity(rows: AgentRunRow[]): AgentActivityResponse {
         .map((r) => r.issue_id),
     ),
   ];
-  const sessionIssueIds = [...new Set(rows.map((r) => r.issue_id))];
+  const sessionIssueIds = [
+    ...new Set(
+      rows.filter((r) => ACTIVE_STATUSES.includes(r.status)).map((r) => r.issue_id),
+    ),
+  ];
   const pullRequests: Record<string, { runId: string; prNumber: number }> = {};
   for (const r of rows) {
     // rows triés DESC → le premier vu par issue est le plus récent.

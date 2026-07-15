@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Toute session REPRENNABLE (tout sauf `failed`) : un run terminé après PR reste
-  // ouvrable pour itérer.
+  // Tous les runs sauf `failed` : `buildAgentActivity` en dérive les runs ACTIFS
+  // (carte « Ouvrir l'agent ») et la PR la plus récente de chaque issue.
   const { data } = await auth.supabase
     .from("agent_runs")
     .select("issue_id, status, id, pr_number, pr_state, created_at")

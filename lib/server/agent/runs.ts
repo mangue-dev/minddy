@@ -86,12 +86,31 @@ export interface CreateRunInput {
   keyMode: "platform" | "byok";
   triggeredBy: "button" | "chat" | "mention";
   /**
-   * Branche à reprendre (au lieu d'en générer une neuve) : la « demande de
-   * changements » sur une PR relance Numo sur SA branche → même PR mise à jour.
+   * Branche à reprendre (au lieu d'en générer une neuve) : une run froide qui
+   * hérite de la PR de l'issue repart de SA branche → même PR mise à jour (MIN-68).
    */
   baseBranch?: string | null;
   branchName?: string | null;
+  /** PR héritée, posée dès la création (cf. `inheritablePrForIssue`). */
+  prNumber?: number | null;
+  prUrl?: string | null;
+  prState?: AgentRun["pr_state"];
 }
+
+/**
+ * Levée par `createRun` quand l'index unique `idx_agent_runs_active_issue` refuse
+ * l'insertion : une autre run de l'issue est devenue active entre le pré-check et
+ * l'INSERT. C'est le même refus que le garde applicatif, gagné par la base.
+ */
+export class ActiveRunExistsError extends Error {
+  constructor() {
+    super("An agent run is already active on this issue");
+    this.name = "ActiveRunExistsError";
+  }
+}
+
+/** Code Postgres d'une violation de contrainte d'unicité. */
+const PG_UNIQUE_VIOLATION = "23505";
 
 /** Crée un run en `queued`, prêt à être drainé. */
 export async function createRun(input: CreateRunInput): Promise<AgentRun> {
@@ -112,11 +131,15 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       key_mode: input.keyMode,
       base_branch: input.baseBranch ?? null,
       branch_name: input.branchName ?? null,
+      pr_number: input.prNumber ?? null,
+      pr_url: input.prUrl ?? null,
+      pr_state: input.prState ?? null,
       run_id: randomUUID(),
     })
     .select("*")
     .single();
   if (error || !data) {
+    if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
     throw new Error(error?.message ?? "Failed to create agent run");
   }
   return data as AgentRun;
@@ -140,7 +163,12 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
   return (data as AgentRun | null) ?? null;
 }
 
-/** Run actif (queued/running/needs_input) de l'issue, ou null. */
+/**
+ * Run ACTIF (queued/running/needs_input) de l'issue, ou null. L'index partiel
+ * unique `idx_agent_runs_active_issue` en garantit au plus un — le tri + `limit(1)`
+ * reste un garde-fou (des données antérieures à MIN-68 peuvent en avoir plusieurs,
+ * et `maybeSingle` lèverait au lieu de répondre).
+ */
 export async function activeRunForIssue(issueId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -148,26 +176,104 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
     .select("*")
     .eq("issue_id", issueId)
     .in("status", ACTIVE_STATUSES)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   return (data as AgentRun | null) ?? null;
 }
 
 /**
- * Run REPRENNABLE le plus récent de l'issue (tout sauf `failed`) — inclut donc un
- * run `completed` après une PR : la session ne se ferme jamais, on peut itérer
- * dessus. `limit(1)` + tri décroissant (plusieurs runs possibles dans le temps).
+ * Une run PLUS RÉCENTE que `createdAt` existe-t-elle sur l'issue ? Les runs d'une
+ * issue partagent la branche : dès qu'une plus récente existe, la précédente n'est
+ * plus reprennable (sa sandbox est restée sur un ancêtre — son push serait rejeté).
+ * Elle devient un historique consultable.
  */
-export async function resumableRunForIssue(issueId: string): Promise<AgentRun | null> {
+export async function newerRunExistsForIssue(
+  issueId: string,
+  createdAt: string,
+): Promise<boolean> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
-    .select("*")
+    .select("id")
     .eq("issue_id", issueId)
-    .neq("status", "failed")
+    .gt("created_at", createdAt)
+    .limit(1);
+  return ((data ?? []) as unknown[]).length > 0;
+}
+
+/** PR de l'issue dont une run froide peut hériter (cf. `inheritablePrForIssue`). */
+export interface InheritablePr {
+  branchName: string;
+  baseBranch: string | null;
+  prNumber: number;
+  prUrl: string | null;
+  prState: AgentRun["pr_state"];
+}
+
+/**
+ * PR dont une NOUVELLE run froide doit hériter (MIN-68) : la plus récente ouverte
+ * par une run de l'issue, tant qu'elle reste pertinente —
+ *   • `open` / `draft`  → on itère dessus ;
+ *   • `closed` (refusée) → même branche, la PR sera rouverte à la prochaine PR ;
+ *   • `merged`          → livrée : plus rien à itérer, la run repart d'une branche
+ *                          neuve et ouvrira une nouvelle PR (→ null ici).
+ * Null aussi si aucune run n'a jamais ouvert de PR (premier lancement).
+ */
+export async function inheritablePrForIssue(issueId: string): Promise<InheritablePr | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("branch_name, base_branch, pr_number, pr_url, pr_state")
+    .eq("issue_id", issueId)
+    .not("pr_number", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  const row = data as {
+    branch_name: string | null;
+    base_branch: string | null;
+    pr_number: number | null;
+    pr_url: string | null;
+    pr_state: AgentRun["pr_state"];
+  } | null;
+  if (!row?.pr_number || !row.branch_name) return null;
+  if (row.pr_state === "merged") return null;
+  return {
+    branchName: row.branch_name,
+    baseBranch: row.base_branch,
+    prNumber: row.pr_number,
+    prUrl: row.pr_url,
+    prState: row.pr_state,
+  };
+}
+
+/**
+ * Résumé de la run précédente de l'issue (son `outcome` = le `summary` que l'agent
+ * a écrit en appelant `finish`). Injecté dans le prompt d'AMORCE d'une run froide :
+ * elle n'hérite d'aucun checkpoint, ce résumé est son seul lien avec ce qui a été
+ * fait avant. Exclut la run courante.
+ *
+ * Restreint aux runs `completed` : `outcome` sert aussi à stocker la QUESTION d'un
+ * `ask_user`, qu'on ne veut pas présenter comme un compte rendu de travail.
+ */
+export async function previousRunSummaryForIssue(
+  issueId: string,
+  excludeRunId: string,
+): Promise<string | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("outcome")
+    .eq("issue_id", issueId)
+    .neq("id", excludeRunId)
+    .eq("status", "completed")
+    .not("outcome", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const outcome = (data as { outcome?: string | null } | null)?.outcome ?? null;
+  return outcome?.trim() ? outcome.trim() : null;
 }
 
 export interface StampFields {
@@ -195,6 +301,11 @@ export interface StampFields {
  * Met à jour un run en gardant la transition (`.in('status', guard)`, défaut
  * ['running']) : un run annulé/déjà terminé n'est jamais réécrit par un chunk en
  * retard. Renvoie le run mis à jour, ou null si la garde n'a pas matché.
+ *
+ * Null couvre aussi l'échec : notamment une violation de
+ * `idx_agent_runs_active_issue` (réveiller un run alors qu'un autre est devenu actif
+ * — cf. la route /steer). On la trace au lieu de l'avaler en silence : un appelant
+ * qui ignore le null croirait le run relancé alors qu'il ne le sera jamais.
  */
 export async function stampRun(
   runId: string,
@@ -203,13 +314,19 @@ export async function stampRun(
 ): Promise<AgentRun | null> {
   const service = getServiceClient();
   const guard = opts?.guard ?? ["running"];
-  const { data } = await service
+  const { data, error } = await service
     .from("agent_runs")
     .update(fields)
     .eq("id", runId)
     .in("status", guard)
     .select("*")
     .maybeSingle();
+  if (error) {
+    console.error(
+      `[agent-runs] stampRun ${runId} → ${fields.status ?? "(fields)"} failed:`,
+      error.message,
+    );
+  }
   return (data as AgentRun | null) ?? null;
 }
 
