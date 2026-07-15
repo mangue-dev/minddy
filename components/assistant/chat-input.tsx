@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ReactNode,
   useRef,
   useCallback,
   useState,
@@ -44,6 +45,17 @@ interface ChatInputProps {
    * set so `badge radius + padding === surface radius` (concentric nesting).
    */
   pageContext?: AssistantPageContext | null;
+  /**
+   * Text to seed the editor with on mount (caret placed at the end, ready to
+   * edit). Used by the agent launch composer to pre-write "Work on MIN-42".
+   * One-shot: only read once when the composer mounts.
+   */
+  initialValue?: string;
+  /**
+   * Extra controls pinned to the LEFT of the bottom bar (the send/dictate
+   * cluster stays right). The agent launch composer drops its model picker here.
+   */
+  leadingControls?: ReactNode;
 }
 
 export interface ChatInputHandle {
@@ -61,6 +73,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       placeholder,
       hideAttach = false,
       pageContext = null,
+      initialValue,
+      leadingControls,
     },
     ref
   ) {
@@ -194,6 +208,27 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       }
     }, [noBorder]);
 
+    // Pré-remplissage one-shot (montage) : on écrit le texte initial, caret en
+    // fin, prêt à être édité — le composer de lancement d'agent s'en sert pour
+    // pré-écrire « Travaille sur MIN-42 ».
+    useEffect(() => {
+      const el = editorRef.current;
+      if (!initialValue || !el) return;
+      el.textContent = initialValue;
+      setIsEmpty(false);
+      el.focus();
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      // Volontairement au montage uniquement (pas de resync sur changement).
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const focusEditorAtEnd = useCallback(() => {
       const el = editorRef.current;
       if (!el || disabled) return;
@@ -285,8 +320,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 px-2 pb-2 pt-1">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
+            {/* Contrôles de gauche (ex. picker de modèle). Vide → la barre reste
+                visuellement identique (le cluster d'envoi collé à droite). */}
+            <div className="flex min-w-0 items-center gap-1.5">{leadingControls}</div>
+            <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming ? (
                 <Button
                   size="icon-sm"

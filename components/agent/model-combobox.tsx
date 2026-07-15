@@ -40,6 +40,7 @@ export function ModelCombobox({
   loadingLabel,
   freeTextLabel,
   disabled,
+  variant = "field",
 }: {
   /** "" = suit mon modèle par défaut ; sinon un id de modèle. */
   value: string;
@@ -53,6 +54,11 @@ export function ModelCombobox({
   /** Libellé de l'option « utiliser tel quel » (saisie libre). */
   freeTextLabel: (query: string) => string;
   disabled?: boolean;
+  /**
+   * `field` (défaut) : trigger pleine largeur façon champ de formulaire.
+   * `compact` : petit pill (logo + nom) pour la barre d'un composer de chat.
+   */
+  variant?: "field" | "compact";
 }) {
   const { provider, models, loading } = useAgentModelsQuery();
   const [open, setOpen] = useState(false);
@@ -108,26 +114,59 @@ export function ModelCombobox({
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className="w-full justify-between font-normal"
-        >
-          {value ? (
-            <span className="flex min-w-0 items-center gap-2">
-              {logoFor(value)}
-              <span className="truncate">{formatModelName(value)}</span>
+        {variant === "compact" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+          >
+            {value
+              ? logoFor(value)
+              : defaultModelId
+                ? logoFor(defaultModelId)
+                : null}
+            <span className="max-w-[9rem] truncate">
+              {/* Toujours le nom réel du modèle : même quand on suit « le défaut »,
+                  on affiche le modèle résolu (fallback sur le libellé si inconnu). */}
+              {value
+                ? formatModelName(value)
+                : defaultModelId
+                  ? formatModelName(defaultModelId)
+                  : defaultLabel}
             </span>
-          ) : (
-            defaultRow
-          )}
-          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-        </Button>
+            <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className="w-full justify-between font-normal"
+          >
+            {value ? (
+              <span className="flex min-w-0 items-center gap-2">
+                {logoFor(value)}
+                <span className="truncate">{formatModelName(value)}</span>
+              </span>
+            ) : (
+              defaultRow
+            )}
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          </Button>
+        )}
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className={cn(
+          "p-0",
+          variant === "compact" ? "w-80" : "w-[var(--radix-popover-trigger-width)]"
+        )}
+        align="start"
+      >
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
           {/* mt-1.5 : respire sous l'input ; px-1 : aligne la largeur des options

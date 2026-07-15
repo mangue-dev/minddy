@@ -14,6 +14,7 @@ import {
 } from "mangue-ui";
 import { BorderBeam } from "border-beam";
 import {
+  Bot,
   Calendar,
   ChevronRight,
   ClipboardCopy,
@@ -45,6 +46,7 @@ import {
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { useAgentActive } from "@/components/agent/agent-activity-context";
+import { AgentChatModal } from "@/components/agent/agent-chat-modal";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
@@ -723,6 +725,7 @@ export function IssueCard({
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
   const tAttach = useTranslations("Attachments");
+  const tAgent = useTranslations("Agent");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -756,6 +759,10 @@ export function IssueCard({
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  // Dialogue « Lancer un agent » (MIN-46) : ouvert depuis le menu clic droit ou
+  // le raccourci ⇧A au survol. Monté à la demande pour ne pas instancier les
+  // requêtes modèles/clés du dialogue sur chaque carte du board.
+  const [launchOpen, setLaunchOpen] = useState(false);
 
   // Candidats du picker : les autres issues OUVERTES du projet, hors celles
   // déjà liées — lier à du travail terminé/annulé n'a pas de sens (un bloqueur
@@ -810,10 +817,17 @@ export function IssueCard({
   };
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
-  // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt.
+  // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
+  // ouvre le dialogue de lancement d'agent (sauf si un agent tourne déjà).
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
     !isDragging,
-    { " ": onOpen, "shift+p": () => void copyPrompt() }
+    {
+      " ": onOpen,
+      "shift+p": () => void copyPrompt(),
+      "shift+a": () => {
+        if (!agentActive) setLaunchOpen(true);
+      },
+    }
   );
 
   const menuActions: ContextMenuAction[] = [
@@ -825,6 +839,21 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
+    // Lancer un agent de code sur ce ticket : ouvre le dialogue (choix du modèle
+    // + instructions optionnelles), ne lance pas directement. Masqué quand un
+    // agent tourne déjà sur l'issue (le liseré animé le signale).
+    ...(!agentActive
+      ? [
+          {
+            id: "launch-agent",
+            label: tAgent("menuLaunch"),
+            keywords: ["agent", "launch", "lancer", "code", "ai"],
+            icon: <Bot className="size-4" />,
+            shortcut: "⇧A",
+            onSelect: () => setLaunchOpen(true),
+          },
+        ]
+      : []),
     // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
     // leaf opens the target-issue picker at the pointer. Shown only when the
     // board wired the relation handlers.
@@ -942,6 +971,25 @@ export function IssueCard({
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />
+      {launchOpen && (
+        // La modal est portalisée mais reste enfant React de la carte : sans ce
+        // garde, un clic dedans (ou sur l'overlay pour fermer) remonterait via
+        // l'arbre React jusqu'à `onClick={onOpen}` et ouvrirait le panneau. On
+        // stoppe donc la propagation (clic + pointerdown côté dnd-kit) ici.
+        <div
+          className="contents"
+          onClick={stop}
+          onPointerDown={stop}
+          onContextMenu={stop}
+        >
+          <AgentChatModal
+            open
+            onOpenChange={setLaunchOpen}
+            issueId={issue.id}
+            issueIdentifier={identifier}
+          />
+        </div>
+      )}
     </div>
   );
 }

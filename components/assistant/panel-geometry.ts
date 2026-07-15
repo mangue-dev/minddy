@@ -4,8 +4,8 @@ import { cn } from "mangue-ui";
  * Géométrie partagée du panneau flottant (Sheet) de Numo : compact façon widget
  * ancré au coin, ou étendu façon modal centrée, avec la transition `.assistant-
  * panel-morph` (voir globals.css) qui interpole right/bottom/width/height/radius.
- * Réutilisée par le chat Numo (AssistantPanel) ET la modal d'activité de l'agent
- * de code (AgentActivityPanel, MIN-46) pour garantir un shell identique.
+ * Réutilisée par le chat Numo (AssistantPanel) ET la modal conversationnelle de
+ * l'agent de code (AgentChatModal, MIN-46) pour garantir un shell identique.
  */
 
 export type PanelDisplayMode = "compact" | "expanded";

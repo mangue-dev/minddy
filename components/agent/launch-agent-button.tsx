@@ -6,15 +6,21 @@ import { Button } from "mangue-ui";
 import { Bot } from "lucide-react";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunActive } from "@/lib/agent-api";
-import { LaunchAgentDialog } from "./launch-agent-dialog";
+import { AgentChatModal } from "./agent-chat-modal";
 import { AgentRunPanel } from "./agent-run-panel";
 
 /**
- * Section « Agent de code » du panneau d'issue (MIN-46) : le lanceur (dialogue
- * avec picker de modèle) et, s'il existe un run, sa vue live (statut, événements,
- * stop, review de PR). Un seul run actif à la fois par issue.
+ * Section « Agent de code » du panneau d'issue (MIN-46) : le lanceur (modal
+ * conversationnelle avec picker de modèle) et, s'il existe un run, sa vue live
+ * (statut, événements, stop, review de PR). Un seul run actif à la fois par issue.
  */
-export function LaunchAgentButton({ issueId }: { issueId: string }) {
+export function LaunchAgentButton({
+  issueId,
+  issueIdentifier,
+}: {
+  issueId: string;
+  issueIdentifier: string;
+}) {
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
   const { runs } = useIssueAgentRunsQuery(issueId);
@@ -38,9 +44,20 @@ export function LaunchAgentButton({ issueId }: { issueId: string }) {
         </Button>
       </div>
 
-      {latest ? <AgentRunPanel issueId={issueId} run={latest} /> : null}
+      {latest ? (
+        <AgentRunPanel
+          issueId={issueId}
+          issueIdentifier={issueIdentifier}
+          run={latest}
+        />
+      ) : null}
 
-      <LaunchAgentDialog open={open} onOpenChange={setOpen} issueId={issueId} />
+      <AgentChatModal
+        open={open}
+        onOpenChange={setOpen}
+        issueId={issueId}
+        issueIdentifier={issueIdentifier}
+      />
     </div>
   );
 }

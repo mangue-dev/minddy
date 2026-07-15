@@ -27,6 +27,7 @@ import { useNotifications } from "@/lib/use-notifications";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import {
@@ -168,6 +169,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     staleTime: 60_000,
   });
   const feedbackCount = feedbackCountData?.count ?? 0;
+
+  // Pull Requests (MIN-66) : compteur des PR ouvertes de Numo. La liste est
+  // globale (l'onglet pointe vers /pull-requests), donc on dérive le compte de
+  // la même query que la page — même « ouverte » que son filtre : open, draft,
+  // ou état pas encore synchronisé.
+  const { pullRequests } = useAllPullRequestsQuery();
+  const openPrCount = pullRequests.filter(
+    (p) => p.pr_state === "open" || p.pr_state === "draft" || p.pr_state == null
+  ).length;
 
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
@@ -408,6 +418,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: "/pull-requests",
               active: pathname.startsWith("/pull-requests"),
               shortcut: "R",
+              badge:
+                openPrCount > 0 ? (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {openPrCount}
+                  </span>
+                ) : undefined,
             },
             {
               key: "home-back",
@@ -487,6 +503,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             href: "/pull-requests",
             active: pathname.startsWith("/pull-requests"),
             shortcut: "R",
+            badge:
+              openPrCount > 0 ? (
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {openPrCount}
+                </span>
+              ) : undefined,
           },
           {
             key: "home",
@@ -524,7 +546,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openCreateProject, t]);
+  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, openCreateProject, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

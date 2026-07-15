@@ -459,7 +459,10 @@ export function IssueSidePanel({
                   onRemoveRelation={onRemoveRelation}
                 />
 
-                <LaunchAgentButton issueId={issue.id} />
+                <LaunchAgentButton
+                  issueId={issue.id}
+                  issueIdentifier={issueIdentifier(projectKey, issue.number)}
+                />
 
                 <IssueActivity
                   items={items}

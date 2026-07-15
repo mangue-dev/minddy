@@ -13,7 +13,7 @@ import {
   type AgentRunSummary,
 } from "@/lib/agent-api";
 import { ModelBadge } from "@/components/model-badge";
-import { AgentActivityPanel } from "./agent-activity-panel";
+import { AgentChatModal } from "./agent-chat-modal";
 import { AgentStatusBadge } from "./agent-run-status";
 
 /**
@@ -23,7 +23,15 @@ import { AgentStatusBadge } from "./agent-run-status";
  * run). Le flux d'événements et la review de PR ne vivent plus ici : ils sont
  * respectivement dans la modal et sur la page Pull Requests.
  */
-export function AgentRunPanel({ issueId, run }: { issueId: string; run: AgentRunSummary }) {
+export function AgentRunPanel({
+  issueId,
+  issueIdentifier,
+  run,
+}: {
+  issueId: string;
+  issueIdentifier: string;
+  run: AgentRunSummary;
+}) {
   const t = useTranslations("Agent");
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -91,7 +99,13 @@ export function AgentRunPanel({ issueId, run }: { issueId: string; run: AgentRun
         ) : null}
       </div>
 
-      <AgentActivityPanel open={activityOpen} onOpenChange={setActivityOpen} run={run} />
+      <AgentChatModal
+        open={activityOpen}
+        onOpenChange={setActivityOpen}
+        issueId={issueId}
+        issueIdentifier={issueIdentifier}
+        initialRun={run}
+      />
     </div>
   );
 }

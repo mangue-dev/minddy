@@ -938,6 +938,7 @@
   "Agent": {
     "sectionTitle": "Code agent",
     "launchButton": "Launch an agent",
+    "menuLaunch": "Launch an agent…",
     "statusQueued": "Queued",
     "statusRunning": "Running",
     "statusNeedsInput": "Awaiting reply",
@@ -983,7 +984,9 @@
     "noActivity": "No activity yet.",
     "plan": "Plan",
     "replyPlaceholder": "Reply to the agent…",
-    "steerPlaceholder": "Steer the agent…"
+    "steerPlaceholder": "Steer the agent…",
+    "composeDefaultPrompt": "Work on {id}",
+    "composePlaceholder": "Describe what the agent should do…"
   },
   "Projects": {
     "newProject": "New Project",
