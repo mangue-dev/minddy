@@ -166,10 +166,13 @@ export class InterruptedError extends Error {
 const INTERRUPT_POLL_MS = 2000;
 
 export interface AgentLoopResult {
-  status: "completed" | "suspended" | "needs_input" | "interrupted";
+  status: "completed" | "suspended" | "needs_input" | "interrupted" | "error";
   messages: AgentChatMessage[];
   finish?: AgentFinish;
   question?: string;
+  /** Erreur LLM fatale (non reprenable) : renvoyée AVEC les messages pour que
+   *  l'exécuteur persiste le checkpoint (pas de perte de contexte/steering). */
+  errorMessage?: string;
   costUsd: number;
   usageSeqEnd: number;
   rounds: number;
@@ -650,6 +653,21 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         // Interruption utilisateur pendant le stream → repos, round partiel jeté.
         if (err instanceof InterruptedError) {
           return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
+        }
+        // Erreur LLM FATALE (non reprenable : 402 crédits, 401/403, 400 non-contexte).
+        // On REPOSE en renvoyant les messages → l'exécuteur persiste le checkpoint
+        // (aucun steering déjà injecté ce round n'est perdu). Pas de re-queue : ça
+        // rebouclerait sur la même erreur.
+        if (err instanceof StreamError) {
+          await emit("error", { message: cap(err.message, 300) });
+          return {
+            status: "error",
+            messages,
+            errorMessage: cap(err.message, 1000),
+            costUsd,
+            usageSeqEnd: seq,
+            rounds: round,
+          };
         }
         throw err;
       }

@@ -41,6 +41,15 @@ import { ModelCombobox } from "./model-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentStatusBadge } from "./agent-run-status";
 
+/** Codes d'erreur bruts renvoyés par la route de lancement → clés i18n Agent. */
+const LAUNCH_ERROR_KEYS: Record<string, string> = {
+  noRepo: "errorNoRepo",
+  unsupportedProvider: "errorUnsupportedProvider",
+  alreadyRunning: "errorAlreadyRunning",
+  quotaExceeded: "errorQuotaExceeded",
+  noModelForProvider: "errorNoModelForProvider",
+};
+
 /**
  * Modal conversationnelle de l'agent de code (MIN-46). Réutilise le shell du chat
  * Numo (Sheet flottant grand format + morph compact/étendu). La SESSION est
@@ -94,6 +103,9 @@ export function AgentChatModal({
     ? runs.find((r) => r.id === run.id) ?? run
     : runs.find((r) => isAgentRunActive(r.status)) ?? null;
   const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
+  // Steerable = la session accepte un message (travail ou repos). Un run terminal
+  // (failed / ancien completed-canceled) ne l'est pas → composer désactivé.
+  const steerable = liveRun ? isAgentRunActive(liveRun.status) : false;
 
   // Heartbeat tant que la modal est ouverte sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
@@ -131,7 +143,9 @@ export function AgentChatModal({
         queryKey: issueAgentRunsQueryKey(issueId),
       });
     } catch (err) {
-      toast.error((err as Error).message);
+      const msg = (err as Error).message;
+      const key = LAUNCH_ERROR_KEYS[msg];
+      toast.error(key ? t(key) : msg);
     } finally {
       setLaunching(false);
     }
@@ -275,10 +289,14 @@ export function AgentChatModal({
                   onSend={(message) => void steer(message)}
                   onAbort={() => void interrupt()}
                   isStreaming={working}
-                  disabled={working}
+                  disabled={working || !steerable}
                   hideAttach
                   placeholder={
-                    working ? t("workingPlaceholder") : t("continuePlaceholder")
+                    working
+                      ? t("workingPlaceholder")
+                      : steerable
+                        ? t("continuePlaceholder")
+                        : t("endedPlaceholder")
                   }
                 />
               ) : (

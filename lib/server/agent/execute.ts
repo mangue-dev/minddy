@@ -44,6 +44,7 @@ import {
   pullPendingMessages,
   readInterruptFlag,
   clearInterrupt,
+  hasPendingRunMessages,
   type AgentRun,
   type AgentCheckpoint,
 } from "./runs";
@@ -441,6 +442,22 @@ export async function executeAgentRun(
       interrupt_requested: false,
     } satisfies Partial<Parameters<typeof stampRun>[1]>;
 
+    // Enregistre le REPOS. Si un message de steering est arrivé APRÈS la dernière
+    // frontière de round (fenêtre de finalisation : commit+push+PR), on RE-QUEUE au
+    // lieu de reposer → le drain relance la boucle qui le draine aussitôt (L1) ;
+    // sinon la session repose (needs_input).
+    const restStamp = async (
+      extra: Partial<Parameters<typeof stampRun>[1]>,
+    ): Promise<void> => {
+      const pending = await hasPendingRunMessages(run.id);
+      await stampRun(run.id, {
+        status: pending ? "queued" : "needs_input",
+        ...restFields,
+        ...(pending ? { not_before: new Date().toISOString() } : {}),
+        ...extra,
+      });
+    };
+
     // ── Fin de tour : commit + PR (si diff) → REPOS (session PAS fermée) ───────
     if (result.status === "completed") {
       const finish = result.finish ?? { summary: "Changes applied." };
@@ -464,9 +481,7 @@ export async function executeAgentRun(
         });
         await emit("pr_opened", { number: pr.number, url: pr.url });
         await postSummaryComment(run, issue.identifier, finish.summary, pr.url, commentLocale);
-        await stampRun(run.id, {
-          status: "needs_input",
-          ...restFields,
+        await restStamp({
           checkpoint,
           pr_number: pr.number,
           pr_url: pr.url,
@@ -487,12 +502,7 @@ export async function executeAgentRun(
         if (err instanceof GithubApiError && err.status === 422) {
           await emit("summary", { text: "No changes were produced." });
           await postSummaryComment(run, issue.identifier, finish.summary, null, commentLocale);
-          await stampRun(run.id, {
-            status: "needs_input",
-            ...restFields,
-            checkpoint,
-            outcome: finish.summary,
-          });
+          await restStamp({ checkpoint, outcome: finish.summary });
           return "completed";
         }
         throw err;
@@ -511,11 +521,17 @@ export async function executeAgentRun(
 
     // ask_user → REPOS (attend la réponse de l'utilisateur).
     if (result.status === "needs_input") {
-      await stampRun(run.id, {
-        status: "needs_input",
-        ...restFields,
+      await restStamp({ checkpoint, outcome: result.question ?? null });
+      return "needs_input";
+    }
+
+    // Erreur LLM fatale → REPOS reprennable. L'event d'erreur a déjà été émis par la
+    // boucle ; le checkpoint (dont un éventuel steering injecté ce round) est conservé
+    // → l'utilisateur peut renvoyer un message pour reprendre.
+    if (result.status === "error") {
+      await restStamp({
         checkpoint,
-        outcome: result.question ?? null,
+        error_message: result.errorMessage ? cap(result.errorMessage, 1000) : null,
       });
       return "needs_input";
     }
@@ -523,7 +539,7 @@ export async function executeAgentRun(
     // « Interrompre » → REPOS (round partiel déjà jeté par la boucle).
     if (result.status === "interrupted") {
       await clearInterrupt(run.id);
-      await stampRun(run.id, { status: "needs_input", ...restFields, checkpoint });
+      await restStamp({ checkpoint });
       return "interrupted";
     }
 
@@ -531,7 +547,7 @@ export async function executeAgentRun(
     // plutôt que re-queue (course : le drapeau est arrivé après le retour de boucle).
     if (await readInterruptFlag(run.id)) {
       await clearInterrupt(run.id);
-      await stampRun(run.id, { status: "needs_input", ...restFields, checkpoint });
+      await restStamp({ checkpoint });
       return "interrupted";
     }
 
@@ -551,7 +567,7 @@ export async function executeAgentRun(
       await emit("error", {
         message: "Tour trop long (budget épuisé) — envoie un message pour continuer.",
       });
-      await stampRun(run.id, { status: "needs_input", ...restFields, checkpoint });
+      await restStamp({ checkpoint });
       return "needs_input";
     }
 

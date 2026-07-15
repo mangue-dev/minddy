@@ -4,7 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun, setRunPrState } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
   getPullRequest,
@@ -131,7 +131,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: (err as Error).message }, { status });
     }
 
-    const result = await launchAgentRun({
+    // Session persistante : la PR appartient à la session de l'issue → on la
+    // CONTINUE (message de steering, reprise si au repos) sur sa branche → même PR
+    // mise à jour. Sinon (aucune session), on en lance une sur la branche existante.
+    const result = await continueOrLaunchAgentRun({
       issueId: run.issue_id,
       userId: auth.user.id,
       triggeredBy: "button",

@@ -16,7 +16,11 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 
 export const runtime = "nodejs";
 
-const ACTIVE_STATUSES = ["queued", "running", "needs_input"];
+// « Numo retravaille » = l'agent TRAVAILLE (queued/running). Une session au REPOS
+// (needs_input) n'est PAS en train de retravailler la PR — sinon la PR resterait
+// « en cours » pour toujours (la session est désormais persistante) et les actions
+// merge/reject seraient bloquées indéfiniment.
+const WORKING_STATUSES = ["queued", "running"];
 
 interface RunRow {
   id: string;
@@ -42,7 +46,7 @@ export interface PullRequestListItem {
   updated_at: string;
   issue: RunRow["issue"];
   project: RunRow["project"];
-  /** Un run encore actif (queued/running/needs_input) sur cette PR = « Numo retravaille ». */
+  /** Un run qui TRAVAILLE (queued/running) sur cette PR = « Numo retravaille ». */
   activeRunId: string | null;
 }
 
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
   for (const r of rows) {
     if (r.pr_number == null) continue;
     const key = `${r.repo_link_id ?? ""}:${r.pr_number}`;
-    const isActive = ACTIVE_STATUSES.includes(r.status);
+    const isWorking = WORKING_STATUSES.includes(r.status);
     const existing = byPr.get(key);
     if (!existing) {
       byPr.set(key, {
@@ -81,7 +85,7 @@ export async function GET(request: NextRequest) {
         updated_at: r.updated_at,
         issue: r.issue,
         project: r.project,
-        activeRunId: isActive ? r.id : null,
+        activeRunId: isWorking ? r.id : null,
       });
       continue;
     }
@@ -90,7 +94,7 @@ export async function GET(request: NextRequest) {
       existing.pr_url = r.pr_url ?? existing.pr_url;
       existing.updated_at = r.updated_at;
     }
-    if (isActive && !existing.activeRunId) existing.activeRunId = r.id;
+    if (isWorking && !existing.activeRunId) existing.activeRunId = r.id;
   }
 
   const pullRequests = [...byPr.values()].sort((a, b) =>

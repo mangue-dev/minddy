@@ -8,7 +8,14 @@ import { getProjectLink } from "@/lib/server/git/repo-links";
 import { insertEvents } from "@/lib/server/issue-events";
 import { resolveAgentModel, AgentModelRequiredError } from "./model";
 import { checkAgentQuota, type AgentQuota } from "./quota";
-import { createRun, activeRunForIssue, type AgentRun } from "./runs";
+import {
+  createRun,
+  activeRunForIssue,
+  insertRunMessage,
+  bumpRunActivity,
+  stampRun,
+  type AgentRun,
+} from "./runs";
 import { drainAgentRuns } from "./drain";
 import { chainAgentDrain } from "./drain-chain";
 
@@ -108,6 +115,43 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   kickAgentDrain(service);
   return { ok: true, run };
+}
+
+export type ContinueResult =
+  | { ok: true; run: AgentRun; continued: boolean }
+  | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
+
+/**
+ * Démarre OU CONTINUE une session d'agent (MIN-46, agent conversationnel). La
+ * session étant persistante, une issue n'a qu'UNE session : si elle existe déjà
+ * (au travail OU au repos), on n'en relance pas une seconde — on lui envoie le
+ * message comme STEERING (et on la relance si elle était au repos). Sinon on lance
+ * une nouvelle session. Utilisé par tous les triggers CONVERSATIONNELS (@numo,
+ * chat numo, « demander des changements » sur une PR) là où l'ancien
+ * `launchAgentRun` renvoyait `alreadyRunning` à tort.
+ */
+export async function continueOrLaunchAgentRun(
+  input: LaunchAgentInput,
+): Promise<ContinueResult> {
+  const active = await activeRunForIssue(input.issueId);
+  if (active) {
+    const text = (input.prompt ?? "").trim();
+    if (text) await insertRunMessage(active.id, input.userId, text);
+    await bumpRunActivity(active.id);
+    // Au repos → nouveau tour : requeue + kick (reprise immédiate). Au travail → le
+    // message rejoint la file et la boucle le draine à la frontière de round.
+    if (active.status === "needs_input") {
+      const resumed = await stampRun(
+        active.id,
+        { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
+        { guard: ["needs_input"] },
+      );
+      if (resumed) kickAgentDrain(getServiceClient());
+    }
+    return { ok: true, run: active, continued: true };
+  }
+  const result = await launchAgentRun(input);
+  return result.ok ? { ok: true, run: result.run, continued: false } : result;
 }
 
 /**

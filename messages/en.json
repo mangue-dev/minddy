@@ -990,7 +990,13 @@
     "continuePlaceholder": "Send a message to continue…",
     "workingPlaceholder": "The agent is working — stop to reply",
     "openConversation": "Open conversation",
-    "openAgent": "Open agent"
+    "openAgent": "Open agent",
+    "endedPlaceholder": "This run has ended.",
+    "errorNoRepo": "This project has no linked GitHub repository.",
+    "errorUnsupportedProvider": "Only GitHub repositories are supported.",
+    "errorAlreadyRunning": "An agent is already running on this issue.",
+    "errorQuotaExceeded": "Monthly agent usage limit reached.",
+    "errorNoModelForProvider": "Pick a model for this provider."
   },
   "Projects": {
     "newProject": "New Project",

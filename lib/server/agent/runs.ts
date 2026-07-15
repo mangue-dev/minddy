@@ -367,6 +367,23 @@ export async function clearInterrupt(runId: string): Promise<void> {
 }
 
 /**
+ * Reste-t-il des messages de steering NON consommés ? Sert à décider, en fin de
+ * tour, s'il faut RE-QUEUER (un message arrivé pendant la phase de finalisation,
+ * après la dernière frontière de round, ne serait sinon traité qu'à l'action
+ * utilisateur suivante).
+ */
+export async function hasPendingRunMessages(runId: string): Promise<boolean> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_run_messages")
+    .select("id")
+    .eq("run_id", runId)
+    .is("consumed_at", null)
+    .limit(1);
+  return ((data ?? []) as unknown[]).length > 0;
+}
+
+/**
  * Ajoute un event au flux du live view (seq monotone par run). Best-effort : le
  * suivi ne doit jamais faire échouer le run. Un run n'a qu'UN écrivain à la fois
  * (le claimer), donc le max(seq)+1 est sûr.

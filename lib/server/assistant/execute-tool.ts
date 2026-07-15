@@ -53,7 +53,7 @@ import {
 } from "@/lib/server/feedback/promote";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { getPullRequest, listPullRequestFiles } from "@/lib/server/agent/pr";
@@ -533,7 +533,10 @@ export async function executeTool(
           typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
         const prompt =
           typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
-        const result = await launchAgentRun({
+        // Session persistante : si l'issue a déjà une session (au travail ou au
+        // repos), on la CONTINUE (le prompt devient un message de steering) au lieu
+        // d'échouer avec « alreadyRunning ». Sinon on en lance une nouvelle.
+        const result = await continueOrLaunchAgentRun({
           issueId,
           userId: ctx.userId,
           triggeredBy: ctx.triggerSource ?? "chat",
@@ -543,7 +546,12 @@ export async function executeTool(
         });
         if (!result.ok) return toolError(launchErrorMessage(result));
         return {
-          result: { launched: true, run_id: result.run.id, status: result.run.status, model: result.run.model },
+          result: {
+            [result.continued ? "continued" : "launched"]: true,
+            run_id: result.run.id,
+            status: result.run.status,
+            model: result.run.model,
+          },
           success: true,
         };
       }
