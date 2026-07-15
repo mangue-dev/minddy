@@ -159,7 +159,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
     await closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
     await setRunPrState(runId, "closed");
-    // PR fermée (refusée) → l'issue passe en canceled (MIN-46).
+    // PR refusée → l'issue retourne « à faire » (todo, jamais annulée) — MIN-46.
     await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "closed" });
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {

@@ -19,6 +19,7 @@ import {
 } from "./runs";
 import { drainAgentRuns } from "./drain";
 import { chainAgentDrain } from "./drain-chain";
+import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 
 /**
  * Point d'entrée UNIQUE pour démarrer un run d'agent (MIN-46). Appelé par TOUS
@@ -114,6 +115,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     },
   ]);
 
+  // Agent lancé, aucune PR encore ouverte → l'issue passe « en cours » (MIN-46).
+  await syncIssueStatusOnAgentStart({ issueId: input.issueId, actorId: input.userId });
+
   kickAgentDrain(service);
   return { ok: true, run };
 }
@@ -149,7 +153,18 @@ export async function continueOrLaunchAgentRun(
         { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
         { guard: ["needs_input", "completed", "canceled"] },
       );
-      if (resumed) kickAgentDrain(getServiceClient());
+      if (resumed) {
+        // Reprise d'une session SANS PR ouverte → retour « en cours ». Si une PR
+        // existe déjà (open/draft/merged/closed), son état gouverne le statut
+        // (in_review / done / todo), on n'y touche pas.
+        if (existing.pr_state == null) {
+          await syncIssueStatusOnAgentStart({
+            issueId: existing.issue_id,
+            actorId: input.userId,
+          });
+        }
+        kickAgentDrain(getServiceClient());
+      }
     }
     return { ok: true, run: existing, continued: true };
   }

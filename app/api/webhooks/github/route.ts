@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           prUrl: payload.pull_request?.html_url ?? null,
         });
         // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
-        // merged→done, closed→canceled, reopened/ready_for_review→in_review.
+        // merged→done, closed→todo, reopened/ready_for_review→in_review.
         for (const run of runs) {
           if (run.createdBy) {
             await syncIssueStatusFromPr({
