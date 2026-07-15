@@ -92,6 +92,9 @@ function GlobalBoardInner() {
   // here with it) — never let useBoardViews consume it, or the remembered
   // view restore would be skipped.
   const viewParam = rawViewParam === "cycle" ? null : rawViewParam;
+  // Deep-link (e.g. the home cycle preview, MIN-67): /all?issue=<id> opens
+  // that issue's side panel once the board's data has loaded.
+  const issueParam = searchParams.get("issue");
   const {
     issues,
     membersByProject,
@@ -247,6 +250,15 @@ function GlobalBoardInner() {
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
   );
+
+  // Deep-link from the home cycle preview: /all?issue=<id> (with ?view=cycle
+  // consumed above into cycleMode) opens that issue's side panel.
+  useEffect(() => {
+    if (issueParam) {
+      setOpenIssueId(issueParam);
+      setOpenIssueTab("description");
+    }
+  }, [issueParam]);
 
   const projectMap = useMemo(
     () => new Map<string, Project>(projects.map((p) => [p.id, p])),
@@ -576,7 +588,11 @@ function GlobalBoardInner() {
         issue={openIssue}
         open={!!openIssue}
         onOpenChange={(next) => {
-          if (!next) setOpenIssueId(null);
+          if (!next) {
+            setOpenIssueId(null);
+            // Strip the deep-link param so re-opening the same issue works.
+            if (issueParam) router.replace(pathname);
+          }
         }}
         projectKey={openProject?.key ?? ""}
         members={openIssue ? membersByProject[openPid] ?? [] : []}

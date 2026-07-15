@@ -14,7 +14,7 @@ import {
 } from "@/lib/cycle";
 import { CycleControls, formatCycleRange } from "@/components/cycle/cycle-header";
 import { StatusIndicator } from "@/components/issue-indicators";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import type { Issue } from "@/lib/types";
 
 /** Shared card chrome — heading + right slot, growing body, bottom footer. */
@@ -57,7 +57,8 @@ function FooterLink({ label }: { label: string }) {
 }
 
 /** One reco-ordered ticket of the cycle: status dot + identifier + title,
-    deep-linking to the issue in its own project board (?issue=<id>). */
+    opening the cycle board (forced cycle view, MIN-67) with the issue's side
+    panel pre-opened — same landing spot as the "Ouvrir le cycle" footer link. */
 function CycleIssueRow({
   issue,
   projectKey,
@@ -67,7 +68,7 @@ function CycleIssueRow({
 }) {
   return (
     <Link
-      href={`/projects/${issue.project_id}?issue=${issue.id}`}
+      href={`/all?view=cycle&issue=${issue.id}`}
       className="group flex min-w-0 items-center gap-2 rounded-md py-0.5 text-sm"
     >
       <StatusIndicator status={issue.status} className="size-4 shrink-0" />
@@ -100,7 +101,9 @@ export function HomeCycleCard() {
     if (!current) return [] as Issue[];
     // Blockers may sit outside the cycle → the status map spans the whole board.
     const statusById = new Map(issues.map((i) => [i.id, i.status]));
-    return [...cycleIssues].sort(recoComparator(relations, statusById)).slice(0, 3);
+    // Preview what's left to do, not what's already finished (MIN-67).
+    const openIssues = cycleIssues.filter((i) => !isClosedStatus(i.status));
+    return [...openIssues].sort(recoComparator(relations, statusById)).slice(0, 3);
   }, [cycleIssues, issues, relations, current]);
 
   const projectKeyById = useMemo(
