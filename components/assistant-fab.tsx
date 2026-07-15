@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -26,10 +27,14 @@ export function AssistantFab() {
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
+  // La page Agents A DÉJÀ la conversation de Numo en plein écran : le FAB flottant y
+  // ferait doublon → on le masque uniquement là (l'anim de sortie joue au passage).
+  const pathname = usePathname();
+  const hiddenForRoute = pathname.startsWith("/agents");
 
   return (
     <AnimatePresence>
-      {!isOpen && (
+      {!isOpen && !hiddenForRoute && (
         <motion.div
           key="assistant-fab"
           initial={{ opacity: 0, y: 14, scale: 0.92 }}

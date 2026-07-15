@@ -255,6 +255,36 @@ export async function fetchPrCommentsApi(
   return parseJson(await fetch(`/api/agent-runs/${runId}/comments`));
 }
 
+// ── Page Agents (liste globale des sessions) ─────────────────────────────────
+
+/**
+ * Une SESSION de l'agent = une issue (un run reprennable persistant par issue).
+ * L'endpoint global dédoublonne les runs par issue et renvoie le run représentant
+ * (celui que la conversation reprendrait). Le « titre » de la session est dérivé du
+ * titre de l'issue liée (aucun champ propre).
+ */
+export interface AgentSessionListItem {
+  runId: string;
+  status: AgentRunStatus;
+  model: string | null;
+  triggered_by: "button" | "chat" | "mention";
+  pr_number: number | null;
+  pr_url: string | null;
+  pr_state: "draft" | "open" | "merged" | "closed" | null;
+  created_at: string;
+  updated_at: string;
+  issue: { id: string; number: number; title: string } | null;
+  project: { id: string; key: string; name: string } | null;
+  /** Un run de l'issue TRAVAILLE (queued/running) → spinner « Numo travaille ». */
+  working: boolean;
+}
+
+export async function fetchAgentSessionsApi(): Promise<{
+  sessions: AgentSessionListItem[];
+}> {
+  return parseJson(await fetch(`/api/agent-runs`));
+}
+
 export async function postPrCommentApi(
   runId: string,
   body: string,

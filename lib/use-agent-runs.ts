@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchAgentRunEventsApi,
   fetchAgentRunPrApi,
+  fetchAgentSessionsApi,
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchPrCommentsApi,
@@ -77,6 +78,26 @@ export function useAllPullRequestsQuery() {
     },
   });
   return { pullRequests: data?.pullRequests ?? [], loading: isLoading, refetch };
+}
+
+/** Clé de cache de la liste globale des sessions d'agent (page Agents). */
+export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
+
+/**
+ * Liste globale des sessions de l'agent (page Agents). Polling ~5 s tant qu'une
+ * session TRAVAILLE (Numo tourne), sinon pas de polling — calqué sur
+ * `useAllPullRequestsQuery`.
+ */
+export function useAgentSessionsQuery() {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: allAgentSessionsQueryKey,
+    queryFn: fetchAgentSessionsApi,
+    refetchInterval: (query) => {
+      const sessions = query.state.data?.sessions ?? [];
+      return sessions.some((s) => s.working) ? 5000 : false;
+    },
+  });
+  return { sessions: data?.sessions ?? [], loading: isLoading, refetch };
 }
 
 /** Fil de conversation d'une PR (commentaires GitHub). */

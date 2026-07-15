@@ -40,6 +40,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
+import { NumoIcon } from "@/components/numo-icon";
 import {
   AppSidebar,
   type AppNavItem,
@@ -89,6 +90,13 @@ function objectiveDotIcon(color: string | null): ComponentType<{ className?: str
   objectiveDotCache.set(key, Icon);
   return Icon;
 }
+
+/** Visage de Numo en icône statique de nav/palette (pas de clignement perpétuel,
+    comme les icônes de liste). Slotté là où les tabs lucide passent un `className`. */
+const NumoNavIcon = ({ className }: { className?: string }) => (
+  <NumoIcon animated={false} className={className} />
+);
+NumoNavIcon.displayName = "NumoNavIcon";
 
 /** Muted monospace identifier badge, e.g. "MIND-42". */
 function identifierBadge(id: string) {
@@ -251,6 +259,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("pullRequests"),
           icon: GitPullRequest,
           onSelect: () => router.push("/pull-requests"),
+        },
+        {
+          key: "go-agents",
+          label: t("agents"),
+          icon: NumoNavIcon,
+          onSelect: () => router.push("/agents"),
         },
         {
           key: "go-all-global",
@@ -426,6 +440,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 ) : undefined,
             },
             {
+              key: "agents",
+              label: t("agents"),
+              icon: NumoNavIcon,
+              href: "/agents",
+              active: pathname.startsWith("/agents"),
+            },
+            {
               key: "home-back",
               label: t("home"),
               icon: ChevronLeft,
@@ -509,6 +530,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                   {openPrCount}
                 </span>
               ) : undefined,
+          },
+          {
+            key: "agents",
+            label: t("agents"),
+            icon: NumoNavIcon,
+            href: "/agents",
+            active: pathname.startsWith("/agents"),
           },
           {
             key: "home",

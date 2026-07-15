@@ -609,7 +609,8 @@
     "project": "Projet",
     "statistics": "Statistiques",
     "feedback": "Feedback",
-    "pullRequests": "Pull Requests"
+    "pullRequests": "Pull Requests",
+    "agents": "Agents"
   },
   "Stats": {
     "title": "Statistiques",
@@ -666,6 +667,7 @@
     "tickets": "Tickets",
     "allIssues": "Tous les tickets",
     "pullRequests": "Pull Requests",
+    "agents": "Agents",
     "objectives": "Objectifs",
     "triage": "Triage",
     "projectSettings": "Paramètres du projet",
@@ -984,6 +986,8 @@
     "activityTitle": "Activité de l'agent",
     "noActivity": "Aucune activité pour l'instant.",
     "plan": "Plan",
+    "workedForMinutes": "A travaillé pendant {minutes, plural, one {# minute} other {# minutes}} et {seconds, plural, one {# seconde} other {# secondes}}",
+    "workedForSeconds": "A travaillé pendant {seconds, plural, one {# seconde} other {# secondes}}",
     "replyPlaceholder": "Répondre à l'agent…",
     "steerPlaceholder": "Orienter l'agent…",
     "composeDefaultPrompt": "Travaille sur {id}",
@@ -1352,6 +1356,18 @@
     "removingFromCycle": "Retrait du cycle…",
     "removedFromCycle": "{count, plural, one {# ticket retiré du cycle} other {# tickets retirés du cycle}}",
     "removeFromCycleFailed": "Échec du retrait du cycle"
+  },
+  "Agents": {
+    "title": "Agents",
+    "emptyState": "Aucune session d'agent pour l'instant. Lancez Numo sur un ticket et elle apparaîtra dans cette liste.",
+    "noSelection": "Sélectionnez une session pour ouvrir sa conversation.",
+    "backToList": "Retour à la liste",
+    "openPullRequest": "Ouvrir la pull request",
+    "statusWorking": "En cours",
+    "statusWaiting": "En attente",
+    "statusDone": "Terminé",
+    "statusFailed": "Échoué",
+    "statusCanceled": "Annulé"
   },
   "PullRequests": {
     "title": "Pull requests",

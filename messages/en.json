@@ -609,7 +609,8 @@
     "project": "Project",
     "statistics": "Statistics",
     "feedback": "Feedback",
-    "pullRequests": "Pull Requests"
+    "pullRequests": "Pull Requests",
+    "agents": "Agents"
   },
   "Stats": {
     "title": "Statistics",
@@ -666,6 +667,7 @@
     "tickets": "Issues",
     "allIssues": "All Issues",
     "pullRequests": "Pull Requests",
+    "agents": "Agents",
     "objectives": "Objectives",
     "triage": "Triage",
     "projectSettings": "Project settings",
@@ -984,6 +986,8 @@
     "activityTitle": "Agent activity",
     "noActivity": "No activity yet.",
     "plan": "Plan",
+    "workedForMinutes": "Worked for {minutes, plural, one {# minute} other {# minutes}} and {seconds, plural, one {# second} other {# seconds}}",
+    "workedForSeconds": "Worked for {seconds, plural, one {# second} other {# seconds}}",
     "replyPlaceholder": "Reply to the agent…",
     "steerPlaceholder": "Steer the agent…",
     "composeDefaultPrompt": "Work on {id}",
@@ -1352,6 +1356,18 @@
     "removingFromCycle": "Removing from the cycle…",
     "removedFromCycle": "{count, plural, one {# issue removed from the cycle} other {# issues removed from the cycle}}",
     "removeFromCycleFailed": "Couldn't remove from the cycle"
+  },
+  "Agents": {
+    "title": "Agents",
+    "emptyState": "No agent sessions here yet. Launch Numo on an issue and it shows up in this list.",
+    "noSelection": "Select a session to open its conversation.",
+    "backToList": "Back to list",
+    "openPullRequest": "Open pull request",
+    "statusWorking": "Working",
+    "statusWaiting": "Waiting",
+    "statusDone": "Done",
+    "statusFailed": "Failed",
+    "statusCanceled": "Canceled"
   },
   "PullRequests": {
     "title": "Pull requests",
