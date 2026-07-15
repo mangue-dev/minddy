@@ -12,6 +12,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { BorderBeam } from "border-beam";
 import {
   Calendar,
   ChevronRight,
@@ -867,7 +868,6 @@ export function IssueCard({
       className={cn(
         "relative cursor-pointer rounded-xl",
         isDragging && "opacity-40",
-        agentActive && "agent-active-glow",
       )}
     >
       <DropOverlay
@@ -880,22 +880,42 @@ export function IssueCard({
           <Spinner className="size-3" />
         </span>
       )}
-      <IssueCardBody
-        issue={issue}
-        projectKey={projectKey}
-        project={project}
-        memberMap={memberMap}
-        categoryMap={categoryMap}
-        objectiveMap={objectiveMap}
-        parentNumber={parentNumber}
-        relations={relations}
-        onOpenParent={onOpenParent}
-        onOpenRelated={onOpenRelated}
-        onOpenPlan={onOpenPlan}
-        onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
-        onSetCategories={(ids) => onSetCategories(issue.id, ids)}
-        inCurrentCycle={inCurrentCycle}
-      />
+      {(() => {
+        const body = (
+          <IssueCardBody
+            issue={issue}
+            projectKey={projectKey}
+            project={project}
+            memberMap={memberMap}
+            categoryMap={categoryMap}
+            objectiveMap={objectiveMap}
+            parentNumber={parentNumber}
+            relations={relations}
+            onOpenParent={onOpenParent}
+            onOpenRelated={onOpenRelated}
+            onOpenPlan={onOpenPlan}
+            onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
+            onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+            inCurrentCycle={inCurrentCycle}
+          />
+        );
+        // Agent en cours : liseré animé qui parcourt le bord (lib `border-beam`).
+        // On n'enveloppe que dans ce cas : les cards normales restent intactes.
+        // Le wrapper a `overflow: hidden` → on lui reporte le `shadow-sm` de la card.
+        return agentActive ? (
+          <BorderBeam
+            size="pulse-inner"
+            duration={4}
+            colorVariant="colorful"
+            theme="auto"
+            className="rounded-xl shadow-sm"
+          >
+            {body}
+          </BorderBeam>
+        ) : (
+          body
+        );
+      })()}
       <IssueContextMenu
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
