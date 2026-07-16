@@ -972,6 +972,15 @@
     "workingSinceSeconds": "Working for {seconds, plural, one {# second} other {# seconds}}",
     "replyPlaceholder": "Reply to the agent…",
     "composePlaceholder": "Ask the agent anything — explore, explain, fix, implement…",
+    "launchPrompt": {
+      "head": "Work on {identifier}: {title}.",
+      "planExists": "This issue already has an implementation plan. Follow it step by step, updating each task's checkbox as you go, then implement the change and verify your work.",
+      "planExistsXl": "This issue already has an implementation plan, and it's a large task (XL). Review the plan and refine it if needed, then STOP and ask whether to start implementing now — don't begin coding until I confirm.",
+      "xs": "This is a small, well-scoped change (XS). Implement it directly — no need to write a plan first. Verify your work when done.",
+      "s": "This is a small task (S). Sketch a short, lightweight plan first only if the change benefits from one, then implement it and verify your work.",
+      "xl": "This is a large task (XL). Start by writing a thorough implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Then STOP and ask whether to start implementing now; don't begin coding until I confirm.",
+      "default": "Start by writing a clear implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Once the plan is in place, implement it and verify your work."
+    },
     "openConversation": "Open conversation",
     "openAgent": "Open agent",
     "endedPlaceholder": "This session failed to start — launch a new agent.",
@@ -1348,6 +1357,7 @@
     "title": "Agents",
     "emptyState": "No agent sessions here yet. Launch Numo on an issue and it shows up in this list.",
     "noSelection": "Select a session to open its conversation.",
+    "draftBadge": "New",
     "backToList": "Back to list",
     "openPullRequest": "Open pull request",
     "prAvailable": "PR available",

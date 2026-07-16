@@ -461,6 +461,12 @@ export function IssueSidePanel({
 
                 <LaunchAgentButton
                   issueId={issue.id}
+                  issueNumber={issue.number}
+                  issueTitle={issue.title}
+                  issuePlan={issue.plan}
+                  issueEffort={issue.effort}
+                  projectId={issue.project_id}
+                  projectKey={projectKey}
                   issueIdentifier={issueIdentifier(projectKey, issue.number)}
                 />
 

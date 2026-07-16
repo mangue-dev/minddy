@@ -6,25 +6,38 @@ import { Button } from "mangue-ui";
 import { ChevronLeft, GitPullRequest } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { AgentSessionListItem } from "@/lib/agent-api";
+import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
 
 /**
  * Panneau de détail d'une session d'agent (page Agents) : un en-tête épuré (retour
  * mobile · titre cliquable · bouton « Ouvrir la pull request ») au-dessus de la MÊME
  * conversation que la modal (`AgentConversation`, inline ici). Cliquer le titre ouvre
- * la sidebar du ticket EN INLINE sur la page (pas de navigation vers le Kanban). La
- * conversation ouvre la run représentante de l'issue, et donne accès à ses runs
- * précédentes (MIN-68).
+ * la sidebar du ticket EN INLINE sur la page (pas de navigation vers le Kanban).
+ * Cliquer un ticket ouvre sa session la plus ACTIVE (résolution par défaut de la
+ * conversation), et donne accès à ses runs précédentes (MIN-68).
  */
 export function AgentSessionDetail({
   item,
   onBack,
   onOpenIssue,
+  compose = false,
+  composeInitialText,
+  onLaunched,
 }: {
   item: AgentSessionListItem;
   onBack: () => void;
   /** Ouvre l'issue liée dans le panneau latéral, par-dessus la page (pas de navigation). */
   onOpenIssue: (issueId: string, projectId: string) => void;
+  /**
+   * Ouvre la conversation en phase COMPOSE (brouillon de lancement) : composer
+   * pré-écrit + picker de modèle, sans rouvrir la dernière run. `item` est alors une
+   * entrée synthétique (aucune run réelle) — voir la page Agents.
+   */
+  compose?: boolean;
+  /** Prompt pré-écrit amorçant le composer en compose (relayé à la conversation). */
+  composeInitialText?: string;
+  /** Relayé à la conversation : une run neuve vient d'être lancée depuis le compose. */
+  onLaunched?: (run: AgentRunSummary) => void;
 }) {
   const t = useTranslations("Agents");
   const router = useRouter();
@@ -71,15 +84,25 @@ export function AgentSessionDetail({
         key={issue.id}
         issueId={issue.id}
         issueIdentifier={identifier}
-        // La page liste des SESSIONS : on ouvre la run représentante de l'issue (la
-        // dernière), jamais un composer vierge — même quand elle est terminée.
-        initialRunId={item.runId}
+        // Cliquer un ticket ouvre sa session la plus ACTIVE — la run au travail,
+        // sinon la dernière run non `failed` : c'est la résolution PAR DÉFAUT de la
+        // conversation (`initialRunId=null`). On ne force PLUS le représentant
+        // `item.runId` (la dernière run CRÉÉE) : quand celle-ci a échoué à l'amorçage,
+        // c'est un tronçon mort (ni fil ni composer) et l'ouvrir de force masquait la
+        // vraie session vivante du ticket. Une session terminée (non `failed`) rouvre
+        // quand même — la résolution la retient. En COMPOSE (brouillon de lancement),
+        // `initialCompose` force le composer vierge quoi qu'il arrive.
+        initialRunId={null}
+        initialCompose={compose}
+        initialComposeText={compose ? composeInitialText : undefined}
+        onLaunched={onLaunched}
         active
         headerTitle={headerTitle}
         headerActions={
-          // S'adapte à l'état de la PR : rien (pas encore de PR), bouton (PR
-          // disponible), ou simple lien texte vert (PR fusionnée). Tous ouvrent la PR.
-          item.pr_number == null ? undefined : item.pr_state === "merged" ? (
+          // En compose : pas de bouton PR (aucune run lancée ; la PR héritée n'existe
+          // qu'une fois le 1er message envoyé). Sinon, s'adapte à l'état de la PR :
+          // rien (pas de PR), bouton (disponible), ou lien texte vert (fusionnée).
+          compose || item.pr_number == null ? undefined : item.pr_state === "merged" ? (
             <button
               type="button"
               onClick={() => router.push(`/pull-requests?run=${item.runId}`)}

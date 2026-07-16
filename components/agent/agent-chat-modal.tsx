@@ -26,10 +26,12 @@ import { AgentConversation } from "./agent-conversation";
  * agrandir/replier/fermer sont fournis en `headerActions` ; l'en-tête gauche (modèle
  * en live / issue ciblée en compose) et tout le comportement viennent du cœur.
  *
- * `initialRunId` ouvre une run précise (« Ouvrir la conversation »). Sans lui, la
- * modal ouvre la DERNIÈRE session de l'issue (conversation qui se poursuit) et ne
- * compose une session neuve que si l'issue n'en a aucune — c'est la modal du
- * bouton « Lancer un agent ».
+ * `initialRunId` ouvre une run précise : c'est le rôle qui reste à cette modal,
+ * la REPRISE à chaud d'une conversation existante depuis le panneau d'issue
+ * (« Ouvrir la conversation » de `AgentRunPanel`). Le LANCEMENT, lui, ne passe plus
+ * par une modal : il redirige vers la page Agents (`/agents?compose=…`). Sans
+ * `initialRunId` la modal retombe sur la dernière session de l'issue (ou compose),
+ * mais plus aucun appelant ne l'utilise ainsi.
  */
 export function AgentChatModal({
   open,

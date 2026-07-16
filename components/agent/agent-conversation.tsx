@@ -73,6 +73,8 @@ export function AgentConversation({
   active = true,
   headerTitle,
   headerActions,
+  onLaunched,
+  initialComposeText,
 }: {
   issueId: string;
   /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
@@ -94,6 +96,18 @@ export function AgentConversation({
   headerTitle?: ReactNode;
   /** Bloc d'actions à droite de l'en-tête. */
   headerActions?: ReactNode;
+  /**
+   * Appelé dès qu'une run NEUVE vient d'être lancée depuis la phase compose (avant
+   * même que la liste des sessions ne l'ait rattrapée). La page Agents s'en sert
+   * pour retenir l'id de la run le temps de la transition compose → live.
+   */
+  onLaunched?: (run: AgentRunSummary) => void;
+  /**
+   * Prompt pré-écrit qui amorce le composer en phase compose (demande
+   * d'implémentation adaptée à l'issue). One-shot : lu au montage du composer, puis
+   * librement éditable. Sans lui, le composer démarre vide (« New run », modal).
+   */
+  initialComposeText?: string;
 }) {
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
@@ -232,6 +246,7 @@ export function AgentConversation({
       setLaunched(started);
       setSelectedId(started.id);
       setComposing(false);
+      onLaunched?.(started);
       await refreshRuns();
     } catch (err) {
       // Refusé (quota, pas de dépôt, une session tourne déjà…) : la session n'existe
@@ -459,6 +474,7 @@ export function AgentConversation({
               onSend={(message) => void launch(message)}
               disabled={launching}
               hideAttach
+              initialValue={initialComposeText}
               placeholder={t("composePlaceholder")}
               leadingControls={
                 <ModelCombobox

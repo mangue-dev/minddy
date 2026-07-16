@@ -53,7 +53,8 @@ import {
   useAgentPr,
   type IssuePr,
 } from "@/components/agent/agent-activity-context";
-import { AgentChatModal } from "@/components/agent/agent-chat-modal";
+import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
@@ -825,10 +826,26 @@ export function IssueCard({
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
-  // Dialogue « Lancer un agent » (MIN-46) : ouvert depuis le menu clic droit ou
-  // le raccourci ⇧A au survol. Monté à la demande pour ne pas instancier les
-  // requêtes modèles/clés du dialogue sur chaque carte du board.
-  const [launchOpen, setLaunchOpen] = useState(false);
+  // « Lancer un agent » (MIN-46) — menu clic droit + raccourci ⇧A. Redirige vers la
+  // page Agents plutôt que d'ouvrir une modal : ticket déjà pourvu d'une session → on
+  // l'ouvre (`?issue=`) ; sinon on pose un brouillon de composition optimiste et on
+  // ouvre son composer (`?compose=`), exactement comme le bouton du panneau d'issue.
+  const launchAgent = () => {
+    if (agentHasSession) {
+      router.push(`/agents?issue=${issue.id}`);
+      return;
+    }
+    const variant = agentLaunchPromptVariant(issue);
+    setAgentComposeDraft({
+      issueId: issue.id,
+      issueNumber: issue.number,
+      issueTitle: issue.title,
+      projectId: issue.project_id,
+      projectKey,
+      prompt: `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${variant}`)}`,
+    });
+    router.push(`/agents?compose=${issue.id}`);
+  };
 
   // Candidats du picker : les autres issues OUVERTES du projet, hors celles
   // déjà liées — lier à du travail terminé/annulé n'a pas de sens (un bloqueur
@@ -890,7 +907,7 @@ export function IssueCard({
     {
       " ": onOpen,
       "shift+p": () => void copyPrompt(),
-      "shift+a": () => setLaunchOpen(true),
+      "shift+a": launchAgent,
     }
   );
 
@@ -903,16 +920,16 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
-    // Ouvre l'agent de code sur ce ticket (modal grand format) : OUVRE la dernière
+    // Ouvre l'agent de code sur ce ticket, sur la PAGE Agents : rouvre la dernière
     // conversation si le ticket en a une (elle se poursuit depuis son composer),
-    // sinon composer vierge pour lancer une session. Toujours disponible.
+    // sinon compose une session neuve. Toujours disponible.
     {
       id: "launch-agent",
       label: agentHasSession ? tAgent("openAgent") : tAgent("menuLaunch"),
       keywords: ["agent", "launch", "lancer", "open", "ouvrir", "code", "ai", "numo"],
       icon: <NumoIcon className="size-4" />,
       shortcut: "⇧A",
-      onSelect: () => setLaunchOpen(true),
+      onSelect: launchAgent,
     },
     // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
     ...(pr && openPr
@@ -1036,25 +1053,6 @@ export function IssueCard({
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />
-      {launchOpen && (
-        // La modal est portalisée mais reste enfant React de la carte : sans ce
-        // garde, un clic dedans (ou sur l'overlay pour fermer) remonterait via
-        // l'arbre React jusqu'à `onClick={onOpen}` et ouvrirait le panneau. On
-        // stoppe donc la propagation (clic + pointerdown côté dnd-kit) ici.
-        <div
-          className="contents"
-          onClick={stop}
-          onPointerDown={stop}
-          onContextMenu={stop}
-        >
-          <AgentChatModal
-            open
-            onOpenChange={setLaunchOpen}
-            issueId={issue.id}
-            issueIdentifier={identifier}
-          />
-        </div>
-      )}
     </div>
   );
 }

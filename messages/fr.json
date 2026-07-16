@@ -972,6 +972,15 @@
     "workingSinceSeconds": "Travail depuis {seconds, plural, one {# seconde} other {# secondes}}",
     "replyPlaceholder": "Répondre à l'agent…",
     "composePlaceholder": "Demande ce que tu veux à l'agent — explorer, expliquer, corriger, implémenter…",
+    "launchPrompt": {
+      "head": "Travaille sur {identifier} : {title}.",
+      "planExists": "Ce ticket a déjà un plan d'implémentation. Suis-le étape par étape, en cochant chaque tâche au fur et à mesure, puis implémente le changement et vérifie ton travail.",
+      "planExistsXl": "Ce ticket a déjà un plan d'implémentation, et c'est une grosse tâche (XL). Relis le plan et affine-le si besoin, puis ARRÊTE-TOI et demande s'il faut commencer l'implémentation maintenant — ne code rien tant que je n'ai pas confirmé.",
+      "xs": "C'est un petit changement bien cadré (XS). Implémente-le directement — inutile d'écrire un plan d'abord. Vérifie ton travail une fois terminé.",
+      "s": "C'est une petite tâche (S). Esquisse d'abord un plan léger seulement si le changement le justifie, puis implémente-le et vérifie ton travail.",
+      "xl": "C'est une grosse tâche (XL). Commence par écrire un plan d'implémentation complet sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Puis ARRÊTE-TOI et demande s'il faut commencer l'implémentation maintenant ; ne code rien tant que je n'ai pas confirmé.",
+      "default": "Commence par écrire un plan d'implémentation clair sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Une fois le plan en place, implémente-le et vérifie ton travail."
+    },
     "openConversation": "Ouvrir la conversation",
     "openAgent": "Ouvrir l'agent",
     "endedPlaceholder": "Cette session n'a pas pu démarrer — lance un nouvel agent.",
@@ -1348,6 +1357,7 @@
     "title": "Agents",
     "emptyState": "Aucune session d'agent pour l'instant. Lancez Numo sur un ticket et elle apparaîtra dans cette liste.",
     "noSelection": "Sélectionnez une session pour ouvrir sa conversation.",
+    "draftBadge": "Nouveau",
     "backToList": "Retour à la liste",
     "openPullRequest": "Ouvrir la pull request",
     "prAvailable": "PR disponible",
