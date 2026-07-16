@@ -11,9 +11,11 @@ import "server-only";
  *  - édition     : edit_file (remplacement de chaîne robuste — cascade opencode,
  *                  cf. edit.ts), write_file (création de fichiers neufs uniquement)
  *  - vérif       : run_command (install/lint/build/tests, git, etc.)
- *  - contrôle    : finish (terminé → ouvre la PR), ask_user (pause)
- * Les commits sont pilotés par le harnais (commit+push au suspend et à la fin) —
- * pas de tool commit exposé, pour garder des commits propres.
+ *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
+ * PAS de tool de fin de tour : le tour se termine quand l'agent répond en texte
+ * (fin naturelle, comme une conversation). Les commits sont pilotés par le harnais
+ * (commit+push au suspend et à chaque fin de tour) — pas de tool commit exposé,
+ * pour garder des commits propres.
  */
 
 export type AgentToolDef = {
@@ -309,45 +311,27 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
-      name: "finish",
+      name: "create_pr",
       description:
-        "Call this when the task is complete and the changes are ready to become a pull request. Provide a concise PR title and a markdown body describing what changed and why. The system commits, pushes the branch, and opens the PR.",
+        "Open the pull request for this ticket's working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. The system commits and pushes your changes first, then opens the PR. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.",
       parameters: {
         type: "object",
         properties: {
-          summary: {
+          title: {
             type: "string",
-            description: "Short summary of what you did (1-3 sentences).",
+            description: "Pull request title. Imperative, concise, in English.",
           },
-          pr_title: {
+          body: {
             type: "string",
-            description: "Pull request title. Imperative, concise.",
-          },
-          pr_body: {
-            type: "string",
-            description: "Pull request description in markdown: what changed, why, how it was verified.",
+            description:
+              "Pull request description in markdown: what changed, why, how it was verified.",
           },
         },
-        required: ["summary"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "ask_user",
-      description:
-        "Ask the user a question and pause when you are blocked by a genuine decision only they can make (ambiguous requirement, missing choice). Do NOT use it for things you can determine from the code. The run pauses until they reply.",
-      parameters: {
-        type: "object",
-        properties: {
-          question: { type: "string", description: "The question to ask the user." },
-        },
-        required: ["question"],
+        required: ["title"],
       },
     },
   },
 ];
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
-export const CONTROL_TOOLS = new Set(["finish", "ask_user", "update_plan"]);
+export const CONTROL_TOOLS = new Set(["update_plan"]);

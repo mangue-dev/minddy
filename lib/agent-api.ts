@@ -21,13 +21,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export type AgentRunStatus =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "canceled"
-  | "needs_input";
+export type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled";
 
 export interface AgentRunSummary {
   id: string;
@@ -50,21 +44,22 @@ export interface AgentRunSummary {
 }
 
 /**
- * Statuts d'un run qui OCCUPE l'issue : l'agent travaille (queued/running) ou il est
- * suspendu en attendant l'utilisateur dans sa conversation (needs_input : ask_user,
- * interruption, erreur). Un seul run actif par issue (MIN-68) : tant qu'il y en a
- * un, on n'en lance pas de nouveau — on ouvre le sien.
+ * Statuts d'un run qui OCCUPE l'issue : l'agent TRAVAILLE (queued/running). Au
+ * repos (`completed`), la session n'occupe plus le ticket — modèle conversationnel :
+ * elle attend simplement le prochain message dans sa conversation. Un seul run au
+ * travail par issue : tant qu'il y en a un, on n'en lance pas de nouveau.
  */
-export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running", "needs_input"];
+export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running"];
 
 export function isAgentRunActive(status: AgentRunStatus): boolean {
   return ACTIVE_AGENT_STATUSES.includes(status);
 }
 
 /**
- * L'agent est-il en train de TRAVAILLER (par opposition au repos `needs_input`) ?
- * Pilote le halo animé des cartes, le polling d'events, et l'affichage du bouton
- * « Interrompre » dans la conversation.
+ * L'agent est-il en train de TRAVAILLER ? Pilote le halo animé des cartes, le
+ * polling d'events, et l'affichage du bouton « Interrompre » dans la conversation.
+ * (Identique à `isAgentRunActive` depuis la fin de `needs_input` — conservé pour
+ * la lisibilité des call-sites : « travaille » vs « occupe le ticket ».)
  */
 export function isAgentRunWorking(status: AgentRunStatus): boolean {
   return status === "queued" || status === "running";
@@ -72,14 +67,11 @@ export function isAgentRunWorking(status: AgentRunStatus): boolean {
 
 /**
  * Ce run précis peut-il être repris à CHAUD (message dans SA conversation) ? Oui
- * même s'il est terminé : son checkpoint et sa sandbox sont conservés, on enchaîne
- * un tour de plus dans le même contexte. Seule une erreur d'amorçage (`failed` :
- * pas de dépôt/modèle) n'a rien à reprendre.
- *
- * ⚠ Ne PAS s'en servir pour décider quelle conversation ouvrir : depuis la sidebar
- * ou la carte, une run terminée ne se rouvre pas — on en lance une NOUVELLE, à
- * froid, avec son propre modèle (MIN-68). C'est `isAgentRunActive` qui répond à
- * « une run occupe-t-elle l'issue ? ».
+ * même au repos : son checkpoint et sa sandbox sont conservés, on enchaîne un tour
+ * de plus dans le même contexte — c'est le geste NORMAL d'une conversation. Seule
+ * une erreur d'amorçage (`failed` : pas de dépôt/modèle) n'a rien à reprendre.
+ * Rappel : seule la DERNIÈRE run de l'issue est reprennable (les runs partagent la
+ * branche) — le serveur refuse les autres (`supersededRun`).
  */
 export function isAgentRunResumable(status: AgentRunStatus): boolean {
   return status !== "failed";
@@ -158,8 +150,8 @@ export async function heartbeatAgentRunApi(runId: string): Promise<void> {
 }
 
 /**
- * Steering d'un run actif (MIN-46) : envoie un message à l'agent (orientation à
- * chaud, ou réponse à un `ask_user` qui reprend le run).
+ * Message à une session (MIN-46) : oriente l'agent à chaud s'il travaille, ou
+ * poursuit la conversation (nouveau tour) si la session est au repos.
  */
 export async function steerAgentRunApi(
   runId: string,
@@ -275,10 +267,10 @@ export async function fetchPrCommentsApi(
 
 /**
  * Une SESSION de l'agent = une issue, et une issue peut avoir plusieurs runs
- * successives (MIN-68). L'endpoint global dédoublonne par issue et renvoie le run
- * REPRÉSENTANT (le plus récent non `failed` : le run actif s'il y en a un, sinon le
- * dernier terminé). Le « titre » de la session est dérivé du titre de l'issue liée
- * (aucun champ propre).
+ * successives (MIN-68). L'endpoint global dédoublonne par issue et renvoie comme
+ * REPRÉSENTANT la DERNIÈRE run en date — le badge de la sidebar reflète l'état de
+ * la dernière session / dernière PR. Le « titre » de la session est dérivé du
+ * titre de l'issue liée (aucun champ propre).
  */
 export interface AgentSessionListItem {
   runId: string;

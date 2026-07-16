@@ -7,27 +7,20 @@ import { getAuthedUser } from "@/lib/server/api-auth";
  * confondus — alimente la page Agents. RLS `agent_runs` = can_access_project → le
  * cookie client suffit, aucun filtre projet manuel.
  *
- * Une SESSION est scoppée à une ISSUE, mais une issue a désormais PLUSIEURS runs
- * successives (MIN-68). On DÉDOUBLONNE donc par `issue_id` en gardant un
- * REPRÉSENTANT : le run le plus récent NON `failed` — c'est-à-dire le run actif s'il
- * y en a un (un run actif interdit tout run plus récent), sinon le dernier run
- * terminé ; à défaut (issue n'ayant que des runs `failed`) le run le plus récent.
- * `runCount` expose la profondeur de l'historique : la conversation de l'issue liste
- * et rend consultables les runs passées. `working` signale qu'un run de l'issue
- * TRAVAILLE (queued/running) — pilote le spinner de la liste.
+ * Une SESSION est scoppée à une ISSUE, mais une issue a PLUSIEURS runs successives
+ * (MIN-68). On DÉDOUBLONNE donc par `issue_id` en gardant comme REPRÉSENTANT la
+ * DERNIÈRE run en date, telle quelle : le badge de la sidebar reflète l'état de la
+ * dernière session / dernière PR du ticket, sans maquillage. `runCount` expose la
+ * profondeur de l'historique : la conversation de l'issue liste et rend
+ * consultables les runs passées via son sélecteur de sessions. `working` signale
+ * qu'un run de l'issue TRAVAILLE (queued/running) — pilote le spinner de la liste.
  */
 
 export const runtime = "nodejs";
 
 const WORKING_STATUSES = ["queued", "running"];
 
-type AgentRunStatus =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "canceled"
-  | "needs_input";
+type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled";
 
 interface RunRow {
   id: string;
@@ -77,10 +70,11 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const rows = (data ?? []) as unknown as RunRow[];
-  // Les lignes arrivent triées par created_at DESC. Pour chaque issue on garde le
-  // 1er run non `failed` rencontré (= le plus récent reprennable) comme
-  // représentant ; à défaut le 1er run vu (le plus récent). `working` = un run
-  // quelconque de l'issue travaille.
+  // Les lignes arrivent triées par created_at DESC : le 1er run vu par issue est la
+  // DERNIÈRE session en date — c'est elle le représentant (badge fidèle à l'état de
+  // la dernière session/PR ; ses `pr_*` portent déjà la PR héritée du ticket, même
+  // si le run a échoué à l'amorçage). `working` = un run quelconque de l'issue
+  // travaille.
   const byIssue = new Map<string, AgentSessionListItem>();
   for (const r of rows) {
     const existing = byIssue.get(r.issue_id);
@@ -106,21 +100,6 @@ export async function GET(request: NextRequest) {
     existing.runCount++;
     // Un run plus ancien peut toujours porter l'info « travaille » de l'issue.
     if (isWorking) existing.working = true;
-    // Promotion du représentant : si l'actuel est `failed` mais qu'on croise un run
-    // reprennable (plus ancien mais non `failed`), il devient le représentant.
-    if (existing.status === "failed" && r.status !== "failed") {
-      existing.runId = r.id;
-      existing.status = r.status;
-      existing.model = r.model;
-      existing.triggered_by = r.triggered_by;
-      existing.pr_number = r.pr_number;
-      existing.pr_url = r.pr_url;
-      existing.pr_state = r.pr_state;
-      // `created_at` n'est PAS repris du nouveau représentant : les lignes arrivent
-      // DESC, donc `r` est plus ANCIEN qu'`existing` et l'écraser ferait reculer la
-      // session dans le tri final. On garde la date du run le plus récent de
-      // l'issue — c'est elle qui date la session.
-    }
   }
 
   // Ordre STABLE par date de création (la plus récente en haut) : contrairement à

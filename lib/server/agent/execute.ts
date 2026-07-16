@@ -35,7 +35,7 @@ import {
 import { AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
 import {
   buildAgentSystemPrompt,
-  buildAgentTaskMessage,
+  buildAgentContextMessage,
   buildInheritedPrMessage,
   type AgentRepoContext,
 } from "./prompt";
@@ -59,24 +59,26 @@ import {
   clearInterrupt,
   hasPendingRunMessages,
   type AgentRun,
-  type AgentRunStatus,
   type AgentCheckpoint,
 } from "./runs";
 
 /**
- * Exécute UN chunk d'un RUN d'agent (MIN-46 + MIN-68). Réveille (snapshot
- * persistant) ou clone le Sandbox, rehydrate le checkpoint, fait tourner la boucle
- * jusqu'à la soft-deadline, puis :
+ * Exécute UN chunk d'un RUN d'agent (MIN-46 + MIN-68, modèle CONVERSATIONNEL).
+ * Réveille (snapshot persistant) ou clone le Sandbox, rehydrate le checkpoint,
+ * fait tourner la boucle jusqu'à la soft-deadline, puis :
  *   - suspended  → commit+push WIP, checkpoint persisté, run re-`queued` (continue
  *                  le tour, en process ou via l'auto-invoke) ;
- *   - completed  → fin de tour : commit+push, PR ouverte/mise à jour S'IL Y A un
- *                  diff, puis run `completed` — le tour est fini, l'issue est libre
- *                  d'accueillir une nouvelle run froide ;
- *   - needs_input → `ask_user` / interruption / erreur LLM : REPOS. La run reste
- *                  ACTIVE (elle attend l'utilisateur DANS sa conversation) et bloque
- *                  donc toute nouvelle run sur l'issue.
- * Un run terminé (`completed`) reste reprennable à CHAUD depuis le composer de sa
- * conversation (checkpoint + snapshot conservés) ; c'est le seul chemin de reprise.
+ *   - completed  → fin de tour NATURELLE (l'agent a répondu) : commit+push de ce
+ *                  qui a changé. AUCUNE PR n'est créée ici — si la session en suit
+ *                  déjà une, le push l'a mise à jour (et on la ROUVRE si elle avait
+ *                  été refusée) ; en créer une est la décision de l'agent (tool
+ *                  `create_pr`) ou de l'utilisateur. Run → `completed` (repos).
+ *   - interrupted / erreur LLM → même REPOS `completed` (checkpoint conservé,
+ *                  error_message le cas échéant) : la session attend simplement le
+ *                  prochain message de l'utilisateur.
+ * Au repos, une session ne bloque PLUS le ticket : seuls queued/running comptent
+ * comme « un agent travaille ». Elle reste reprennable à CHAUD depuis le composer
+ * de sa conversation (checkpoint + snapshot conservés).
  * Seule une erreur d'AMORÇAGE (repo/modèle) → `failed`. Le drain appelle après claim.
  */
 
@@ -89,12 +91,7 @@ const MAX_WALL_CLOCK_MS = 60 * 60_000;
 /** Taille max du checkpoint sérialisé. */
 const MAX_CHECKPOINT_BYTES = 8_000_000;
 
-export type ExecuteOutcome =
-  | "completed"
-  | "suspended"
-  | "needs_input"
-  | "interrupted"
-  | "failed";
+export type ExecuteOutcome = "completed" | "suspended" | "interrupted" | "failed";
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -112,10 +109,22 @@ function toNum(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** Exécuteur du tool `create_pr` (fourni par executeAgentRun, qui a le contexte git/PR). */
+type CreatePrHandler = (args: {
+  title: string;
+  body?: string;
+}) => Promise<{ result: unknown; success: boolean }>;
+
 /** Les tools « métier » de l'agent, exécutés dans le Sandbox du run. */
-function makeExecTool(sandbox: Sandbox): ExecuteAgentTool {
+function makeExecTool(sandbox: Sandbox, createPr: CreatePrHandler): ExecuteAgentTool {
   return async (name, args) => {
     switch (name) {
+      case "create_pr": {
+        return await createPr({
+          title: String(args.title ?? "").trim(),
+          body: typeof args.body === "string" ? args.body : undefined,
+        });
+      }
       case "read_file": {
         const win = await readWorkFileWindow(sandbox, String(args.path ?? ""), {
           offset: toNum(args.offset),
@@ -370,84 +379,15 @@ async function buildInheritedPrContext(
 }
 
 /**
- * La branche du run a déjà été fusionnée pendant son tour : il n'y a plus de PR à
- * mettre à jour et on refuse d'en ouvrir une nouvelle depuis une branche livrée.
+ * Message de commit d'une fin de tour : la première ligne de la réponse de l'agent
+ * (nettoyée du markdown, bornée), sinon un générique. Les PR sont squash-mergées
+ * par défaut — le message n'a pas besoin d'être parfait, juste lisible.
  */
-class MergedBranchError extends Error {
-  prNumber: number;
-  constructor(prNumber: number) {
-    super(`Pull request #${prNumber} is already merged`);
-    this.name = "MergedBranchError";
-    this.prNumber = prNumber;
-  }
-}
-
-/** Message de fin de tour quand la branche a été fusionnée sous les pieds du run. */
-const MERGED_BRANCH_STRINGS: Record<Locale, (n: number) => string> = {
-  fr: (n) =>
-    `La pull request #${n} a été fusionnée pendant ce tour : le travail de cette branche est livré. Aucune nouvelle pull request n'a été ouverte — lance un nouvel agent pour continuer, il repartira d'une branche neuve.`,
-  en: (n) =>
-    `Pull request #${n} was merged during this turn: this branch's work is shipped. No new pull request was opened — launch a new agent to carry on, it will start from a fresh branch.`,
-};
-
-/**
- * PR du run après le push : l'héritée mise à jour (MIN-68) — rouverte si elle avait
- * été REFUSÉE, puisque la run vient de répondre aux objections — ou une PR neuve.
- * Une PR déjà mergée n'est pas réutilisable : on en ouvre une nouvelle sur la
- * branche (cas de course — la PR a été mergée après la création du run).
- *
- * Toute défaillance sur la PR héritée (illisible, réouverture refusée parce que sa
- * branche tête avait été supprimée à la fermeture puis recréée par notre push…)
- * retombe sur l'ouverture d'une PR neuve : le travail vient d'être poussé, il DOIT
- * finir sous une pull request — sans ce repli, l'erreur remonterait au 422 « aucune
- * modification » et le run se conclurait sur « rien produit » avec des commits
- * orphelins.
- */
-async function openOrUpdatePullRequest(opts: {
-  token: string;
-  repoFullName: string;
-  inheritedNumber: number | null;
-  head: string;
-  base: string;
-  title: string;
-  body: string;
-}): Promise<PullRequestRef> {
-  if (opts.inheritedNumber != null) {
-    const current = await getPullRequest({
-      token: opts.token,
-      repoFullName: opts.repoFullName,
-      number: opts.inheritedNumber,
-    }).catch(() => null);
-    // PR déjà FUSIONNÉE : le travail de cette branche est livré. En ouvrir une
-    // nouvelle DEPUIS elle ressusciterait un cycle de revue sur du fini (et ferait
-    // régresser l'issue de `done` à `in_review`). Une run ne devrait jamais arriver
-    // là — /steer refuse de réveiller une run mergée, et `inheritablePrForIssue`
-    // n'hérite jamais d'une PR mergée — mais si la PR a été mergée pendant le tour,
-    // on s'arrête ici plutôt que de polluer le dépôt : le tour se conclut sans PR.
-    if (current?.merged) throw new MergedBranchError(opts.inheritedNumber);
-    if (current && !current.merged) {
-      // Le push a déjà mis la PR à jour (GitHub suit la tête de branche) : il ne
-      // reste qu'à la remettre en revue si elle avait été fermée.
-      if (current.state !== "closed") return current;
-      const reopened = await reopenPullRequest({
-        token: opts.token,
-        repoFullName: opts.repoFullName,
-        number: opts.inheritedNumber,
-      }).catch((err) => {
-        console.error("[agent-execute] PR reopen failed:", (err as Error).message);
-        return null;
-      });
-      if (reopened) return reopened;
-    }
-  }
-  return await ensurePullRequest({
-    token: opts.token,
-    repoFullName: opts.repoFullName,
-    head: opts.head,
-    base: opts.base,
-    title: opts.title,
-    body: opts.body,
-  });
+export function commitMessageFromReply(reply: string, identifier: string): string {
+  const firstLine = reply.split("\n").find((l) => l.trim())?.trim() ?? "";
+  const cleaned = firstLine.replace(/[#*_`>]+/g, "").trim();
+  if (cleaned.length >= 8) return cleaned.length <= 72 ? cleaned : `${cleaned.slice(0, 69)}…`;
+  return `wip(${identifier}): agent update`;
 }
 
 export async function executeAgentRun(
@@ -476,7 +416,7 @@ export async function executeAgentRun(
       await clearInterrupt(run.id);
       const pending = await hasPendingRunMessages(run.id);
       await stampRun(run.id, {
-        status: pending ? "queued" : "needs_input",
+        status: pending ? "queued" : "completed",
         ...(pending ? { not_before: new Date().toISOString() } : {}),
         continuations: 0,
         attempts: 0,
@@ -518,14 +458,16 @@ export async function executeAgentRun(
       branch_name: workBranch,
     });
 
-    // Rehydrate ou amorce l'historique.
+    // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
+    // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
+    // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
     let messages: AgentChatMessage[];
     let usageSeqStart = run.checkpoint?.usageSeq ?? run.continuations * 1000;
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
     } else {
       const system = buildAgentSystemPrompt({ locale: commentLocale });
-      const taskMsg = buildAgentTaskMessage({
+      const contextMsg = buildAgentContextMessage({
         issue: {
           identifier: issue.identifier,
           title: issue.title,
@@ -534,26 +476,174 @@ export async function executeAgentRun(
         },
         repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
         projectName: issue.projectName,
-        extraInstructions: run.prompt, // injecté UNE fois (plus de double-injection)
       });
       messages = [
         { role: "system", content: system },
-        { role: "user", content: taskMsg },
+        { role: "user", content: contextMsg },
       ];
-      // Run FROIDE héritant d'une PR (MIN-68) : elle n'a aucun checkpoint, mais la
-      // branche porte déjà du travail. On lui donne sa seule mémoire de ce passé —
-      // résumé de la run précédente, PR, fil de review — pour qu'elle itère au lieu
-      // de tout refaire.
+      // Session FROIDE héritant d'une PR (MIN-68) : elle n'a aucun checkpoint, mais
+      // la branche porte déjà du travail. On lui donne sa seule mémoire de ce passé —
+      // résumé de la session précédente, PR, fil de review — pour qu'elle itère au
+      // lieu de tout refaire.
       const inheritedPr = await buildInheritedPrContext(run, {
         token: target.token,
         repoFullName: target.repoFullName,
         repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
       });
       if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
-      // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après la tâche.
+      // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après le contexte.
       const repoInstructions = await readRepoInstructions(sandbox);
       if (repoInstructions) messages.push({ role: "user", content: repoInstructions });
+      // La demande du lanceur, en dernier : c'est À ELLE que l'agent répond.
+      if (run.prompt?.trim()) messages.push({ role: "user", content: run.prompt.trim() });
     }
+
+    // État PR de la session, MUTÉ pendant le tour (create_pr, réouverture au push) :
+    // la fin de tour lit l'état à jour, pas celui figé au claim.
+    const prState: { number: number | null; url: string | null; state: AgentRun["pr_state"] } = {
+      number: run.pr_number,
+      url: run.pr_url,
+      state: run.pr_state,
+    };
+
+    /** Enregistre une PR ouverte/rouverte : état local + stamp + statut d'issue +
+     *  event live + commentaire d'issue (le SEUL commentaire du nouveau modèle). */
+    const registerPr = async (
+      pr: PullRequestRef,
+      kind: "opened" | "reopened",
+    ): Promise<void> => {
+      prState.number = pr.number;
+      prState.url = pr.url;
+      prState.state = pr.merged ? "merged" : ((pr.state as AgentRun["pr_state"]) ?? "open");
+      await emit("pr_opened", { number: pr.number, url: pr.url });
+      await stampRun(run.id, {
+        pr_number: pr.number,
+        pr_url: pr.url,
+        pr_state: prState.state,
+      });
+      if (run.created_by) {
+        await syncIssueStatusFromPr({
+          issueId: run.issue_id,
+          actorId: run.created_by,
+          prState: prState.state,
+        });
+      }
+      await postPrComment(run, issue.identifier, kind, pr.url, commentLocale);
+    };
+
+    /**
+     * Tool `create_pr` : la création de PR est une DÉCISION (de l'agent ou de
+     * l'utilisateur), plus un automatisme de fin de tour. Pousse d'abord le travail
+     * du tour, puis : PR déjà vivante → no-op informatif (le push l'a mise à jour) ;
+     * PR refusée → réouverture (règle produit : on réitère la dernière PR, jamais de
+     * doublon) ; sinon → création. Une PR mergée n'est jamais réutilisée.
+     */
+    const createPr: CreatePrHandler = async ({ title, body }) => {
+      const prTitle = title || `${issue.identifier}: ${issue.title}`;
+      const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+      try {
+        await commitAndPush(sb, { authUrl: fresh.authUrl, workBranch, message: prTitle });
+      } catch (err) {
+        return { result: { error: `push failed: ${(err as Error).message}` }, success: false };
+      }
+      if (prState.number != null) {
+        const current = await getPullRequest({
+          token: fresh.token,
+          repoFullName: fresh.repoFullName,
+          number: prState.number,
+        }).catch(() => null);
+        if (current?.merged) {
+          return {
+            result: {
+              error: `Pull request #${prState.number} is already merged — this branch's work is shipped. A new session on this ticket will start a fresh branch and pull request.`,
+            },
+            success: false,
+          };
+        }
+        if (current && current.state !== "closed") {
+          return {
+            result: {
+              number: current.number,
+              url: current.url,
+              note: "A pull request already exists for this branch — your pushes update it automatically; nothing was created.",
+            },
+            success: true,
+          };
+        }
+        if (current && current.state === "closed") {
+          const reopened = await reopenPullRequest({
+            token: fresh.token,
+            repoFullName: fresh.repoFullName,
+            number: prState.number,
+          }).catch((err) => {
+            console.error("[agent-execute] PR reopen failed:", (err as Error).message);
+            return null;
+          });
+          if (reopened) {
+            await registerPr(reopened, "reopened");
+            return {
+              result: {
+                number: reopened.number,
+                url: reopened.url,
+                note: "The rejected pull request was reopened with the new work.",
+              },
+              success: true,
+            };
+          }
+        }
+        // PR illisible / réouverture impossible (branche tête supprimée puis
+        // recréée par notre push…) → on retombe sur une création propre.
+      }
+      const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · issue ${issue.identifier}`;
+      try {
+        const pr = await ensurePullRequest({
+          token: fresh.token,
+          repoFullName: fresh.repoFullName,
+          head: workBranch,
+          base: baseBranch,
+          title: prTitle,
+          body: prBody,
+        });
+        await registerPr(pr, "opened");
+        return { result: { number: pr.number, url: pr.url }, success: true };
+      } catch (err) {
+        if (err instanceof GithubApiError && err.status === 422) {
+          return {
+            result: {
+              error:
+                "The branch has no changes compared to the base branch — there is nothing to open a pull request for.",
+            },
+            success: false,
+          };
+        }
+        return { result: { error: (err as Error).message }, success: false };
+      }
+    };
+
+    /**
+     * La session suit une PR REFUSÉE et un push vient de commiter du travail → on
+     * la ROUVRE (règle produit : on réitère toujours la dernière PR du ticket,
+     * jamais de doublon). Appelé après CHAQUE push qui commite — fin de tour ET
+     * push WIP de mi-tour : sur un tour multi-chunks, ce sont les WIP qui portent
+     * les commits, et le push final (arbre propre, committed=false) ne verrait
+     * rien. Une PR mergée n'est jamais ressuscitée (le reopen échoue → on n'insiste
+     * pas). Best-effort.
+     */
+    const reopenIfRejectedWorkPushed = async (
+      pushed: { committed: boolean } | null,
+      token: string,
+    ): Promise<void> => {
+      if (!pushed?.committed || prState.number == null || prState.state !== "closed") return;
+      const reopened = await reopenPullRequest({
+        token,
+        repoFullName: target.repoFullName,
+        number: prState.number,
+      }).catch((err) => {
+        console.error("[agent-execute] PR reopen on push failed:", (err as Error).message);
+        return null;
+      });
+      if (reopened && !reopened.merged) await registerPr(reopened, "reopened");
+    };
 
     const { apiKey, baseUrl, provider } = await resolveAgentApiKey(run.created_by);
     // Fenêtre de contexte du modèle (OpenRouter) → seuil de compaction adapté.
@@ -578,7 +668,7 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       contextWindow,
-      execTool: makeExecTool(sandbox),
+      execTool: makeExecTool(sandbox, createPr),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).
@@ -593,7 +683,7 @@ export async function executeAgentRun(
     const checkpoint: AgentCheckpoint = { messages: result.messages, usageSeq: result.usageSeqEnd };
     const nowIso = new Date().toISOString();
 
-    // Champs communs à toute mise au REPOS (fin de tour / ask_user / interruption /
+    // Champs communs à toute mise au REPOS (fin de tour / interruption / erreur /
     // budget épuisé) : run reprennable à chaud, microVM gardée chaude (le reaper la
     // coupera après ~5 min d'inactivité), budget de tour remis à zéro.
     const restFields = {
@@ -614,112 +704,65 @@ export async function executeAgentRun(
       interrupt_requested: false,
     } satisfies Partial<Parameters<typeof stampRun>[1]>;
 
-    // Enregistre le REPOS. Deux repos distincts (MIN-68) :
-    //   • `completed` — le tour est FINI (l'agent a appelé `finish`). Le run n'est
-    //     plus actif : l'issue peut accueillir une nouvelle run froide. Il reste
-    //     reprennable à chaud depuis le composer de SA conversation.
-    //   • `needs_input` — le run est SUSPENDU et attend l'utilisateur dans sa
-    //     conversation (ask_user, interruption, erreur, budget épuisé). Il reste
-    //     ACTIF, donc bloque toute nouvelle run sur l'issue.
+    // Enregistre le REPOS. Il n'y a plus qu'UN repos (modèle conversationnel) :
+    // `completed` — la session attend le prochain message de l'utilisateur dans sa
+    // conversation, et ne bloque PLUS le ticket (seuls queued/running l'occupent).
+    // Elle reste reprennable à chaud depuis son composer (checkpoint + snapshot).
     // Si un message de steering est arrivé APRÈS la dernière frontière de round
-    // (fenêtre de finalisation : commit+push+PR), on RE-QUEUE au lieu de reposer →
+    // (fenêtre de finalisation : commit+push), on RE-QUEUE au lieu de reposer →
     // le drain relance la boucle qui le draine aussitôt.
     const restStamp = async (
       extra: Partial<Parameters<typeof stampRun>[1]>,
-      restStatus: AgentRunStatus = "needs_input",
     ): Promise<void> => {
       const pending = await hasPendingRunMessages(run.id);
       await stampRun(run.id, {
-        status: pending ? "queued" : restStatus,
+        status: pending ? "queued" : "completed",
         ...restFields,
         ...(pending ? { not_before: new Date().toISOString() } : {}),
         ...extra,
       });
     };
 
-    // ── Fin de tour : commit + PR (si diff) → run `completed` ─────────────────
+    // ── Fin de tour NATURELLE : push du travail, PAS de PR automatique ────────
     if (result.status === "completed") {
-      const finish = result.finish ?? { summary: "Changes applied." };
-      const freshTarget = await resolveRepoCloneTarget(run.project_id);
+      const reply = result.reply?.trim() ?? "";
+      const freshTarget = await resolveRepoCloneTarget(run.project_id).catch(() => null);
       const authUrl = freshTarget?.authUrl ?? target.authUrl;
       const token = freshTarget?.token ?? target.token;
 
-      const prTitle = finish.prTitle?.trim() || `${issue.identifier}: ${issue.title}`;
-      const prBody = `${finish.prBody?.trim() || finish.summary}\n\n---\n🤖 Généré par l'agent numo (minddy) · issue ${issue.identifier}`;
+      // Pousse ce que le tour a changé (no-op propre sans changement). Si la session
+      // suit une PR, GitHub la met à jour tout seul — aucune création ici : ouvrir
+      // une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
+      const pushed = await commitAndPush(sandbox, {
+        authUrl,
+        workBranch,
+        message: commitMessageFromReply(reply, issue.identifier),
+      }).catch((err) => {
+        // Un push raté ne perd rien : le travail reste dans le snapshot, re-poussé
+        // au tour suivant.
+        console.error("[agent-execute] turn-end push failed:", (err as Error).message);
+        return null;
+      });
 
-      await commitAndPush(sandbox, { authUrl, workBranch, message: prTitle });
+      await reopenIfRejectedWorkPushed(pushed, token);
 
-      try {
-        const pr = await openOrUpdatePullRequest({
-          token,
-          repoFullName: target.repoFullName,
-          inheritedNumber: run.pr_number,
-          head: workBranch,
-          base: baseBranch,
-          title: prTitle,
-          body: prBody,
-        });
-        await emit("pr_opened", { number: pr.number, url: pr.url });
-        await postSummaryComment(run, issue.identifier, finish.summary, pr.url, commentLocale);
-        await restStamp(
-          {
-            checkpoint,
-            pr_number: pr.number,
-            pr_url: pr.url,
-            pr_state: (pr.state as AgentRun["pr_state"]) ?? "open",
-            outcome: finish.summary,
-          },
-          "completed",
-        );
-        // PR ouverte/mise à jour → l'issue passe en revue (MIN-46). Best-effort.
-        if (run.created_by) {
-          await syncIssueStatusFromPr({
-            issueId: run.issue_id,
-            actorId: run.created_by,
-            prState: (pr.state as AgentRun["pr_state"]) ?? "open",
-          });
-        }
-        return "completed";
-      } catch (err) {
-        // Branche fusionnée sous les pieds du run → fin de tour SANS PR : on ne
-        // rouvre pas de cycle de revue sur du travail livré, et on ne touche pas au
-        // statut de l'issue (elle reste `done`).
-        if (err instanceof MergedBranchError) {
-          const message = (MERGED_BRANCH_STRINGS[commentLocale] ?? MERGED_BRANCH_STRINGS.en)(
-            err.prNumber,
-          );
-          await emit("error", { message });
-          await postSummaryComment(run, issue.identifier, message, null, commentLocale);
-          await restStamp({ checkpoint, outcome: finish.summary }, "completed");
-          return "completed";
-        }
-        // Aucune modification produite (422 « No commits between… ») → fin de tour
-        // sans PR.
-        if (err instanceof GithubApiError && err.status === 422) {
-          await emit("summary", { text: "No changes were produced." });
-          await postSummaryComment(run, issue.identifier, finish.summary, null, commentLocale);
-          await restStamp({ checkpoint, outcome: finish.summary }, "completed");
-          return "completed";
-        }
-        throw err;
-      }
+      // `outcome` = la dernière réponse de la session : c'est elle qu'une future
+      // session froide recevra comme résumé du travail précédent.
+      await restStamp({ checkpoint, outcome: reply ? cap(reply, 4000) : null });
+      return "completed";
     }
 
-    // ── needs_input / interrupted / suspended : push WIP + persiste le checkpoint ─
-    await commitAndPush(sandbox, {
+    // ── interrupted / erreur / suspended : push WIP + persiste le checkpoint ──
+    const wipPushed = await commitAndPush(sandbox, {
       authUrl: target.authUrl,
       workBranch,
       message: `wip(${issue.identifier}): chunk ${run.continuations + 1}`,
     }).catch((err) => {
       // Un push raté ne doit pas perdre le checkpoint (l'état repo se re-poussera au chunk suivant).
       console.error("[agent-execute] WIP push failed:", (err as Error).message);
+      return null;
     });
-
-    // ask_user → REPOS (attend la réponse de l'utilisateur).
-    if (result.status === "needs_input") {
-      await restStamp({ checkpoint, outcome: result.question ?? null });
-      return "needs_input";
-    }
+    await reopenIfRejectedWorkPushed(wipPushed, target.token);
 
     // Erreur LLM fatale → REPOS reprennable. L'event d'erreur a déjà été émis par la
     // boucle ; le checkpoint (dont un éventuel steering injecté ce round) est conservé
@@ -729,7 +772,7 @@ export async function executeAgentRun(
         checkpoint,
         error_message: result.errorMessage ? cap(result.errorMessage, 1000) : null,
       });
-      return "needs_input";
+      return "completed";
     }
 
     // « Interrompre » → REPOS (round partiel déjà jeté par la boucle).
@@ -764,7 +807,7 @@ export async function executeAgentRun(
         message: "Tour trop long (budget épuisé) — envoie un message pour continuer.",
       });
       await restStamp({ checkpoint });
-      return "needs_input";
+      return "completed";
     }
 
     // Continuation du MÊME tour : re-queue immédiat (window_started_at conservé).
@@ -798,7 +841,7 @@ export async function executeAgentRun(
     // renvoyer un message pour reprendre.
     await clearInterrupt(run.id).catch(() => {});
     await stampRun(run.id, {
-      status: "needs_input",
+      status: "completed",
       error_message: cap(message, 1000),
       continuations: 0,
       // Comme `restFields` : ce run revient au repos sain, son budget de reprise sur
@@ -811,23 +854,25 @@ export async function executeAgentRun(
       last_activity_at: new Date().toISOString(),
       interrupt_requested: false,
     });
-    return "needs_input";
+    return "completed";
   }
 }
 
 const COMMENT_STRINGS: Record<
   Locale,
-  { header: (id: string) => string; viewPr: string; noChanges: string }
+  { header: (id: string) => string; opened: string; reopened: string; viewPr: string }
 > = {
   fr: {
     header: (id) => `Agent numo — ${id}`,
+    opened: "Pull request ouverte.",
+    reopened: "Pull request rouverte avec le nouveau travail.",
     viewPr: "Voir la pull request",
-    noChanges: "Aucune modification produite.",
   },
   en: {
     header: (id) => `Numo agent — ${id}`,
+    opened: "Pull request opened.",
+    reopened: "Pull request reopened with the new work.",
     viewPr: "View the pull request",
-    noChanges: "No changes were produced.",
   },
 };
 
@@ -859,21 +904,24 @@ async function resolveRunLocale(run: AgentRun): Promise<Locale> {
   return defaultLocale;
 }
 
-/** Poste le résumé du run (+ lien PR) en commentaire d'issue, attribué à Numo. */
-async function postSummaryComment(
+/**
+ * Poste un commentaire d'issue sur ÉVÉNEMENT PR uniquement (création/réouverture),
+ * attribué à Numo. Les tours de conversation ordinaires ne commentent plus le
+ * ticket : tout vit dans la conversation de la session.
+ */
+async function postPrComment(
   run: AgentRun,
   identifier: string,
-  summary: string,
-  prUrl: string | null,
+  kind: "opened" | "reopened",
+  prUrl: string,
   locale: Locale,
 ): Promise<void> {
   if (!run.created_by) return;
   try {
     const service = getServiceClient();
     const s = COMMENT_STRINGS[locale] ?? COMMENT_STRINGS.en;
-    const body = prUrl
-      ? `**${s.header(identifier)}**\n\n${summary}\n\n🔗 [${s.viewPr}](${prUrl})`
-      : `**${s.header(identifier)}**\n\n${summary}\n\n_${s.noChanges}_`;
+    const label = kind === "reopened" ? s.reopened : s.opened;
+    const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr}](${prUrl})`;
     await service.from("comments").insert({
       issue_id: run.issue_id,
       author_id: run.created_by,
@@ -881,6 +929,6 @@ async function postSummaryComment(
       via_assistant: true,
     });
   } catch (err) {
-    console.error("[agent-execute] summary comment failed:", (err as Error).message);
+    console.error("[agent-execute] PR comment failed:", (err as Error).message);
   }
 }

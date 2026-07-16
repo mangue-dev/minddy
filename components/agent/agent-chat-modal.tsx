@@ -27,8 +27,9 @@ import { AgentConversation } from "./agent-conversation";
  * en live / issue ciblée en compose) et tout le comportement viennent du cœur.
  *
  * `initialRunId` ouvre une run précise (« Ouvrir la conversation »). Sans lui, la
- * modal ouvre la run active de l'issue, ou compose une NOUVELLE run à froid — c'est
- * la modal du bouton « Lancer un agent » (MIN-68).
+ * modal ouvre la DERNIÈRE session de l'issue (conversation qui se poursuit) et ne
+ * compose une session neuve que si l'issue n'en a aucune — c'est la modal du
+ * bouton « Lancer un agent ».
  */
 export function AgentChatModal({
   open,
@@ -36,14 +37,17 @@ export function AgentChatModal({
   issueId,
   issueIdentifier,
   initialRunId = null,
+  compose = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issueId: string;
-  /** Identifiant lisible (MIN-42) — pré-écrit dans le prompt en phase compose. */
+  /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
   issueIdentifier: string;
-  /** Ouvre CETTE run (sinon : run active de l'issue, à défaut nouvelle run). */
+  /** Ouvre CETTE run (sinon : session au travail, à défaut la dernière session). */
   initialRunId?: string | null;
+  /** Force la phase compose (« Lancer un NOUVEL agent »). */
+  compose?: boolean;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
@@ -71,6 +75,7 @@ export function AgentChatModal({
           issueId={issueId}
           issueIdentifier={issueIdentifier}
           initialRunId={initialRunId}
+          initialCompose={compose}
           headerActions={
             <>
               <Tooltip>

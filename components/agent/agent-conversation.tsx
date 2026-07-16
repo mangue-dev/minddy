@@ -44,17 +44,18 @@ const AGENT_ERROR_KEYS: Record<string, string> = {
  * de la modal pour être hébergé aussi bien dans le `Sheet` flottant (AgentChatModal)
  * que DIRECTEMENT dans la page Agents (liste/détail, sans modal).
  *
- * Une issue porte une SUITE de runs, dont une seule peut être active. Ce composant
- * tient les deux modes de (re)lancement, qui se distinguent par le POINT D'ENTRÉE :
+ * Une issue porte une SUITE de sessions, dont une seule peut TRAVAILLER à la fois.
+ * Ce composant tient les deux modes, qui se distinguent par le POINT D'ENTRÉE :
  *
- *  • FROID (`compose`) — aucune run active, et aucune run explicitement ouverte :
- *    intro + composer pré-écrit « Travaille sur MIN-42 » + picker de modèle. Envoyer
- *    lance une run NEUVE, qui héritera côté serveur de la branche/PR de l'issue.
- *    C'est ce que voient la sidebar, le clic droit et « demander des changements ».
- *  • CHAUD (`live`) — une run est ouverte (active par défaut, ou choisie dans
- *    l'historique) : le fil est son flux d'événements et le composer lui parle
- *    DIRECTEMENT (`/steer`), dans son contexte. Même terminée, une run reste
- *    reprennable ainsi — c'est le seul chemin de reprise à chaud.
+ *  • CHAUD (`live`) — LE MODE PAR DÉFAUT dès qu'une session existe : on ouvre la
+ *    dernière session de l'issue (ou celle choisie dans le sélecteur) ; le fil est
+ *    son flux d'événements et le composer lui parle DIRECTEMENT (`/steer`), dans
+ *    son contexte. Au repos, la conversation se POURSUIT ainsi, naturellement —
+ *    comme un chat.
+ *  • FROID (`compose`) — aucune session sur l'issue, ou « Lancer un nouvel agent »
+ *    explicitement demandé : composer VIERGE (l'utilisateur dit ce qu'il veut, pas
+ *    de but pré-écrit) + picker de modèle. Envoyer lance une session NEUVE, qui
+ *    héritera côté serveur de la branche/PR de l'issue.
  *
  * Tant que le composant est `active`, un heartbeat rafraîchit l'horloge d'inactivité
  * du run pour que la sandbox ne soit pas coupée pendant qu'on lit ou écrit.
@@ -68,19 +69,25 @@ export function AgentConversation({
   issueId,
   issueIdentifier,
   initialRunId = null,
+  initialCompose = false,
   active = true,
   headerTitle,
   headerActions,
 }: {
   issueId: string;
-  /** Identifiant lisible (MIN-42) — pré-écrit dans le prompt en phase compose. */
+  /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
   issueIdentifier: string;
   /**
    * Ouvre CETTE run (le panneau d'issue et la page Agents désignent la dernière).
-   * Absent → on ouvre la run ACTIVE de l'issue, et à défaut on compose une nouvelle
-   * run froide : c'est ce que veut un point d'entrée « lancer un agent ».
+   * Absent → on ouvre la session qui TRAVAILLE, à défaut la DERNIÈRE session de
+   * l'issue (la conversation se poursuit), et sans aucune session on compose.
    */
   initialRunId?: string | null;
+  /**
+   * Force la phase compose à l'ouverture (« Lancer un NOUVEL agent ») même si
+   * l'issue a déjà des sessions au repos.
+   */
+  initialCompose?: boolean;
   /** Le composant est-il visible/vivant ? Gate la query et le heartbeat. */
   active?: boolean;
   /** Bloc de gauche de l'en-tête (défaut : modèle en live / issue en compose). */
@@ -119,7 +126,7 @@ export function AgentConversation({
   const [launched, setLaunched] = useState<AgentRunSummary | null>(null);
   // « Lancer un nouvel agent » demandé explicitement : force la phase compose même
   // si l'issue a des runs passées (sinon on rouvrirait la dernière).
-  const [composing, setComposing] = useState(false);
+  const [composing, setComposing] = useState(initialCompose);
   // Messages envoyés dont l'écho serveur n'est pas encore arrivé (bulles optimistes).
   const [pendingMessages, setPendingMessages] = useState<string[]>([]);
   // 1er message d'une session en cours de création : le POST de lancement fait les
@@ -129,8 +136,8 @@ export function AgentConversation({
   const [launchText, setLaunchText] = useState<string | null>(null);
   useEffect(() => {
     setSelectedId(initialRunId);
-    setComposing(false);
-  }, [initialRunId]);
+    setComposing(initialCompose);
+  }, [initialRunId, initialCompose]);
 
   const { runs, loading } = useIssueAgentRunsQuery(active ? issueId : null);
   // La run tout juste lancée est active mais pas encore dans `runs` : sans elle, on
@@ -138,13 +145,15 @@ export function AgentConversation({
   const knownRuns =
     launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
-  // Résolution de la run affichée. Une run TERMINÉE n'est jamais reprise d'office :
-  // sans run désignée ni run active, on compose une nouvelle run froide (MIN-68).
+  // Résolution de la session affichée : celle désignée, sinon celle qui travaille,
+  // sinon la DERNIÈRE session de l'issue — une conversation au repos se POURSUIT
+  // (modèle conversationnel), elle ne retombe plus sur un composer vierge. Compose
+  // seulement sans aucune session, ou sur demande explicite (« nouvel agent »).
   const liveRun = composing
     ? null
     : selectedId
       ? knownRuns.find((r) => r.id === selectedId) ?? null
-      : activeRun;
+      : activeRun ?? knownRuns[0] ?? null;
   const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
   // `runs` arrive trié du plus récent au plus ancien : runs[0] est la dernière run.
   // La run qu'on vient de lancer compte AUSSI comme la dernière : entre le POST et
@@ -225,7 +234,7 @@ export function AgentConversation({
     }
   };
 
-  // Message au repos : relance l'agent (nouveau tour) ou répond à un `ask_user`.
+  // Message au repos : poursuit la conversation (nouveau tour dans le même contexte).
   const steer = async (message: string) => {
     if (!liveRun) return;
     const text = message.trim();
@@ -436,7 +445,6 @@ export function AgentConversation({
               onSend={(message) => void launch(message)}
               disabled={launching}
               hideAttach
-              initialValue={t("composeDefaultPrompt", { id: issueIdentifier })}
               placeholder={t("composePlaceholder")}
               leadingControls={
                 <ModelCombobox

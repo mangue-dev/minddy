@@ -20,11 +20,11 @@ export const runtime = "nodejs";
 // PAS en train de retravailler la PR — sinon la PR resterait « en cours » pour
 // toujours et les actions merge/reject seraient bloquées indéfiniment.
 const WORKING_STATUSES = ["queued", "running"];
-// Un run OCCUPE l'issue (MIN-68) : il travaille, ou il est suspendu en attente de
-// l'utilisateur. Tant qu'il y en a un, aucune nouvelle run ne peut être lancée —
-// « demander des changements » est donc indisponible (le serveur renvoie 409).
-// Distinct de WORKING_STATUSES : merger/refuser une PR reste possible dans ce cas.
-const ACTIVE_STATUSES = ["queued", "running", "needs_input"];
+// Un run OCCUPE l'issue (MIN-68) : il TRAVAILLE. Au repos (`completed`), une
+// session n'occupe plus le ticket (modèle conversationnel). Tant qu'un run
+// travaille, aucune nouvelle run ne peut être lancée — « demander des
+// changements » est donc indisponible (le serveur renvoie 409).
+const ACTIVE_STATUSES = ["queued", "running"];
 
 interface RunRow {
   id: string;

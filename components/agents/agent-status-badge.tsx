@@ -81,7 +81,7 @@ export function AgentStatusBadge({
       </Badge>
     );
   }
-  // Repos sans PR (needs_input, ou completed sans changement) → en attente.
+  // Session au repos sans PR → conversation prête à continuer.
   return (
     <Badge variant="outline" className={className}>
       {t("statusWaiting")}

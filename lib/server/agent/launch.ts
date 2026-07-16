@@ -14,7 +14,6 @@ import {
   inheritablePrForIssue,
   insertRunMessage,
   bumpRunActivity,
-  stampRun,
   ActiveRunExistsError,
   type AgentRun,
 } from "./runs";
@@ -156,15 +155,12 @@ export type ContinueResult =
 /**
  * Démarre OU CONTINUE un run d'agent, pour les triggers CONVERSATIONNELS où « une
  * run tourne déjà » ne doit pas être une erreur (@numo en commentaire, chat numo) :
- *   • une run est ACTIVE (au travail, ou au repos sur un `ask_user`) → le message
- *     lui parvient en STEERING, à chaud, dans sa session ; on la relance si elle
- *     attendait l'utilisateur ;
- *   • sinon (aucune run, ou la dernière est terminée) → nouvelle run FROIDE, qui
+ *   • une run TRAVAILLE (queued/running) → le message lui parvient en STEERING, à
+ *     chaud, drainé à la frontière de round ;
+ *   • sinon (aucune run, ou la dernière est au repos) → nouvelle run FROIDE, qui
  *     hérite de la PR de l'issue.
- * Contrairement à avant MIN-68, une run `completed` n'est plus reprise ici : le
- * tour est fini, la relance mérite une run neuve (et son propre choix de modèle).
- * La reprise à chaud d'une run terminée reste possible, mais seulement depuis le
- * composer de SA conversation (`/steer`).
+ * Une run `completed` (au repos) n'est pas reprise ici : la reprise à chaud d'une
+ * conversation existante se fait depuis le composer de SA conversation (`/steer`).
  */
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
@@ -174,27 +170,6 @@ export async function continueOrLaunchAgentRun(
     const text = (input.prompt ?? "").trim();
     if (text) await insertRunMessage(active.id, input.userId, text);
     await bumpRunActivity(active.id);
-    // Au repos (`needs_input`) → nouveau tour : requeue + kick (reprise immédiate).
-    // Au travail → le message rejoint la file, drainé à la frontière de round.
-    if (active.status === "needs_input") {
-      const resumed = await stampRun(
-        active.id,
-        { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
-        { guard: ["needs_input"] },
-      );
-      if (resumed) {
-        // Reprise SANS PR ouverte → retour « en cours ». Si une PR existe déjà
-        // (open/draft/merged/closed), son état gouverne le statut (in_review /
-        // done / todo), on n'y touche pas.
-        if (active.pr_state == null) {
-          await syncIssueStatusOnAgentStart({
-            issueId: active.issue_id,
-            actorId: input.userId,
-          });
-        }
-        kickAgentDrain(getServiceClient());
-      }
-    }
     return { ok: true, run: active, continued: true };
   }
   const result = await launchAgentRun(input);

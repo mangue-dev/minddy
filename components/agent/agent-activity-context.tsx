@@ -7,9 +7,9 @@ import { useQuery } from "@tanstack/react-query";
  * Contexte « état de l'agent par issue » (MIN-46). Un seul poll par board expose
  * deux ensembles d'issue_ids :
  *   • working  — l'agent TRAVAILLE (queued/running) → halo animé sur la carte ;
- *   • session  — une session reprennable existe (working OU au repos needs_input)
- *                → l'entrée de la carte propose « Ouvrir l'agent » plutôt que
- *                  « Lancer un agent ».
+ *   • session  — une CONVERSATION existe (au moins une run non `failed`, au travail
+ *                ou au repos) → l'entrée de la carte propose « Ouvrir l'agent »
+ *                plutôt que « Lancer un agent ».
  * Polling adaptatif : rapide tant qu'un agent travaille, lent sinon (les sessions
  * au repos ne changent pas d'elles-mêmes).
  *

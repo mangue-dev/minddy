@@ -20,10 +20,10 @@ const DRAIN_TIME_BUDGET_MS = 270_000;
 const MIN_CHUNK_BUDGET_MS = 40_000;
 /** Inactivité au-delà de laquelle on coupe la microVM d'un run au repos. */
 const SANDBOX_IDLE_REAP_MS = 5 * 60_000;
-/** Runs au repos dont la microVM peut être coupée : suspendus ET tours finis
-    (MIN-68 : un tour fini garde sa sandbox pour une reprise à chaud éventuelle —
-    sans ce reaping, chaque run terminé fuiterait une microVM). */
-const RESTING_STATUSES = ["needs_input", "completed"];
+/** Runs au repos dont la microVM peut être coupée. `completed` = le seul repos du
+    modèle conversationnel (la session garde sa sandbox pour une reprise à chaud —
+    sans ce reaping, chaque tour fini fuiterait une microVM). */
+const RESTING_STATUSES = ["completed"];
 
 /**
  * Reaper d'inactivité : coupe la microVM des runs AU REPOS (suspendus ou tour fini)

@@ -16,16 +16,14 @@ export interface AgentRunRow {
   created_at: string;
 }
 
-/** Une run occupe l'issue : au travail, ou suspendue en attente de l'utilisateur. */
-const ACTIVE_STATUSES = ["queued", "running", "needs_input"];
-
 export interface AgentActivityResponse {
   /** L'agent TRAVAILLE (queued/running) → halo animé sur la carte. */
   workingIssueIds: string[];
   /**
-   * Une run est ACTIVE sur l'issue (queued/running/needs_input) → l'entrée de la
-   * carte OUVRE cette run au lieu d'en lancer une nouvelle (MIN-68 : une run
-   * terminée ne compte plus — elle se relance à froid, pas en la rouvrant).
+   * Une CONVERSATION d'agent existe sur l'issue (au moins une run non `failed`,
+   * au travail ou au repos) → l'entrée de la carte OUVRE la conversation au lieu
+   * d'en lancer une nouvelle (modèle conversationnel : une session au repos se
+   * poursuit depuis son composer).
    */
   sessionIssueIds: string[];
   /** PR la plus récente par issue (open/draft/merged, pas closed) → chip
@@ -41,11 +39,8 @@ export function buildAgentActivity(rows: AgentRunRow[]): AgentActivityResponse {
         .map((r) => r.issue_id),
     ),
   ];
-  const sessionIssueIds = [
-    ...new Set(
-      rows.filter((r) => ACTIVE_STATUSES.includes(r.status)).map((r) => r.issue_id),
-    ),
-  ];
+  // `rows` exclut déjà les runs `failed` (contrat des endpoints appelants).
+  const sessionIssueIds = [...new Set(rows.map((r) => r.issue_id))];
   const pullRequests: Record<string, { runId: string; prNumber: number }> = {};
   for (const r of rows) {
     // rows triés DESC → le premier vu par issue est le plus récent.

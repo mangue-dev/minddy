@@ -22,7 +22,7 @@ describe("buildInheritedPrMessage", () => {
     expect(msg).toContain("#12");
     expect(msg).toContain("MIN-42: add search");
     expect(msg).toContain(repo.workBranch);
-    expect(msg).toMatch(/do NOT start the task over/i);
+    expect(msg).toMatch(/do NOT start the ticket over/i);
     // Le diff n'est jamais inliné : l'agent lit la branche lui-même, et le fait
     // avec une commande qui survit au clone shallow (pas de three-dot).
     expect(msg).toContain("git diff main");

@@ -39,11 +39,11 @@ import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types"
  * Numo : on reconstruit les events (`thinking`/`summary`/`tool_call`/`tool_result`)
  * au format `AssistantMessage[]` puis on les rend avec le MÊME `<ChatMessage>`.
  *
- * À la Codex : dès qu'un TOUR se termine (l'agent émet son `summary` final), tout son
- * déroulé (réflexions, tool-calls, updates de plan) se replie dans un accordéon
- * « A travaillé pendant X min Y s » — seul le résumé final reste visible en dessous.
- * Les messages de steering de l'utilisateur séparent les tours et restent visibles ;
- * le tour EN COURS (ou en pause `ask_user`) reste déplié.
+ * À la Codex : dès qu'un TOUR se termine (l'agent émet sa réponse finale, event
+ * `summary`), tout son déroulé (réflexions, tool-calls, updates de plan) se replie
+ * dans un accordéon « A travaillé pendant X min Y s » — seule la réponse reste
+ * visible en dessous. Les messages de l'utilisateur séparent les tours et restent
+ * visibles ; le tour EN COURS reste déplié.
  */
 
 type ToolResult = { status: "running" | "complete"; result?: unknown; success?: boolean };
@@ -309,8 +309,8 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
     }
     work.push(it);
   }
-  // Travail restant sans résumé : si l'agent TRAVAILLE → tour ACTIF (accordéon ouvert,
-  // chrono live) ; sinon (pause `ask_user`) → déplié tel quel.
+  // Travail restant sans réponse finale : si l'agent TRAVAILLE → tour ACTIF
+  // (accordéon ouvert, chrono live) ; sinon (interruption, erreur) → déplié tel quel.
   if (active && work.length > 0) {
     blocks.push({
       type: "turn",
@@ -519,7 +519,7 @@ export function AgentEventFeed({
 }) {
   const t = useTranslations("Agent");
   // On ne poll les events (et n'affiche l'indicateur « travaille ») que tant que
-  // l'agent TRAVAILLE ; au repos (needs_input) le fil est figé jusqu'à relance.
+  // l'agent TRAVAILLE ; au repos le fil est figé jusqu'au prochain message.
   const active = isAgentRunWorking(status);
   const { events, loading } = useAgentRunEventsQuery(runId, active);
   const feedRef = useRef<HTMLDivElement>(null);

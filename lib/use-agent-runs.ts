@@ -9,7 +9,6 @@ import {
   fetchIssueAgentRunsApi,
   fetchPrCommentsApi,
   isAgentRunWorking,
-  isAgentRunActive,
 } from "./agent-api";
 
 /** Clé de cache des runs d'agent d'une issue. */
@@ -19,11 +18,11 @@ export function issueAgentRunsQueryKey(issueId: string) {
 
 /**
  * Runs de l'agent d'une issue, avec polling adaptatif : ~3 s tant que l'agent
- * TRAVAILLE (queued/running) ; ~12 s de backstop tant qu'une session existe mais est
- * au repos (needs_input) — pour capter une reprise déclenchée par un AUTRE client
- * (autre onglet, coéquipier) même quand notre modal est ouverte ; sinon pas de
- * polling. `refetchOnMount: always` garantit un état frais à l'ouverture de la modal
- * (évite d'ouvrir « compose » sur une session déjà vivante à cause d'un cache périmé).
+ * TRAVAILLE (queued/running) ; ~12 s de backstop sinon dès qu'une run existe —
+ * pour capter une reprise déclenchée par un AUTRE client (autre onglet,
+ * coéquipier) même quand notre conversation est ouverte. `refetchOnMount: always`
+ * garantit un état frais à l'ouverture de la modal (évite d'ouvrir « compose » sur
+ * une session déjà vivante à cause d'un cache périmé).
  */
 export function useIssueAgentRunsQuery(issueId: string | null) {
   const { data, isLoading } = useQuery({
@@ -34,7 +33,7 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     refetchInterval: (query) => {
       const runs = query.state.data?.runs ?? [];
       if (runs.some((r) => isAgentRunWorking(r.status))) return 3000;
-      if (runs.some((r) => isAgentRunActive(r.status))) return 12000;
+      if (runs.length > 0) return 12000;
       return false;
     },
   });

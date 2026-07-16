@@ -12,21 +12,20 @@ import {
   type AgentRunStatus,
 } from "@/lib/server/agent/runs";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
+import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
  * Reprise à CHAUD d'un run d'agent (MIN-46 + MIN-68) : l'utilisateur envoie un
- * message DEPUIS la conversation du run. C'est le seul chemin qui reprend un run
- * existant dans son contexte (checkpoint + sandbox) — tous les autres points
- * d'entrée (sidebar, carte, « demander des changements ») lancent une run FROIDE.
- * On accepte donc tout run reprennable (tout sauf `failed`), y compris `completed` :
- * on enchaîne un tour de plus sur la même branche/PR. Le message rejoint la file
- * `agent_run_messages` ; la boucle le draine à la frontière de round et l'injecte
- * comme message `user`. Cas :
- *   • running / queued          → orientation à chaud (drainé au round suivant) ;
- *   • needs_input / completed /
- *     canceled                  → nouveau tour : on repasse le run `queued`, budget
- *                                 de tour réinitialisé, et on kicke le drain.
+ * message DEPUIS la conversation du run — c'est le geste NORMAL du modèle
+ * conversationnel (la session vit tant qu'on lui parle). C'est le seul chemin qui
+ * reprend un run existant dans son contexte (checkpoint + sandbox) — les points
+ * d'entrée de LANCEMENT (sidebar, carte, « demander des changements ») créent une
+ * run FROIDE. Le message rejoint la file `agent_run_messages` ; la boucle le draine
+ * à la frontière de round et l'injecte comme message `user`. Cas :
+ *   • running / queued     → orientation à chaud (drainé au round suivant) ;
+ *   • completed / canceled → nouveau tour : on repasse le run `queued`, budget de
+ *                            tour réinitialisé, et on kicke le drain.
  * Seule la DERNIÈRE run de l'issue est reprennable — les précédentes sont un
  * historique (voir le refus `supersededRun` plus bas).
  * Membre du projet requis. Un seul écrivain d'events = le claimer.
@@ -35,9 +34,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 type RouteContext = { params: Promise<{ runId: string }> };
 
 /** Reprennable = tout sauf `failed` (erreur d'amorçage repo/modèle). */
-const RESUMABLE: AgentRunStatus[] = ["queued", "running", "needs_input", "completed", "canceled"];
+const RESUMABLE: AgentRunStatus[] = ["queued", "running", "completed", "canceled"];
 /** Statuts au repos/terminés qui exigent une relance (re-queue + kick). */
-const RESUME_FROM: AgentRunStatus[] = ["needs_input", "completed", "canceled"];
+const RESUME_FROM: AgentRunStatus[] = ["completed", "canceled"];
 const MAX_LEN = 4000;
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
@@ -69,8 +68,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   //  • une run PLUS RÉCENTE existe sur l'issue. Les runs d'une issue partagent la
   //    branche : la plus récente l'a fait avancer, alors que la sandbox de ce run
   //    est restée à SON état. Le reprendre commiterait par-dessus un ancêtre et le
-  //    push serait rejeté (non-fast-forward) — le run finirait `needs_input` et
-  //    bloquerait l'issue pour de bon. Une run passée est un HISTORIQUE : on la
+  //    push serait rejeté (non-fast-forward) — le tour échouerait en boucle.
+  //    Une run passée est un HISTORIQUE : on la
   //    consulte, on ne la réveille pas ; pour continuer, on en lance une nouvelle
   //    (qui, elle, clone la branche à jour).
   //  • une AUTRE run est active (course : elle vient d'être créée).
@@ -123,6 +122,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
     resumed = true;
+
+    // L'agent se remet au travail → le ticket repasse « en cours », SAUF si une PR
+    // en revue (open/draft) gouverne déjà son statut — même règle qu'au lancement
+    // d'une run froide (launch.ts). Une PR refusée (closed → issue `todo`) repasse
+    // bien en cours ; `merged` est déjà refusé plus haut (409 prMerged).
+    if (run.pr_state !== "open" && run.pr_state !== "draft") {
+      await syncIssueStatusOnAgentStart({ issueId: run.issue_id, actorId: auth.user.id });
+    }
   }
 
   await insertRunMessage(runId, auth.user.id, message);

@@ -74,12 +74,14 @@ export function LaunchAgentButton({
         />
       ) : null}
 
-      {/* Aucun `initialRun` → la modal s'ouvre en compose : une NOUVELLE run. */}
+      {/* `compose` → la modal s'ouvre sur un composer VIERGE : une NOUVELLE session
+          (sans lui, elle rouvrirait la dernière conversation de l'issue). */}
       <AgentChatModal
         open={open}
         onOpenChange={setOpen}
         issueId={issueId}
         issueIdentifier={issueIdentifier}
+        compose
       />
     </div>
   );

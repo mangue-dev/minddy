@@ -12,13 +12,18 @@ import type { AgentChatMessage, AgentEventType } from "./agent-loop";
  * live view. Service client uniquement (RLS lecture-seule côté membres).
  */
 
+/**
+ * Statuts d'un run (modèle conversationnel). `completed` = AU REPOS : le tour est
+ * fini, la session attend le prochain message dans sa conversation — elle reste
+ * reprennable à chaud et n'occupe PLUS le ticket. (`needs_input` n'existe plus :
+ * une question de l'agent est une réponse comme une autre.)
+ */
 export type AgentRunStatus =
   | "queued"
   | "running"
   | "completed"
   | "failed"
-  | "canceled"
-  | "needs_input";
+  | "canceled";
 
 /** Contenu sérialisé du checkpoint (repris tel quel au chunk suivant). */
 export interface AgentCheckpoint {
@@ -67,7 +72,7 @@ export interface AgentRun {
   updated_at: string;
 }
 
-const ACTIVE_STATUSES: AgentRunStatus[] = ["queued", "running", "needs_input"];
+const ACTIVE_STATUSES: AgentRunStatus[] = ["queued", "running"];
 /** Un run 'running' plus vieux que ce seuil est présumé bloqué (fonction morte).
     Un chunk sain dure ≤ ~270s ; 6 min laisse une marge sûre tout en récupérant
     vite un vrai crash (au lieu d'attendre 10 min). */
@@ -164,10 +169,11 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
 }
 
 /**
- * Run ACTIF (queued/running/needs_input) de l'issue, ou null. L'index partiel
- * unique `idx_agent_runs_active_issue` en garantit au plus un — le tri + `limit(1)`
- * reste un garde-fou (des données antérieures à MIN-68 peuvent en avoir plusieurs,
- * et `maybeSingle` lèverait au lieu de répondre).
+ * Run ACTIF (queued/running — l'agent TRAVAILLE) de l'issue, ou null. Au repos
+ * (`completed`), une session n'occupe plus le ticket. L'index partiel unique
+ * `idx_agent_runs_active_issue` en garantit au plus un — le tri + `limit(1)`
+ * reste un garde-fou (des données antérieures peuvent en avoir plusieurs, et
+ * `maybeSingle` lèverait au lieu de répondre).
  */
 export async function activeRunForIssue(issueId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
@@ -249,13 +255,10 @@ export async function inheritablePrForIssue(issueId: string): Promise<Inheritabl
 }
 
 /**
- * Résumé de la run précédente de l'issue (son `outcome` = le `summary` que l'agent
- * a écrit en appelant `finish`). Injecté dans le prompt d'AMORCE d'une run froide :
- * elle n'hérite d'aucun checkpoint, ce résumé est son seul lien avec ce qui a été
- * fait avant. Exclut la run courante.
- *
- * Restreint aux runs `completed` : `outcome` sert aussi à stocker la QUESTION d'un
- * `ask_user`, qu'on ne veut pas présenter comme un compte rendu de travail.
+ * Résumé de la run précédente de l'issue (son `outcome` = la DERNIÈRE RÉPONSE de
+ * l'agent, capée). Injecté dans le prompt d'AMORCE d'une run froide : elle n'hérite
+ * d'aucun checkpoint, ce résumé est son seul lien avec ce qui a été fait avant.
+ * Exclut la run courante. Restreint aux runs `completed` avec un `outcome`.
  */
 export async function previousRunSummaryForIssue(
   issueId: string,

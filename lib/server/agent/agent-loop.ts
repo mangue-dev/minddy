@@ -55,10 +55,11 @@ import {
  *  - pas de persistance assistant_messages : `messages` EST le checkpoint.
  *  - chaque appel → `recordAiUsage(feature:'agent_code', run_id)` ; chaque étape
  *    → `emit` vers agent_run_events (live view).
- *  - `finish` termine (→ ouverture de PR par l'appelant) ; `ask_user` met en
- *    pause (statut needs_input).
- * Les tools « métier » (read_file/write_file/run_command…) sont délégués à
- * `execTool` (fourni par execute.ts, qui détient le Sandbox).
+ *  - FIN DE TOUR NATURELLE : le tour se termine quand le modèle répond SANS
+ *    tool-call — sa réponse texte est le message à l'utilisateur (`reply`). Pas de
+ *    tool de contrôle terminal (finish/ask_user supprimés — modèle conversationnel).
+ * Les tools « métier » (read_file/write_file/run_command/create_pr…) sont délégués
+ * à `execTool` (fourni par execute.ts, qui détient le Sandbox).
  */
 
 const MAX_ROUNDS_PER_CHUNK = 60;
@@ -100,11 +101,6 @@ export type ExecuteAgentTool = (
   args: Record<string, unknown>,
 ) => Promise<{ result: unknown; success: boolean }>;
 
-export interface AgentFinish {
-  summary: string;
-  prTitle?: string;
-  prBody?: string;
-}
 
 export interface RunAgentLoopParams {
   /** Historique (system + user, ou rehydraté depuis le checkpoint). MUTÉ + renvoyé. */
@@ -166,10 +162,10 @@ export class InterruptedError extends Error {
 const INTERRUPT_POLL_MS = 2000;
 
 export interface AgentLoopResult {
-  status: "completed" | "suspended" | "needs_input" | "interrupted" | "error";
+  status: "completed" | "suspended" | "interrupted" | "error";
   messages: AgentChatMessage[];
-  finish?: AgentFinish;
-  question?: string;
+  /** Réponse finale du tour (fin naturelle : le modèle s'arrête sans tool-call). */
+  reply?: string;
   /** Erreur LLM fatale (non reprenable) : renvoyée AVEC les messages pour que
    *  l'exécuteur persiste le checkpoint (pas de perte de contexte/steering). */
   errorMessage?: string;
@@ -236,8 +232,8 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { pattern: String(args.pattern ?? "") };
     case "run_command":
       return { command: cap(String(args.command ?? ""), 100) };
-    case "ask_user":
-      return { question: cap(String(args.question ?? ""), 300) };
+    case "create_pr":
+      return { title: cap(String(args.title ?? ""), 200) };
     default:
       return {};
   }
@@ -496,8 +492,8 @@ async function streamCompletion(opts: {
 }
 
 /**
- * Fait tourner l'agent jusqu'à : terminé (`finish` / arrêt naturel), suspendu
- * (soft-deadline / plafond de rounds), ou en attente utilisateur (`ask_user`).
+ * Fait tourner l'agent jusqu'à : fin de tour (réponse texte sans tool-call),
+ * suspendu (soft-deadline / plafond de rounds), interrompu, ou erreur LLM.
  * Renvoie le checkpoint (`messages`) à persister, le coût du chunk et l'issue.
  */
 export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoopResult> {
@@ -695,15 +691,16 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     if (stream.reasoning.trim()) await emit("thinking", { text: cap(stream.reasoning, 2000) });
     if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
 
-    // Arrêt naturel sans tool-call → tâche considérée terminée.
+    // Arrêt naturel sans tool-call → FIN DE TOUR : le texte du modèle est sa
+    // réponse à l'utilisateur (le feed la rend comme bulle de clôture du tour).
     if (stream.toolCalls.length === 0) {
       messages.push({ role: "assistant", content: stream.content || "" });
-      const summary = stream.content.trim() || "Changes applied.";
-      await emit("summary", { text: cap(summary, 2000) });
+      const reply = stream.content.trim() || "Done.";
+      await emit("summary", { text: cap(reply, 8000) });
       return {
         status: "completed",
         messages,
-        finish: { summary },
+        reply,
         costUsd,
         usageSeqEnd: seq,
         rounds: round,
@@ -746,8 +743,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       continue;
     }
 
-    let pauseQuestion: string | null = null;
-    let finishResult: AgentFinish | null = null;
     for (const tc of stream.toolCalls) {
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
@@ -763,30 +758,22 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         continue;
       }
 
-      // `finish` est terminal, mais on le CAPTURE et on continue : les tool-calls
-      // frères du même tour (edit_file…) doivent d'abord s'exécuter, sinon leurs
-      // mutations n'atteignent jamais le Sandbox et la PR décrirait des changements
-      // absents. On honore finish APRÈS la boucle (le pause l'emporte s'il survient).
-      if (name === "finish") {
-        finishResult = {
-          summary: String(args.summary ?? "").trim() || "Changes applied.",
-          prTitle: typeof args.pr_title === "string" ? args.pr_title : undefined,
-          prBody: typeof args.pr_body === "string" ? args.pr_body : undefined,
-        };
-        messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ ok: true }) });
+      // Shim LEGACY : les checkpoints d'avant le débridage portent un système qui
+      // décrit `finish`/`ask_user`. Ces tools n'existent plus — on répond au
+      // tool-call (l'appariement doit rester intact) en expliquant le nouveau
+      // protocole, et le modèle conclut son tour en texte au round suivant.
+      if (name === "finish" || name === "ask_user") {
+        messages.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: JSON.stringify({
+            error: `The ${name} tool no longer exists. Turns now end naturally: simply write your reply (or your question) as a plain text message with no tool calls.`,
+          }),
+        });
         continue;
       }
 
       await emit("tool_call", { id: tc.id, name, ...toolArgSummary(name, args) });
-
-      if (name === "ask_user") {
-        const question = String(args.question ?? "").trim();
-        pauseQuestion = question;
-        const res = { status: "awaiting_user_response", question };
-        messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(res) });
-        await emit("tool_result", { id: tc.id, name, success: true });
-        continue;
-      }
 
       let result: unknown;
       let success: boolean;
@@ -799,24 +786,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), 6000) });
       await emit("tool_result", { id: tc.id, name, success, preview: previewResult(result) });
     }
-
-    // Un pause l'emporte sur un finish concurrent (l'agent pose une question).
-    if (pauseQuestion !== null) {
-      return {
-        status: "needs_input",
-        messages,
-        question: pauseQuestion,
-        costUsd,
-        usageSeqEnd: seq,
-        rounds: round,
-      };
-    }
-
-    // finish (honoré APRÈS l'exécution des tool-calls frères) → terminal.
-    if (finishResult) {
-      await emit("summary", { text: finishResult.summary });
-      return { status: "completed", messages, finish: finishResult, costUsd, usageSeqEnd: seq, rounds: round };
-    }
-    // sinon on reboucle
+    // on reboucle (le tour ne se termine que sur une réponse sans tool-call)
   }
 }
