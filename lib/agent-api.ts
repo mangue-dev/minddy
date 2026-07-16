@@ -43,6 +43,13 @@ export interface AgentRunSummary {
   error_message: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * Moment PRÉCIS de la dernière fin d'agent (transition vers `completed`), stampé
+   * par trigger DB — insensible aux heartbeats / webhooks PR. `null` tant que la run
+   * n'a jamais terminé. Pilote la bulle bleue « lu / non-lu » (comparé au dernier
+   * `last_read_at` de la session).
+   */
+  completed_at: string | null;
 }
 
 /**
@@ -290,12 +297,75 @@ export interface AgentSessionListItem {
   working: boolean;
   /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique. */
   runCount: number;
+  /**
+   * Dernière fin d'agent de la session (max `completed_at` de ses runs), ou `null`
+   * si aucune run n'a jamais terminé. Comparé au `last_read_at` de l'utilisateur →
+   * bulle bleue « terminé, non lu ».
+   */
+  lastCompletedAt: string | null;
 }
 
 export async function fetchAgentSessionsApi(): Promise<{
   sessions: AgentSessionListItem[];
 }> {
   return parseJson(await fetch(`/api/agent-runs`));
+}
+
+// ── État « lu » des sessions d'agent (bulle bleue « terminé, non lu ») ────────
+
+/**
+ * Carte { issueId → last_read_at } des sessions consultées par l'utilisateur. Une
+ * session est NON LUE quand sa dernière run terminée (`lastCompletedAt`) est
+ * postérieure à ce timestamp (ou absente de la carte = jamais consultée).
+ */
+export async function fetchAgentReadsApi(): Promise<{
+  reads: Record<string, string>;
+}> {
+  return parseJson(await fetch(`/api/agent-reads`));
+}
+
+/** Marque une session (issue) comme lue MAINTENANT — upsert `last_read_at = now()`. */
+export async function markAgentSessionReadApi(issueId: string): Promise<void> {
+  await parseJson(
+    await fetch(`/api/agent-reads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issueId }),
+    }),
+  );
+}
+
+/**
+ * Une session est NON LUE quand sa dernière fin d'agent (`lastCompletedAt`) est
+ * postérieure au dernier `last_read_at` de l'utilisateur (ou jamais consultée), ET
+ * qu'aucun run ne TRAVAILLE : pendant le travail c'est le halo/spinner qui prime, la
+ * bulle « terminé » n'apparaît qu'une fois l'agent au repos.
+ */
+export function isAgentSessionUnread(
+  session: Pick<AgentSessionListItem, "working" | "lastCompletedAt" | "issue">,
+  reads: Record<string, string>,
+): boolean {
+  if (session.working || !session.lastCompletedAt || !session.issue) return false;
+  const lastRead = reads[session.issue.id];
+  // Comparaison NUMÉRIQUE : `completed_at` (Postgres, `…+00:00`) et `last_read_at`
+  // (client, `…Z`) n'ont pas le même format string → un `>` lexical serait faux.
+  if (!lastRead) return true;
+  return new Date(session.lastCompletedAt).getTime() > new Date(lastRead).getTime();
+}
+
+/**
+ * Un run précis est NON LU : il a terminé (`completed_at`) après le dernier
+ * `last_read_at` de la session (ou jamais consultée). Pilote la bulle dans le
+ * sélecteur de sessions (chaque run = « Session N »).
+ */
+export function isAgentRunUnread(
+  run: Pick<AgentRunSummary, "completed_at">,
+  lastReadAt: string | null | undefined,
+): boolean {
+  if (!run.completed_at) return false;
+  // Comparaison NUMÉRIQUE (formats de date hétérogènes — cf. isAgentSessionUnread).
+  if (!lastReadAt) return true;
+  return new Date(run.completed_at).getTime() > new Date(lastReadAt).getTime();
 }
 
 export async function postPrCommentApi(

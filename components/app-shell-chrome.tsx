@@ -28,6 +28,8 @@ import { fetchIssuesApi } from "@/lib/issues-api";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import { useAgentReads } from "@/lib/use-agent-reads";
+import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import {
@@ -188,9 +190,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   ).length;
 
   // Agents : un spinner sur l'onglet dès qu'une session TRAVAILLE (génération en
-  // cours), tous projets confondus.
+  // cours), tous projets confondus ; sinon une bulle bleue si au moins une session a
+  // TERMINÉ sans avoir été consultée (le travail en cours prime sur le non-lu).
   const { sessions: agentSessions } = useAgentSessionsQuery();
+  const { reads: agentReads } = useAgentReads();
   const anyAgentWorking = agentSessions.some((s) => s.working);
+  const anyAgentUnread = agentSessions.some((s) => isAgentSessionUnread(s, agentReads));
 
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
@@ -450,8 +455,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: NumoNavIcon,
               href: "/agents",
               active: pathname.startsWith("/agents"),
+              showBadgeCollapsed: true,
               badge: anyAgentWorking ? (
                 <Spinner className="size-3.5 text-muted-foreground" />
+              ) : anyAgentUnread ? (
+                <span
+                  className="size-2 rounded-full bg-blue-500"
+                  aria-label={t("agentsUnread")}
+                />
               ) : undefined,
             },
             {
@@ -545,8 +556,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: NumoNavIcon,
             href: "/agents",
             active: pathname.startsWith("/agents"),
+            showBadgeCollapsed: true,
             badge: anyAgentWorking ? (
               <Spinner className="size-3.5 text-muted-foreground" />
+            ) : anyAgentUnread ? (
+              <span
+                className="size-2 rounded-full bg-blue-500"
+                aria-label={t("agentsUnread")}
+              />
             ) : undefined,
           },
           {
@@ -585,7 +602,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, openCreateProject, t]);
+  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

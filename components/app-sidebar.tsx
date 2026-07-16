@@ -54,7 +54,15 @@ const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 56;
 
 /** A sidebar nav item that can advertise its `G`-chord second key (e.g. "M"). */
-export type AppNavItem = NavItem & { shortcut?: string };
+export type AppNavItem = NavItem & {
+  shortcut?: string;
+  /**
+   * Rejoue le `badge` dans un coin de l'icône quand la sidebar est REPLIÉE (les
+   * badges normaux n'y sont pas rendus, faute de place). Réservé aux indicateurs
+   * compacts — spinner « agent en cours », pastille non-lu — pas aux compteurs.
+   */
+  showBadgeCollapsed?: boolean;
+};
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
 const MotionLink = motion.create(Link);
@@ -114,6 +122,13 @@ function SidebarRow({
         </Kbd>
       ) : !collapsed && item.badge != null ? (
         <span className="ml-auto flex items-center">{item.badge}</span>
+      ) : null}
+      {/* Replié : le badge (spinner « agent en cours » / pastille non-lu) se replie
+          en pastille de coin sur l'icône — sinon l'info disparaît en mode rail. */}
+      {collapsed && item.showBadgeCollapsed && item.badge != null ? (
+        <span className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-sidebar">
+          {item.badge}
+        </span>
       ) : null}
     </>
   );

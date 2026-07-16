@@ -22,6 +22,7 @@ import {
   IterationCw,
   Link2,
   ListChecks,
+  Plus,
   Triangle,
   User,
 } from "lucide-react";
@@ -826,25 +827,36 @@ export function IssueCard({
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
-  // « Lancer un agent » (MIN-46) — menu clic droit + raccourci ⇧A. Redirige vers la
-  // page Agents plutôt que d'ouvrir une modal : ticket déjà pourvu d'une session → on
-  // l'ouvre (`?issue=`) ; sinon on pose un brouillon de composition optimiste et on
-  // ouvre son composer (`?compose=`), exactement comme le bouton du panneau d'issue.
-  const launchAgent = () => {
-    if (agentHasSession) {
-      router.push(`/agents?issue=${issue.id}`);
-      return;
-    }
-    const variant = agentLaunchPromptVariant(issue);
+  // Agent de code sur ce ticket (MIN-46) — menu clic droit + raccourci ⇧A. Redirige
+  // vers la page Agents plutôt que d'ouvrir une modal. Deux points d'entrée :
+  //  • openAgentSession — rouvre la session existante (sa run la plus active, `?issue=`) ;
+  //  • startNewAgentSession — pose un brouillon de composition optimiste et ouvre son
+  //    composer (`?compose=`), lançant une session NEUVE même si le ticket en a déjà
+  //    une (nouvelle run sur le ticket), exactement comme le bouton du panneau d'issue.
+  const openAgentSession = () => {
+    router.push(`/agents?issue=${issue.id}`);
+  };
+  const startNewAgentSession = () => {
+    // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
+    // composer VIERGE : l'utilisateur dicte lui-même la consigne. Premier lancement à
+    // froid → prompt d'amorçage (contexte du ticket, adapté à son plan / effort).
+    const prompt = agentHasSession
+      ? ""
+      : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
     setAgentComposeDraft({
       issueId: issue.id,
       issueNumber: issue.number,
       issueTitle: issue.title,
       projectId: issue.project_id,
       projectKey,
-      prompt: `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${variant}`)}`,
+      prompt,
     });
     router.push(`/agents?compose=${issue.id}`);
+  };
+  // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
+  const launchAgent = () => {
+    if (agentHasSession) openAgentSession();
+    else startNewAgentSession();
   };
 
   // Candidats du picker : les autres issues OUVERTES du projet, hors celles
@@ -920,17 +932,38 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
-    // Ouvre l'agent de code sur ce ticket, sur la PAGE Agents : rouvre la dernière
-    // conversation si le ticket en a une (elle se poursuit depuis son composer),
-    // sinon compose une session neuve. Toujours disponible.
-    {
-      id: "launch-agent",
-      label: agentHasSession ? tAgent("openAgent") : tAgent("menuLaunch"),
-      keywords: ["agent", "launch", "lancer", "open", "ouvrir", "code", "ai", "numo"],
-      icon: <NumoIcon className="size-4" />,
-      shortcut: "⇧A",
-      onSelect: launchAgent,
-    },
+    // Agent de code sur ce ticket, sur la PAGE Agents. Session existante → deux
+    // entrées : « Ouvrir l'agent » (rouvre la session, sa run la plus active) et
+    // « Nouvelle session » (compose une run neuve sur le ticket). Aucune session →
+    // une seule entrée « Lancer un agent » (compose à froid). ⇧A = 1re action.
+    ...(agentHasSession
+      ? [
+          {
+            id: "open-agent",
+            label: tAgent("openAgent"),
+            keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
+            icon: <NumoIcon className="size-4" />,
+            shortcut: "⇧A",
+            onSelect: openAgentSession,
+          },
+          {
+            id: "new-agent-session",
+            label: tAgent("newSession"),
+            keywords: ["agent", "new", "nouvelle", "session", "launch", "lancer", "numo"],
+            icon: <Plus className="size-4" />,
+            onSelect: startNewAgentSession,
+          },
+        ]
+      : [
+          {
+            id: "launch-agent",
+            label: tAgent("menuLaunch"),
+            keywords: ["agent", "launch", "lancer", "code", "ai", "numo"],
+            icon: <NumoIcon className="size-4" />,
+            shortcut: "⇧A",
+            onSelect: startNewAgentSession,
+          },
+        ]),
     // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
     ...(pr && openPr
       ? [

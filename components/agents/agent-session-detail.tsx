@@ -23,6 +23,7 @@ export function AgentSessionDetail({
   compose = false,
   composeInitialText,
   onLaunched,
+  showUnread = false,
 }: {
   item: AgentSessionListItem;
   onBack: () => void;
@@ -38,6 +39,8 @@ export function AgentSessionDetail({
   composeInitialText?: string;
   /** Relayé à la conversation : une run neuve vient d'être lancée depuis le compose. */
   onLaunched?: (run: AgentRunSummary) => void;
+  /** Affiche les bulles bleues « terminé, non lu » sur le sélecteur de runs (page Agents). */
+  showUnread?: boolean;
 }) {
   const t = useTranslations("Agents");
   const router = useRouter();
@@ -96,6 +99,7 @@ export function AgentSessionDetail({
         initialCompose={compose}
         initialComposeText={compose ? composeInitialText : undefined}
         onLaunched={onLaunched}
+        showUnread={showUnread}
         active
         headerTitle={headerTitle}
         headerActions={

@@ -34,6 +34,7 @@ import { isAgentRunActive, type AgentRunSummary } from "@/lib/agent-api";
 export function AgentRunHistory({
   runs,
   selectedId,
+  unreadRunIds,
   onSelect,
   onNewRun,
   className,
@@ -41,6 +42,8 @@ export function AgentRunHistory({
   /** Runs de l'issue, plus récente d'abord (ordre de l'API). */
   runs: AgentRunSummary[];
   selectedId: string | null;
+  /** Runs terminées non consultées → bulle bleue (déclencheur + entrée). Absent = off. */
+  unreadRunIds?: Set<string>;
   onSelect: (run: AgentRunSummary) => void;
   /** Passe en phase compose (nouvelle run froide). Absent → action masquée. */
   onNewRun?: () => void;
@@ -50,6 +53,10 @@ export function AgentRunHistory({
   const format = useFormatter();
 
   if (runs.length === 0) return null;
+
+  // Au moins une run non consultée parmi celles listées → point bleu sur le déclencheur
+  // (le dropdown est replié : sans ça la bulle serait invisible tant qu'il est fermé).
+  const anyUnread = !!unreadRunIds && runs.some((r) => unreadRunIds.has(r.id));
 
   const fmt = (at: string): string =>
     format.dateTime(new Date(at), {
@@ -75,6 +82,12 @@ export function AgentRunHistory({
             {selected
               ? t("runNumbered", { number: numberOf(selected), total: runs.length })
               : t("runHistory", { total: runs.length })}
+            {anyUnread ? (
+              <span
+                className="size-1.5 shrink-0 rounded-full bg-blue-500"
+                aria-label={t("unreadRun")}
+              />
+            ) : null}
             <ChevronDown className="size-3" />
           </Button>
         </DropdownMenuTrigger>
@@ -98,6 +111,11 @@ export function AgentRunHistory({
               </span>
               {isAgentRunActive(run.status) ? (
                 <span className="size-1.5 shrink-0 rounded-full bg-brand" />
+              ) : unreadRunIds?.has(run.id) ? (
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-blue-500"
+                  aria-label={t("unreadRun")}
+                />
               ) : null}
             </DropdownMenuItem>
           ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, cn } from "mangue-ui";
@@ -10,13 +10,14 @@ import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
 import { NumoIcon } from "@/components/numo-icon";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   setAgentComposeDraft,
   useAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
-import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
+import { isAgentSessionUnread, type AgentRunSummary, type AgentSessionListItem } from "@/lib/agent-api";
 
 /**
  * Page Agents — vue liste/détail façon Pull Requests : à gauche TOUTES les sessions
@@ -38,6 +39,23 @@ export function AgentsPage() {
   const format = useFormatter();
   const router = useRouter();
   const { sessions, loading } = useAgentSessionsQuery();
+  const { reads, markRead } = useAgentReads();
+
+  // Marque une session lue peu APRÈS son ouverture explicite (clic sur une tuile ou
+  // deep-link `?issue=`), pas à la présélection passive : sur mobile, sessions[0] est
+  // choisie sans que le volet soit affiché — la marquer lue effacerait une bulle que
+  // l'utilisateur n'a pas vue. Le court délai laisse la bulle visible un instant
+  // (liste + badge sidebar + sélecteur de runs) avant de s'effacer, et n'acte la
+  // lecture que si l'utilisateur reste sur la session.
+  const markTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleMarkRead = (issueId: string | null) => {
+    if (markTimerRef.current) clearTimeout(markTimerRef.current);
+    if (!issueId) return;
+    markTimerRef.current = setTimeout(() => markRead(issueId), 1500);
+  };
+  useEffect(() => () => {
+    if (markTimerRef.current) clearTimeout(markTimerRef.current);
+  }, []);
 
   // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?issue=<issueId> présélectionne
   // la session de cette issue ; ?compose=<issueId> l'ouvre en brouillon de lancement.
@@ -79,6 +97,7 @@ export function AgentsPage() {
         project: { id: draft.projectId, key: draft.projectKey, name: draft.projectKey },
         working: false,
         runCount: 0,
+        lastCompletedAt: null,
       }
     : null;
 
@@ -107,7 +126,8 @@ export function AgentsPage() {
     if (!issueParam) return;
     setSelectedIssueId(issueParam);
     setMobileDetail(true);
-  }, [issueParam]);
+    scheduleMarkRead(issueParam);
+  }, [issueParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Transition terminée : la run lancée figure dans la liste → on efface le brouillon
   // et on reste sur la même issue (le volet est conservé, swap synthétique → réel
@@ -163,6 +183,7 @@ export function AgentsPage() {
     setLaunchedRunId(null);
     setSelectedIssueId(issueId);
     setMobileDetail(true);
+    scheduleMarkRead(issueId);
   };
 
   const fmtDay = (at: string): string =>
@@ -233,6 +254,7 @@ export function AgentsPage() {
                 s.issue && s.project
                   ? issueIdentifier(s.project.key, s.issue.number)
                   : "—";
+              const unread = isAgentSessionUnread(s, reads);
               return (
                 <button
                   key={s.issue?.id ?? s.runId}
@@ -246,6 +268,13 @@ export function AgentsPage() {
                   )}
                 >
                   <div className="flex items-center gap-2">
+                    {/* Agent terminé, non consulté → bulle bleue (comme un non-lu). */}
+                    {unread && (
+                      <span
+                        className="size-2 shrink-0 rounded-full bg-blue-500"
+                        aria-label={t("unread")}
+                      />
+                    )}
                     <span className="shrink-0 font-mono text-xs text-muted-foreground">
                       {identifier}
                     </span>
@@ -292,6 +321,7 @@ export function AgentsPage() {
             onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
             onBack={() => setMobileDetail(false)}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
+            showUnread
           />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">

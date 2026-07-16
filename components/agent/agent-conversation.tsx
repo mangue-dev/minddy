@@ -11,6 +11,7 @@ import {
   interruptAgentRunApi,
   isAgentRunActive,
   isAgentRunResumable,
+  isAgentRunUnread,
   isAgentRunWorking,
   launchAgentRunApi,
   steerAgentRunApi,
@@ -21,6 +22,7 @@ import {
   issueAgentRunsQueryKey,
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
+import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { ModelBadge } from "@/components/model-badge";
@@ -75,6 +77,7 @@ export function AgentConversation({
   headerActions,
   onLaunched,
   initialComposeText,
+  showUnread = false,
 }: {
   issueId: string;
   /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
@@ -108,6 +111,11 @@ export function AgentConversation({
    * librement éditable. Sans lui, le composer démarre vide (« New run », modal).
    */
   initialComposeText?: string;
+  /**
+   * Marque les runs terminées non consultées d'une bulle bleue dans le sélecteur de
+   * sessions (page Agents). Hors /agents (ex. modal de reprise), laissé à false.
+   */
+  showUnread?: boolean;
 }) {
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
@@ -165,6 +173,16 @@ export function AgentConversation({
   // proposerait « lancer un nouvel agent » sur une issue déjà occupée (→ 409).
   const knownRuns =
     launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
+
+  // Bulles bleues du sélecteur de sessions (page Agents) : runs terminées après la
+  // dernière consultation de la session. Réactif — le mark-read différé de la page
+  // les efface. Hors /agents (`showUnread=false`), aucun suivi.
+  const { reads } = useAgentReads();
+  const unreadRunIds = showUnread
+    ? new Set(
+        knownRuns.filter((r) => isAgentRunUnread(r, reads[issueId])).map((r) => r.id),
+      )
+    : undefined;
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Résolution de la session affichée : celle désignée, sinon celle qui travaille,
   // sinon la DERNIÈRE session NON `failed` de l'issue — une conversation au repos
@@ -359,6 +377,7 @@ export function AgentConversation({
         <AgentRunHistory
           runs={knownRuns}
           selectedId={liveRun?.id ?? null}
+          unreadRunIds={unreadRunIds}
           onSelect={(picked) => {
             userOverrodeRef.current = true;
             setComposing(false);

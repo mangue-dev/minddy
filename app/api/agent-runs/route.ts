@@ -33,6 +33,7 @@ interface RunRow {
   pr_state: "draft" | "open" | "merged" | "closed" | null;
   created_at: string;
   updated_at: string;
+  completed_at: string | null;
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string } | null;
 }
@@ -54,6 +55,11 @@ export interface AgentSessionListItem {
   working: boolean;
   /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique (MIN-68). */
   runCount: number;
+  /**
+   * Dernière fin d'agent de la session (max `completed_at` de ses runs), ou `null`.
+   * Comparé au `last_read_at` de l'utilisateur → bulle bleue « terminé, non lu ».
+   */
+  lastCompletedAt: string | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -63,7 +69,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, status, model, triggered_by, pr_number, pr_url, pr_state, created_at, updated_at, issue:issues(id, number, title), project:projects(id, key, name)",
+      "id, issue_id, status, model, triggered_by, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, issue:issues(id, number, title), project:projects(id, key, name)",
     )
     .order("created_at", { ascending: false });
 
@@ -94,12 +100,17 @@ export async function GET(request: NextRequest) {
         project: r.project,
         working: isWorking,
         runCount: 1,
+        lastCompletedAt: r.completed_at,
       });
       continue;
     }
     existing.runCount++;
     // Un run plus ancien peut toujours porter l'info « travaille » de l'issue.
     if (isWorking) existing.working = true;
+    // Dernière fin d'agent de l'issue = la plus tardive parmi ses runs terminées.
+    if (r.completed_at && (!existing.lastCompletedAt || r.completed_at > existing.lastCompletedAt)) {
+      existing.lastCompletedAt = r.completed_at;
+    }
   }
 
   // Ordre STABLE par date de création (la plus récente en haut) : contrairement à
