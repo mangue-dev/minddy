@@ -47,6 +47,14 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - \`run_command\` — install deps, lint, type-check, build, run tests.
 - \`update_plan\` — maintain a short ordered checklist of your steps for multi-step work (keep exactly one step \`in_progress\`; skip it for trivial or conversational turns).
 - \`create_pr\` — open the ticket's pull request when there is none yet (see Git below).
+- \`read_issue\` — the LIVE state of the ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; binaries via a signed URL you can curl in the sandbox).
+- \`write_issue_plan\` — write the ticket's persistent implementation plan (see The ticket below).
+
+## The ticket
+- Your first message carries a SNAPSHOT of the ticket. It goes stale: whenever fresh state matters — the user mentions a comment, an attachment, an edit you haven't seen, or you need the current plan — call \`read_issue\` instead of guessing. Open attachments that matter to the request (specs, mockups, logs) with \`read_attachment\`.
+- **The ticket may carry an implementation plan** (markdown checkbox tasks: \`- [ ]\` pending, \`- [~]\` in progress, \`- [x]\` done, \`- [-]\` cancelled). When asked to implement a ticket that ships a plan, follow it, and reuse its task wording VERBATIM as your \`update_plan\` steps — your progress then mirrors onto the ticket's plan automatically.
+- **When the user asks for a plan** ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work — reply and stop unless they also asked to implement.
+- Never write the ticket's plan unprompted: it belongs to the user. Your session checklist (\`update_plan\`) is yours; the ticket plan (\`write_issue_plan\`) only changes on their request.
 
 ## Git and pull requests
 - **The harness owns git.** At the end of each turn it commits and pushes whatever you changed. Never run \`git commit\`, \`git reset --hard\`, \`git checkout -- \`, \`git rebase\`, \`git push\`, force-push, or \`--amend\` via \`run_command\`. Use read-only git (status/diff/log/show) freely.
@@ -165,16 +173,33 @@ You are a FRESH session: you did NOT write that code and you have none of the pr
 Everything above is context. Act on the user's message.`;
 }
 
+/** Pièce jointe annoncée dans l'amorce (l'agent l'ouvre via read_attachment). */
+export interface AgentAttachmentContext {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
 /**
- * Message utilisateur de CONTEXTE : dépôt + ticket (description + plan). Volontai-
- * rement présenté comme du contexte — la demande réelle est le message utilisateur
- * qui suit (le prompt du lanceur, poussé à part par l'appelant). Les instructions
- * du dépôt (AGENTS.md/CLAUDE.md) sont aussi injectées à part, juste après.
+ * Message utilisateur de CONTEXTE : dépôt + ticket (description + plan + pièces
+ * jointes). Volontairement présenté comme du contexte — la demande réelle est le
+ * message utilisateur qui suit (le prompt du lanceur, poussé à part par
+ * l'appelant). Les instructions du dépôt (AGENTS.md/CLAUDE.md) sont aussi
+ * injectées à part, juste après. C'est un SNAPSHOT : l'état vivant du ticket
+ * (champs, plan, commentaires, pièces) se relit à tout moment via `read_issue`.
  */
 export function buildAgentContextMessage(input: {
   issue: AgentIssueContext;
   repo: AgentRepoContext;
   projectName?: string | null;
+  attachments?: AgentAttachmentContext[];
 }): string {
   const { issue, repo } = input;
   const planBlock = issue.plan?.trim()
@@ -183,10 +208,17 @@ export function buildAgentContextMessage(input: {
   const descBlock = issue.description?.trim()
     ? `\n\n## Ticket description\n${issue.description.trim()}`
     : "";
+  const attachments = input.attachments ?? [];
+  const attachmentsBlock =
+    attachments.length > 0
+      ? `\n\n## Attachments on the ticket (open with read_attachment)\n${attachments
+          .map((a) => `- ${a.name} (${a.mimeType}, ${formatSize(a.sizeBytes)}) — id: ${a.id}`)
+          .join("\n")}`
+      : "";
 
   return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns.
 
-# Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}
+# Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${attachmentsBlock}
 
-This ticket is the session's anchor and context. The user's messages drive the work; if none follows, the ticket itself is the request.`;
+This ticket is the session's anchor and context. Everything above is a snapshot taken at session start — \`read_issue\` gives you the live state (fields, plan, comments, attachments) whenever it matters. The user's messages drive the work; if none follows, the ticket itself is the request.`;
 }

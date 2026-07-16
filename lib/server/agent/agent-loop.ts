@@ -68,7 +68,7 @@ const MAX_COMPACTIONS_PER_CHUNK = 3;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
 const MAX_CONTEXT_TRIMS = 4;
 /** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
-const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep"]);
+const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep", "read_issue", "read_attachment"]);
 
 /** Un message du protocole chat OpenRouter (identique à celui de processChat). */
 export interface AgentChatMessage {
@@ -234,6 +234,10 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { command: cap(String(args.command ?? ""), 100) };
     case "create_pr":
       return { title: cap(String(args.title ?? ""), 200) };
+    case "read_attachment":
+      return { attachment_id: String(args.attachment_id ?? "") };
+    case "write_issue_plan":
+      return { chars: String(args.plan ?? "").length };
     default:
       return {};
   }

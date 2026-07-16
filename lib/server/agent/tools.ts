@@ -12,6 +12,10 @@ import "server-only";
  *                  cf. edit.ts), write_file (création de fichiers neufs uniquement)
  *  - vérif       : run_command (install/lint/build/tests, git, etc.)
  *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
+ *  - ticket      : read_issue (état VIVANT du ticket : champs, plan, commentaires,
+ *                  pièces jointes), read_attachment, write_issue_plan (écrit le
+ *                  plan du ticket SUR DEMANDE de l'utilisateur, sans l'appliquer)
+ *                  — exécutés par lib/server/agent/issue-tools.ts.
  * PAS de tool de fin de tour : le tour se termine quand l'agent répond en texte
  * (fin naturelle, comme une conversation). Les commits sont pilotés par le harnais
  * (commit+push au suspend et à chaque fin de tour) — pas de tool commit exposé,
@@ -302,6 +306,59 @@ export const AGENT_TOOLS: AgentToolDef[] = [
               },
               required: ["step", "status"],
             },
+          },
+        },
+        required: ["plan"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_issue",
+      description:
+        "Re-read the minddy ticket this session is anchored to: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its attachments (metadata + ids), the most recent comments, sub-issues and relations. The ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or attachments mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
+      parameters: {
+        type: "object",
+        properties: {
+          include_all_comments: {
+            type: "boolean",
+            description: "Return the FULL comment thread instead of the last 15 (default false).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_attachment",
+      description:
+        "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. Text files come back inline (capped); binaries and large files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.",
+      parameters: {
+        type: "object",
+        properties: {
+          attachment_id: {
+            type: "string",
+            description: "Attachment id from read_issue (issue or comment attachments).",
+          },
+        },
+        required: ["attachment_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "write_issue_plan",
+      description:
+        "Write the ticket's implementation PLAN — the persistent markdown plan stored on the minddy ticket, visible to the whole team. Call it ONLY when the user asks for a plan (e.g. 'prépare un plan', 'plan this ticket', 'how would you do it? write it down') — never spontaneously. Full replacement: send the complete plan. Format: a short context (goal, approach), then ordered checkbox tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' cancelled — each naming the exact files/components/functions/migrations to touch, and a final verification step. Explore the code FIRST so tasks reference real paths. Writing the plan does NOT start the work: after writing it, reply and stop unless the user also asked to implement. Distinct from update_plan, which is only your live session checklist.",
+      parameters: {
+        type: "object",
+        properties: {
+          plan: {
+            type: "string",
+            description: "The complete plan in markdown (context + '- [ ]' tasks + verification).",
           },
         },
         required: ["plan"],

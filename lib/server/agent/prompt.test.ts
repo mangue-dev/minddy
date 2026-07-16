@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildInheritedBranchMessage, buildInheritedPrMessage } from "./prompt";
+import {
+  buildAgentContextMessage,
+  buildInheritedBranchMessage,
+  buildInheritedPrMessage,
+} from "./prompt";
 
 /**
  * Message d'amorce d'une run FROIDE qui hérite d'une PR (MIN-68). C'est la seule
@@ -126,6 +130,47 @@ describe("buildInheritedPrMessage", () => {
     // Le cap est à 2000 : 2100 « x » d'affilée ne peuvent pas survivre.
     expect(msg).toContain("x".repeat(2000));
     expect(msg).not.toContain("x".repeat(2100));
+  });
+});
+
+/**
+ * Message de CONTEXTE d'amorce : le ticket est un snapshot (l'état vivant se relit
+ * via read_issue) et ses pièces jointes sont annoncées avec leur id — sans quoi
+ * l'agent ignorerait leur existence tant que l'utilisateur n'en parle pas.
+ */
+describe("buildAgentContextMessage", () => {
+  const base = {
+    issue: { identifier: "MIN-42", title: "Add search", description: null, plan: null },
+    repo,
+  };
+
+  it("annonce les pièces jointes avec id, type et taille", () => {
+    const msg = buildAgentContextMessage({
+      ...base,
+      attachments: [
+        { id: "att-1", name: "spec.md", mimeType: "text/markdown", sizeBytes: 2048 },
+        { id: "att-2", name: "mock.png", mimeType: "image/png", sizeBytes: 3 * 1024 * 1024 },
+      ],
+    });
+    expect(msg).toContain("spec.md (text/markdown, 2 KB) — id: att-1");
+    expect(msg).toContain("mock.png (image/png, 3.0 MB) — id: att-2");
+    expect(msg).toContain("read_attachment");
+  });
+
+  it("sans pièce jointe, pas de section ; le snapshot renvoie vers read_issue", () => {
+    const msg = buildAgentContextMessage(base);
+    expect(msg).not.toContain("Attachments on the ticket");
+    expect(msg).toContain("read_issue");
+    expect(msg).toMatch(/snapshot/i);
+  });
+
+  it("injecte le plan du ticket tel quel quand il existe", () => {
+    const msg = buildAgentContextMessage({
+      ...base,
+      issue: { ...base.issue, plan: "- [ ] créer la route\n- [x] écrire le test" },
+    });
+    expect(msg).toContain("- [ ] créer la route");
+    expect(msg).toContain("- [x] écrire le test");
   });
 });
 

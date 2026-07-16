@@ -51,6 +51,7 @@ import {
 } from "./pr";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
+import { executeIssueTool, ISSUE_TOOL_NAMES, type IssueToolContext } from "./issue-tools";
 import {
   stampRun,
   getRun,
@@ -122,9 +123,15 @@ type CreatePrHandler = (args: {
   body?: string;
 }) => Promise<{ result: unknown; success: boolean }>;
 
-/** Les tools « métier » de l'agent, exécutés dans le Sandbox du run. */
-function makeExecTool(sandbox: Sandbox, createPr: CreatePrHandler): ExecuteAgentTool {
+/** Les tools « métier » de l'agent : Sandbox (fichiers/commandes), git/PR
+    (`createPr`) et ticket minddy (`issue-tools.ts`, routé par nom). */
+function makeExecTool(
+  sandbox: Sandbox,
+  createPr: CreatePrHandler,
+  issueToolCtx: IssueToolContext,
+): ExecuteAgentTool {
   return async (name, args) => {
+    if (ISSUE_TOOL_NAMES.has(name)) return await executeIssueTool(issueToolCtx, name, args);
     switch (name) {
       case "create_pr": {
         return await createPr({
@@ -315,17 +322,26 @@ interface IssueContext {
   description: string | null;
   plan: string | null;
   projectName: string | null;
+  projectKey: string;
+  /** Pièces jointes du ticket (et de ses commentaires) — annoncées dans l'amorce
+      pour que l'agent sache qu'elles existent (il les ouvre via read_attachment). */
+  attachments: Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>;
 }
 
 async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
   const service = getServiceClient();
-  const [{ data: issue }, { data: project }] = await Promise.all([
+  const [{ data: issue }, { data: project }, { data: attachmentRows }] = await Promise.all([
     service
       .from("issues")
       .select("number, title, description, plan")
       .eq("id", run.issue_id)
       .maybeSingle(),
     service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),
+    service
+      .from("attachments")
+      .select("id, file_name, mime_type, size_bytes")
+      .eq("issue_id", run.issue_id)
+      .order("created_at", { ascending: true }),
   ]);
   const key = (project as { key?: string } | null)?.key ?? "ISSUE";
   const number = (issue as { number?: number } | null)?.number ?? 0;
@@ -335,6 +351,18 @@ async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
     description: (issue as { description?: string | null } | null)?.description ?? null,
     plan: (issue as { plan?: string | null } | null)?.plan ?? null,
     projectName: (project as { name?: string } | null)?.name ?? null,
+    projectKey: key,
+    attachments: ((attachmentRows ?? []) as Array<{
+      id: string;
+      file_name: string | null;
+      mime_type: string | null;
+      size_bytes: number | null;
+    }>).map((a) => ({
+      id: a.id,
+      name: a.file_name ?? "attachment",
+      mimeType: a.mime_type ?? "application/octet-stream",
+      sizeBytes: a.size_bytes ?? 0,
+    })),
   };
 }
 
@@ -501,6 +529,7 @@ export async function executeAgentRun(
         },
         repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
         projectName: issue.projectName,
+        attachments: issue.attachments,
       });
       messages = [
         { role: "system", content: system },
@@ -710,7 +739,12 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       contextWindow,
-      execTool: makeExecTool(sandbox, createPr),
+      execTool: makeExecTool(sandbox, createPr, {
+        issueId: run.issue_id,
+        projectId: run.project_id,
+        projectKey: issue.projectKey,
+        actorId: run.created_by,
+      }),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).
