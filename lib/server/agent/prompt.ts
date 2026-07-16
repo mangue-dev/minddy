@@ -140,6 +140,32 @@ Everything above is context. Act on the user's message (or, failing that, on the
 }
 
 /**
+ * Variante SANS PR du message d'héritage : la lignée du ticket vit sur une branche
+ * qui porte du travail poussé, mais aucune pull request n'a (encore) été ouverte —
+ * la création de PR est une décision, plus un automatisme. Sans ce message, une
+ * session froide recommencerait le ticket de zéro par-dessus du travail existant.
+ */
+export function buildInheritedBranchMessage(input: {
+  repo: AgentRepoContext;
+  /** Dernière réponse de la session précédente (sa seule mémoire du travail). */
+  previousSummary?: string | null;
+}): string {
+  const { repo } = input;
+  const summaryBlock = input.previousSummary?.trim()
+    ? `\n\n## What the previous session did (its own summary)\n${cap(input.previousSummary.trim(), 4000)}`
+    : "";
+
+  return `# This ticket already carries work in progress
+The working branch **${repo.workBranch}** already carries committed work from a previous session. No pull request exists yet — opening one (with \`create_pr\`) is still an open decision.
+
+You are a FRESH session: you did NOT write that code and you have none of the previous conversation — only what follows. So do NOT start the ticket over. **First read the current state of the branch**: run \`git diff ${repo.defaultBranch}\` to see everything this branch already changed, then \`read_file\` what matters. Only then act. Keep working on the SAME branch — the harness pushes ${repo.workBranch} at each turn end.
+
+(The clone is shallow: \`git diff ${repo.defaultBranch}\` works, but three-dot diffs and deep \`git log\` have no common history to walk — don't rely on them.)${summaryBlock}
+
+Everything above is context. Act on the user's message.`;
+}
+
+/**
  * Message utilisateur de CONTEXTE : dépôt + ticket (description + plan). Volontai-
  * rement présenté comme du contexte — la demande réelle est le message utilisateur
  * qui suit (le prompt du lanceur, poussé à part par l'appelant). Les instructions

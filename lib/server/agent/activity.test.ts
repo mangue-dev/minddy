@@ -69,7 +69,7 @@ describe("buildAgentActivity", () => {
   });
 
   it("garde une PR FUSIONNÉE dans le chip (seule `closed` est exclue)", () => {
-    // `merged` est le seul état de PR traité à part (inheritablePrForIssue renvoie
+    // `merged` est le seul état de PR traité à part (inheritableWorkForIssue renvoie
     // null → branche neuve) : on verrouille ici qu'il reste néanmoins affiché,
     // sinon le lien vers le travail livré disparaîtrait de la carte.
     const out = buildAgentActivity([

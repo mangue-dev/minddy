@@ -37,6 +37,7 @@ import {
   buildAgentSystemPrompt,
   buildAgentContextMessage,
   buildInheritedPrMessage,
+  buildInheritedBranchMessage,
   type AgentRepoContext,
 } from "./prompt";
 import { resolveAgentApiKey, getModelContextWindow } from "./model";
@@ -52,9 +53,11 @@ import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
 import {
   stampRun,
+  getRun,
   appendEvent,
   pullPendingMessages,
   previousRunSummaryForIssue,
+  branchHasPriorRun,
   readInterruptFlag,
   clearInterrupt,
   hasPendingRunMessages,
@@ -90,6 +93,10 @@ const MIN_SOFT_DEADLINE_MS = 20_000;
 const MAX_WALL_CLOCK_MS = 60 * 60_000;
 /** Taille max du checkpoint sérialisé. */
 const MAX_CHECKPOINT_BYTES = 8_000_000;
+/** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
+    `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
+    donc une erreur persistante s'arrête après ce nombre de claims. */
+const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
 
 export type ExecuteOutcome = "completed" | "suspended" | "interrupted" | "failed";
 
@@ -332,11 +339,15 @@ async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
 }
 
 /**
- * Assemble le message d'amorce d'une run FROIDE qui hérite d'une PR (MIN-68), ou
- * null si la run n'hérite de rien (premier lancement). La PR et son fil de review
- * sont lus À CHAUD sur GitHub — pas figés au lancement : entre la création de la run
- * et son exécution, un reviewer a pu commenter, et c'est souvent CE commentaire qui
- * motive la relance. Le résumé de la run précédente vient de la base (`outcome`).
+ * Assemble le message d'amorce d'une run FROIDE qui hérite du travail du ticket
+ * (MIN-68, indexé sur la branche), ou null si la run n'hérite de rien (premier
+ * lancement). Deux formes :
+ *  • la lignée porte une PR → PR + fil de review lus À CHAUD sur GitHub (pas figés
+ *    au lancement : entre la création de la run et son exécution, un reviewer a pu
+ *    commenter, et c'est souvent CE commentaire qui motive la relance) ;
+ *  • la lignée n'a pas (encore) de PR → message de branche héritée (le travail
+ *    poussé continue ; `create_pr` reste une décision).
+ * Le résumé de la run précédente vient de la base (`outcome`).
  *
  * Best-effort : GitHub indisponible ne doit pas faire échouer la run — on retombe
  * sur le contexte minimal (« tu itères sur cette branche, va la lire »).
@@ -349,7 +360,21 @@ async function buildInheritedPrContext(
     repo: AgentRepoContext;
   },
 ): Promise<string | null> {
-  if (run.pr_number == null) return null;
+  if (run.pr_number == null) {
+    // Pas de PR : la branche héritée porte-t-elle du travail d'une session
+    // précédente ? (Une branche neuve stampée par un premier chunk crashé, non.)
+    if (!run.branch_name) return null;
+    const inherited = await branchHasPriorRun(
+      run.issue_id,
+      run.branch_name,
+      run.created_at,
+    ).catch(() => false);
+    if (!inherited) return null;
+    const previousSummary = await previousRunSummaryForIssue(run.issue_id, run.id).catch(
+      () => null,
+    );
+    return buildInheritedBranchMessage({ repo: opts.repo, previousSummary });
+  }
   const number = run.pr_number;
 
   const [pr, comments, previousSummary] = await Promise.all([
@@ -621,19 +646,36 @@ export async function executeAgentRun(
     };
 
     /**
-     * La session suit une PR REFUSÉE et un push vient de commiter du travail → on
-     * la ROUVRE (règle produit : on réitère toujours la dernière PR du ticket,
-     * jamais de doublon). Appelé après CHAQUE push qui commite — fin de tour ET
-     * push WIP de mi-tour : sur un tour multi-chunks, ce sont les WIP qui portent
-     * les commits, et le push final (arbre propre, committed=false) ne verrait
-     * rien. Une PR mergée n'est jamais ressuscitée (le reopen échoue → on n'insiste
-     * pas). Best-effort.
+     * Recale `prState` sur la BASE : les actions in-app (merge/reject pendant que
+     * l'agent tourne) et le webhook GitHub stampent `agent_runs.pr_state`, invisible
+     * du snapshot pris au claim. Sans ce recalage, un reject mid-turn ne serait
+     * jamais rouvert au push, et un merge mid-turn passerait inaperçu.
+     */
+    const refreshPrStateFromDb = async (): Promise<void> => {
+      const db = await getRun(run.id).catch(() => null);
+      if (!db) return;
+      prState.number = db.pr_number;
+      prState.url = db.pr_url;
+      prState.state = db.pr_state;
+    };
+
+    /**
+     * La session suit une PR REFUSÉE et un push vient de faire AVANCER le remote →
+     * on la ROUVRE (règle produit : on réitère toujours la dernière PR du ticket,
+     * jamais de doublon). Appelé après CHAQUE push — fin de tour ET push WIP de
+     * mi-tour : sur un tour multi-chunks, ce sont les WIP qui portent les commits.
+     * Décision sur `remoteUpdated` (le remote a bougé), pas `committed` : un commit
+     * posé à un appel précédent (push 5xx) part avec un arbre propre au suivant.
+     * Une PR mergée n'est jamais ressuscitée (le reopen échoue → on n'insiste pas).
+     * Best-effort.
      */
     const reopenIfRejectedWorkPushed = async (
-      pushed: { committed: boolean } | null,
+      pushed: { remoteUpdated: boolean } | null,
       token: string,
     ): Promise<void> => {
-      if (!pushed?.committed || prState.number == null || prState.state !== "closed") return;
+      if (!pushed?.remoteUpdated) return;
+      await refreshPrStateFromDb();
+      if (prState.number == null || prState.state !== "closed") return;
       const reopened = await reopenPullRequest({
         token,
         repoFullName: target.repoFullName,
@@ -733,22 +775,49 @@ export async function executeAgentRun(
       // Pousse ce que le tour a changé (no-op propre sans changement). Si la session
       // suit une PR, GitHub la met à jour tout seul — aucune création ici : ouvrir
       // une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
+      let pushError: string | null = null;
       const pushed = await commitAndPush(sandbox, {
         authUrl,
         workBranch,
         message: commitMessageFromReply(reply, issue.identifier),
       }).catch((err) => {
-        // Un push raté ne perd rien : le travail reste dans le snapshot, re-poussé
-        // au tour suivant.
-        console.error("[agent-execute] turn-end push failed:", (err as Error).message);
+        pushError = (err as Error).message;
+        console.error("[agent-execute] turn-end push failed:", pushError);
         return null;
       });
+      // Push raté → SIGNAL VISIBLE (event + error_message), le run reste au repos
+      // reprennable. Un rejet non-fast-forward n'est PAS transitoire (quelqu'un a
+      // poussé sur la branche de l'agent) : sans signal, chaque tour re-échouerait
+      // en silence et l'utilisateur croirait le travail livré alors que la branche
+      // distante ne le reçoit plus jamais.
+      if (pushError) {
+        await emit("error", {
+          message: (PUSH_FAILED_STRINGS[commentLocale] ?? PUSH_FAILED_STRINGS.en)(
+            cap(pushError, 300),
+          ),
+        });
+      }
 
       await reopenIfRejectedWorkPushed(pushed, token);
+      // Le remote a reçu du travail mais la PR a été FUSIONNÉE pendant le tour
+      // (`refreshPrStateFromDb` dans le reopen vient de recaler l'état) : les
+      // commits sont préservés sur la branche mais n'appartiennent plus à aucune
+      // PR — on le dit, sinon l'utilisateur croit le travail en revue.
+      if (pushed?.remoteUpdated && prState.state === "merged" && prState.number != null) {
+        await emit("error", {
+          message: (MERGED_DURING_TURN_STRINGS[commentLocale] ?? MERGED_DURING_TURN_STRINGS.en)(
+            prState.number,
+          ),
+        });
+      }
 
       // `outcome` = la dernière réponse de la session : c'est elle qu'une future
       // session froide recevra comme résumé du travail précédent.
-      await restStamp({ checkpoint, outcome: reply ? cap(reply, 4000) : null });
+      await restStamp({
+        checkpoint,
+        outcome: reply ? cap(reply, 4000) : null,
+        ...(pushError ? { error_message: cap(pushError, 1000) } : {}),
+      });
       return "completed";
     }
 
@@ -825,9 +894,24 @@ export async function executeAgentRun(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await emit("error", { message });
-    // Erreur d'AMORÇAGE (repo/modèle/clone : sandbox jamais acquise) → non
-    // reprenable, la session échoue.
+    // Erreur d'AMORÇAGE (repo/modèle/clone : sandbox jamais acquise).
     if (!sandbox) {
+      // Une CONVERSATION EXISTANTE (checkpoint) ne meurt jamais sur une erreur
+      // d'amorçage — souvent transitoire (mint de token GitHub, 502). REPOS avec
+      // l'erreur visible : le prochain message retentera l'amorçage, contexte
+      // intact. Seule une run VIERGE (rien à préserver) échoue en `failed`.
+      if (run.checkpoint?.messages?.length) {
+        await stampRun(run.id, {
+          status: "completed",
+          error_message: cap(message, 1000),
+          continuations: 0,
+          attempts: 0,
+          window_started_at: null,
+          last_activity_at: new Date().toISOString(),
+          interrupt_requested: false,
+        });
+        return "completed";
+      }
       await stampRun(run.id, {
         status: "failed",
         error_message: cap(message, 1000),
@@ -837,17 +921,25 @@ export async function executeAgentRun(
       return "failed";
     }
     // Erreur EN COURS DE TOUR → la session reste reprennable : REPOS, checkpoint du
-    // dernier état sain conservé (non écrasé), microVM gardée. L'utilisateur peut
-    // renvoyer un message pour reprendre.
+    // dernier état sain conservé (non écrasé), microVM gardée. Si un message de
+    // steering attend (accepté pendant le tour, jamais drainé), on RE-QUEUE pour ne
+    // pas l'orpheliner — borné par `attempts` (incrémenté à chaque claim, jamais
+    // remis à zéro sur ce chemin) pour qu'une erreur persistante ne boucle pas
+    // claim → erreur → re-queue indéfiniment.
     await clearInterrupt(run.id).catch(() => {});
+    const retryForPending =
+      run.attempts < MAX_ERROR_REQUEUE_ATTEMPTS &&
+      (await hasPendingRunMessages(run.id).catch(() => false));
     await stampRun(run.id, {
-      status: "completed",
+      status: retryForPending ? "queued" : "completed",
+      ...(retryForPending
+        ? { not_before: new Date().toISOString() }
+        : // Repos sain : le budget de reprise sur crash repart entier (sinon il
+          // s'épuise sur la vie du run et le prochain crash effacerait son
+          // checkpoint via requeueStuckRuns).
+          { attempts: 0 }),
       error_message: cap(message, 1000),
       continuations: 0,
-      // Comme `restFields` : ce run revient au repos sain, son budget de reprise sur
-      // crash repart entier (sinon il s'épuise sur la vie du run et le prochain
-      // crash effacerait son checkpoint).
-      attempts: 0,
       window_started_at: null,
       sandbox_id: sandboxName(sandbox),
       sandbox_stopped_at: null,
@@ -857,6 +949,22 @@ export async function executeAgentRun(
     return "completed";
   }
 }
+
+/** Note de fil quand le push de fin de tour échoue (visible dans la conversation). */
+const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
+  fr: (detail) =>
+    `Le push de fin de tour a échoué — la branche distante n'a PAS reçu le travail de ce tour. Le travail reste dans la sandbox et sera re-poussé au prochain tour. Détail : ${detail}`,
+  en: (detail) =>
+    `The turn-end push failed — the remote branch did NOT receive this turn's work. The work is kept in the sandbox and will be pushed again next turn. Detail: ${detail}`,
+};
+
+/** Note de fil quand la PR a été fusionnée PENDANT le tour (travail hors PR). */
+const MERGED_DURING_TURN_STRINGS: Record<Locale, (n: number) => string> = {
+  fr: (n) =>
+    `La pull request #${n} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune pull request. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
+  en: (n) =>
+    `Pull request #${n} was merged during this turn: the new work was pushed to the branch but no longer belongs to any pull request. Start a new session to continue — it will begin from a fresh branch.`,
+};
 
 const COMMENT_STRINGS: Record<
   Locale,

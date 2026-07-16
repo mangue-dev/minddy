@@ -884,7 +884,7 @@ export function IssueCard({
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
   // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
-  // ouvre l'agent (nouvelle run à froid, ou la run active s'il y en a une).
+  // ouvre l'agent (la dernière conversation du ticket, ou un composer vierge).
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
     !isDragging,
     {
@@ -903,9 +903,9 @@ export function IssueCard({
       shortcut: "⇧P",
       onSelect: () => void copyPrompt(),
     },
-    // Ouvre l'agent de code sur ce ticket (modal grand format) : LANCE une nouvelle
-    // run à froid, ou OUVRE la run active s'il y en a une (pour la suivre /
-    // l'interrompre / lui répondre). Toujours disponible.
+    // Ouvre l'agent de code sur ce ticket (modal grand format) : OUVRE la dernière
+    // conversation si le ticket en a une (elle se poursuit depuis son composer),
+    // sinon composer vierge pour lancer une session. Toujours disponible.
     {
       id: "launch-agent",
       label: agentHasSession ? tAgent("openAgent") : tAgent("menuLaunch"),

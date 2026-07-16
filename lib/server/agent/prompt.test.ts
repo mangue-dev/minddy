@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInheritedPrMessage } from "./prompt";
+import { buildInheritedBranchMessage, buildInheritedPrMessage } from "./prompt";
 
 /**
  * Message d'amorce d'une run FROIDE qui hérite d'une PR (MIN-68). C'est la seule
@@ -126,5 +126,34 @@ describe("buildInheritedPrMessage", () => {
     // Le cap est à 2000 : 2100 « x » d'affilée ne peuvent pas survivre.
     expect(msg).toContain("x".repeat(2000));
     expect(msg).not.toContain("x".repeat(2100));
+  });
+});
+
+/**
+ * Variante SANS PR : depuis que l'héritage est indexé sur la branche (la création
+ * de PR est une décision), une run froide peut reprendre une branche qui porte du
+ * travail jamais mis en PR. Ce message est sa seule mémoire de ce passé.
+ */
+describe("buildInheritedBranchMessage", () => {
+  it("porte la branche, l'absence de PR et l'ordre de ne pas repartir de zéro", () => {
+    const msg = buildInheritedBranchMessage({ repo });
+    expect(msg).toContain(repo.workBranch);
+    expect(msg).toMatch(/No pull request exists yet/i);
+    expect(msg).toMatch(/do NOT start the ticket over/i);
+    // Même contrainte de clone shallow que le message PR.
+    expect(msg).toContain("git diff main");
+    expect(msg).not.toContain("main...");
+  });
+
+  it("injecte le résumé de la session précédente, plafonné", () => {
+    const msg = buildInheritedBranchMessage({
+      repo,
+      previousSummary: "Ajout du champ de recherche.",
+    });
+    expect(msg).toContain("Ajout du champ de recherche.");
+
+    const capped = buildInheritedBranchMessage({ repo, previousSummary: "s".repeat(9000) });
+    expect(capped).not.toContain("s".repeat(4100));
+    expect(capped).toContain("[truncated]");
   });
 });

@@ -32,6 +32,8 @@ export interface AgentRunSummary {
   triggered_by: "button" | "chat" | "mention";
   /** Prompt de lancement (bulle « originelle » de la conversation). */
   prompt: string | null;
+  /** Branche de travail de la lignée (l'héritage des runs froides est indexé dessus). */
+  branch_name: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;

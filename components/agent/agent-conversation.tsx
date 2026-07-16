@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner, toast } from "mangue-ui";
@@ -134,7 +134,14 @@ export function AgentConversation({
   // temps il n'y a rien à afficher — le message a quitté le composer et n'existe
   // encore nulle part. On le tient ici pour le montrer tout de suite.
   const [launchText, setLaunchText] = useState<string | null>(null);
+  // L'utilisateur a explicitement choisi une session ou ouvert le composer : les
+  // props ne reprennent plus la main. Sans ce garde, un changement d'`initialRunId`
+  // (le représentant de l'issue bouge — ex. un coéquipier lance une run, le poll la
+  // fait remonter) écraserait sa sélection ou jetterait le brouillon en cours de
+  // frappe dans le composer.
+  const userOverrodeRef = useRef(false);
   useEffect(() => {
+    if (userOverrodeRef.current) return;
     setSelectedId(initialRunId);
     setComposing(initialCompose);
   }, [initialRunId, initialCompose]);
@@ -146,14 +153,16 @@ export function AgentConversation({
     launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Résolution de la session affichée : celle désignée, sinon celle qui travaille,
-  // sinon la DERNIÈRE session de l'issue — une conversation au repos se POURSUIT
-  // (modèle conversationnel), elle ne retombe plus sur un composer vierge. Compose
-  // seulement sans aucune session, ou sur demande explicite (« nouvel agent »).
+  // sinon la DERNIÈRE session NON `failed` de l'issue — une conversation au repos
+  // se POURSUIT (modèle conversationnel), elle ne retombe plus sur un composer
+  // vierge. Une run `failed` (morte à l'amorçage) n'a ni fil ni composer : la
+  // prendre par défaut ouvrirait une conversation morte sans action visible — on
+  // compose à la place (elle reste consultable via le sélecteur de sessions).
   const liveRun = composing
     ? null
     : selectedId
       ? knownRuns.find((r) => r.id === selectedId) ?? null
-      : activeRun ?? knownRuns[0] ?? null;
+      : activeRun ?? knownRuns.find((r) => r.status !== "failed") ?? null;
   const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
   // `runs` arrive trié du plus récent au plus ancien : runs[0] est la dernière run.
   // La run qu'on vient de lancer compte AUSSI comme la dernière : entre le POST et
@@ -289,14 +298,14 @@ export function AgentConversation({
       ? "loading"
       : "compose";
 
-  // PR dont la prochaine run froide héritera — miroir EXACT de
-  // `inheritablePrForIssue` : on prend la PR la plus récente, et si elle est
-  // fusionnée il n'y a rien à hériter (branche neuve). Surtout pas « la plus récente
-  // non fusionnée » : on promettrait d'itérer sur une vieille PR que le serveur ne
-  // touchera pas.
-  const latestPrRun = runs.find((r) => r.pr_number != null) ?? null;
-  const inheritedPr =
-    latestPrRun && latestPrRun.pr_state !== "merged" ? latestPrRun.pr_number : null;
+  // Travail dont la prochaine run froide héritera — miroir EXACT de
+  // `inheritableWorkForIssue` : la lignée est indexée sur la BRANCHE (la création
+  // de PR est optionnelle). Run la plus récente avec une branche ; mergée → rien à
+  // hériter (branche neuve). Surtout pas « la plus récente non fusionnée » : on
+  // promettrait d'itérer sur une vieille lignée que le serveur ne touchera pas.
+  const latestWorkRun = runs.find((r) => r.branch_name != null) ?? null;
+  const inheritedWork =
+    latestWorkRun && latestWorkRun.pr_state !== "merged" ? latestWorkRun : null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -336,6 +345,7 @@ export function AgentConversation({
           runs={knownRuns}
           selectedId={liveRun?.id ?? null}
           onSelect={(picked) => {
+            userOverrodeRef.current = true;
             setComposing(false);
             setSelectedId(picked.id);
           }}
@@ -343,6 +353,7 @@ export function AgentConversation({
             activeRun || phase === "compose"
               ? undefined
               : () => {
+                  userOverrodeRef.current = true;
                   setSelectedId(null);
                   setComposing(true);
                 }
@@ -382,11 +393,14 @@ export function AgentConversation({
               <NumoIcon className="size-6 text-muted-foreground" />
             </div>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {/* Une run froide part d'un contexte vierge, mais reprend la PR de
-                  l'issue : on l'annonce, sinon « nouvel agent » laisse craindre de
-                  repartir de zéro et de perdre le travail déjà en revue. */}
-              {inheritedPr
-                ? t("composeInheritsPr", { number: inheritedPr })
+              {/* Une run froide part d'un contexte vierge, mais reprend la lignée
+                  du ticket (branche, et PR si une existe) : on l'annonce, sinon
+                  « nouvel agent » laisse craindre de repartir de zéro et de perdre
+                  le travail déjà poussé. */}
+              {inheritedWork
+                ? inheritedWork.pr_number != null
+                  ? t("composeInheritsPr", { number: inheritedWork.pr_number })
+                  : t("composeInheritsBranch")
                 : t("dialogDescription")}
             </p>
           </div>

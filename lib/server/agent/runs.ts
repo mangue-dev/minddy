@@ -96,7 +96,7 @@ export interface CreateRunInput {
    */
   baseBranch?: string | null;
   branchName?: string | null;
-  /** PR héritée, posée dès la création (cf. `inheritablePrForIssue`). */
+  /** PR héritée, posée dès la création (cf. `inheritableWorkForIssue`). */
   prNumber?: number | null;
   prUrl?: string | null;
   prState?: AgentRun["pr_state"];
@@ -193,6 +193,11 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
  * issue partagent la branche : dès qu'une plus récente existe, la précédente n'est
  * plus reprennable (sa sandbox est restée sur un ancêtre — son push serait rejeté).
  * Elle devient un historique consultable.
+ *
+ * Les runs `failed` sont IGNORÉES : une run morte à l'amorçage n'a jamais acquis de
+ * sandbox ni fait avancer la branche — la compter condamnerait définitivement la
+ * dernière bonne session (409 supersededRun) pour une panne transitoire (mint de
+ * token GitHub, 502…) survenue en essayant d'en lancer une nouvelle.
  */
 export async function newerRunExistsForIssue(
   issueId: string,
@@ -204,35 +209,41 @@ export async function newerRunExistsForIssue(
     .select("id")
     .eq("issue_id", issueId)
     .gt("created_at", createdAt)
+    .neq("status", "failed")
     .limit(1);
   return ((data ?? []) as unknown[]).length > 0;
 }
 
-/** PR de l'issue dont une run froide peut hériter (cf. `inheritablePrForIssue`). */
-export interface InheritablePr {
+/** Travail de l'issue dont une run froide peut hériter (cf. `inheritableWorkForIssue`). */
+export interface InheritableWork {
   branchName: string;
   baseBranch: string | null;
-  prNumber: number;
+  /** PR de la lignée, si une a été ouverte (la création de PR est optionnelle). */
+  prNumber: number | null;
   prUrl: string | null;
   prState: AgentRun["pr_state"];
 }
 
 /**
- * PR dont une NOUVELLE run froide doit hériter (MIN-68) : la plus récente ouverte
- * par une run de l'issue, tant qu'elle reste pertinente —
- *   • `open` / `draft`  → on itère dessus ;
- *   • `closed` (refusée) → même branche, la PR sera rouverte à la prochaine PR ;
- *   • `merged`          → livrée : plus rien à itérer, la run repart d'une branche
- *                          neuve et ouvrira une nouvelle PR (→ null ici).
- * Null aussi si aucune run n'a jamais ouvert de PR (premier lancement).
+ * TRAVAIL dont une NOUVELLE run froide doit hériter (MIN-68, généralisé au modèle
+ * conversationnel) : la lignée est indexée sur la BRANCHE, plus seulement sur la
+ * PR — depuis que `create_pr` est une décision, une session peut pousser du vrai
+ * travail sans jamais ouvrir de PR, et ce travail ne doit pas être orphelin. On
+ * prend la run la plus récente qui porte une branche :
+ *   • PR `open` / `draft`  → même branche, on itère sur la PR ;
+ *   • PR `closed` (refusée) → même branche, la PR sera rouverte au prochain push ;
+ *   • pas de PR             → même branche (le travail poussé continue) ;
+ *   • PR `merged`           → livrée : plus rien à itérer, la run repart d'une
+ *                             branche neuve (→ null ici).
+ * Null aussi si aucune run n'a jamais eu de branche (premier lancement).
  */
-export async function inheritablePrForIssue(issueId: string): Promise<InheritablePr | null> {
+export async function inheritableWorkForIssue(issueId: string): Promise<InheritableWork | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
     .select("branch_name, base_branch, pr_number, pr_url, pr_state")
     .eq("issue_id", issueId)
-    .not("pr_number", "is", null)
+    .not("branch_name", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -243,7 +254,7 @@ export async function inheritablePrForIssue(issueId: string): Promise<Inheritabl
     pr_url: string | null;
     pr_state: AgentRun["pr_state"];
   } | null;
-  if (!row?.pr_number || !row.branch_name) return null;
+  if (!row?.branch_name) return null;
   if (row.pr_state === "merged") return null;
   return {
     branchName: row.branch_name,
@@ -252,6 +263,29 @@ export async function inheritablePrForIssue(issueId: string): Promise<Inheritabl
     prUrl: row.pr_url,
     prState: row.pr_state,
   };
+}
+
+/**
+ * Une run PLUS ANCIENNE de l'issue a-t-elle déjà travaillé cette branche ?
+ * Distingue, à l'amorce d'une run sans checkpoint, une branche HÉRITÉE (elle porte
+ * le travail d'une session précédente → message d'héritage) de la branche NEUVE
+ * d'un premier chunk re-tenté après crash (générée puis stampée par le chunk mort,
+ * sans aucun passé — un message d'héritage y serait mensonger).
+ */
+export async function branchHasPriorRun(
+  issueId: string,
+  branchName: string,
+  beforeCreatedAt: string,
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("id")
+    .eq("issue_id", issueId)
+    .eq("branch_name", branchName)
+    .lt("created_at", beforeCreatedAt)
+    .limit(1);
+  return ((data ?? []) as unknown[]).length > 0;
 }
 
 /**
@@ -439,15 +473,6 @@ export async function syncPrState(opts: {
   return ((runs ?? []) as Array<{ id: string; issue_id: string; created_by: string | null }>).map(
     (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
   );
-}
-
-/** Met à jour l'état PR d'un run précis (action de review in-app : merge/close). */
-export async function setRunPrState(
-  runId: string,
-  prState: AgentRun["pr_state"],
-): Promise<void> {
-  const service = getServiceClient();
-  await service.from("agent_runs").update({ pr_state: prState }).eq("id", runId);
 }
 
 /**

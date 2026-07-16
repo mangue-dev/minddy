@@ -689,7 +689,14 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Reasoning : affiché en live mais JAMAIS poussé dans `messages` (chat-completions
     // ne le round-trippe pas ; le persister gonflerait/rejouerait le contexte).
     if (stream.reasoning.trim()) await emit("thinking", { text: cap(stream.reasoning, 2000) });
-    if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
+    // Le contenu n'est émis en `thinking` QUE s'il accompagne des tool-calls (pensée
+    // intermédiaire). Un round SANS tool-call est la réponse finale : elle part en
+    // `summary` seul juste en dessous — l'émettre aussi ici créerait une bulle
+    // dupliquée dès que la réponse dépasse le cap (2000 ≠ 8000 → le dédoublonnage
+    // par égalité de texte du feed ne matche plus).
+    if (stream.content.trim() && stream.toolCalls.length > 0) {
+      await emit("thinking", { text: cap(stream.content, 2000) });
+    }
 
     // Arrêt naturel sans tool-call → FIN DE TOUR : le texte du modèle est sa
     // réponse à l'utilisateur (le feed la rend comme bulle de clôture du tour).

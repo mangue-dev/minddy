@@ -533,11 +533,12 @@ export async function executeTool(
           typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
         const prompt =
           typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
-        // Si une run est ACTIVE sur l'issue (au travail, ou suspendue en attente de
-        // l'utilisateur), on la CONTINUE — le prompt devient un message de steering —
-        // au lieu d'échouer avec « alreadyRunning ». Sinon (aucune run, ou la
-        // dernière est terminée) on lance une run FROIDE, qui hérite de la PR de
-        // l'issue (MIN-68).
+        // Si une run TRAVAILLE sur l'issue (queued/running), le prompt lui parvient
+        // en STEERING au lieu d'échouer avec « alreadyRunning ». Sinon (aucune run,
+        // ou la dernière est au repos) on lance une run FROIDE, qui hérite de la
+        // lignée de l'issue (branche + PR éventuelle — MIN-68). NB : une session au
+        // repos n'est PAS reprise ici ; la reprise à chaud d'une conversation passe
+        // par le composer de SA conversation (/steer).
         const result = await continueOrLaunchAgentRun({
           issueId,
           userId: ctx.userId,

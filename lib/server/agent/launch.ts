@@ -11,7 +11,7 @@ import { checkAgentQuota, type AgentQuota } from "./quota";
 import {
   createRun,
   activeRunForIssue,
-  inheritablePrForIssue,
+  inheritableWorkForIssue,
   insertRunMessage,
   bumpRunActivity,
   ActiveRunExistsError,
@@ -90,12 +90,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     throw err;
   }
 
-  // Héritage de la PR (MIN-68) : tant que la PR de l'issue est pertinente (open /
-  // draft / closed), la run froide repart de SA branche et porte ses `pr_*` dès la
+  // Héritage du TRAVAIL (MIN-68, indexé sur la branche) : tant que la lignée de
+  // l'issue est vivante (branche portée par une run, PR non mergée — ou pas de PR
+  // du tout), la run froide repart de SA branche et porte ses `pr_*` dès la
   // création → `execute.ts` pousse sur la bonne branche et met à jour la MÊME PR
-  // (une `closed` est rouverte au moment du push). Après un merge, plus rien à
-  // hériter : branche neuve + nouvelle PR.
-  const inherited = await inheritablePrForIssue(input.issueId);
+  // le cas échéant (une `closed` est rouverte au push). Après un merge, plus rien
+  // à hériter : branche neuve.
+  const inherited = await inheritableWorkForIssue(input.issueId);
 
   let run: AgentRun;
   try {

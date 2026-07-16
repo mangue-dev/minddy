@@ -170,12 +170,20 @@ export async function cloneRepo(
  * Stage tout, commit s'il y a des changements, puis push HEAD → workBranch. À
  * appeler à chaque suspend et à la fin (l'état du repo devient durable dans git).
  * `authUrl` doit porter un token FRAIS (l'appelant le re-résout avant l'appel).
- * Renvoie le sha de HEAD et si un commit a été créé.
+ *
+ * Renvoie le sha de HEAD, si un commit a été créé, et surtout `remoteUpdated` : le
+ * push a-t-il fait AVANCER la branche distante ? C'est LE signal « du vrai travail
+ * vient d'arriver sur le remote » — plus fiable que `committed`, qui ne voit que
+ * l'appel courant : un commit posé par un appel précédent dont le push avait
+ * échoué (5xx transitoire) part avec un arbre PROPRE au push suivant
+ * (committed=false), et inversement un tour purement conversationnel pousse un
+ * no-op (remote déjà à jour). Les décisions du type « rouvrir la PR refusée »
+ * doivent se prendre sur `remoteUpdated`.
  */
 export async function commitAndPush(
   sandbox: Sandbox,
   opts: { authUrl: string; workBranch: string; message: string },
-): Promise<{ committed: boolean; headSha: string }> {
+): Promise<{ committed: boolean; remoteUpdated: boolean; headSha: string }> {
   const status = await runShell(sandbox, `git status --porcelain`);
   const dirty = status.stdout.trim().length > 0;
 
@@ -186,6 +194,20 @@ export async function commitAndPush(
     if (commit.exitCode !== 0) throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
   }
 
+  const head = await runShell(sandbox, `git rev-parse HEAD`);
+  const headSha = head.stdout.trim();
+
+  // Sha actuel de la branche distante (vide si elle n'existe pas encore). Best-
+  // effort : si ls-remote échoue, on suppose le remote en retard (remoteUpdated
+  // sera true si le push passe) — mieux vaut un reopen de trop qu'un travail
+  // poussé sans réouverture de sa PR refusée.
+  const remote = await runShell(
+    sandbox,
+    `git ls-remote ${sq(opts.authUrl)} ${sq(`refs/heads/${opts.workBranch}`)}`,
+    { timeoutMs: 60_000 },
+  );
+  const remoteSha = remote.exitCode === 0 ? remote.stdout.trim().split(/\s/)[0] ?? "" : "";
+
   const push = await runShell(
     sandbox,
     `git push ${sq(opts.authUrl)} ${sq(`HEAD:refs/heads/${opts.workBranch}`)}`,
@@ -193,8 +215,7 @@ export async function commitAndPush(
   );
   if (push.exitCode !== 0) throw new Error(`git push failed: ${push.stderr || push.stdout}`);
 
-  const head = await runShell(sandbox, `git rev-parse HEAD`);
-  return { committed: dirty, headSha: head.stdout.trim() };
+  return { committed: dirty, remoteUpdated: remoteSha !== headSha, headSha };
 }
 
 // ── Helpers fichiers (utilisés par les tools de l'agent) ─────────────────────

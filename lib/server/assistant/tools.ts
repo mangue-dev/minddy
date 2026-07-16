@@ -1009,7 +1009,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Launch the minddy cloud code agent on an issue: it clones the project's linked GitHub repository in a sandbox, implements the issue, and opens a pull request. Requires a linked GitHub repo. Use when the user asks to IMPLEMENT, fix, or write code for an issue — not merely describe it. Pass `model` ONLY when the user explicitly names a model to use — resolve the exact id with list_agent_models first so it matches their active provider (a model absent from that provider will fail); otherwise omit `model` and their default applies.",
+        "Send a message to the minddy cloud code agent on an issue. The agent works CONVERSATIONALLY in a sandbox on the project's linked GitHub repository, anchored to the issue: it does what the message asks (implement, fix, explore, explain, review), pushes its code changes to the issue's working branch, and opens a pull request only when asked or when it judges the work ready for review — a PR is NOT automatic, so never promise one. If an agent is already working on the issue, the message reaches it as steering; otherwise a new session starts (inheriting the issue's existing branch/PR). Requires a linked GitHub repo. Pass `model` ONLY when the user explicitly names a model to use — resolve the exact id with list_agent_models first so it matches their active provider (a model absent from that provider will fail); otherwise omit `model` and their default applies.",
       parameters: {
         type: "object",
         properties: {

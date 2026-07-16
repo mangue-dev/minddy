@@ -12,6 +12,7 @@ import {
   type AgentRunStatus,
 } from "@/lib/server/agent/runs";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
+import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
 
@@ -24,12 +25,22 @@ import { getServiceClient } from "@/lib/supabase-service";
  * run FROIDE. Le message rejoint la file `agent_run_messages` ; la boucle le draine
  * à la frontière de round et l'injecte comme message `user`. Cas :
  *   • running / queued     → orientation à chaud (drainé au round suivant) ;
- *   • completed / canceled → nouveau tour : on repasse le run `queued`, budget de
- *                            tour réinitialisé, et on kicke le drain.
+ *   • completed / canceled → nouveau tour : quota re-vérifié (chaque reprise est un
+ *                            tour FACTURÉ — sans ce check, une session existante
+ *                            contournerait le plafond mensuel pour toujours), puis
+ *                            run re-`queued`, budget réinitialisé, drain kické.
  * Seule la DERNIÈRE run de l'issue est reprennable — les précédentes sont un
  * historique (voir le refus `supersededRun` plus bas).
  * Membre du projet requis. Un seul écrivain d'events = le claimer.
  */
+
+// Le kick de reprise draine le premier chunk dans after() : il lui faut la même
+// fenêtre que la route cron (270 s de budget), sinon la fonction est tuée en plein
+// round et le run reste bloqué en 'running' — et deux kills successifs épuisent
+// MAX_CRASH_ATTEMPTS, qui efface le checkpoint (conversation morte). Même raison
+// que le maxDuration = 300 de /api/issues/[id]/agent.
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ runId: string }> };
 
@@ -63,26 +74,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run is not resumable" }, { status: 409 });
   }
 
-  // Réveiller un run AU REPOS le remet en file. Deux refus (MIN-68) :
-  //
-  //  • une run PLUS RÉCENTE existe sur l'issue. Les runs d'une issue partagent la
-  //    branche : la plus récente l'a fait avancer, alors que la sandbox de ce run
-  //    est restée à SON état. Le reprendre commiterait par-dessus un ancêtre et le
-  //    push serait rejeté (non-fast-forward) — le tour échouerait en boucle.
-  //    Une run passée est un HISTORIQUE : on la
-  //    consulte, on ne la réveille pas ; pour continuer, on en lance une nouvelle
-  //    (qui, elle, clone la branche à jour).
-  //  • une AUTRE run est active (course : elle vient d'être créée).
-  //
-  // Un run qui travaille déjà (queued/running) n'est pas concerné : il EST le plus
-  // récent, son message rejoint simplement la file.
   // Sa PR est FUSIONNÉE → ce run est LIVRÉ, on ne le réveille pas (MIN-68). Sa
-  // branche est déjà dans la base : y remettre l'agent au travail rouvrirait un
-  // cycle de PR sur du travail livré — concrètement le harnais pousserait de
-  // nouveaux commits sur la branche mergée et ouvrirait une PR de plus, ce qui fait
-  // régresser l'issue de `done` à `in_review`. La règle « merged → branche neuve »
-  // ne vivait que dans `inheritablePrForIssue` (chemin FROID) ; la reprise à chaud,
-  // qui garde sa propre branche, la contournait. Pour continuer : nouvelle run.
+  // branche est déjà dans la base : y remettre l'agent au travail pousserait de
+  // nouveaux commits sur du travail livré. Pour continuer : nouvelle run (qui
+  // repartira d'une branche neuve — `inheritableWorkForIssue` n'hérite jamais
+  // d'une lignée mergée).
   if (run.pr_state === "merged") {
     return NextResponse.json({ error: "prMerged", code: "prMerged" }, { status: 409 });
   }
@@ -93,6 +89,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       newerRunExistsForIssue(run.issue_id, run.created_at),
       activeRunForIssue(run.issue_id),
     ]);
+    // Une run PLUS RÉCENTE (non `failed`) existe : les runs d'une issue partagent
+    // la branche, la plus récente l'a fait avancer — reprendre celle-ci pousserait
+    // par-dessus un ancêtre (push rejeté). Une run passée est un HISTORIQUE : on
+    // la consulte, on ne la réveille pas.
     if (newer) {
       return NextResponse.json(
         { error: "supersededRun", code: "supersededRun" },
@@ -106,35 +106,71 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
+    // Chaque reprise démarre un TOUR facturé — même contrôle qu'au lancement
+    // (BYOK = illimité ; clé plateforme = plafond mensuel). Quota vérifié sur le
+    // PROPRIÉTAIRE du run : c'est sa clé/son plafond que le tour consomme.
+    const quota = await checkAgentQuota(run.created_by ?? auth.user.id);
+    if (!quota.allowed) {
+      return NextResponse.json(
+        { error: "quotaExceeded", code: "quotaExceeded", quota },
+        { status: 402 },
+      );
+    }
+
     // Requeue AVANT d'enregistrer le message : si la garde ne matche pas (course
-    // perdue), on refuse au lieu d'accepter un message que personne ne drainerait.
-    // Nouveau tour sur la même branche/PR (window de tour réinitialisée → le claim
-    // ré-ancre le wall-clock).
+    // perdue), on décide en connaissance de cause au lieu d'accepter un message
+    // que personne ne drainerait. Nouveau tour sur la même branche/PR.
     const stamped = await stampRun(
       runId,
       { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
       { guard: RESUME_FROM },
     );
     if (!stamped) {
-      return NextResponse.json(
-        { error: "alreadyRunning", code: "alreadyRunning" },
-        { status: 409 },
-      );
-    }
-    resumed = true;
+      // Course : le run n'est plus au repos. Si c'est LUI qui est (re)devenu actif
+      // (double-envoi rapide, autre onglet qui vient de le réveiller), le message
+      // est légitime — il rejoint le tour qui démarre, comme pour un run qui
+      // travaille. On ne refuse que si c'est une AUTRE run qui a pris l'issue.
+      const now = await getRun(runId);
+      if (!now || !["queued", "running"].includes(now.status)) {
+        return NextResponse.json(
+          { error: "alreadyRunning", code: "alreadyRunning" },
+          { status: 409 },
+        );
+      }
+    } else {
+      resumed = true;
 
-    // L'agent se remet au travail → le ticket repasse « en cours », SAUF si une PR
-    // en revue (open/draft) gouverne déjà son statut — même règle qu'au lancement
-    // d'une run froide (launch.ts). Une PR refusée (closed → issue `todo`) repasse
-    // bien en cours ; `merged` est déjà refusé plus haut (409 prMerged).
-    if (run.pr_state !== "open" && run.pr_state !== "draft") {
-      await syncIssueStatusOnAgentStart({ issueId: run.issue_id, actorId: auth.user.id });
+      // L'agent se remet au travail → le ticket repasse « en cours », SAUF si une
+      // PR en revue (open/draft) gouverne déjà son statut — même règle qu'au
+      // lancement d'une run froide (launch.ts). Une PR refusée (closed → issue
+      // `todo`) repasse bien en cours ; `merged` est déjà refusé plus haut.
+      if (run.pr_state !== "open" && run.pr_state !== "draft") {
+        await syncIssueStatusOnAgentStart({ issueId: run.issue_id, actorId: auth.user.id });
+      }
     }
   }
 
   await insertRunMessage(runId, auth.user.id, message);
   // Un message relance l'horloge d'inactivité (empêche le reaping imminent).
   await bumpRunActivity(runId);
+
+  // Course fin-de-tour : le message a été accepté pour un run qui TRAVAILLAIT,
+  // mais l'exécuteur a pu passer au repos entre son dernier `hasPendingRunMessages`
+  // et son stamp final — le message resterait alors orphelin (personne ne draine un
+  // run au repos). On re-lit : si le run vient de se poser, on le re-queue nous-
+  // mêmes (la garde évite le double-réveil si un autre client l'a déjà fait).
+  if (!resumed) {
+    const now = await getRun(runId);
+    if (now && RESUME_FROM.includes(now.status)) {
+      const stamped = await stampRun(
+        runId,
+        { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
+        { guard: RESUME_FROM },
+      );
+      if (stamped) resumed = true;
+    }
+  }
+
   if (resumed) kickAgentDrain(getServiceClient());
 
   return NextResponse.json({ ok: true, status: run.status });

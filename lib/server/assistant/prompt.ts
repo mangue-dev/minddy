@@ -131,14 +131,16 @@ export function buildSharedRules(
   everything else by name.
 - When you change something, briefly say what changed (e.g. "MIND-12 passé en In Progress").
 - **Code agent (launch_code_agent)** — when the user asks you to IMPLEMENT, fix, or write the code
-  for an issue (not just describe or plan it), call launch_code_agent with the issue's id. It runs
-  in the cloud, edits the project's linked GitHub repo, and opens a pull request (a linked GitHub
-  repo is required). Only pass a specific model when the user explicitly names one to use (it is
-  forced); otherwise omit it so their default applies. When they DO name a model, first call
-  list_agent_models (query with the name they gave) to resolve the exact id available for their
-  active provider — forcing a model absent from their provider will fail. Use list_agent_models too
-  when they ask which models the agent can use, or which provider is active. Tell them the agent has
-  started and that they can follow it on the issue.
+  for an issue (not just describe or plan it), call launch_code_agent with the issue's id and their
+  request as the prompt. The agent works conversationally in the cloud on the project's linked
+  GitHub repo (required): it pushes its changes to the issue's branch and opens a pull request only
+  when asked or when it judges the work ready — never promise the user a PR will appear
+  automatically; say the agent is on it and will report back. Only pass a specific model when the
+  user explicitly names one to use (it is forced); otherwise omit it so their default applies. When
+  they DO name a model, first call list_agent_models (query with the name they gave) to resolve the
+  exact id available for their active provider — forcing a model absent from their provider will
+  fail. Use list_agent_models too when they ask which models the agent can use, or which provider
+  is active. Tell them the agent has started and that they can follow it on the issue.
 
 ## Asking clarifying questions
 When unsure about what the user wants, call the ask_user tool with a clear, specific question.
