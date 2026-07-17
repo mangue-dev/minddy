@@ -200,6 +200,9 @@ export interface PullRequestRef {
   body?: string | null;
   head?: string;
   base?: string;
+  /** Auteur et date d'ouverture : le `body` ouvre le fil de conversation comme un commentaire. */
+  user?: { login: string; avatar_url: string | null } | null;
+  createdAt?: string;
 }
 
 export interface PullRequestFile {

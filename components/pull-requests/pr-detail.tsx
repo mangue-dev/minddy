@@ -15,6 +15,10 @@ import {
   DialogTitle,
   Skeleton,
   Spinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
   Tooltip,
   TooltipContent,
@@ -42,15 +46,15 @@ import {
   actOnAgentPrApi,
   postPrCommentApi,
   requestAgentPrChangesApi,
-  type PullRequestComment,
   type PullRequestListItem,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 
 /**
  * Panneau de détail d'une PR (MIN-66) : en-tête (issue + état + lien GitHub),
- * barre d'actions (accepter/refuser/demander des changements), diff, et fil de
- * commentaires GitHub. Tout est piloté par le run canonique `item.runId`.
+ * barre d'actions (accepter/refuser/demander des changements), puis deux onglets
+ * façon GitHub — le fil de conversation (description de la PR + commentaires) et
+ * les fichiers modifiés. Tout est piloté par le run canonique `item.runId`.
  */
 
 function stateBadgeVariant(
@@ -59,6 +63,65 @@ function stateBadgeVariant(
   if (state === "merged") return "default";
   if (state === "closed") return "destructive";
   return "secondary";
+}
+
+/**
+ * Une entrée du fil : avatar, auteur, heure, corps markdown. Sert autant à la
+ * description de la PR (le commentaire qui OUVRE le fil) qu'aux commentaires qui
+ * suivent — côté GitHub c'est la même chose, et le fil ne se lit comme un fil que
+ * si son premier message a la même forme que les autres.
+ */
+function ThreadComment({
+  user,
+  createdAt,
+  body,
+  onQuoteReply,
+}: {
+  user: { login: string; avatar_url: string | null } | null;
+  createdAt: string | null;
+  body: string;
+  onQuoteReply: () => void;
+}) {
+  const t = useTranslations("PullRequests");
+  const format = useFormatter();
+  const now = useNow();
+
+  return (
+    <li className="group/comment flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
+      <div className="flex items-center gap-2">
+        <Avatar className="size-5 shrink-0 text-[9px]">
+          {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.login} /> : null}
+          <AvatarFallback>{(user?.login ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <span className="min-w-0 truncate text-sm font-medium text-foreground">
+          {user?.login ?? "—"}
+        </span>
+        {createdAt ? (
+          <span className="shrink-0 text-xs text-muted-foreground/80">
+            {format.relativeTime(new Date(createdAt), now)}
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("quoteReply")}
+              className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+              onClick={onQuoteReply}
+            >
+              <Reply className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{t("quoteReply")}</TooltipContent>
+        </Tooltip>
+      </div>
+      <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+        {body}
+      </Markdown>
+    </li>
+  );
 }
 
 export function PrDetail({
@@ -75,8 +138,6 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
-  const format = useFormatter();
-  const now = useNow();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
 
@@ -98,6 +159,7 @@ export function PrDetail({
   const [model, setModel] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
+  const [tab, setTab] = useState<"conversation" | "files">("conversation");
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
@@ -158,13 +220,13 @@ export function PrDetail({
   // in_reply_to — seuls les commentaires de review ancrés au code sont threadés).
   // « Répondre » cite donc le message dans le composer du bas, comme le fait le
   // « Quote reply » de GitHub, et mentionne son auteur pour garder le fil lisible.
-  const quoteReply = (c: PullRequestComment) => {
-    const quoted = (c.body ?? "")
+  const quoteReply = (body: string, login?: string | null) => {
+    const quoted = body
       .trim()
       .split("\n")
       .map((line) => `> ${line}`)
       .join("\n");
-    const mention = c.user?.login ? `@${c.user.login} ` : "";
+    const mention = login ? `@${login} ` : "";
     setCommentBody((d) => `${d.trim() ? `${d.trimEnd()}\n\n` : ""}${quoted}\n\n${mention}`);
     // Après le rendu de la nouvelle valeur : focus, curseur à la fin (après la mention).
     requestAnimationFrame(() => {
@@ -289,7 +351,7 @@ export function PrDetail({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
-          {/* Titre issue + méta PR + description */}
+          {/* Titre issue + méta PR */}
           <div className="flex flex-col gap-2">
             <h1 className="font-display text-2xl leading-tight font-semibold">
               {item.issue?.title ?? pr?.title ?? identifier}
@@ -330,124 +392,114 @@ export function PrDetail({
                 </a>
               ) : null}
             </div>
-            {prDescription ? (
-              <Markdown className="mt-1 text-sm text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
-                {prDescription}
-              </Markdown>
-            ) : null}
           </div>
 
-          {/* Diff */}
-          <section className="flex flex-col gap-2">
-            {loading ? (
-              <div className="flex flex-col gap-2">
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-40 rounded-md" />
-              </div>
-            ) : pr ? (
-              <PrDiff
-                files={files}
-                runId={item.runId}
-                prUrl={pr.url}
-                reviewComments={reviewComments}
-                onCommentPosted={refetchReviewComments}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>
-            )}
-          </section>
-
-          {/* Fil de commentaires GitHub */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold">{t("comments")}</h2>
-            {commentsLoading ? (
-              <Skeleton className="h-16 rounded-md" />
-            ) : comments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noComments")}</p>
-            ) : (
-              // Même carte que les commentaires d'issue (CommentCard) : bordure,
-              // fond card, en-tête avatar/auteur/heure puis le corps markdown.
-              <ul className="flex flex-col gap-3">
-                {comments.map((c) => (
-                  <li
-                    key={c.id}
-                    className="group/comment flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Avatar className="size-5 shrink-0 text-[9px]">
-                        {c.user?.avatar_url ? (
-                          <AvatarImage src={c.user.avatar_url} alt={c.user.login} />
-                        ) : null}
-                        <AvatarFallback>
-                          {(c.user?.login ?? "?").slice(0, 1).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                        {c.user?.login ?? "—"}
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground/80">
-                        {format.relativeTime(new Date(c.created_at), now)}
-                      </span>
-                      <span className="min-w-0 flex-1" />
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={t("quoteReply")}
-                            className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
-                            onClick={() => quoteReply(c)}
-                          >
-                            <Reply className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">{t("quoteReply")}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <Markdown className="text-foreground">{c.body}</Markdown>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* Composer — même carte que le composer d'issue (CommentComposer),
-                sans mentions ni pièces jointes : un commentaire part sur GitHub,
-                où ni l'un ni l'autre n'a de sens. */}
-            <div className="relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring">
-              <AutoTextarea
-                ref={composerRef}
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    void submitComment();
-                  }
-                }}
-                placeholder={t("commentPlaceholder")}
-                className="max-h-48 w-full overflow-y-auto bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
-              />
-              <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
-                <DictateButton
-                  onTranscription={(text) =>
-                    setCommentBody((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
-                  }
-                  disabled={posting}
-                />
-                {commentBody.trim() || posting ? (
-                  <Button
-                    size="sm"
-                    className="rounded-full px-4"
-                    onClick={() => void submitComment()}
-                    disabled={!commentBody.trim() || posting}
-                  >
-                    {posting ? <Spinner /> : null}
-                    {t("postComment")}
-                  </Button>
+          {/* Onglets façon GitHub : le fil d'un côté, le code de l'autre. */}
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "conversation" | "files")}>
+            <TabsList variant="line" className="justify-start p-0">
+              <TabsTrigger value="conversation" className="gap-1.5">
+                {t("tabConversation")}
+                {comments.length > 0 ? (
+                  <span className="text-xs text-muted-foreground">{comments.length}</span>
                 ) : null}
+              </TabsTrigger>
+              <TabsTrigger value="files" className="gap-1.5">
+                {t("tabFiles")}
+                {files.length > 0 ? (
+                  <span className="text-xs text-muted-foreground">{files.length}</span>
+                ) : null}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Fil : la description de la PR ouvre la discussion, les commentaires
+                GitHub suivent, le composer ferme. */}
+            <TabsContent value="conversation" className="mt-4 flex flex-col gap-3">
+              {loading || commentsLoading ? (
+                <Skeleton className="h-16 rounded-lg" />
+              ) : !prDescription && comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("noComments")}</p>
+              ) : (
+                // Mêmes cartes que les commentaires d'issue (CommentCard) : bordure,
+                // fond card, en-tête avatar/auteur/heure puis le corps markdown.
+                <ul className="flex flex-col gap-3">
+                  {prDescription ? (
+                    <ThreadComment
+                      user={pr?.user ?? null}
+                      createdAt={pr?.createdAt ?? null}
+                      body={prDescription}
+                      onQuoteReply={() => quoteReply(prDescription, pr?.user?.login)}
+                    />
+                  ) : null}
+                  {comments.map((c) => (
+                    <ThreadComment
+                      key={c.id}
+                      user={c.user}
+                      createdAt={c.created_at}
+                      body={c.body}
+                      onQuoteReply={() => quoteReply(c.body ?? "", c.user?.login)}
+                    />
+                  ))}
+                </ul>
+              )}
+
+              {/* Composer — même carte que le composer d'issue (CommentComposer),
+                  sans mentions ni pièces jointes : un commentaire part sur GitHub,
+                  où ni l'un ni l'autre n'a de sens. */}
+              <div className="relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring">
+                <AutoTextarea
+                  ref={composerRef}
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      void submitComment();
+                    }
+                  }}
+                  placeholder={t("commentPlaceholder")}
+                  className="max-h-48 w-full overflow-y-auto bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+                />
+                <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
+                  <DictateButton
+                    onTranscription={(text) =>
+                      setCommentBody((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+                    }
+                    disabled={posting}
+                  />
+                  {commentBody.trim() || posting ? (
+                    <Button
+                      size="sm"
+                      className="rounded-full px-4"
+                      onClick={() => void submitComment()}
+                      disabled={!commentBody.trim() || posting}
+                    >
+                      {posting ? <Spinner /> : null}
+                      {t("postComment")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </section>
+            </TabsContent>
+
+            <TabsContent value="files" className="mt-4">
+              {loading ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-40 rounded-md" />
+                </div>
+              ) : pr ? (
+                <PrDiff
+                  files={files}
+                  runId={item.runId}
+                  prUrl={pr.url}
+                  reviewComments={reviewComments}
+                  onCommentPosted={refetchReviewComments}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

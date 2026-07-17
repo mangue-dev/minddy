@@ -21,6 +21,9 @@ export interface PullRequestRef {
   base?: string;
   /** SHA de la tête — ancre immuable pour calculer le merge base (getMergeBaseSha). */
   headSha?: string;
+  /** Auteur et date d'ouverture : le `body` ouvre le fil comme un commentaire, il lui faut son en-tête. */
+  user?: { login: string; avatar_url: string | null } | null;
+  createdAt?: string;
 }
 
 export interface PullRequestFile {
@@ -138,6 +141,8 @@ interface RawPull {
   body?: string | null;
   head?: { ref?: string; sha?: string };
   base?: { ref?: string };
+  user?: { login?: string; avatar_url?: string } | null;
+  created_at?: string;
 }
 
 function toRef(pr: RawPull): PullRequestRef {
@@ -152,6 +157,8 @@ function toRef(pr: RawPull): PullRequestRef {
     head: pr.head?.ref,
     base: pr.base?.ref,
     headSha: pr.head?.sha,
+    user: pr.user ? { login: pr.user.login ?? "", avatar_url: pr.user.avatar_url ?? null } : null,
+    createdAt: pr.created_at,
   };
 }
 
