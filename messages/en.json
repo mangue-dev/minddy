@@ -1418,7 +1418,12 @@
     "unified": "Unified",
     "split": "Split",
     "binaryOrLarge": "Diff not available (binary or too large).",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "expandGap": "{count, plural, one {# hidden line} other {# hidden lines}}",
+    "expandRest": "Expand the rest of the file",
+    "expandUp": "Expand the lines above",
+    "expandDown": "Expand the lines below",
+    "expandFailed": "Could not load"
   },
   "Triage": {
     "projectNotFound": "Project not found",

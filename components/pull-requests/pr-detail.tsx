@@ -335,7 +335,7 @@ export function PrDetail({
                 <Skeleton className="h-40 rounded-md" />
               </div>
             ) : pr ? (
-              <PrDiff files={files} prUrl={pr.url} />
+              <PrDiff files={files} runId={item.runId} prUrl={pr.url} />
             ) : (
               <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>
             )}

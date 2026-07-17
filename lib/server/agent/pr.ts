@@ -19,6 +19,8 @@ export interface PullRequestRef {
   body?: string | null;
   head?: string;
   base?: string;
+  /** SHA de la tête — ancre immuable pour calculer le merge base (getMergeBaseSha). */
+  headSha?: string;
 }
 
 export interface PullRequestFile {
@@ -27,6 +29,8 @@ export interface PullRequestFile {
   additions: number;
   deletions: number;
   patch?: string;
+  /** Chemin AVANT la PR si le fichier a été renommé — c'est lui qui adresse la version de base. */
+  previous_filename?: string;
 }
 
 /** Commentaire de conversation d'une PR (endpoint issues/{n}/comments de GitHub). */
@@ -72,6 +76,27 @@ async function ghJson<T>(
   return data as T;
 }
 
+/**
+ * Variante texte de `ghJson` : avec `Accept: application/vnd.github.raw` GitHub
+ * sert le contenu du fichier tel quel, pas du JSON (et jusqu'à 100 Mo, là où la
+ * réponse JSON plafonne à 1 Mo). 404 → null (fichier absent à ce ref).
+ */
+async function ghRawText(url: string, token: string): Promise<string | null> {
+  const res = await fetch(url, { headers: githubHeaders(token, "application/vnd.github.raw") });
+  if (res.status === 404) return null;
+  const text = await res.text();
+  if (!res.ok) {
+    let message = `GitHub API error (${res.status})`;
+    try {
+      message = (JSON.parse(text) as { message?: string }).message ?? message;
+    } catch {
+      // Corps non-JSON (raw) : on garde le message par défaut.
+    }
+    throw new GithubApiError(message, res.status);
+  }
+  return text;
+}
+
 interface RawPull {
   number: number;
   html_url: string;
@@ -81,7 +106,7 @@ interface RawPull {
   merged_at?: string | null;
   title?: string;
   body?: string | null;
-  head?: { ref?: string };
+  head?: { ref?: string; sha?: string };
   base?: { ref?: string };
 }
 
@@ -96,6 +121,7 @@ function toRef(pr: RawPull): PullRequestRef {
     body: pr.body ?? null,
     head: pr.head?.ref,
     base: pr.base?.ref,
+    headSha: pr.head?.sha,
   };
 }
 
@@ -177,7 +203,14 @@ export async function listPullRequestFiles(opts: {
 }): Promise<PullRequestFile[]> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const files = await ghJson<
-    Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string }>
+    Array<{
+      filename: string;
+      status: string;
+      additions: number;
+      deletions: number;
+      patch?: string;
+      previous_filename?: string;
+    }>
   >(
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/files?per_page=100`,
     opts.token,
@@ -188,7 +221,53 @@ export async function listPullRequestFiles(opts: {
     additions: f.additions,
     deletions: f.deletions,
     patch: f.patch,
+    previous_filename: f.previous_filename,
   }));
+}
+
+/**
+ * SHA du **merge base** de la PR — le point de référence des patches GitHub.
+ *
+ * GitHub diffe une PR à trois points (`base...head`) : les numéros de ligne
+ * « anciens » des patches comptent depuis l'ancêtre commun, PAS depuis le tip de
+ * la branche de base. Utiliser `pr.base.sha` est un piège : si la base a avancé
+ * depuis, les lignes décalent et l'expansion injecte silencieusement le mauvais
+ * code. On passe le nom de branche vivant (et non `base.sha`, figé à l'ouverture
+ * de la PR) : si `head` a fusionné la base entre-temps, l'ancêtre commun a bougé
+ * et seule la branche vivante donne celui que GitHub a réellement utilisé.
+ */
+export async function getMergeBaseSha(opts: {
+  token: string;
+  repoFullName: string;
+  base: string;
+  head: string;
+}): Promise<string> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  // Refs laissés tels quels : les noms de branche à slash (`numo/min-42`) sont
+  // valides ici, et les %2F casseraient la route compare de GitHub.
+  const comparison = await ghJson<{ merge_base_commit?: { sha?: string } }>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${opts.base}...${opts.head}?per_page=1`,
+    opts.token,
+  );
+  const sha = comparison.merge_base_commit?.sha;
+  if (!sha) throw new GithubApiError("No merge base for this pull request", 502);
+  return sha;
+}
+
+/** Contenu brut d'un fichier à un ref donné, ou null s'il n'y existe pas. */
+export async function getFileAtRef(opts: {
+  token: string;
+  repoFullName: string;
+  path: string;
+  ref: string;
+}): Promise<string | null> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  // Chemin encodé segment par segment : encodeURIComponent avalerait les `/`.
+  const path = opts.path.split("/").map(encodeURIComponent).join("/");
+  return ghRawText(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(opts.ref)}`,
+    opts.token,
+  );
 }
 
 export async function mergePullRequest(opts: {

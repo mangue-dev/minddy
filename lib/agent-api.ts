@@ -193,12 +193,27 @@ export interface PullRequestFile {
   additions: number;
   deletions: number;
   patch?: string;
+  /** Chemin AVANT la PR si le fichier a été renommé — c'est lui qui adresse la version de base. */
+  previous_filename?: string;
 }
 
 export async function fetchAgentRunPrApi(
   runId: string,
 ): Promise<{ pr: PullRequestRef | null; files: PullRequestFile[] }> {
   return parseJson(await fetch(`/api/agent-runs/${runId}/pr`));
+}
+
+/**
+ * Version base d'un fichier de la PR (texte brut au merge base) — la source du
+ * dépliage de contexte dans la vue diff. `path` = chemin côté base.
+ */
+export async function fetchPrFileSourceApi(
+  runId: string,
+  path: string,
+): Promise<{ content: string }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/pr/file?path=${encodeURIComponent(path)}`),
+  );
 }
 
 export async function actOnAgentPrApi(

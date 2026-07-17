@@ -44,6 +44,14 @@
   --diff-code-insert-edit-background-color: rgb(57 208 78 / 0.38);
   --diff-code-delete-edit-background-color: rgb(255 71 62 / 0.38);
 }
+/* Barre de dépliage du contexte masqué entre deux zones de diff : une bande
+   neutre qui se lit comme une couture, pas comme du code. Bordures posées sur la
+   cellule (un tbody ne les rend pas de façon fiable). */
+.pr-diff-view .pr-diff-expand > tr > td {
+  background-color: var(--muted);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
    White chrome (sidebar + header) over a light-gray content area. The AppShell
