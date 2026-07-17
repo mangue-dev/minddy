@@ -56,7 +56,12 @@ import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import { getPullRequest, listPullRequestFiles } from "@/lib/server/agent/pr";
+import {
+  getPullRequest,
+  listPullRequestFiles,
+  listPullRequestReviewComments,
+} from "@/lib/server/agent/pr";
+import { groupReviewThreads } from "@/lib/pr-review-threads";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -581,9 +586,14 @@ export async function executeTool(
         const target = await resolveRepoCloneTarget(projectId);
         if (!target) return toolError("This project has no linked GitHub repository.");
 
-        const [pr, files] = await Promise.all([
+        const [pr, files, reviewComments] = await Promise.all([
           getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
           listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+          listPullRequestReviewComments({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }).catch(() => []),
         ]);
 
         // Cap patch size so a huge diff doesn't blow the context window.
@@ -606,6 +616,22 @@ export async function executeTool(
                 f.patch && f.patch.length > PATCH_CAP
                   ? f.patch.slice(0, PATCH_CAP) + "\n… (diff truncated)"
                   : f.patch ?? null,
+            })),
+            // Commentaires ancrés au code, regroupés en fils. `line: null` = le
+            // code visé a changé depuis : l'ancre ne vaut plus, seul le hunk dit
+            // de quoi on parlait.
+            review_comments: groupReviewThreads(reviewComments).map((thread) => ({
+              path: thread.root.path,
+              line: thread.root.line,
+              original_line: thread.root.original_line,
+              side: thread.root.side,
+              outdated: thread.root.line == null,
+              diff_hunk: thread.root.diff_hunk,
+              comments: thread.comments.map((c) => ({
+                author: c.user?.login ?? null,
+                body: c.body,
+                created_at: c.created_at,
+              })),
             })),
           },
           success: true,

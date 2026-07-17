@@ -3,6 +3,7 @@ import {
   buildAgentContextMessage,
   buildInheritedBranchMessage,
   buildInheritedPrMessage,
+  toPrLineThreads,
 } from "./prompt";
 
 /**
@@ -130,6 +131,195 @@ describe("buildInheritedPrMessage", () => {
     // Le cap est à 2000 : 2100 « x » d'affilée ne peuvent pas survivre.
     expect(msg).toContain("x".repeat(2000));
     expect(msg).not.toContain("x".repeat(2100));
+  });
+
+  /**
+   * Les commentaires de LIGNE sont la raison d'être de la review ancrée au code :
+   * sans leur ancre ni leur extrait de diff, l'agent lit « et le cas nul ? » sans
+   * savoir de quel code on parle — et corrige au hasard.
+   */
+  describe("commentaires de ligne", () => {
+    const thread = {
+      path: "lib/search.ts",
+      line: 42,
+      side: "RIGHT" as const,
+      diffHunk: "@@ -40,3 +40,3 @@\n const q = input.trim();\n-return search(q);\n+return search(q, opts);",
+      comments: [{ author: "alice", body: "Et le cas nul ?" }],
+    };
+
+    it("porte l'ancre chemin:ligne, l'extrait de diff et le fil", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: [thread] },
+      });
+      expect(msg).toContain("lib/search.ts:42");
+      expect(msg).toContain("+return search(q, opts);");
+      expect(msg).toContain("@alice: Et le cas nul ?");
+      // Un commentaire de ligne se répond en code, pas en prose.
+      expect(msg).toMatch(/CHANGING THE CODE/i);
+    });
+
+    it("empile les réponses d'un même fil sous une seule ancre", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: {
+          number: 12,
+          state: "open",
+          comments: [],
+          lineThreads: [
+            {
+              ...thread,
+              comments: [
+                { author: "alice", body: "Et le cas nul ?" },
+                { author: "bob", body: "Bien vu, à corriger." },
+              ],
+            },
+          ],
+        },
+      });
+      expect(msg.split("lib/search.ts:42").length - 1).toBe(1);
+      expect(msg).toContain("@bob: Bien vu, à corriger.");
+    });
+
+    it("signale une ligne supprimée (side LEFT) — elle vit dans l'ancien fichier", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: [{ ...thread, side: "LEFT" }] },
+      });
+      expect(msg).toContain("lib/search.ts:42 (removed line)");
+    });
+
+    it("marque un fil périmé au lieu d'inventer une ancre", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: [{ ...thread, line: null }] },
+      });
+      expect(msg).toMatch(/OUTDATED/);
+      expect(msg).not.toContain("lib/search.ts:42");
+      // Le hunk reste : c'est tout ce qui dit encore de quel code on parlait.
+      expect(msg).toContain("+return search(q, opts);");
+    });
+
+    it("tronque un hunk fleuve PAR LE HAUT (la ligne commentée est à la fin)", () => {
+      const long = ["@@ -1,40 +1,40 @@", ...Array.from({ length: 30 }, (_, i) => ` ctx-${i}`)].join(
+        "\n",
+      );
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: {
+          number: 12,
+          state: "open",
+          comments: [],
+          lineThreads: [{ ...thread, diffHunk: long }],
+        },
+      });
+      expect(msg).toContain("[hunk truncated]");
+      expect(msg).toContain("ctx-29"); // la fin — le code visé — survit
+      expect(msg).not.toContain("ctx-0\n"); // le début est coupé
+    });
+
+    it("respecte le plafond de 10 fils, en gardant les plus RÉCENTS", () => {
+      const threads = Array.from({ length: 14 }, (_, i) => ({
+        ...thread,
+        path: `file-${i}.ts`,
+      }));
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: threads },
+      });
+      expect(msg).not.toContain("file-3.ts");
+      expect(msg).toContain("file-4.ts");
+      expect(msg).toContain("file-13.ts");
+    });
+
+    it("n'ajoute aucune section quand la PR n'a pas de commentaire de ligne", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [] },
+      });
+      expect(msg).not.toMatch(/Line comments/i);
+    });
+  });
+
+  /**
+   * Le maillon entre « GitHub a des commentaires de ligne » et « l'agent les
+   * lit » : `execute.ts` passe la réponse BRUTE de l'API à `toPrLineThreads`, dont
+   * la sortie alimente l'amorce. On part donc d'objets GitHub tels quels.
+   */
+  describe("toPrLineThreads — de la réponse GitHub à l'amorce de l'agent", () => {
+    /** Un commentaire de review au format exact de l'API (relevé sur une vraie PR). */
+    const raw = (over: Partial<Parameters<typeof toPrLineThreads>[0][number]> = {}) => ({
+      id: 1,
+      body: "Et le cas nul ?",
+      path: "lib/search.ts",
+      line: 42,
+      original_line: 42,
+      side: "RIGHT" as const,
+      in_reply_to_id: null,
+      diff_hunk: "@@ -40,3 +40,3 @@\n-return search(q);\n+return search(q, opts);",
+      user: { login: "alice", avatar_url: null },
+      created_at: "2026-07-17T10:00:00Z",
+      html_url: "https://github.com/o/r/pull/12#discussion_r1",
+      ...over,
+    });
+
+    it("porte un commentaire GitHub brut jusqu'au message que reçoit l'agent", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: toPrLineThreads([raw()]) },
+      });
+      expect(msg).toContain("lib/search.ts:42");
+      expect(msg).toContain("@alice: Et le cas nul ?");
+      expect(msg).toContain("+return search(q, opts);");
+    });
+
+    it("regroupe les réponses GitHub en UN fil sous une seule ancre", () => {
+      const threads = toPrLineThreads([
+        raw({ id: 10, body: "Et le cas nul ?" }),
+        raw({ id: 11, body: "Bien vu.", in_reply_to_id: 10, created_at: "2026-07-17T10:05:00Z" }),
+      ]);
+      expect(threads).toHaveLength(1);
+      expect(threads[0].comments.map((c) => c.body)).toEqual(["Et le cas nul ?", "Bien vu."]);
+
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: threads },
+      });
+      expect(msg.split("lib/search.ts:42").length - 1).toBe(1);
+      expect(msg).toContain("@alice: Bien vu.");
+    });
+
+    it("propage `line: null` en fil PÉRIMÉ jusqu'au message", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: {
+          number: 12,
+          state: "open",
+          comments: [],
+          lineThreads: toPrLineThreads([raw({ line: null })]),
+        },
+      });
+      expect(msg).toMatch(/OUTDATED/);
+      // Le hunk survit : sans lui l'agent ne saurait plus de quel code on parle.
+      expect(msg).toContain("+return search(q, opts);");
+    });
+
+    it("propage le side LEFT (ligne supprimée) jusqu'au message", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: {
+          number: 12,
+          state: "open",
+          comments: [],
+          lineThreads: toPrLineThreads([raw({ side: "LEFT" })]),
+        },
+      });
+      expect(msg).toContain("lib/search.ts:42 (removed line)");
+    });
+
+    it("rend [] sur une PR sans commentaire de ligne (pas de section vide)", () => {
+      expect(toPrLineThreads([])).toEqual([]);
+    });
   });
 });
 

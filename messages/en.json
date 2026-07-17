@@ -1423,7 +1423,20 @@
     "expandRest": "Expand the rest of the file",
     "expandUp": "Expand the lines above",
     "expandDown": "Expand the lines below",
-    "expandFailed": "Could not load"
+    "expandFailed": "Could not load",
+    "addLineComment": "Comment on this line",
+    "lineCommentPlaceholder": "Comment on this line…",
+    "postLineComment": "Comment",
+    "reply": "Reply",
+    "replyPlaceholder": "Reply…",
+    "postReply": "Reply",
+    "staleComments": "{count, plural, one {# outdated comment} other {# outdated comments}}",
+    "staleAnchor": "{path}:{line}",
+    "orphanComments": "{count, plural, one {# comment on a file outside this diff} other {# comments on files outside this diff}}",
+    "lineNotInDiffError": "GitHub could not attach this comment: the line is no longer part of the diff. It may have changed since the view was loaded — reload the pull request.",
+    "lineAnchor": "Comment on line {line}",
+    "lineAnchorAdded": "Comment on line {line} · added",
+    "lineAnchorRemoved": "Comment on line {line} · removed"
   },
   "Triage": {
     "projectNotFound": "Project not found",

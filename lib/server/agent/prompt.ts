@@ -2,6 +2,8 @@
 // node/vitest, comme prune.ts / caching.ts. Ne rien y mettre qui touche aux secrets
 // ou à la base — l'appelant fournit déjà tout le contexte.
 
+import { groupReviewThreads, type ReviewCommentLike } from "@/lib/pr-review-threads";
+
 /**
  * Prompts de l'agent de code cloud (MIN-46, débridé en agent CONVERSATIONNEL).
  * Trois morceaux :
@@ -84,6 +86,56 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 const PR_COMMENT_MAX_CHARS = 2000;
 /** Nombre de commentaires de PR injectés (les plus RÉCENTS — la demande du jour). */
 const PR_COMMENTS_MAX = 10;
+/**
+ * Lignes de `diff_hunk` gardées par fil. GitHub termine le hunk À la ligne
+ * commentée : c'est la FIN qui porte le code visé, d'où la troncature par le haut.
+ */
+const PR_DIFF_HUNK_MAX_LINES = 8;
+
+/** Un fil de commentaires ancré à une ligne du code (review GitHub). */
+export interface InheritedPrLineThread {
+  path: string;
+  /** Ligne visée, ou null si GitHub ne sait plus la rattacher (fil périmé). */
+  line: number | null;
+  side: "LEFT" | "RIGHT";
+  /** Le code commenté, tel qu'il était au moment du commentaire. */
+  diffHunk: string;
+  comments: Array<{ author: string | null; body: string }>;
+}
+
+/**
+ * Ce qu'il faut savoir d'un commentaire de review pour le donner à l'agent.
+ * Décrit structurellement (et non importé de `./pr`) pour garder ce module pur :
+ * le type serveur s'y conforme tel quel.
+ */
+export interface PrReviewCommentLike extends ReviewCommentLike {
+  body: string;
+  path: string;
+  line: number | null;
+  side: "LEFT" | "RIGHT";
+  diff_hunk: string;
+  user: { login: string } | null;
+}
+
+/**
+ * Commentaires de review GitHub → fils prêts pour l'amorce de l'agent.
+ *
+ * Vit ici, dans le module PUR, et pas en lambda au fil de `execute.ts` : c'est le
+ * maillon entre « GitHub a des commentaires de ligne » et « l'agent les lit », et
+ * il doit être testable sans sandbox ni base.
+ */
+export function toPrLineThreads(comments: PrReviewCommentLike[]): InheritedPrLineThread[] {
+  return groupReviewThreads(comments).map((thread) => ({
+    path: thread.root.path,
+    line: thread.root.line,
+    side: thread.root.side,
+    diffHunk: thread.root.diff_hunk,
+    comments: thread.comments.map((c) => ({
+      author: c.user?.login ?? null,
+      body: c.body,
+    })),
+  }));
+}
 
 export interface InheritedPrContext {
   number: number;
@@ -92,12 +144,52 @@ export interface InheritedPrContext {
   state?: string | null;
   /** Fil de review GitHub, ordre chronologique (le plus ancien d'abord). */
   comments: Array<{ author: string | null; body: string }>;
+  /** Fils ancrés au code, ordre chronologique. */
+  lineThreads?: InheritedPrLineThread[];
   /** Résumé écrit par la session PRÉCÉDENTE (sa dernière réponse). */
   previousSummary?: string | null;
 }
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
+}
+
+/**
+ * Garde la QUEUE du `diff_hunk` : GitHub l'arrête à la ligne commentée, donc les
+ * dernières lignes sont le code dont on parle — couper par la fin le supprimerait.
+ */
+function capHunkTail(hunk: string, maxLines: number): string {
+  const lines = hunk.replace(/\s+$/, "").split("\n");
+  if (lines.length <= maxLines) return lines.join("\n");
+  return ["… [hunk truncated]", ...lines.slice(-maxLines)].join("\n");
+}
+
+/**
+ * Rend les fils ancrés au code. Sans l'extrait de diff, l'agent lirait « et le cas
+ * nul ? » sans savoir de quelle ligne on parle : l'ancre `chemin:ligne` et le hunk
+ * sont ce qui rend le commentaire actionnable. Les fils périmés (`line: null`)
+ * sont signalés — leur ancre ne vaut plus, seul le hunk raconte le code visé.
+ */
+function buildLineThreadsBlock(threads: InheritedPrLineThread[]): string {
+  const recent = threads.slice(-PR_COMMENTS_MAX);
+  if (recent.length === 0) return "";
+
+  const rendered = recent.map((thread) => {
+    const anchor =
+      thread.line != null
+        ? `${thread.path}:${thread.line}${thread.side === "LEFT" ? " (removed line)" : ""}`
+        : `${thread.path} — OUTDATED: the code it was written against has changed, so it no longer maps to a line; judge from the snippet below whether it still applies`;
+    const snippet = thread.diffHunk.trim()
+      ? `\n\`\`\`diff\n${capHunkTail(thread.diffHunk, PR_DIFF_HUNK_MAX_LINES)}\n\`\`\``
+      : "";
+    const body = thread.comments
+      .map((c) => `@${c.author ?? "unknown"}: ${cap(c.body.trim(), PR_COMMENT_MAX_CHARS)}`)
+      .join("\n\n");
+    return `### ${anchor}${snippet}\n${body}`;
+  });
+
+  return `\n\n## Line comments on the pull request (anchored to specific code, oldest first)
+Each block below is a review thread attached to a line of the diff. The snippet is the code as it stood when the comment was written — read the file to see it now. Answer them by CHANGING THE CODE, not by replying in prose.\n\n${rendered.join("\n\n")}`;
 }
 
 /**
@@ -133,6 +225,8 @@ export function buildInheritedPrMessage(input: {
           .join("\n\n")}`
       : "";
 
+  const lineThreadsBlock = buildLineThreadsBlock(pr.lineThreads ?? []);
+
   const bodyBlock = pr.body?.trim()
     ? `\n\n## Pull request description\n${cap(pr.body.trim(), 4000)}`
     : "";
@@ -142,7 +236,7 @@ The working branch **${repo.workBranch}** already carries committed work, and pu
 
 You are a FRESH session: you did NOT write that code and you have none of the previous conversation — only what follows. So do NOT start the ticket over. **First read the current state of the branch**: run \`git diff ${repo.defaultBranch}\` to see everything this branch already changed, then \`read_file\` what matters. Only then act. Keep iterating on the SAME branch — the harness pushes ${repo.workBranch} and pull request #${pr.number} follows it.
 
-(The clone is shallow: \`git diff ${repo.defaultBranch}\` works, but three-dot diffs and deep \`git log\` have no common history to walk — don't rely on them.)${summaryBlock}${bodyBlock}${commentsBlock}
+(The clone is shallow: \`git diff ${repo.defaultBranch}\` works, but three-dot diffs and deep \`git log\` have no common history to walk — don't rely on them.)${summaryBlock}${bodyBlock}${commentsBlock}${lineThreadsBlock}
 
 Everything above is context. Act on the user's message (or, failing that, on the review comments above).`;
 }

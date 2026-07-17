@@ -1423,7 +1423,20 @@
     "expandRest": "Déplier la suite du fichier",
     "expandUp": "Déplier les lignes au-dessus",
     "expandDown": "Déplier les lignes en dessous",
-    "expandFailed": "Chargement impossible"
+    "expandFailed": "Chargement impossible",
+    "addLineComment": "Commenter cette ligne",
+    "lineCommentPlaceholder": "Commenter cette ligne…",
+    "postLineComment": "Commenter",
+    "reply": "Répondre",
+    "replyPlaceholder": "Répondre…",
+    "postReply": "Répondre",
+    "staleComments": "{count, plural, one {# commentaire périmé} other {# commentaires périmés}}",
+    "staleAnchor": "{path}:{line}",
+    "orphanComments": "{count, plural, one {# commentaire sur un fichier hors de ce diff} other {# commentaires sur des fichiers hors de ce diff}}",
+    "lineNotInDiffError": "GitHub n'a pas pu rattacher ce commentaire : la ligne ne fait plus partie du diff. Elle a pu changer depuis l'ouverture de la vue — rechargez la pull request.",
+    "lineAnchor": "Commentaire sur la ligne {line}",
+    "lineAnchorAdded": "Commentaire sur la ligne {line} · ajoutée",
+    "lineAnchorRemoved": "Commentaire sur la ligne {line} · supprimée"
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",

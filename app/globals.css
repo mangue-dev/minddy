@@ -52,6 +52,17 @@
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
+/* Ancre le « + » de commentaire : la gouttière ne fait que 7ch et aligne son
+   numéro à droite — le bouton est posé en absolu pour ne pas le pousser. */
+.pr-diff-view .diff-gutter {
+  position: relative;
+}
+/* Un widget (fil de commentaires) n'est pas du code : il ne doit hériter ni de la
+   police mono ni du `white-space` des lignes de diff. */
+.pr-diff-view .diff-widget-content {
+  font-family: var(--font-sans, inherit);
+  white-space: normal;
+}
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
    White chrome (sidebar + header) over a light-gray content area. The AppShell

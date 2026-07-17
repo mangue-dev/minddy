@@ -5,6 +5,21 @@
  * lister ses runs. (Le détail live + events + stop d'un run arrivent en Phase 7.)
  */
 
+/**
+ * Erreur d'API qui conserve le `code` métier de la route (ex. `lineNotInDiff`) en
+ * plus du message : certains appelants doivent distinguer le cas, pas seulement
+ * l'afficher. Reste une `Error` — les appelants qui ne lisent que `.message` sont
+ * inchangés.
+ */
+export class ApiError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+  }
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
   let data: unknown = null;
@@ -14,9 +29,9 @@ async function parseJson<T>(response: Response): Promise<T> {
     data = null;
   }
   if (!response.ok) {
-    const message =
-      (data as { error?: string } | null)?.error || text.trim() || "Request failed";
-    throw new Error(message);
+    const payload = data as { error?: string; code?: string } | null;
+    const message = payload?.error || text.trim() || "Request failed";
+    throw new ApiError(message, payload?.code);
   }
   return data as T;
 }
@@ -285,6 +300,67 @@ export async function fetchPrCommentsApi(
   runId: string,
 ): Promise<{ comments: PullRequestComment[] }> {
   return parseJson(await fetch(`/api/agent-runs/${runId}/comments`));
+}
+
+/**
+ * Commentaire de review : ancré à une ligne du diff, contrairement à
+ * `PullRequestComment` qui vit dans le fil plat de la conversation.
+ *
+ * `line` non nul ne veut PAS dire « la ligne est dans le diff » : GitHub le
+ * conserve tant qu'il sait retrouver la ligne dans la tête, même si le diff s'est
+ * déplacé ailleurs. C'est la résolution dans les hunks rendus qui décide de
+ * l'affichage inline — voir `pr-diff`.
+ */
+export interface PullRequestReviewComment {
+  id: number;
+  body: string;
+  path: string;
+  line: number | null;
+  original_line: number | null;
+  side: "LEFT" | "RIGHT";
+  /** Racine du fil, ou null si ce commentaire EST la racine. */
+  in_reply_to_id: number | null;
+  diff_hunk: string;
+  user: { login: string; avatar_url: string | null } | null;
+  created_at: string;
+  html_url: string;
+}
+
+export async function fetchPrReviewCommentsApi(
+  runId: string,
+): Promise<{ comments: PullRequestReviewComment[] }> {
+  return parseJson(await fetch(`/api/agent-runs/${runId}/pr/review-comments`));
+}
+
+/**
+ * Poste un commentaire sur une ligne du diff. Part immédiatement sur GitHub.
+ * Lève une `ApiError` de code `lineNotInDiff` si GitHub refuse d'ancrer la ligne.
+ */
+export async function postPrReviewCommentApi(
+  runId: string,
+  input: { body: string; path: string; line: number; side: "LEFT" | "RIGHT" },
+): Promise<{ comment: PullRequestReviewComment }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/pr/review-comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+/** Répond dans un fil de review (`inReplyTo` = n'importe quel id du fil). */
+export async function replyPrReviewCommentApi(
+  runId: string,
+  input: { body: string; inReplyTo: number },
+): Promise<{ comment: PullRequestReviewComment }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}/pr/review-comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: input.body, in_reply_to: input.inReplyTo }),
+    }),
+  );
 }
 
 // ── Page Agents (liste globale des sessions) ─────────────────────────────────

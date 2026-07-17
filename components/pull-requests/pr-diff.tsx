@@ -2,9 +2,9 @@
 
 import "react-diff-view/style/index.css";
 
-import { useCallback, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { cn, SegmentedControl, Spinner } from "mangue-ui";
+import { cn, SegmentedControl, Spinner, toast } from "mangue-ui";
 import { ChevronDown, ChevronRight, ChevronUp, UnfoldVertical } from "lucide-react";
 import {
   parseDiff,
@@ -12,12 +12,36 @@ import {
   Hunk,
   Decoration,
   expandFromRawCode,
+  getChangeKey,
   getCollapsedLinesCountBetween,
+  type ChangeData,
   type DiffType,
   type FileData,
+  type GutterOptions,
   type HunkData,
 } from "react-diff-view";
-import { fetchPrFileSourceApi, type PullRequestFile } from "@/lib/agent-api";
+import {
+  fetchPrFileSourceApi,
+  postPrReviewCommentApi,
+  type ApiError,
+  type PullRequestFile,
+  type PullRequestReviewComment,
+} from "@/lib/agent-api";
+import { groupReviewThreads } from "@/lib/pr-review-threads";
+import {
+  commentableChangeKeys,
+  gutterAnchor,
+  resolveThreadChangeKey,
+  type PrReviewThread,
+} from "@/lib/pr-review-diff";
+import {
+  GutterCommentButton,
+  LineComposer,
+  LineWidget,
+  ReviewThreadCard,
+  StaleThreads,
+  useReviewReplies,
+} from "@/components/pull-requests/pr-review-comments";
 
 /**
  * Vue diff moderne d'une PR (MIN-66) : liste de fichiers repliables avec compteurs
@@ -66,6 +90,17 @@ function splitLines(content: string): string[] {
 }
 
 type ViewType = "unified" | "split";
+
+/**
+ * Ce que l'en-tête d'un widget annonce : la ligne visée et sa nature. Une ligne
+ * de contexte porte deux numéros (ancien / nouveau) : on affiche le NOUVEAU,
+ * cohérent avec l'ancre que produit `gutterAnchor` pour ce cas (side RIGHT).
+ */
+function anchorOf(change: ChangeData): { line: number; kind: "added" | "removed" | "context" } {
+  if (change.type === "insert") return { line: change.lineNumber, kind: "added" };
+  if (change.type === "delete") return { line: change.lineNumber, kind: "removed" };
+  return { line: change.newLineNumber, kind: "context" };
+}
 
 /**
  * Barre entre deux zones de diff : annonce les lignes masquées et les déplie.
@@ -183,6 +218,8 @@ function PrDiffFile({
   prUrl,
   collapsed,
   onToggle,
+  reviewComments,
+  onCommentPosted,
 }: {
   file: PullRequestFile;
   parsed?: FileData;
@@ -191,12 +228,25 @@ function PrDiffFile({
   prUrl?: string | null;
   collapsed: boolean;
   onToggle: () => void;
+  /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
+  reviewComments: PullRequestReviewComment[];
+  onCommentPosted: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
   const [ranges, setRanges] = useState<Range[]>([]);
   const [source, setSource] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  // Brouillons indexés par clé de changement (ou par fil, pour les réponses) : un
+  // envoi qui échoue GARDE son texte, et ouvrir un second composer ne détruit pas
+  // le premier. Ils ne sont vidés qu'au succès ou à l'annulation explicite.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [openAnchors, setOpenAnchors] = useState<
+    Record<string, { line: number; side: "LEFT" | "RIGHT" }>
+  >({});
+  const [postingKey, setPostingKey] = useState<string | null>(null);
+  const replies = useReviewReplies(runId, onCommentPosted);
 
   // Un fichier ajouté n'a pas de version de base : son patch EST déjà le fichier
   // entier, il n'y a rien à déplier.
@@ -232,6 +282,142 @@ function PrDiffFile({
     if (!source || ranges.length === 0) return base;
     return ranges.reduce((hs, [start, end]) => expandFromRawCode(hs, source, start, end), base);
   }, [parsed, source, ranges]);
+
+  /**
+   * Lignes où le « + » a le droit d'apparaître : celles des hunks D'ORIGINE.
+   * GitHub renvoie 422 sur une ligne hors diff, et le dépliage en affiche
+   * justement — proposer le bouton là offrirait un envoi voué à l'échec.
+   */
+  const commentableKeys = useMemo(() => commentableChangeKeys(parsed?.hunks ?? []), [parsed]);
+
+  /** Clé de changement → la ligne qu'elle désigne, pour l'en-tête des widgets. */
+  const changesByKey = useMemo(() => {
+    const map = new Map<string, ChangeData>();
+    for (const hunk of hunks) {
+      for (const change of hunk.changes) map.set(getChangeKey(change), change);
+    }
+    return map;
+  }, [hunks]);
+
+  const threads = useMemo(() => groupReviewThreads(reviewComments), [reviewComments]);
+
+  // Répartit les fils : ancrés sous leur ligne, ou périmés (repliés en bas). Le
+  // départage se fait sur les hunks RENDUS — déplier du contexte peut ramener un
+  // fil à sa place.
+  const { threadsByKey, staleThreads } = useMemo(() => {
+    const byKey = new Map<string, PrReviewThread[]>();
+    const stale: PrReviewThread[] = [];
+    for (const thread of threads) {
+      const key = resolveThreadChangeKey(hunks, thread);
+      if (!key) {
+        stale.push(thread);
+        continue;
+      }
+      const list = byKey.get(key);
+      if (list) list.push(thread);
+      else byKey.set(key, [thread]);
+    }
+    return { threadsByKey: byKey, staleThreads: stale };
+  }, [threads, hunks]);
+
+  const closeComposer = useCallback((key: string) => {
+    setOpenAnchors(({ [key]: _closed, ...rest }) => rest);
+    setDrafts(({ [key]: _cleared, ...rest }) => rest);
+  }, []);
+
+  const submitComment = useCallback(
+    async (key: string) => {
+      const anchor = openAnchors[key];
+      const body = (drafts[key] ?? "").trim();
+      if (!anchor || !body || postingKey) return;
+      setPostingKey(key);
+      try {
+        await postPrReviewCommentApi(runId, {
+          body,
+          // Un commentaire de review s'adresse au chemin ACTUEL du fichier, même
+          // renommé (contrairement au dépliage, qui lit la version de base).
+          path: file.filename,
+          line: anchor.line,
+          side: anchor.side,
+        });
+        // Fermé (et brouillon vidé) au SUCCÈS seulement : sur échec le composer
+        // reste ouvert avec le texte.
+        closeComposer(key);
+        await onCommentPosted();
+      } catch (err) {
+        const apiErr = err as ApiError;
+        toast.error(
+          apiErr.code === "lineNotInDiff" ? t("lineNotInDiffError") : apiErr.message,
+        );
+      } finally {
+        setPostingKey(null);
+      }
+    },
+    [openAnchors, drafts, postingKey, runId, file.filename, closeComposer, onCommentPosted, t],
+  );
+
+  /**
+   * Un widget par ligne commentée : `react-diff-view` le rend SOUS la ligne. Les
+   * fils d'une même ligne s'empilent dans un seul widget, suivis du composer.
+   */
+  const widgets = useMemo(() => {
+    const map: Record<string, ReactNode> = {};
+    const keys = new Set([...threadsByKey.keys(), ...Object.keys(openAnchors)]);
+    for (const key of keys) {
+      const change = changesByKey.get(key);
+      // Un widget n'existe que sous une ligne rendue : sans son changement il n'y
+      // a pas d'en-tête à écrire — et `Diff` ne le rendra de toute façon pas.
+      if (!change) continue;
+      const list = threadsByKey.get(key) ?? [];
+      map[key] = (
+        <LineWidget anchor={anchorOf(change)}>
+          {list.map((thread) => (
+            <ReviewThreadCard key={thread.id} thread={thread} replies={replies} />
+          ))}
+          {openAnchors[key] ? (
+            <LineComposer
+              value={drafts[key] ?? ""}
+              onChange={(next) => setDrafts((prev) => ({ ...prev, [key]: next }))}
+              onSubmit={() => void submitComment(key)}
+              onCancel={() => closeComposer(key)}
+              submitting={postingKey === key}
+            />
+          ) : null}
+        </LineWidget>
+      );
+    }
+    return map;
+  }, [
+    threadsByKey,
+    changesByKey,
+    openAnchors,
+    drafts,
+    postingKey,
+    replies,
+    submitComment,
+    closeComposer,
+  ]);
+
+  const renderGutter = useCallback(
+    ({ change, side, inHoverState, renderDefault }: GutterOptions) => {
+      const anchor = gutterAnchor(change, side);
+      const key = getChangeKey(change);
+      // Pas d'ancre de ce côté, ou ligne hors des hunks d'origine → gouttière nue.
+      if (!anchor || !commentableKeys.has(key)) return renderDefault();
+      return (
+        <>
+          {renderDefault()}
+          {inHoverState ? (
+            <GutterCommentButton
+              className="absolute top-1/2 left-0.5 -translate-y-1/2"
+              onClick={() => setOpenAnchors((prev) => (prev[key] ? prev : { ...prev, [key]: anchor }))}
+            />
+          ) : null}
+        </>
+      );
+    },
+    [commentableKeys],
+  );
 
   const renderHunks = (rendered: HunkData[]): ReactElement[] => {
     const nodes: ReactElement[] = [];
@@ -314,46 +500,88 @@ function PrDiffFile({
           −{file.deletions}
         </span>
       </button>
-      {collapsed ? null : parsed ? (
-        <div className="overflow-x-auto text-[13px]">
-          <Diff viewType={viewType} diffType={parsed.type as DiffType} hunks={hunks}>
-            {renderHunks}
-          </Diff>
-        </div>
-      ) : (
-        <div className="px-3 py-2 text-[11px] text-muted-foreground">
-          {t("binaryOrLarge")}{" "}
-          {prUrl ? (
-            <a
-              href={prUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-brand hover:underline"
-            >
-              {t("viewOnGithub")}
-            </a>
-          ) : null}
-        </div>
+      {collapsed ? null : (
+        <>
+          {parsed ? (
+            <div className="overflow-x-auto text-[13px]">
+              <Diff
+                viewType={viewType}
+                diffType={parsed.type as DiffType}
+                hunks={hunks}
+                widgets={widgets}
+                renderGutter={renderGutter}
+              >
+                {renderHunks}
+              </Diff>
+            </div>
+          ) : (
+            <div className="px-3 py-2 text-[11px] text-muted-foreground">
+              {t("binaryOrLarge")}{" "}
+              {prUrl ? (
+                <a
+                  href={prUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand hover:underline"
+                >
+                  {t("viewOnGithub")}
+                </a>
+              ) : null}
+            </div>
+          )}
+          {/* Hors du `parsed ?` : un fichier binaire ou trop gros n'a pas de diff,
+              donc AUCUN de ses fils ne s'ancre — ils vivent tous ici plutôt que de
+              disparaître avec le diff qu'on ne sait pas rendre. */}
+          <StaleThreads threads={staleThreads} replies={replies} />
+        </>
       )}
     </div>
   );
 }
 
+/** Références stables : `?? []` / `?? () => {}` en ligne casseraient les mémos. */
+const NO_COMMENTS: PullRequestReviewComment[] = [];
+const noop = () => {};
+
 export function PrDiff({
   files,
   runId,
   prUrl,
+  reviewComments = NO_COMMENTS,
+  onCommentPosted = noop,
   className,
 }: {
   files: PullRequestFile[];
   /** Run porteur de la PR — sert à charger la version base d'un fichier au dépliage. */
   runId: string;
   prUrl?: string | null;
+  /** Commentaires de review de la PR, tous fichiers confondus. */
+  reviewComments?: PullRequestReviewComment[];
+  /** Rafraîchit les commentaires après un envoi réussi. */
+  onCommentPosted?: () => unknown;
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
   const [viewType, setViewType] = useState<ViewType>("unified");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const commentsByPath = useMemo(() => {
+    const map = new Map<string, PullRequestReviewComment[]>();
+    for (const c of reviewComments) {
+      const list = map.get(c.path);
+      if (list) list.push(c);
+      else map.set(c.path, [c]);
+    }
+    return map;
+  }, [reviewComments]);
+
+  // Commentaires dont le fichier n'est pas dans la PR (dépassement des 100
+  // fichiers de l'API, fichier retiré depuis) : sans ce repli ils disparaîtraient
+  // sans laisser de trace.
+  const orphanThreads = useMemo(() => {
+    const known = new Set(files.map((f) => f.filename));
+    return groupReviewThreads(reviewComments.filter((c) => !known.has(c.path)));
+  }, [reviewComments, files]);
 
   // Parse une fois puis indexe par chemin (nouveau chemin, ou ancien pour une suppression).
   const parsedByPath = useMemo(() => {
@@ -366,6 +594,8 @@ export function PrDiff({
     }
     return map;
   }, [files]);
+
+  const orphanReplies = useReviewReplies(runId, onCommentPosted);
 
   if (files.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noDiff")}</p>;
@@ -414,8 +644,19 @@ export function PrDiff({
             prUrl={prUrl}
             collapsed={collapsed.has(f.filename)}
             onToggle={() => toggle(f.filename)}
+            reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
+            onCommentPosted={onCommentPosted}
           />
         ))}
+        {orphanThreads.length > 0 ? (
+          <div className="overflow-hidden rounded-md border border-border">
+            <StaleThreads
+              threads={orphanThreads}
+              replies={orphanReplies}
+              label={(count) => t("orphanComments", { count })}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

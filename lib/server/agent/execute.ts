@@ -38,6 +38,7 @@ import {
   buildAgentContextMessage,
   buildInheritedPrMessage,
   buildInheritedBranchMessage,
+  toPrLineThreads,
   type AgentRepoContext,
 } from "./prompt";
 import { resolveAgentApiKey, getModelContextWindow } from "./model";
@@ -45,6 +46,7 @@ import {
   ensurePullRequest,
   getPullRequest,
   listPullRequestComments,
+  listPullRequestReviewComments,
   reopenPullRequest,
   GithubApiError,
   type PullRequestRef,
@@ -405,11 +407,18 @@ async function buildInheritedPrContext(
   }
   const number = run.pr_number;
 
-  const [pr, comments, previousSummary] = await Promise.all([
+  const [pr, comments, reviewComments, previousSummary] = await Promise.all([
     getPullRequest({ token: opts.token, repoFullName: opts.repoFullName, number }).catch(
       () => null,
     ),
     listPullRequestComments({
+      token: opts.token,
+      repoFullName: opts.repoFullName,
+      number,
+    }).catch(() => []),
+    // Commentaires ancrés au code : l'agent doit voir ce qu'on lui demande de
+    // corriger LIGNE À LIGNE, pas seulement le fil de conversation.
+    listPullRequestReviewComments({
       token: opts.token,
       repoFullName: opts.repoFullName,
       number,
@@ -426,6 +435,7 @@ async function buildInheritedPrContext(
       // PR illisible → on se rabat sur l'état figé au lancement.
       state: pr ? (pr.merged ? "merged" : pr.state) : run.pr_state,
       comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
+      lineThreads: toPrLineThreads(reviewComments),
       previousSummary,
     },
   });

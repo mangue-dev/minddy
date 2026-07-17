@@ -1035,7 +1035,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read the pull request the code agent opened for an issue: its title, description, state, branch, and the per-file diffs (patches, capped). Use it to explain what a PR changes, review it, or answer questions about its content. Requires the issue to have an agent-opened PR.",
+        "Read the pull request the code agent opened for an issue: its title, description, state, branch, the per-file diffs (patches, capped), and the review comments anchored to specific lines of code (with their file:line anchor and the diff snippet they were written against). Use it to explain what a PR changes, review it, or answer questions about its content or the review feedback on it. Requires the issue to have an agent-opened PR.",
       parameters: {
         type: "object",
         properties: {

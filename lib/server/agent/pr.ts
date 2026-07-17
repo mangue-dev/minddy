@@ -42,6 +42,36 @@ export interface PullRequestComment {
   html_url: string;
 }
 
+/**
+ * Commentaire de REVIEW : ancré à une ligne du diff (endpoint pulls/{n}/comments),
+ * là où `PullRequestComment` vit dans le fil plat de la conversation.
+ *
+ * `line` est la ligne dans la version ACTUELLE de la PR, `original_line` celle du
+ * commit où le commentaire a été posé. GitHub met `line: null` quand il ne sait
+ * plus rattacher le commentaire au diff courant (« outdated ») — mais l'inverse
+ * n'est PAS vrai : `line` non nul ne garantit pas que la ligne soit dans le diff
+ * (vérifié contre l'API : un commentaire posé sur une ligne de CONTEXTE garde son
+ * `line` même après que le diff se soit déplacé ailleurs dans le fichier). Côté
+ * rendu, seule la résolution effective dans les hunks fait foi.
+ */
+export interface PullRequestReviewComment {
+  id: number;
+  body: string;
+  path: string;
+  /** Ligne dans le diff courant, ou null si GitHub ne sait plus la rattacher. */
+  line: number | null;
+  /** Ligne au commit d'origine — le repli d'affichage quand `line` est null. */
+  original_line: number | null;
+  side: "LEFT" | "RIGHT";
+  /** Racine du fil (GitHub normalise : répondre à une réponse pointe la racine). */
+  in_reply_to_id: number | null;
+  /** Extrait du diff autour de la ligne, tel qu'au moment du commentaire. */
+  diff_hunk: string;
+  user: { login: string; avatar_url: string | null } | null;
+  created_at: string;
+  html_url: string;
+}
+
 /** Erreur d'API GitHub avec le status HTTP (permet de distinguer 422 « no commits »). */
 export class GithubApiError extends Error {
   status: number;
@@ -362,6 +392,135 @@ export async function listPullRequestComments(opts: {
     opts.token,
   );
   return comments.map(toComment);
+}
+
+interface RawReviewComment extends RawComment {
+  path?: string;
+  line?: number | null;
+  original_line?: number | null;
+  side?: string | null;
+  in_reply_to_id?: number | null;
+  diff_hunk?: string;
+}
+
+function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
+  return {
+    id: c.id,
+    body: c.body ?? "",
+    path: c.path ?? "",
+    line: c.line ?? null,
+    original_line: c.original_line ?? null,
+    side: c.side === "LEFT" ? "LEFT" : "RIGHT",
+    in_reply_to_id: c.in_reply_to_id ?? null,
+    diff_hunk: c.diff_hunk ?? "",
+    user: c.user ? { login: c.user.login ?? "", avatar_url: c.user.avatar_url ?? null } : null,
+    created_at: c.created_at,
+    html_url: c.html_url,
+  };
+}
+
+const REVIEW_COMMENTS_PER_PAGE = 100;
+/** Garde-fou : 10 pages = 1000 commentaires de review, très au-delà du réel. */
+const REVIEW_COMMENTS_MAX_PAGES = 10;
+
+/**
+ * Commentaires de review de la PR — ceux ancrés à une ligne de code.
+ *
+ * PAGINÉ, contrairement à ses voisins de ce fichier : GitHub sert ce endpoint du
+ * plus ANCIEN au plus récent, donc s'arrêter à la première page ferait disparaître
+ * les commentaires les plus RÉCENTS — précisément ceux qui portent la demande du
+ * jour, et que l'agent doit lire. Un fil de review dépasse 100 bien plus vite
+ * qu'une PR ne dépasse 100 fichiers changés.
+ */
+export async function listPullRequestReviewComments(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PullRequestReviewComment[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const all: PullRequestReviewComment[] = [];
+  for (let page = 1; page <= REVIEW_COMMENTS_MAX_PAGES; page++) {
+    const batch = await ghJson<RawReviewComment[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/comments` +
+        `?per_page=${REVIEW_COMMENTS_PER_PAGE}&page=${page}`,
+      opts.token,
+    );
+    all.push(...batch.map(toReviewComment));
+    // Page incomplète = dernière page.
+    if (batch.length < REVIEW_COMMENTS_PER_PAGE) break;
+  }
+  return all;
+}
+
+/**
+ * Poste un commentaire de review sur une ligne (équivalent du « Add single
+ * comment » de GitHub : il part tout de suite, hors review groupée).
+ *
+ * `commitId` DOIT être la tête de la PR (`PullRequestRef.headSha`), et la ligne
+ * doit appartenir au diff : vérifié contre l'API réelle, une ligne hors diff —
+ * typiquement une ligne de contexte dépliée dans la vue — se fait refuser en
+ * **422** (`pull_request_review_thread.line: could not be resolved`). L'appelant
+ * ne doit donc proposer l'affordance que sur les lignes des hunks d'origine.
+ *
+ * `startLine`/`startSide` sont là pour les commentaires multi-lignes (hors
+ * périmètre aujourd'hui) : GitHub les accepte sur ce même endpoint.
+ */
+export async function createPullRequestReviewComment(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  body: string;
+  commitId: string;
+  path: string;
+  line: number;
+  side: "LEFT" | "RIGHT";
+  startLine?: number;
+  startSide?: "LEFT" | "RIGHT";
+}): Promise<PullRequestReviewComment> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const created = await ghJson<RawReviewComment>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/comments`,
+    opts.token,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body: opts.body,
+        commit_id: opts.commitId,
+        path: opts.path,
+        line: opts.line,
+        side: opts.side,
+        ...(opts.startLine != null ? { start_line: opts.startLine } : {}),
+        ...(opts.startSide ? { start_side: opts.startSide } : {}),
+      }),
+    },
+  );
+  return toReviewComment(created);
+}
+
+/**
+ * Répond dans un fil de review. `commentId` peut être n'importe quel commentaire
+ * du fil : GitHub rattache la réponse à la RACINE (vérifié contre l'API — répondre
+ * à une réponse renvoie `in_reply_to_id` = la racine). Les fils sont donc plats.
+ */
+export async function replyToPullRequestReviewComment(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  body: string;
+}): Promise<PullRequestReviewComment> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const created = await ghJson<RawReviewComment>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/comments/${opts.commentId}/replies`,
+    opts.token,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toReviewComment(created);
 }
 
 /** Ajoute un commentaire à la conversation de la PR (auteur = la GitHub App minddy). */

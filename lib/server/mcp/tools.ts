@@ -46,7 +46,12 @@ import {
   uploadAttachment,
 } from "@/lib/server/attachments";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
-import { getPullRequest, listPullRequestFiles } from "@/lib/server/agent/pr";
+import {
+  getPullRequest,
+  listPullRequestFiles,
+  listPullRequestReviewComments,
+} from "@/lib/server/agent/pr";
+import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
   ensureCycles,
@@ -469,10 +474,15 @@ export function registerMinddyTools(server: McpServer): void {
       title: "Get pull request",
       description:
         "Read the pull request the code agent opened for an issue: its number, url, " +
-        "state (open/merged/closed), title, description, head/base branches, and the " +
-        "per-file diffs (patches, truncated past ~4000 chars). Use it to review a PR, " +
-        "explain what it changes, or answer questions about its content. Fails if the " +
-        "issue has no agent-opened PR, or if the project has no linked GitHub repo.",
+        "state (open/merged/closed), title, description, head/base branches, the " +
+        "per-file diffs (patches, truncated past ~4000 chars), and the review comments " +
+        "anchored to lines of code. Each review comment thread carries its file, its " +
+        "line and side (RIGHT = the new file, LEFT = the old one), the diff snippet it " +
+        "was written against, and its replies; 'outdated: true' means the code it " +
+        "pointed at has since changed, so only the snippet says what it referred to. " +
+        "Use it to review a PR, explain what it changes, or act on the review feedback. " +
+        "Fails if the issue has no agent-opened PR, or if the project has no linked " +
+        "GitHub repo.",
       inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
@@ -512,7 +522,7 @@ export function registerMinddyTools(server: McpServer): void {
       }
 
       try {
-        const [pr, files] = await Promise.all([
+        const [pr, files, reviewComments] = await Promise.all([
           getPullRequest({
             token: target.token,
             repoFullName: target.repoFullName,
@@ -523,6 +533,11 @@ export function registerMinddyTools(server: McpServer): void {
             repoFullName: target.repoFullName,
             number: prNumber,
           }),
+          listPullRequestReviewComments({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }).catch(() => []),
         ]);
         return ok({
           pull_request: {
@@ -545,6 +560,23 @@ export function registerMinddyTools(server: McpServer): void {
                 f.patch && f.patch.length > MAX_PATCH_CHARS
                   ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
                   : f.patch ?? null,
+            })),
+            // Fils de review ancrés au code. Un fil périmé (`outdated`) n'a plus
+            // d'ancre fiable — son `diff_hunk` est la seule trace du code visé.
+            review_comments: groupReviewThreads(reviewComments).map((thread) => ({
+              id: thread.id,
+              path: thread.root.path,
+              line: thread.root.line,
+              original_line: thread.root.original_line,
+              side: thread.root.side,
+              outdated: thread.root.line == null,
+              diff_hunk: thread.root.diff_hunk,
+              url: thread.root.html_url,
+              comments: thread.comments.map((c) => ({
+                author: c.user?.login ?? null,
+                body: c.body,
+                created_at: c.created_at,
+              })),
             })),
           },
         });

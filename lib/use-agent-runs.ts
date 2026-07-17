@@ -8,6 +8,7 @@ import {
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchPrCommentsApi,
+  fetchPrReviewCommentsApi,
   isAgentRunWorking,
 } from "./agent-api";
 
@@ -120,6 +121,16 @@ export function usePrCommentsQuery(runId: string | null) {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["pr-comments", runId],
     queryFn: () => fetchPrCommentsApi(runId as string),
+    enabled: !!runId,
+  });
+  return { comments: data?.comments ?? [], loading: isLoading, refetch };
+}
+
+/** Commentaires de review d'une PR (ceux ancrés à une ligne du diff). */
+export function usePrReviewCommentsQuery(runId: string | null) {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["pr-review-comments", runId],
+    queryFn: () => fetchPrReviewCommentsApi(runId as string),
     enabled: !!runId,
   });
   return { comments: data?.comments ?? [], loading: isLoading, refetch };

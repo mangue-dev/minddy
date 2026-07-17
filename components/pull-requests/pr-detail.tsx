@@ -33,7 +33,11 @@ import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import { useAgentRunPrQuery, usePrCommentsQuery } from "@/lib/use-agent-runs";
+import {
+  useAgentRunPrQuery,
+  usePrCommentsQuery,
+  usePrReviewCommentsQuery,
+} from "@/lib/use-agent-runs";
 import {
   actOnAgentPrApi,
   postPrCommentApi,
@@ -80,6 +84,9 @@ export function PrDetail({
   const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
     item.runId,
   );
+  const { comments: reviewComments, refetch: refetchReviewComments } = usePrReviewCommentsQuery(
+    item.runId,
+  );
 
   const [acting, setActing] = useState<null | "merge" | "close">(null);
   const [confirmAction, setConfirmAction] = useState<null | "merge" | "close">(null);
@@ -98,15 +105,18 @@ export function PrDetail({
     item.pr_state === "merged" ? "stateMerged" : item.pr_state === "closed" ? "stateClosed" : "stateOpen";
   const isTerminal = item.pr_state === "merged" || item.pr_state === "closed";
 
-  // Quand Numo termine (le run actif disparaît de la liste), rafraîchir diff + commentaires.
+  // Quand Numo termine (le run actif disparaît de la liste), rafraîchir diff +
+  // commentaires. Les commentaires de ligne en font partie : Numo peut y avoir
+  // répondu, et un nouveau push change les lignes auxquelles ils s'ancrent.
   const prevWorking = useRef(isWorking);
   useEffect(() => {
     if (prevWorking.current && !isWorking) {
       void refetchPr();
       void refetchComments();
+      void refetchReviewComments();
     }
     prevWorking.current = isWorking;
-  }, [isWorking, refetchPr, refetchComments]);
+  }, [isWorking, refetchPr, refetchComments, refetchReviewComments]);
 
   const act = async (action: "merge" | "close") => {
     if (acting) return;
@@ -335,7 +345,13 @@ export function PrDetail({
                 <Skeleton className="h-40 rounded-md" />
               </div>
             ) : pr ? (
-              <PrDiff files={files} runId={item.runId} prUrl={pr.url} />
+              <PrDiff
+                files={files}
+                runId={item.runId}
+                prUrl={pr.url}
+                reviewComments={reviewComments}
+                onCommentPosted={refetchReviewComments}
+              />
             ) : (
               <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>
             )}
