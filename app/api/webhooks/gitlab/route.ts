@@ -1,0 +1,192 @@
+import { timingSafeEqual } from "node:crypto";
+import { type NextRequest, NextResponse } from "next/server";
+import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
+import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
+import { recordForgePrActionEvents } from "@/lib/server/agent/pr-activity";
+import { getServiceClient } from "@/lib/supabase-service";
+import type { PrActionEventType } from "@/lib/pr-events";
+import type { AgentRun } from "@/lib/server/agent/runs";
+
+/**
+ * POST /api/webhooks/gitlab — récepteur webhook GitLab (MIN-69), pendant de
+ * /api/webhooks/github pour les Merge Requests de l'agent de code.
+ *
+ * On vérifie le secret (`X-Gitlab-Token`, comparaison à temps constant) puis on
+ * traite le hook `Merge Request Hook` (object_kind `merge_request`) :
+ *  - action `merge` / `close` / `reopen` / `open` → met à jour `agent_runs.pr_state`
+ *    (la review in-app reflète le vrai état côté GitLab) ET, pour un merge/close
+ *    fait DIRECTEMENT sur GitLab, trace « accepté / refusé la MR » dans l'activité
+ *    de l'issue liée.
+ *  - action `approved` / `approval` → trace « approuvé la MR ». GitLab n'a PAS de
+ *    review « request changes » native : `pr_changes_requested` ne vient que de
+ *    l'action in-app. `unapproved`/`unapproval` sont IGNORÉS (aucun événement
+ *    minddy correspondant — retirer une approbation n'est pas une action tracée,
+ *    GitHub n'a d'ailleurs pas d'équivalent).
+ * Les `Note Hook` (commentaires) et tout autre object_kind sont acquittés sans
+ * traitement : un commentaire n'est pas une activité (choix produit).
+ *
+ * Anti-doublon : les actions minddy in-app (merge/close) sont faites avec le token
+ * OAuth du COMPTE CONNECTÉ du dépôt — leur écho webhook porte ce compte comme
+ * `user`. On ignore donc l'ACTIVITÉ des merge/close émis par le compte de service
+ * (l'état, lui, est toujours synchronisé — idempotent). Revers assumé : un merge
+ * fait à la main sur gitlab.com par ce même compte n'est pas tracé — impossible à
+ * distinguer de l'écho, même compromis que le filtre bot GitHub.
+ *
+ * Fail-closed : secret présent + token invalide → 401. Secret non déployé →
+ * on acquitte sans vérifier (aucun risque, traitement idempotent best-effort).
+ */
+
+/** action GitLab → pr_state minddy (null = pas de changement d'état à écrire). */
+function mapMrState(action: string): AgentRun["pr_state"] | null {
+  switch (action) {
+    case "merge":
+      return "merged";
+    case "close":
+      return "closed";
+    case "open":
+    case "reopen":
+      return "open";
+    default:
+      return null;
+  }
+}
+
+/** action → événement d'activité PR (null = action non tracée). */
+function prActionFor(action: string): PrActionEventType | null {
+  switch (action) {
+    case "merge":
+      return "pr_accepted";
+    case "close":
+      return "pr_rejected";
+    // `approved` = la MR devient entièrement approuvée ; `approval` = une
+    // approbation individuelle quand plusieurs sont requises. Mutuellement
+    // exclusifs par événement → pas de double trace.
+    case "approved":
+    case "approval":
+      return "pr_approved";
+    default:
+      return null;
+  }
+}
+
+interface GitlabUserPayload {
+  id?: number;
+  username?: string;
+}
+
+interface MergeRequestEvent {
+  object_kind?: string;
+  user?: GitlabUserPayload;
+  project?: { path_with_namespace?: string };
+  object_attributes?: {
+    iid?: number;
+    action?: string;
+    state?: string;
+    url?: string;
+  };
+}
+
+/**
+ * L'acteur du hook est-il le compte de service du dépôt (le compte GitLab dont
+ * minddy utilise le token) ? Comparé par id de compte (provider_account_id),
+ * repli sur le login. Plusieurs projets peuvent lier le même dépôt via des
+ * connexions différentes → on collecte toutes les identités liées.
+ */
+async function isServiceAccount(
+  repoFullName: string,
+  user: GitlabUserPayload | undefined,
+): Promise<boolean> {
+  if (!user || (user.id == null && !user.username)) return false;
+  const service = getServiceClient();
+  const { data } = await service
+    .from("project_git_links")
+    .select("git_connections(provider_account_id, account_login)")
+    .eq("repo_full_name", repoFullName)
+    .eq("provider", "gitlab");
+  // Relation to-one embarquée : objet au runtime, cast via unknown (cf. Supabase).
+  const connections = ((data ?? []) as unknown as Array<{
+    git_connections: { provider_account_id: string | null; account_login: string | null } | null;
+  }>).map((r) => r.git_connections);
+  return connections.some(
+    (c) =>
+      c &&
+      ((user.id != null && c.provider_account_id === String(user.id)) ||
+        (!!user.username && c.account_login === user.username)),
+  );
+}
+
+async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
+  const attrs = payload.object_attributes ?? {};
+  const action = attrs.action ?? "";
+  const iid = attrs.iid;
+  const repoFullName = payload.project?.path_with_namespace;
+  if (iid == null || !repoFullName) return;
+
+  // État : merge/close/reopen/open recalent pr_state (et le statut d'issue).
+  const prState = mapMrState(action);
+  let runs: SyncedPrRun[] | null = null;
+  if (prState) {
+    runs = await syncPrState({
+      repoFullName,
+      prNumber: iid,
+      prState,
+      prUrl: attrs.url ?? null,
+    });
+    // Aligne le statut des issues sur le nouvel état MR (MIN-46) :
+    // merged→done, closed→todo, open/reopen→in_review.
+    for (const run of runs) {
+      if (run.createdBy) {
+        await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
+      }
+    }
+  }
+
+  const actionType = prActionFor(action);
+  if (!actionType) return;
+  // Écho d'une action in-app (faite avec le token du compte connecté) → déjà
+  // tracée par la route avec l'acteur humain : on ne re-trace pas.
+  const echo =
+    (actionType === "pr_accepted" || actionType === "pr_rejected") &&
+    (await isServiceAccount(repoFullName, payload.user));
+  if (echo) return;
+
+  const affected = runs ?? (await findRunsForPr({ repoFullName, prNumber: iid }));
+  await recordForgePrActionEvents({
+    runs: affected,
+    type: actionType,
+    prNumber: iid,
+    provider: "gitlab",
+    login: payload.user?.username ?? null,
+  });
+}
+
+/** Comparaison à temps constant du X-Gitlab-Token (secret partagé verbatim). */
+function tokenMatches(provided: string | null, secret: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(secret);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+export async function POST(request: NextRequest) {
+  const rawBody = await request.text();
+  const secret = process.env.GITLAB_WEBHOOK_SECRET;
+
+  if (secret && !tokenMatches(request.headers.get("x-gitlab-token"), secret)) {
+    return NextResponse.json({ error: "invalid token" }, { status: 401 });
+  }
+
+  try {
+    const payload = JSON.parse(rawBody) as MergeRequestEvent;
+    // Seules les Merge Requests nous intéressent — les Note Hook (commentaires)
+    // et autres object_kind sont acquittés sans traitement (pas une activité).
+    if (payload.object_kind === "merge_request") {
+      await handleMergeRequest(payload);
+    }
+  } catch (err) {
+    // Best-effort : on acquitte quand même pour que GitLab ne re-livre pas.
+    console.error("[webhooks/gitlab] handling failed:", (err as Error).message);
+  }
+
+  return NextResponse.json({ ok: true });
+}

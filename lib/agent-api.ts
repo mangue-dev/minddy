@@ -272,6 +272,8 @@ export interface PullRequestListItem {
   pr_number: number;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
+  /** Provider du dépôt lié — pilote le vocabulaire PR/MR et les liens (MIN-69). */
+  provider: "github" | "gitlab";
   model: string | null;
   created_at: string;
   updated_at: string;

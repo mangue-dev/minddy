@@ -4,13 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun } from "@/lib/server/agent/runs";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import {
-  getPullRequest,
-  listPullRequestFiles,
-  getMergeBaseSha,
-  getFileAtRef,
-  GithubApiError,
-} from "@/lib/server/agent/pr";
+import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 
 /**
  * Version BASE d'un fichier de la PR d'un run — la source dont la vue diff a
@@ -52,10 +46,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
+    const forge = forgeFor(target.provider);
 
     const [pr, files] = await Promise.all([
-      getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
-      listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
+      forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
+      forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
     ]);
 
     // Le chemin doit être celui d'un fichier de la PR, côté base. Un fichier
@@ -71,13 +66,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Pull request has no base or head" }, { status: 409 });
     }
 
-    const ref = await getMergeBaseSha({
+    const ref = await forge.getMergeBaseSha({
       token: target.token,
       repoFullName: target.repoFullName,
       base,
       head,
     });
-    const content = await getFileAtRef({
+    const content = await forge.getFileAtRef({
       token: target.token,
       repoFullName: target.repoFullName,
       path,
@@ -88,7 +83,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
     return NextResponse.json({ content });
   } catch (err) {
-    const status = err instanceof GithubApiError ? 502 : 500;
+    const status = isForgeApiError(err) ? 502 : 500;
     return NextResponse.json({ error: (err as Error).message }, { status });
   }
 }

@@ -56,11 +56,7 @@ import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import {
-  getPullRequest,
-  listPullRequestFiles,
-  listPullRequestReviewComments,
-} from "@/lib/server/agent/pr";
+import { forgeFor } from "@/lib/server/agent/forge";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 
 // ── Tool execution ─────────────────────────────────────────────────────
@@ -584,16 +580,19 @@ export async function executeTool(
         }
 
         const target = await resolveRepoCloneTarget(projectId);
-        if (!target) return toolError("This project has no linked GitHub repository.");
+        if (!target) return toolError("This project has no linked repository.");
+        const forge = forgeFor(target.provider);
 
         const [pr, files, reviewComments] = await Promise.all([
-          getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
-          listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
-          listPullRequestReviewComments({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }).catch(() => []),
+          forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+          forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+          forge
+            .listPullRequestReviewComments({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
         ]);
 
         // Cap patch size so a huge diff doesn't blow the context window.

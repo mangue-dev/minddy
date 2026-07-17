@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectLink } from "@/lib/server/git/repo-links";
+import { REPO_PROVIDERS, isRepoProviderId } from "@/lib/repo-providers";
 import { insertEvents } from "@/lib/server/issue-events";
 import { resolveAgentModel, AgentModelRequiredError } from "./model";
 import { checkAgentQuota, type AgentQuota } from "./quota";
@@ -72,7 +73,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   const link = await getProjectLink(projectId);
   if (!link) return { ok: false, error: "noRepo" };
-  if (link.provider !== "github") return { ok: false, error: "unsupportedProvider" };
+  // Le registre des providers fait autorité (MIN-69) : un provider connu avec la
+  // capacité d'écriture (PR/MR) peut porter l'agent — github ET gitlab.
+  if (!isRepoProviderId(link.provider) || !REPO_PROVIDERS[link.provider].capabilities.write) {
+    return { ok: false, error: "unsupportedProvider" };
+  }
 
   const active = await activeRunForIssue(input.issueId);
   if (active) return { ok: false, error: "alreadyRunning", run: active };

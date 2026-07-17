@@ -1,9 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
-import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
+import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { insertEvents } from "@/lib/server/issue-events";
-import { getServiceClient } from "@/lib/supabase-service";
+import { recordForgePrActionEvents } from "@/lib/server/agent/pr-activity";
 import type { PrActionEventType } from "@/lib/pr-events";
 import type { AgentRun } from "@/lib/server/agent/runs";
 
@@ -74,32 +73,6 @@ function isBot(actor: GithubActor | undefined | null): boolean {
   return actor?.type === "Bot";
 }
 
-/**
- * Trace une action PR faite DIRECTEMENT sur GitHub dans l'activité des issues
- * liées. Un seul event par issue (plusieurs runs peuvent partager la même PR).
- * Acteur = l'utilisateur GitHub : pas d'utilisateur minddy (`actor_id` null), son
- * login est porté par `from_value`, le numéro de PR par `to_value`.
- */
-async function recordGithubPrActionEvents(
-  runs: SyncedPrRun[],
-  type: PrActionEventType,
-  prNumber: number,
-  login: string | null,
-): Promise<void> {
-  const issueIds = [...new Set(runs.map((r) => r.issueId))];
-  if (issueIds.length === 0) return;
-  await insertEvents(
-    getServiceClient(),
-    issueIds.map((issueId) => ({
-      issue_id: issueId,
-      actor_id: null,
-      type,
-      from_value: login,
-      to_value: String(prNumber),
-    })),
-  );
-}
-
 interface PullRequestEvent {
   action?: string;
   number?: number;
@@ -141,7 +114,13 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // Le merge/close in-app passe par le bot de l'App → ignoré (déjà tracé).
   const actionType = prActionForPullRequest(action, merged);
   if (actionType && !isBot(payload.sender)) {
-    await recordGithubPrActionEvents(runs, actionType, number, payload.sender?.login ?? null);
+    await recordForgePrActionEvents({
+      runs,
+      type: actionType,
+      prNumber: number,
+      provider: "github",
+      login: payload.sender?.login ?? null,
+    });
   }
 }
 
@@ -154,7 +133,13 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
   if (!actionType || number == null || !repoFullName || isBot(reviewer)) return;
 
   const runs = await findRunsForPr({ repoFullName, prNumber: number });
-  await recordGithubPrActionEvents(runs, actionType, number, reviewer?.login ?? null);
+  await recordForgePrActionEvents({
+    runs,
+    type: actionType,
+    prNumber: number,
+    provider: "github",
+    login: reviewer?.login ?? null,
+  });
 }
 
 export async function POST(request: NextRequest) {

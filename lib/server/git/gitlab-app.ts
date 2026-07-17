@@ -11,11 +11,12 @@ import {
 
 /**
  * App OAuth GitLab + plomberie des tokens (MIN-47), portée d'AutoKap
- * (gitlab-app.ts) — réduite au flux de liaison inerte : l'utilisateur autorise
- * une fois (connect), minddy stocke les tokens access+refresh (chiffrés) et
- * réutilise le compte sur tous ses projets. Les access tokens expirent (~2h) et
- * sont rafraîchis paresseusement au moment du mint. gitlab.com SaaS uniquement.
- * PAS de création/vérif de webhooks (viendront avec l'agent de code, MIN-46).
+ * (gitlab-app.ts) : l'utilisateur autorise une fois (connect), minddy stocke les
+ * tokens access+refresh (chiffrés) et réutilise le compte sur tous ses projets.
+ * Les access tokens expirent (~2h) et sont rafraîchis paresseusement au moment
+ * du mint. gitlab.com SaaS uniquement. L'agent de code (MIN-69) consomme ces
+ * tokens via `getGitlabAccessToken` (clone + module MR `lib/server/agent/mr.ts`) ;
+ * le webhook `/api/webhooks/gitlab` se crée À LA MAIN sur le dépôt (cf. .env.example).
  */
 
 // `api` est le seul scope nécessaire — et le seul qui marche. Il donne l'accès

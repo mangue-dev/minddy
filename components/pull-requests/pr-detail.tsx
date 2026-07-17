@@ -388,7 +388,9 @@ export function PrDetail({
                   className="inline-flex items-center gap-1 text-brand hover:underline"
                 >
                   <ExternalLink className="size-3" />
-                  {t("prNumber", { number: pr.number })}
+                  {t(item.provider === "gitlab" ? "mrNumber" : "prNumber", {
+                    number: pr.number,
+                  })}
                 </a>
               ) : null}
             </div>
@@ -492,6 +494,7 @@ export function PrDetail({
                   files={files}
                   runId={item.runId}
                   prUrl={pr.url}
+                  provider={item.provider}
                   reviewComments={reviewComments}
                   onCommentPosted={refetchReviewComments}
                 />

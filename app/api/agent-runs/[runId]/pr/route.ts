@@ -8,22 +8,16 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import {
-  getPullRequest,
-  listPullRequestFiles,
-  mergePullRequest,
-  closePullRequest,
-  createPullRequestComment,
-  GithubApiError,
-} from "@/lib/server/agent/pr";
+import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 
 /**
- * Review in-app de la PR d'un run d'agent (MIN-46 + MIN-66 + MIN-68).
- *  GET  → metadata PR + fichiers/patches (diff rendu dans minddy).
+ * Review in-app de la PR/MR d'un run d'agent (MIN-46 + MIN-66 + MIN-68 + MIN-69).
+ *  GET  → metadata PR + fichiers/patches (diff rendu dans minddy) + provider.
  *  POST → { action: 'merge' | 'close' }                    (membre du projet requis)
  *       | { action: 'request_changes', message, model? }   → poste la review sur la
  *         PR puis lance une NOUVELLE run froide qui hérite de cette PR (MIN-68).
- * Le token d'installation (Pull requests R/W) est minté à la volée.
+ * Les opérations passent par le client du provider (`forgeFor`) : GitHub (token
+ * d'installation) ou GitLab (access token OAuth), minté à la volée.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -85,14 +79,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
+    const forge = forgeFor(target.provider);
 
     const [pr, files] = await Promise.all([
-      getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
-      listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
+      forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
+      forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
     ]);
-    return NextResponse.json({ pr, files });
+    return NextResponse.json({ pr, files, provider: target.provider });
   } catch (err) {
-    const status = err instanceof GithubApiError ? 502 : 500;
+    const status = isForgeApiError(err) ? 502 : 500;
     return NextResponse.json({ error: (err as Error).message }, { status });
   }
 }
@@ -161,7 +156,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     try {
       const target = await resolveRepoCloneTarget(run.project_id);
       if (target) {
-        await createPullRequestComment({
+        await forgeFor(target.provider).createPullRequestComment({
           token: target.token,
           repoFullName: target.repoFullName,
           number: run.pr_number,
@@ -180,9 +175,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
+    const forge = forgeFor(target.provider);
 
     if (action === "merge") {
-      await mergePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
+      await forge.mergePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
       // Stampe TOUS les runs qui portent cette PR (une issue en enchaîne plusieurs
       // sur la même PR) : n'en marquer qu'un laisserait les frères sur un pr_state
       // périmé — le garde `prMerged` du steer serait contournable jusqu'à l'écho
@@ -194,7 +190,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       await recordPrActionEvent(run.issue_id, auth.user.id, "pr_accepted", run.pr_number);
       return NextResponse.json({ ok: true, pr_state: "merged" });
     }
-    await closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
+    await forge.closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
     // Comme pour merge : tous les runs de la PR, pas seulement celui-ci.
     await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "closed" });
     // PR refusée → l'issue retourne « à faire » (todo, jamais annulée) — MIN-46.
@@ -203,7 +199,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     await recordPrActionEvent(run.issue_id, auth.user.id, "pr_rejected", run.pr_number);
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {
-    const status = err instanceof GithubApiError ? 502 : 500;
+    const status = isForgeApiError(err) ? 502 : 500;
     return NextResponse.json({ error: (err as Error).message }, { status });
   }
 }

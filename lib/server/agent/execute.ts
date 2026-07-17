@@ -42,15 +42,9 @@ import {
   type AgentRepoContext,
 } from "./prompt";
 import { resolveAgentApiKey, getModelContextWindow } from "./model";
-import {
-  ensurePullRequest,
-  getPullRequest,
-  listPullRequestComments,
-  listPullRequestReviewComments,
-  reopenPullRequest,
-  GithubApiError,
-  type PullRequestRef,
-} from "./pr";
+import { forgeFor, isForgeApiError, type Forge } from "./forge";
+import type { PullRequestRef } from "./pr";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
 import { executeIssueTool, ISSUE_TOOL_NAMES, type IssueToolContext } from "./issue-tools";
@@ -385,6 +379,7 @@ async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
 async function buildInheritedPrContext(
   run: AgentRun,
   opts: {
+    forge: Forge;
     token: string;
     repoFullName: string;
     repo: AgentRepoContext;
@@ -408,21 +403,25 @@ async function buildInheritedPrContext(
   const number = run.pr_number;
 
   const [pr, comments, reviewComments, previousSummary] = await Promise.all([
-    getPullRequest({ token: opts.token, repoFullName: opts.repoFullName, number }).catch(
-      () => null,
-    ),
-    listPullRequestComments({
-      token: opts.token,
-      repoFullName: opts.repoFullName,
-      number,
-    }).catch(() => []),
+    opts.forge
+      .getPullRequest({ token: opts.token, repoFullName: opts.repoFullName, number })
+      .catch(() => null),
+    opts.forge
+      .listPullRequestComments({
+        token: opts.token,
+        repoFullName: opts.repoFullName,
+        number,
+      })
+      .catch(() => []),
     // Commentaires ancrés au code : l'agent doit voir ce qu'on lui demande de
     // corriger LIGNE À LIGNE, pas seulement le fil de conversation.
-    listPullRequestReviewComments({
-      token: opts.token,
-      repoFullName: opts.repoFullName,
-      number,
-    }).catch(() => []),
+    opts.forge
+      .listPullRequestReviewComments({
+        token: opts.token,
+        repoFullName: opts.repoFullName,
+        number,
+      })
+      .catch(() => []),
     previousRunSummaryForIssue(run.issue_id, run.id).catch(() => null),
   ]);
 
@@ -490,9 +489,10 @@ export async function executeAgentRun(
       return "interrupted";
     }
 
-    // Cible de clone (token d'installation frais pour ce chunk).
+    // Cible de clone (token frais pour ce chunk) + client PR/MR du provider.
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) throw new Error("No repository linked to this project");
+    const forge = forgeFor(target.provider);
 
     const issue = await loadIssueContext(run);
     // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner).
@@ -550,6 +550,7 @@ export async function executeAgentRun(
       // résumé de la session précédente, PR, fil de review — pour qu'elle itère au
       // lieu de tout refaire.
       const inheritedPr = await buildInheritedPrContext(run, {
+        forge,
         token: target.token,
         repoFullName: target.repoFullName,
         repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
@@ -592,7 +593,7 @@ export async function executeAgentRun(
           prState: prState.state,
         });
       }
-      await postPrComment(run, issue.identifier, kind, pr.url, commentLocale);
+      await postPrComment(run, issue.identifier, kind, pr.url, commentLocale, target.provider);
     };
 
     /**
@@ -611,11 +612,13 @@ export async function executeAgentRun(
         return { result: { error: `push failed: ${(err as Error).message}` }, success: false };
       }
       if (prState.number != null) {
-        const current = await getPullRequest({
-          token: fresh.token,
-          repoFullName: fresh.repoFullName,
-          number: prState.number,
-        }).catch(() => null);
+        const current = await forge
+          .getPullRequest({
+            token: fresh.token,
+            repoFullName: fresh.repoFullName,
+            number: prState.number,
+          })
+          .catch(() => null);
         if (current?.merged) {
           return {
             result: {
@@ -635,14 +638,16 @@ export async function executeAgentRun(
           };
         }
         if (current && current.state === "closed") {
-          const reopened = await reopenPullRequest({
-            token: fresh.token,
-            repoFullName: fresh.repoFullName,
-            number: prState.number,
-          }).catch((err) => {
-            console.error("[agent-execute] PR reopen failed:", (err as Error).message);
-            return null;
-          });
+          const reopened = await forge
+            .reopenPullRequest({
+              token: fresh.token,
+              repoFullName: fresh.repoFullName,
+              number: prState.number,
+            })
+            .catch((err) => {
+              console.error("[agent-execute] PR reopen failed:", (err as Error).message);
+              return null;
+            });
           if (reopened) {
             await registerPr(reopened, "reopened");
             return {
@@ -660,7 +665,7 @@ export async function executeAgentRun(
       }
       const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · issue ${issue.identifier}`;
       try {
-        const pr = await ensurePullRequest({
+        const pr = await forge.ensurePullRequest({
           token: fresh.token,
           repoFullName: fresh.repoFullName,
           head: workBranch,
@@ -671,7 +676,7 @@ export async function executeAgentRun(
         await registerPr(pr, "opened");
         return { result: { number: pr.number, url: pr.url }, success: true };
       } catch (err) {
-        if (err instanceof GithubApiError && err.status === 422) {
+        if (isForgeApiError(err) && err.status === 422) {
           return {
             result: {
               error:
@@ -715,14 +720,16 @@ export async function executeAgentRun(
       if (!pushed?.remoteUpdated) return;
       await refreshPrStateFromDb();
       if (prState.number == null || prState.state !== "closed") return;
-      const reopened = await reopenPullRequest({
-        token,
-        repoFullName: target.repoFullName,
-        number: prState.number,
-      }).catch((err) => {
-        console.error("[agent-execute] PR reopen on push failed:", (err as Error).message);
-        return null;
-      });
+      const reopened = await forge
+        .reopenPullRequest({
+          token,
+          repoFullName: target.repoFullName,
+          number: prState.number,
+        })
+        .catch((err) => {
+          console.error("[agent-execute] PR reopen on push failed:", (err as Error).message);
+          return null;
+        });
       if (reopened && !reopened.merged) await registerPr(reopened, "reopened");
     };
 
@@ -851,6 +858,7 @@ export async function executeAgentRun(
         await emit("error", {
           message: (MERGED_DURING_TURN_STRINGS[commentLocale] ?? MERGED_DURING_TURN_STRINGS.en)(
             prState.number,
+            prTerm(target.provider),
           ),
         });
       }
@@ -1002,29 +1010,43 @@ const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
     `The turn-end push failed — the remote branch did NOT receive this turn's work. The work is kept in the sandbox and will be pushed again next turn. Detail: ${detail}`,
 };
 
+/** Terme provider affiché dans les notes/commentaires (marques, non localisées). */
+function prTerm(provider: RepoProviderId): string {
+  return provider === "gitlab" ? "merge request" : "pull request";
+}
+
+function capitalized(term: string): string {
+  return term.charAt(0).toUpperCase() + term.slice(1);
+}
+
 /** Note de fil quand la PR a été fusionnée PENDANT le tour (travail hors PR). */
-const MERGED_DURING_TURN_STRINGS: Record<Locale, (n: number) => string> = {
-  fr: (n) =>
-    `La pull request #${n} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune pull request. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
-  en: (n) =>
-    `Pull request #${n} was merged during this turn: the new work was pushed to the branch but no longer belongs to any pull request. Start a new session to continue — it will begin from a fresh branch.`,
+const MERGED_DURING_TURN_STRINGS: Record<Locale, (n: number, term: string) => string> = {
+  fr: (n, term) =>
+    `La ${term} #${n} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune ${term}. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
+  en: (n, term) =>
+    `${capitalized(term)} #${n} was merged during this turn: the new work was pushed to the branch but no longer belongs to any ${term}. Start a new session to continue — it will begin from a fresh branch.`,
 };
 
 const COMMENT_STRINGS: Record<
   Locale,
-  { header: (id: string) => string; opened: string; reopened: string; viewPr: string }
+  {
+    header: (id: string) => string;
+    opened: (term: string) => string;
+    reopened: (term: string) => string;
+    viewPr: (term: string) => string;
+  }
 > = {
   fr: {
     header: (id) => `Agent numo — ${id}`,
-    opened: "Pull request ouverte.",
-    reopened: "Pull request rouverte avec le nouveau travail.",
-    viewPr: "Voir la pull request",
+    opened: (term) => `${capitalized(term)} ouverte.`,
+    reopened: (term) => `${capitalized(term)} rouverte avec le nouveau travail.`,
+    viewPr: (term) => `Voir la ${term}`,
   },
   en: {
     header: (id) => `Numo agent — ${id}`,
-    opened: "Pull request opened.",
-    reopened: "Pull request reopened with the new work.",
-    viewPr: "View the pull request",
+    opened: (term) => `${capitalized(term)} opened.`,
+    reopened: (term) => `${capitalized(term)} reopened with the new work.`,
+    viewPr: (term) => `View the ${term}`,
   },
 };
 
@@ -1067,13 +1089,15 @@ async function postPrComment(
   kind: "opened" | "reopened",
   prUrl: string,
   locale: Locale,
+  provider: RepoProviderId,
 ): Promise<void> {
   if (!run.created_by) return;
   try {
     const service = getServiceClient();
     const s = COMMENT_STRINGS[locale] ?? COMMENT_STRINGS.en;
-    const label = kind === "reopened" ? s.reopened : s.opened;
-    const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr}](${prUrl})`;
+    const term = prTerm(provider);
+    const label = kind === "reopened" ? s.reopened(term) : s.opened(term);
+    const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr(term)}](${prUrl})`;
     await service.from("comments").insert({
       issue_id: run.issue_id,
       author_id: run.created_by,

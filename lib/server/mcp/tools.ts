@@ -47,10 +47,8 @@ import {
 } from "@/lib/server/attachments";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import {
-  getPullRequest,
-  listPullRequestFiles,
-  listPullRequestReviewComments,
-} from "@/lib/server/agent/pr";
+  forgeFor,
+} from "@/lib/server/agent/forge";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
@@ -518,26 +516,29 @@ export function registerMinddyTools(server: McpServer): void {
         return fail("git_link_invalid", (e as Error).message);
       }
       if (!target) {
-        return fail("no_repository", "This project has no linked GitHub repository.");
+        return fail("no_repository", "This project has no linked repository.");
       }
+      const forge = forgeFor(target.provider);
 
       try {
         const [pr, files, reviewComments] = await Promise.all([
-          getPullRequest({
+          forge.getPullRequest({
             token: target.token,
             repoFullName: target.repoFullName,
             number: prNumber,
           }),
-          listPullRequestFiles({
+          forge.listPullRequestFiles({
             token: target.token,
             repoFullName: target.repoFullName,
             number: prNumber,
           }),
-          listPullRequestReviewComments({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }).catch(() => []),
+          forge
+            .listPullRequestReviewComments({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
         ]);
         return ok({
           pull_request: {

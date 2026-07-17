@@ -2,11 +2,14 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getInstallationToken } from "@/lib/server/git/github-app";
+import { getGitlabAccessToken } from "@/lib/server/git/gitlab-app";
+import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
 
 /**
  * Résout de quoi cloner le dépôt lié à un projet dans le Sandbox de l'agent
- * (MIN-46). GitHub d'abord : on mint un token d'installation ÉPHÉMÈRE (via
- * getInstallationToken, MIN-47) et on construit une URL de clone HTTPS
+ * (MIN-46 + MIN-69). On mint un token ÉPHÉMÈRE — token d'installation GitHub
+ * (getInstallationToken, MIN-47) ou access token OAuth GitLab (refresh paresseux
+ * via getGitlabAccessToken) — et on construit une URL de clone HTTPS
  * token-authentifiée — jamais persistée hors de la microVM.
  *
  * On lit directement `project_git_links` (qui dénormalise `installation_id`)
@@ -42,8 +45,7 @@ interface GitLinkRow {
 
 /**
  * Cible de clone du projet, ou null s'il n'a aucun dépôt lié. Lève si le lien
- * GitHub est incomplet (installation_id manquant) ou si le provider n'est pas
- * encore supporté (GitLab — hors v1 MIN-46).
+ * est incomplet (installation_id GitHub manquant) ou si le provider est inconnu.
  */
 export async function resolveRepoCloneTarget(
   projectId: string,
@@ -78,6 +80,20 @@ export async function resolveRepoCloneTarget(
     };
   }
 
-  // GitLab : le côté écriture (clone/MR) arrive après la v1 (GitHub d'abord).
-  throw new Error(`Repo provider '${row.provider}' not yet supported by the code agent (GitHub-first)`);
+  if (row.provider === "gitlab") {
+    const token = await getGitlabAccessToken(row.connection_id);
+    // Clone OAuth : user `oauth2`, mot de passe = l'access token (doc GitLab).
+    const host = new URL(GITLAB_HOST).host;
+    return {
+      provider: "gitlab",
+      repoFullName: row.repo_full_name,
+      defaultBranch: row.default_branch ?? "main",
+      authUrl: `https://oauth2:${token}@${host}/${row.repo_full_name}.git`,
+      token,
+      linkId: row.id,
+      connectionId: row.connection_id,
+    };
+  }
+
+  throw new Error(`Unknown repo provider '${row.provider}'`);
 }

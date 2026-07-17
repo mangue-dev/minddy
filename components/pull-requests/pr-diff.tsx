@@ -216,6 +216,7 @@ function PrDiffFile({
   viewType,
   runId,
   prUrl,
+  provider,
   collapsed,
   onToggle,
   reviewComments,
@@ -226,6 +227,7 @@ function PrDiffFile({
   viewType: ViewType;
   runId: string;
   prUrl?: string | null;
+  provider?: "github" | "gitlab";
   collapsed: boolean;
   onToggle: () => void;
   /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
@@ -524,7 +526,7 @@ function PrDiffFile({
                   rel="noreferrer"
                   className="text-brand hover:underline"
                 >
-                  {t("viewOnGithub")}
+                  {t(provider === "gitlab" ? "viewOnGitlab" : "viewOnGithub")}
                 </a>
               ) : null}
             </div>
@@ -547,6 +549,7 @@ export function PrDiff({
   files,
   runId,
   prUrl,
+  provider,
   reviewComments = NO_COMMENTS,
   onCommentPosted = noop,
   className,
@@ -555,6 +558,8 @@ export function PrDiff({
   /** Run porteur de la PR — sert à charger la version base d'un fichier au dépliage. */
   runId: string;
   prUrl?: string | null;
+  /** Provider du dépôt (vocabulaire des liens « Voir sur … ») — défaut GitHub. */
+  provider?: "github" | "gitlab";
   /** Commentaires de review de la PR, tous fichiers confondus. */
   reviewComments?: PullRequestReviewComment[];
   /** Rafraîchit les commentaires après un envoi réussi. */
@@ -642,6 +647,7 @@ export function PrDiff({
             viewType={viewType}
             runId={runId}
             prUrl={prUrl}
+            provider={provider}
             collapsed={collapsed.has(f.filename)}
             onToggle={() => toggle(f.filename)}
             reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}

@@ -4,18 +4,14 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun } from "@/lib/server/agent/runs";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import {
-  listPullRequestComments,
-  createPullRequestComment,
-  GithubApiError,
-} from "@/lib/server/agent/pr";
+import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 
 /**
- * Fil de conversation d'une PR d'agent (MIN-66), servi par l'API GitHub via un
- * token d'installation frais.
+ * Fil de conversation d'une PR/MR d'agent (MIN-66 + MIN-69), servi par l'API du
+ * provider via un token frais.
  *  GET  → commentaires de la PR (accès projet requis).
  *  POST → { body } ajoute un commentaire (membre du projet requis ; auteur = la
- *         GitHub App minddy).
+ *         GitHub App minddy, ou le compte GitLab connecté).
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -38,14 +34,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
-    const comments = await listPullRequestComments({
+    const comments = await forgeFor(target.provider).listPullRequestComments({
       token: target.token,
       repoFullName: target.repoFullName,
       number: run.pr_number,
     });
     return NextResponse.json({ comments });
   } catch (err) {
-    const status = err instanceof GithubApiError ? 502 : 500;
+    const status = isForgeApiError(err) ? 502 : 500;
     return NextResponse.json({ error: (err as Error).message }, { status });
   }
 }
@@ -77,7 +73,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
-    const comment = await createPullRequestComment({
+    const comment = await forgeFor(target.provider).createPullRequestComment({
       token: target.token,
       repoFullName: target.repoFullName,
       number: run.pr_number,
@@ -85,7 +81,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json({ comment });
   } catch (err) {
-    const status = err instanceof GithubApiError ? 502 : 500;
+    const status = isForgeApiError(err) ? 502 : 500;
     return NextResponse.json({ error: (err as Error).message }, { status });
   }
 }

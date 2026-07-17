@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Ellipsis,
   Github,
+  Gitlab,
   MessagesSquare,
   Pencil,
   Plug,
@@ -29,7 +30,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
-import { isGithubPrEvent } from "@/lib/pr-events";
+import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
 import {
   describeEvent,
   describeFeedbackEvent,
@@ -231,6 +232,21 @@ function GithubAvatar({ className }: { className?: string }) {
   );
 }
 
+/** Same, for merge-request actions performed directly on GitLab (MIN-69). */
+function GitlabAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
+        className,
+      )}
+    >
+      <Gitlab className="size-3" />
+    </span>
+  );
+}
+
 /** Avatar for issues submitted through a project integration (Feedback API) —
     a plug instead of a user's initials, so external submissions stand out. */
 function IntegrationAvatar({ className }: { className?: string }) {
@@ -293,9 +309,11 @@ function EventRow({
   const viaMcp = !viaSmartAssign && !viaNumo && !!item.event.via_mcp;
   const viaIntegration =
     !viaSmartAssign && !viaNumo && !viaMcp && !!item.event.integration_id;
-  // Action PR faite directement sur GitHub : pas d'utilisateur minddy, le login
-  // GitHub (from_value) tient lieu d'acteur, avec le logo GitHub.
-  const viaGithub = isGithubPrEvent(item.event);
+  // Action PR/MR faite directement sur le provider (webhook GitHub/GitLab) :
+  // pas d'utilisateur minddy, le login provider (from_value, préfixé `gitlab:`
+  // le cas échéant) tient lieu d'acteur, avec le logo du provider.
+  const viaForge = isForgePrEvent(item.event);
+  const forgeActor = viaForge ? forgePrActor(item.event.from_value) : null;
   // Soumission board (feedback) : l'auteur est un utilisateur final anonyme
   // sans identité équipe — le board tient lieu d'acteur.
   const viaBoard =
@@ -309,8 +327,8 @@ function EventRow({
     ? "Smart Assign"
     : viaNumo
       ? "Numo"
-      : viaGithub
-        ? item.event.from_value || "GitHub"
+      : forgeActor
+        ? forgeActor.login || (forgeActor.provider === "gitlab" ? "GitLab" : "GitHub")
         : viaIntegration
           ? t("integrationActor", {
               name: item.event.integration_name ?? t("integrationFallback"),
@@ -332,8 +350,12 @@ function EventRow({
         <SmartAssignAvatar />
       ) : viaNumo ? (
         <NumoAvatar />
-      ) : viaGithub ? (
-        <GithubAvatar />
+      ) : forgeActor ? (
+        forgeActor.provider === "gitlab" ? (
+          <GitlabAvatar />
+        ) : (
+          <GithubAvatar />
+        )
       ) : viaMcp ? (
         <McpAvatar agent={item.event.api_key_agent} />
       ) : viaIntegration ? (

@@ -38,6 +38,7 @@ interface RunRow {
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string } | null;
+  repo_link: { provider: string } | null;
 }
 
 export interface PullRequestListItem {
@@ -45,6 +46,8 @@ export interface PullRequestListItem {
   pr_number: number;
   pr_url: string | null;
   pr_state: RunRow["pr_state"];
+  /** Provider du dépôt lié — pilote le vocabulaire PR/MR et les liens (MIN-69). */
+  provider: "github" | "gitlab";
   model: string | null;
   created_at: string;
   updated_at: string;
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, repo_link_id, status, pr_number, pr_url, pr_state, model, created_at, updated_at, issue:issues(id, number, title), project:projects(id, key, name)",
+      "id, repo_link_id, status, pr_number, pr_url, pr_state, model, created_at, updated_at, issue:issues(id, number, title), project:projects(id, key, name), repo_link:project_git_links(provider)",
     )
     .not("pr_number", "is", null)
     .order("created_at", { ascending: true });
@@ -95,6 +98,7 @@ export async function GET(request: NextRequest) {
         pr_number: r.pr_number,
         pr_url: r.pr_url,
         pr_state: r.pr_state,
+        provider: r.repo_link?.provider === "gitlab" ? "gitlab" : "github",
         model: r.model,
         created_at: r.created_at,
         updated_at: r.updated_at,

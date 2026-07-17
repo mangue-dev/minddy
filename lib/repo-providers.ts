@@ -32,7 +32,8 @@ export interface RepoProviderMeta {
   authModel: RepoProviderAuthModel;
   status: "active";
   capabilities: {
-    /** Écriture (PR/MR) — les deux providers portent read+write pour le futur agent. */
+    /** Écriture (PR/MR) — l'agent de code tourne sur les deux providers (MIN-69) :
+        clone, ouverture/merge/close de PR ou MR, review, webhook de synchro. */
     write: boolean;
   };
 }

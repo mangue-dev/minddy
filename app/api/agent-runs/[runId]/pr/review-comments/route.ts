@@ -4,13 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun } from "@/lib/server/agent/runs";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import {
-  getPullRequest,
-  listPullRequestReviewComments,
-  createPullRequestReviewComment,
-  replyToPullRequestReviewComment,
-  GithubApiError,
-} from "@/lib/server/agent/pr";
+import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 
 /**
  * Commentaires de review d'une PR d'agent — ceux ancrés à une ligne du diff, par
@@ -45,14 +39,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
-    const comments = await listPullRequestReviewComments({
+    const comments = await forgeFor(target.provider).listPullRequestReviewComments({
       token: target.token,
       repoFullName: target.repoFullName,
       number: run.pr_number,
     });
     return NextResponse.json({ comments });
   } catch (err) {
-    const status = err instanceof GithubApiError ? 502 : 500;
+    const status = isForgeApiError(err) ? 502 : 500;
     return NextResponse.json({ error: (err as Error).message }, { status });
   }
 }
@@ -117,9 +111,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
+    const forge = forgeFor(target.provider);
 
     if (isReply) {
-      const comment = await replyToPullRequestReviewComment({
+      const comment = await forge.replyToPullRequestReviewComment({
         token: target.token,
         repoFullName: target.repoFullName,
         number,
@@ -132,7 +127,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // `commit_id` doit être la TÊTE de la PR : c'est le commit contre lequel
     // GitHub résout la ligne. On le relit à chaque envoi plutôt que de le tenir
     // côté client — entre l'ouverture de la vue et l'envoi, l'agent a pu pousser.
-    const pr = await getPullRequest({
+    // (GitLab ancre par diff_refs, relus à chaud par le module MR.)
+    const pr = await forge.getPullRequest({
       token: target.token,
       repoFullName: target.repoFullName,
       number,
@@ -141,7 +137,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Pull request has no head commit" }, { status: 409 });
     }
 
-    const comment = await createPullRequestReviewComment({
+    const comment = await forge.createPullRequestReviewComment({
       token: target.token,
       repoFullName: target.repoFullName,
       number,
@@ -153,7 +149,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json({ comment });
   } catch (err) {
-    if (err instanceof GithubApiError) {
+    if (isForgeApiError(err)) {
       // 422 = GitHub refuse d'ancrer la ligne. Le cas normal est une ligne hors
       // diff, mais il survient aussi quand la tête a bougé sous l'utilisateur (la
       // ligne visée n'existe plus à ce commit). Code dédié : l'UI l'explique et
