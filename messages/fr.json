@@ -1,4 +1,19 @@
 {
+  "Scratchpad": {
+    "title": "Notes",
+    "srDescription": "Vos notes rapides et tâches personnelles.",
+    "open": "Notes",
+    "openAria": "Ouvrir les notes (G puis N)",
+    "placeholder": "Note une tâche…",
+    "copyAll": "Tout copier",
+    "copyAllAria": "Copier toutes les notes en prompt pour un agent",
+    "copySection": "Copier la section",
+    "copySectionAria": "Copier cette section en prompt pour un agent",
+    "copiedToast": "Notes copiées en prompt",
+    "copiedSectionToast": "Section copiée en prompt",
+    "emptyCopyToast": "Rien à copier pour l'instant",
+    "close": "Fermer"
+  },
   "Activity": {
     "created": "a créé le ticket",
     "categoryAdded": "a ajouté la catégorie « {name} »",
@@ -716,6 +731,7 @@
       "navHome": "Aller à l'accueil",
       "navInbox": "Aller à l'inbox",
       "navAssistant": "Ouvrir l'assistant Numo",
+      "navNotes": "Ouvrir les Notes",
       "navAllIssues": "Aller aux tickets",
       "navMyIssues": "Ouvrir la vue Mes tickets",
       "navObjectives": "Aller aux Objectifs",

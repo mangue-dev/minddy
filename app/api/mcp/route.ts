@@ -46,6 +46,11 @@ const handler = createMcpHandler(
       "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +
       "individual issues — adding assigns the issue to the owner and never changes " +
       "its status. " +
+      "The key owner also has a SCRATCHPAD: one personal, cross-project notes doc of " +
+      "quick things to do right now (the in-app replacement for a problems.md), in the " +
+      "same checkbox markdown as plans. minddy_get_scratchpad reads it; " +
+      "minddy_set_scratchpad replaces the WHOLE doc, so read first and preserve what " +
+      "you are not changing. " +
       "A project can also collect user requests on a FEEDBACK board (also fed by its " +
       "API and internal entry) — separate from issues: a user need with a public " +
       "status and votes. minddy_list_feedback / minddy_get_feedback read them (the " +

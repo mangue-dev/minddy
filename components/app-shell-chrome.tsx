@@ -20,9 +20,11 @@ import {
   ListTodo,
   Keyboard,
   GitPullRequest,
+  NotebookPen,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
+import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -38,6 +40,7 @@ import {
   type PaletteItem,
 } from "@/components/header-search-pill";
 import { NewMenu } from "@/components/new-menu";
+import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
@@ -113,10 +116,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Nav");
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
+  const tScratch = useTranslations("Scratchpad");
   const pathname = usePathname();
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
   const { openCreateIssue, openCreateObjective } = useCreate();
+  const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
 
@@ -265,6 +270,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
         {
+          key: "open-notes",
+          label: tScratch("open"),
+          icon: NotebookPen,
+          keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
+          onSelect: openScratchpad,
+        },
+        {
           key: "go-pull-requests",
           label: t("pullRequests"),
           icon: GitPullRequest,
@@ -411,7 +423,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, currentProject, projectIssues, projectObjectives, router, openCreateProject, openCreateIssue, openCreateObjective, t, ti, tk, setCheatsheetOpen]);
+  }, [projects, currentProject, projectIssues, projectObjectives, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, t, ti, tk, tScratch, setCheatsheetOpen]);
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -636,6 +648,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             // and "Nouveau" to the navbar "+", so the header collapses to the
             // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
             <div className="hidden items-center gap-2 desktop:flex">
+              <ScratchpadTrigger />
               <HeaderSearchPill onOpen={() => setPaletteOpen(true)} />
               <NewMenu />
             </div>

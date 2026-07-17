@@ -28,6 +28,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "nav.home", labelKey: "navHome", keys: [["G"], ["H"]] },
       { id: "nav.inbox", labelKey: "navInbox", keys: [["G"], ["I"]] },
       { id: "nav.assistant", labelKey: "navAssistant", keys: [["G"], ["A"]] },
+      { id: "nav.notes", labelKey: "navNotes", keys: [["G"], ["N"]] },
       { id: "nav.allIssues", labelKey: "navAllIssues", keys: [["G"], ["B"]] },
       { id: "nav.myIssues", labelKey: "navMyIssues", keys: [["G"], ["M"]] },
       { id: "nav.objectives", labelKey: "navObjectives", keys: [["G"], ["O"]] },

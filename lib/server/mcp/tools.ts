@@ -59,6 +59,8 @@ import {
   getCycleOverview,
   getCyclePrefsForUser,
 } from "@/lib/server/cycles";
+import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { effortToPoints, statusCompletionCredit, todayISO } from "@/lib/cycle";
 import { issueIdentifier, type IssueEffort, type IssueStatus } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
@@ -1454,6 +1456,68 @@ export function registerMinddyTools(server: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });
+    }
+  );
+
+  // ── Scratchpad (Notes) — la note perso UNIQUE du propriétaire de la clé :
+  // un bloc-notes markdown de petites tâches du moment (« problems.md »
+  // intégré), mêmes cases à cocher que les plans (lib/plan.ts). Pas de
+  // project_id : c'est personnel et cross-projet. get lit, set REMPLACE tout le
+  // document — relire d'abord pour ne rien écraser.
+  server.registerTool(
+    "minddy_get_scratchpad",
+    {
+      title: "Get scratchpad",
+      description:
+        "Read the key owner's SCRATCHPAD: their single personal, cross-project " +
+        "notes doc ('quick things to do right now') — the in-app replacement for " +
+        "a problems.md file. Markdown with the same checkbox tasks as plans " +
+        "('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped) " +
+        "and '##' section headings. Returns the raw markdown plus task progress. " +
+        "There is exactly one scratchpad per account; it is not tied to a project.",
+      inputSchema: {},
+      annotations: READ_ONLY,
+    },
+    async (_args, extra) => {
+      const auth = requireUser(extra);
+      if ("error" in auth) return auth.error;
+      try {
+        return ok(await getScratchpad(getServiceClient(), auth.userId));
+      } catch (err) {
+        return fail("database_error", (err as Error).message);
+      }
+    }
+  );
+
+  server.registerTool(
+    "minddy_set_scratchpad",
+    {
+      title: "Set scratchpad",
+      description:
+        "Replace the ENTIRE scratchpad markdown for the key owner — this " +
+        "overwrites the whole notes doc. So call minddy_get_scratchpad FIRST and " +
+        "preserve the parts you are not changing (keep other sections; only tick " +
+        "off the items you actually finished). Checkbox convention: '- [ ]' to " +
+        "do, '- [~]' in progress, '- [x]' done, '- [-]' dropped; '##' for section " +
+        "titles. An empty string clears the scratchpad.",
+      inputSchema: {
+        content: z
+          .string()
+          .max(MAX_SCRATCHPAD_LENGTH)
+          .describe(
+            "The full new scratchpad markdown (replaces everything currently there)."
+          ),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const auth = requireUser(extra);
+      if ("error" in auth) return auth.error;
+      try {
+        return ok(await setScratchpad(getServiceClient(), auth.userId, args.content));
+      } catch (err) {
+        return fail("database_error", (err as Error).message);
+      }
     }
   );
 

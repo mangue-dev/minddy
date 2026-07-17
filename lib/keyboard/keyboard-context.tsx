@@ -5,7 +5,7 @@
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar) and
 // a short "G then…" toast appears (covers the collapsed-sidebar case).
 //
-//   Global:      G H home · G I inbox · G A assistant (Numo)
+//   Global:      G H home · G I inbox · G A assistant (Numo) · G N notes
 //   In a project: G B all issues · G M my issues · G O objectives
 //                 G T triage · G S project settings
 //
@@ -34,6 +34,7 @@ import { useTranslations } from "next-intl";
 import { toast, Kbd } from "mangue-ui";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useScratchpad } from "@/lib/scratchpad-context";
 
 /** Leader key that arms a navigation chord. */
 export const CHORD_PREFIX = "g";
@@ -100,6 +101,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toggle: toggleAssistant } = useAssistantPanel();
+  const { open: openScratchpad } = useScratchpad();
   const tk = useTranslations("Keyboard");
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -125,6 +127,8 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   routerRef.current = router;
   const toggleAssistantRef = useRef(toggleAssistant);
   toggleAssistantRef.current = toggleAssistant;
+  const openScratchpadRef = useRef(openScratchpad);
+  openScratchpadRef.current = openScratchpad;
   const thenRef = useRef(tk("then"));
   thenRef.current = tk("then");
   // Mirrors chordPrefix synchronously for the listener (state is async).
@@ -160,6 +164,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           return true;
         case "a":
           toggleAssistantRef.current();
+          return true;
+        case "n":
+          openScratchpadRef.current();
           return true;
         default:
           break;
