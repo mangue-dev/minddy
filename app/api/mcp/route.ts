@@ -37,7 +37,10 @@ const handler = createMcpHandler(
       "and minddy_list_objectives list their metadata (id + name/type/size), " +
       "minddy_add_attachment uploads one (base64, 10 MB max) to an issue or, via " +
       "comment_id, to a comment, and minddy_get_attachment downloads one by id " +
-      "(signed URL, or the bytes inline). The key owner may have a " +
+      "(signed URL, or the bytes inline). An issue worked by minddy's code agent " +
+      "carries a PULL REQUEST: minddy_get_pull_request reads it from the issue — " +
+      "state, branches, description and per-file diffs. " +
+      "The key owner may have a " +
       "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
       "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +
       "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +

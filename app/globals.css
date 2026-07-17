@@ -28,21 +28,21 @@
   --diff-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   /* Sans ça react-diff-view garde `color: initial` (noir) → illisible en sombre. */
   --diff-text-color: var(--foreground);
-  --diff-code-insert-background-color: rgb(46 160 67 / 0.20);
-  --diff-code-delete-background-color: rgb(248 81 73 / 0.18);
-  --diff-gutter-insert-background-color: rgb(46 160 67 / 0.30);
-  --diff-gutter-delete-background-color: rgb(248 81 73 / 0.28);
-  --diff-code-insert-edit-background-color: rgb(46 160 67 / 0.42);
-  --diff-code-delete-edit-background-color: rgb(248 81 73 / 0.42);
+  --diff-code-insert-background-color: rgb(35 178 62 / 0.16);
+  --diff-code-delete-background-color: rgb(255 65 55 / 0.14);
+  --diff-gutter-insert-background-color: rgb(35 178 62 / 0.26);
+  --diff-gutter-delete-background-color: rgb(255 65 55 / 0.24);
+  --diff-code-insert-edit-background-color: rgb(35 178 62 / 0.36);
+  --diff-code-delete-edit-background-color: rgb(255 65 55 / 0.36);
   --diff-selection-background-color: rgb(48 152 208 / 0.30);
 }
 .dark .pr-diff-view {
-  --diff-code-insert-background-color: rgb(63 185 80 / 0.22);
-  --diff-code-delete-background-color: rgb(248 81 73 / 0.20);
-  --diff-gutter-insert-background-color: rgb(63 185 80 / 0.32);
-  --diff-gutter-delete-background-color: rgb(248 81 73 / 0.30);
-  --diff-code-insert-edit-background-color: rgb(63 185 80 / 0.45);
-  --diff-code-delete-edit-background-color: rgb(248 81 73 / 0.45);
+  --diff-code-insert-background-color: rgb(57 208 78 / 0.17);
+  --diff-code-delete-background-color: rgb(255 71 62 / 0.15);
+  --diff-gutter-insert-background-color: rgb(57 208 78 / 0.27);
+  --diff-gutter-delete-background-color: rgb(255 71 62 / 0.25);
+  --diff-code-insert-edit-background-color: rgb(57 208 78 / 0.38);
+  --diff-code-delete-edit-background-color: rgb(255 71 62 / 0.38);
 }
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────

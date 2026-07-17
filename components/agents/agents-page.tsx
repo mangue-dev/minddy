@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, cn } from "mangue-ui";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { AgentStatusBadge } from "@/components/agents/agent-status-badge";
+import { LaunchAgentPicker } from "@/components/agents/launch-agent-picker";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
 import { NumoIcon } from "@/components/numo-icon";
@@ -18,6 +19,25 @@ import {
   useAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
 import { isAgentSessionUnread, type AgentRunSummary, type AgentSessionListItem } from "@/lib/agent-api";
+
+/**
+ * Vrai dès que le volet détail est rendu par le layout (breakpoint md = 768px, le
+ * volet passe en `md:flex`). Sert à savoir si la conversation SÉLECTIONNÉE est
+ * réellement affichée (desktop) ou seulement présélectionnée derrière la liste
+ * (mobile). Uniquement lu dans un effet → pas de souci d'hydratation (valeur `false`
+ * au 1er rendu serveur/client, corrigée juste après).
+ */
+function useIsWideViewport(): boolean {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return wide;
+}
 
 /**
  * Page Agents — vue liste/détail façon Pull Requests : à gauche TOUTES les sessions
@@ -40,22 +60,7 @@ export function AgentsPage() {
   const router = useRouter();
   const { sessions, loading } = useAgentSessionsQuery();
   const { reads, markRead } = useAgentReads();
-
-  // Marque une session lue peu APRÈS son ouverture explicite (clic sur une tuile ou
-  // deep-link `?issue=`), pas à la présélection passive : sur mobile, sessions[0] est
-  // choisie sans que le volet soit affiché — la marquer lue effacerait une bulle que
-  // l'utilisateur n'a pas vue. Le court délai laisse la bulle visible un instant
-  // (liste + badge sidebar + sélecteur de runs) avant de s'effacer, et n'acte la
-  // lecture que si l'utilisateur reste sur la session.
-  const markTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleMarkRead = (issueId: string | null) => {
-    if (markTimerRef.current) clearTimeout(markTimerRef.current);
-    if (!issueId) return;
-    markTimerRef.current = setTimeout(() => markRead(issueId), 1500);
-  };
-  useEffect(() => () => {
-    if (markTimerRef.current) clearTimeout(markTimerRef.current);
-  }, []);
+  const isWide = useIsWideViewport();
 
   // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?issue=<issueId> présélectionne
   // la session de cette issue ; ?compose=<issueId> l'ouvre en brouillon de lancement.
@@ -126,8 +131,7 @@ export function AgentsPage() {
     if (!issueParam) return;
     setSelectedIssueId(issueParam);
     setMobileDetail(true);
-    scheduleMarkRead(issueParam);
-  }, [issueParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [issueParam]);
 
   // Transition terminée : la run lancée figure dans la liste → on efface le brouillon
   // et on reste sur la même issue (le volet est conservé, swap synthétique → réel
@@ -143,6 +147,17 @@ export function AgentsPage() {
   const realSelected = sessions.find((s) => s.issue?.id === selectedIssueId) ?? null;
   // Élément affiché à droite : le brouillon en compose, sinon la vraie session.
   const activeItem = composeSelected ? draftItem : realSelected;
+
+  // La conversation AFFICHÉE n'a jamais de bulle : on la marque lue à son ouverture ET
+  // à chaque nouvelle fin de run tant qu'elle reste visible (dépendance sur
+  // `lastCompletedAt`). « Visible » = desktop (le volet est toujours rendu) ou, sur
+  // mobile, le volet détail ouvert ; sinon (liste mobile ou compose) on ne marque pas,
+  // pour ne pas effacer la bulle d'une session qu'on ne regarde pas.
+  const shownReal = !composeSelected && (isWide || mobileDetail) ? realSelected : null;
+  useEffect(() => {
+    const id = shownReal?.issue?.id;
+    if (id) markRead(id);
+  }, [shownReal?.issue?.id, shownReal?.lastCompletedAt, markRead]);
 
   // Publie l'issue active à Numo : il résout « cette issue » (et sa PR le cas
   // échéant), la lit et peut agir dessus — brouillon compris (issue sans PR).
@@ -183,7 +198,6 @@ export function AgentsPage() {
     setLaunchedRunId(null);
     setSelectedIssueId(issueId);
     setMobileDetail(true);
-    scheduleMarkRead(issueId);
   };
 
   const fmtDay = (at: string): string =>
@@ -203,6 +217,9 @@ export function AgentsPage() {
         <div className="flex items-center gap-2 px-4 pt-5 pb-2">
           <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
           <span className="text-sm tabular-nums text-muted-foreground">{listCount}</span>
+          <div className="ml-auto">
+            <LaunchAgentPicker sessions={sessions} />
+          </div>
         </div>
 
         {loading && !showDraftEntry ? (

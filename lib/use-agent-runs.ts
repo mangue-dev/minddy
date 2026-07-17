@@ -44,12 +44,19 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
  * Events du live view d'un run : polling ~2 s tant que le run est actif.
  * `runId` null = la session n'existe pas encore (POST de lancement en vol) : rien à
  * interroger, le fil n'affiche que la bulle optimiste du 1er message.
+ *
+ * `refetchOnMount: always` : au repos le run ne poll plus, et le `staleTime` global
+ * de 5 min garderait le cache « frais ». Sans ce forçage, revenir sur la page Agents
+ * après avoir quitté l'onglet (remontage du composant) réafficherait les events
+ * d'AVANT — sans le dernier message envoyé ni la réponse de l'agent — jusqu'à un
+ * rechargement complet. On refetch donc à chaque montage, comme les runs de l'issue.
  */
 export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   const { data, isLoading } = useQuery({
     queryKey: ["agent-run-events", runId],
     queryFn: () => fetchAgentRunEventsApi(runId as string),
     enabled: !!runId,
+    refetchOnMount: "always",
     refetchInterval: active ? 2000 : false,
   });
   return { events: data?.events ?? [], loading: isLoading };
@@ -90,12 +97,16 @@ export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
 /**
  * Liste globale des sessions de l'agent (page Agents). Polling ~5 s tant qu'une
  * session TRAVAILLE (Numo tourne), sinon pas de polling — calqué sur
- * `useAllPullRequestsQuery`.
+ * `useAllPullRequestsQuery`. `refetchOnMount: always` pour la même raison que les
+ * events : au repos la liste ne poll plus, donc revenir sur /agents après avoir
+ * quitté l'onglet réafficherait des statuts/non-lus périmés (cache « frais » 5 min)
+ * jusqu'à un rechargement complet.
  */
 export function useAgentSessionsQuery() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: allAgentSessionsQueryKey,
     queryFn: fetchAgentSessionsApi,
+    refetchOnMount: "always",
     refetchInterval: (query) => {
       const sessions = query.state.data?.sessions ?? [];
       return sessions.some((s) => s.working) ? 5000 : false;

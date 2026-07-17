@@ -22,7 +22,10 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, ExternalLink, GitPullRequest, X } from "lucide-react";
+import { Check, ChevronLeft, ExternalLink, GitPullRequest, Reply, X } from "lucide-react";
+import Link from "next/link";
+import { AutoTextarea } from "@/components/auto-textarea";
+import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
@@ -35,6 +38,7 @@ import {
   actOnAgentPrApi,
   postPrCommentApi,
   requestAgentPrChangesApi,
+  type PullRequestComment,
   type PullRequestListItem,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -87,6 +91,7 @@ export function PrDetail({
   const [model, setModel] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
   const stateKey =
@@ -139,6 +144,27 @@ export function PrDetail({
     }
   };
 
+  // Le fil d'une PR est PLAT côté GitHub (endpoint issues/{n}/comments : aucun
+  // in_reply_to — seuls les commentaires de review ancrés au code sont threadés).
+  // « Répondre » cite donc le message dans le composer du bas, comme le fait le
+  // « Quote reply » de GitHub, et mentionne son auteur pour garder le fil lisible.
+  const quoteReply = (c: PullRequestComment) => {
+    const quoted = (c.body ?? "")
+      .trim()
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    const mention = c.user?.login ? `@${c.user.login} ` : "";
+    setCommentBody((d) => `${d.trim() ? `${d.trimEnd()}\n\n` : ""}${quoted}\n\n${mention}`);
+    // Après le rendu de la nouvelle valeur : focus, curseur à la fin (après la mention).
+    requestAnimationFrame(() => {
+      const el = composerRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  };
+
   const submitComment = async () => {
     const body = commentBody.trim();
     if (!body || posting) return;
@@ -188,7 +214,14 @@ export function PrDetail({
         ) : (
           <span className="font-mono text-sm text-muted-foreground">{identifier}</span>
         )}
-        <Badge variant={stateBadgeVariant(item.pr_state)} icon={<GitPullRequest />}>
+        {/* Une PR terminale n'a plus d'actions : le badge prend la place qu'elles
+            occupaient à droite, là où l'œil cherchait le bouton. Tant qu'elle est
+            ouverte il reste à gauche, contre l'identifiant. */}
+        <Badge
+          variant={stateBadgeVariant(item.pr_state)}
+          icon={<GitPullRequest />}
+          className={cn(isTerminal && "ml-auto")}
+        >
           {t(stateKey)}
         </Badge>
         {isWorking ? (
@@ -208,6 +241,7 @@ export function PrDetail({
                 <TooltipTrigger asChild>
                   <span tabIndex={0}>
                     <Button variant="outline" size="sm" disabled>
+                      <NumoIcon animated={false} />
                       {t("requestChanges")}
                     </Button>
                   </span>
@@ -218,6 +252,7 @@ export function PrDetail({
               </Tooltip>
             ) : (
               <Button variant="outline" size="sm" onClick={() => setChangeOpen(true)}>
+                <NumoIcon animated={false} />
                 {t("requestChanges")}
               </Button>
             )}
@@ -250,9 +285,23 @@ export function PrDetail({
               {item.issue?.title ?? pr?.title ?? identifier}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-              <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
-                {t("generatedByNumo")}
-              </Badge>
+              {/* La session Numo est celle de l'issue liée (/agents est indexé par
+                  issue, tous les runs successifs y vivent) → le badge y mène. */}
+              {item.issue ? (
+                <Link href={`/agents?issue=${item.issue.id}`}>
+                  <Badge
+                    variant="secondary"
+                    icon={<NumoIcon animated={false} />}
+                    className="h-6 transition-colors hover:bg-muted"
+                  >
+                    {t("generatedByNumo")}
+                  </Badge>
+                </Link>
+              ) : (
+                <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
+                  {t("generatedByNumo")}
+                </Badge>
+              )}
               {item.project ? (
                 <span className="inline-flex items-center gap-1.5">
                   <ProjectOrb seed={item.project.id} className="size-3.5" />
@@ -272,7 +321,7 @@ export function PrDetail({
               ) : null}
             </div>
             {prDescription ? (
-              <Markdown className="mt-1 text-sm text-muted-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+              <Markdown className="mt-1 text-sm text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
                 {prDescription}
               </Markdown>
             ) : null}
@@ -300,49 +349,86 @@ export function PrDetail({
             ) : comments.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noComments")}</p>
             ) : (
-              <ul className="flex flex-col gap-4">
+              // Même carte que les commentaires d'issue (CommentCard) : bordure,
+              // fond card, en-tête avatar/auteur/heure puis le corps markdown.
+              <ul className="flex flex-col gap-3">
                 {comments.map((c) => (
-                  <li key={c.id} className="flex gap-3">
-                    <Avatar className="size-7 shrink-0">
-                      {c.user?.avatar_url ? (
-                        <AvatarImage src={c.user.avatar_url} alt={c.user.login} />
-                      ) : null}
-                      <AvatarFallback>
-                        {(c.user?.login ?? "?").slice(0, 1).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{c.user?.login ?? "—"}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {format.relativeTime(new Date(c.created_at), now)}
-                        </span>
-                      </div>
-                      <Markdown className="text-sm text-foreground">{c.body}</Markdown>
+                  <li
+                    key={c.id}
+                    className="group/comment flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="size-5 shrink-0 text-[9px]">
+                        {c.user?.avatar_url ? (
+                          <AvatarImage src={c.user.avatar_url} alt={c.user.login} />
+                        ) : null}
+                        <AvatarFallback>
+                          {(c.user?.login ?? "?").slice(0, 1).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                        {c.user?.login ?? "—"}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground/80">
+                        {format.relativeTime(new Date(c.created_at), now)}
+                      </span>
+                      <span className="min-w-0 flex-1" />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t("quoteReply")}
+                            className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+                            onClick={() => quoteReply(c)}
+                          >
+                            <Reply className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">{t("quoteReply")}</TooltipContent>
+                      </Tooltip>
                     </div>
+                    <Markdown className="text-foreground">{c.body}</Markdown>
                   </li>
                 ))}
               </ul>
             )}
 
-            {/* Composer */}
-            <div className="flex flex-col gap-2">
-              <Textarea
+            {/* Composer — même carte que le composer d'issue (CommentComposer),
+                sans mentions ni pièces jointes : un commentaire part sur GitHub,
+                où ni l'un ni l'autre n'a de sens. */}
+            <div className="relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring">
+              <AutoTextarea
+                ref={composerRef}
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    void submitComment();
+                  }
+                }}
                 placeholder={t("commentPlaceholder")}
-                rows={3}
-                className="resize-none bg-card"
+                className="max-h-48 w-full overflow-y-auto bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
               />
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={() => void submitComment()}
-                  disabled={!commentBody.trim() || posting}
-                >
-                  {posting ? <Spinner /> : null}
-                  {t("postComment")}
-                </Button>
+              <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
+                <DictateButton
+                  onTranscription={(text) =>
+                    setCommentBody((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+                  }
+                  disabled={posting}
+                />
+                {commentBody.trim() || posting ? (
+                  <Button
+                    size="sm"
+                    className="rounded-full px-4"
+                    onClick={() => void submitComment()}
+                    disabled={!commentBody.trim() || posting}
+                  >
+                    {posting ? <Spinner /> : null}
+                    {t("postComment")}
+                  </Button>
+                ) : null}
               </div>
             </div>
           </section>

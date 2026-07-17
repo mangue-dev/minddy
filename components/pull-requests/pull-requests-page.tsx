@@ -130,13 +130,13 @@ export function PullRequestsPage() {
           mobileDetail ? "hidden" : "flex",
         )}
       >
-        <div className="flex items-center gap-2 px-4 pt-5 pb-2">
+        <div className="flex items-center gap-2 px-4 pt-5 pb-3">
           <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
           <span className="text-sm tabular-nums text-muted-foreground">{filtered.length}</span>
-        </div>
-        <div className="px-3 pb-2">
+          {/* Pas de classe de largeur : le trigger est `w-fit`, il se cale donc
+              sur son libellé et tient sur la ligne du titre. */}
           <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger size="sm" className="ml-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

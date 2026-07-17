@@ -46,6 +46,8 @@ import {
   uploadAttachment,
 } from "@/lib/server/attachments";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
+import { getPullRequest, listPullRequestFiles } from "@/lib/server/agent/pr";
+import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
   ensureCycles,
   fillCycleForUser,
@@ -80,6 +82,10 @@ const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
 /** Above this, minddy_get_attachment never embeds bytes inline (base64 would
     swamp the model's context) — the signed download_url is the way in. */
 const MAX_INLINE_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
+
+/** Plafond par fichier du diff renvoyé par minddy_get_pull_request — aligné sur
+    le tool read_pull_request de Numo. */
+const MAX_PATCH_CHARS = 4000;
 
 /** Text-ish MIME → return the file as readable text rather than a base64 blob. */
 function isTextMime(mime: string): boolean {
@@ -454,6 +460,97 @@ export function registerMinddyTools(server: McpServer): void {
             }
           : {}),
       });
+    }
+  );
+
+  server.registerTool(
+    "minddy_get_pull_request",
+    {
+      title: "Get pull request",
+      description:
+        "Read the pull request the code agent opened for an issue: its number, url, " +
+        "state (open/merged/closed), title, description, head/base branches, and the " +
+        "per-file diffs (patches, truncated past ~4000 chars). Use it to review a PR, " +
+        "explain what it changes, or answer questions about its content. Fails if the " +
+        "issue has no agent-opened PR, or if the project has no linked GitHub repo.",
+      inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in ref) return ref.error;
+
+      // La PR d'une issue est portée par sa run CANONIQUE — la plus ancienne à
+      // l'avoir ouverte ; les runs suivants (demandes de changements) la partagent.
+      const { data: run, error } = await getServiceClient()
+        .from("agent_runs")
+        .select("pr_number")
+        .eq("issue_id", ref.issue.id)
+        .not("pr_number", "is", null)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) return fail("database_error", error.message);
+      const prNumber = (run as { pr_number?: number } | null)?.pr_number;
+      if (prNumber == null) {
+        return fail(
+          "pull_request_not_found",
+          `Issue '${ref.issue.identifier}' has no pull request opened by the code agent yet.`
+        );
+      }
+
+      let target;
+      try {
+        target = await resolveRepoCloneTarget(scope.access.project.id);
+      } catch (e) {
+        return fail("git_link_invalid", (e as Error).message);
+      }
+      if (!target) {
+        return fail("no_repository", "This project has no linked GitHub repository.");
+      }
+
+      try {
+        const [pr, files] = await Promise.all([
+          getPullRequest({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }),
+          listPullRequestFiles({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }),
+        ]);
+        return ok({
+          pull_request: {
+            number: pr.number,
+            url: pr.url,
+            state: pr.merged ? "merged" : pr.state,
+            title: pr.title,
+            body: pr.body,
+            head: pr.head,
+            base: pr.base,
+            repository: target.repoFullName,
+            issue: { id: ref.issue.id, identifier: ref.issue.identifier },
+            files: files.map((f) => ({
+              filename: f.filename,
+              status: f.status,
+              additions: f.additions,
+              deletions: f.deletions,
+              // Plafonne le patch : un gros diff noierait le contexte du modèle.
+              patch:
+                f.patch && f.patch.length > MAX_PATCH_CHARS
+                  ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
+                  : f.patch ?? null,
+            })),
+          },
+        });
+      } catch (e) {
+        return fail("github_error", (e as Error).message);
+      }
     }
   );
 
