@@ -15,6 +15,7 @@ import {
   cn,
 } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
@@ -155,11 +156,11 @@ export function PullRequestsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-4 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              <GitPullRequest className="size-6" />
-            </div>
-            <p className="max-w-xs text-sm text-muted-foreground">{t("emptyState")}</p>
+          <div className="p-4">
+            <EmptyState
+              icon={<GitPullRequest className="size-6" />}
+              description={t("emptyState")}
+            />
           </div>
         ) : (
           <div className="flex flex-col px-2 pb-4">

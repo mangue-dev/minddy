@@ -20,6 +20,7 @@ import {
 } from "mangue-ui";
 import { ArrowUpDown, Check, ChevronDown, MessagesSquare, Megaphone } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { EmptyState } from "@/components/empty-state";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import {
   FEEDBACK_POST_STATUSES,
@@ -120,13 +121,11 @@ export function FeedbackBoardClient({
         <FilterBar basePath={basePath} sort={sort} status={status} category={activeCategory} />
 
         {posts.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-12 text-center">
-            <MessagesSquare className="size-5 text-muted-foreground" />
-            {/* Filtre actif = la vue est vide, pas le board. */}
-            <p className="text-sm text-muted-foreground">
-              {status || activeCategory ? t("emptyFiltered") : t("empty")}
-            </p>
-          </div>
+          /* Filtre actif = la vue est vide, pas le board. */
+          <EmptyState
+            icon={<MessagesSquare className="size-6" />}
+            description={status || activeCategory ? t("emptyFiltered") : t("empty")}
+          />
         ) : (
           <ul className="flex flex-col divide-y divide-border/60">
             {posts.map((post) => (

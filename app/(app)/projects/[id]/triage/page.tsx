@@ -17,6 +17,7 @@ import {
   toast,
 } from "mangue-ui";
 import { Check, ChevronLeft, Copy, Filter, X } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import {
   AssigneeValue,
@@ -229,12 +230,10 @@ export default function TriagePage() {
             <h1 className="mb-5 font-display text-xl font-semibold tracking-tight">
               {t("title")}
             </h1>
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-                <Filter className="size-6" />
-              </div>
-              <p className="max-w-xs text-sm text-muted-foreground">{t("emptyState")}</p>
-            </div>
+            <EmptyState
+              icon={<Filter className="size-6" />}
+              description={t("emptyState")}
+            />
           </div>
         </div>
       </div>

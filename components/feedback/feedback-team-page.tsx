@@ -50,6 +50,7 @@ import {
   Undo2,
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
+import { EmptyState } from "@/components/empty-state";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -296,10 +297,12 @@ export function FeedbackTeamPage() {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : posts.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-              <MessagesSquare className="size-5 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t("empty")}</p>
-              <p className="text-xs text-muted-foreground">{t("emptyHint")}</p>
+            <div className="p-4">
+              <EmptyState
+                icon={<MessagesSquare className="size-6" />}
+                title={t("empty")}
+                description={t("emptyHint")}
+              />
             </div>
           ) : (
             <ul>

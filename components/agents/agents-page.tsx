@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, cn } from "mangue-ui";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
+import { EmptyState } from "@/components/empty-state";
 import { AgentStatusBadge } from "@/components/agents/agent-status-badge";
 import { LaunchAgentPicker } from "@/components/agents/launch-agent-picker";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
@@ -229,11 +230,11 @@ export function AgentsPage() {
             ))}
           </div>
         ) : sessions.length === 0 && !showDraftEntry ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-4 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              <NumoIcon className="size-6" animated={false} />
-            </div>
-            <p className="max-w-xs text-sm text-muted-foreground">{t("emptyState")}</p>
+          <div className="p-4">
+            <EmptyState
+              icon={<NumoIcon className="size-6" animated={false} />}
+              description={t("emptyState")}
+            />
           </div>
         ) : (
           <div className="flex flex-col px-2 pb-4">

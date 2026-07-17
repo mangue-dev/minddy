@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button, Skeleton, cn } from "mangue-ui";
 import { Inbox, UserPlus, AtSign, MessageSquare } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { useNotifications } from "@/lib/use-notifications";
 import type { MyNotification, NotificationType } from "@/lib/types";
 
@@ -71,12 +72,7 @@ export default function InboxPage() {
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-            <Inbox className="size-6" />
-          </div>
-          <p className="text-sm text-muted-foreground">{t("emptyMessage")}</p>
-        </div>
+        <EmptyState icon={<Inbox className="size-6" />} description={t("emptyMessage")} />
       ) : (
         <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
           {notifications.map((n) => {

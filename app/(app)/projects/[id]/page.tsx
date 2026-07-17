@@ -30,6 +30,7 @@ import {
   useAssistantPanel,
 } from "@/lib/assistant-panel-context";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
+import { EmptyState } from "@/components/empty-state";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
@@ -394,15 +395,18 @@ function ProjectBoard() {
         </div>
       ) : issues.length === 0 ? (
         <div className="min-h-0 flex-1 px-6 pt-4">
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              <ListTodo className="size-6" />
-            </div>
-            <p className="max-w-xs text-sm text-muted-foreground">
-              {t("noIssuesYet")}{" "}
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">C</kbd>.
-            </p>
-          </div>
+          <EmptyState
+            icon={<ListTodo className="size-6" />}
+            description={
+              <>
+                {t("noIssuesYet")}{" "}
+                <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  C
+                </kbd>
+                .
+              </>
+            }
+          />
         </div>
       ) : (
         <>

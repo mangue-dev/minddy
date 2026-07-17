@@ -27,6 +27,7 @@ import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-quer
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
+import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { ObjectiveDialog } from "@/components/objective-dialog";
@@ -134,18 +135,18 @@ function ObjectivesInner() {
               ))}
             </div>
           ) : objectives.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-                <Target className="size-6" />
-              </div>
-              <p className="max-w-xs text-sm text-muted-foreground">
-                {t("emptyState", { issues: tIssue("entityPlural").toLowerCase() })}
-              </p>
-              <Button onClick={openCreate}>
-                <Plus />
-                {t("newObjective")}
-              </Button>
-            </div>
+            <EmptyState
+              icon={<Target className="size-6" />}
+              description={t("emptyState", {
+                issues: tIssue("entityPlural").toLowerCase(),
+              })}
+              action={
+                <Button onClick={openCreate}>
+                  <Plus />
+                  {t("newObjective")}
+                </Button>
+              }
+            />
           ) : (
             <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
               {objectives.map((obj) => {
