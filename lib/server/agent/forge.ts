@@ -32,14 +32,15 @@ export function isForgeApiError(err: unknown): err is ForgeApiError {
   return err instanceof GithubApiError || err instanceof GitlabApiError;
 }
 
-/** Surface commune des opérations PR/MR — les signatures exactes de `pr.ts`. */
+/**
+ * Surface commune des opérations PR/MR. Volontairement PLUS ÉTROITE que les
+ * modules concrets : pas de `commitId` (chaque provider résout sa propre ancre
+ * de review), pas de méthode de merge ni de commentaire multi-lignes (options
+ * GitHub que GitLab ignorerait en silence), pas de `findOpen*` (détail interne
+ * des `ensure*`). N'élargir qu'avec une implémentation réelle des deux côtés.
+ */
 export interface Forge {
   provider: RepoProviderId;
-  findOpenPullRequest(opts: {
-    token: string;
-    repoFullName: string;
-    head: string;
-  }): Promise<PullRequestRef | null>;
   ensurePullRequest(opts: {
     token: string;
     repoFullName: string;
@@ -58,9 +59,12 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestFile[]>;
+  /** Base du diff servi : merge base VIVANT (GitHub, diff recalculé à la volée)
+      ou `diff_refs.base_sha` PERSISTÉ (GitLab, diff figé au dernier push). */
   getMergeBaseSha(opts: {
     token: string;
     repoFullName: string;
+    number: number;
     base: string;
     head: string;
   }): Promise<string>;
@@ -74,7 +78,6 @@ export interface Forge {
     token: string;
     repoFullName: string;
     number: number;
-    method?: "merge" | "squash" | "rebase";
   }): Promise<void>;
   closePullRequest(opts: {
     token: string;
@@ -102,17 +105,16 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestReviewComment[]>;
+  /** Ancre résolue PAR le provider : tête de PR relue à chaud (GitHub) ou
+      diff_refs (GitLab). Ligne hors diff → erreur 422 (« lineNotInDiff »). */
   createPullRequestReviewComment(opts: {
     token: string;
     repoFullName: string;
     number: number;
     body: string;
-    commitId: string;
     path: string;
     line: number;
     side: "LEFT" | "RIGHT";
-    startLine?: number;
-    startSide?: "LEFT" | "RIGHT";
   }): Promise<PullRequestReviewComment>;
   replyToPullRequestReviewComment(opts: {
     token: string;
@@ -125,7 +127,6 @@ export interface Forge {
 
 const githubForge: Forge = {
   provider: "github",
-  findOpenPullRequest: github.findOpenPullRequest,
   ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
   listPullRequestFiles: github.listPullRequestFiles,
@@ -137,13 +138,24 @@ const githubForge: Forge = {
   listPullRequestComments: github.listPullRequestComments,
   createPullRequestComment: github.createPullRequestComment,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
-  createPullRequestReviewComment: github.createPullRequestReviewComment,
+  // GitHub exige `commit_id` = la TÊTE de la PR, relue à chaud à chaque envoi
+  // (entre l'ouverture de la vue et l'envoi, l'agent a pu pousser — cf. pr.ts).
+  createPullRequestReviewComment: async (opts) => {
+    const pr = await github.getPullRequest({
+      token: opts.token,
+      repoFullName: opts.repoFullName,
+      number: opts.number,
+    });
+    if (!pr.headSha) {
+      throw new GithubApiError("Pull request has no head commit", 409);
+    }
+    return github.createPullRequestReviewComment({ ...opts, commitId: pr.headSha });
+  },
   replyToPullRequestReviewComment: github.replyToPullRequestReviewComment,
 };
 
 const gitlabForge: Forge = {
   provider: "gitlab",
-  findOpenPullRequest: gitlab.findOpenMergeRequest,
   ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
   listPullRequestFiles: gitlab.listMergeRequestChanges,

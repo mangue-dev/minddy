@@ -1,5 +1,7 @@
 "use client";
 
+import type { RepoProviderId } from "@/lib/repo-providers";
+
 /**
  * Fetchers client de l'agent de code (MIN-46) : lancer un run sur une issue et
  * lister ses runs. (Le détail live + events + stop d'un run arrivent en Phase 7.)
@@ -273,7 +275,7 @@ export interface PullRequestListItem {
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
   /** Provider du dépôt lié — pilote le vocabulaire PR/MR et les liens (MIN-69). */
-  provider: "github" | "gitlab";
+  provider: RepoProviderId;
   model: string | null;
   created_at: string;
   updated_at: string;

@@ -28,6 +28,7 @@ import {
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import {
   commentableChangeKeys,
   gutterAnchor,
@@ -227,7 +228,7 @@ function PrDiffFile({
   viewType: ViewType;
   runId: string;
   prUrl?: string | null;
-  provider?: "github" | "gitlab";
+  provider?: RepoProviderId;
   collapsed: boolean;
   onToggle: () => void;
   /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
@@ -559,7 +560,7 @@ export function PrDiff({
   runId: string;
   prUrl?: string | null;
   /** Provider du dépôt (vocabulaire des liens « Voir sur … ») — défaut GitHub. */
-  provider?: "github" | "gitlab";
+  provider?: RepoProviderId;
   /** Commentaires de review de la PR, tous fichiers confondus. */
   reviewComments?: PullRequestReviewComment[];
   /** Rafraîchit les commentaires après un envoi réussi. */

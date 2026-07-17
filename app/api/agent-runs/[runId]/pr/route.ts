@@ -183,7 +183,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // sur la même PR) : n'en marquer qu'un laisserait les frères sur un pr_state
       // périmé — le garde `prMerged` du steer serait contournable jusqu'à l'écho
       // du webhook (qui peut ne jamais arriver en dev).
-      await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "merged" });
+      await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "merged", provider: target.provider });
       // PR mergée → l'issue passe en done (MIN-46). Acteur = le membre qui merge.
       await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "merged" });
       // Trace « a accepté la PR » dans l'activité de l'issue.
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
     await forge.closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
     // Comme pour merge : tous les runs de la PR, pas seulement celui-ci.
-    await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "closed" });
+    await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "closed", provider: target.provider });
     // PR refusée → l'issue retourne « à faire » (todo, jamais annulée) — MIN-46.
     await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "closed" });
     // Trace « a refusé la PR » dans l'activité de l'issue.

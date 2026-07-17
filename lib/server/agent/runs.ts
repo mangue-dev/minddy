@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
 
 /**
@@ -409,15 +410,20 @@ export interface SyncedPrRun {
 }
 
 /** Ids des liaisons projet↔dépôt pour `repoFullName` (un numéro de PR est unique
-    par dépôt ; plusieurs projets peuvent lier le même dépôt). */
+    par dépôt ; plusieurs projets peuvent lier le même dépôt). Filtré par
+    PROVIDER (MIN-69) : `owner/name` n'est unique QUE par forge — sans ce filtre,
+    un webhook GitLab pour `acme/app` tamponnerait les runs d'un dépôt GitHub
+    homonyme (miroirs, forks migrés), et réciproquement. */
 async function repoLinkIds(
   service: ReturnType<typeof getServiceClient>,
   repoFullName: string,
+  provider: RepoProviderId,
 ): Promise<string[]> {
   const { data: links } = await service
     .from("project_git_links")
     .select("id")
-    .eq("repo_full_name", repoFullName);
+    .eq("repo_full_name", repoFullName)
+    .eq("provider", provider);
   return ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
 }
 
@@ -429,9 +435,10 @@ async function repoLinkIds(
 export async function findRunsForPr(opts: {
   repoFullName: string;
   prNumber: number;
+  provider: RepoProviderId;
 }): Promise<SyncedPrRun[]> {
   const service = getServiceClient();
-  const linkIds = await repoLinkIds(service, opts.repoFullName);
+  const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
   if (linkIds.length === 0) return [];
   const { data: runs } = await service
     .from("agent_runs")
@@ -454,9 +461,10 @@ export async function syncPrState(opts: {
   prNumber: number;
   prState: AgentRun["pr_state"];
   prUrl?: string | null;
+  provider: RepoProviderId;
 }): Promise<SyncedPrRun[]> {
   const service = getServiceClient();
-  const linkIds = await repoLinkIds(service, opts.repoFullName);
+  const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
   if (linkIds.length === 0) return [];
   const { data: runs } = await service
     .from("agent_runs")

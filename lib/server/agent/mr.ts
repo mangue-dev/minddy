@@ -68,11 +68,16 @@ async function glJson<T>(url: string, token: string, init?: RequestInit): Promis
   return data as T;
 }
 
-/** Variante paginée (offset via X-Next-Page), bornée par `maxPages`. */
+/**
+ * Variante paginée (offset via X-Next-Page), bornée par `maxPages`. `stopWhen`
+ * (optionnel) court-circuite les pages restantes dès que l'accumulé suffit —
+ * ex. la recherche d'UNE discussion n'a pas à drainer tout le fil.
+ */
 async function glPaged<T>(
   baseUrl: string,
   token: string,
   maxPages: number,
+  stopWhen?: (all: T[]) => boolean,
 ): Promise<T[]> {
   const all: T[] = [];
   let page: number | null = 1;
@@ -91,6 +96,7 @@ async function glPaged<T>(
     }
     if (!res.ok) throw new GitlabApiError(errorMessage(data, res.status), res.status);
     all.push(...((data as T[]) ?? []));
+    if (stopWhen?.(all)) break;
     page = gitlabNextPage(res);
     fetched++;
   }
@@ -153,6 +159,10 @@ export async function findOpenMergeRequest(opts: {
 /**
  * Ouvre la MR du run, ou renvoie celle déjà ouverte pour cette branche (reprise).
  * GitLab répond 409 « Another open merge request already exists » dans ce cas.
+ *
+ * Parité GitHub sur la branche VIDE : GitLab accepte les MR sans aucun commit —
+ * on refuse nous-mêmes en 422 (le même status que le « No commits between… » de
+ * GitHub), sinon l'agent ouvrirait une MR vide et pousserait le ticket en revue.
  */
 export async function ensureMergeRequest(opts: {
   token: string;
@@ -162,6 +172,14 @@ export async function ensureMergeRequest(opts: {
   title: string;
   body: string;
 }): Promise<PullRequestRef> {
+  const compare = await glJson<{ commits?: unknown[] }>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/compare` +
+      `?from=${encodeURIComponent(opts.base)}&to=${encodeURIComponent(opts.head)}`,
+    opts.token,
+  );
+  if ((compare.commits ?? []).length === 0) {
+    throw new GitlabApiError("No commits between base and head branches", 422);
+  }
   try {
     const created = await glJson<RawMr>(
       `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests`,
@@ -212,29 +230,42 @@ interface RawDiff {
   deleted_file?: boolean;
 }
 
-/** Compte +/- d'un unified diff (GitLab ne fournit pas les stats par fichier). */
+/** Compte +/- d'un unified diff (GitLab ne fournit pas les stats par fichier).
+    Gardé DANS les hunks, mêmes règles que `resolveDiffPosition` : une ligne de
+    contenu `++…` est bien une addition, un en-tête hors hunk n'est rien. */
 function countDiffLines(diff: string): { additions: number; deletions: number } {
   let additions = 0;
   let deletions = 0;
+  let inHunk = false;
   for (const line of diff.split("\n")) {
-    if (line.startsWith("+") && !line.startsWith("+++")) additions++;
-    else if (line.startsWith("-") && !line.startsWith("---")) deletions++;
+    if (/^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.test(line)) {
+      inHunk = true;
+      continue;
+    }
+    if (!inHunk || line.startsWith("\\")) continue;
+    if (line.startsWith("+")) additions++;
+    else if (line.startsWith("-")) deletions++;
   }
   return { additions, deletions };
 }
 
 const DIFFS_MAX_PAGES = 10;
 
-/** Diffs bruts de la MR (endpoint /diffs, paginé). Partagé fichiers + positions. */
-async function listRawDiffs(opts: {
-  token: string;
-  repoFullName: string;
-  number: number;
-}): Promise<RawDiff[]> {
+/** Diffs bruts de la MR (endpoint /diffs, paginé). Partagé fichiers + positions.
+    `stopWhen` court-circuite la pagination quand on ne cherche qu'un fichier. */
+async function listRawDiffs(
+  opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  },
+  stopWhen?: (all: RawDiff[]) => boolean,
+): Promise<RawDiff[]> {
   return glPaged<RawDiff>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/diffs`,
     opts.token,
     DIFFS_MAX_PAGES,
+    stopWhen,
   );
 }
 
@@ -265,20 +296,28 @@ export async function listMergeRequestChanges(opts: {
   });
 }
 
-/** SHA du merge base entre deux refs (endpoint repository/merge_base). */
+/**
+ * SHA de la BASE du diff servi par GitLab pour cette MR : `diff_refs.base_sha`.
+ *
+ * Le miroir du piège documenté dans `pr.ts` (getMergeBaseSha), inversé : GitHub
+ * recalcule le diff à la volée (le merge base VIVANT est le bon), GitLab fige le
+ * diff à `diff_refs` — rafraîchi seulement quand la branche source pousse, PAS
+ * quand la cible avance. Recalculer un merge base vivant décalerait les lignes
+ * dépliées après un rebase/force-push de la cible (ou après merge). L'ancre
+ * persistée survit aussi à la suppression de la branche source.
+ */
 export async function getMergeBaseSha(opts: {
   token: string;
   repoFullName: string;
-  base: string;
-  head: string;
+  number: number;
 }): Promise<string> {
-  const data = await glJson<{ id?: string }>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/merge_base` +
-      `?refs[]=${encodeURIComponent(opts.base)}&refs[]=${encodeURIComponent(opts.head)}`,
+  const mr = await glJson<RawMr>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
     opts.token,
   );
-  if (!data.id) throw new GitlabApiError("No merge base for this merge request", 502);
-  return data.id;
+  const sha = mr.diff_refs?.base_sha;
+  if (!sha) throw new GitlabApiError("Merge request has no diff refs", 502);
+  return sha;
 }
 
 /** Contenu brut d'un fichier à un ref donné, ou null s'il n'y existe pas. */
@@ -315,7 +354,6 @@ export async function mergeMergeRequest(opts: {
   token: string;
   repoFullName: string;
   number: number;
-  method?: "merge" | "squash" | "rebase";
 }): Promise<void> {
   await glJson<unknown>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
@@ -482,15 +520,19 @@ function toReviewComment(
 
 const DISCUSSIONS_MAX_PAGES = 10;
 
-async function listRawDiscussions(opts: {
-  token: string;
-  repoFullName: string;
-  number: number;
-}): Promise<RawDiscussion[]> {
+async function listRawDiscussions(
+  opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  },
+  stopWhen?: (all: RawDiscussion[]) => boolean,
+): Promise<RawDiscussion[]> {
   return glPaged<RawDiscussion>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/discussions`,
     opts.token,
     DISCUSSIONS_MAX_PAGES,
+    stopWhen,
   );
 }
 
@@ -519,36 +561,38 @@ export async function listMergeRequestDiffComments(opts: {
 }
 
 /**
- * Poste un commentaire de review sur une ligne (nouvelle discussion GitLab).
- * `commitId` est ignoré : GitLab ancre par `diff_refs` (base/start/head) lus À
- * CHAUD sur la MR — plus fiable qu'un SHA passé par le client. Ligne hors diff
- * → GitlabApiError(422), même contrat que GitHub (« lineNotInDiff » côté route).
+ * Poste un commentaire de review sur une ligne (nouvelle discussion GitLab),
+ * ancré par les `diff_refs` (base/start/head) lus À CHAUD sur la MR. Ligne hors
+ * diff → GitlabApiError(422), même contrat que GitHub (« lineNotInDiff » côté
+ * route). Le fichier est adressé par son chemin ACTUEL (new_path) même côté
+ * LEFT — la convention GitHub que toute l'UI suit — avec repli sur old_path.
  */
 export async function createMergeRequestDiffComment(opts: {
   token: string;
   repoFullName: string;
   number: number;
   body: string;
-  commitId: string;
   path: string;
   line: number;
   side: "LEFT" | "RIGHT";
-  startLine?: number;
-  startSide?: "LEFT" | "RIGHT";
 }): Promise<PullRequestReviewComment> {
-  const mrRaw = await glJson<RawMr>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
-    opts.token,
-  );
+  const matchesPath = (d: RawDiff): boolean =>
+    d.new_path === opts.path || d.old_path === opts.path;
+  // MR (diff_refs) et diffs sont indépendants — en parallèle, et la pagination
+  // des diffs s'arrête dès que le fichier visé est trouvé.
+  const [mrRaw, diffs] = await Promise.all([
+    glJson<RawMr>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+      opts.token,
+    ),
+    listRawDiffs(opts, (all) => all.some(matchesPath)),
+  ]);
   const refs = mrRaw.diff_refs;
   if (!refs?.base_sha || !refs.head_sha) {
     throw new GitlabApiError("Merge request has no diff refs", 502);
   }
 
-  const diffs = await listRawDiffs(opts);
-  const file = diffs.find((d) =>
-    opts.side === "RIGHT" ? d.new_path === opts.path : (d.old_path ?? d.new_path) === opts.path,
-  );
+  const file = diffs.find((d) => d.new_path === opts.path) ?? diffs.find(matchesPath);
   const position = file?.diff ? resolveDiffPosition(file.diff, opts.line, opts.side) : null;
   if (!position) {
     throw new GitlabApiError("The line is not part of the merge request diff", 422);
@@ -592,10 +636,11 @@ export async function replyToMergeRequestDiffComment(opts: {
   commentId: number;
   body: string;
 }): Promise<PullRequestReviewComment> {
-  const discussions = await listRawDiscussions(opts);
-  const discussion = discussions.find((d) =>
-    (d.notes ?? []).some((n) => n.id === opts.commentId),
-  );
+  const holdsComment = (d: RawDiscussion): boolean =>
+    (d.notes ?? []).some((n) => n.id === opts.commentId);
+  // La pagination s'arrête dès que la discussion porteuse est trouvée.
+  const discussions = await listRawDiscussions(opts, (all) => all.some(holdsComment));
+  const discussion = discussions.find(holdsComment);
   if (!discussion) {
     throw new GitlabApiError("Review thread not found for this comment", 404);
   }

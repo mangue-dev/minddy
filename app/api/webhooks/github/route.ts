@@ -102,6 +102,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
     prNumber: number,
     prState,
     prUrl: payload.pull_request?.html_url ?? null,
+    provider: "github",
   });
   // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
   // merged→done, closed→todo, reopened/ready_for_review→in_review.
@@ -132,7 +133,7 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
   const actionType = prActionForReview(payload.review?.state ?? "");
   if (!actionType || number == null || !repoFullName || isBot(reviewer)) return;
 
-  const runs = await findRunsForPr({ repoFullName, prNumber: number });
+  const runs = await findRunsForPr({ repoFullName, prNumber: number, provider: "github" });
   await recordForgePrActionEvents({
     runs,
     type: actionType,

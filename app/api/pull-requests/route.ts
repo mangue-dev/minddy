@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Liste GLOBALE des pull requests ouvertes par l'agent Numo, tous projets
@@ -47,7 +48,7 @@ export interface PullRequestListItem {
   pr_url: string | null;
   pr_state: RunRow["pr_state"];
   /** Provider du dépôt lié — pilote le vocabulaire PR/MR et les liens (MIN-69). */
-  provider: "github" | "gitlab";
+  provider: RepoProviderId;
   model: string | null;
   created_at: string;
   updated_at: string;
@@ -65,6 +66,15 @@ export interface PullRequestListItem {
    * sélectionnerait silencieusement la PR d'un autre ticket.
    */
   runIds: string[];
+}
+
+/** Provider du run. `repo_link_id` est ON DELETE SET NULL : après un unlink, le
+    lien a disparu mais le run garde sa PR/MR — l'hôte du `pr_url` garde alors la
+    trace du provider (sinon une MR GitLab s'afficherait en vocabulaire GitHub). */
+function runProvider(r: RunRow): RepoProviderId {
+  const stored = r.repo_link?.provider;
+  if (stored && isRepoProviderId(stored)) return stored;
+  return r.pr_url?.startsWith("https://gitlab.com/") ? "gitlab" : "github";
 }
 
 export async function GET(request: NextRequest) {
@@ -98,7 +108,7 @@ export async function GET(request: NextRequest) {
         pr_number: r.pr_number,
         pr_url: r.pr_url,
         pr_state: r.pr_state,
-        provider: r.repo_link?.provider === "gitlab" ? "gitlab" : "github",
+        provider: runProvider(r),
         model: r.model,
         created_at: r.created_at,
         updated_at: r.updated_at,

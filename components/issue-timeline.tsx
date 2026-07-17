@@ -30,7 +30,8 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
-import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
+import { isForgePrEvent, forgePrActor, type ForgeProvider } from "@/lib/pr-events";
+import { getRepoProvider } from "@/lib/repo-providers";
 import {
   describeEvent,
   describeFeedbackEvent,
@@ -215,10 +216,17 @@ function BoardAvatar({ className }: { className?: string }) {
   );
 }
 
-/** Avatar for pull-request actions performed directly on GitHub (accepted /
-    rejected / approved / changes requested via the webhook) — the GitHub mark,
-    the actor being the GitHub user rather than a minddy member. */
-function GithubAvatar({ className }: { className?: string }) {
+/** Avatar for PR/MR actions performed directly on the provider (accepted /
+    rejected / approved / changes requested via the webhook) — the forge's mark,
+    the actor being the GitHub/GitLab user rather than a minddy member. */
+function ForgeAvatar({
+  provider,
+  className,
+}: {
+  provider: ForgeProvider;
+  className?: string;
+}) {
+  const Icon = provider === "gitlab" ? Gitlab : Github;
   return (
     <span
       aria-hidden
@@ -227,22 +235,7 @@ function GithubAvatar({ className }: { className?: string }) {
         className,
       )}
     >
-      <Github className="size-3" />
-    </span>
-  );
-}
-
-/** Same, for merge-request actions performed directly on GitLab (MIN-69). */
-function GitlabAvatar({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
-        className,
-      )}
-    >
-      <Gitlab className="size-3" />
+      <Icon className="size-3" />
     </span>
   );
 }
@@ -328,7 +321,7 @@ function EventRow({
     : viaNumo
       ? "Numo"
       : forgeActor
-        ? forgeActor.login || (forgeActor.provider === "gitlab" ? "GitLab" : "GitHub")
+        ? forgeActor.login || getRepoProvider(forgeActor.provider).displayName
         : viaIntegration
           ? t("integrationActor", {
               name: item.event.integration_name ?? t("integrationFallback"),
@@ -351,11 +344,7 @@ function EventRow({
       ) : viaNumo ? (
         <NumoAvatar />
       ) : forgeActor ? (
-        forgeActor.provider === "gitlab" ? (
-          <GitlabAvatar />
-        ) : (
-          <GithubAvatar />
-        )
+        <ForgeAvatar provider={forgeActor.provider} />
       ) : viaMcp ? (
         <McpAvatar agent={item.event.api_key_agent} />
       ) : viaIntegration ? (

@@ -857,7 +857,7 @@ export async function executeAgentRun(
       if (pushed?.remoteUpdated && prState.state === "merged" && prState.number != null) {
         await emit("error", {
           message: (MERGED_DURING_TURN_STRINGS[commentLocale] ?? MERGED_DURING_TURN_STRINGS.en)(
-            prState.number,
+            prRef(target.provider, prState.number),
             prTerm(target.provider),
           ),
         });
@@ -1015,16 +1015,21 @@ function prTerm(provider: RepoProviderId): string {
   return provider === "gitlab" ? "merge request" : "pull request";
 }
 
+/** Référence provider d'une PR/MR : `#12` sur GitHub, `!12` sur GitLab. */
+function prRef(provider: RepoProviderId, n: number): string {
+  return provider === "gitlab" ? `!${n}` : `#${n}`;
+}
+
 function capitalized(term: string): string {
   return term.charAt(0).toUpperCase() + term.slice(1);
 }
 
 /** Note de fil quand la PR a été fusionnée PENDANT le tour (travail hors PR). */
-const MERGED_DURING_TURN_STRINGS: Record<Locale, (n: number, term: string) => string> = {
-  fr: (n, term) =>
-    `La ${term} #${n} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune ${term}. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
-  en: (n, term) =>
-    `${capitalized(term)} #${n} was merged during this turn: the new work was pushed to the branch but no longer belongs to any ${term}. Start a new session to continue — it will begin from a fresh branch.`,
+const MERGED_DURING_TURN_STRINGS: Record<Locale, (ref: string, term: string) => string> = {
+  fr: (ref, term) =>
+    `La ${term} ${ref} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune ${term}. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
+  en: (ref, term) =>
+    `${capitalized(term)} ${ref} was merged during this turn: the new work was pushed to the branch but no longer belongs to any ${term}. Start a new session to continue — it will begin from a fresh branch.`,
 };
 
 const COMMENT_STRINGS: Record<

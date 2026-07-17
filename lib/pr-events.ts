@@ -1,3 +1,5 @@
+import type { RepoProviderId } from "@/lib/repo-providers";
+
 /**
  * Événements d'activité tracés pour les actions de review d'une pull request /
  * merge request : accepter (merge), refuser (close), approuver et demander des
@@ -14,14 +16,15 @@ export const PR_ACTION_EVENT_TYPES = [
 
 export type PrActionEventType = (typeof PR_ACTION_EVENT_TYPES)[number];
 
-/** Provider d'origine d'une action PR venue d'un webhook. */
-export type ForgeProvider = "github" | "gitlab";
+/** Provider d'origine d'une action PR venue d'un webhook (id du registre). */
+export type ForgeProvider = RepoProviderId;
 
 /**
  * Marqueur de provider encodé dans `from_value` (MIN-69) : les événements GitHub
  * historiques portent le login nu — GitHub reste donc la forme non préfixée, et
- * GitLab se distingue par le préfixe `gitlab:`. Pas de colonne dédiée : le champ
- * n'est lu que par la timeline, via `forgePrActor`.
+ * GitLab se distingue par le préfixe `gitlab:`. Pas de colonne dédiée, donc TOUT
+ * lecteur de `from_value` d'un événement `pr_*` doit décoder via `forgePrActor`
+ * (timeline ET sortie MCP recentActivity) — ne jamais afficher la valeur brute.
  */
 const GITLAB_ACTOR_PREFIX = "gitlab:";
 

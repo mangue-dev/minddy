@@ -124,25 +124,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ comment });
     }
 
-    // `commit_id` doit être la TÊTE de la PR : c'est le commit contre lequel
-    // GitHub résout la ligne. On le relit à chaque envoi plutôt que de le tenir
-    // côté client — entre l'ouverture de la vue et l'envoi, l'agent a pu pousser.
-    // (GitLab ancre par diff_refs, relus à chaud par le module MR.)
-    const pr = await forge.getPullRequest({
-      token: target.token,
-      repoFullName: target.repoFullName,
-      number,
-    });
-    if (!pr.headSha) {
-      return NextResponse.json({ error: "Pull request has no head commit" }, { status: 409 });
-    }
-
+    // L'ancre du commentaire est résolue PAR le provider (tête de PR relue à
+    // chaud sur GitHub, diff_refs sur GitLab) — la route n'a rien à pré-lire.
     const comment = await forge.createPullRequestReviewComment({
       token: target.token,
       repoFullName: target.repoFullName,
       number,
       body,
-      commitId: pr.headSha,
       path: payload.path as string,
       line: payload.line as number,
       side: payload.side as "LEFT" | "RIGHT",

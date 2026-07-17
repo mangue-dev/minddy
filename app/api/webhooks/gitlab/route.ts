@@ -32,8 +32,8 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * fait à la main sur gitlab.com par ce même compte n'est pas tracé — impossible à
  * distinguer de l'écho, même compromis que le filtre bot GitHub.
  *
- * Fail-closed : secret présent + token invalide → 401. Secret non déployé →
- * on acquitte sans vérifier (aucun risque, traitement idempotent best-effort).
+ * Fail-closed intégral : token invalide → 401 ; secret non déployé → acquitté
+ * SANS traitement (ce récepteur mute l'état, il n'accepte rien d'invérifiable).
  */
 
 /** action GitLab → pr_state minddy (null = pas de changement d'état à écrire). */
@@ -122,18 +122,27 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const repoFullName = payload.project?.path_with_namespace;
   if (iid == null || !repoFullName) return;
 
-  // État : merge/close/reopen/open recalent pr_state (et le statut d'issue).
   const prState = mapMrState(action);
-  let runs: SyncedPrRun[] | null = null;
+  const actionType = prActionFor(action);
+  if (!prState && !actionType) return;
+
+  // Runs concernés D'ABORD : le webhook du dépôt reçoit toutes les MR humaines,
+  // qui ne matchent aucun run d'agent — on s'arrête là avant toute autre requête
+  // (l'anti-écho compris). merge/close/reopen/open recalent pr_state au passage.
+  const runs: SyncedPrRun[] = prState
+    ? await syncPrState({
+        repoFullName,
+        prNumber: iid,
+        prState,
+        prUrl: attrs.url ?? null,
+        provider: "gitlab",
+      })
+    : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
+  if (runs.length === 0) return;
+
+  // Aligne le statut des issues sur le nouvel état MR (MIN-46) :
+  // merged→done, closed→todo, open/reopen→in_review.
   if (prState) {
-    runs = await syncPrState({
-      repoFullName,
-      prNumber: iid,
-      prState,
-      prUrl: attrs.url ?? null,
-    });
-    // Aligne le statut des issues sur le nouvel état MR (MIN-46) :
-    // merged→done, closed→todo, open/reopen→in_review.
     for (const run of runs) {
       if (run.createdBy) {
         await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
@@ -141,7 +150,6 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     }
   }
 
-  const actionType = prActionFor(action);
   if (!actionType) return;
   // Écho d'une action in-app (faite avec le token du compte connecté) → déjà
   // tracée par la route avec l'acteur humain : on ne re-trace pas.
@@ -150,9 +158,8 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     (await isServiceAccount(repoFullName, payload.user));
   if (echo) return;
 
-  const affected = runs ?? (await findRunsForPr({ repoFullName, prNumber: iid }));
   await recordForgePrActionEvents({
-    runs: affected,
+    runs,
     type: actionType,
     prNumber: iid,
     provider: "gitlab",
@@ -172,7 +179,16 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const secret = process.env.GITLAB_WEBHOOK_SECRET;
 
-  if (secret && !tokenMatches(request.headers.get("x-gitlab-token"), secret)) {
+  // FAIL-CLOSED : ce récepteur MUTE l'état (pr_state, statut d'issue, activité).
+  // Sans secret déployé, on acquitte SANS traiter — sinon n'importe qui
+  // connaissant le chemin d'un dépôt lié pourrait forger un merge et passer une
+  // issue en done. (Le webhook GitHub historique est resté fail-open ; ici la
+  // variable est neuve, aucun déploiement existant à ne pas casser.)
+  if (!secret) {
+    console.warn("[webhooks/gitlab] GITLAB_WEBHOOK_SECRET is not set — payload ignored");
+    return NextResponse.json({ ok: true });
+  }
+  if (!tokenMatches(request.headers.get("x-gitlab-token"), secret)) {
     return NextResponse.json({ error: "invalid token" }, { status: 401 });
   }
 

@@ -13,6 +13,8 @@ import {
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
+import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
+import { getRepoProvider } from "@/lib/repo-providers";
 import { MAX_PLAN_LENGTH, PLAN_TASK_STATES, parsePlan, setTaskState } from "@/lib/plan";
 import {
   ISSUE_EFFORTS,
@@ -228,20 +230,30 @@ async function recentActivity(issueId: string): Promise<Array<Record<string, unk
   ]);
   const integrationNames = new Map((integrations ?? []).map((i) => [i.id, i.name]));
 
-  return events.map((e) => ({
-    actor: e.via_assistant
-      ? "Numo"
-      : e.via_mcp
-        ? `${keyActors.get(e.api_key_id as string)?.name ?? "Agent"} (mcp)`
-        : e.integration_id
-          ? `${integrationNames.get(e.integration_id) ?? "Integration"} (integration)`
-          : displayName(toNamed(users.get(e.actor_id as string)), "User"),
-    type: e.type,
-    field: e.field,
-    from_value: e.from_value,
-    to_value: e.to_value,
-    created_at: e.created_at,
-  }));
+  return events.map((e) => {
+    // Action PR/MR venue d'un webhook provider : pas d'acteur minddy — le login
+    // provider tient lieu d'acteur, DÉCODÉ (le préfixe `gitlab:` de from_value
+    // est un encodage interne, cf. forgeActorValue, il ne doit pas fuir ici).
+    const forge = isForgePrEvent(e as { type: string; actor_id: string | null })
+      ? forgePrActor(e.from_value as string | null)
+      : null;
+    return {
+      actor: forge
+        ? `${forge.login ?? getRepoProvider(forge.provider).displayName} (${forge.provider})`
+        : e.via_assistant
+          ? "Numo"
+          : e.via_mcp
+            ? `${keyActors.get(e.api_key_id as string)?.name ?? "Agent"} (mcp)`
+            : e.integration_id
+              ? `${integrationNames.get(e.integration_id) ?? "Integration"} (integration)`
+              : displayName(toNamed(users.get(e.actor_id as string)), "User"),
+      type: e.type,
+      field: e.field,
+      from_value: forge ? forge.login : e.from_value,
+      to_value: e.to_value,
+      created_at: e.created_at,
+    };
+  });
 }
 
 /** Mode detailed de minddy_list_issues : noms (assigné, objectif, catégories)

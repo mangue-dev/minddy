@@ -69,6 +69,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const ref = await forge.getMergeBaseSha({
       token: target.token,
       repoFullName: target.repoFullName,
+      number: run.pr_number,
       base,
       head,
     });
