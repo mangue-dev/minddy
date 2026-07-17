@@ -300,7 +300,7 @@ function FiltersPopover({
                   setFilters({ ...f, project: toggle<string>(f.project, p.id) })
                 }
               >
-                <ProjectOrb seed={p.id} className="size-4 shrink-0" />
+                <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4 shrink-0" />
                 <span className="truncate">{p.name}</span>
               </ToggleRow>
             ))}

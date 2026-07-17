@@ -48,6 +48,31 @@ export async function updateProjectApi(
   );
 }
 
+/** Importe le favicon du site live comme icône du projet (owner). */
+export async function importProjectIconApi(
+  id: string,
+  siteUrl: string
+): Promise<{ icon_url: string }> {
+  return parseJson<{ icon_url: string }>(
+    await fetch(`/api/projects/${id}/icon`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ site_url: siteUrl }),
+    })
+  );
+}
+
+/** Retire l'icône du projet — retour à l'orbe générée (owner). */
+export async function clearProjectIconApi(id: string): Promise<void> {
+  const response = await fetch(`/api/projects/${id}/icon`, { method: "DELETE" });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      (data as { error?: string } | null)?.error || "Request failed"
+    );
+  }
+}
+
 export async function deleteProjectApi(id: string): Promise<void> {
   const response = await fetch(`/api/projects/${id}`, { method: "DELETE" });
   if (!response.ok) {

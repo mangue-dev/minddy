@@ -29,6 +29,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
+import { ProjectIconPicker } from "@/components/project-icon-picker";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
@@ -171,6 +172,14 @@ export default function ProjectSettingsPage() {
               onChange={(e) => setKey(normalizeKey(e.target.value))}
               className="w-28 font-mono uppercase tracking-wide"
               maxLength={5}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t("iconLabel")}</span>
+            <ProjectIconPicker
+              projectId={project.id}
+              iconUrl={project.icon_url}
+              onChanged={() => {}}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

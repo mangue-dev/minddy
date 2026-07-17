@@ -62,7 +62,7 @@ export default async function MyFeedbackPage({ params }: PageProps) {
       tabs={tabs}
       heading={
         <div className="flex min-w-0 items-center gap-2">
-          <ProjectOrb seed={ctx.project.id} className="size-5 rounded-[6px]" />
+          <ProjectOrb seed={ctx.project.id} iconUrl={ctx.project.icon_url} className="size-5 rounded-[6px]" />
           <h1 className="min-w-0 truncate text-sm font-semibold">{ctx.project.name}</h1>
           {tabs.length === 0 && (
             <span className="shrink-0 text-sm text-muted-foreground">· {t("title")}</span>

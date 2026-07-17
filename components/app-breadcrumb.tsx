@@ -29,7 +29,13 @@ function sectionKeyFor(pathname: string): string | null {
 }
 
 function ProjectChip({ project, className }: { project: Project; className?: string }) {
-  return <ProjectOrb seed={project.id} className={cn("size-5", className)} />;
+  return (
+    <ProjectOrb
+      seed={project.id}
+      iconUrl={project.icon_url}
+      className={cn("size-5", className)}
+    />
+  );
 }
 
 function ProjectSwitcher({ project }: { project: Project }) {

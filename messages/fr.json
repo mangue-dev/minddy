@@ -135,7 +135,9 @@
     "customDomainApexUnsupported": "Les domaines apex ne sont pas pris en charge — utilisez un sous-domaine (ex. feedback.votredomaine.com)",
     "customDomainTaken": "Ce domaine est déjà utilisé",
     "customDomainsNotConfigured": "Les domaines personnalisés ne sont pas configurés sur ce déploiement",
-    "customDomainApiError": "Le fournisseur de domaine est injoignable — réessayez"
+    "customDomainApiError": "Le fournisseur de domaine est injoignable — réessayez",
+    "iconInvalidUrl": "URL du site invalide ou inaccessible.",
+    "iconNotFound": "Aucun favicon exploitable trouvé sur ce site."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -1033,7 +1035,23 @@
     "join": "Rejoindre",
     "invitationAccepted": "Invitation acceptée.",
     "invitationRejected": "Invitation refusée.",
-    "someone": "Quelqu'un"
+    "someone": "Quelqu'un",
+    "wizardIconDesc": "Une icône pour reconnaître le projet partout. Sans import, il garde son orbe générée.",
+    "wizardGitDesc": "Relie un dépôt GitHub ou GitLab — l'agent s'en sert pour préparer ses pull requests. Optionnel, modifiable dans les paramètres.",
+    "wizardNoRepo": "aucun dépôt",
+    "wizardFeedbackLabel": "Board de feedback public",
+    "wizardFeedbackDesc": "Une page publique où tes utilisateurs proposent des idées et votent. Aussi activable plus tard dans les paramètres.",
+    "wizardFinish": "Terminer",
+    "wizardDoneToast": "Projet « {name} » configuré.",
+    "iconSiteUrlPlaceholder": "https://monproduit.com",
+    "iconImportButton": "Importer",
+    "iconImportHint": "Colle l'URL de ton site live pour importer son favicon.",
+    "iconImportedToast": "Icône importée.",
+    "iconRemovedToast": "Icône retirée.",
+    "wizardIconTitle": "Icône du projet",
+    "wizardGitTitle": "Relier un dépôt",
+    "wizardFinishTitle": "Finitions",
+    "wizardFinishSubtitle": "Un dernier réglage et le projet est prêt."
   },
   "Settings": {
     "title": "Paramètres du projet",
@@ -1201,7 +1219,8 @@
     "feedbackAccentTitle": "Couleur d'accent",
     "feedbackAccentDesc": "Personnalise la couleur d'accent du board public, distincte en mode clair et sombre. Sinon, le bleu par défaut est utilisé.",
     "feedbackAccentLight": "Mode clair",
-    "feedbackAccentDark": "Mode sombre"
+    "feedbackAccentDark": "Mode sombre",
+    "iconLabel": "Icône"
   },
   "Sort": {
     "manual": "Manuel",

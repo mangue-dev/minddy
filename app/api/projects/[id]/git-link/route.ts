@@ -135,10 +135,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ mode: "reuse", connectionId: existing.id });
     }
 
+    // `origin: 'wizard'` → le callback reprend le wizard de création (MIN-62).
+    const requestOrigin = (body as { origin?: unknown }).origin;
     const state = signGitLinkState({
       projectId: id,
       userId: auth.user.id,
       provider,
+      ...(requestOrigin === "wizard" ? { origin: "wizard" } : {}),
     });
     if (provider === "github") {
       const url = `https://github.com/apps/${getGithubAppSlug()}/installations/new?state=${encodeURIComponent(state)}`;

@@ -445,7 +445,7 @@ export function ObjectiveDialog({
                   menuLabel={t("createInOtherProject")}
                   menu={otherProjects.map((p) => (
                     <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
-                      <ProjectOrb seed={p.id} className="size-4" />
+                      <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
                       <span className="truncate">{p.name}</span>
                     </DropdownMenuItem>
                   ))}

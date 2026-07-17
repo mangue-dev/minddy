@@ -618,7 +618,7 @@ export function IssueCardBody({
       {/* Cross-project boards only: the issue's origin project (orb + name). */}
       {project && (
         <div className="-mb-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <ProjectOrb seed={project.id} className="size-3.5" />
+          <ProjectOrb seed={project.id} iconUrl={project.icon_url} className="size-3.5" />
           <span className="truncate">{project.name}</span>
         </div>
       )}

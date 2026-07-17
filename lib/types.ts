@@ -220,6 +220,9 @@ export interface Project {
   name: string;
   key: string;
   color: string | null;
+  /** Icon imported from the live site's favicon (public storage URL); the UI
+      falls back to the generated orb when null. */
+  icon_url: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
   /** Smart Assign rules, user_id → free text describing the member's preferred

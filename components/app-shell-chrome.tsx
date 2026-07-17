@@ -64,7 +64,7 @@ const ObjectiveSidePanel = dynamic(
 function projectChip(project: Project) {
   return (
     <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
-      <ProjectOrb seed={project.id} className="size-3.5" />
+      <ProjectOrb seed={project.id} iconUrl={project.icon_url} className="size-3.5" />
       <span className="max-w-[9rem] truncate">{project.name}</span>
     </span>
   );
@@ -306,7 +306,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         items: projects.map((p) => ({
           key: `project-${p.id}`,
           label: p.name,
-          icon: projectOrbIcon(p.id),
+          icon: projectOrbIcon(p.id, p.icon_url),
           keywords: [p.key],
           onSelect: () => router.push(`/projects/${p.id}`),
         })),
@@ -589,7 +589,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           ...projects.map((p) => ({
             key: `project-${p.id}`,
             label: p.name,
-            icon: projectOrbIcon(p.id),
+            icon: projectOrbIcon(p.id, p.icon_url),
             href: `/projects/${p.id}`,
           })),
           {

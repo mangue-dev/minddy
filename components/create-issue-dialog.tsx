@@ -594,7 +594,7 @@ export function CreateIssueDialog({
                         key={p.id}
                         onSelect={() => void submit(createMore, p)}
                       >
-                        <ProjectOrb seed={p.id} className="size-4" />
+                        <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
                         <span className="truncate">{p.name}</span>
                       </DropdownMenuItem>
                     ))}

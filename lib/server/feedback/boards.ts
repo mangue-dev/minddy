@@ -35,7 +35,7 @@ const BOARD_SELECT =
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
-  project: { id: string; key: string; name: string };
+  project: { id: string; key: string; name: string; icon_url: string | null };
 }
 
 /** Résolution du token public. Ne filtre PAS sur enabled : la page décide
@@ -52,7 +52,7 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
 
   const { data: project } = await service
     .from("projects")
-    .select("id, key, name")
+    .select("id, key, name, icon_url")
     .eq("id", board.project_id as string)
     .is("deleted_at", null)
     .maybeSingle();
@@ -60,7 +60,7 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
 
   return {
     board: board as FeedbackBoardRow,
-    project: project as { id: string; key: string; name: string },
+    project: project as PublicBoardContext["project"],
   };
 }
 

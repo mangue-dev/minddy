@@ -24,9 +24,13 @@ export async function GET(request: NextRequest) {
   }
 
   const isAccount = state.projectId === ACCOUNT_CONNECT_PROJECT;
+  // Une autorisation initiée depuis le wizard de création (MIN-62) reprend le
+  // wizard sur la page du projet ; sinon, retour aux paramètres git du projet.
   const base = isAccount
     ? "/settings?tab=git"
-    : `/projects/${state.projectId}/settings?tab=git`;
+    : state.origin === "wizard"
+      ? `/projects/${state.projectId}?setup=git`
+      : `/projects/${state.projectId}/settings?tab=git`;
 
   if (!code) {
     return NextResponse.redirect(new URL(`${base}&git=error`, origin));

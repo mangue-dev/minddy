@@ -1,4 +1,6 @@
-import type { ComponentType } from "react";
+"use client";
+
+import { useState, type ComponentType } from "react";
 import { cn } from "mangue-ui";
 
 /**
@@ -14,23 +16,48 @@ function projectHue(seed: string): number {
 }
 
 /**
- * A project's icon when it has no image: a deterministic gradient "orb" keyed
- * off a stable seed (the project id). Layered OKLCH gradients — a base fill, a
- * blurred offset conic for organic depth, and a glassy radial highlight — give
- * it a subtle sphere feel. No initials, exactly like AutoKap's ProjectOrb.
+ * A project's icon: the imported favicon when `iconUrl` is set (MIN-62), else a
+ * deterministic gradient "orb" keyed off a stable seed (the project id).
+ * Layered OKLCH gradients — a base fill, a blurred offset conic for organic
+ * depth, and a glassy radial highlight — give the orb a subtle sphere feel. No
+ * initials, exactly like AutoKap's ProjectOrb. A broken image URL falls back to
+ * the orb.
  *
  * Size and corner radius come from `className` (defaults to a 20px rounded
  * square); pass e.g. `size-9 rounded-[10px]` to override.
  */
 export function ProjectOrb({
   seed,
+  iconUrl,
   className,
 }: {
   seed: string;
+  iconUrl?: string | null;
   className?: string;
 }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const hue = projectHue(seed);
   const hue2 = (hue + 40) % 360;
+
+  if (iconUrl && failedUrl !== iconUrl) {
+    return (
+      <span
+        aria-hidden
+        className={cn(
+          "relative block size-5 shrink-0 overflow-hidden rounded-[5px]",
+          className,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={iconUrl}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+          onError={() => setFailedUrl(iconUrl)}
+        />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -65,17 +92,26 @@ export function ProjectOrb({
 }
 
 // mangue-ui's <Sidebar> renders `NavItem.icon` as `<Icon className="…" />` with
-// no way to pass a seed, so we hand it a per-project component. Cache by seed to
-// keep component identity stable across renders (otherwise the orb remounts).
+// no way to pass a seed, so we hand it a per-project component. Cache by
+// seed+icon to keep component identity stable across renders (otherwise the
+// orb remounts).
 const orbIconCache = new Map<string, ComponentType<{ className?: string }>>();
 
-export function projectOrbIcon(seed: string): ComponentType<{ className?: string }> {
-  const cached = orbIconCache.get(seed);
+export function projectOrbIcon(
+  seed: string,
+  iconUrl?: string | null,
+): ComponentType<{ className?: string }> {
+  const cacheKey = `${seed}|${iconUrl ?? ""}`;
+  const cached = orbIconCache.get(cacheKey);
   if (cached) return cached;
   const Icon = ({ className }: { className?: string }) => (
-    <ProjectOrb seed={seed} className={cn("rounded-[5px]", className)} />
+    <ProjectOrb
+      seed={seed}
+      iconUrl={iconUrl}
+      className={cn("rounded-[5px]", className)}
+    />
   );
   Icon.displayName = `ProjectOrbIcon(${seed})`;
-  orbIconCache.set(seed, Icon);
+  orbIconCache.set(cacheKey, Icon);
   return Icon;
 }

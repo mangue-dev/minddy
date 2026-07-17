@@ -135,7 +135,9 @@
     "customDomainApexUnsupported": "Apex domains are not supported — use a subdomain (e.g. feedback.yourdomain.com)",
     "customDomainTaken": "This domain is already in use",
     "customDomainsNotConfigured": "Custom domains are not configured on this deployment",
-    "customDomainApiError": "The domain provider could not be reached — try again"
+    "customDomainApiError": "The domain provider could not be reached — try again",
+    "iconInvalidUrl": "Invalid or unreachable site URL.",
+    "iconNotFound": "No usable favicon found on this site."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -1033,7 +1035,23 @@
     "join": "Join",
     "invitationAccepted": "Invitation accepted.",
     "invitationRejected": "Invitation rejected.",
-    "someone": "Someone"
+    "someone": "Someone",
+    "wizardIconDesc": "An icon to spot the project everywhere. Without an import, it keeps its generated orb.",
+    "wizardGitDesc": "Link a GitHub or GitLab repository — the agent uses it to prepare its pull requests. Optional, changeable in settings.",
+    "wizardNoRepo": "no repository",
+    "wizardFeedbackLabel": "Public feedback board",
+    "wizardFeedbackDesc": "A public page where your users suggest ideas and vote. Can also be enabled later in settings.",
+    "wizardFinish": "Finish",
+    "wizardDoneToast": "Project “{name}” is set up.",
+    "iconSiteUrlPlaceholder": "https://myproduct.com",
+    "iconImportButton": "Import",
+    "iconImportHint": "Paste your live site's URL to import its favicon.",
+    "iconImportedToast": "Icon imported.",
+    "iconRemovedToast": "Icon removed.",
+    "wizardIconTitle": "Project icon",
+    "wizardGitTitle": "Link a repository",
+    "wizardFinishTitle": "Finishing touches",
+    "wizardFinishSubtitle": "One last setting and the project is ready."
   },
   "Settings": {
     "title": "Project settings",
@@ -1201,7 +1219,8 @@
     "feedbackAccentTitle": "Accent color",
     "feedbackAccentDesc": "Customize the public board's accent color, separately for light and dark mode. Otherwise the default blue is used.",
     "feedbackAccentLight": "Light mode",
-    "feedbackAccentDark": "Dark mode"
+    "feedbackAccentDark": "Dark mode",
+    "iconLabel": "Icon"
   },
   "Sort": {
     "manual": "Manual",

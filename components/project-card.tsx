@@ -92,7 +92,7 @@ export function ProjectCard({ project }: { project: Project }) {
       {/* Top row: orb + name + more-options menu */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <ProjectOrb seed={project.id} className="size-9 rounded-[10px]" />
+          <ProjectOrb seed={project.id} iconUrl={project.icon_url} className="size-9 rounded-[10px]" />
           <h3 className="truncate text-base font-medium tracking-tight">
             {project.name}
           </h3>

@@ -63,12 +63,15 @@ export async function fetchGitCandidatesApi(
 export async function startGitConnectApi(
   projectId: string,
   provider: RepoProviderId,
+  /** "wizard" : le callback provider reprend le wizard (`?setup=git`) au lieu
+      de renvoyer vers les paramètres du projet. */
+  origin?: "wizard",
 ): Promise<StartConnectResponse> {
   return parseJson(
     await fetch(`/api/projects/${projectId}/git-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "start", provider }),
+      body: JSON.stringify({ action: "start", provider, ...(origin ? { origin } : {}) }),
     }),
   );
 }
