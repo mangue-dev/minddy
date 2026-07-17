@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -17,7 +18,15 @@ import {
   TabsTrigger,
   toast,
 } from "mangue-ui";
-import { ChevronRight, Trash2, X } from "lucide-react";
+import {
+  ChevronRight,
+  ClipboardCopy,
+  GitPullRequest,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   AssigneeValue,
   CategoryValue,
@@ -30,7 +39,23 @@ import {
 } from "@/components/issue-property-fields";
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { RelationsSection } from "@/components/relations-section";
-import { LaunchAgentButton } from "@/components/agent/launch-agent-button";
+import { AgentChatModal } from "@/components/agent/agent-chat-modal";
+import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
+import {
+  IssueActionsMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
+import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
+import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
+import { isAgentRunWorking } from "@/lib/agent-api";
+import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
+import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
+import {
+  resolvePromptCopyAutoStart,
+  shouldAutoStartOnPromptCopy,
+} from "@/lib/prompt-copy-auto-start";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { resolveRelations } from "@/lib/relation-constants";
 import {
@@ -107,19 +132,58 @@ export function IssueSidePanel({
   initialTab?: "description" | "plan";
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const tPlan = useTranslations("Plan");
+  const tAgent = useTranslations("Agent");
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"description" | "plan">(initialTab);
   // Remount the description editor when dictation rewrites it — it reads
   // `value` only on mount and commits on blur.
   const [editorKey, setEditorKey] = useState(0);
+  // Conversation de l'agent, en modal PAR-DESSUS le panneau : la reprise à chaud
+  // ne doit pas coûter le contexte du ticket (la carte, elle, n'a rien à perdre
+  // et navigue vers /agents).
+  const [chatOpen, setChatOpen] = useState(false);
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
     useIssueTimeline(issue?.id ?? null);
+
+  // Agent de code de ce ticket. Mêmes dérivations que les cartes (lib/server/
+  // agent/activity.ts), mais depuis les runs de l'issue seule : le panneau
+  // s'ouvre aussi là où le provider d'activité du board n'existe pas (page Pull
+  // requests, board de feedback).
+  const { runs } = useIssueAgentRunsQuery(issue?.id ?? null);
+  const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
+  const latestRun = runs[0] ?? null;
+  // Une conversation reprennable existe (au moins une run non `failed`).
+  const hasAgentSession = runs.some((r) => r.status !== "failed");
+  // Runs triés DESC → la première portant une PR non fermée est la PR du ticket.
+  const prRun =
+    runs.find((r) => r.pr_number != null && r.pr_state !== "closed") ?? null;
+
+  // Cycle (MIN-32) : le panneau lit le cycle courant lui-même plutôt que de le
+  // faire descendre par ses quatre appelants — le hook est déjà gaté par les
+  // préférences utilisateur, donc ne coûte rien quand les cycles sont éteints.
+  const { currentCycle } = useMyCycleQuery();
+  const onSetIssueCycle = useCallback(
+    (target: Issue, cycleId: string | null) =>
+      void onUpdate(
+        target.id,
+        // Mirrors the server side-effect: adding assigns to me, never a status bump.
+        cycleId && user?.id
+          ? { cycle_id: cycleId, assignee_id: user.id }
+          : { cycle_id: cycleId }
+      ).catch((err) => toast.error((err as Error).message)),
+    [onUpdate, user?.id]
+  );
+  const buildCycleActions = useCycleMenuActions(
+    currentCycle?.id ?? null,
+    onSetIssueCycle
+  );
 
   // Sync the editable title when a different issue opens (not on every tick),
   // and land on the tab the opener asked for (plan indicator → plan tab).
@@ -145,11 +209,104 @@ export function IssueSidePanel({
       .filter((r): r is ChipRelation => r !== null);
   }, [issue?.id, relations, allIssues]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Agent de code (MIN-46 / MIN-68) ──────────────────────────────────────
+  // Deux points d'entrée, comme sur les cartes :
+  //  • ouvrir la conversation existante — ici en modal sur la dernière run, pour
+  //    garder le ticket sous les yeux (la carte, elle, navigue vers /agents) ;
+  //  • lancer une session NEUVE — pose un brouillon de composition optimiste et
+  //    ouvre son composer (`?compose=`), même si le ticket a déjà une session.
+  const startNewAgentSession = useCallback(() => {
+    if (!issue) return;
+    // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
+    // composer VIERGE : l'utilisateur dicte lui-même la consigne. Premier lancement à
+    // froid → prompt d'amorçage (contexte du ticket, adapté à son plan / effort).
+    const identifier = issueIdentifier(projectKey, issue.number);
+    const prompt = hasAgentSession
+      ? ""
+      : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
+    setAgentComposeDraft({
+      issueId: issue.id,
+      issueNumber: issue.number,
+      issueTitle: issue.title,
+      projectId: issue.project_id,
+      projectKey,
+      prompt,
+    });
+    router.push(`/agents?compose=${issue.id}`);
+  }, [issue, hasAgentSession, projectKey, router, tAgent]);
+
+  // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
+  const launchAgent = useCallback(() => {
+    if (hasAgentSession) setChatOpen(true);
+    else startNewAgentSession();
+  }, [hasAgentSession, startNewAgentSession]);
+
+  const openPr = useCallback(() => {
+    if (prRun) router.push(`/pull-requests?run=${prRun.id}`);
+  }, [prRun, router]);
+
+  const copyPrompt = useCallback(async () => {
+    if (!issue) return;
+    // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
+    // désactivable dans Compte → Préférences). On n'avance que les statuts
+    // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
+    const autoStart =
+      resolvePromptCopyAutoStart(user?.user_metadata) &&
+      shouldAutoStartOnPromptCopy(issue.status);
+    // Le XML copié doit refléter l'état RÉEL après déplacement : si on passe le
+    // ticket « En cours », le prompt le décrit déjà `in_progress`, pas l'ancien.
+    const promptIssue = autoStart
+      ? { ...issue, status: "in_progress" as const }
+      : issue;
+    const titleById = new Map(allIssues.map((i) => [i.id, i.title]));
+    const promptRelations = resolvedRelations.map((r) => ({
+      type: r.relation,
+      identifier: issueIdentifier(projectKey, r.otherNumber),
+      title: titleById.get(r.otherId) ?? "",
+    }));
+    // Noms des catégories (les IDs vivent sur l'issue, les noms dans `categories`).
+    const promptCategories = issue.category_ids
+      .map((cid) => categories.find((c) => c.id === cid)?.name)
+      .filter((name): name is string => !!name);
+    await navigator.clipboard.writeText(
+      buildIssuePrompt({
+        issue: promptIssue,
+        projectId: issue.project_id,
+        projectKey,
+        categories: promptCategories,
+        relations: promptRelations,
+        attachmentCount: issue.attachment_count,
+      })
+    );
+    if (autoStart) {
+      void onUpdate(issue.id, { status: "in_progress" }).catch((err) =>
+        toast.error((err as Error).message)
+      );
+      toast.success(t("promptCopiedMoved"));
+    } else {
+      toast.success(t("promptCopied"));
+    }
+  }, [
+    issue,
+    allIssues,
+    resolvedRelations,
+    categories,
+    projectKey,
+    user?.user_metadata,
+    onUpdate,
+    t,
+  ]);
+
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
   // body; the picker opens at the cursor, in the key/value section. `d` maps to
   // the due-date picker here just like on board cards (voice dictation lives on
-  // `v`, so nothing needs to be freed).
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(open);
+  // `v`, so nothing needs to be freed). ⇧P / ⇧A doublent le menu « ⋯ », comme sur
+  // les cartes ; le hook ne les déclenche jamais pendant une saisie (titre,
+  // description, commentaire).
+  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(open, {
+    "shift+p": () => void copyPrompt(),
+    "shift+a": launchAgent,
+  });
 
   // Apply a dictated patch: categories go through their own join-table
   // endpoint, everything else is one immediate issue update. Also sync the
@@ -239,6 +396,65 @@ export function IssueSidePanel({
     onOpenChange(false);
   };
 
+  // Menu « ⋯ » de l'en-tête : la parité d'actions avec le clic droit d'une carte
+  // (prompt, agent, PR, cycle), plus la suppression qui vivait ici avant.
+  const menuActions: ContextMenuAction[] = [
+    {
+      id: "copy-prompt",
+      label: t("copyAsPrompt"),
+      icon: <ClipboardCopy className="size-4" />,
+      shortcut: "⇧P",
+      onSelect: () => void copyPrompt(),
+    },
+    // Session existante → deux entrées : « Ouvrir l'agent » (reprend la dernière
+    // run, en modal) et « Nouvelle session » (compose une run neuve sur le
+    // ticket). Aucune session → une seule entrée « Lancer un agent » (à froid).
+    ...(hasAgentSession
+      ? [
+          {
+            id: "open-agent",
+            label: tAgent("openAgent"),
+            icon: <NumoIcon className="size-4" />,
+            shortcut: "⇧A",
+            onSelect: () => setChatOpen(true),
+          },
+          {
+            id: "new-agent-session",
+            label: tAgent("newSession"),
+            icon: <Plus className="size-4" />,
+            onSelect: startNewAgentSession,
+          },
+        ]
+      : [
+          {
+            id: "launch-agent",
+            label: tAgent("menuLaunch"),
+            icon: <NumoIcon className="size-4" />,
+            shortcut: "⇧A",
+            onSelect: startNewAgentSession,
+          },
+        ]),
+    ...(prRun
+      ? [
+          {
+            id: "open-pr",
+            label: tAgent("viewPullRequest"),
+            icon: <GitPullRequest className="size-4" />,
+            onSelect: openPr,
+          },
+        ]
+      : []),
+    ...buildCycleActions(issue),
+    {
+      id: "delete",
+      label: tCommon("delete"),
+      icon: <Trash2 className="size-4" />,
+      separatorBefore: true,
+      variant: "destructive",
+      onSelect: () => setConfirmDelete(true),
+    },
+  ];
+
   return (
     <>
       <SidePanel open={open} onOpenChange={onOpenChange}>
@@ -249,7 +465,7 @@ export function IssueSidePanel({
           // Suppress the open-autofocus so nothing is focused on open.
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {/* Header: identifier · dictate · delete · close */}
+          {/* Header: identifier · agent state · dictate · more · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">
               <SidePanelTitle asChild>
@@ -285,6 +501,14 @@ export function IssueSidePanel({
                   className="font-mono text-xs text-muted-foreground"
                 />
               )}
+              {/* Agent de code : le seul état qui mérite l'en-tête (au travail,
+                  ou une PR à relire) — le reste est dans le menu « ⋯ ». */}
+              <IssueAgentChip
+                working={agentWorking}
+                prRun={prRun}
+                onOpenConversation={() => setChatOpen(true)}
+                onOpenPr={openPr}
+              />
               {/* Voice editing — Numo turns dictated commands into field updates */}
               {numoBusy ? (
                 <>
@@ -310,15 +534,19 @@ export function IssueSidePanel({
               )}
             </div>
             <div className="-mr-1.5 flex items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("deleteAriaLabel")}
-                className="rounded-full text-destructive hover:text-destructive"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 />
-              </Button>
+              <IssueActionsMenu
+                actions={menuActions}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("moreActionsAriaLabel")}
+                    className="rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                }
+              />
               <SidePanelClose asChild>
                 <Button
                   variant="ghost"
@@ -381,12 +609,11 @@ export function IssueSidePanel({
                   placeholder={t("descriptionPlaceholder")}
                 />
 
-                <IssueAttachmentsSection
-                  issueId={issue.id}
-                  projectId={issue.project_id}
-                />
-
-                {/* Key/value properties — borderless, like the issue cards */}
+                {/* Key/value properties — borderless, like the issue cards.
+                    Attachments and relations are rows of this table too: each
+                    puts its control on the value side and lists its content
+                    right under the row, so they read as properties of the
+                    ticket rather than sections of their own. */}
                 <div className="flex flex-col">
                   <PropertyRow label={tField("status")}>
                     <StatusValue
@@ -437,6 +664,21 @@ export function IssueSidePanel({
                       onChange={(objective_id) => void patch({ objective_id })}
                     />
                   </PropertyRow>
+
+                  <IssueAttachmentsSection
+                    issueId={issue.id}
+                    projectId={issue.project_id}
+                  />
+
+                  <RelationsSection
+                    issue={issue}
+                    relations={resolvedRelations}
+                    allIssues={allIssues}
+                    projectKey={projectKey}
+                    onOpenIssue={onOpenIssue}
+                    onAddRelation={onAddRelation}
+                    onRemoveRelation={onRemoveRelation}
+                  />
                 </div>
 
                 {!isChild && (
@@ -448,27 +690,6 @@ export function IssueSidePanel({
                     onCreate={onCreate}
                   />
                 )}
-
-                <RelationsSection
-                  issue={issue}
-                  relations={resolvedRelations}
-                  allIssues={allIssues}
-                  projectKey={projectKey}
-                  onOpenIssue={onOpenIssue}
-                  onAddRelation={onAddRelation}
-                  onRemoveRelation={onRemoveRelation}
-                />
-
-                <LaunchAgentButton
-                  issueId={issue.id}
-                  issueNumber={issue.number}
-                  issueTitle={issue.title}
-                  issuePlan={issue.plan}
-                  issueEffort={issue.effort}
-                  projectId={issue.project_id}
-                  projectKey={projectKey}
-                  issueIdentifier={issueIdentifier(projectKey, issue.number)}
-                />
 
                 <IssueActivity
                   items={items}
@@ -518,6 +739,20 @@ export function IssueSidePanel({
           </SidePanelFooter>
         </SidePanelContent>
       </SidePanel>
+
+      {/* Reprise à chaud de la conversation, PAR-DESSUS le panneau : ouvre la
+          dernière run et donne accès à l'historique des runs du ticket. Montée
+          seulement quand une run existe — sans `initialRunId` la modal
+          retomberait sur un composer, ce que fait déjà « Nouvelle session ». */}
+      {latestRun && (
+        <AgentChatModal
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          issueId={issue.id}
+          issueIdentifier={issueIdentifier(projectKey, issue.number)}
+          initialRunId={latestRun.id}
+        />
+      )}
 
       <ConfirmDeleteDialog
         open={confirmDelete}

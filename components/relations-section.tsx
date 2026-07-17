@@ -1,20 +1,24 @@
 "use client";
 
-// Side-panel section listing an issue's relations (MIN-25), grouped by type,
-// each removable. An inline row of per-type pickers adds new relations (the
-// board's right-click menu and the MCP tool are the other entry points).
+// Side-panel relations (MIN-25), rendered as a row of the key/value property
+// table — label left, a link button right — with the issue's relations grouped
+// by type just under it, each removable.
+//
+// Adding is two steps in ONE popover: the link button opens the list of relation
+// types, and picking one advances the SAME popover to the searchable list of
+// candidate issues. (The board's right-click menu and the MCP tool are the other
+// entry points; the menu chains two overlays instead, which it can afford —
+// there's no Dialog around a card.)
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, cn, toast } from "mangue-ui";
-import { X } from "lucide-react";
+import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
+import { Link2, X } from "lucide-react";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
-import {
-  RELATION_PRIORITY,
-  RELATION_TYPES,
-} from "@/lib/relation-constants";
+import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
-import { SearchSelect, type PickerOption } from "@/components/search-select";
+import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
+import { SearchMenu } from "@/components/search-menu";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
@@ -42,29 +46,28 @@ export function RelationsSection({
 }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
+  const [open, setOpen] = useState(false);
+  // Étape courante du popover : null = choisir le type, sinon = choisir la cible
+  // de ce type. La recherche est contrôlée pour repartir vide à chaque étape —
+  // sans quoi « bloc » (tapé pour filtrer les types) filtrerait ensuite les
+  // tickets et n'en montrerait aucun.
+  const [step, setStep] = useState<IssueRelationType | null>(null);
+  const [query, setQuery] = useState("");
 
   const issueById = useMemo(
     () => new Map(allIssues.map((i) => [i.id, i])),
     [allIssues]
   );
 
-  // Candidates for the add pickers: other OPEN issues not already linked here
-  // — relating to done/canceled work is pointless (a closed blocker doesn't
-  // block, and the resolver would mark it spent immediately).
-  const candidateOptions = useMemo<PickerOption[]>(() => {
+  // Candidates: other OPEN issues not already linked here — relating to
+  // done/canceled work is pointless (a closed blocker doesn't block, and the
+  // resolver would mark it spent immediately).
+  const candidates = useMemo<Issue[]>(() => {
     const linked = new Set(relations.map((r) => r.otherId));
-    return allIssues
-      .filter((i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status))
-      .map((i) => {
-        const id = issueIdentifier(projectKey, i.number);
-        return {
-          value: i.id,
-          label: `${id} ${i.title}`,
-          keywords: [id, i.title],
-          icon: <StatusIndicator status={i.status} className="size-4" />,
-        };
-      });
-  }, [allIssues, relations, issue.id, projectKey]);
+    return allIssues.filter(
+      (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
+    );
+  }, [allIssues, relations, issue.id]);
 
   const grouped = useMemo(
     () =>
@@ -75,21 +78,94 @@ export function RelationsSection({
     [relations]
   );
 
-  const add = (type: IssueRelationType, targetId: string | null) => {
-    if (targetId) onAddRelation(issue.id, type, targetId);
+  const close = () => {
+    setOpen(false);
+    setStep(null);
+    setQuery("");
   };
 
   return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-sm font-medium">{t("relations")}</span>
-        {relations.length > 0 && (
-          <span className="text-xs text-muted-foreground">{relations.length}</span>
-        )}
-      </div>
+    <>
+      <PropertyRow label={t("relations")}>
+        <SearchMenu
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next) {
+              setStep(null);
+              setQuery("");
+            }
+          }}
+          align="end"
+          tooltip={t("addRelationAria")}
+          searchValue={query}
+          onSearchValueChange={setQuery}
+          searchPlaceholder={step ? t("searchIssue") : undefined}
+          // Plus large que le w-60 par défaut : à l'étape 2 on choisit un ticket
+          // par son titre, et 240px le coupaient au tiers. Reste dans le panneau.
+          contentClassName="w-80"
+          trigger={
+            <button
+              type="button"
+              aria-label={t("addRelationAria")}
+              className={cn(TRIGGER, "text-muted-foreground")}
+            >
+              <Link2 className="size-4" />
+            </button>
+          }
+        >
+          {step === null ? (
+            // Libellés COURTS (« Bloque », « Bloqué par », « Lié à ») : ceux de
+            // la section, et ceux des en-têtes de groupes juste dessous. La
+            // formulation « Marquer comme bloquant… » est celle du clic droit
+            // d'une carte, où l'entrée doit s'annoncer comme une action ; ici
+            // l'en-tête dit déjà « Relations », et l'étape suivante enchaîne sur
+            // « Bloque quel ticket ? ». Elle reste cherchable via les keywords.
+            <CommandGroup heading={t("relations")}>
+              {RELATION_TYPES.map((type) => (
+                <CommandItem
+                  key={type}
+                  value={type}
+                  keywords={[t(`action_${type}`)]}
+                  onSelect={() => {
+                    setStep(type);
+                    setQuery("");
+                  }}
+                >
+                  <RelationIcon relation={type} className="size-4" />
+                  <span className="truncate">{t(type)}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : (
+            <CommandGroup heading={t(`pick_${step}`)}>
+              {candidates.map((candidate) => {
+                const id = issueIdentifier(projectKey, candidate.number);
+                return (
+                  <CommandItem
+                    key={candidate.id}
+                    value={candidate.id}
+                    keywords={[id, candidate.title]}
+                    onSelect={() => {
+                      onAddRelation(issue.id, step, candidate.id);
+                      close();
+                    }}
+                  >
+                    <StatusIndicator status={candidate.status} className="size-4" />
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      {id}
+                    </span>
+                    <span className="truncate">{candidate.title}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+        </SearchMenu>
+      </PropertyRow>
 
       {grouped.length > 0 && (
-        <div className="mb-3 flex flex-col gap-3">
+        <div className="flex flex-col gap-3 pb-2">
           {grouped.map((group) => (
             <div key={group.type}>
               <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -155,29 +231,6 @@ export function RelationsSection({
           ))}
         </div>
       )}
-
-      {/* Add: one picker per relation type. */}
-      <div className="flex flex-wrap gap-1.5">
-        {RELATION_TYPES.map((type) => (
-          <SearchSelect
-            key={type}
-            value={null}
-            onChange={(targetId) => add(type, targetId)}
-            options={candidateOptions}
-            align="start"
-            searchPlaceholder={t("searchIssue")}
-            trigger={
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground focus-visible:bg-muted/40"
-              >
-                <RelationIcon relation={type} className="size-3.5" />
-                {t(`action_${type}`)}
-              </button>
-            }
-          />
-        ))}
-      </div>
-    </div>
+    </>
   );
 }

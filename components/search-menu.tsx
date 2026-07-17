@@ -57,6 +57,11 @@ export type SearchMenuProps = {
   /** Key badge (e.g. "S") shown next to the tooltip — surfaces the shortcut. */
   shortcutHint?: string;
   searchPlaceholder?: string;
+  /** Contrôle le texte de recherche. Par défaut cmdk le tient lui-même ; le
+   *  passer sert aux menus qui avancent d'une étape à l'autre sans se fermer
+   *  (relations : type puis ticket) et doivent repartir d'un champ vide. */
+  searchValue?: string;
+  onSearchValueChange?: (value: string) => void;
   emptyText?: string;
   align?: "start" | "center" | "end";
   contentClassName?: string;
@@ -74,6 +79,8 @@ export function SearchMenu({
   tooltip,
   shortcutHint,
   searchPlaceholder,
+  searchValue,
+  onSearchValueChange,
   emptyText,
   align = "start",
   contentClassName,
@@ -98,6 +105,9 @@ export function SearchMenu({
             autoFocus
             placeholder={searchPlaceholder ?? t("search")}
             className={searchInputClass}
+            {...(searchValue !== undefined
+              ? { value: searchValue, onValueChange: onSearchValueChange }
+              : {})}
           />
         </DropdownSearchRow>
         <CommandSeparator className="my-1" />

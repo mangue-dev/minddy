@@ -29,7 +29,9 @@ import type { Category, Member, Objective } from "@/lib/types";
    button chrome (matches the inline pickers on the issue cards). Right-aligned;
    opens a searchable dropdown on click. */
 
-const TRIGGER =
+/* Exported so the rows that aren't a plain field picker — relations, agent —
+   hang their own trigger off the same chrome. */
+export const TRIGGER =
   "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
 
 export function Dot({ color }: { color: string | null | undefined }) {

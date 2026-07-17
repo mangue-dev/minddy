@@ -1,14 +1,17 @@
 "use client";
 
-// Menu contextuel (clic droit) des cartes de ticket : un vrai dropdown Radix
-// (le même que les dropdowns classiques de l'app) ancré à la position du
-// pointeur, avec un champ de recherche en tête pour filtrer les actions. Une
-// action portant des `children` devient un sous-menu en flyout latéral
+// Menu d'actions d'un ticket : un vrai dropdown Radix (le même que les dropdowns
+// classiques de l'app), décliné en deux ancrages qui partagent le même corps —
+//   • IssueContextMenu — ancré à la position du pointeur (clic droit sur une carte),
+//     avec un champ de recherche en tête pour filtrer les actions ;
+//   • IssueActionsMenu — ancré à un trigger (le bouton « ⋯ » du panneau d'issue).
+// Une action portant des `children` devient un sous-menu en flyout latéral
 // (accordéon inline sur mobile, géré par mangue-ui).
 //
-// La recherche filtre les entrées de premier niveau (label + keywords), comme
-// l'ancienne version cmdk. Le filtrage garde le focus dans le champ ; ↓ descend
-// dans la liste, Entrée déclenche la première entrée, Échap ferme.
+// La recherche (quand elle est activée) filtre les entrées de premier niveau
+// (label + keywords), comme l'ancienne version cmdk. Le filtrage garde le focus
+// dans le champ ; ↓ descend dans la liste, Entrée déclenche la première entrée,
+// Échap ferme.
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
@@ -34,6 +37,10 @@ export interface ContextMenuAction {
   icon?: React.ReactNode;
   /** Touche du raccourci correspondant, affichée à droite (ex. "⇧P"). */
   shortcut?: string;
+  /** Sépare l'entrée du groupe précédent (ignoré si elle ouvre la liste). */
+  separatorBefore?: boolean;
+  /** `destructive` = rouge, pour les actions irréversibles (supprimer). */
+  variant?: "default" | "destructive";
   /** Sous-actions : quand présentes, l'action devient un sous-menu en flyout
       au lieu de déclencher `onSelect`. */
   children?: ContextMenuAction[];
@@ -52,7 +59,10 @@ function actionMatches(action: ContextMenuAction, query: string): boolean {
 /** Feuille : un item cliquable, avec éventuellement un raccourci à droite. */
 function LeafItem({ action }: { action: ContextMenuAction }) {
   return (
-    <DropdownMenuItem onSelect={() => action.onSelect?.()}>
+    <DropdownMenuItem
+      variant={action.variant}
+      onSelect={() => action.onSelect?.()}
+    >
       {action.icon}
       <span className="truncate">{action.label}</span>
       {action.shortcut && (
@@ -84,15 +94,15 @@ function ActionNode({ action }: { action: ContextMenuAction }) {
   return <LeafItem action={action} />;
 }
 
-export function IssueContextMenu({
-  position,
-  onClose,
+/** Corps commun aux deux ancrages : recherche optionnelle + liste d'actions. */
+function ActionMenuBody({
   actions,
+  open,
+  searchable,
 }: {
-  /** Coordonnées viewport du clic droit ; null = menu fermé. */
-  position: { x: number; y: number } | null;
-  onClose: () => void;
   actions: ContextMenuAction[];
+  open: boolean;
+  searchable: boolean;
 }) {
   const t = useTranslations("Picker");
   const [query, setQuery] = React.useState("");
@@ -102,15 +112,16 @@ export function IssueContextMenu({
   // focus sur la recherche (Radix focalise le premier item par défaut ; on
   // reprend la main après lui via un rAF).
   React.useEffect(() => {
-    if (!position) {
+    if (!open) {
       setQuery("");
       return;
     }
+    if (!searchable) return;
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [position]);
+  }, [open, searchable]);
 
-  const q = query.trim().toLowerCase();
+  const q = searchable ? query.trim().toLowerCase() : "";
   const visible = actions.filter((a) => actionMatches(a, q));
 
   // Le contenu est portalisé au <body> ; on y récupère les items focusables pour
@@ -149,6 +160,53 @@ export function IssueContextMenu({
   };
 
   return (
+    <>
+      {searchable && (
+        <>
+          <DropdownSearchRow>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onInputKeyDown}
+              placeholder={t("search")}
+              className={searchInputClass}
+              aria-label={t("search")}
+            />
+          </DropdownSearchRow>
+          <DropdownMenuSeparator />
+        </>
+      )}
+      {visible.length === 0 ? (
+        <div className="px-2.5 py-1.5 text-sm text-muted-foreground">
+          {t("noResults")}
+        </div>
+      ) : (
+        visible.map((action, i) => (
+          <React.Fragment key={action.id}>
+            {/* Un séparateur en tête de liste (groupe précédent entièrement
+                filtré) serait une barre orpheline : on ne le rend qu'entre deux
+                entrées visibles. */}
+            {action.separatorBefore && i > 0 && <DropdownMenuSeparator />}
+            <ActionNode action={action} />
+          </React.Fragment>
+        ))
+      )}
+    </>
+  );
+}
+
+export function IssueContextMenu({
+  position,
+  onClose,
+  actions,
+}: {
+  /** Coordonnées viewport du clic droit ; null = menu fermé. */
+  position: { x: number; y: number } | null;
+  onClose: () => void;
+  actions: ContextMenuAction[];
+}) {
+  return (
     <DropdownMenu
       open={!!position}
       onOpenChange={(open) => !open && onClose()}
@@ -180,27 +238,38 @@ export function IssueContextMenu({
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
-        <DropdownSearchRow>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onInputKeyDown}
-            placeholder={t("search")}
-            className={searchInputClass}
-            aria-label={t("search")}
-          />
-        </DropdownSearchRow>
-        <DropdownMenuSeparator />
-        {visible.length === 0 ? (
-          <div className="px-2.5 py-1.5 text-sm text-muted-foreground">
-            {t("noResults")}
-          </div>
-        ) : (
-          visible.map((action) => (
-            <ActionNode key={action.id} action={action} />
-          ))
-        )}
+        <ActionMenuBody actions={actions} open={!!position} searchable />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * Les mêmes actions, ancrées à un bouton — le « ⋯ » de l'en-tête du panneau
+ * d'issue. Pas de champ de recherche par défaut : la liste y est courte et se
+ * balaie d'un regard (le typeahead natif de Radix suffit), là où le clic droit
+ * sert de palette.
+ */
+export function IssueActionsMenu({
+  trigger,
+  actions,
+  align = "end",
+  searchable = false,
+}: {
+  trigger: React.ReactNode;
+  actions: ContextMenuAction[];
+  align?: "start" | "center" | "end";
+  searchable?: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    // Non modal, comme le menu contextuel : les actions enchaînent sur d'autres
+    // couches (confirmation de suppression, conversation de l'agent) sans que le
+    // verrou de focus/pointeur du menu ne leur survive.
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent align={align} side="bottom" className="min-w-56">
+        <ActionMenuBody actions={actions} open={open} searchable={searchable} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

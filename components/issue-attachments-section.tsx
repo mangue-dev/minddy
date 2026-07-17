@@ -8,14 +8,20 @@ import {
   DropOverlay,
   useFileDrop,
 } from "@/components/attachments";
+import { PropertyRow } from "@/components/issue-property-fields";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useIssueAttachments } from "@/lib/use-issue-attachments";
 import { useAuth } from "@/lib/auth-context";
 
 /**
- * Issue-LEVEL attachments in the side panel (description tab). Files register
- * as soon as they land in storage — no submit step — and anyone can drop or
- * pick more; removal is uploader-only (RLS).
+ * Issue-LEVEL attachments in the side panel (description tab). Rendered as a row
+ * of the key/value property table — label left, attach button right — with the
+ * files listed just under it, so attachments read as one more property of the
+ * ticket rather than a section of their own.
+ *
+ * Files register as soon as they land in storage — no submit step — and anyone
+ * can drop or pick more; removal is uploader-only (RLS). The row and its files
+ * are one drop target.
  */
 export function IssueAttachmentsSection({
   issueId,
@@ -40,19 +46,16 @@ export function IssueAttachmentsSection({
   const empty = attachments.length === 0 && uploads.pending.length === 0;
 
   return (
-    <div
-      className="relative -m-2 flex flex-col gap-2 rounded-lg p-2"
-      {...drop.handlers}
-    >
+    <div className="relative rounded-lg" {...drop.handlers}>
       <DropOverlay show={drop.dragging} />
-      <div className="flex items-center justify-between py-1">
-        <span className="text-sm font-medium">{t("sectionTitle")}</span>
-        <AttachButton onFiles={uploads.addFiles} className="-my-1" />
-      </div>
+      <PropertyRow label={t("sectionTitle")}>
+        <AttachButton onFiles={uploads.addFiles} className="-mr-1.5" />
+      </PropertyRow>
       {!empty && (
         <AttachmentPills
           attachments={attachments}
           pending={uploads.pending}
+          className="pb-2"
           onRemove={(a) => {
             if (a.id) remove(a.id).catch((e) => toast.error((e as Error).message));
           }}

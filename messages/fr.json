@@ -545,7 +545,6 @@
     "subEntityPlural": "Sous-tickets"
   },
   "IssueUI": {
-    "deleteAriaLabel": "Supprimer le ticket",
     "titlePlaceholder": "Titre du ticket",
     "descriptionPlaceholder": "Ajoute une description…",
     "issueDeletedToast": "Ticket supprimé.",
@@ -580,7 +579,8 @@
     "createdByIntegrationGeneric": "Créé via une intégration",
     "copyAsPrompt": "Copier le prompt",
     "promptCopied": "Prompt copié — colle-le à ton agent.",
-    "promptCopiedMoved": "Prompt copié — le ticket est passé « En cours »."
+    "promptCopiedMoved": "Prompt copié — le ticket est passé « En cours ».",
+    "moreActionsAriaLabel": "Actions du ticket"
   },
   "Language": {
     "title": "Langue",
@@ -850,6 +850,7 @@
     "pick_blocks": "Bloque quel ticket ?",
     "pick_blocked_by": "Bloqué par quel ticket ?",
     "pick_related": "Lié à quel ticket ?",
+    "addRelationAria": "Lier à un ticket",
     "searchIssue": "Rechercher un ticket…"
   },
   "Profile": {
@@ -944,8 +945,6 @@
   },
   "Agent": {
     "sectionTitle": "Agent de code",
-    "launchButton": "Lancer un agent",
-    "launchNewButton": "Lancer un nouvel agent",
     "menuLaunch": "Lancer un agent…",
     "statusFailed": "Échec",
     "statusCanceled": "Annulé",
@@ -982,7 +981,6 @@
       "xl": "C'est une grosse tâche (XL). Commence par écrire un plan d'implémentation complet sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Puis ARRÊTE-TOI et demande s'il faut commencer l'implémentation maintenant ; ne code rien tant que je n'ai pas confirmé.",
       "default": "Commence par écrire un plan d'implémentation clair sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Une fois le plan en place, implémente-le et vérifie ton travail."
     },
-    "openConversation": "Ouvrir la conversation",
     "openAgent": "Ouvrir l'agent",
     "newSession": "Nouvelle session",
     "endedPlaceholder": "Cette session n'a pas pu démarrer — lance un nouvel agent.",

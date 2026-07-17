@@ -545,7 +545,6 @@
     "subEntityPlural": "Sub-issues"
   },
   "IssueUI": {
-    "deleteAriaLabel": "Delete issue",
     "titlePlaceholder": "Issue title",
     "descriptionPlaceholder": "Add a description…",
     "issueDeletedToast": "Issue deleted.",
@@ -580,7 +579,8 @@
     "createdByIntegrationGeneric": "Created via an integration",
     "copyAsPrompt": "Copy as prompt",
     "promptCopied": "Prompt copied — paste it to your agent.",
-    "promptCopiedMoved": "Prompt copied — the issue moved to “In progress”."
+    "promptCopiedMoved": "Prompt copied — the issue moved to “In progress”.",
+    "moreActionsAriaLabel": "Issue actions"
   },
   "Language": {
     "title": "Language",
@@ -850,7 +850,8 @@
     "pick_blocks": "Blocking which issue?",
     "pick_blocked_by": "Blocked by which issue?",
     "pick_related": "Related to which issue?",
-    "searchIssue": "Search issue…"
+    "addRelationAria": "Link to an issue",
+    "searchIssue": "Search an issue…"
   },
   "Profile": {
     "title": "Profile",
@@ -944,8 +945,6 @@
   },
   "Agent": {
     "sectionTitle": "Code agent",
-    "launchButton": "Launch an agent",
-    "launchNewButton": "Launch a new agent",
     "menuLaunch": "Launch an agent…",
     "statusFailed": "Failed",
     "statusCanceled": "Canceled",
@@ -982,7 +981,6 @@
       "xl": "This is a large task (XL). Start by writing a thorough implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Then STOP and ask whether to start implementing now; don't begin coding until I confirm.",
       "default": "Start by writing a clear implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Once the plan is in place, implement it and verify your work."
     },
-    "openConversation": "Open conversation",
     "openAgent": "Open agent",
     "newSession": "New session",
     "endedPlaceholder": "This session failed to start — launch a new agent.",
