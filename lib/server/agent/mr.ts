@@ -296,6 +296,25 @@ export async function listMergeRequestChanges(opts: {
   });
 }
 
+/** Même plafond que `pr.ts` : 5 pages de 100 suffisent à un picker de branche. */
+const MAX_BRANCH_PAGES = 5;
+
+/**
+ * Noms des branches du dépôt (picker de branche de base du lancement d'agent) —
+ * miroir de `pr.ts`. Le tri (défaut d'abord) est fait par l'appelant.
+ */
+export async function listBranches(opts: {
+  token: string;
+  repoFullName: string;
+}): Promise<string[]> {
+  const branches = await glPaged<{ name: string }>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/branches`,
+    opts.token,
+    MAX_BRANCH_PAGES,
+  );
+  return branches.map((b) => b.name);
+}
+
 /**
  * SHA de la BASE du diff servi par GitLab pour cette MR : `diff_refs.base_sha`.
  *

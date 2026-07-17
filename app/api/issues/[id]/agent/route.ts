@@ -21,7 +21,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const RUN_COLUMNS =
-  "id, status, model, model_forced, key_mode, triggered_by, prompt, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at";
+  "id, status, model, model_forced, key_mode, triggered_by, prompt, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -66,14 +66,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { data: issue } = await auth.supabase.from("issues").select("id").eq("id", id).maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
-  let body: { prompt?: string; model?: string } = {};
+  let body: { prompt?: string; model?: string; baseBranch?: string } = {};
   try {
-    body = (await request.json()) as { prompt?: string; model?: string };
+    body = (await request.json()) as { prompt?: string; model?: string; baseBranch?: string };
   } catch {
     // corps vide accepté
   }
   const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : undefined;
   const prompt = typeof body.prompt === "string" && body.prompt.trim() ? body.prompt.trim() : undefined;
+  const baseBranch =
+    typeof body.baseBranch === "string" && body.baseBranch.trim()
+      ? body.baseBranch.trim()
+      : undefined;
 
   const result = await launchAgentRun({
     issueId: id,
@@ -82,6 +86,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     prompt,
     model,
     forced: !!model,
+    baseBranch,
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

@@ -58,6 +58,12 @@ export interface LaunchAgentInput {
   model?: string | null;
   /** true si le modèle est imposé (numo « utilise tel modèle »). */
   forced?: boolean;
+  /**
+   * Branche de base choisie au lancement (défaut : la branche par défaut du
+   * dépôt). IGNORÉE si l'issue a une lignée vivante à hériter : la branche de
+   * travail existe déjà, sa base ne se rechoisit pas.
+   */
+  baseBranch?: string | null;
 }
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
@@ -117,7 +123,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       keyMode: quota.mode,
       triggeredBy: input.triggeredBy,
       branchName: inherited?.branchName ?? null,
-      baseBranch: inherited?.baseBranch ?? null,
+      baseBranch: inherited ? inherited.baseBranch : input.baseBranch ?? null,
       prNumber: inherited?.prNumber ?? null,
       prUrl: inherited?.prUrl ?? null,
       prState: inherited?.prState ?? null,

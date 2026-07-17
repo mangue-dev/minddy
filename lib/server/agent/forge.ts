@@ -41,6 +41,8 @@ export function isForgeApiError(err: unknown): err is ForgeApiError {
  */
 export interface Forge {
   provider: RepoProviderId;
+  /** Noms des branches du dépôt (picker de branche de base au lancement). */
+  listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
   ensurePullRequest(opts: {
     token: string;
     repoFullName: string;
@@ -127,6 +129,7 @@ export interface Forge {
 
 const githubForge: Forge = {
   provider: "github",
+  listBranches: github.listBranches,
   ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
   listPullRequestFiles: github.listPullRequestFiles,
@@ -156,6 +159,7 @@ const githubForge: Forge = {
 
 const gitlabForge: Forge = {
   provider: "gitlab",
+  listBranches: gitlab.listBranches,
   ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
   listPullRequestFiles: gitlab.listMergeRequestChanges,

@@ -49,6 +49,9 @@ export interface AgentRunSummary {
   triggered_by: "button" | "chat" | "mention";
   /** Prompt de lancement (bulle « originelle » de la conversation). */
   prompt: string | null;
+  /** Branche COPIÉE au lancement (choisie en compose, sinon le défaut du dépôt).
+      Null tant que le premier chunk ne l'a pas stampée sur une run sans héritage. */
+  base_branch: string | null;
   /** Branche de travail de la lignée (l'héritage des runs froides est indexé dessus). */
   branch_name: string | null;
   pr_number: number | null;
@@ -111,7 +114,7 @@ export async function fetchIssueAgentRunsApi(
 
 export async function launchAgentRunApi(
   issueId: string,
-  body: { prompt?: string; model?: string },
+  body: { prompt?: string; model?: string; baseBranch?: string },
 ): Promise<{ run: AgentRunSummary }> {
   return parseJson(
     await fetch(`/api/issues/${issueId}/agent`, {
@@ -120,6 +123,16 @@ export async function launchAgentRunApi(
       body: JSON.stringify(body),
     }),
   );
+}
+
+/**
+ * Branches du dépôt lié au projet de l'issue (picker de branche de base en phase
+ * compose). `defaultBranch` en tête de liste.
+ */
+export async function fetchIssueRepoBranchesApi(
+  issueId: string,
+): Promise<{ branches: string[]; defaultBranch: string }> {
+  return parseJson(await fetch(`/api/issues/${issueId}/agent/branches`));
 }
 
 // ── Run détail / events / stop / PR ──────────────────────────────────────────

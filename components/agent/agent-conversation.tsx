@@ -27,6 +27,7 @@ import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
+import { BranchCombobox } from "./branch-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 
@@ -237,6 +238,9 @@ export function AgentConversation({
   const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
+  // Branche de BASE (phase compose, lignée neuve) : "" = le défaut du dépôt.
+  // Comme le modèle, le choix ne se fait qu'au lancement — figée ensuite.
+  const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
   // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
   const modelRequired = provider === "generic" && !defaultModel && !model;
@@ -258,6 +262,9 @@ export function AgentConversation({
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
         model: model || undefined,
+        // Le serveur l'ignore si la lignée hérite déjà d'une branche (le picker
+        // est alors verrouillé — ceinture et bretelles côté course).
+        baseBranch: baseBranch || undefined,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
       // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
@@ -471,20 +478,36 @@ export function AgentConversation({
                       : t("pastRunPlaceholder")
               }
               leadingControls={
-                // Modèle figé pour la session : picker verrouillé + tooltip.
-                <ModelCombobox
-                  variant="compact"
-                  value={liveRun.model ?? ""}
-                  onChange={() => {}}
-                  defaultLabel={t("modelDefault")}
-                  defaultModelId={liveRun.model}
-                  placeholder={t("modelSearchPlaceholder")}
-                  emptyLabel={t("modelSearchEmpty")}
-                  loadingLabel={t("modelSearchLoading")}
-                  freeTextLabel={(q) => t("modelUseCustom", { model: q })}
-                  disabled
-                  disabledTooltip={t("modelLocked")}
-                />
+                <>
+                  {/* Modèle figé pour la session : picker verrouillé + tooltip. */}
+                  <ModelCombobox
+                    variant="compact"
+                    value={liveRun.model ?? ""}
+                    onChange={() => {}}
+                    defaultLabel={t("modelDefault")}
+                    defaultModelId={liveRun.model}
+                    placeholder={t("modelSearchPlaceholder")}
+                    emptyLabel={t("modelSearchEmpty")}
+                    loadingLabel={t("modelSearchLoading")}
+                    freeTextLabel={(q) => t("modelUseCustom", { model: q })}
+                    disabled
+                    disabledTooltip={t("modelLocked")}
+                  />
+                  {/* Branche copiée au lancement, figée elle aussi pour la session. */}
+                  <BranchCombobox
+                    issueId={issueId}
+                    value=""
+                    onChange={() => {}}
+                    defaultLabel={t("branchDefault")}
+                    defaultHint={t("branchDefaultHint")}
+                    placeholder={t("branchSearchPlaceholder")}
+                    emptyLabel={t("branchSearchEmpty")}
+                    loadingLabel={t("branchSearchLoading")}
+                    disabled
+                    disabledTooltip={t("branchLocked")}
+                    lockedBranch={liveRun.base_branch}
+                  />
+                </>
               }
             />
           ) : (
@@ -496,18 +519,37 @@ export function AgentConversation({
               initialValue={initialComposeText}
               placeholder={t("composePlaceholder")}
               leadingControls={
-                <ModelCombobox
-                  variant="compact"
-                  value={model}
-                  onChange={setModel}
-                  defaultLabel={t("modelDefault")}
-                  defaultModelId={defaultModel ?? providerDefaultModel}
-                  placeholder={t("modelSearchPlaceholder")}
-                  emptyLabel={t("modelSearchEmpty")}
-                  loadingLabel={t("modelSearchLoading")}
-                  freeTextLabel={(q) => t("modelUseCustom", { model: q })}
-                  disabled={launching}
-                />
+                <>
+                  <ModelCombobox
+                    variant="compact"
+                    value={model}
+                    onChange={setModel}
+                    defaultLabel={t("modelDefault")}
+                    defaultModelId={defaultModel ?? providerDefaultModel}
+                    placeholder={t("modelSearchPlaceholder")}
+                    emptyLabel={t("modelSearchEmpty")}
+                    loadingLabel={t("modelSearchLoading")}
+                    freeTextLabel={(q) => t("modelUseCustom", { model: q })}
+                    disabled={launching}
+                  />
+                  {/* Branche que l'agent COPIE pour son espace de travail. Choix
+                      possible seulement ici (au lancement) et seulement pour une
+                      lignée NEUVE : quand la session hérite d'une branche
+                      existante, sa base ne se rechoisit pas — chip verrouillé. */}
+                  <BranchCombobox
+                    issueId={issueId}
+                    value={baseBranch}
+                    onChange={setBaseBranch}
+                    defaultLabel={t("branchDefault")}
+                    defaultHint={t("branchDefaultHint")}
+                    placeholder={t("branchSearchPlaceholder")}
+                    emptyLabel={t("branchSearchEmpty")}
+                    loadingLabel={t("branchSearchLoading")}
+                    disabled={launching || inheritedWork != null}
+                    disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
+                    lockedBranch={inheritedWork?.base_branch}
+                  />
+                </>
               }
             />
           )}

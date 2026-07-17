@@ -262,6 +262,32 @@ export async function listPullRequestFiles(opts: {
   }));
 }
 
+/** Pages de 100 drainées au plus pour le picker de branche — au-delà, un dépôt
+    a trop de branches pour qu'une liste exhaustive serve encore à choisir. */
+const MAX_BRANCH_PAGES = 5;
+
+/**
+ * Noms des branches du dépôt (picker de branche de base du lancement d'agent).
+ * Paginé jusqu'à MAX_BRANCH_PAGES × 100 — le tri (défaut d'abord) est fait par
+ * l'appelant, GitHub ne proposant ni tri ni recherche sur cet endpoint.
+ */
+export async function listBranches(opts: {
+  token: string;
+  repoFullName: string;
+}): Promise<string[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const names: string[] = [];
+  for (let page = 1; page <= MAX_BRANCH_PAGES; page++) {
+    const batch = await ghJson<Array<{ name: string }>>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches?per_page=100&page=${page}`,
+      opts.token,
+    );
+    names.push(...batch.map((b) => b.name));
+    if (batch.length < 100) break;
+  }
+  return names;
+}
+
 /**
  * SHA du **merge base** de la PR — le point de référence des patches GitHub.
  *
