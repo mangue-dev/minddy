@@ -13,6 +13,10 @@ export type PanelDisplayMode = "compact" | "expanded";
 // Compact : ancré en bas-droite (coin du FAB), coins très arrondis.
 const COMPACT_DESKTOP =
   "md:!inset-auto md:!top-auto md:!left-auto md:!right-4 md:!bottom-4 " +
+  // `assistant-panel-anchor` ré-ancre right/bottom au coin du shell centré sur
+  // ultrawide (voir globals.css) ; l'étendu ne la porte pas et reste centré
+  // sur le viewport.
+  "assistant-panel-anchor " +
   "md:!w-[min(450px,calc(100vw-24px))] md:!max-w-none " +
   "md:!h-[min(600px,calc(100dvh-32px))] " +
   "md:rounded-[30px] md:border md:border-l md:origin-bottom-right";

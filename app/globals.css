@@ -110,6 +110,37 @@
     transition-duration: 280ms;
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
+
+  /* Sur ultrawide (≥2200px) le shell devient une carte centrée (mangue-ui
+     AppShell pose `.ultrawide-canvas` sur le body), donc on ré-ancre le FAB
+     Numo et son panneau compact — tous deux en `fixed` — au coin bas-droit du
+     shell plutôt qu'au bord du viewport. Offset = marge de centrage du shell
+     + 8px : pour le FAB de 44px, ce 8px garde son rayon de 22px concentrique
+     au coin de 30px du shell (30 − 8 = 22) ; le panneau partage exactement le
+     même coin pour s'ouvrir là où se trouve le FAB.
+
+     Pourquoi @layer utilities + !important : le panneau se positionne avec des
+     utilitaires Tailwind !important (md:!right-4 …) qui vivent dans ce layer.
+     Pour les déclarations !important l'ordre des cascade layers s'inverse, donc
+     un !important layerisé bat un non-layerisé quelle que soit la spécificité —
+     une règle hors layer perdrait silencieusement. Déclarée dans @layer
+     utilities, c'est la spécificité qui tranche (0,2,0 bat le 0,1,0 du md:). */
+  .ultrawide-canvas .assistant-fab-anchor,
+  .ultrawide-canvas .assistant-panel-anchor {
+    right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
+    bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px) !important;
+  }
+
+  /* Chaîne de rayons concentriques sur ultrawide : le panneau compact se niche
+     dans le coin de 30px du shell avec le même gap de 8px que le FAB, donc son
+     coin descend à 22px (30 − 8). Le ChatInput garde son gap de 6px au bord du
+     panneau (px-1.5/pb-1.5) et est déjà en rounded-2xl (16px = 22 − 6) : les
+     coins bas restent concentriques, shell 30 → panneau 22 → input 16. Pas
+     d'!important nécessaire : bat les utilitaires `rounded-*` à la spécificité
+     dans @layer utilities (contrairement à la position ci-dessus). */
+  .ultrawide-canvas .assistant-panel-anchor {
+    border-radius: 22px;
+  }
 }
 
 /* Shiki dual-theme support — !important needed to override inline styles */

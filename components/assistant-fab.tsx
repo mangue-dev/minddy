@@ -42,6 +42,9 @@ export function AssistantFab() {
           exit={{ opacity: 0, y: 6, scale: 0.92 }}
           transition={{ ...transitions.gentle, delay: 0.35 }}
           className={cn(
+            // `assistant-fab-anchor` ré-ancre le FAB au coin du shell centré
+            // sur ultrawide (≥2200px) — voir globals.css `.ultrawide-canvas`.
+            "assistant-fab-anchor",
             // Hidden below the 1200px mobile cutover — there the assistant is
             // reached from the mobile navbar's Numo button (single entry point),
             // and the FAB would overlap the bottom nav.
