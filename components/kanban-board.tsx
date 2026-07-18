@@ -88,7 +88,7 @@ export function KanbanBoard({
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onDeleteIssue?: (issueId: string) => Promise<void>;
-  onDeleteIssue?: (issueId: string) => Promise<void>;
+  onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
   onAddRelation: (
     sourceId: string,
@@ -297,6 +297,7 @@ export function KanbanBoard({
               clearSelection();
             } : undefined}
             onClear={clearSelection}
+            onAskNumo={() => onAskNumo(selectedIssues)}
           />
         )}
         <ColumnDots

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, ChevronDown, Command as CommandIcon, X } from "lucide-react";
+import { NumoIcon } from "@/components/numo-icon";
 import {
   Button,
   Command,
@@ -24,12 +25,14 @@ export function BulkIssueActions({
   onUpdate,
   onDelete,
   onClear,
+  onAskNumo,
 }: {
   count: number;
   members: Member[];
   onUpdate: (patch: IssueUpdateInput) => void;
   onDelete?: () => void;
   onClear: () => void;
+  onAskNumo: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const apply = (patch: IssueUpdateInput) => {
@@ -59,6 +62,12 @@ export function BulkIssueActions({
             <CommandInput placeholder="Rechercher une action..." />
             <CommandList>
               <CommandEmpty>Aucune action trouvée.</CommandEmpty>
+              <CommandGroup heading="Numo">
+                <CommandItem value="demander à numo" onSelect={() => { onAskNumo(); setOpen(false); }}>
+                  <NumoIcon className="mr-2 size-4" />
+                  Demander à Numo
+                </CommandItem>
+              </CommandGroup>
               <CommandGroup heading="Modifier">
                 {STATUSES.map((item) => (
                   <CommandItem key={`status-${item.value}`} value={`statut ${item.value}`} onSelect={() => apply({ status: item.value as IssueStatus })}>
@@ -91,6 +100,10 @@ export function BulkIssueActions({
           </Command>
         </PopoverContent>
       </Popover>
+      <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full px-3 text-xs" onClick={onAskNumo}>
+        <NumoIcon className="size-4" />
+        Demander à Numo
+      </Button>
       <Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" onClick={onClear} aria-label="Désélectionner les tickets">
         <X className="size-4" />
       </Button>

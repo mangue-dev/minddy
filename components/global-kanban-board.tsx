@@ -99,6 +99,7 @@ export function GlobalKanbanBoard({
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onDeleteIssue: (issueId: string, projectId: string) => Promise<void>;
+  onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   onMove: (
     issueId: string,
@@ -279,6 +280,7 @@ export function GlobalKanbanBoard({
             clearSelection();
           }}
           onClear={clearSelection}
+          onAskNumo={() => onAskNumo(selectedIssues)}
         />
       )}
       <div
