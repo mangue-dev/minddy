@@ -287,54 +287,28 @@ nav[aria-label="Navigation"]
   opacity: 0.5;
 }
 
+/* La case à cocher, la ligne barrée et le menu ⋯ sont rendus par le NodeView
+   React (components/scratchpad/scratchpad-task.tsx) en classes Tailwind — ici,
+   juste le reset de la liste et l'indentation des sous-tâches. */
 .scratchpad-editor .ProseMirror ul[data-type="taskList"] {
   list-style: none;
   margin: 0.5rem 0;
   padding: 0;
 }
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+.scratchpad-editor .ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] {
   margin: 0.125rem 0;
 }
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] li > label {
-  flex: 0 0 auto;
-  margin-top: 0.15rem;
-  user-select: none;
-}
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] li > div {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] li > div > p {
+/* Le paragraphe d'une tâche hérite sinon du `[&_p]:my-2` de l'éditeur, ce qui
+   décale le texte vers le bas et désaligne la case + le ⋯. */
+.scratchpad-editor .ProseMirror li[data-type="taskItem"] p {
   margin: 0;
 }
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 1rem;
-  height: 1rem;
-  border: 1px solid var(--input);
-  border-radius: 4px;
-  cursor: pointer;
-  position: relative;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:hover {
-  border-color: var(--muted-foreground);
-}
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
-  background-size: 0.7rem 0.7rem;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-.scratchpad-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
-  color: var(--muted-foreground);
-  text-decoration: line-through;
+.scratchpad-editor
+  .ProseMirror
+  ul[data-type="taskList"]
+  ul[data-type="taskList"] {
+  margin: 0.125rem 0;
+  padding-left: 1.5rem;
 }
 
 .scratchpad-editor .ProseMirror :is(h1, h2, h3) {

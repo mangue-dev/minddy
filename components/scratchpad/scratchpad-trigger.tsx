@@ -12,7 +12,7 @@ export function ScratchpadTrigger() {
   const { open } = useScratchpad();
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="icon-sm"
       aria-label={t("openAria")}
       title={t("openAria")}
