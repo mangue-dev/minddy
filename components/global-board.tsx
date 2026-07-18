@@ -449,6 +449,17 @@ function GlobalBoardInner() {
       ),
     onSetCategories: setCategories,
     onDeleteIssue: (id: string, pid: string) => deleteIssue(id, pid),
+    onAskNumo: (selectedIssues: Issue[]) => openAssistant({
+      projectId: null,
+      pageContext: {
+        issueIds: selectedIssues.map((issue) => issue.id),
+        issueIdentifiers: selectedIssues.map((issue) => {
+          const project = projectMap.get(issue.project_id);
+          return project ? `${project.key}-${issue.number}` : String(issue.number);
+        }),
+        issueTitles: selectedIssues.map((issue) => issue.title),
+      },
+    }),
     onMove: moveIssue,
     allIssues: scopedIssues,
     relations,
