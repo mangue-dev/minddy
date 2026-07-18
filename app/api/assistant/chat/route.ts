@@ -4,6 +4,11 @@ import { createSupabaseFromRequest } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { ensureUsageBudget } from "@/lib/server/usage";
+import {
+  isPlanLimitError,
+  planLimitResponse,
+} from "@/lib/server/plan-limit-error";
 import type {
   AssistantChatRequest,
   AssistantPageContext,
@@ -92,6 +97,14 @@ export async function POST(request: NextRequest) {
         headers: { "Retry-After": String(rateLimit.retryAfter) },
       }
     );
+  }
+
+  // Budget d'usage du plan (MIN-72) — pré-vol avant tout appel LLM.
+  try {
+    await ensureUsageBudget(user.id);
+  } catch (err) {
+    if (isPlanLimitError(err)) return planLimitResponse(err);
+    throw err;
   }
 
   let body: AssistantChatRequest;

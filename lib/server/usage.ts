@@ -1,0 +1,206 @@
+import "server-only";
+
+import { getServiceClient } from "@/lib/supabase-service";
+import {
+  SANDBOX_USD_PER_MINUTE,
+  USAGE_SEGMENTS,
+  type BillableFeature,
+  type UsageSegmentId,
+} from "@/lib/billing-plans";
+import {
+  getResolvedBilling,
+  type ResolvedBilling,
+} from "@/lib/server/billing-accounts";
+import { PlanLimitError } from "@/lib/server/plan-limit-error";
+import { recordAiUsage } from "@/lib/server/ai-usage";
+
+/**
+ * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
+ * agrégé depuis le ledger `ai_usage` (coût brut USD, ventilé par feature).
+ *
+ * Fenêtre : la période Stripe courante pour les abonnés, sinon le mois
+ * calendaire UTC ; bornée par le filigrane `agent_quota_resets` (remise à zéro
+ * admin — s'applique désormais au budget entier, plus seulement aux agents).
+ *
+ * Enforcement : `ensureUsageBudget` en PRÉ-VOL avant chaque action coûtante ;
+ * l'enregistrement reste post-hoc best-effort (`recordAiUsage` ne throw
+ * jamais) — un léger dépassement sur la dernière action est assumé, comme chez
+ * Claude/ChatGPT. Pas de fenêtre 5 h / hebdo en v1 (les rate-limits de session
+ * restent la garde anti-rafale).
+ */
+
+export interface UsagePeriod {
+  start: string;
+  end: string;
+}
+
+export interface UserUsage {
+  billing: ResolvedBilling;
+  period: UsagePeriod;
+  usedUsd: number;
+  byFeature: Partial<Record<BillableFeature, number>>;
+}
+
+function monthWindow(now = new Date()): UsagePeriod {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+/** La fenêtre comptée par le budget de ce user. */
+export async function getUsagePeriod(
+  userId: string,
+  billing: ResolvedBilling
+): Promise<UsagePeriod> {
+  let { start, end } = monthWindow();
+
+  const account = billing.account;
+  if (
+    billing.source === "stripe" &&
+    account?.stripe_current_period_start &&
+    account.stripe_current_period_end
+  ) {
+    start = account.stripe_current_period_start;
+    end = account.stripe_current_period_end;
+  }
+
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_quota_resets")
+    .select("reset_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const resetAt = (data as { reset_at?: string } | null)?.reset_at;
+  if (resetAt && resetAt > start) start = resetAt;
+
+  return { start, end };
+}
+
+interface UsageRpcRow {
+  feature: string;
+  cost: number | string;
+  calls: number;
+  runs: number;
+}
+
+function roundUsd(value: number): number {
+  return Math.round(value * 1e6) / 1e6;
+}
+
+/** Dépensé + ventilation par feature du user sur sa fenêtre courante. */
+export async function getUserUsage(userId: string): Promise<UserUsage> {
+  const billing = await getResolvedBilling(userId);
+  const period = await getUsagePeriod(userId, billing);
+
+  const service = getServiceClient();
+  const { data, error } = await service.rpc("get_user_usage_since", {
+    p_user_id: userId,
+    p_since: period.start,
+  });
+  if (error) throw new Error(error.message);
+
+  const parsed = (data ?? {}) as {
+    total_cost?: number | string;
+    by_feature?: UsageRpcRow[];
+  };
+  const byFeature: Partial<Record<BillableFeature, number>> = {};
+  for (const row of parsed.by_feature ?? []) {
+    byFeature[row.feature as BillableFeature] = roundUsd(Number(row.cost) || 0);
+  }
+
+  return {
+    billing,
+    period,
+    usedUsd: roundUsd(Number(parsed.total_cost) || 0),
+    byFeature,
+  };
+}
+
+/** Ventile `byFeature` sur les segments d'affichage, dans l'ordre de la barre. */
+export function segmentizeUsage(
+  byFeature: Partial<Record<BillableFeature, number>>
+): Array<{ id: UsageSegmentId; usd: number }> {
+  return USAGE_SEGMENTS.map((segment) => ({
+    id: segment.id,
+    usd: roundUsd(
+      segment.features.reduce((sum, feature) => sum + (byFeature[feature] ?? 0), 0)
+    ),
+  }));
+}
+
+/**
+ * Check pré-vol : budget restant → l'usage courant ; épuisé → 403
+ * `usage_budget_exceeded`. Retourne l'usage pour éviter un second fetch.
+ */
+export async function ensureUsageBudget(userId: string): Promise<UserUsage> {
+  const usage = await getUserUsage(userId);
+  const included = usage.billing.plan.includedUsageUsd;
+  if (usage.usedUsd >= included) {
+    throw new PlanLimitError("usage_budget_exceeded", {
+      used: roundUsd(usage.usedUsd),
+      included,
+    });
+  }
+  return usage;
+}
+
+/** Variante booléenne pour les jobs de fond (cron feedback, smart assign). */
+export async function hasUsageBudget(userId: string): Promise<boolean> {
+  try {
+    const usage = await getUserUsage(userId);
+    return usage.usedUsd < usage.billing.plan.includedUsageUsd;
+  } catch (err) {
+    // Best-effort : un échec de lecture ne doit pas éteindre les jobs de fond.
+    console.error("[usage] budget check failed:", (err as Error).message);
+    return true;
+  }
+}
+
+/**
+ * Budget du OWNER d'un projet — pour l'IA du feedback board (cron, posts
+ * publics) : c'est le owner qui paye, pas le visiteur. Best-effort (true si
+ * le projet est introuvable) : ne jamais casser un flux public sur un doute.
+ */
+export async function ownerHasUsageBudget(projectId: string): Promise<boolean> {
+  try {
+    const service = getServiceClient();
+    const { data } = await service
+      .from("projects")
+      .select("owner_id")
+      .eq("id", projectId)
+      .maybeSingle();
+    const ownerId = (data as { owner_id?: string } | null)?.owner_id;
+    if (!ownerId) return true;
+    return await hasUsageBudget(ownerId);
+  } catch (err) {
+    console.error("[usage] owner budget check failed:", (err as Error).message);
+    return true;
+  }
+}
+
+/**
+ * Métrage du compute Vercel Sandbox d'un run agent : wall-clock × $/min, une
+ * ligne `sandbox_compute` au ledger (provider 'vercel'). `seq` doit être unique
+ * dans le run côté appelant (une ligne par tranche de drain).
+ */
+export async function recordSandboxUsage(params: {
+  runId: string;
+  seq: number;
+  userId: string | null;
+  projectId: string | null;
+  durationMs: number;
+}): Promise<void> {
+  const minutes = params.durationMs / 60_000;
+  const cost = roundUsd(minutes * SANDBOX_USD_PER_MINUTE);
+  if (cost <= 0) return;
+  await recordAiUsage({
+    runId: params.runId,
+    seq: params.seq,
+    feature: "sandbox_compute",
+    provider: "vercel",
+    model: "vercel/sandbox",
+    cost,
+    userId: params.userId,
+    projectId: params.projectId,
+  });
+}

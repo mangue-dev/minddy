@@ -11,6 +11,11 @@ import {
 } from "@/lib/server/ai-usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { ensureUsageBudget } from "@/lib/server/usage";
+import {
+  isPlanLimitError,
+  planLimitResponse,
+} from "@/lib/server/plan-limit-error";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
 import type { PromptProjectContext } from "@/lib/server/assistant/prompt";
@@ -286,6 +291,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id: projectId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+
+  // Budget d'usage du plan (MIN-72) — pré-vol avant le mini-agent de dictée.
+  try {
+    await ensureUsageBudget(auth.user.id);
+  } catch (err) {
+    if (isPlanLimitError(err)) return planLimitResponse(err);
+    throw err;
+  }
 
   const rateLimit = checkSessionRateLimit(auth.user.id, "dictate-issue", RATE_LIMIT);
   if (!rateLimit.allowed) {

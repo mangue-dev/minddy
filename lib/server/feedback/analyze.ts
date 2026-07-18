@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/embeddings";
 import { mergePosts } from "@/lib/server/feedback/merge";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { ownerHasUsageBudget } from "@/lib/server/usage";
 
 /**
  * Passe d'analyse IA horaire (MIN-37). Pour chaque post non analysé : backfill
@@ -78,7 +79,19 @@ export async function runFeedbackAnalysis(): Promise<AnalysisReport> {
     return report;
   }
 
+  // Budget du plan (MIN-72) : l'analyse est payée par le owner du projet. Un
+  // owner à sec → skip SANS compter d'échec (le lease reporte au prochain run
+  // horaire ; le post repartira quand le budget sera revenu). Cache par projet.
+  const budgetByProject = new Map<string, boolean>();
+
   for (const post of (claimedPosts ?? []) as ClaimedPost[]) {
+    let hasBudget = budgetByProject.get(post.project_id);
+    if (hasBudget === undefined) {
+      hasBudget = await ownerHasUsageBudget(post.project_id);
+      budgetByProject.set(post.project_id, hasBudget);
+    }
+    if (!hasBudget) continue;
+
     try {
       const ok = await analyzePost(post, { model, autoThreshold, suggestFloor, report });
       if (!ok) {

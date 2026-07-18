@@ -41,6 +41,7 @@ import {
 } from "@/components/header-search-pill";
 import { NewMenu } from "@/components/new-menu";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
+import { UsageIndicator } from "@/components/usage-indicator";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
@@ -648,6 +649,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             // and "Nouveau" to the navbar "+", so the header collapses to the
             // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
             <div className="hidden items-center gap-2 desktop:flex">
+              <UsageIndicator />
               <ScratchpadTrigger />
               <HeaderSearchPill onOpen={() => setPaletteOpen(true)} />
               <NewMenu />

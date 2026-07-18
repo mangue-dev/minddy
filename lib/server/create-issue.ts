@@ -22,6 +22,8 @@ import {
   isSmartAssignEligibleStatus,
   scheduleSmartAssign,
 } from "@/lib/server/smart-assign";
+import { ensureIssueLimit } from "@/lib/server/entitlements";
+import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
@@ -44,7 +46,8 @@ export type CreateIssueResult =
         | "nestingLimitedToOneLevel"
         | "planTooLong"
         | "databaseError"
-        | "attachmentInvalid";
+        | "attachmentInvalid"
+        | "issueLimitReached";
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
     };
@@ -74,6 +77,17 @@ export async function createIssueForProject({
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
     return { ok: false, status: 400, errorKey: "titleRequired" };
+  }
+
+  // Limite issues/projet du plan du owner (MIN-72) — vérifiée ici pour couvrir
+  // tous les chemins de création (UI, API v1, MCP, Numo, import CSV, triage).
+  try {
+    await ensureIssueLimit(projectId);
+  } catch (err) {
+    if (isPlanLimitError(err)) {
+      return { ok: false, status: err.status, errorKey: "issueLimitReached" };
+    }
+    throw err;
   }
 
   // Files the client already uploaded under this project's storage prefix.

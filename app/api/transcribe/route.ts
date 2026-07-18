@@ -7,6 +7,11 @@ import {
   type TranscribeAudioFormat,
 } from "@/lib/server/openrouter-transcribe";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
+import { ensureUsageBudget } from "@/lib/server/usage";
+import {
+  isPlanLimitError,
+  planLimitResponse,
+} from "@/lib/server/plan-limit-error";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_AUDIO_SECONDS = 90;
@@ -39,6 +44,14 @@ export async function POST(request: NextRequest) {
         headers: { "Retry-After": String(rateLimit.retryAfter) },
       },
     );
+  }
+
+  // Budget d'usage du plan (MIN-72) — pré-vol avant l'appel de transcription.
+  try {
+    await ensureUsageBudget(user.id);
+  } catch (err) {
+    if (isPlanLimitError(err)) return planLimitResponse(err);
+    throw err;
   }
 
   let formData: FormData;

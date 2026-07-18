@@ -9,6 +9,7 @@ import {
   parseOpenRouterUsage,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
+import { ownerHasUsageBudget } from "@/lib/server/usage";
 
 /** Contexte de suivi de coût pour un appel d'embeddings (un appel = un run). */
 export interface EmbeddingUsageRecord {
@@ -39,6 +40,15 @@ export async function embedTexts(
 ): Promise<(number[] | null)[]> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey || texts.length === 0) return texts.map(() => null);
+
+  // Budget du plan (MIN-72) : l'IA feedback est payée par le owner du projet.
+  // Budget à sec → null (comme un échec réseau) : le post vit sans embedding,
+  // la passe horaire rattrapera quand le budget sera revenu.
+  if (opts?.record?.projectId) {
+    if (!(await ownerHasUsageBudget(opts.record.projectId))) {
+      return texts.map(() => null);
+    }
+  }
 
   const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
   try {

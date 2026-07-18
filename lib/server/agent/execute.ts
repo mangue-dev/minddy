@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAccountSettings } from "@/lib/server/account-settings";
+import { recordSandboxUsage } from "@/lib/server/usage";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import {
   AGENT_SOFT_DEADLINE_MS,
@@ -999,8 +1000,25 @@ export async function executeAgentRun(
       interrupt_requested: false,
     });
     return "completed";
+  } finally {
+    // Métrage du compute sandbox (MIN-72) : chaque tranche d'exécution où la
+    // microVM a été réveillée est facturée en wall-clock — y compris les tours
+    // en échec. Bande de seq dédiée pour ne pas croiser celle des appels LLM
+    // (continuations × 1000 + rounds).
+    if (sandbox) {
+      await recordSandboxUsage({
+        runId: run.run_id ?? run.id,
+        seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
+        userId: run.created_by,
+        projectId: run.project_id,
+        durationMs: Date.now() - callStart,
+      }).catch(() => {});
+    }
   }
 }
+
+/** Base de seq des lignes `sandbox_compute` (hors de la bande des appels LLM). */
+const SANDBOX_USAGE_SEQ_BASE = 1_000_000_000;
 
 /** Note de fil quand le push de fin de tour échoue (visible dans la conversation). */
 const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {

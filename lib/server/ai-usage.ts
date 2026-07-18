@@ -25,7 +25,8 @@ export type AiFeature =
   | "feedback_classify"
   | "feedback_analyze"
   | "embedding"
-  | "agent_code";
+  | "agent_code"
+  | "sandbox_compute";
 
 /** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {
@@ -86,6 +87,8 @@ export interface AiUsageInput {
   seq?: number;
   feature: AiFeature;
   model?: string | null;
+  /** Défaut DB : 'openrouter'. Poser 'vercel' pour le compute sandbox. */
+  provider?: string;
   generationId?: string | null;
   promptTokens?: number | null;
   completionTokens?: number | null;
@@ -101,6 +104,7 @@ function toRow(input: AiUsageInput) {
     run_id: input.runId,
     seq: input.seq ?? 0,
     feature: input.feature,
+    ...(input.provider ? { provider: input.provider } : {}),
     model: input.model ?? null,
     generation_id: input.generationId ?? null,
     prompt_tokens: input.promptTokens ?? null,

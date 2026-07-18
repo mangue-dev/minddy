@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AssistantToolCall } from "@/lib/assistant-types";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { hasUsageBudget } from "@/lib/server/usage";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -164,6 +165,9 @@ export async function runCommentMention({
 
     const access = await getProjectAccess(actorId, issue.project_id as string);
     if (!access) return;
+
+    // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
+    if (!(await hasUsageBudget(actorId))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
     const { data: reply, error: replyError } = await service
@@ -412,6 +416,9 @@ export async function runObjectiveCommentMention({
     const access = await getProjectAccess(actorId, objective.project_id as string);
     if (!access) return;
 
+    // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
+    if (!(await hasUsageBudget(actorId))) return;
+
     // ── Post the live placeholder reply right away ───────────────────────
     const { data: reply, error: replyError } = await service
       .from("comments")
@@ -643,6 +650,9 @@ export async function runFeedbackCommentMention({
 
     const access = await getProjectAccess(actorId, post.project_id as string);
     if (!access) return;
+
+    // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
+    if (!(await hasUsageBudget(actorId))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
     const { data: reply, error: replyError } = await service

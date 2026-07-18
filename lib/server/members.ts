@@ -3,6 +3,8 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { findAuthUserByEmail } from "@/lib/server/auth-users";
+import { ensureMembersAllowed } from "@/lib/server/entitlements";
+import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import type { Invitation } from "@/lib/types";
 
 /**
@@ -24,6 +26,7 @@ type InviteError =
   | "alreadyOwner"
   | "alreadyMember"
   | "invitationAlreadyPending"
+  | "membersProOnly"
   | "databaseError";
 
 export async function inviteMember({
@@ -42,6 +45,16 @@ export async function inviteMember({
   if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
   if (!access.isOwner) {
     return { ok: false, status: 403, errorKey: "ownerOnlyInvite" };
+  }
+
+  // Travail en équipe = plans avec allowMembers (Pro) — MIN-72.
+  try {
+    await ensureMembersAllowed(actorId);
+  } catch (err) {
+    if (isPlanLimitError(err)) {
+      return { ok: false, status: err.status, errorKey: "membersProOnly" };
+    }
+    throw err;
   }
 
   const normalized =

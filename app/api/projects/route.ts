@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { ensureProjectLimit } from "@/lib/server/entitlements";
+import {
+  isPlanLimitError,
+  planLimitResponse,
+} from "@/lib/server/plan-limit-error";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 
 /** GET /api/projects — list the caller's accessible (owned + member) projects. */
@@ -49,6 +54,13 @@ export async function POST(request: NextRequest) {
       { error: t("invalidProjectKey") },
       { status: 400 }
     );
+  }
+
+  try {
+    await ensureProjectLimit(auth.user.id);
+  } catch (err) {
+    if (isPlanLimitError(err)) return planLimitResponse(err);
+    throw err;
   }
 
   const { data, error } = await auth.supabase

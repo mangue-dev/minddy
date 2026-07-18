@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { setFeedbackPostCategories } from "@/lib/server/feedback/set-post-categories";
 import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import {
@@ -87,7 +88,19 @@ export async function runFeedbackClassification(): Promise<ClassificationReport>
     return report;
   }
 
+  // Budget du plan (MIN-72) : payé par le owner du projet — owner à sec → skip
+  // sans compter d'échec (les posts restent en attente de revue jusqu'au retour
+  // du budget). Cache par projet, comme dans analyze.ts.
+  const budgetByProject = new Map<string, boolean>();
+
   for (const post of (claimedPosts ?? []) as ClaimedPost[]) {
+    let hasBudget = budgetByProject.get(post.project_id);
+    if (hasBudget === undefined) {
+      hasBudget = await ownerHasUsageBudget(post.project_id);
+      budgetByProject.set(post.project_id, hasBudget);
+    }
+    if (!hasBudget) continue;
+
     try {
       const ok = await classifyPost(post, { model, report });
       if (!ok) {
