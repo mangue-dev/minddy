@@ -9,9 +9,12 @@ import {
   DialogDescription,
   DialogTitle,
   Spinner,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   toast,
 } from "mangue-ui";
-import { Copy, X } from "lucide-react";
+import { Check, Copy, ListX, X } from "lucide-react";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import {
@@ -54,6 +57,13 @@ function ScratchpadBody() {
   const save = useSaveScratchpad();
 
   const markdownRef = useRef<(() => string) | null>(null);
+  const removeCompletedRef = useRef<(() => number) | null>(null);
+
+  const removeCompleted = () => {
+    const removed = removeCompletedRef.current?.() ?? 0;
+    if (removed > 0) toast.success(t("removedCompleted"));
+    else toast(t("noCompleted"));
+  };
 
   const copyAll = async () => {
     const md = (markdownRef.current?.() ?? content).trim();
@@ -71,33 +81,76 @@ function ScratchpadBody() {
     toast.success(t("copiedSectionToast"));
   };
 
+  const showSaveState = !isLoading && (save.isPending || content.trim() !== "");
+
   return (
     <>
+      {showSaveState && (
+        <div className="absolute top-4 left-5 z-30 flex items-center gap-1.5 text-xs text-muted-foreground">
+          {save.isPending ? (
+            <>
+              <Spinner className="size-3" />
+              {t("saving")}
+            </>
+          ) : (
+            <>
+              <Check className="size-3.5" />
+              {t("saved")}
+            </>
+          )}
+        </div>
+      )}
+
       <div className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1">
         {!isLoading && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("copyAllAria")}
-            title={t("copyAll")}
-            onClick={copyAll}
-            className="rounded-full text-muted-foreground hover:text-foreground"
-          >
-            <Copy className="size-4" />
-          </Button>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("removeCompleted")}
+                  onClick={removeCompleted}
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <ListX className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("removeCompleted")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("copyAllAria")}
+                  onClick={copyAll}
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <Copy className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("copyAll")}</TooltipContent>
+            </Tooltip>
+          </>
         )}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("close")}
-          onClick={() => setOpen(false)}
-          className="rounded-full text-muted-foreground hover:text-foreground"
-        >
-          <X className="size-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("close")}
+              onClick={() => setOpen(false)}
+              className="rounded-full text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("close")}</TooltipContent>
+        </Tooltip>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto px-6 pt-16 pb-12">
+      <div className="flex flex-1 flex-col overflow-y-auto px-6 pt-48 pb-12">
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
           {isLoading ? (
             <div className="flex justify-center py-16 text-muted-foreground">
@@ -111,6 +164,7 @@ function ScratchpadBody() {
               placeholder={t("placeholder")}
               copySectionLabel={t("copySection")}
               markdownRef={markdownRef}
+              removeCompletedRef={removeCompletedRef}
             />
           )}
         </div>

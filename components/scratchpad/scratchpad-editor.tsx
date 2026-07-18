@@ -13,7 +13,7 @@ import { Markdown } from "tiptap-markdown";
 import { useTranslations } from "next-intl";
 import { Spinner, cn } from "mangue-ui";
 import { Heading1, Heading2, Heading3, List, ListTodo, Mic } from "lucide-react";
-import { splitScratchpadSections } from "@/lib/scratchpad";
+import { removeCompletedTasks, splitScratchpadSections } from "@/lib/scratchpad";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
 import {
   ScratchpadTaskItem,
@@ -74,6 +74,7 @@ export function ScratchpadEditor({
   placeholder,
   copySectionLabel,
   markdownRef,
+  removeCompletedRef,
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
@@ -83,6 +84,9 @@ export function ScratchpadEditor({
   /** Populated with a getter for the editor's live markdown, so the parent's
       "copy all" reflects the current text without waiting for a debounced save. */
   markdownRef?: MutableRefObject<(() => string) | null>;
+  /** Populated with an action that drops completed tasks from the live editor
+      (returns how many were removed) — driven by the modal's toolbar button. */
+  removeCompletedRef?: MutableRefObject<(() => number) | null>;
 }) {
   const t = useTranslations("Scratchpad");
   const tDictate = useTranslations("Dictate");
@@ -165,6 +169,22 @@ export function ScratchpadEditor({
     const ed = editorRef.current;
     if (ed && !ed.isDestroyed) onChangeRef.current(getMarkdown(ed));
   };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+
+  // Drop completed tasks from the LIVE editor (the source of truth while open),
+  // then save. Returns how many were removed so the caller can confirm.
+  const removeCompleted = () => {
+    const ed = editorRef.current;
+    if (!ed || ed.isDestroyed) return 0;
+    const { content: next, removed } = removeCompletedTasks(getMarkdown(ed));
+    if (removed === 0) return 0;
+    ed.commands.setContent(next); // tiptap-markdown re-parses the markdown
+    onChangeRef.current(next);
+    return removed;
+  };
+  const removeCompletedFnRef = useRef(removeCompleted);
+  removeCompletedFnRef.current = removeCompleted;
 
   // Stable across the editor's life (SectionCopy reads options once at plugin
   // creation) — resolves the clicked heading's section from the live markdown.
@@ -211,6 +231,8 @@ export function ScratchpadEditor({
     onCreate: ({ editor }) => {
       editorRef.current = editor;
       if (markdownRef) markdownRef.current = () => getMarkdown(editor);
+      if (removeCompletedRef)
+        removeCompletedRef.current = () => removeCompletedFnRef.current();
     },
     onUpdate: ({ editor }) => {
       scheduleCommit(getMarkdown(editor));
@@ -224,10 +246,29 @@ export function ScratchpadEditor({
     () => () => {
       flush();
       if (markdownRef) markdownRef.current = null;
+      if (removeCompletedRef) removeCompletedRef.current = null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
+
+  // ⌘S / Ctrl+S saves now (autosave already runs; this is the explicit gesture
+  // that drives the visible "saved" indicator) instead of the browser dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === "s"
+      ) {
+        e.preventDefault();
+        flushRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
 
   // While recording: Enter stops (→ transcribe → task), Escape cancels. Captured
   // so neither the editor nor the dialog sees the keystroke.

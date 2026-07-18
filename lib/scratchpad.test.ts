@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { splitScratchpadSections } from "@/lib/scratchpad";
+import {
+  appendScratchpadTasks,
+  removeCompletedTasks,
+  splitScratchpadSections,
+} from "@/lib/scratchpad";
 import { parsePlan, setTaskState } from "@/lib/plan";
 
 describe("splitScratchpadSections", () => {
@@ -38,5 +42,62 @@ describe("splitScratchpadSections", () => {
     const sections = splitScratchpadSections(note);
     expect(sections).toHaveLength(1);
     expect(sections[0].title).toBe("Real");
+  });
+});
+
+describe("appendScratchpadTasks", () => {
+  it("appends at the end of the document with the right marker", () => {
+    const out = appendScratchpadTasks("- [ ] a", [
+      { text: "b", state: "pending" },
+      { text: "c", state: "in_progress" },
+    ]);
+    expect(out).toBe("- [ ] a\n- [ ] b\n- [~] c\n");
+  });
+
+  it("seeds an empty note", () => {
+    expect(appendScratchpadTasks("", [{ text: "first", state: "pending" }])).toBe(
+      "- [ ] first\n"
+    );
+  });
+
+  it("inserts at the end of a named section, before the next heading", () => {
+    const note = "## A\n- [ ] a1\n\n## B\n- [ ] b1";
+    const out = appendScratchpadTasks(note, [{ text: "a2", state: "pending" }], "A");
+    expect(out).toBe("## A\n- [ ] a1\n- [ ] a2\n\n## B\n- [ ] b1");
+  });
+
+  it("appends to the last section when it is the target", () => {
+    const note = "## A\n- [ ] a1\n## B\n- [ ] b1";
+    const out = appendScratchpadTasks(note, [{ text: "b2", state: "completed" }], "B");
+    expect(out).toBe("## A\n- [ ] a1\n## B\n- [ ] b1\n- [x] b2");
+  });
+
+  it("flattens multi-line task text to one line", () => {
+    const out = appendScratchpadTasks("", [
+      { text: "line one\nline two", state: "pending" },
+    ]);
+    expect(out).toBe("- [ ] line one line two\n");
+  });
+
+  it("returns null when the section is not found", () => {
+    expect(
+      appendScratchpadTasks("## A\n- [ ] a", [{ text: "x", state: "pending" }], "Z")
+    ).toBeNull();
+  });
+});
+
+describe("removeCompletedTasks", () => {
+  it("drops only completed task lines, keeping prose and other states", () => {
+    const note = "## Section\n- [ ] a\n- [x] b\n- [~] c\n- [-] d\n- [x] e";
+    const { content, removed } = removeCompletedTasks(note);
+    expect(removed).toBe(2);
+    expect(content).toBe("## Section\n- [ ] a\n- [~] c\n- [-] d");
+  });
+
+  it("returns the content unchanged when there is nothing completed", () => {
+    const note = "- [ ] a\n- [~] b";
+    const result = removeCompletedTasks(note);
+    expect(result.removed).toBe(0);
+    expect(result.content).toBe(note);
   });
 });

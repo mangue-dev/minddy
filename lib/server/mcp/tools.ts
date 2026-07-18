@@ -60,7 +60,7 @@ import {
   getCyclePrefsForUser,
 } from "@/lib/server/cycles";
 import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
-import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
+import { MAX_SCRATCHPAD_LENGTH, appendScratchpadTasks } from "@/lib/scratchpad";
 import { effortToPoints, statusCompletionCredit, todayISO } from "@/lib/cycle";
 import { issueIdentifier, type IssueEffort, type IssueStatus } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
@@ -1473,8 +1473,11 @@ export function registerMinddyTools(server: McpServer): void {
         "notes doc ('quick things to do right now') — the in-app replacement for " +
         "a problems.md file. Markdown with the same checkbox tasks as plans " +
         "('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped) " +
-        "and '##' section headings. Returns the raw markdown plus task progress. " +
-        "There is exactly one scratchpad per account; it is not tied to a project.",
+        "and '##' section headings. Returns the raw markdown, task progress, and " +
+        "the flat list of tasks with their 0-based index (document order) — pass " +
+        "those indices to minddy_update_scratchpad_task to tick items off without " +
+        "rewriting the doc. There is exactly one scratchpad per account; it is " +
+        "not tied to a project.",
       inputSchema: {},
       annotations: READ_ONLY,
     },
@@ -1482,7 +1485,17 @@ export function registerMinddyTools(server: McpServer): void {
       const auth = requireUser(extra);
       if ("error" in auth) return auth.error;
       try {
-        return ok(await getScratchpad(getServiceClient(), auth.userId));
+        const state = await getScratchpad(getServiceClient(), auth.userId);
+        return ok({
+          content: state.content,
+          updated_at: state.updated_at,
+          progress: state.progress,
+          tasks: parsePlan(state.content).tasks.map((t) => ({
+            index: t.index,
+            text: t.text,
+            state: t.state,
+          })),
+        });
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }
@@ -1515,6 +1528,146 @@ export function registerMinddyTools(server: McpServer): void {
       if ("error" in auth) return auth.error;
       try {
         return ok(await setScratchpad(getServiceClient(), auth.userId, args.content));
+      } catch (err) {
+        return fail("database_error", (err as Error).message);
+      }
+    }
+  );
+
+  server.registerTool(
+    "minddy_update_scratchpad_task",
+    {
+      title: "Update scratchpad task",
+      description:
+        "Flip the state of ONE or more existing scratchpad tasks WITHOUT " +
+        "rewriting the whole doc — the precise way to tick items off. Tasks are " +
+        "0-indexed in document order (the `tasks` array of minddy_get_scratchpad); " +
+        "each task keeps its text, only its checkbox marker changes. States: " +
+        "pending, in_progress, completed, cancelled. To add/remove tasks or edit " +
+        "their text, use minddy_set_scratchpad instead. Indices are validated " +
+        "all-or-nothing: a single out-of-range index rejects the whole call.",
+      inputSchema: {
+        tasks: z
+          .array(
+            z.object({
+              task_index: z
+                .number()
+                .int()
+                .min(0)
+                .describe("0-based task index, in document order."),
+              state: z.enum(PLAN_TASK_STATES),
+            })
+          )
+          .min(1)
+          .max(50)
+          .describe("The task-state changes to apply."),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const auth = requireUser(extra);
+      if ("error" in auth) return auth.error;
+      try {
+        const service = getServiceClient();
+        const current = await getScratchpad(service, auth.userId);
+        const parsed = parsePlan(current.content);
+        for (const change of args.tasks) {
+          if (change.task_index >= parsed.tasks.length) {
+            return fail(
+              "invalid_params",
+              `task_index ${change.task_index} is out of range — the scratchpad has ${parsed.tasks.length} task(s) (valid indices 0..${Math.max(0, parsed.tasks.length - 1)}).`
+            );
+          }
+        }
+        let next = current.content;
+        for (const change of args.tasks) {
+          next = setTaskState(next, parsed.tasks[change.task_index].line, change.state);
+        }
+        const saved = await setScratchpad(service, auth.userId, next);
+        return ok({
+          content: saved.content,
+          progress: saved.progress,
+          tasks: parsePlan(saved.content).tasks.map((t) => ({
+            index: t.index,
+            text: t.text,
+            state: t.state,
+          })),
+        });
+      } catch (err) {
+        return fail("database_error", (err as Error).message);
+      }
+    }
+  );
+
+  server.registerTool(
+    "minddy_add_scratchpad_tasks",
+    {
+      title: "Add scratchpad tasks",
+      description:
+        "Append one or more NEW tasks to the scratchpad without rewriting the " +
+        "whole doc. Each task defaults to 'pending' (unchecked). By default tasks " +
+        "go at the END of the note; pass `section` (a '##' heading's exact text) " +
+        "to add them at the end of that section instead — an unknown section is " +
+        "rejected (create it with minddy_set_scratchpad first). To change an " +
+        "existing task's state use minddy_update_scratchpad_task; to edit task " +
+        "text or remove tasks use minddy_set_scratchpad.",
+      inputSchema: {
+        tasks: z
+          .array(
+            z.object({
+              text: z
+                .string()
+                .min(1)
+                .max(2000)
+                .describe("The task text (single line)."),
+              state: z
+                .enum(PLAN_TASK_STATES)
+                .optional()
+                .describe("Initial state (default: pending)."),
+            })
+          )
+          .min(1)
+          .max(50)
+          .describe("The tasks to add, in order."),
+        section: z
+          .string()
+          .optional()
+          .describe(
+            "Exact text of a '##' section heading to append under. Omit to add at the end of the note."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const auth = requireUser(extra);
+      if ("error" in auth) return auth.error;
+      try {
+        const service = getServiceClient();
+        const current = await getScratchpad(service, auth.userId);
+        const next = appendScratchpadTasks(
+          current.content,
+          args.tasks.map((task) => ({
+            text: task.text,
+            state: task.state ?? "pending",
+          })),
+          args.section
+        );
+        if (next === null) {
+          return fail(
+            "invalid_params",
+            `Section "${args.section}" was not found. Omit "section" to add at the end, or create the heading first with minddy_set_scratchpad.`
+          );
+        }
+        const saved = await setScratchpad(service, auth.userId, next);
+        return ok({
+          content: saved.content,
+          progress: saved.progress,
+          tasks: parsePlan(saved.content).tasks.map((t) => ({
+            index: t.index,
+            text: t.text,
+            state: t.state,
+          })),
+        });
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }

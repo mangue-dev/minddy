@@ -7,13 +7,6 @@
 
 import type { PlanTaskState } from "@/lib/plan";
 
-export const TASK_MARKER_BY_STATE: Record<PlanTaskState, string> = {
-  pending: "[ ]",
-  in_progress: "[~]",
-  completed: "[x]",
-  cancelled: "[-]",
-};
-
 const STATE_BY_MARKER: Record<string, PlanTaskState> = {
   "[ ]": "pending",
   "[~]": "in_progress",

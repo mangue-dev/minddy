@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type MouseEvent } from "react";
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -11,11 +12,9 @@ import type { NodeViewRenderer } from "@tiptap/core";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
   cn,
   toast,
 } from "mangue-ui";
@@ -28,12 +27,11 @@ import {
   Minus,
   Play,
 } from "lucide-react";
+import { SearchMenu } from "@/components/search-menu";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
-import {
-  TASK_MARKER_BY_STATE,
-  scratchpadTaskMarkdownIt,
-} from "@/components/scratchpad/task-markdown";
+import { TASK_MARKER_BY_STATE } from "@/lib/scratchpad";
+import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown";
 
 /**
  * Scratchpad tasks with the plan's FOUR states inside the WYSIWYG editor. The
@@ -62,12 +60,25 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
     toast.success(tScratch("copiedLineToast"));
   };
 
+  // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button
+  // or by right-clicking the task; anchored to the ⋯ trigger (Radix positions it
+  // transform-aware, unlike a fixed-point anchor inside the dialog).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pick = (fn: () => void) => {
+    fn();
+    setMenuOpen(false);
+  };
+
   return (
     <NodeViewWrapper
       as="li"
       data-type="taskItem"
       data-state={state}
       className="group/task flex items-start gap-2.5 rounded-md px-1 hover:bg-muted/50"
+      onContextMenu={(e: MouseEvent) => {
+        e.preventDefault();
+        setMenuOpen(true);
+      }}
     >
       {/* Wrappers a full text-line tall (text-sm × leading-relaxed) so the box
           and the ⋯ center on the first line, whatever the text wraps to. */}
@@ -111,50 +122,75 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
         contentEditable={false}
         className="flex h-[1.625rem] shrink-0 items-center"
       >
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("taskMenuAria")}
-            onMouseDown={(e) => e.preventDefault()}
-            className="size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-          >
-            <Ellipsis className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <SearchMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          tooltip={t("taskMenuAria")}
+          align="end"
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("taskMenuAria")}
+              onMouseDown={(e) => e.preventDefault()}
+              className="size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            >
+              <Ellipsis className="size-4" />
+            </Button>
+          }
+        >
+          <CommandGroup>
           {state !== "pending" && (
-            <DropdownMenuItem onSelect={() => set("pending")}>
+            <CommandItem
+              value={t("markPending")}
+              keywords={["pending", "todo", "à faire", "a faire"]}
+              onSelect={() => pick(() => set("pending"))}
+            >
               <Circle />
               {t("markPending")}
-            </DropdownMenuItem>
+            </CommandItem>
           )}
           {state !== "in_progress" && (
-            <DropdownMenuItem onSelect={() => set("in_progress")}>
+            <CommandItem
+              value={t("markInProgress")}
+              keywords={["in progress", "en cours", "wip"]}
+              onSelect={() => pick(() => set("in_progress"))}
+            >
               <Play />
               {t("markInProgress")}
-            </DropdownMenuItem>
+            </CommandItem>
           )}
           {state !== "completed" && (
-            <DropdownMenuItem onSelect={() => set("completed")}>
+            <CommandItem
+              value={t("markCompleted")}
+              keywords={["completed", "done", "terminé", "termine", "fait"]}
+              onSelect={() => pick(() => set("completed"))}
+            >
               <Check />
               {t("markCompleted")}
-            </DropdownMenuItem>
+            </CommandItem>
           )}
           {state !== "cancelled" && (
-            <DropdownMenuItem onSelect={() => set("cancelled")}>
+            <CommandItem
+              value={t("cancelTask")}
+              keywords={["cancelled", "annulé", "annule", "drop"]}
+              onSelect={() => pick(() => set("cancelled"))}
+            >
               <CircleSlash />
               {t("cancelTask")}
-            </DropdownMenuItem>
+            </CommandItem>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={copyLine}>
+          <CommandSeparator className="my-1" />
+          <CommandItem
+            value={tScratch("copyLine")}
+            keywords={["copy", "copier", "prompt", "agent"]}
+            onSelect={() => pick(copyLine)}
+          >
             <Copy />
             {tScratch("copyLine")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </CommandItem>
+        </CommandGroup>
+        </SearchMenu>
       </span>
     </NodeViewWrapper>
   );
