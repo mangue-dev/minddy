@@ -1160,6 +1160,10 @@
     "wizardNoRepo": "no repository",
     "wizardFeedbackLabel": "Public feedback board",
     "wizardFeedbackDesc": "A public page where your users suggest ideas and vote. Can also be enabled later in settings.",
+    "wizardSmartAssignLabel": "Smart Assign",
+    "wizardSmartAssignDesc": "Automatically assigns issues based on your team's rules. You can change this later.",
+    "wizardAutoAssignLabel": "Auto-assignment",
+    "wizardAutoAssignDesc": "Assigns new issues to an available team member as they are created.",
     "wizardFinish": "Finish",
     "wizardDoneToast": "Project “{name}” is set up.",
     "iconSiteUrlPlaceholder": "https://myproduct.com",
@@ -1170,7 +1174,7 @@
     "wizardIconTitle": "Project icon",
     "wizardGitTitle": "Link a repository",
     "wizardFinishTitle": "Finishing touches",
-    "wizardFinishSubtitle": "One last setting and the project is ready."
+    "wizardFinishSubtitle": "Choose useful options and your project is ready."
   },
   "Settings": {
     "title": "Project settings",

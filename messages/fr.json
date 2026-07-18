@@ -1160,6 +1160,10 @@
     "wizardNoRepo": "aucun dépôt",
     "wizardFeedbackLabel": "Board de feedback public",
     "wizardFeedbackDesc": "Une page publique où tes utilisateurs proposent des idées et votent. Aussi activable plus tard dans les paramètres.",
+    "wizardSmartAssignLabel": "Smart Assign",
+    "wizardSmartAssignDesc": "Attribue automatiquement les tickets selon les règles de l'équipe. Tu peux modifier ce réglage plus tard.",
+    "wizardAutoAssignLabel": "Auto-attribution",
+    "wizardAutoAssignDesc": "Attribue les nouveaux tickets à un membre disponible dès leur création.",
     "wizardFinish": "Terminer",
     "wizardDoneToast": "Projet « {name} » configuré.",
     "iconSiteUrlPlaceholder": "https://monproduit.com",
@@ -1170,7 +1174,7 @@
     "wizardIconTitle": "Icône du projet",
     "wizardGitTitle": "Relier un dépôt",
     "wizardFinishTitle": "Finitions",
-    "wizardFinishSubtitle": "Un dernier réglage et le projet est prêt."
+    "wizardFinishSubtitle": "Choisis les options utiles et ton projet est prêt."
   },
   "Settings": {
     "title": "Paramètres du projet",

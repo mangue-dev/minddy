@@ -64,6 +64,9 @@ export async function updateProjectSettings({
   if ("color" in input) {
     updates.color = typeof input.color === "string" ? input.color : null;
   }
+  if (typeof input.auto_assign_enabled === "boolean") {
+    updates.auto_assign_enabled = input.auto_assign_enabled;
+  }
   if (typeof input.smart_assign_enabled === "boolean") {
     if (
       input.smart_assign_enabled &&

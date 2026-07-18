@@ -225,6 +225,8 @@ export interface Project {
   icon_url: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
+  /** Automatically assign new issues to the project lead or available member. */
+  auto_assign_enabled: boolean;
   /** Smart Assign rules, user_id → free text describing the member's preferred
       tasks (kept on the project — the owner has no project_members row). */
   smart_assign_rules: Record<string, string>;
@@ -237,6 +239,8 @@ export interface CreateProjectInput {
   name: string;
   key: string;
   color?: string | null;
+  smart_assign_enabled?: boolean;
+  auto_assign_enabled?: boolean;
 }
 
 export interface ProjectUpdateInput {
@@ -244,6 +248,7 @@ export interface ProjectUpdateInput {
   key?: string;
   color?: string | null;
   smart_assign_enabled?: boolean;
+  auto_assign_enabled?: boolean;
   smart_assign_rules?: Record<string, string>;
 }
 

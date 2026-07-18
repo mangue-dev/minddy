@@ -105,6 +105,8 @@ export function CreateProjectWizard({
 
   // Étape « Finitions »
   const [feedbackEnabled, setFeedbackEnabled] = useState(false);
+  const [smartAssignEnabled, setSmartAssignEnabled] = useState(false);
+  const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
   const step: StepId = STEPS[Math.min(stepIndex, STEPS.length - 1)];
   const isLast = stepIndex >= STEPS.length - 1;
@@ -122,6 +124,8 @@ export function CreateProjectWizard({
     setCandidates(null);
     setBinding(false);
     setFeedbackEnabled(false);
+    setSmartAssignEnabled(false);
+    setAutoAssignEnabled(false);
   }, []);
 
   // Reprise après le redirect provider : projet existant, directement à l'étape
@@ -256,6 +260,12 @@ export function CreateProjectWizard({
     if (!project) return;
     setSubmitting(true);
     try {
+      const updated = await updateProject(project.id, {
+        smart_assign_enabled: smartAssignEnabled,
+        auto_assign_enabled: autoAssignEnabled,
+      });
+      setProject(updated);
+
       if (feedbackEnabled) {
         const response = await fetch(`/api/projects/${project.id}/feedback/settings`, {
           method: "PATCH",
@@ -518,6 +528,24 @@ export function CreateProjectWizard({
                           </p>
                         </div>
                       </div>
+                      <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
+                        <span className="flex min-w-0 flex-col gap-0.5 text-left">
+                          <span className="text-sm font-medium">{t("wizardSmartAssignLabel")}</span>
+                          <span className="text-xs leading-relaxed text-muted-foreground">
+                            {t("wizardSmartAssignDesc")}
+                          </span>
+                        </span>
+                        <Switch checked={smartAssignEnabled} onCheckedChange={setSmartAssignEnabled} />
+                      </label>
+                      <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
+                        <span className="flex min-w-0 flex-col gap-0.5 text-left">
+                          <span className="text-sm font-medium">{t("wizardAutoAssignLabel")}</span>
+                          <span className="text-xs leading-relaxed text-muted-foreground">
+                            {t("wizardAutoAssignDesc")}
+                          </span>
+                        </span>
+                        <Switch checked={autoAssignEnabled} onCheckedChange={setAutoAssignEnabled} />
+                      </label>
                       <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
                         <span className="flex min-w-0 flex-col gap-0.5 text-left">
                           <span className="text-sm font-medium">

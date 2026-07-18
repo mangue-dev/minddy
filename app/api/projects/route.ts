@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { ensureProjectLimit } from "@/lib/server/entitlements";
+import {
+  canUseSmartAssign,
+  ensureProjectLimit,
+} from "@/lib/server/entitlements";
 import {
   isPlanLimitError,
   planLimitResponse,
@@ -45,6 +48,8 @@ export async function POST(request: NextRequest) {
   const name = typeof input.name === "string" ? input.name.trim() : "";
   const key = normalizeKey(typeof input.key === "string" ? input.key : "");
   const color = typeof input.color === "string" ? input.color : null;
+  const smartAssignEnabled = input.smart_assign_enabled === true;
+  const autoAssignEnabled = input.auto_assign_enabled === true;
 
   if (!name) {
     return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
@@ -58,6 +63,9 @@ export async function POST(request: NextRequest) {
 
   try {
     await ensureProjectLimit(auth.user.id);
+    if (smartAssignEnabled && !(await canUseSmartAssign(auth.user.id))) {
+      return NextResponse.json({ error: t("smartAssignNotAllowed") }, { status: 403 });
+    }
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -65,7 +73,14 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await auth.supabase
     .from("projects")
-    .insert({ owner_id: auth.user.id, name, key, color })
+    .insert({
+      owner_id: auth.user.id,
+      name,
+      key,
+      color,
+      smart_assign_enabled: smartAssignEnabled,
+      auto_assign_enabled: autoAssignEnabled,
+    })
     .select("*")
     .single();
 
