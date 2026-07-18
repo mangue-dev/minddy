@@ -44,6 +44,9 @@ importers:
       '@tiptap/extension-list':
         specifier: 3.27.4
         version: 3.27.4(@tiptap/core@3.27.4(@tiptap/pm@3.27.4))(@tiptap/pm@3.27.4)
+      '@tiptap/extension-paragraph':
+        specifier: 3.27.4
+        version: 3.27.4(@tiptap/core@3.27.4(@tiptap/pm@3.27.4))
       '@tiptap/extensions':
         specifier: 3.27.4
         version: 3.27.4(@tiptap/core@3.27.4(@tiptap/pm@3.27.4))(@tiptap/pm@3.27.4)
