@@ -30,16 +30,30 @@ export async function PUT(request: NextRequest) {
     body = null;
   }
   const content = (body as { content?: unknown } | null)?.content;
+  const rev = (body as { rev?: unknown } | null)?.rev;
   if (typeof content !== "string") {
     return NextResponse.json({ error: "content must be a string" }, { status: 400 });
+  }
+  if (typeof rev !== "number" || !Number.isInteger(rev) || rev < 0) {
+    return NextResponse.json(
+      { error: "rev must be the non-negative integer version you edited from" },
+      { status: 400 }
+    );
   }
   if (content.length > MAX_SCRATCHPAD_LENGTH) {
     return NextResponse.json({ error: "content too long" }, { status: 400 });
   }
 
   try {
-    const state = await setScratchpad(auth.supabase, auth.user.id, content);
-    return NextResponse.json(state);
+    const { conflicted, ...state } = await setScratchpad(
+      auth.supabase,
+      auth.user.id,
+      content,
+      rev
+    );
+    // 409 with the CURRENT server state — the client 3-way merges its edit onto
+    // this and retries with the fresh rev.
+    return NextResponse.json(state, { status: conflicted ? 409 : 200 });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }

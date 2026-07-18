@@ -16,11 +16,9 @@ import {
 } from "mangue-ui";
 import { Check, Copy, ListX, X } from "lucide-react";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useScratchpad } from "@/lib/scratchpad-context";
-import {
-  useSaveScratchpad,
-  useScratchpadQuery,
-} from "@/lib/use-scratchpad-query";
+import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
 
 /**
@@ -53,11 +51,22 @@ export function ScratchpadModal() {
 function ScratchpadBody() {
   const t = useTranslations("Scratchpad");
   const { isOpen, setOpen } = useScratchpad();
-  const { content, isLoading } = useScratchpadQuery(isOpen);
-  const save = useSaveScratchpad();
 
   const markdownRef = useRef<(() => string) | null>(null);
+  const applyRef = useRef<
+    ((content: string, opts?: { emitUpdate?: boolean }) => void) | null
+  >(null);
   const removeCompletedRef = useRef<(() => number) | null>(null);
+
+  const { content, isLoading, isSaving, save } = useScratchpadDoc({
+    open: isOpen,
+    liveRef: markdownRef,
+    applyRef,
+  });
+
+  // Soft fade at the scroll edges (same pattern as the Kanban columns and the
+  // agent feed) so it's clear the notes continue past the top/bottom.
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
 
   const removeCompleted = () => {
     const removed = removeCompletedRef.current?.() ?? 0;
@@ -81,13 +90,13 @@ function ScratchpadBody() {
     toast.success(t("copiedSectionToast"));
   };
 
-  const showSaveState = !isLoading && (save.isPending || content.trim() !== "");
+  const showSaveState = !isLoading && (isSaving || content.trim() !== "");
 
   return (
     <>
       {showSaveState && (
         <div className="absolute top-4 left-5 z-30 flex items-center gap-1.5 text-xs text-muted-foreground">
-          {save.isPending ? (
+          {isSaving ? (
             <>
               <Spinner className="size-3" />
               {t("saving")}
@@ -150,7 +159,11 @@ function ScratchpadBody() {
         </Tooltip>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto px-6 pt-48 pb-12">
+      <div
+        ref={fadeRef}
+        {...scrollProps}
+        className="flex flex-1 flex-col overflow-y-auto px-6 pt-48 pb-12"
+      >
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
           {isLoading ? (
             <div className="flex justify-center py-16 text-muted-foreground">
@@ -159,11 +172,12 @@ function ScratchpadBody() {
           ) : (
             <ScratchpadEditor
               initialValue={content}
-              onChange={(md) => save.mutate(md)}
+              onChange={save}
               onCopySection={copySection}
               placeholder={t("placeholder")}
               copySectionLabel={t("copySection")}
               markdownRef={markdownRef}
+              applyExternalRef={applyRef}
               removeCompletedRef={removeCompletedRef}
             />
           )}

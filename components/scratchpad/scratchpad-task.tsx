@@ -74,7 +74,7 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
       as="li"
       data-type="taskItem"
       data-state={state}
-      className="group/task flex items-start gap-2.5 rounded-md px-1 hover:bg-muted/50"
+      className="group/task flex items-start gap-2.5 rounded-[3px] px-1 hover:bg-muted/50"
       onContextMenu={(e: MouseEvent) => {
         e.preventDefault();
         setMenuOpen(true);

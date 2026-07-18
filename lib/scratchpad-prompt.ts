@@ -5,6 +5,8 @@
 // anglais et prévient l'agent que les notes sont floues → demander si besoin.
 // La note est courte : on l'inline directement (contrairement au plan d'issue).
 
+import { stripScratchpadSpacers } from "@/lib/scratchpad";
+
 export function buildScratchpadPrompt(
   notes: string,
   opts?: { section?: boolean }
@@ -29,7 +31,7 @@ If the minddy MCP tools are not available, that's fine — just work from the no
   return `Work through ${target}.
 
 <notes>
-${notes.trim()}
+${stripScratchpadSpacers(notes).trim()}
 </notes>
 
 These are rough, personal working notes — a quick to-do list I jotted down, not a formal spec. Checkbox lines are to-do items: '- [ ]' means to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Some items may be terse or ambiguous. If anything is unclear or you need more detail before acting, ask me first rather than guessing.

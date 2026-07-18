@@ -59,7 +59,11 @@ import {
   getCycleOverview,
   getCyclePrefsForUser,
 } from "@/lib/server/cycles";
-import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
+import {
+  getScratchpad,
+  setScratchpad,
+  mutateScratchpad,
+} from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH, appendScratchpadTasks } from "@/lib/scratchpad";
 import { effortToPoints, statusCompletionCredit, todayISO } from "@/lib/cycle";
 import { issueIdentifier, type IssueEffort, type IssueStatus } from "@/lib/issue-constants";
@@ -1477,7 +1481,9 @@ export function registerMinddyTools(server: McpServer): void {
         "the flat list of tasks with their 0-based index (document order) — pass " +
         "those indices to minddy_update_scratchpad_task to tick items off without " +
         "rewriting the doc. There is exactly one scratchpad per account; it is " +
-        "not tied to a project.",
+        "not tied to a project. Also returns `rev`, the version — pass it back to " +
+        "minddy_set_scratchpad / minddy_update_scratchpad_task so a concurrent " +
+        "edit by the user is never overwritten.",
       inputSchema: {},
       annotations: READ_ONLY,
     },
@@ -1489,6 +1495,7 @@ export function registerMinddyTools(server: McpServer): void {
         return ok({
           content: state.content,
           updated_at: state.updated_at,
+          rev: state.rev,
           progress: state.progress,
           tasks: parsePlan(state.content).tasks.map((t) => ({
             index: t.index,
@@ -1512,13 +1519,25 @@ export function registerMinddyTools(server: McpServer): void {
         "preserve the parts you are not changing (keep other sections; only tick " +
         "off the items you actually finished). Checkbox convention: '- [ ]' to " +
         "do, '- [~]' in progress, '- [x]' done, '- [-]' dropped; '##' for section " +
-        "titles. An empty string clears the scratchpad.",
+        "titles. An empty string clears the scratchpad. ALWAYS pass `expected_rev` " +
+        "(the `rev` from your minddy_get_scratchpad): the write is rejected if the " +
+        "note changed meanwhile so you never clobber the user's concurrent edits.",
       inputSchema: {
         content: z
           .string()
           .max(MAX_SCRATCHPAD_LENGTH)
           .describe(
             "The full new scratchpad markdown (replaces everything currently there)."
+          ),
+        expected_rev: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe(
+            "The `rev` from the minddy_get_scratchpad you based this on. If it no " +
+              "longer matches (the user edited meanwhile) the write is rejected — " +
+              "re-read and reapply. Omit only for an unconditional overwrite."
           ),
       },
       annotations: WRITE_IDEMPOTENT,
@@ -1527,7 +1546,47 @@ export function registerMinddyTools(server: McpServer): void {
       const auth = requireUser(extra);
       if ("error" in auth) return auth.error;
       try {
-        return ok(await setScratchpad(getServiceClient(), auth.userId, args.content));
+        const service = getServiceClient();
+        // With expected_rev: a strict compare-and-swap — a stale base is refused
+        // so the user's concurrent edits are never overwritten. Without it: an
+        // unconditional (but still atomic) overwrite for backward compatibility.
+        if (args.expected_rev !== undefined) {
+          const write = await setScratchpad(
+            service,
+            auth.userId,
+            args.content,
+            args.expected_rev
+          );
+          if (write.conflicted) {
+            return fail(
+              "conflict",
+              `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${write.rev}) — the user likely edited it in the app. Call minddy_get_scratchpad again, reapply your change onto the fresh content, and set it with the new rev.`
+            );
+          }
+          return ok({
+            content: write.content,
+            updated_at: write.updated_at,
+            rev: write.rev,
+            progress: write.progress,
+          });
+        }
+        const result = await mutateScratchpad(
+          service,
+          auth.userId,
+          () => args.content
+        );
+        if (result.status !== "ok") {
+          return fail(
+            "conflict",
+            "The scratchpad is being edited concurrently; read it again and retry."
+          );
+        }
+        return ok({
+          content: result.state.content,
+          updated_at: result.state.updated_at,
+          rev: result.state.rev,
+          progress: result.state.progress,
+        });
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }
@@ -1545,7 +1604,9 @@ export function registerMinddyTools(server: McpServer): void {
         "each task keeps its text, only its checkbox marker changes. States: " +
         "pending, in_progress, completed, cancelled. To add/remove tasks or edit " +
         "their text, use minddy_set_scratchpad instead. Indices are validated " +
-        "all-or-nothing: a single out-of-range index rejects the whole call.",
+        "all-or-nothing: a single out-of-range index rejects the whole call. Pass " +
+        "`expected_rev` (the `rev` from the get whose indices you're using) so a " +
+        "concurrent edit can't make you flip the wrong task.",
       inputSchema: {
         tasks: z
           .array(
@@ -1561,6 +1622,16 @@ export function registerMinddyTools(server: McpServer): void {
           .min(1)
           .max(50)
           .describe("The task-state changes to apply."),
+        expected_rev: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe(
+            "The `rev` from the minddy_get_scratchpad whose task indices you are " +
+              "using. If the note changed since, the indices may point elsewhere, " +
+              "so the call is rejected — re-read for fresh indices and retry."
+          ),
       },
       annotations: WRITE_IDEMPOTENT,
     },
@@ -1570,6 +1641,18 @@ export function registerMinddyTools(server: McpServer): void {
       try {
         const service = getServiceClient();
         const current = await getScratchpad(service, auth.userId);
+        // Guard against stale indices: if the note advanced past the version the
+        // caller read the indices from, the same index may now be a different
+        // task — refuse so the wrong item is never flipped.
+        if (
+          args.expected_rev !== undefined &&
+          current.rev !== args.expected_rev
+        ) {
+          return fail(
+            "conflict",
+            `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${current.rev}), so your task indices may no longer match. Call minddy_get_scratchpad again for fresh indices and retry.`
+          );
+        }
         const parsed = parsePlan(current.content);
         for (const change of args.tasks) {
           if (change.task_index >= parsed.tasks.length) {
@@ -1583,9 +1666,16 @@ export function registerMinddyTools(server: McpServer): void {
         for (const change of args.tasks) {
           next = setTaskState(next, parsed.tasks[change.task_index].line, change.state);
         }
-        const saved = await setScratchpad(service, auth.userId, next);
+        const saved = await setScratchpad(service, auth.userId, next, current.rev);
+        if (saved.conflicted) {
+          return fail(
+            "conflict",
+            "The scratchpad was edited concurrently while applying your change. Call minddy_get_scratchpad again for fresh indices and retry."
+          );
+        }
         return ok({
           content: saved.content,
+          rev: saved.rev,
           progress: saved.progress,
           tasks: parsePlan(saved.content).tasks.map((t) => ({
             index: t.index,
@@ -1643,24 +1733,35 @@ export function registerMinddyTools(server: McpServer): void {
       if ("error" in auth) return auth.error;
       try {
         const service = getServiceClient();
-        const current = await getScratchpad(service, auth.userId);
-        const next = appendScratchpadTasks(
-          current.content,
-          args.tasks.map((task) => ({
-            text: task.text,
-            state: task.state ?? "pending",
-          })),
-          args.section
+        // Appending is position-independent, so no rev is needed: mutateScratchpad
+        // re-reads and re-appends under compare-and-swap on conflict, landing the
+        // new tasks on top of the latest note without clobbering concurrent edits.
+        const result = await mutateScratchpad(service, auth.userId, (content) =>
+          appendScratchpadTasks(
+            content,
+            args.tasks.map((task) => ({
+              text: task.text,
+              state: task.state ?? "pending",
+            })),
+            args.section
+          )
         );
-        if (next === null) {
+        if (result.status === "aborted") {
           return fail(
             "invalid_params",
             `Section "${args.section}" was not found. Omit "section" to add at the end, or create the heading first with minddy_set_scratchpad.`
           );
         }
-        const saved = await setScratchpad(service, auth.userId, next);
+        if (result.status === "conflict") {
+          return fail(
+            "conflict",
+            "The scratchpad is being edited concurrently; read it again and retry."
+          );
+        }
+        const saved = result.state;
         return ok({
           content: saved.content,
+          rev: saved.rev,
           progress: saved.progress,
           tasks: parsePlan(saved.content).tasks.map((t) => ({
             index: t.index,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   appendScratchpadTasks,
+  mergeScratchpad,
   removeCompletedTasks,
   splitScratchpadSections,
 } from "@/lib/scratchpad";
@@ -99,5 +100,86 @@ describe("removeCompletedTasks", () => {
     const result = removeCompletedTasks(note);
     expect(result.removed).toBe(0);
     expect(result.content).toBe(note);
+  });
+
+  it("drops a section title when all of its tasks were completed", () => {
+    const note = "## Done\n- [x] a\n- [x] b\n\n## Live\n- [ ] c";
+    const { content, removed } = removeCompletedTasks(note);
+    expect(removed).toBe(2);
+    expect(content).toBe("## Live\n- [ ] c");
+  });
+
+  it("also removes the emptied section's '---' separator and blanks", () => {
+    const note = "## à faire\n- [x] Configurer stripe\n\n---\n\n# Carnet\n- [ ] c";
+    const { content } = removeCompletedTasks(note);
+    expect(content).toBe("# Carnet\n- [ ] c");
+  });
+
+  it("keeps the title when the section still has prose", () => {
+    const note = "## Notes\nkeep this line\n- [x] a";
+    const { content } = removeCompletedTasks(note);
+    expect(content).toBe("## Notes\nkeep this line");
+  });
+
+  it("keeps a cancelled task (a section of [-] is not 'all completed')", () => {
+    const note = "## Section\n- [x] a\n- [-] b";
+    const { content } = removeCompletedTasks(note);
+    expect(content).toBe("## Section\n- [-] b");
+  });
+
+  it("keeps a parent whose subsection survives, but drops the empty subsection", () => {
+    const note = "# Parent\n## A\n- [x] a\n## B\n- [ ] b";
+    const { content } = removeCompletedTasks(note);
+    expect(content).toBe("# Parent\n## B\n- [ ] b");
+  });
+
+  it("empties the note when every section is fully completed", () => {
+    const note = "# A\n- [x] a\n## B\n- [x] b";
+    const { content, removed } = removeCompletedTasks(note);
+    expect(removed).toBe(2);
+    expect(content).toBe("");
+  });
+});
+
+describe("mergeScratchpad", () => {
+  const base = "# A\n- [ ] a1\n- [ ] a2\n\n# B\n- [ ] b1";
+
+  it("returns the value when nobody diverged", () => {
+    expect(mergeScratchpad(base, base, base)).toBe(base);
+  });
+
+  it("takes your version when only you changed", () => {
+    const ours = base.replace("- [ ] a1", "- [x] a1");
+    expect(mergeScratchpad(base, ours, base)).toBe(ours);
+  });
+
+  it("takes their version when only the other side changed", () => {
+    const theirs = base + "\n- [ ] b2";
+    expect(mergeScratchpad(base, base, theirs)).toBe(theirs);
+  });
+
+  it("keeps BOTH sides' edits when they touch different lines", () => {
+    const ours = base.replace("- [ ] a1", "- [x] a1"); // you tick a1
+    const theirs = base.replace("- [ ] b1", "- [x] b1"); // agent ticks b1
+    const merged = mergeScratchpad(base, ours, theirs);
+    expect(merged).toContain("- [x] a1");
+    expect(merged).toContain("- [x] b1");
+    expect(merged).toContain("- [ ] a2");
+  });
+
+  it("merges an append from one side with an edit from the other", () => {
+    const ours = base.replace("- [ ] a2", "- [x] a2"); // you tick a2
+    const theirs = base + "\n- [ ] b2"; // agent adds b2
+    const merged = mergeScratchpad(base, ours, theirs);
+    expect(merged).toContain("- [x] a2");
+    expect(merged).toContain("- [ ] b2");
+  });
+
+  it("prefers your version when the SAME line was changed on both sides", () => {
+    const ours = base.replace("- [ ] a1", "- [x] a1 (mine)");
+    const theirs = base.replace("- [ ] a1", "- [~] a1 (agent)");
+    const merged = mergeScratchpad(base, ours, theirs);
+    expect(merged).toContain("a1 (mine)");
+    expect(merged).not.toContain("a1 (agent)");
   });
 });

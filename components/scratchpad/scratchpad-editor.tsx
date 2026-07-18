@@ -13,8 +13,13 @@ import { Markdown } from "tiptap-markdown";
 import { useTranslations } from "next-intl";
 import { Spinner, cn } from "mangue-ui";
 import { Heading1, Heading2, Heading3, List, ListTodo, Mic } from "lucide-react";
-import { removeCompletedTasks, splitScratchpadSections } from "@/lib/scratchpad";
+import {
+  removeCompletedTasks,
+  splitScratchpadSections,
+  stripScratchpadSpacers,
+} from "@/lib/scratchpad";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
+import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import {
   ScratchpadTaskItem,
   ScratchpadTaskList,
@@ -57,9 +62,14 @@ const PROSE = cn(
 
 function getMarkdown(editor: Editor): string {
   // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
-  return (
+  const md = (
     editor.storage as unknown as { markdown: { getMarkdown(): string } }
   ).markdown.getMarkdown();
+  // An empty doc is a single empty paragraph → the paragraph serializer emits a
+  // lone nbsp spacer (scratchpad-paragraph.ts). Normalize a doc that is ONLY
+  // spacers back to "" so a blank note stores blank (spacers are only kept when
+  // they sit among real content).
+  return stripScratchpadSpacers(md).trim() === "" ? "" : md;
 }
 
 /**
@@ -74,6 +84,7 @@ export function ScratchpadEditor({
   placeholder,
   copySectionLabel,
   markdownRef,
+  applyExternalRef,
   removeCompletedRef,
 }: {
   initialValue: string;
@@ -84,6 +95,13 @@ export function ScratchpadEditor({
   /** Populated with a getter for the editor's live markdown, so the parent's
       "copy all" reflects the current text without waiting for a debounced save. */
   markdownRef?: MutableRefObject<(() => string) | null>;
+  /** Populated with a setter that replaces the editor's content — used by the
+      sync layer to adopt a merged/remote version (see lib/use-scratchpad-query).
+      `emitUpdate` defaults to false so adopting an already-persisted version does
+      not trigger a redundant save. */
+  applyExternalRef?: MutableRefObject<
+    ((content: string, opts?: { emitUpdate?: boolean }) => void) | null
+  >;
   /** Populated with an action that drops completed tasks from the live editor
       (returns how many were removed) — driven by the modal's toolbar button. */
   removeCompletedRef?: MutableRefObject<(() => number) | null>;
@@ -203,7 +221,8 @@ export function ScratchpadEditor({
   // useEditor expects. @tiptap/pm and @tiptap/core are single-versioned, so it's
   // purely a type artifact — cast to the react-side Extensions type.
   const extensions = [
-    StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+    StarterKit.configure({ heading: { levels: [1, 2, 3] }, paragraph: false }),
+    ScratchpadParagraph,
     ScratchpadTaskList,
     ScratchpadTaskItem,
     Markdown.configure({
@@ -231,6 +250,13 @@ export function ScratchpadEditor({
     onCreate: ({ editor }) => {
       editorRef.current = editor;
       if (markdownRef) markdownRef.current = () => getMarkdown(editor);
+      if (applyExternalRef)
+        applyExternalRef.current = (content, opts) => {
+          if (editor.isDestroyed) return;
+          editor.commands.setContent(content, {
+            emitUpdate: opts?.emitUpdate ?? false,
+          });
+        };
       if (removeCompletedRef)
         removeCompletedRef.current = () => removeCompletedFnRef.current();
     },
@@ -246,6 +272,7 @@ export function ScratchpadEditor({
     () => () => {
       flush();
       if (markdownRef) markdownRef.current = null;
+      if (applyExternalRef) applyExternalRef.current = null;
       if (removeCompletedRef) removeCompletedRef.current = null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

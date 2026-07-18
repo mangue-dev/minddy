@@ -68,6 +68,8 @@ function keysForUserEvent(change: BroadcastChange): QueryKey[] {
         ["me", "board"],
         ["me", "cycle"],
       ];
+    case "user_scratchpad": // agent (MCP) or another tab edited my notes
+      return [["me", "scratchpad"]];
     case "ai_usage": // une action IA vient d'être comptée → jauge du header (MIN-72)
       return [["billing", "usage"]];
     case "billing_accounts": // sync Stripe / override admin → plan effectif
@@ -155,6 +157,7 @@ const USER_SCOPE_KEYS: QueryKey[] = [
   ["views", "global"],
   ["me", "board"],
   ["me", "cycle"],
+  ["me", "scratchpad"],
   ["billing"],
 ];
 const projectScopeKeys = (projectId: string): QueryKey[] => [
