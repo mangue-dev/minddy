@@ -246,6 +246,20 @@ export function AgentConversation({
     if (working || liveRun?.pr_number != null) setRequestingPr(false);
   }, [working, liveRun?.pr_number]);
 
+  // Un tour qui se termine émet ses DERNIERS events (résumé + `files_changed`) juste
+  // avant de passer `completed` : le polling à 2 s s'arrête dès que le statut n'est
+  // plus « travaille » et peut donc les manquer. On refetch une fois au passage
+  // travail → repos pour que le bloc de fichiers settled et le bouton PR arrivent sans
+  // attendre un remontage.
+  const wasWorkingRef = useRef(working);
+  useEffect(() => {
+    const runId = liveRun?.id;
+    if (wasWorkingRef.current && !working && runId) {
+      void queryClient.invalidateQueries({ queryKey: ["agent-run-events", runId] });
+    }
+    wasWorkingRef.current = working;
+  }, [working, liveRun?.id, queryClient]);
+
   // Heartbeat tant que le composant est actif sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
   useEffect(() => {
