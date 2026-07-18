@@ -32,6 +32,7 @@ import {
   MoreHorizontal,
   Megaphone,
   BarChart3,
+  CreditCard,
   Settings,
   ArrowUpRight,
   Shield,
@@ -339,6 +340,12 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
           <Link href="/settings">
             <Settings />
             {t("accountSettings")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/billing">
+            <CreditCard />
+            {t("billing")}
           </Link>
         </DropdownMenuItem>
         {isAdmin && (

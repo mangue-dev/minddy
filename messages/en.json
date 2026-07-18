@@ -257,7 +257,9 @@
     "historySubtitle": "Each entry is one action of the current period, with its share of the budget.",
     "historyAllTypes": "All types",
     "historyEmpty": "No usage yet this period.",
-    "historyLoadMore": "Load more ({remaining})",
+    "historyPageOf": "Page {page} / {pages}",
+    "historyPrev": "Previous page",
+    "historyNext": "Next page",
     "agentsGateTitle": "Code agents are not in your plan",
     "agentsGateDescription": "Upgrade to Go or Pro to let Numo's agent work on your tickets and open pull requests.",
     "agentsGateCta": "View plans",
@@ -1653,7 +1655,26 @@
     "tabs": {
       "models": "Models",
       "costs": "AI costs",
-      "quotas": "Quotas"
+      "quotas": "Quotas",
+      "billing": "Billing"
+    },
+    "billing": {
+      "title": "Plan overrides",
+      "subtitle": "Force a plan on an account (takes precedence over Stripe). Remove the override to restore the real plan.",
+      "searchPlaceholder": "user@email.com",
+      "search": "Search",
+      "notFound": "No account with this email.",
+      "effectivePlan": "Plan: {plan}",
+      "source_admin_override": "Admin override",
+      "source_stripe": "Stripe subscription",
+      "source_default": "Default (free)",
+      "stripeUnderneath": "Stripe plan underneath: {plan}",
+      "overrideLabel": "Forced plan",
+      "overrideNone": "None (real plan)",
+      "noteLabel": "Note",
+      "notePlaceholder": "Why this override (internal)",
+      "save": "Save",
+      "saved": "Override saved."
     },
     "title": "AI models",
     "subtitle": "Configure the AI models minddy uses. Format is provider/model (e.g. deepseek/deepseek-v4-flash); leave empty to fall back to the default.",

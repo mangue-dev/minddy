@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { AdminModelsDashboard } from "./admin-models-dashboard";
 import { AdminCostsDashboard } from "./admin-costs-dashboard";
 import { AdminQuotasDashboard } from "./admin-quotas-dashboard";
+import { AdminBillingDashboard } from "./admin-billing-dashboard";
 
 /**
  * Shell à onglets du `/admin` : « Modèles » (config des modèles IA), « Coûts IA »
@@ -21,6 +22,7 @@ export function AdminDashboard() {
           <TabsTrigger value="models">{t("tabs.models")}</TabsTrigger>
           <TabsTrigger value="costs">{t("tabs.costs")}</TabsTrigger>
           <TabsTrigger value="quotas">{t("tabs.quotas")}</TabsTrigger>
+          <TabsTrigger value="billing">{t("tabs.billing")}</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="models">
@@ -31,6 +33,9 @@ export function AdminDashboard() {
       </TabsContent>
       <TabsContent value="quotas">
         <AdminQuotasDashboard />
+      </TabsContent>
+      <TabsContent value="billing">
+        <AdminBillingDashboard />
       </TabsContent>
     </Tabs>
   );

@@ -257,7 +257,9 @@
     "historySubtitle": "Chaque entrée est une action de la période en cours, avec sa part du budget.",
     "historyAllTypes": "Tous les types",
     "historyEmpty": "Aucun usage sur cette période.",
-    "historyLoadMore": "Charger plus ({remaining})",
+    "historyPageOf": "Page {page} / {pages}",
+    "historyPrev": "Page précédente",
+    "historyNext": "Page suivante",
     "agentsGateTitle": "Les agents de code ne sont pas dans votre plan",
     "agentsGateDescription": "Passez à Go ou Pro pour laisser l'agent de Numo travailler sur vos tickets et ouvrir des pull requests.",
     "agentsGateCta": "Voir les plans",
@@ -1653,7 +1655,26 @@
     "tabs": {
       "models": "Modèles",
       "costs": "Coûts IA",
-      "quotas": "Quotas"
+      "quotas": "Quotas",
+      "billing": "Facturation"
+    },
+    "billing": {
+      "title": "Overrides de plan",
+      "subtitle": "Forcer un plan sur un compte (prioritaire sur Stripe). Retirer l'override rend son vrai plan.",
+      "searchPlaceholder": "utilisateur@email.com",
+      "search": "Rechercher",
+      "notFound": "Aucun compte avec cet email.",
+      "effectivePlan": "Plan : {plan}",
+      "source_admin_override": "Override admin",
+      "source_stripe": "Abonnement Stripe",
+      "source_default": "Défaut (free)",
+      "stripeUnderneath": "Plan Stripe sous-jacent : {plan}",
+      "overrideLabel": "Plan forcé",
+      "overrideNone": "Aucun (plan réel)",
+      "noteLabel": "Note",
+      "notePlaceholder": "Pourquoi cet override (interne)",
+      "save": "Enregistrer",
+      "saved": "Override enregistré."
     },
     "title": "Modèles IA",
     "subtitle": "Configurez les modèles d’IA utilisés par minddy. Le format est provider/model (ex. deepseek/deepseek-v4-flash) ; laissez vide pour revenir à la valeur par défaut.",

@@ -48,13 +48,8 @@ export default function BillingPage() {
           <PlanSection />
         </section>
 
-        <section className="space-y-3">
-          <div>
-            <h2 className="text-sm font-semibold">{t("historyTitle")}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("historySubtitle")}
-            </p>
-          </div>
+        {/* L'accordéon porte son propre en-tête (titre + sous-titre). */}
+        <section>
           <UsageHistorySection />
         </section>
       </div>
