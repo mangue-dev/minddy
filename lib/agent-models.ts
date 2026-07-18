@@ -39,12 +39,10 @@ export const AGENT_ALLOWED_MODELS: AgentModelOption[] = [
 // ── Clés app_config (surcharge admin sans redeploy) ──────────────────────────
 /** Défaut racine du modèle de l'agent. */
 export const AGENT_MODEL_CONFIG_KEY = "agent_model";
-/** Plafond mensuel (USD) d'usage de l'agent sur la clé plateforme. */
-export const AGENT_MONTHLY_CAP_CONFIG_KEY = "agent_monthly_cap_usd";
+// L'ancien plafond mensuel fixe (`agent_monthly_cap_usd`, 10 $) est remplacé
+// depuis MIN-72 par le budget d'usage du PLAN (lib/billing-plans.ts).
 
 // ── Réglages opérationnels (défauts ; surchargables plus tard) ────────────────
-/** Plafond mensuel par défaut (USD) quand la clé plateforme est utilisée. */
-export const AGENT_MONTHLY_CAP_USD_DEFAULT = 10;
 /** Soft-deadline d'un chunk : au-delà, on suspend au round suivant (< 300s maxDuration). */
 export const AGENT_SOFT_DEADLINE_MS = 250_000;
 /** Timeout dur d'un appel modèle dans la boucle agentique. */

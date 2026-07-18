@@ -3,22 +3,22 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getAppConfigValue, setAppConfigValue } from "@/lib/server/app-config";
-import {
-  AGENT_MONTHLY_CAP_CONFIG_KEY,
-  AGENT_MONTHLY_CAP_USD_DEFAULT,
-} from "@/lib/agent-models";
+import { getUserUsage } from "@/lib/server/usage";
 import { displayName } from "@/lib/display-name";
 
 /**
- * Administration des LIMITES d'usage de l'agent (`/admin` → onglet « Quotas »).
+ * Administration des LIMITES d'usage (`/admin` → onglet « Quotas »).
  * Gate identique aux autres endpoints admin : JWT via getClaims + isAdminUser.
  *
- *  GET    → plafond mensuel en vigueur + une ligne par utilisateur ayant consommé
- *           l'agent ce mois-ci (dépense réelle vs dépense comptée par le quota).
- *  POST   { userId }        → remet son quota à zéro (pose le filigrane).
+ * Depuis MIN-72 il n'y a PLUS de plafond global : la limite de chaque
+ * utilisateur est le budget mensuel de SON plan (lib/billing-plans.ts), toutes
+ * features confondues — l'écran l'affiche par ligne, avec le plan résolu.
+ *
+ *  GET    → une ligne par utilisateur ayant consommé de l'IA ce mois-ci :
+ *           dépense réelle du mois (analyses) vs dépense comptée sur SA vraie
+ *           fenêtre (période Stripe ou mois, bornée par le filigrane) + budget.
+ *  POST   { userId }        → remet son budget à zéro (pose le filigrane).
  *  DELETE ?userId=<uuid>    → annule la remise à zéro (le mois entier recompte).
- *  PATCH  { cap }           → change le plafond mensuel global (USD).
  *
  * La remise à zéro NE SUPPRIME AUCUNE donnée de coût : `ai_usage` est un ledger
  * append-only, source des analyses. On déplace seulement le début de la fenêtre
@@ -37,9 +37,6 @@ async function requireAdmin(
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Garde-fou : un plafond négatif bloquerait tout le monde, un plafond absurde ne
- *  protégerait plus rien. */
-const CAP_MAX_USD = 10_000;
 
 interface QuotaUsageRow {
   user_id: string;
@@ -48,12 +45,6 @@ interface QuotaUsageRow {
   calls: number;
   last_used_at: string;
   reset_at: string | null;
-}
-
-async function currentCap(): Promise<number> {
-  const raw = await getAppConfigValue(AGENT_MONTHLY_CAP_CONFIG_KEY);
-  const parsed = raw != null ? Number(raw) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : AGENT_MONTHLY_CAP_USD_DEFAULT;
 }
 
 export async function GET(request: NextRequest) {
@@ -66,10 +57,9 @@ export async function GET(request: NextRequest) {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
   ).toISOString();
 
-  const [{ data, error }, cap] = await Promise.all([
-    service.rpc("get_agent_quota_usage", { p_month_start: monthStart }),
-    currentCap(),
-  ]);
+  const { data, error } = await service.rpc("get_agent_quota_usage", {
+    p_month_start: monthStart,
+  });
   if (error) {
     console.error("[admin/agent-quota] get_agent_quota_usage failed:", error.message);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
@@ -78,27 +68,35 @@ export async function GET(request: NextRequest) {
   const rows = (data ?? []) as QuotaUsageRow[];
   // Nom lisible par utilisateur (jamais l'email brut côté UI, cf. lib/display-name).
   // Une poignée d'utilisateurs par mois → résolution unitaire, pas de listUsers.
+  // `getUserUsage` donne la dépense comptée sur la VRAIE fenêtre de l'utilisateur
+  // (période Stripe ou mois calendaire, bornée par le filigrane) + son plan.
   const users = await Promise.all(
     rows.map(async (r) => {
-      const { data: u } = await service.auth.admin.getUserById(r.user_id);
+      const [{ data: u }, usage] = await Promise.all([
+        service.auth.admin.getUserById(r.user_id),
+        getUserUsage(r.user_id),
+      ]);
       const meta = u?.user?.user_metadata as { full_name?: string } | undefined;
-      const spentCounted = Number(r.spent_counted) || 0;
+      const capUsd = usage.billing.plan.includedUsageUsd;
       return {
         userId: r.user_id,
         name: displayName({ full_name: meta?.full_name, email: u?.user?.email }, "—"),
+        planId: usage.billing.planId,
+        /** Budget mensuel du plan de CET utilisateur (USD, coût brut). */
+        capUsd,
         /** Dépense RÉELLE du mois — analyses, jamais altérée par une remise à zéro. */
         spentMonth: Number(r.spent_month) || 0,
-        /** Ce que le plafond compte vraiment (depuis le filigrane). */
-        spentCounted,
+        /** Ce que le budget compte vraiment (vraie fenêtre + filigrane). */
+        spentCounted: usage.usedUsd,
         calls: Number(r.calls) || 0,
         lastUsedAt: r.last_used_at,
         resetAt: r.reset_at,
-        blocked: spentCounted >= cap,
+        blocked: usage.usedUsd >= capUsd,
       };
     }),
   );
 
-  return NextResponse.json({ cap, capDefault: AGENT_MONTHLY_CAP_USD_DEFAULT, monthStart, users });
+  return NextResponse.json({ monthStart, users });
 }
 
 /** POST { userId } — pose le filigrane : le quota repart de maintenant. */
@@ -149,33 +147,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Undo failed" }, { status: 500 });
   }
   return NextResponse.json({ ok: true, userId });
-}
-
-/** PATCH { cap } — plafond mensuel global (USD), commun à tous les utilisateurs. */
-export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin(request);
-  if (!admin.ok) return admin.response;
-
-  let body: { cap?: unknown };
-  try {
-    body = (await request.json()) as { cap?: unknown };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-  const cap = typeof body.cap === "number" ? body.cap : Number(body.cap);
-  if (!Number.isFinite(cap) || cap <= 0 || cap > CAP_MAX_USD) {
-    return NextResponse.json(
-      { error: `Cap must be between 0 and ${CAP_MAX_USD}` },
-      { status: 400 },
-    );
-  }
-
-  try {
-    await setAppConfigValue(AGENT_MONTHLY_CAP_CONFIG_KEY, String(cap));
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "Save failed";
-    console.error("[admin/agent-quota] cap save failed:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-  return NextResponse.json({ ok: true, cap });
 }

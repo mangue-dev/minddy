@@ -2,19 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Input, Separator, Skeleton, Spinner, toast } from "mangue-ui";
+import { Badge, Button, Skeleton, Spinner, toast } from "mangue-ui";
 import { RotateCcw, Undo2 } from "lucide-react";
 
 /**
- * Dashboard admin des LIMITES d'usage de l'agent (`/admin` → onglet « Quotas »).
- * Lit/écrit `/api/admin/agent-quota` : plafond mensuel global + une ligne par
- * utilisateur ayant consommé l'agent ce mois-ci.
+ * Dashboard admin des LIMITES d'usage (`/admin` → onglet « Quotas »).
+ * Lit/écrit `/api/admin/agent-quota` : une ligne par utilisateur ayant consommé
+ * de l'IA ce mois-ci, avec SON plan et SON budget (MIN-72 — plus de plafond
+ * global : la limite est le budget mensuel du plan, toutes features).
  *
  * Le point important de cet écran : « remettre à zéro » ne supprime AUCUN coût.
  * Chaque ligne montre donc DEUX montants — la dépense réelle du mois (analyses,
- * intacte) et ce que le plafond compte vraiment (depuis la remise à zéro). C'est ce
- * qui rend l'action lisible : on voit que le quota est libéré ET que la comptabilité
- * n'a pas bougé. La remise à zéro s'annule (le mois entier recompte).
+ * intacte) et ce que le budget compte vraiment (vraie fenêtre + remise à zéro).
+ * C'est ce qui rend l'action lisible : on voit que le budget est libéré ET que
+ * la comptabilité n'a pas bougé. La remise à zéro s'annule (le mois recompte).
  *
  * Accès verrouillé côté serveur par `app/(app)/admin/layout.tsx` + l'API.
  */
@@ -22,6 +23,8 @@ import { RotateCcw, Undo2 } from "lucide-react";
 interface QuotaUser {
   userId: string;
   name: string;
+  planId: string;
+  capUsd: number;
   spentMonth: number;
   spentCounted: number;
   calls: number;
@@ -31,8 +34,6 @@ interface QuotaUser {
 }
 
 interface QuotaPayload {
-  cap: number;
-  capDefault: number;
   monthStart: string;
   users: QuotaUser[];
 }
@@ -62,8 +63,6 @@ export function AdminQuotasDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [capDraft, setCapDraft] = useState("");
-  const [savingCap, setSavingCap] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -71,7 +70,6 @@ export function AdminQuotasDashboard() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const payload = (await res.json()) as QuotaPayload;
       setData(payload);
-      setCapDraft(String(payload.cap));
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -120,32 +118,6 @@ export function AdminQuotasDashboard() {
     }
   };
 
-  const saveCap = async () => {
-    const cap = Number(capDraft);
-    if (!Number.isFinite(cap) || cap <= 0) {
-      toast.error(t("quotas.capInvalid"));
-      return;
-    }
-    setSavingCap(true);
-    try {
-      const res = await fetch("/api/admin/agent-quota", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cap }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? `HTTP ${res.status}`);
-      }
-      toast.success(t("quotas.capSaved"));
-      await load();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setSavingCap(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="mx-auto flex w-full max-w-[880px] flex-col gap-3 px-4 py-6 md:px-8">
@@ -162,40 +134,9 @@ export function AdminQuotasDashboard() {
     );
   }
 
-  const capDirty = capDraft.trim() !== String(data.cap);
-
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col gap-6 px-4 py-6 md:px-8">
-      {/* Plafond global */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold">{t("quotas.capTitle")}</h2>
-        <p className="text-sm text-muted-foreground">{t("quotas.capDescription")}</p>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
-              $
-            </span>
-            <Input
-              value={capDraft}
-              onChange={(e) => setCapDraft(e.target.value)}
-              inputMode="decimal"
-              className="w-32 pl-6"
-              aria-label={t("quotas.capTitle")}
-            />
-          </div>
-          <Button size="sm" onClick={() => void saveCap()} disabled={!capDirty || savingCap}>
-            {savingCap ? <Spinner /> : null}
-            {t("quotas.capSave")}
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {t("quotas.capDefaultHint", { value: `$${data.capDefault}` })}
-          </span>
-        </div>
-      </section>
-
-      <Separator />
-
-      {/* Par utilisateur */}
+      {/* Par utilisateur — la limite est le budget du plan de chacun. */}
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-semibold">{t("quotas.usersTitle")}</h2>
@@ -211,6 +152,9 @@ export function AdminQuotasDashboard() {
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <span className="truncate">{u.name}</span>
+                    <Badge variant="outline" className="h-5 text-[10px]">
+                      {u.planId}
+                    </Badge>
                     {u.blocked ? (
                       <Badge variant="destructive" className="h-5 text-[10px]">
                         {t("quotas.blocked")}
@@ -237,7 +181,7 @@ export function AdminQuotasDashboard() {
                         u.blocked ? "text-destructive" : ""
                       }`}
                     >
-                      {fmtCost(u.spentCounted)} / ${data.cap}
+                      {fmtCost(u.spentCounted)} / ${u.capUsd}
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {t("quotas.counted")}
