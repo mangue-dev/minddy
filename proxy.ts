@@ -178,7 +178,14 @@ export async function proxy(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     // pathname + search : /oauth/authorize doit retrouver ses paramètres
     // (client_id, code_challenge…) après le passage par /login.
-    loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
+    const target = pathname + request.nextUrl.search;
+    // '/' n'est qu'un redirecteur serveur vers /home : ne jamais le passer en
+    // `redirect`. Sinon la connexion renvoie l'utilisateur sur '/', dont la
+    // redirection déconnectée a été préchargée dans le cache du routeur par le
+    // logo <Link href="/"> de la page login — et il reste piégé sur /login.
+    if (target !== "/") {
+      loginUrl.searchParams.set("redirect", target);
+    }
     return NextResponse.redirect(loginUrl);
   }
 

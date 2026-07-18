@@ -35,6 +35,12 @@ export function sanitizeInternalRedirectPath(
   try {
     const parsed = new URL(decoded, "https://minddy.invalid");
     if (parsed.origin !== "https://minddy.invalid") return fallback;
+    // Root ('/') is a pure server-redirector to /home, never a real page. Using
+    // it as a post-login target sends users through '/', whose logged-out
+    // redirect the login page's logo <Link href="/"> prefetches into the App
+    // Router cache — the stale entry then bounces them straight back to /login.
+    // Collapse to the fallback so the destination is always a real route.
+    if (parsed.pathname === "/") return fallback;
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return fallback;
