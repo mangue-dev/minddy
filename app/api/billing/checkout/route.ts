@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
     customerId,
     planId,
     userId: user.id,
-    successUrl: `${origin}/settings?tab=billing&billing=success`,
-    cancelUrl: `${origin}/settings?tab=billing&billing=cancelled`,
+    successUrl: `${origin}/billing?billing=success`,
+    cancelUrl: `${origin}/billing?billing=cancelled`,
   });
 
   await upsertBillingAccount(user.id, {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "mangue-ui";
 import {
   BarChart3,
+  CreditCard,
   Megaphone,
   Settings,
   Shield,
@@ -74,6 +75,7 @@ export function useAccountActions(): {
       label: t("account"),
       items: [
         { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
+        { key: "m-billing", label: t("billing"), icon: CreditCard, href: "/billing" },
         { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
         ...(isAdmin
           ? [{ key: "m-admin", label: t("adminDashboard"), icon: Shield, href: "/admin" }]
@@ -107,6 +109,13 @@ export function useAccountActions(): {
       icon: BarChart3,
       keywords: ["statistics", "stats", "statistiques"],
       onSelect: () => router.push("/statistics"),
+    },
+    {
+      key: "cmd-billing",
+      label: t("billing"),
+      icon: CreditCard,
+      keywords: ["billing", "facturation", "plan", "abonnement", "subscription", "usage"],
+      onSelect: () => router.push("/billing"),
     },
     ...(isAdmin
       ? [

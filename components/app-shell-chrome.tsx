@@ -42,6 +42,7 @@ import {
 import { NewMenu } from "@/components/new-menu";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { UsageIndicator } from "@/components/usage-indicator";
+import { usePlanGates } from "@/lib/use-billing-query";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
@@ -118,6 +119,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
+  const tBilling = useTranslations("Billing");
+  const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
@@ -254,13 +257,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
     }
-    createItems.push({
-      key: "create-project",
-      label: t("newProject"),
-      icon: Plus,
-      keywords: createKw,
-      onSelect: openCreateProject,
-    });
+    if (!projectLimitReached) {
+      createItems.push({
+        key: "create-project",
+        label: t("newProject"),
+        icon: Plus,
+        keywords: createKw,
+        onSelect: openCreateProject,
+      });
+    }
     groups.push({ key: "create", heading: t("create"), items: createItems });
 
     // ── Go to (global) ────────────────────────────────────────────────
@@ -277,18 +282,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
           onSelect: openScratchpad,
         },
-        {
-          key: "go-pull-requests",
-          label: t("pullRequests"),
-          icon: GitPullRequest,
-          onSelect: () => router.push("/pull-requests"),
-        },
-        {
-          key: "go-agents",
-          label: t("agents"),
-          icon: NumoNavIcon,
-          onSelect: () => router.push("/agents"),
-        },
+        ...(agentsAllowed
+          ? [
+              {
+                key: "go-pull-requests",
+                label: t("pullRequests"),
+                icon: GitPullRequest,
+                onSelect: () => router.push("/pull-requests"),
+              },
+              {
+                key: "go-agents",
+                label: t("agents"),
+                icon: NumoNavIcon,
+                onSelect: () => router.push("/agents"),
+              },
+            ]
+          : []),
         {
           key: "go-all-global",
           label: t("allIssues"),
@@ -424,7 +433,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, currentProject, projectIssues, projectObjectives, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, t, ti, tk, tScratch, setCheatsheetOpen]);
+  }, [projects, currentProject, projectIssues, projectObjectives, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, t, ti, tk, tScratch, setCheatsheetOpen]);
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -441,6 +450,45 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ) : undefined,
   };
 
+  // Verrous de plan (MIN-72) : Agents & Pull Requests restent visibles mais
+  // grisés quand le plan ne les inclut pas ; « Nouveau projet » se grise au
+  // plafond. Partagés par les deux modes de la sidebar (projet / home).
+  const pullRequestsItem: AppNavItem = {
+    key: "pull-requests",
+    label: t("pullRequests"),
+    icon: GitPullRequest,
+    href: "/pull-requests",
+    active: pathname.startsWith("/pull-requests"),
+    shortcut: "R",
+    disabled: !agentsAllowed,
+    tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
+    badge:
+      agentsAllowed && openPrCount > 0 ? (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {openPrCount}
+        </span>
+      ) : undefined,
+  };
+  const agentsItem: AppNavItem = {
+    key: "agents",
+    label: t("agents"),
+    icon: NumoNavIcon,
+    href: "/agents",
+    active: pathname.startsWith("/agents"),
+    showBadgeCollapsed: true,
+    disabled: !agentsAllowed,
+    tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
+    badge:
+      agentsAllowed && anyAgentWorking ? (
+        <Spinner className="size-3.5 text-muted-foreground" />
+      ) : agentsAllowed && anyAgentUnread ? (
+        <span
+          className="size-2 rounded-full bg-blue-500"
+          aria-label={t("agentsUnread")}
+        />
+      ) : undefined,
+  };
+
   const sections = useMemo<AppNavSection[]>(() => {
     if (currentProject) {
       const base = `/projects/${currentProject.id}`;
@@ -448,36 +496,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         {
           items: [
             inboxItem,
-            {
-              key: "pull-requests",
-              label: t("pullRequests"),
-              icon: GitPullRequest,
-              href: "/pull-requests",
-              active: pathname.startsWith("/pull-requests"),
-              shortcut: "R",
-              badge:
-                openPrCount > 0 ? (
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {openPrCount}
-                  </span>
-                ) : undefined,
-            },
-            {
-              key: "agents",
-              label: t("agents"),
-              icon: NumoNavIcon,
-              href: "/agents",
-              active: pathname.startsWith("/agents"),
-              showBadgeCollapsed: true,
-              badge: anyAgentWorking ? (
-                <Spinner className="size-3.5 text-muted-foreground" />
-              ) : anyAgentUnread ? (
-                <span
-                  className="size-2 rounded-full bg-blue-500"
-                  aria-label={t("agentsUnread")}
-                />
-              ) : undefined,
-            },
+            pullRequestsItem,
+            agentsItem,
             {
               key: "home-back",
               label: t("home"),
@@ -549,36 +569,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       {
         items: [
           inboxItem,
-          {
-            key: "pull-requests",
-            label: t("pullRequests"),
-            icon: GitPullRequest,
-            href: "/pull-requests",
-            active: pathname.startsWith("/pull-requests"),
-            shortcut: "R",
-            badge:
-              openPrCount > 0 ? (
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {openPrCount}
-                </span>
-              ) : undefined,
-          },
-          {
-            key: "agents",
-            label: t("agents"),
-            icon: NumoNavIcon,
-            href: "/agents",
-            active: pathname.startsWith("/agents"),
-            showBadgeCollapsed: true,
-            badge: anyAgentWorking ? (
-              <Spinner className="size-3.5 text-muted-foreground" />
-            ) : anyAgentUnread ? (
-              <span
-                className="size-2 rounded-full bg-blue-500"
-                aria-label={t("agentsUnread")}
-              />
-            ) : undefined,
-          },
+          pullRequestsItem,
+          agentsItem,
           {
             key: "home",
             label: t("home"),
@@ -610,12 +602,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             label: t("newProject"),
             icon: Plus,
             onClick: openCreateProject,
+            disabled: projectLimitReached,
+            tooltip: projectLimitReached
+              ? tBilling("projectLimitTooltip")
+              : undefined,
           },
         ],
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, t]);
+  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

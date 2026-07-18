@@ -6,13 +6,11 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   ArrowRight,
   Bot,
-  Box,
   Gauge,
   Info,
   Loader2,
   Megaphone,
   Mic,
-  Sparkles,
 } from "lucide-react";
 import {
   Button,
@@ -27,8 +25,9 @@ import {
   type BillingPlanId,
   type UsageSegmentId,
 } from "@/lib/billing-plans";
-import { formatUsd, useBillingSummary } from "@/lib/use-billing-query";
+import { useBillingSummary } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
+import { NumoIcon } from "@/components/numo-icon";
 
 /**
  * Usage du plan (MIN-72) — pastille du header + popover : barre de budget
@@ -38,17 +37,22 @@ import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
  * est partagé tel quel avec l'onglet billing des settings.
  */
 
-const SEGMENT_UI: Record<
+// Numo en icône de ligne : visage figé, calé sur la taille des icônes lucide.
+// Ses traits sont intrinsèques au dessin — strokeWidth volontairement ignoré.
+function NumoRowIcon({ className }: { className?: string; strokeWidth?: number }) {
+  return <NumoIcon animated={false} className={className} />;
+}
+
+export const SEGMENT_UI: Record<
   UsageSegmentId,
   {
     icon: ComponentType<{ className?: string; strokeWidth?: number }>;
     text: string;
-    labelKey: "segmentAgents" | "segmentSandbox" | "segmentNumo" | "segmentDictation" | "segmentFeedback";
+    labelKey: "segmentAgents" | "segmentNumo" | "segmentDictation" | "segmentFeedback";
   }
 > = {
   agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
-  sandbox: { icon: Box, text: "text-cyan-600 dark:text-cyan-400", labelKey: "segmentSandbox" },
-  numo: { icon: Sparkles, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
+  numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
   dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
   feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
 };
@@ -106,17 +110,8 @@ export function UsageIndicator() {
 export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean }) {
   const t = useTranslations("Billing");
   const locale = useLocale();
-  const {
-    loading,
-    planId,
-    includedUsd,
-    usedUsd,
-    remainingUsd,
-    percent,
-    state,
-    segments,
-    nextResetAt,
-  } = useBillingSummary();
+  const { loading, planId, includedUsd, percent, state, segments, nextResetAt } =
+    useBillingSummary();
 
   const [hoveredId, setHoveredId] = useState<UsageSegmentId | null>(null);
 
@@ -200,14 +195,6 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
             )}
             style={{ left: `${hoveredOffset}%`, width: `${hoveredWidth}%` }}
           />
-        </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="tabular-nums">
-            {t("usedAmount", { amount: loading ? "—" : formatUsd(usedUsd) })}
-          </span>
-          <span className="tabular-nums">
-            {t("remainingAmount", { amount: loading ? "—" : formatUsd(remainingUsd) })}
-          </span>
         </div>
         {nextReset && !loading && (
           <div className="flex pt-0.5">
@@ -328,7 +315,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
         variant={canUpgrade ? "ghost" : "outline"}
         className="w-full gap-1.5"
       >
-        <Link href="/settings?tab=billing" onClick={onNavigate}>
+        <Link href="/billing" onClick={onNavigate}>
           {t("viewBilling")}
           <ArrowRight className="size-3.5" />
         </Link>

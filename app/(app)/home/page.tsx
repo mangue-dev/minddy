@@ -5,6 +5,7 @@ import { Button, Skeleton } from "mangue-ui";
 import { Plus } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
+import { usePlanGates } from "@/lib/use-billing-query";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { ProjectCard, NewProjectCard } from "@/components/project-card";
@@ -30,6 +31,7 @@ export default function HomePage() {
   const t = useTranslations("Home");
   const { projects, loading, openCreateProject } = useProjects();
   const { openCreateIssue, canCreate } = useCreate();
+  const { projectLimitReached } = usePlanGates();
   const { user } = useAuth();
 
   const meta = user?.user_metadata as AuthMeta | undefined;
@@ -88,7 +90,10 @@ export default function HomePage() {
           {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
-          <NewProjectCard onClick={openCreateProject} />
+          <NewProjectCard
+            onClick={openCreateProject}
+            disabled={projectLimitReached}
+          />
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
+  cn,
 } from "mangue-ui";
 import {
   Plus,
@@ -154,20 +155,34 @@ export function ProjectCard({ project }: { project: Project }) {
 }
 
 /** Dashed "create" tile at the end of the project grid (mirrors AutoKap). */
-export function NewProjectCard({ onClick }: { onClick: () => void }) {
+export function NewProjectCard({
+  onClick,
+  disabled = false,
+}: {
+  onClick: () => void;
+  /** Plafond de projets du plan atteint (MIN-72) : carte grisée, inerte. */
+  disabled?: boolean;
+}) {
   const t = useTranslations("Projects");
   return (
     <div
       role="button"
-      tabIndex={0}
-      onClick={onClick}
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
+      onClick={disabled ? undefined : onClick}
       onKeyDown={(e) => {
+        if (disabled) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onClick();
         }
       }}
-      className="flex h-full min-h-[160px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border outline-none transition-colors hover:border-foreground/25 hover:bg-muted/30 focus-visible:border-foreground/25 focus-visible:bg-muted/30"
+      className={cn(
+        "flex h-full min-h-[160px] w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border outline-none transition-colors",
+        disabled
+          ? "opacity-50"
+          : "cursor-pointer hover:border-foreground/25 hover:bg-muted/30 focus-visible:border-foreground/25 focus-visible:bg-muted/30"
+      )}
     >
       <div className="flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         <Plus className="size-4" />

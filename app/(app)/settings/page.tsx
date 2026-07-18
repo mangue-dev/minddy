@@ -1,15 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  Bot,
-  CreditCard,
-  GitBranch,
-  IterationCw,
-  Plug,
-  SlidersHorizontal,
-  User,
-} from "lucide-react";
+import { Bot, GitBranch, IterationCw, Plug, SlidersHorizontal, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   SettingsShell,
@@ -22,7 +14,6 @@ import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { AccountGitConnectionsSection } from "@/components/settings/account-git-connections-section";
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
-import { AccountBillingSection } from "@/components/settings/account-billing-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 
 export default function AccountSettingsPage() {
@@ -73,12 +64,6 @@ export default function AccountSettingsPage() {
       label: t("agentTab"),
       icon: Bot,
       content: <AccountAiKeysSection />,
-    },
-    {
-      value: "billing",
-      label: t("billingTab"),
-      icon: CreditCard,
-      content: <AccountBillingSection />,
     },
   ];
 

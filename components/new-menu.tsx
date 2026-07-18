@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
+import { usePlanGates } from "@/lib/use-billing-query";
 
 export interface CreateAction {
   key: string;
@@ -40,6 +41,7 @@ export function useCreateActions(): CreateAction[] {
   const t = useTranslations("Nav");
   const { openCreateProject } = useProjects();
   const { openCreateIssue, openCreateObjective, canCreate } = useCreate();
+  const { projectLimitReached } = usePlanGates();
 
   return [
     {
@@ -62,6 +64,8 @@ export function useCreateActions(): CreateAction[] {
       key: "new-project",
       icon: FolderPlus,
       label: t("newProject"),
+      // Plafond de projets du plan atteint (MIN-72) → action grisée.
+      disabled: projectLimitReached,
       onSelect: openCreateProject,
     },
   ];

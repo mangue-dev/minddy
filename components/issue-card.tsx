@@ -55,6 +55,7 @@ import {
   type IssuePr,
 } from "@/components/agent/agent-activity-context";
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import { usePlanGates } from "@/lib/use-billing-query";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
@@ -793,6 +794,7 @@ export function IssueCard({
   // Une run d'agent est ACTIVE sur l'issue → l'action OUVRE sa conversation. Sinon
   // (aucune run, ou toutes terminées) elle en LANCE une nouvelle, à froid (MIN-68).
   const agentHasSession = useAgentHasSession(issue.id);
+  const { agentsAllowed } = usePlanGates();
   // PR disponible pour ce ticket → chip « PR disponible » sur la carte + option menu.
   const pr = useAgentPr(issue.id);
   const router = useRouter();
@@ -854,7 +856,9 @@ export function IssueCard({
     router.push(`/agents?compose=${issue.id}`);
   };
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
+  // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
   const launchAgent = () => {
+    if (!agentsAllowed) return;
     if (agentHasSession) openAgentSession();
     else startNewAgentSession();
   };
@@ -936,36 +940,38 @@ export function IssueCard({
     // entrées : « Ouvrir l'agent » (rouvre la session, sa run la plus active) et
     // « Nouvelle session » (compose une run neuve sur le ticket). Aucune session →
     // une seule entrée « Lancer un agent » (compose à froid). ⇧A = 1re action.
-    ...(agentHasSession
-      ? [
-          {
-            id: "open-agent",
-            label: tAgent("openAgent"),
-            keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
-            icon: <NumoIcon className="size-4" />,
-            shortcut: "⇧A",
-            onSelect: openAgentSession,
-          },
-          {
-            id: "new-agent-session",
-            label: tAgent("newSession"),
-            keywords: ["agent", "new", "nouvelle", "session", "launch", "lancer", "numo"],
-            icon: <Plus className="size-4" />,
-            onSelect: startNewAgentSession,
-          },
-        ]
-      : [
-          {
-            id: "launch-agent",
-            label: tAgent("menuLaunch"),
-            keywords: ["agent", "launch", "lancer", "code", "ai", "numo"],
-            icon: <NumoIcon className="size-4" />,
-            shortcut: "⇧A",
-            onSelect: startNewAgentSession,
-          },
-        ]),
+    ...(!agentsAllowed
+      ? []
+      : agentHasSession
+        ? [
+            {
+              id: "open-agent",
+              label: tAgent("openAgent"),
+              keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
+              icon: <NumoIcon className="size-4" />,
+              shortcut: "⇧A",
+              onSelect: openAgentSession,
+            },
+            {
+              id: "new-agent-session",
+              label: tAgent("newSession"),
+              keywords: ["agent", "new", "nouvelle", "session", "launch", "lancer", "numo"],
+              icon: <Plus className="size-4" />,
+              onSelect: startNewAgentSession,
+            },
+          ]
+        : [
+            {
+              id: "launch-agent",
+              label: tAgent("menuLaunch"),
+              keywords: ["agent", "launch", "lancer", "code", "ai", "numo"],
+              icon: <NumoIcon className="size-4" />,
+              shortcut: "⇧A",
+              onSelect: startNewAgentSession,
+            },
+          ]),
     // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
-    ...(pr && openPr
+    ...(agentsAllowed && pr && openPr
       ? [
           {
             id: "open-pr",

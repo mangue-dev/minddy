@@ -105,12 +105,7 @@ export type BillableFeature =
   | "agent_code"
   | "sandbox_compute";
 
-export type UsageSegmentId =
-  | "agents"
-  | "sandbox"
-  | "numo"
-  | "dictation"
-  | "feedback";
+export type UsageSegmentId = "agents" | "numo" | "dictation" | "feedback";
 
 export interface UsageSegment {
   id: UsageSegmentId;
@@ -125,8 +120,12 @@ export interface UsageSegment {
  * segments dans cet ordre.
  */
 export const USAGE_SEGMENTS: UsageSegment[] = [
-  { id: "agents", features: ["agent_code"], barClass: "bg-violet-500" },
-  { id: "sandbox", features: ["sandbox_compute"], barClass: "bg-cyan-500" },
+  // LLM + compute sandbox d'un même run : pour l'utilisateur, c'est UN agent.
+  {
+    id: "agents",
+    features: ["agent_code", "sandbox_compute"],
+    barClass: "bg-violet-500",
+  },
   { id: "numo", features: ["numo_chat", "numo_comment"], barClass: "bg-blue-500" },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },
   {
@@ -135,3 +134,11 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
     barClass: "bg-emerald-500",
   },
 ];
+
+/** Multiple d'usage d'un plan vs Free (« 10× plus d'usage ») — pour l'UI, qui
+    parle en pourcentages et multiples, jamais en montants USD. */
+export function usageMultiplierVsFree(plan: BillingPlan): number {
+  const free = getBillingPlan("free");
+  if (free.includedUsageUsd <= 0) return 1;
+  return Math.round(plan.includedUsageUsd / free.includedUsageUsd);
+}

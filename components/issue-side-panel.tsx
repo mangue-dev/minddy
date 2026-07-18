@@ -49,6 +49,7 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunWorking } from "@/lib/agent-api";
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import { usePlanGates } from "@/lib/use-billing-query";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
@@ -157,6 +158,7 @@ export function IssueSidePanel({
   // s'ouvre aussi là où le provider d'activité du board n'existe pas (page Pull
   // requests, board de feedback).
   const { runs } = useIssueAgentRunsQuery(issue?.id ?? null);
+  const { agentsAllowed } = usePlanGates();
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
   // Une conversation reprennable existe (au moins une run non `failed`).
@@ -236,10 +238,12 @@ export function IssueSidePanel({
   }, [issue, hasAgentSession, projectKey, router, tAgent]);
 
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
+  // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
   const launchAgent = useCallback(() => {
+    if (!agentsAllowed) return;
     if (hasAgentSession) setChatOpen(true);
     else startNewAgentSession();
-  }, [hasAgentSession, startNewAgentSession]);
+  }, [agentsAllowed, hasAgentSession, startNewAgentSession]);
 
   const openPr = useCallback(() => {
     if (prRun) router.push(`/pull-requests?run=${prRun.id}`);
@@ -409,32 +413,34 @@ export function IssueSidePanel({
     // Session existante → deux entrées : « Ouvrir l'agent » (reprend la dernière
     // run, en modal) et « Nouvelle session » (compose une run neuve sur le
     // ticket). Aucune session → une seule entrée « Lancer un agent » (à froid).
-    ...(hasAgentSession
-      ? [
-          {
-            id: "open-agent",
-            label: tAgent("openAgent"),
-            icon: <NumoIcon className="size-4" />,
-            shortcut: "⇧A",
-            onSelect: () => setChatOpen(true),
-          },
-          {
-            id: "new-agent-session",
-            label: tAgent("newSession"),
-            icon: <Plus className="size-4" />,
-            onSelect: startNewAgentSession,
-          },
-        ]
-      : [
-          {
-            id: "launch-agent",
-            label: tAgent("menuLaunch"),
-            icon: <NumoIcon className="size-4" />,
-            shortcut: "⇧A",
-            onSelect: startNewAgentSession,
-          },
-        ]),
-    ...(prRun
+    ...(!agentsAllowed
+      ? []
+      : hasAgentSession
+        ? [
+            {
+              id: "open-agent",
+              label: tAgent("openAgent"),
+              icon: <NumoIcon className="size-4" />,
+              shortcut: "⇧A",
+              onSelect: () => setChatOpen(true),
+            },
+            {
+              id: "new-agent-session",
+              label: tAgent("newSession"),
+              icon: <Plus className="size-4" />,
+              onSelect: startNewAgentSession,
+            },
+          ]
+        : [
+            {
+              id: "launch-agent",
+              label: tAgent("menuLaunch"),
+              icon: <NumoIcon className="size-4" />,
+              shortcut: "⇧A",
+              onSelect: startNewAgentSession,
+            },
+          ]),
+    ...(agentsAllowed && prRun
       ? [
           {
             id: "open-pr",
@@ -503,12 +509,14 @@ export function IssueSidePanel({
               )}
               {/* Agent de code : le seul état qui mérite l'en-tête (au travail,
                   ou une PR à relire) — le reste est dans le menu « ⋯ ». */}
-              <IssueAgentChip
-                working={agentWorking}
-                prRun={prRun}
-                onOpenConversation={() => setChatOpen(true)}
-                onOpenPr={openPr}
-              />
+              {agentsAllowed && (
+                <IssueAgentChip
+                  working={agentWorking}
+                  prRun={prRun}
+                  onOpenConversation={() => setChatOpen(true)}
+                  onOpenPr={openPr}
+                />
+              )}
               {/* Voice editing — Numo turns dictated commands into field updates */}
               {numoBusy ? (
                 <>

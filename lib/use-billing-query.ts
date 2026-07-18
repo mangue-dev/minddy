@@ -5,7 +5,6 @@ import {
   fetchBillingStatusApi,
   fetchBillingUsageApi,
 } from "@/lib/billing-api";
-import type { UsageSegmentId } from "@/lib/billing-plans";
 
 export const billingStatusQueryKey = ["billing", "status"] as const;
 export const billingUsageQueryKey = ["billing", "usage"] as const;
@@ -60,20 +59,32 @@ export function useBillingSummary() {
   };
 }
 
-/** Part (en % du budget) d'un segment — pour la barre et les lignes du détail. */
-export function segmentPercent(
-  segments: Array<{ id: UsageSegmentId; usd: number }>,
-  includedUsd: number,
-  id: UsageSegmentId
-): number {
-  if (includedUsd <= 0) return 0;
-  const segment = segments.find((s) => s.id === id);
-  return segment ? Math.min((segment.usd / includedUsd) * 100, 100) : 0;
+/**
+ * Les deux verrous de plan consommés par l'UI (MIN-72, retours) : accès agents
+ * et plafond de projets. Par défaut PERMISSIF tant que le billing charge (pas
+ * de flash « désactivé » pour les plans payants — le serveur reste le juge).
+ */
+export function usePlanGates() {
+  const { loading, usage } = useBillingSummary();
+  return {
+    loading,
+    agentsAllowed: usage?.limits.allowAgents ?? true,
+    projectLimitReached:
+      usage != null &&
+      usage.limits.maxProjects != null &&
+      usage.limits.projectsUsed >= usage.limits.maxProjects,
+  };
 }
 
-/** Montant USD compact : "—" à 0, "<$0.01" sous le centime, sinon "$x.xx". */
-export function formatUsd(value: number): string {
-  if (value <= 0) return "—";
-  if (value < 0.01) return "<$0.01";
-  return `$${value.toFixed(2)}`;
+/**
+ * % du budget mensuel pour un montant de coût brut — l'UI ne parle JAMAIS en
+ * USD (le coût interne n'est pas l'affaire de l'utilisateur), toujours en
+ * pourcentage du budget du plan. Plancher « <0.1 » pour les micro-actions.
+ */
+export function formatBudgetPercent(usd: number, includedUsd: number): string {
+  if (includedUsd <= 0 || usd <= 0) return "—";
+  const percent = (usd / includedUsd) * 100;
+  if (percent < 0.1) return "<0.1%";
+  if (percent < 1) return `${percent.toFixed(1)}%`;
+  return `${Math.round(percent)}%`;
 }

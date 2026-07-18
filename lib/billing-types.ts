@@ -20,6 +20,22 @@ export interface BillingStatusResponse {
   } | null;
 }
 
+export interface UsageHistoryEntry {
+  runId: string;
+  /** Segment d'affichage (agents = LLM + sandbox fusionnés). */
+  segmentId: UsageSegmentId;
+  at: string;
+  projectName: string | null;
+  /** Coût brut USD du run — l'UI le convertit en % du budget, jamais affiché tel quel. */
+  usd: number;
+}
+
+/** `GET /api/billing/usage-history` — runs de la fenêtre courante, paginés. */
+export interface UsageHistoryResponse {
+  total: number;
+  entries: UsageHistoryEntry[];
+}
+
 export interface UsageSummaryResponse {
   planId: BillingPlanId;
   /** Budget d'usage mensuel inclus (USD, coût brut). */

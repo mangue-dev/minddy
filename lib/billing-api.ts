@@ -2,9 +2,10 @@
 
 import type {
   BillingStatusResponse,
+  UsageHistoryResponse,
   UsageSummaryResponse,
 } from "@/lib/billing-types";
-import type { BillingPlanId } from "@/lib/billing-plans";
+import type { BillingPlanId, UsageSegmentId } from "@/lib/billing-plans";
 
 /** Fetchers client du billing (MIN-72) : statut de plan, usage, checkout, portal. */
 
@@ -30,6 +31,21 @@ export async function fetchBillingStatusApi(): Promise<BillingStatusResponse> {
 
 export async function fetchBillingUsageApi(): Promise<UsageSummaryResponse> {
   return parseJson(await fetch("/api/billing/usage", { cache: "no-store" }));
+}
+
+export async function fetchUsageHistoryApi(params: {
+  segment?: UsageSegmentId | null;
+  offset?: number;
+}): Promise<UsageHistoryResponse> {
+  const search = new URLSearchParams();
+  if (params.segment) search.set("segment", params.segment);
+  if (params.offset) search.set("offset", String(params.offset));
+  const qs = search.toString();
+  return parseJson(
+    await fetch(`/api/billing/usage-history${qs ? `?${qs}` : ""}`, {
+      cache: "no-store",
+    })
+  );
 }
 
 /** Démarre un checkout Stripe → URL de redirection. */

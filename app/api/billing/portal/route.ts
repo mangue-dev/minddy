@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   const session = await createStripePortalSession({
     customerId: account.stripe_customer_id,
-    returnUrl: `${request.nextUrl.origin}/settings?tab=billing`,
+    returnUrl: `${request.nextUrl.origin}/billing`,
   });
   return Response.json({ url: session.url });
 }
