@@ -139,75 +139,89 @@ export function useScratchpadDoc({
     [applyRef]
   );
 
-  const saveRef = useRef<(content: string) => Promise<void>>(async () => {});
-  const save = useCallback(
+  // One CAS write of `ours`, with 3-way merge + retry only if the server was
+  // changed by SOMEONE ELSE meanwhile (the agent via MCP). In normal solo use no
+  // conflict ever happens, so `res.content === ours` and the editor is left
+  // completely alone — no setContent, no cursor jump, no revert.
+  const commitOnce = useCallback(
     async (ours: string) => {
-      setSaving(true);
-      try {
-        let attempt = ours;
-        let mergeBase = baseRef.current.content;
-        let expectRev = baseRef.current.rev;
-        let saved: Extract<PutResult, { ok: true }> | null = null;
+      let attempt = ours;
+      let mergeBase = baseRef.current.content;
+      let expectRev = baseRef.current.rev;
 
-        for (let i = 0; i < 8; i++) {
-          const res = await putScratchpad(attempt, expectRev);
-          if (res.ok) {
-            saved = res;
-            break;
-          }
-          // Conflict: fold our edit onto the server's current version and retry.
-          attempt = mergeScratchpad(mergeBase, attempt, res.content);
-          mergeBase = res.content;
-          expectRev = res.rev;
-        }
-
-        if (!saved) {
-          // Sustained contention (very rare) — resync to the server, don't loop.
-          const latest = await fetchScratchpad();
-          baseRef.current = { content: latest.content, rev: latest.rev };
-          qc.setQueryData(SCRATCHPAD_KEY, latest);
-          const live = getLive();
-          if (live !== undefined && live !== latest.content) {
-            applyExternal(latest.content, { emitUpdate: false });
+      for (let i = 0; i < 8; i++) {
+        const res = await putScratchpad(attempt, expectRev);
+        if (res.ok) {
+          baseRef.current = { content: res.content, rev: res.rev };
+          qc.setQueryData(
+            SCRATCHPAD_KEY,
+            responseOf(res.content, res.updated_at, res.rev)
+          );
+          // Only a real external merge makes the stored version differ from what
+          // we submitted → adopt it so the editor and the next base carry the
+          // other side's changes. (Never triggered by plain typing.)
+          if (res.content !== ours) {
+            const live = getLive();
+            if (live !== undefined && live !== res.content) {
+              const target =
+                live === ours
+                  ? res.content
+                  : mergeScratchpad(ours, live, res.content);
+              applyExternal(target, { emitUpdate: target !== res.content });
+            }
           }
           return;
         }
-
-        baseRef.current = { content: saved.content, rev: saved.rev };
-        qc.setQueryData(
-          SCRATCHPAD_KEY,
-          responseOf(saved.content, saved.updated_at, saved.rev)
-        );
-
-        // If a merge changed the doc, reflect it in the editor so the view — and
-        // the next save's base — carries the other side's changes.
-        const live = getLive();
-        if (live !== undefined && live !== saved.content) {
-          if (live === ours) {
-            applyExternal(saved.content, { emitUpdate: false });
-          } else {
-            // You typed during the round-trip → fold those in-flight edits too,
-            // then persist the result.
-            const target = mergeScratchpad(ours, live, saved.content);
-            applyExternal(target, { emitUpdate: false });
-            if (target !== saved.content) void saveRef.current(target);
-          }
-        }
-      } catch {
-        // Transient failure (network / server error). Leave baseRef untouched so
-        // the edit stays in the editor and the next change retries from the same
-        // base — the user's work is never dropped on a failed request.
-      } finally {
-        setSaving(false);
+        // Conflict: fold our edit onto the server's current version and retry.
+        attempt = mergeScratchpad(mergeBase, attempt, res.content);
+        mergeBase = res.content;
+        expectRev = res.rev;
       }
+      // Couldn't converge (sustained contention) — resync the base to the server.
+      const latest = await fetchScratchpad();
+      baseRef.current = { content: latest.content, rev: latest.rev };
+      qc.setQueryData(SCRATCHPAD_KEY, latest);
     },
     [qc, getLive, applyExternal]
   );
-  saveRef.current = save;
 
-  // Idle adoption: when the server advances past our base and the editor has no
-  // unsaved edits, pull the fresh content in. If the editor IS dirty, leave it —
-  // the next save's 3-way merge reconciles without losing what you typed.
+  // Serialize autosaves: coalesce rapid edits to the latest content and never let
+  // two writes overlap (overlapping writes would self-conflict and churn). The
+  // editor's markdown is cumulative, so a save that fails is picked up in full by
+  // the next one.
+  const pendingRef = useRef<string | null>(null);
+  const runningRef = useRef(false);
+  const commitRef = useRef(commitOnce);
+  commitRef.current = commitOnce;
+
+  const save = useCallback((content: string) => {
+    pendingRef.current = content;
+    if (runningRef.current) return;
+    runningRef.current = true;
+    setSaving(true);
+    void (async () => {
+      try {
+        while (pendingRef.current !== null) {
+          const next = pendingRef.current;
+          pendingRef.current = null;
+          try {
+            await commitRef.current(next);
+          } catch {
+            // Transient failure — drop this attempt; the next edit's full-content
+            // save includes it, so nothing the user typed is lost.
+          }
+        }
+      } finally {
+        runningRef.current = false;
+        setSaving(false);
+      }
+    })();
+  }, []);
+
+  // Idle adoption: when the server advances past our base (the agent wrote) and
+  // the editor has no unsaved edits, pull the fresh content in. If the editor IS
+  // dirty, leave it — the next save's 3-way merge reconciles without losing what
+  // you typed.
   useEffect(() => {
     if (!data || !seededRef.current) return;
     if (data.rev <= baseRef.current.rev) return;

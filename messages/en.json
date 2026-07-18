@@ -1087,7 +1087,7 @@
     "createPullRequest": "Create pull request",
     "createPrPrompt": "Open a pull request for the changes on this branch.",
     "renamedFrom": "Renamed from {path}",
-    "fileStatus_added": "Added",
+    "fileStatus_added": "Created",
     "fileStatus_modified": "Modified",
     "fileStatus_deleted": "Deleted",
     "fileStatus_renamed": "Renamed",

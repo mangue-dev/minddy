@@ -19,12 +19,12 @@ import { changeTotals } from "@/lib/agent-changed-files";
  * seulement quand une PR existe.
  */
 
-/** Pastille de statut : lettre + teinte, à la GitHub. */
-const STATUS_STYLE: Record<AgentFileChangeStatus, { letter: string; className: string }> = {
-  added: { letter: "A", className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
-  modified: { letter: "M", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-  deleted: { letter: "D", className: "bg-red-500/15 text-red-600 dark:text-red-400" },
-  renamed: { letter: "R", className: "bg-sky-500/15 text-sky-600 dark:text-sky-400" },
+/** Teinte de la pastille de statut (le mot lui-même vient de l'i18n, façon Codex). */
+const STATUS_STYLE: Record<AgentFileChangeStatus, string> = {
+  added: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  modified: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  deleted: "bg-red-500/15 text-red-600 dark:text-red-400",
+  renamed: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
 };
 
 function FileRow({
@@ -35,20 +35,17 @@ function FileRow({
   onOpenFile?: (path: string) => void;
 }) {
   const t = useTranslations("Agent");
-  const style = STATUS_STYLE[file.status];
   const statusLabel = t(`fileStatus_${file.status}` as "fileStatus_added");
 
   const inner = (
     <>
       <span
         className={cn(
-          "flex size-4 shrink-0 items-center justify-center rounded text-[10px] font-semibold",
-          style.className,
+          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+          STATUS_STYLE[file.status],
         )}
-        aria-label={statusLabel}
-        title={statusLabel}
       >
-        {style.letter}
+        {statusLabel}
       </span>
       <span
         className="min-w-0 flex-1 truncate font-mono text-xs"

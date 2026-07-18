@@ -1087,7 +1087,7 @@
     "createPullRequest": "Créer une pull request",
     "createPrPrompt": "Ouvre une pull request pour les changements de cette branche.",
     "renamedFrom": "Renommé depuis {path}",
-    "fileStatus_added": "Ajouté",
+    "fileStatus_added": "Créé",
     "fileStatus_modified": "Modifié",
     "fileStatus_deleted": "Supprimé",
     "fileStatus_renamed": "Renommé",
