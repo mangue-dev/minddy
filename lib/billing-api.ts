@@ -5,7 +5,11 @@ import type {
   UsageHistoryResponse,
   UsageSummaryResponse,
 } from "@/lib/billing-types";
-import type { BillingPlanId, UsageSegmentId } from "@/lib/billing-plans";
+import type {
+  BillingInterval,
+  BillingPlanId,
+  UsageSegmentId,
+} from "@/lib/billing-plans";
 
 /** Fetchers client du billing (MIN-72) : statut de plan, usage, checkout, portal. */
 
@@ -49,12 +53,15 @@ export async function fetchUsageHistoryApi(params: {
 }
 
 /** Démarre un checkout Stripe → URL de redirection. */
-export async function createCheckoutApi(planId: BillingPlanId): Promise<string> {
+export async function createCheckoutApi(
+  planId: BillingPlanId,
+  interval: BillingInterval = "month"
+): Promise<string> {
   const { url } = await parseJson<{ url: string | null }>(
     await fetch("/api/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ planId, interval }),
     })
   );
   if (!url) throw new Error("Missing checkout URL");

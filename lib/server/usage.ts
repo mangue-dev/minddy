@@ -9,8 +9,10 @@ import {
 } from "@/lib/billing-plans";
 import {
   getResolvedBilling,
+  shouldUseStripePlan,
   type ResolvedBilling,
 } from "@/lib/server/billing-accounts";
+import { resolveUsageWindow } from "@/lib/billing-cycle";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { recordAiUsage } from "@/lib/server/ai-usage";
 
@@ -18,9 +20,10 @@ import { recordAiUsage } from "@/lib/server/ai-usage";
  * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
  * agrégé depuis le ledger `ai_usage` (coût brut USD, ventilé par feature).
  *
- * Fenêtre : la période Stripe courante pour les abonnés, sinon le mois
- * calendaire UTC ; bornée par le filigrane `agent_quota_resets` (remise à zéro
- * admin — s'applique désormais au budget entier, plus seulement aux agents).
+ * Fenêtre : le cycle de facturation Stripe pour les abonnés (annuel → sous-cycle
+ * MENSUEL, l'usage se réinitialise chaque mois même en paiement annuel), sinon
+ * le mois calendaire UTC ; bornée par le filigrane `agent_quota_resets` (remise
+ * à zéro admin — s'applique au budget entier, plus seulement aux agents).
  *
  * Enforcement : `ensureUsageBudget` en PRÉ-VOL avant chaque action coûtante ;
  * l'enregistrement reste post-hoc best-effort (`recordAiUsage` ne throw
@@ -54,14 +57,25 @@ export async function getUsagePeriod(
 ): Promise<UsagePeriod> {
   let { start, end } = monthWindow();
 
+  // Fenêtre = cycle de facturation Stripe dès qu'un abonnement ACTIF porte ses
+  // dates, indépendamment de la source du plan effectif : un override admin peut
+  // coexister avec un vrai abonnement, et c'est alors le cycle (pas le mois
+  // calendaire) qui borne l'usage. Annuel → sous-cycle MENSUEL : l'usage se
+  // réinitialise chaque mois même quand le paiement est annuel.
   const account = billing.account;
   if (
-    billing.source === "stripe" &&
     account?.stripe_current_period_start &&
-    account.stripe_current_period_end
+    account.stripe_current_period_end &&
+    shouldUseStripePlan(account.stripe_subscription_status)
   ) {
-    start = account.stripe_current_period_start;
-    end = account.stripe_current_period_end;
+    const window = resolveUsageWindow({
+      periodStart: account.stripe_current_period_start,
+      periodEnd: account.stripe_current_period_end,
+    });
+    if (window) {
+      start = window.start;
+      end = window.end;
+    }
   }
 
   const service = getServiceClient();

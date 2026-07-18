@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/agent-drain",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/billing-sync",
+      "schedule": "15 * * * *"
     }
   ]
 }

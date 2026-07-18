@@ -12,6 +12,9 @@
 
 export type BillingPlanId = "free" | "go" | "pro";
 
+/** Cadence de facturation d'un abonnement (= `recurring.interval` côté Stripe). */
+export type BillingInterval = "month" | "year";
+
 export interface BillingPlan {
   id: BillingPlanId;
   /** Prix d'affichage (le prix facturé vient du price Stripe configuré en env). */
@@ -79,6 +82,22 @@ export function coerceBillingPlanId(value: unknown): BillingPlanId | null {
 /** Rang pour comparer les plans (upgrade vs manage dans l'UI). */
 export function billingPlanRank(id: BillingPlanId): number {
   return BILLING_PLANS.findIndex((plan) => plan.id === id);
+}
+
+// ── Facturation annuelle ─────────────────────────────────────────────────────
+
+/** Mois offerts sur l'annuel : on facture 10 mois pour 12 (2 mois offerts). */
+export const ANNUAL_FREE_MONTHS = 2;
+export const ANNUAL_BILLED_MONTHS = 12 - ANNUAL_FREE_MONTHS;
+
+/** Prix annuel d'affichage (le prix facturé vient du price Stripe annuel). */
+export function annualPriceEur(plan: BillingPlan): number {
+  return plan.priceEurMonthly * ANNUAL_BILLED_MONTHS;
+}
+
+/** Coût mensuel équivalent d'un abonnement annuel, arrondi au centime. */
+export function annualMonthlyEquivalentEur(plan: BillingPlan): number {
+  return Math.round((annualPriceEur(plan) / 12) * 100) / 100;
 }
 
 // ── Coûts non-LLM ────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 import {
   coerceBillingPlanId,
+  type BillingInterval,
   type BillingPlanId,
 } from "@/lib/billing-plans";
 
@@ -36,14 +37,23 @@ export interface StripePortalSession {
   url: string;
 }
 
+export interface StripeSubscriptionItem {
+  price: { id: string };
+  /** Modèle « flexible » (API ≥ 2025-03-31) : la période courante est portée
+   *  par l'item d'abonnement, plus par la racine. */
+  current_period_start?: number;
+  current_period_end?: number;
+}
+
 export interface StripeSubscription {
   id: string;
   customer: string;
   status: string;
   cancel_at_period_end: boolean;
-  current_period_start: number;
-  current_period_end: number;
-  items: { data: Array<{ price: { id: string } }> };
+  /** Repli pour les anciennes versions d'API (période portée par la racine). */
+  current_period_start?: number;
+  current_period_end?: number;
+  items: { data: StripeSubscriptionItem[] };
   metadata?: Record<string, string>;
 }
 
@@ -71,23 +81,44 @@ export function getStripeWebhookSecret(): string {
   return secret;
 }
 
-export function getStripePriceIdForPlan(planId: BillingPlanId): string | null {
+export function getStripePriceIdForPlan(
+  planId: BillingPlanId,
+  interval: BillingInterval = "month"
+): string | null {
+  const yearly = interval === "year";
   switch (planId) {
     case "go":
-      return process.env.STRIPE_PRICE_ID_GO ?? null;
+      return (
+        (yearly ? process.env.STRIPE_PRICE_ID_GO_YEARLY : process.env.STRIPE_PRICE_ID_GO) ??
+        null
+      );
     case "pro":
-      return process.env.STRIPE_PRICE_ID_PRO ?? null;
+      return (
+        (yearly ? process.env.STRIPE_PRICE_ID_PRO_YEARLY : process.env.STRIPE_PRICE_ID_PRO) ??
+        null
+      );
     case "free":
       return null;
   }
 }
 
+/** Reconnaît les price IDs mensuels ET annuels d'un plan. */
 export function getPlanIdForStripePrice(
   priceId: string | null | undefined
 ): BillingPlanId | null {
   if (!priceId) return null;
-  if (priceId === process.env.STRIPE_PRICE_ID_GO) return "go";
-  if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
+  if (
+    priceId === process.env.STRIPE_PRICE_ID_GO ||
+    priceId === process.env.STRIPE_PRICE_ID_GO_YEARLY
+  ) {
+    return "go";
+  }
+  if (
+    priceId === process.env.STRIPE_PRICE_ID_PRO ||
+    priceId === process.env.STRIPE_PRICE_ID_PRO_YEARLY
+  ) {
+    return "pro";
+  }
   return null;
 }
 
@@ -138,11 +169,12 @@ export async function findStripeCustomerByEmail(
 export async function createStripeCheckoutSession(params: {
   customerId: string;
   planId: BillingPlanId;
+  interval?: BillingInterval;
   userId: string;
   successUrl: string;
   cancelUrl: string;
 }): Promise<StripeCheckoutSession> {
-  const priceId = getStripePriceIdForPlan(params.planId);
+  const priceId = getStripePriceIdForPlan(params.planId, params.interval ?? "month");
   if (!priceId) {
     throw new Error(`Missing Stripe price for plan ${params.planId}`);
   }
@@ -187,6 +219,22 @@ export async function fetchStripeSubscription(
 export function stripeUnixToIso(value: number | null | undefined): string | null {
   if (!value) return null;
   return new Date(value * 1000).toISOString();
+}
+
+/**
+ * Période de facturation courante d'un abonnement. Depuis l'API 2025-03-31
+ * (billing « flexible »), `current_period_*` est porté par l'item, plus par la
+ * racine — on lit l'item d'abord, la racine en repli pour les vieux comptes.
+ */
+export function getStripeSubscriptionPeriod(subscription: StripeSubscription): {
+  start: number | null;
+  end: number | null;
+} {
+  const item = subscription.items.data[0];
+  return {
+    start: item?.current_period_start ?? subscription.current_period_start ?? null,
+    end: item?.current_period_end ?? subscription.current_period_end ?? null,
+  };
 }
 
 function parseStripeSignature(header: string): {

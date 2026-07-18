@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
-import { coerceBillingPlanId } from "@/lib/billing-plans";
+import { coerceBillingPlanId, type BillingInterval } from "@/lib/billing-plans";
 import {
   getBillingAccountForUser,
   shouldUseStripePlan,
@@ -46,7 +46,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const planId = coerceBillingPlanId((body as { planId?: unknown })?.planId);
-  if (!planId || planId === "free" || !getStripePriceIdForPlan(planId)) {
+  const interval: BillingInterval =
+    (body as { interval?: unknown })?.interval === "year" ? "year" : "month";
+  if (!planId || planId === "free" || !getStripePriceIdForPlan(planId, interval)) {
     return Response.json({ error: "Invalid plan" }, { status: 400 });
   }
 
@@ -76,6 +78,7 @@ export async function POST(request: NextRequest) {
   const session = await createStripeCheckoutSession({
     customerId,
     planId,
+    interval,
     userId: user.id,
     successUrl: `${origin}/billing?billing=success`,
     cancelUrl: `${origin}/billing?billing=cancelled`,

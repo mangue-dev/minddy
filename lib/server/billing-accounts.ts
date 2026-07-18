@@ -11,6 +11,7 @@ import {
 import {
   fetchStripeSubscription,
   getPlanIdForStripePrice,
+  getStripeSubscriptionPeriod,
   coerceStripePlanId,
   isStripeConfigured,
   stripeUnixToIso,
@@ -131,6 +132,7 @@ export async function syncSubscriptionToBillingAccount(
   const stripePlanId =
     getPlanIdForStripePrice(priceId) ??
     coerceStripePlanId(subscription.metadata?.plan_id);
+  const period = getStripeSubscriptionPeriod(subscription);
 
   await upsertBillingAccount(userId, {
     stripe_customer_id: subscription.customer,
@@ -138,8 +140,8 @@ export async function syncSubscriptionToBillingAccount(
     stripe_price_id: priceId,
     stripe_plan_id: stripePlanId,
     stripe_subscription_status: subscription.status,
-    stripe_current_period_start: stripeUnixToIso(subscription.current_period_start),
-    stripe_current_period_end: stripeUnixToIso(subscription.current_period_end),
+    stripe_current_period_start: stripeUnixToIso(period.start),
+    stripe_current_period_end: stripeUnixToIso(period.end),
     stripe_cancel_at_period_end: subscription.cancel_at_period_end,
     ...(event
       ? {
@@ -227,4 +229,49 @@ export async function getResolvedBilling(userId: string): Promise<ResolvedBillin
     account,
     stripeConfigured: isStripeConfigured(),
   };
+}
+
+// ── Reconciliation périodique ────────────────────────────────────────────────
+
+/**
+ * Filet anti-dérive (cron, en plus du re-sync paresseux) : re-tire l'état réel
+ * de chaque abonnement depuis Stripe et le ré-écrit, indépendamment des
+ * webhooks. Un event manqué — renouvellement, changement de plan, annulation —
+ * serait sinon invisible pour les users inactifs que la lecture ne touche
+ * jamais. Un abonnement annulé repasse naturellement en free via
+ * `syncSubscriptionToBillingAccount` (statut `canceled`). Les comptes les plus
+ * anciennement synchronisés d'abord, par lot borné pour tenir dans le budget
+ * temps de la fonction.
+ */
+export async function reconcileStripeBillingAccounts(options?: {
+  limit?: number;
+}): Promise<{ checked: number; synced: number; failed: number }> {
+  if (!isStripeConfigured()) return { checked: 0, synced: 0, failed: 0 };
+
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("billing_accounts")
+    .select("stripe_subscription_id")
+    .not("stripe_subscription_id", "is", null)
+    .order("updated_at", { ascending: true })
+    .limit(options?.limit ?? 500);
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as Array<{ stripe_subscription_id: string }>;
+  let synced = 0;
+  let failed = 0;
+  for (const row of rows) {
+    try {
+      const subscription = await fetchStripeSubscription(row.stripe_subscription_id);
+      await syncSubscriptionToBillingAccount(subscription);
+      synced++;
+    } catch (err) {
+      failed++;
+      console.error(
+        `[billing] reconcile failed for ${row.stripe_subscription_id}:`,
+        (err as Error).message
+      );
+    }
+  }
+  return { checked: rows.length, synced, failed };
 }
