@@ -51,7 +51,9 @@ export function BulkIssueActions({
         <option value="unassigned">Non assigné</option>
         {members.map((member) => <option key={member.user_id} value={member.user_id}>{member.display_name ?? member.user_id}</option>)}
       </select>
-      {onDelete && <button type="button" className={cn(selectClass, "text-destructive")} onClick={onDelete}>Supprimer</button>}
+      {onDelete && <button type="button" className={cn(selectClass, "text-destructive")} onClick={() => {
+        if (window.confirm(`Supprimer ${count} ticket(s) ?`)) onDelete();
+      }}>Supprimer</button>}
       <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={onClear}>Désélectionner</button>
     </div>
   );

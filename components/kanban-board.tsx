@@ -63,6 +63,7 @@ export function KanbanBoard({
   onOpenPlan,
   onCreateIssue,
   onUpdateIssue,
+  onDeleteIssue,
   onSetCategories,
   onAddRelation,
   onMove,
@@ -86,6 +87,8 @@ export function KanbanBoard({
   onOpenPlan: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
+  onDeleteIssue?: (issueId: string) => Promise<void>;
+  onDeleteIssue?: (issueId: string) => Promise<void>;
   onSetCategories: (issueId: string, ids: string[]) => void;
   onAddRelation: (
     sourceId: string,
@@ -289,6 +292,10 @@ export function KanbanBoard({
             count={selectedIssues.length}
             members={members}
             onUpdate={updateSelected}
+            onDelete={onDeleteIssue ? async () => {
+              await Promise.all(selectedIssues.map((issue) => onDeleteIssue(issue.id)));
+              clearSelection();
+            } : undefined}
             onClear={clearSelection}
           />
         )}

@@ -448,6 +448,7 @@ function GlobalBoardInner() {
         toast.error((err as Error).message)
       ),
     onSetCategories: setCategories,
+    onDeleteIssue: (id: string, pid: string) => deleteIssue(id, pid),
     onMove: moveIssue,
     allIssues: scopedIssues,
     relations,
