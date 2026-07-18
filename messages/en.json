@@ -1392,7 +1392,6 @@
     "monthsAgo": "{mo}mo ago",
     "yearsAgo": "{y, plural, one {# year ago} other {# years ago}}",
     "integrationActor": "Integration {name}",
-    "mcpActor": "{name} (mcp)",
     "mcpFallback": "Agent",
     "integrationFallback": "unknown",
     "boardActor": "The board"

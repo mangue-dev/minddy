@@ -88,6 +88,21 @@ function actorName(members: Member[], id: string | null, t: TimelineT): string {
   return displayName(m, t("someUser"));
 }
 
+/** Display name for an action performed through the MCP endpoint: the acting
+    agent's canonical label (Claude Code, Cursor…) when its key maps to a known
+    agent, else the raw key name with a trailing "(…)" (workspace/project the
+    client tacks on) dropped. No "(mcp)" suffix — the agent's logo already marks
+    the source; just the agent name. */
+function mcpActorName(
+  agent: string | null | undefined,
+  keyName: string | null | undefined,
+  t: TimelineT,
+): string {
+  if (isMcpAgentId(agent)) return getMcpAgent(agent).label;
+  const raw = (keyName ?? t("mcpFallback")).trim();
+  return raw.replace(/\s*\([^()]*\)\s*$/, "").trim() || raw;
+}
+
 /** Bridge next-intl translators into the loose types describeEvent expects. */
 function useEventTranslators(): EventTranslators {
   const tActivity = useTranslations("Activity");
@@ -313,7 +328,7 @@ function EventRow({
     entity === "feedback" &&
     item.event.type === "created" &&
     item.event.field === "board";
-  // via_mcp : l'acteur affiché est l'AGENT (nom de la clé API + logo), pas
+  // via_mcp : l'acteur affiché est l'AGENT (nom canonique + logo), pas
   // l'utilisateur — l'action peut venir d'un workflow automatisé.
   const actor = actorName(ctx.members, item.event.actor_id, t);
   const name = viaSmartAssign
@@ -327,7 +342,7 @@ function EventRow({
               name: item.event.integration_name ?? t("integrationFallback"),
             })
           : viaMcp
-            ? t("mcpActor", { name: item.event.api_key_name ?? t("mcpFallback") })
+            ? mcpActorName(item.event.api_key_agent, item.event.api_key_name, t)
             : viaBoard
               ? t("boardActor")
               : actor;
@@ -391,12 +406,12 @@ function CommentBlock({
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
   const author = actorName(ctx.members, comment.author_id, t);
-  // via_mcp : l'auteur affiché est l'AGENT (nom de la clé API + logo), pas
+  // via_mcp : l'auteur affiché est l'AGENT (nom canonique + logo), pas
   // l'utilisateur ; le propriétaire (author_id) garde édition et suppression.
   const name = viaNumo
     ? "Numo"
     : viaMcp
-      ? t("mcpActor", { name: comment.api_key_name ?? t("mcpFallback") })
+      ? mcpActorName(comment.api_key_agent, comment.api_key_name, t)
       : author;
   // Live @Numo reply: 'working' comments update in place (current tool, then
   // streaming text) via Realtime until only the final message remains. A
