@@ -1122,6 +1122,9 @@
   "Projects": {
     "newProject": "New Project",
     "projectOptions": "Project options",
+    "tickets": "Issues",
+    "triage": "Triage",
+    "feedback": "Feedback",
     "objectives": "Objectives",
     "settings": "Settings",
     "triageIssues": "{entityPlural} in Triage",

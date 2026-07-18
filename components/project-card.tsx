@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   Tooltip,
   TooltipTrigger,
   TooltipContent,
@@ -21,6 +22,8 @@ import {
   CheckCircle2,
   Target,
   Settings,
+  LayoutGrid,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 import { fetchIssuesApi } from "@/lib/issues-api";
@@ -116,6 +119,25 @@ export function ProjectCard({ project }: { project: Project }) {
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           >
+            <DropdownMenuItem
+              onSelect={() => router.push(`/projects/${project.id}`)}
+            >
+              <LayoutGrid />
+              {t("tickets")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => router.push(`/projects/${project.id}/triage`)}
+            >
+              <CircleDotDashed />
+              {t("triage")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => router.push(`/projects/${project.id}/feedback`)}
+            >
+              <MessagesSquare />
+              {t("feedback")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}/objectives`)}
             >
