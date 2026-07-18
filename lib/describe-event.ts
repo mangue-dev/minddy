@@ -50,6 +50,12 @@ function issueRef(ctx: EventContext, tr: EventTranslators, id: string | null): s
   const i = ctx.issues.find((x) => x.id === id);
   return i ? issueIdentifier(ctx.projectKey, i.number) : tr.t("issueSome");
 }
+const IMPORT_SOURCE_LABELS: Record<string, string> = {
+  linear: "Linear",
+  jira: "Jira",
+  csv: "CSV",
+};
+
 const emptyDash = "—";
 const effortLabel = (v: string | null) =>
   v ? EFFORT_MAP[v as IssueEffort]?.label ?? v : emptyDash;
@@ -63,6 +69,11 @@ export function describeEvent(
 ): string {
   const { t, tStatus, tPriority, formatDue } = tr;
   if (e.type === "created") return t("created");
+  // CSV importers (MIN-45): to_value carries the source.
+  if (e.type === "imported")
+    return t("imported", {
+      source: IMPORT_SOURCE_LABELS[e.to_value ?? ""] ?? "CSV",
+    });
   if (e.type === "category_added")
     return t("categoryAdded", { name: categoryName(ctx, tr, e.to_value) });
   if (e.type === "category_removed")

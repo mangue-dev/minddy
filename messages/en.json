@@ -93,7 +93,8 @@
     "feedbackLinked": "linked to {ref}",
     "feedbackUnlinked": "unlinked the issue",
     "feedbackMerged": "merged “{title}” into this feedback",
-    "feedbackMergeUndone": "reverted the merge of “{title}”"
+    "feedbackMergeUndone": "reverted the merge of “{title}”",
+    "imported": "imported the issue from {source}"
   },
   "ApiErrors": {
     "invalidJson": "Invalid JSON",
@@ -167,7 +168,12 @@
     "customDomainsNotConfigured": "Custom domains are not configured on this deployment",
     "customDomainApiError": "The domain provider could not be reached — try again",
     "iconInvalidUrl": "Invalid or unreachable site URL.",
-    "iconNotFound": "No usable favicon found on this site."
+    "iconNotFound": "No usable favicon found on this site.",
+    "importInvalidCsv": "This file doesn't look like a supported CSV.",
+    "importNoIssues": "No importable issues found in this file.",
+    "importTooLarge": "The CSV exceeds 5 MB.",
+    "importTooManyIssues": "Imports are limited to 1,000 issues at a time.",
+    "importOwnerOnly": "Only the project owner can import issues."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -1251,7 +1257,28 @@
     "feedbackAccentDesc": "Customize the public board's accent color, separately for light and dark mode. Otherwise the default blue is used.",
     "feedbackAccentLight": "Light mode",
     "feedbackAccentDark": "Dark mode",
-    "iconLabel": "Icon"
+    "iconLabel": "Icon",
+    "importTab": "Import",
+    "importSectionDesc": "Import issues from a Linear or Jira export, or a generic CSV file.",
+    "importDropTitle": "Drop a CSV file here, or click to browse",
+    "importDropHint": "Linear and Jira exports are detected automatically — 5 MB max.",
+    "importTemplateLink": "Download the CSV template",
+    "importSource_linear": "Linear export",
+    "importSource_jira": "Jira export",
+    "importSource_csv": "Generic CSV",
+    "importPreviewCount": "{count, plural, one {# issue detected} other {# issues detected}}",
+    "importCategoriesToCreate": "{count, plural, one {# category to create} other {# categories to create}}",
+    "importWarn_unknownStatus": "Unknown status “{value}” → Backlog ({count})",
+    "importWarn_skippedNoTitle": "{count, plural, one {# row without a title skipped} other {# rows without a title skipped}}",
+    "importWarn_parentNotFound": "{count, plural, one {# issue kept top-level (parent not in the file)} other {# issues kept top-level (parent not in the file)}}",
+    "importWarn_flattenedSubIssue": "{count, plural, one {# issue flattened (one nesting level only)} other {# issues flattened (one nesting level only)}}",
+    "importButton": "Import {count, plural, one {# issue} other {# issues}}",
+    "importSuccessToast": "{count, plural, one {# issue imported} other {# issues imported}}",
+    "importOwnerOnlyHint": "Only the project owner can import issues.",
+    "importErrorInvalid": "This file doesn't look like a supported CSV — no title column found.",
+    "importErrorEmpty": "No importable issues found in this file.",
+    "importErrorTooLarge": "This file exceeds 5 MB.",
+    "importErrorTooMany": "Imports are limited to 1,000 issues at a time."
   },
   "Sort": {
     "manual": "Manual",

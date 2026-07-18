@@ -93,7 +93,8 @@
     "feedbackLinked": "a lié à {ref}",
     "feedbackUnlinked": "a délié le ticket",
     "feedbackMerged": "a fusionné « {title} » dans ce retour",
-    "feedbackMergeUndone": "a annulé la fusion de « {title} »"
+    "feedbackMergeUndone": "a annulé la fusion de « {title} »",
+    "imported": "a importé le ticket depuis {source}"
   },
   "ApiErrors": {
     "invalidJson": "JSON invalide",
@@ -167,7 +168,12 @@
     "customDomainsNotConfigured": "Les domaines personnalisés ne sont pas configurés sur ce déploiement",
     "customDomainApiError": "Le fournisseur de domaine est injoignable — réessayez",
     "iconInvalidUrl": "URL du site invalide ou inaccessible.",
-    "iconNotFound": "Aucun favicon exploitable trouvé sur ce site."
+    "iconNotFound": "Aucun favicon exploitable trouvé sur ce site.",
+    "importInvalidCsv": "Ce fichier ne ressemble pas à un CSV pris en charge.",
+    "importNoIssues": "Aucun ticket importable dans ce fichier.",
+    "importTooLarge": "Le CSV dépasse 5 Mo.",
+    "importTooManyIssues": "L'import est limité à 1 000 tickets à la fois.",
+    "importOwnerOnly": "Seul le propriétaire du projet peut importer des tickets."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -1251,7 +1257,28 @@
     "feedbackAccentDesc": "Personnalise la couleur d'accent du board public, distincte en mode clair et sombre. Sinon, le bleu par défaut est utilisé.",
     "feedbackAccentLight": "Mode clair",
     "feedbackAccentDark": "Mode sombre",
-    "iconLabel": "Icône"
+    "iconLabel": "Icône",
+    "importTab": "Import",
+    "importSectionDesc": "Importe des tickets depuis un export Linear ou Jira, ou un fichier CSV générique.",
+    "importDropTitle": "Dépose un fichier CSV ici, ou clique pour parcourir",
+    "importDropHint": "Les exports Linear et Jira sont détectés automatiquement — 5 Mo max.",
+    "importTemplateLink": "Télécharger le modèle CSV",
+    "importSource_linear": "Export Linear",
+    "importSource_jira": "Export Jira",
+    "importSource_csv": "CSV générique",
+    "importPreviewCount": "{count, plural, one {# ticket détecté} other {# tickets détectés}}",
+    "importCategoriesToCreate": "{count, plural, one {# catégorie à créer} other {# catégories à créer}}",
+    "importWarn_unknownStatus": "Statut inconnu « {value} » → Backlog ({count})",
+    "importWarn_skippedNoTitle": "{count, plural, one {# ligne sans titre ignorée} other {# lignes sans titre ignorées}}",
+    "importWarn_parentNotFound": "{count, plural, one {# ticket gardé au premier niveau (parent absent du fichier)} other {# tickets gardés au premier niveau (parent absent du fichier)}}",
+    "importWarn_flattenedSubIssue": "{count, plural, one {# ticket aplati (un seul niveau de sous-tickets)} other {# tickets aplatis (un seul niveau de sous-tickets)}}",
+    "importButton": "Importer {count, plural, one {# ticket} other {# tickets}}",
+    "importSuccessToast": "{count, plural, one {# ticket importé} other {# tickets importés}}",
+    "importOwnerOnlyHint": "Seul le propriétaire du projet peut importer des tickets.",
+    "importErrorInvalid": "Ce fichier ne ressemble pas à un CSV pris en charge — aucune colonne titre trouvée.",
+    "importErrorEmpty": "Aucun ticket importable dans ce fichier.",
+    "importErrorTooLarge": "Le fichier dépasse 5 Mo.",
+    "importErrorTooMany": "L'import est limité à 1 000 tickets à la fois."
   },
   "Sort": {
     "manual": "Manuel",

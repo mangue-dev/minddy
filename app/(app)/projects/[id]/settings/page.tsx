@@ -16,6 +16,7 @@ import {
 } from "mangue-ui";
 import {
   GitBranch,
+  Import as ImportIcon,
   LogOut,
   MessagesSquare,
   Plug,
@@ -35,6 +36,7 @@ import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
 import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
 import { ProjectGitSection } from "@/components/settings/project-git-section";
+import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import {
@@ -322,6 +324,14 @@ export default function ProjectSettingsPage() {
         >
           <ProjectGitSection projectId={project.id} />
         </SettingsSection>
+      ),
+    },
+    {
+      value: "import",
+      label: t("importTab"),
+      icon: ImportIcon,
+      content: (
+        <ProjectImportSection projectId={project.id} isOwner={isOwner} />
       ),
     },
     {
