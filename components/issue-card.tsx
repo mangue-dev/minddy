@@ -781,6 +781,9 @@ export function IssueCard({
   extraActions?: ContextMenuAction[];
   /** The issue belongs to MY current cycle — forwarded to the card body. */
   inCurrentCycle?: boolean;
+  /** Shift-click selection state for bulk actions. */
+  selected?: boolean;
+  onSelect?: (issueId: string) => void;
 }) {
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
@@ -1012,7 +1015,15 @@ export function IssueCard({
       {...attributes}
       {...listeners}
       {...containerProps}
-      onClick={onOpen}
+      onClick={(e) => {
+        if (e.shiftKey && onSelect) {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect(issue.id);
+          return;
+        }
+        onOpen();
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1024,6 +1035,7 @@ export function IssueCard({
       // touch is free to scroll the board/columns natively.
       className={cn(
         "relative cursor-pointer rounded-xl",
+        selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
         isDragging && "opacity-40",
       )}
     >
