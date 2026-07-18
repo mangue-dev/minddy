@@ -31,6 +31,13 @@ export interface AgentCheckpoint {
   messages: AgentChatMessage[];
   /** Prochain index de ligne ai_usage (ordre d'affichage). */
   usageSeq?: number;
+  /**
+   * Sha git au dernier event `files_changed` émis — le « avant » du diff par tour
+   * (MIN-46). Persisté dans le checkpoint pour qu'un tour éclaté sur plusieurs chunks
+   * (WIP intermédiaires) diffe quand même depuis son VRAI début, pas depuis le dernier
+   * chunk. Amorcé au HEAD du premier chunk (« rien de changé encore » pour ce run).
+   */
+  lastFilesSha?: string;
 }
 
 export interface AgentRun {

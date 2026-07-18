@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner, toast } from "mangue-ui";
@@ -30,6 +31,7 @@ import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
+import { AgentChangesBar } from "./agent-changes-bar";
 
 /** Codes d'erreur bruts des routes agent (lancement ET reprise) → clés i18n Agent. */
 const AGENT_ERROR_KEYS: Record<string, string> = {
@@ -120,6 +122,7 @@ export function AgentConversation({
 }) {
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
   const agentErrorMessage = (err: unknown): string => {
@@ -157,6 +160,9 @@ export function AgentConversation({
   // temps il n'y a rien à afficher — le message a quitté le composer et n'existe
   // encore nulle part. On le tient ici pour le montrer tout de suite.
   const [launchText, setLaunchText] = useState<string | null>(null);
+  // Demande « créer la PR » envoyée : désactive le bouton le temps que l'agent
+  // reparte (working) ou que la PR apparaisse. Remise à zéro par l'effet plus bas.
+  const [requestingPr, setRequestingPr] = useState(false);
   // L'utilisateur a explicitement choisi une session ou ouvert le composer : les
   // props ne reprennent plus la main. Sans ce garde, un changement d'`initialRunId`
   // (le représentant de l'issue bouge — ex. un coéquipier lance une run, le poll la
@@ -215,6 +221,15 @@ export function AgentConversation({
   const steerable = liveRun
     ? isAgentRunResumable(liveRun.status) && isLatest && !delivered
     : false;
+  // « Créer une pull request » a du sens quand la session est reprennable ET qu'aucune
+  // PR n'existe encore : la barre de changements montre alors le bouton (si du travail
+  // a été poussé). Sinon l'en-tête porte déjà « ouvrir la PR ».
+  const canCreatePr = steerable && liveRun?.pr_number == null;
+  // Une PR existe → les fichiers des blocs de diff mènent à sa vue diff in-app.
+  const openPrFile =
+    liveRun && liveRun.pr_number != null
+      ? () => router.push(`/pull-requests?run=${liveRun.id}`)
+      : undefined;
 
   // Changer de run vide les bulles optimistes : elles appartiennent à la
   // conversation qu'on quitte, pas à celle qu'on ouvre. `launchText` part avec :
@@ -222,7 +237,14 @@ export function AgentConversation({
   useEffect(() => {
     setPendingMessages([]);
     setLaunchText(null);
+    setRequestingPr(false);
   }, [liveRun?.id]);
+
+  // La demande de PR a « pris » dès que l'agent repart (working) ou que la PR existe :
+  // on réactive le bouton (il disparaîtra de lui-même via `canCreatePr`).
+  useEffect(() => {
+    if (working || liveRun?.pr_number != null) setRequestingPr(false);
+  }, [working, liveRun?.pr_number]);
 
   // Heartbeat tant que le composant est actif sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
@@ -332,6 +354,16 @@ export function AgentConversation({
     if (working) await interrupt();
   };
 
+  // « Créer une pull request » (note MIN-46) : on n'ouvre PAS la PR nous-mêmes — on
+  // INJECTE un message qui le demande à l'agent, qui l'ouvre via son tool `create_pr`
+  // et itère ensuite dessus comme sur n'importe quelle consigne. Le bouton n'apparaît
+  // qu'au repos sans PR (cf. `canCreatePr`), donc un simple steer suffit.
+  const createPr = async () => {
+    if (!liveRun || requestingPr) return;
+    setRequestingPr(true);
+    await steer(t("createPrPrompt"));
+  };
+
   const phase: "live" | "loading" | "compose" = liveRun
     ? "live"
     : loading
@@ -411,6 +443,7 @@ export function AgentConversation({
             status={liveRun.status}
             prompt={liveRun.prompt}
             pendingUserMessages={pendingMessages}
+            onOpenFile={openPrFile}
             className="h-full py-4"
           />
         ) : launchText ? (
@@ -453,6 +486,19 @@ export function AgentConversation({
       {phase !== "loading" && (
         <div className="shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
+          {/* Fichiers changés : bloc LIVE du tour épinglé au-dessus du composer pendant
+              le travail, ou bouton « créer la PR » au repos. Passe SOUS la réponse (dans
+              le fil) une fois le tour fini — c'est l'event `files_changed` qui prend le
+              relais là-bas. */}
+          {liveRun ? (
+            <AgentChangesBar
+              runId={liveRun.id}
+              working={working}
+              canCreatePr={canCreatePr}
+              requestingPr={requestingPr}
+              onCreatePr={() => void createPr()}
+            />
+          ) : null}
           {liveRun ? (
             <ChatInput
               key={liveRun.id}

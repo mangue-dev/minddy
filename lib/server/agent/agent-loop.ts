@@ -89,7 +89,8 @@ export type AgentEventType =
   | "error"
   | "summary"
   | "user_message"
-  | "plan_update";
+  | "plan_update"
+  | "files_changed";
 
 export type EmitAgentEvent = (
   type: AgentEventType,
@@ -225,8 +226,18 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { path: String(args.path ?? "") };
     case "move_file":
       return { from: String(args.from ?? ""), to: String(args.to ?? "") };
-    case "apply_edits":
-      return { count: Array.isArray(args.changes) ? args.changes.length : 0 };
+    case "apply_edits": {
+      // Les chemins servent la vue LIVE « fichiers changés » (bloc de diff par tour,
+      // MIN-46) : sans eux, un batch multi-fichiers n'apparaît que comme un compteur.
+      const changes = Array.isArray(args.changes) ? args.changes : [];
+      return {
+        count: changes.length,
+        paths: changes
+          .map((c) => String((c as Record<string, unknown>)?.path ?? ""))
+          .filter(Boolean)
+          .slice(0, 50),
+      };
+    }
     case "glob":
     case "grep":
       return { pattern: String(args.pattern ?? "") };

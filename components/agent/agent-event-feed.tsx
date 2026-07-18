@@ -28,10 +28,17 @@ import {
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { NumoIcon } from "@/components/numo-icon";
+import { ChangedFilesBlock } from "./changed-files-block";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { unechoedMessages } from "@/lib/agent-pending";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
-import { isAgentRunWorking, type AgentRunEvent, type AgentRunStatus } from "@/lib/agent-api";
+import {
+  isAgentRunWorking,
+  parseFilesChangedPayload,
+  type AgentFileChange,
+  type AgentRunEvent,
+  type AgentRunStatus,
+} from "@/lib/agent-api";
 import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types";
 
 /**
@@ -70,7 +77,14 @@ type FeedItem =
       text: string;
       createdAt: string;
     }
-  | { kind: "plan"; id: string; steps: PlanStep[]; createdAt: string };
+  | { kind: "plan"; id: string; steps: PlanStep[]; createdAt: string }
+  | {
+      kind: "files";
+      id: string;
+      files: AgentFileChange[];
+      truncated: boolean;
+      createdAt: string;
+    };
 
 /**
  * Un TOUR : accordéon du déroulé.
@@ -85,6 +99,8 @@ type Block =
       key: string;
       work: FeedItem[];
       summary: MessageItem | null;
+      /** Bloc(s) « fichiers changés » du tour — rendus SOUS le résumé, hors accordéon. */
+      files: FeedItem[];
       startedAt: string;
       endedAt: string | null;
       active: boolean;
@@ -237,6 +253,16 @@ function buildFeed(
         items.push({ kind: "note", id: e.id, variant: "commit", text: "", createdAt: e.created_at });
         break;
       }
+      case "files_changed": {
+        // Émis en fin de tour (après le `summary`) : la liste autoritaire des fichiers
+        // que le tour a changés. Rattachée au tour et rendue sous sa réponse (buildBlocks).
+        const { files, truncated } = parseFilesChangedPayload(p);
+        current = null;
+        if (files.length > 0) {
+          items.push({ kind: "files", id: e.id, files, truncated, createdAt: e.created_at });
+        }
+        break;
+      }
       case "plan_update": {
         const steps = (Array.isArray(p.plan) ? p.plan : []) as PlanStep[];
         // Une seule checklist affichée : on remplace la précédente par la plus récente.
@@ -280,7 +306,22 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
     work = [];
   };
 
+  // Dernier tour poussé : reçoit le bloc « fichiers changés » qui le suit (l'event
+  // arrive APRÈS le résumé qui a déjà refermé le tour).
+  const lastTurn = (): Extract<Block, { type: "turn" }> | null => {
+    const b = blocks[blocks.length - 1];
+    return b && b.type === "turn" ? b : null;
+  };
+
   for (const it of items) {
+    // Bloc « fichiers changés » : rattaché au tour qu'il clôt (rendu sous sa réponse).
+    // Sans tour immédiatement avant (résumé lâche, ou tour actif) → item libre.
+    if (it.kind === "files") {
+      const turn = work.length === 0 ? lastTurn() : null;
+      if (turn) turn.files.push(it);
+      else work.push(it);
+      continue;
+    }
     // Un message user sépare les tours : il reste visible, et clôt tout travail en
     // cours non résumé (tour mis en pause) → affiché déplié.
     if (it.kind === "message" && it.message.role === "user") {
@@ -296,6 +337,7 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
           key: itemKey(work[0]),
           work,
           summary: it,
+          files: [],
           startedAt: work[0].createdAt || it.createdAt,
           endedAt: it.endedAt || it.createdAt,
           active: false,
@@ -317,6 +359,7 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
       key: itemKey(work[0]),
       work,
       summary: null,
+      files: [],
       startedAt: work[0].createdAt,
       endedAt: null,
       active: true,
@@ -331,6 +374,27 @@ interface RenderContext {
   results: Map<string, ToolResult>;
   copyableIds: Set<string>;
   lastMessageId: string | null;
+  /** Ouvre la vue diff d'un fichier (fourni quand une PR existe) → lignes cliquables. */
+  onOpenFile?: (path: string) => void;
+}
+
+function FilesRow({
+  item,
+  onOpenFile,
+}: {
+  item: Extract<FeedItem, { kind: "files" }>;
+  onOpenFile?: (path: string) => void;
+}) {
+  const t = useTranslations("Agent");
+  return (
+    <ChangedFilesBlock
+      files={item.files}
+      truncated={item.truncated}
+      label={t("filesChanged", { count: item.files.length })}
+      defaultOpen
+      onOpenFile={onOpenFile}
+    />
+  );
 }
 
 function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
@@ -346,6 +410,7 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
     );
   }
   if (it.kind === "plan") return <PlanRow key={it.id} item={it} />;
+  if (it.kind === "files") return <FilesRow key={it.id} item={it} onOpenFile={ctx.onOpenFile} />;
   return <NoteRow key={it.id} item={it} />;
 }
 
@@ -359,6 +424,7 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
 function TurnGroup({
   work,
   summary,
+  files,
   startedAt,
   endedAt,
   active,
@@ -366,6 +432,7 @@ function TurnGroup({
 }: {
   work: FeedItem[];
   summary: MessageItem | null;
+  files: FeedItem[];
   startedAt: string;
   endedAt: string | null;
   active: boolean;
@@ -422,6 +489,8 @@ function TurnGroup({
         </CollapsibleContent>
       </Collapsible>
       {summary ? renderItem(summary, ctx) : null}
+      {/* Fichiers changés du tour : sous la réponse, hors de l'accordéon de travail. */}
+      {files.map((it) => renderItem(it, ctx))}
     </div>
   );
 }
@@ -497,6 +566,7 @@ export function AgentEventFeed({
   prompt,
   className,
   pendingUserMessages = [],
+  onOpenFile,
 }: {
   /**
    * Session à suivre, ou `null` quand elle n'existe pas ENCORE : le POST de
@@ -509,6 +579,8 @@ export function AgentEventFeed({
   /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
   prompt?: string | null;
   className?: string;
+  /** Rend cliquables les fichiers des blocs de diff (fourni quand une PR existe). */
+  onOpenFile?: (path: string) => void;
   /**
    * Messages que l'utilisateur vient d'envoyer, pas encore revenus du serveur.
    * Un message de steering ne devient un event `user_message` que lorsque la BOUCLE
@@ -604,7 +676,7 @@ export function AgentEventFeed({
     }
   }
 
-  const ctx: RenderContext = { results, copyableIds, lastMessageId };
+  const ctx: RenderContext = { results, copyableIds, lastMessageId, onOpenFile };
   // Le tour actif (accordéon ouvert « Travail depuis X ») porte déjà le signal
   // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore
   // (ex. juste après le lancement : prompt affiché, aucun pas produit).
@@ -627,6 +699,7 @@ export function AgentEventFeed({
               key={block.key}
               work={block.work}
               summary={block.summary}
+              files={block.files}
               startedAt={block.startedAt}
               endedAt={block.endedAt}
               active={block.active}

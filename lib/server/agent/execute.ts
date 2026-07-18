@@ -13,6 +13,8 @@ import {
   getOrCreateAgentSandbox,
   cloneRepo,
   commitAndPush,
+  revParseHead,
+  changedFiles,
   runShell,
   readWorkFile,
   readWorkFileWindow,
@@ -522,6 +524,13 @@ export async function executeAgentRun(
       branch_name: workBranch,
     });
 
+    // Baseline du « diff par tour » (MIN-46, event `files_changed`) : HEAD à l'entrée
+    // du chunk. `filesFromSha` est le point depuis lequel la fin de tour diffe — le
+    // dernier sha émis (persisté dans le checkpoint, survit aux chunks WIP), ou ce
+    // baseline au tout premier chunk du run (« rien de changé encore »).
+    const baselineHead = await revParseHead(sandbox);
+    const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
+
     // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
     // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
@@ -774,7 +783,15 @@ export async function executeAgentRun(
     });
 
     const newCost = run.cost_usd + result.costUsd;
-    const checkpoint: AgentCheckpoint = { messages: result.messages, usageSeq: result.usageSeqEnd };
+    // `lastFilesSha` amorcé pour TOUTES les mises au repos (ce checkpoint est réutilisé
+    // par les chemins WIP/interruption/erreur/budget) : sur le 1er chunk on fixe la
+    // baseline, jamais avancée en cours de tour — seule une fin de tour la fait
+    // progresser (plus bas). Un chunk ultérieur ne la réinitialise donc pas.
+    const checkpoint: AgentCheckpoint = {
+      messages: result.messages,
+      usageSeq: result.usageSeqEnd,
+      lastFilesSha: run.checkpoint?.lastFilesSha ?? baselineHead,
+    };
     const nowIso = new Date().toISOString();
 
     // Champs communs à toute mise au REPOS (fin de tour / interruption / erreur /
@@ -864,10 +881,23 @@ export async function executeAgentRun(
         });
       }
 
+      // Diff par tour (MIN-46) : émet les fichiers que CE tour a changés, calculés par
+      // git dans la sandbox entre la baseline du tour et la tête poussée. Best-effort
+      // (n'affecte jamais le repos). `filesToSha` avance la baseline du prochain tour —
+      // persistée dans le checkpoint pour que le tour suivant diffe depuis ici.
+      let filesToSha = filesFromSha;
+      if (pushed?.headSha && pushed.headSha !== filesFromSha) {
+        const changed = await changedFiles(sandbox, filesFromSha, pushed.headSha).catch(() => null);
+        if (changed && changed.files.length > 0) {
+          await emit("files_changed", { files: changed.files, truncated: changed.truncated });
+        }
+        filesToSha = pushed.headSha;
+      }
+
       // `outcome` = la dernière réponse de la session : c'est elle qu'une future
       // session froide recevra comme résumé du travail précédent.
       await restStamp({
-        checkpoint,
+        checkpoint: { ...checkpoint, lastFilesSha: filesToSha },
         outcome: reply ? cap(reply, 4000) : null,
         ...(pushError ? { error_message: cap(pushError, 1000) } : {}),
       });

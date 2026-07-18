@@ -218,6 +218,120 @@ export async function commitAndPush(
   return { committed: dirty, remoteUpdated: remoteSha !== headSha, headSha };
 }
 
+// ── Diff par tour (event `files_changed`, MIN-46) ────────────────────────────
+
+/** Nombre max de fichiers listés dans un event `files_changed` (gros tour borné). */
+export const CHANGED_FILES_CAP = 100;
+
+/** Un fichier changé sur un intervalle git. Défini ICI : sandbox.ts (serveur) ne
+    dépend pas de la couche client `lib/agent-api.ts` (« use client »). Même forme. */
+interface ChangedFile {
+  path: string;
+  status: "added" | "modified" | "deleted" | "renamed";
+  additions: number;
+  deletions: number;
+  previousPath?: string;
+}
+
+/** HEAD courant du dépôt (sha), ou "" si indéterminable. Best-effort — ne lève pas. */
+export async function revParseHead(sandbox: Sandbox): Promise<string> {
+  try {
+    const res = await runShell(sandbox, `git rev-parse HEAD`);
+    return res.exitCode === 0 ? res.stdout.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Résout le chemin APRÈS d'un champ path de `git diff --numstat`, qui compacte les
+ * renommages (`a => b`, `{a => b}`, `pre/{a => b}/post`) — là où `--name-status`
+ * donne des chemins propres tab-séparés. On ne s'en sert que pour indexer les
+ * compteurs par chemin final.
+ */
+function numstatNewPath(field: string): string {
+  const brace = field.match(/^(.*)\{(.*) => (.*)\}(.*)$/);
+  if (brace) {
+    const [, pre, , newMid, post] = brace;
+    return `${pre}${newMid}${post}`.replace(/\/{2,}/g, "/");
+  }
+  const arrow = field.split(" => ");
+  return (arrow.length === 2 ? arrow[1] : field).trim();
+}
+
+/**
+ * Fichiers changés entre deux shas (le « diff par tour »). Deux passes git :
+ * `--name-status` (statut + chemins propres, renommages compris) pour la liste, et
+ * `--numstat` pour les compteurs +/− (fichier binaire → 0/0). Forme deux-points
+ * seulement — le clone est shallow (depth 1). Best-effort : toute erreur (ou un sha
+ * hors de l'historique shallow) renvoie une liste vide, ne casse jamais un tour.
+ */
+export async function changedFiles(
+  sandbox: Sandbox,
+  fromSha: string,
+  toSha: string,
+): Promise<{ files: ChangedFile[]; truncated: boolean }> {
+  if (!fromSha || !toSha || fromSha === toSha) return { files: [], truncated: false };
+  try {
+    const [nameStatus, numstat] = await Promise.all([
+      runShell(sandbox, `git diff --name-status --find-renames ${sq(fromSha)} ${sq(toSha)}`),
+      runShell(sandbox, `git diff --numstat --find-renames ${sq(fromSha)} ${sq(toSha)}`),
+    ]);
+    if (nameStatus.exitCode !== 0) return { files: [], truncated: false };
+
+    // Compteurs indexés par chemin APRÈS.
+    const counts = new Map<string, { additions: number; deletions: number }>();
+    for (const line of numstat.stdout.split("\n")) {
+      if (!line.trim()) continue;
+      const parts = line.split("\t");
+      if (parts.length < 3) continue;
+      const additions = parts[0] === "-" ? 0 : Number.parseInt(parts[0], 10) || 0;
+      const deletions = parts[1] === "-" ? 0 : Number.parseInt(parts[1], 10) || 0;
+      counts.set(numstatNewPath(parts.slice(2).join("\t")), { additions, deletions });
+    }
+
+    const files: ChangedFile[] = [];
+    for (const line of nameStatus.stdout.split("\n")) {
+      if (!line.trim()) continue;
+      const parts = line.split("\t");
+      const code = parts[0]?.[0] ?? "";
+      let status: ChangedFile["status"];
+      let path: string;
+      let previousPath: string | undefined;
+      if (code === "R") {
+        status = "renamed";
+        previousPath = parts[1] ?? "";
+        path = parts[2] ?? previousPath;
+      } else if (code === "A" || code === "C") {
+        // Copie (C) = nouveau fichier côté cible → « ajouté » du point de vue lecteur.
+        status = "added";
+        path = parts[1] ?? "";
+      } else if (code === "D") {
+        status = "deleted";
+        path = parts[1] ?? "";
+      } else {
+        status = "modified";
+        path = parts[1] ?? "";
+      }
+      if (!path) continue;
+      const c = counts.get(path) ?? { additions: 0, deletions: 0 };
+      files.push({
+        path,
+        status,
+        additions: c.additions,
+        deletions: c.deletions,
+        ...(previousPath ? { previousPath } : {}),
+      });
+    }
+
+    files.sort((a, b) => a.path.localeCompare(b.path));
+    const truncated = files.length > CHANGED_FILES_CAP;
+    return { files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files, truncated };
+  } catch {
+    return { files: [], truncated: false };
+  }
+}
+
 // ── Helpers fichiers (utilisés par les tools de l'agent) ─────────────────────
 
 /** Nombre max de lignes renvoyées par un `read_file` sans offset/limit. */

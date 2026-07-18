@@ -147,7 +147,8 @@ export type AgentEventType =
   | "error"
   | "summary"
   | "user_message"
-  | "plan_update";
+  | "plan_update"
+  | "files_changed";
 
 export interface AgentRunEvent {
   id: string;
@@ -155,6 +156,57 @@ export interface AgentRunEvent {
   type: AgentEventType;
   payload: Record<string, unknown> | null;
   created_at: string;
+}
+
+/** Nature d'un changement de fichier d'un tour (git name-status → 4 cas affichables). */
+export type AgentFileChangeStatus = "added" | "modified" | "deleted" | "renamed";
+
+/**
+ * Un fichier changé pendant un tour de l'agent (MIN-46, note « diff par tour »).
+ * Émis dans l'event `files_changed` en fin de tour, calculé côté serveur par un
+ * `git diff --numstat --name-status <shaAvant> <shaAprès>` dans la sandbox (source
+ * de vérité — les tool-calls ne suffisent pas : `apply_edits` et `run_command`
+ * changent des fichiers hors de leur payload). `previousPath` n'est présent que
+ * pour un renommage (chemin AVANT — celui qui adresse la version de base).
+ */
+export interface AgentFileChange {
+  path: string;
+  status: AgentFileChangeStatus;
+  additions: number;
+  deletions: number;
+  previousPath?: string;
+}
+
+/** Résultat parsé d'un event `files_changed`. `truncated` : la liste a été bornée (gros tour). */
+export interface AgentFilesChangedPayload {
+  files: AgentFileChange[];
+  truncated: boolean;
+}
+
+/** Lit le payload d'un event `files_changed` en tolérant les formes partielles. */
+export function parseFilesChangedPayload(
+  payload: Record<string, unknown> | null,
+): AgentFilesChangedPayload {
+  const rawFiles = Array.isArray(payload?.files) ? (payload!.files as unknown[]) : [];
+  const files: AgentFileChange[] = [];
+  for (const raw of rawFiles) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const r = raw as Record<string, unknown>;
+    const path = typeof r.path === "string" ? r.path : "";
+    if (!path) continue;
+    const status =
+      r.status === "added" || r.status === "deleted" || r.status === "renamed"
+        ? r.status
+        : "modified";
+    files.push({
+      path,
+      status,
+      additions: typeof r.additions === "number" ? r.additions : 0,
+      deletions: typeof r.deletions === "number" ? r.deletions : 0,
+      ...(typeof r.previousPath === "string" ? { previousPath: r.previousPath } : {}),
+    });
+  }
+  return { files, truncated: payload?.truncated === true };
 }
 
 export async function fetchAgentRunEventsApi(
