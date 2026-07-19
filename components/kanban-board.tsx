@@ -31,6 +31,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
+import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
@@ -62,6 +63,8 @@ export function KanbanBoard({
   onOpenPlan,
   onCreateIssue,
   onUpdateIssue,
+  onDeleteIssue,
+  onAskNumo,
   onSetCategories,
   onAddRelation,
   onMove,
@@ -85,6 +88,8 @@ export function KanbanBoard({
   onOpenPlan: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
+  onDeleteIssue?: (issueId: string) => Promise<void>;
+  onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
   onAddRelation: (
     sourceId: string,
@@ -150,6 +155,26 @@ export function KanbanBoard({
   }, [issues, statuses, sort]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelection = useCallback((issueId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(issueId)) next.delete(issueId);
+      else next.add(issueId);
+      return next;
+    });
+  }, []);
+  const selectedIssues = useMemo(
+    () => issues.filter((issue) => selectedIds.has(issue.id)),
+    [issues, selectedIds]
+  );
+  const updateSelected = useCallback(
+    (patch: IssueUpdateInput) => {
+      selectedIssues.forEach((issue) => onUpdateIssue(issue.id, patch));
+    },
+    [onUpdateIssue, selectedIssues]
+  );
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
   const activeIssue = activeId ? issues.find((i) => i.id === activeId) ?? null : null;
   const activeParent =
     activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
@@ -263,6 +288,19 @@ export function KanbanBoard({
     >
       <div className="flex h-full flex-col">
         {/* Mobile: dots reflect / control the snapped column (one status per swipe). */}
+        {selectedIssues.length > 0 && (
+          <BulkIssueActions
+            count={selectedIssues.length}
+            members={members}
+            onUpdate={updateSelected}
+            onDelete={onDeleteIssue ? async () => {
+              await Promise.all(selectedIssues.map((issue) => onDeleteIssue(issue.id)));
+              clearSelection();
+            } : undefined}
+            onClear={clearSelection}
+            onAskNumo={() => onAskNumo(selectedIssues)}
+          />
+        )}
         <ColumnDots
           statuses={columns.map((c) => c.status)}
           active={activeColumn}
@@ -299,6 +337,8 @@ export function KanbanBoard({
               onAddRelation={onAddRelation}
               buildMenuActions={buildMenuActions}
               currentCycleId={currentCycleId}
+              selectedIds={selectedIds}
+              onSelect={toggleSelection}
             />
           ))}
         </div>

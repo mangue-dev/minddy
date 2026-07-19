@@ -543,6 +543,7 @@ export function IssueCardBody({
   onSetCategories,
   inCurrentCycle,
   dragging,
+  selected,
   pr,
   onOpenPr,
 }: {
@@ -579,6 +580,7 @@ export function IssueCardBody({
       icon before the identifier. Boards leave it unset in cycle view (where
       every card is in the cycle, the icon would be noise). */
   inCurrentCycle?: boolean;
+  selected?: boolean;
   dragging?: boolean;
 }) {
   const t = useTranslations("IssueUI");
@@ -612,7 +614,9 @@ export function IssueCardBody({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm",
+        "flex flex-col gap-2 rounded-xl border border-border p-3 text-left shadow-sm",
+        // Sélection groupée (MIN-75) : fond bleuté plutôt qu'un liseré.
+        selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg"
       )}
     >
@@ -750,6 +754,8 @@ export function IssueCard({
   onSetCategories,
   extraActions,
   inCurrentCycle,
+  selected,
+  onSelect,
 }: {
   issue: Issue;
   projectId: string;
@@ -781,6 +787,8 @@ export function IssueCard({
   extraActions?: ContextMenuAction[];
   /** The issue belongs to MY current cycle — forwarded to the card body. */
   inCurrentCycle?: boolean;
+  selected?: boolean;
+  onSelect?: (issueId: string) => void;
 }) {
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
@@ -1012,7 +1020,15 @@ export function IssueCard({
       {...attributes}
       {...listeners}
       {...containerProps}
-      onClick={onOpen}
+      onClick={(e) => {
+        if (e.shiftKey && onSelect) {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect(issue.id);
+          return;
+        }
+        onOpen();
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1056,6 +1072,7 @@ export function IssueCard({
             onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
             onSetCategories={(ids) => onSetCategories(issue.id, ids)}
             inCurrentCycle={inCurrentCycle}
+            selected={selected}
           />
         );
         // Agent en cours : liseré animé qui parcourt le bord (wrapper `AgentBeam`

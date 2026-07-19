@@ -41,6 +41,8 @@ export function KanbanColumn({
   onAddRelation,
   buildMenuActions,
   currentCycleId,
+  selectedIds,
+  onSelect,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -70,6 +72,8 @@ export function KanbanColumn({
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
   currentCycleId?: string | null;
+  selectedIds: Set<string>;
+  onSelect: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
@@ -129,6 +133,8 @@ export function KanbanColumn({
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={onUpdateIssue}
                 onSetCategories={onSetCategories}
+                selected={selectedIds.has(issue.id)}
+                onSelect={onSelect}
                 extraActions={buildMenuActions?.(issue)}
                 inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
               />

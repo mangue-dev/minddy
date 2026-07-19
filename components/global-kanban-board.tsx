@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,7 @@ import { resolveRelations } from "@/lib/relation-constants";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
+import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -70,6 +71,8 @@ export function GlobalKanbanBoard({
   onOpenIssueById,
   onOpenPlan,
   onUpdateIssue,
+  onDeleteIssue,
+  onAskNumo,
   onSetCategories,
   onMove,
   onCreateIssue,
@@ -96,6 +99,8 @@ export function GlobalKanbanBoard({
   onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
+  onDeleteIssue: (issueId: string, projectId: string) => Promise<void>;
+  onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   onMove: (
     issueId: string,
@@ -172,6 +177,20 @@ export function GlobalKanbanBoard({
   }, [issues, statuses, sort, comparator]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelection = useCallback((issueId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(issueId)) next.delete(issueId);
+      else next.add(issueId);
+      return next;
+    });
+  }, []);
+  const selectedIssues = useMemo(() => issues.filter((issue) => selectedIds.has(issue.id)), [issues, selectedIds]);
+  const updateSelected = useCallback((patch: IssueUpdateInput) => {
+    selectedIssues.forEach((issue) => onUpdateIssue(issue.id, patch, issue.project_id));
+  }, [onUpdateIssue, selectedIssues]);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
   const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
   const activeProject = activeIssue
     ? projectMap.get(activeIssue.project_id)
@@ -252,6 +271,19 @@ export function GlobalKanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
+      {selectedIssues.length > 0 && (
+        <BulkIssueActions
+          count={selectedIssues.length}
+          members={Array.from(memberMapByProject.values()).flatMap((members) => Array.from(members.values()))}
+          onUpdate={updateSelected}
+          onDelete={async () => {
+            await Promise.all(selectedIssues.map((issue) => onDeleteIssue(issue.id, issue.project_id)));
+            clearSelection();
+          }}
+          onClear={clearSelection}
+          onAskNumo={() => onAskNumo(selectedIssues)}
+        />
+      )}
       <div
         ref={fadeRef}
         onScroll={scrollProps.onScroll}
@@ -279,6 +311,8 @@ export function GlobalKanbanBoard({
             onAddRelation={onAddRelation}
             buildMenuActions={buildMenuActions}
             currentCycleId={currentCycleId}
+            selectedIds={selectedIds}
+            onSelect={toggleSelection}
           />
         ))}
       </div>

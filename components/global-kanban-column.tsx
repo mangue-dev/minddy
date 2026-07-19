@@ -49,6 +49,8 @@ export function GlobalKanbanColumn({
   onOpenPlan,
   onUpdateIssue,
   onSetCategories,
+  selectedIds,
+  onSelect,
   onCreateIssue,
   onAddRelation,
   buildMenuActions,
@@ -73,6 +75,8 @@ export function GlobalKanbanColumn({
   onOpenPlan: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
+  selectedIds: Set<string>;
+  onSelect: (issueId: string) => void;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
   onCreateIssue?: (status: IssueStatus) => void;
   /** Adds a relation from a card; the card's project id rides along. */
@@ -152,6 +156,8 @@ export function GlobalKanbanColumn({
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={(id, patch) => onUpdateIssue(id, patch, pid)}
                 onSetCategories={(id, ids) => onSetCategories(id, ids, pid)}
+                selected={selectedIds.has(issue.id)}
+                onSelect={onSelect}
                 extraActions={buildMenuActions?.(issue)}
                 inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
               />

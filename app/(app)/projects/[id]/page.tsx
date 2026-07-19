@@ -479,6 +479,15 @@ function ProjectBoard() {
                 setOpenIssueTab("plan");
               }}
               onCreateIssue={openCreate}
+              onAskNumo={(selectedIssues) => openAssistant({
+                projectId: project.id,
+                pageContext: {
+                  projectId: project.id,
+                  issueIds: selectedIssues.map((issue) => issue.id),
+                  issueIdentifiers: selectedIssues.map((issue) => issueIdentifier(project.key, issue.number)),
+                  issueTitles: selectedIssues.map((issue) => issue.title),
+                },
+              })}
               onUpdateIssue={(id, patch) =>
                 void updateIssue(id, patch).catch((err) =>
                   toast.error((err as Error).message)

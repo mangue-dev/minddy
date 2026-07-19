@@ -10,6 +10,7 @@ import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { ScratchpadProvider } from "@/lib/scratchpad-context";
 import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
+import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
@@ -40,7 +41,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <KeyboardProvider>
                   <UndoProvider>
                     <CreateProvider>
-                      <AppShellChrome>{children}</AppShellChrome>
+                      <BulkActionsProvider>
+                        <AppShellChrome>{children}</AppShellChrome>
+                      </BulkActionsProvider>
                     </CreateProvider>
                     <AssistantPanel />
                     <AssistantFab />

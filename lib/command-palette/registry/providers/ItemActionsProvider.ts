@@ -50,7 +50,7 @@ export const ItemActionsProvider: ActionProvider = {
     }
 
     // === SECONDARY: Toggle favorite ===
-    if (ctx.toggleFavorite && !("calculatorResult" in item)) {
+    if (ctx.toggleFavorite && item.favoritable !== false && !("calculatorResult" in item)) {
       const realId = getRealItemId(item);
       const isFav = ctx.isFavorite?.(realId) ?? false;
 

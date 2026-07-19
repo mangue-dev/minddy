@@ -83,6 +83,10 @@ export interface AssistantPageContext {
   onglet?: "my" | "all";
   /** The issue open in the side panel (or selected in triage), when any. */
   issueId?: string;
+  /** Issues selected for a bulk assistant request. */
+  issueIds?: string[];
+  issueIdentifiers?: string[];
+  issueTitles?: string[];
   /** Human identifier ("MIND-42") — used for the context badge. */
   issueIdentifier?: string;
   issueTitle?: string;
