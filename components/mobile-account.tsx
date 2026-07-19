@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import packageJson from "@/package.json";
 import { useTheme } from "mangue-ui";
 import {
   BarChart3,
@@ -168,28 +169,31 @@ export function MobileMenuFooter() {
   const avatarUrl = meta?.avatar_url || meta?.picture || null;
 
   return (
-    <div className="flex items-center gap-3 px-1">
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={avatarUrl}
-          alt=""
-          className="size-8 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <span
-          aria-hidden
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground"
-        >
-          {initialsOf(name)}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{name}</div>
-        {user?.email ? (
-          <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-        ) : null}
+    <div className="flex flex-col gap-2 px-1">
+      <div className="flex items-center gap-3">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt=""
+            className="size-8 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground"
+          >
+            {initialsOf(name)}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{name}</div>
+          {user?.email ? (
+            <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+          ) : null}
+        </div>
       </div>
+      <div className="text-center text-xs text-muted-foreground">{packageJson.version}</div>
     </div>
   );
 }
