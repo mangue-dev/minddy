@@ -579,6 +579,7 @@ export function IssueCardBody({
       icon before the identifier. Boards leave it unset in cycle view (where
       every card is in the cycle, the icon would be noise). */
   inCurrentCycle?: boolean;
+  selected?: boolean;
   dragging?: boolean;
 }) {
   const t = useTranslations("IssueUI");
@@ -750,6 +751,8 @@ export function IssueCard({
   onSetCategories,
   extraActions,
   inCurrentCycle,
+  selected,
+  onSelect,
 }: {
   issue: Issue;
   projectId: string;
@@ -781,7 +784,6 @@ export function IssueCard({
   extraActions?: ContextMenuAction[];
   /** The issue belongs to MY current cycle — forwarded to the card body. */
   inCurrentCycle?: boolean;
-  /** Shift-click selection state for bulk actions. */
   selected?: boolean;
   onSelect?: (issueId: string) => void;
 }) {
@@ -1068,6 +1070,7 @@ export function IssueCard({
             onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
             onSetCategories={(ids) => onSetCategories(issue.id, ids)}
             inCurrentCycle={inCurrentCycle}
+            selected={selected}
           />
         );
         // Agent en cours : liseré animé qui parcourt le bord (wrapper `AgentBeam`
