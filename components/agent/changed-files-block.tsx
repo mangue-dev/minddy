@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
 import { ChevronRight } from "lucide-react";
-import type { AgentFileChange, AgentFileChangeStatus } from "@/lib/agent-api";
+import type { AgentFileChange } from "@/lib/agent-api";
 import { changeTotals } from "@/lib/agent-changed-files";
 
 /**
@@ -19,14 +19,6 @@ import { changeTotals } from "@/lib/agent-changed-files";
  * seulement quand une PR existe.
  */
 
-/** Teinte de la pastille de statut (le mot lui-même vient de l'i18n, façon Codex). */
-const STATUS_STYLE: Record<AgentFileChangeStatus, string> = {
-  added: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  modified: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  deleted: "bg-red-500/15 text-red-600 dark:text-red-400",
-  renamed: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
-};
-
 function FileRow({
   file,
   onOpenFile,
@@ -39,19 +31,13 @@ function FileRow({
 
   const inner = (
     <>
+      {/* Action + chemin comme une SEULE phrase, en couleur normale (façon Codex) :
+          « créé lib/… », « modifié app/… ». Pas de badge, pas de couleur par action. */}
       <span
-        className={cn(
-          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
-          STATUS_STYLE[file.status],
-        )}
-      >
-        {statusLabel}
-      </span>
-      <span
-        className="min-w-0 flex-1 truncate font-mono text-xs"
+        className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
         title={file.previousPath ? t("renamedFrom", { path: file.previousPath }) : file.path}
       >
-        {file.path}
+        {statusLabel} {file.path}
       </span>
       {file.additions > 0 ? (
         <span className="shrink-0 text-[11px] tabular-nums text-emerald-600 dark:text-emerald-400">
