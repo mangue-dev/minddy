@@ -211,6 +211,49 @@ export async function listInstallationRepositories(
   return repos;
 }
 
+export interface CommitIdentity {
+  name: string;
+  email: string;
+}
+
+// Identité git mémoïsée du bot de l'App (login `<slug>[bot]`). L'id numérique du
+// bot est stable par app ; résolu une fois puis réutilisé pour tout le process.
+let cachedBotIdentity: CommitIdentity | null = null;
+
+/**
+ * Identité de commit du bot de l'App GitHub (`<slug>[bot]` + son email noreply
+ * GitHub `<id>+<slug>[bot]@users.noreply.github.com`). Commiter sous CETTE
+ * identité — et non un email fantaisie comme `agent@minddy.app` — permet à GitHub,
+ * et donc au contrôle d'auteur de commit de Vercel, de rattacher chaque commit de
+ * l'agent à un vrai compte (exactement comme dependabot[bot] / github-actions[bot]) ;
+ * sinon Vercel bloque le déploiement (« commit email could not be matched to a
+ * GitHub account »). L'id numérique vient de `GET /users/<slug>[bot]` (donnée
+ * publique, lisible avec le token d'installation) et ne change jamais : mémoïsé.
+ */
+export async function getGithubBotCommitIdentity(
+  installationToken: string,
+): Promise<CommitIdentity> {
+  if (cachedBotIdentity) return cachedBotIdentity;
+
+  const login = `${getGithubAppSlug()}[bot]`;
+  const response = await fetch(
+    `${GITHUB_API_BASE}/users/${encodeURIComponent(login)}`,
+    { headers: githubHeaders(installationToken) },
+  );
+  const data = (await response.json()) as { id?: number; message?: string };
+  if (!response.ok || typeof data.id !== "number") {
+    throw new Error(
+      data.message || `Failed to resolve GitHub App bot user id (${response.status})`,
+    );
+  }
+
+  cachedBotIdentity = {
+    name: login,
+    email: `${data.id}+${login}@users.noreply.github.com`,
+  };
+  return cachedBotIdentity;
+}
+
 export interface InstallationAccount {
   login: string | null;
   type: string | null;

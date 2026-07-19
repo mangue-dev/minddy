@@ -8,7 +8,8 @@ import {
   AGENT_SOFT_DEADLINE_MS,
   AGENT_MAX_CONTINUATIONS,
 } from "@/lib/agent-models";
-import { resolveRepoCloneTarget } from "./repo-access";
+import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
+import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import {
   getOrCreateAgentSandbox,
   cloneRepo,
@@ -84,6 +85,20 @@ import {
  * de sa conversation (checkpoint + snapshot conservés).
  * Seule une erreur d'AMORÇAGE (repo/modèle) → `failed`. Le drain appelle après claim.
  */
+
+/**
+ * Identité git des commits de l'agent, selon le forge. Côté GitHub on commit sous
+ * le bot de l'App (`<slug>[bot]`, rattachable à un vrai compte GitHub) — sinon le
+ * contrôle d'auteur de Vercel bloque le déploiement. Ailleurs, identité générique.
+ */
+async function resolveCommitterIdentity(
+  target: RepoCloneTarget,
+): Promise<{ name: string; email: string }> {
+  if (target.provider === "github") {
+    return getGithubBotCommitIdentity(target.token);
+  }
+  return { name: "minddy agent", email: "agent@minddy.app" };
+}
 
 /** Marge (ms) réservée après la boucle pour commit+push+PR+stamp. */
 const COMMIT_MARGIN_MS = 25_000;
@@ -510,7 +525,8 @@ export async function executeAgentRun(
     const { sandbox: sb } = await getOrCreateAgentSandbox({
       name: `agent-${run.id}`,
       onCreate: async (fresh) => {
-        await cloneRepo(fresh, { authUrl: target.authUrl, baseBranch, workBranch });
+        const committer = await resolveCommitterIdentity(target);
+        await cloneRepo(fresh, { authUrl: target.authUrl, baseBranch, workBranch, committer });
       },
     });
     sandbox = sb;

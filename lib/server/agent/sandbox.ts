@@ -139,7 +139,14 @@ export async function runShell(
  */
 export async function cloneRepo(
   sandbox: Sandbox,
-  opts: { authUrl: string; baseBranch: string; workBranch: string },
+  opts: {
+    authUrl: string;
+    baseBranch: string;
+    workBranch: string;
+    // Identité git des commits de l'agent. Doit être rattachable à un vrai compte
+    // du forge (bot de l'App côté GitHub) : sinon Vercel bloque le déploiement.
+    committer: { name: string; email: string };
+  },
 ): Promise<void> {
   const wipe = await runShell(sandbox, `rm -rf ${sq(REPO_DIR)}`, { cwd: SANDBOX_HOME });
   if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
@@ -153,8 +160,8 @@ export async function cloneRepo(
 
   const setup = [
     `set -e`,
-    `git config user.email "agent@minddy.app"`,
-    `git config user.name "minddy agent"`,
+    `git config user.email ${sq(opts.committer.email)}`,
+    `git config user.name ${sq(opts.committer.name)}`,
     `if git ls-remote --exit-code --heads ${sq(opts.authUrl)} ${sq(opts.workBranch)} >/dev/null 2>&1; then`,
     `  git fetch --depth 1 ${sq(opts.authUrl)} ${sq(opts.workBranch)}:${sq(opts.workBranch)}`,
     `  git checkout ${sq(opts.workBranch)}`,
