@@ -1,24 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ChevronDown, Command as CommandIcon, X } from "lucide-react";
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
+import { Command as CommandIcon, X } from "lucide-react";
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
-import {
-  Button,
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "mangue-ui";
-import { EFFORTS, PRIORITIES, STATUSES, type IssueEffort, type IssuePriority, type IssueStatus } from "@/lib/issue-constants";
+import { useBulkActions } from "@/lib/bulk-actions-context";
 import type { IssueUpdateInput, Member } from "@/lib/types";
 
-/** Linear-style floating selection pill with all bulk actions in its command menu. */
+/**
+ * Linear-style floating selection pill (MIN-75). It no longer carries its own
+ * cmdk dropdown: "Actions" hands the selection to the global command palette
+ * (⌘K) via {@link useBulkActions}, so bulk edits reuse the palette's inline
+ * submenu forms (one "Changer le statut" that opens a select, etc.). The pill
+ * keeps only the fast paths: the count, Actions, an icon-only "Ask Numo", and
+ * clear.
+ */
 export function BulkIssueActions({
   count,
   members,
@@ -34,77 +31,67 @@ export function BulkIssueActions({
   onClear: () => void;
   onAskNumo: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const apply = (patch: IssueUpdateInput) => {
-    onUpdate(patch);
-    setOpen(false);
-  };
-  const deleteSelected = () => {
-    if (onDelete && window.confirm(`Supprimer ${count} ticket(s) ?`)) {
-      onDelete();
-      setOpen(false);
-    }
-  };
+  const t = useTranslations("BulkActions");
+  const { requestBulkActions } = useBulkActions();
+
+  // Cross-project boards flatten every project's members, so the same person can
+  // appear once per shared project — de-dupe by user id (also fixes the React
+  // duplicate-key warning the assignee list used to throw).
+  const uniqueMembers = useMemo(() => {
+    const seen = new Set<string>();
+    return members.filter((m) => {
+      if (seen.has(m.user_id)) return false;
+      seen.add(m.user_id);
+      return true;
+    });
+  }, [members]);
+
+  const openActions = () =>
+    requestBulkActions({
+      count,
+      members: uniqueMembers,
+      onUpdate,
+      onDelete,
+      onAskNumo,
+    });
 
   return (
     <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl backdrop-blur-md">
-      <span className="px-3 text-sm font-medium whitespace-nowrap">{count} sélectionné(s)</span>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button type="button" size="sm" className="h-8 gap-1.5 rounded-full px-3 text-xs">
-            <CommandIcon className="size-3.5" />
-            Actions
-            <ChevronDown className="size-3.5 opacity-70" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="center" side="top" className="w-72 p-0">
-          <Command>
-            <CommandInput placeholder="Rechercher une action..." />
-            <CommandList>
-              <CommandEmpty>Aucune action trouvée.</CommandEmpty>
-              <CommandGroup heading="Numo">
-                <CommandItem value="demander à numo" onSelect={() => { onAskNumo(); setOpen(false); }}>
-                  <NumoIcon className="mr-2 size-4" />
-                  Demander à Numo
-                </CommandItem>
-              </CommandGroup>
-              <CommandGroup heading="Modifier">
-                {STATUSES.map((item) => (
-                  <CommandItem key={`status-${item.value}`} value={`statut ${item.value}`} onSelect={() => apply({ status: item.value as IssueStatus })}>
-                    <span className="flex-1">Statut : {item.value}</span><Check className="size-3.5 opacity-50" />
-                  </CommandItem>
-                ))}
-                {PRIORITIES.map((item) => (
-                  <CommandItem key={`priority-${item.value}`} value={`priorité ${item.value}`} onSelect={() => apply({ priority: item.value as IssuePriority })}>
-                    Priorité : {item.value}
-                  </CommandItem>
-                ))}
-                {EFFORTS.map((item) => (
-                  <CommandItem key={`effort-${item.value}`} value={`effort ${item.value}`} onSelect={() => apply({ effort: item.value as IssueEffort })}>
-                    Effort : {item.value}
-                  </CommandItem>
-                ))}
-                <CommandItem value="assigné non assigné" onSelect={() => apply({ assignee_id: null })}>Assigné : non assigné</CommandItem>
-                {members.map((member) => (
-                  <CommandItem key={`assignee-${member.user_id}`} value={`assigné ${member.display_name ?? member.user_id}`} onSelect={() => apply({ assignee_id: member.user_id })}>
-                    Assigné : {member.display_name ?? member.user_id}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-              {onDelete && (
-                <CommandGroup heading="Danger">
-                  <CommandItem value="supprimer les tickets" className="text-destructive" onSelect={deleteSelected}>Supprimer les tickets</CommandItem>
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full px-3 text-xs" onClick={onAskNumo}>
-        <NumoIcon className="size-4" />
-        Demander à Numo
+      <span className="px-3 text-sm font-medium whitespace-nowrap">
+        {t("selected", { count })}
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        className="h-8 gap-1.5 rounded-full px-3 text-xs"
+        onClick={openActions}
+      >
+        <CommandIcon className="size-3.5" />
+        {t("actions")}
       </Button>
-      <Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" onClick={onClear} aria-label="Désélectionner les tickets">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-full"
+            onClick={onAskNumo}
+            aria-label={t("askNumo")}
+          >
+            <NumoIcon className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t("askNumo")}</TooltipContent>
+      </Tooltip>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-8 rounded-full"
+        onClick={onClear}
+        aria-label={t("clear")}
+      >
         <X className="size-4" />
       </Button>
     </div>

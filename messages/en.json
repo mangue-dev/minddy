@@ -341,6 +341,14 @@
     "noAccountYet": "Don't have an account yet?",
     "createAccountLink": "Create an account"
   },
+  "BulkActions": {
+    "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
+    "actions": "Actions",
+    "askNumo": "Ask Numo",
+    "clear": "Deselect",
+    "delete": "{count, plural, one {Delete issue} other {Delete issues}}",
+    "deleteConfirm": "{count, plural, one {Delete # issue?} other {Delete # issues?}}"
+  },
   "Board": {
     "viewCreated": "View \"{name}\" created.",
     "viewUpdated": "View updated.",

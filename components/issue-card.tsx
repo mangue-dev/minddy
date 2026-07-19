@@ -543,6 +543,7 @@ export function IssueCardBody({
   onSetCategories,
   inCurrentCycle,
   dragging,
+  selected,
   pr,
   onOpenPr,
 }: {
@@ -613,7 +614,9 @@ export function IssueCardBody({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm",
+        "flex flex-col gap-2 rounded-xl border border-border p-3 text-left shadow-sm",
+        // Sélection groupée (MIN-75) : fond bleuté plutôt qu'un liseré.
+        selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg"
       )}
     >
@@ -1037,7 +1040,6 @@ export function IssueCard({
       // touch is free to scroll the board/columns natively.
       className={cn(
         "relative cursor-pointer rounded-xl",
-        selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
         isDragging && "opacity-40",
       )}
     >

@@ -51,6 +51,12 @@ export interface PaletteItem {
   typeLabel?: string;
   /** Colored status dot displayed before the title. */
   statusDot?: "success" | "muted" | "warning" | "danger";
+  /**
+   * Whether the built-in "toggle favorite" action applies. Defaults to true.
+   * Set false for transient/system items (e.g. a bulk-selection entry) that
+   * shouldn't be favoritable.
+   */
+  favoritable?: boolean;
   /** Optional context id — items matching SearchContext.currentContextId get boosted. */
   contextId?: string;
   /** Optional sub-context id — items matching SearchContext.currentSubContextId get boosted. */

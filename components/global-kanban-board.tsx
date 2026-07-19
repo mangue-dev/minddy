@@ -72,6 +72,7 @@ export function GlobalKanbanBoard({
   onOpenPlan,
   onUpdateIssue,
   onDeleteIssue,
+  onAskNumo,
   onSetCategories,
   onMove,
   onCreateIssue,

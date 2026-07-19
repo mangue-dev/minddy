@@ -64,6 +64,7 @@ export function KanbanBoard({
   onCreateIssue,
   onUpdateIssue,
   onDeleteIssue,
+  onAskNumo,
   onSetCategories,
   onAddRelation,
   onMove,
