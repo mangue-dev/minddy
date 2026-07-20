@@ -11,6 +11,7 @@ export const MCP_SERVER_NAME = "minddy";
 
 export type McpAgentId =
   | "claude"
+  | "claude-desktop"
   | "codex"
   | "cursor"
   | "gemini"
@@ -23,8 +24,9 @@ export interface McpAgent {
   /** Comment l'artefact de build() s'utilise :
       command  → coller dans un terminal
       config   → coller dans un fichier de configuration
-      deeplink → URL ouverte directement (installation en un clic) */
-  kind: "command" | "config" | "deeplink";
+      deeplink → URL ouverte directement (installation en un clic)
+      url      → coller l'URL du serveur dans « Ajouter un connecteur » */
+  kind: "command" | "config" | "deeplink" | "url";
   /** Logo pour thème clair (public/) ; logoDark = variante thème sombre. */
   logo: string;
   logoDark?: string;
@@ -43,6 +45,17 @@ export const MCP_AGENTS: McpAgent[] = [
     // L'authentification se fait ensuite via /mcp (navigateur).
     build: (endpoint) =>
       `claude mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint}`,
+  },
+  {
+    id: "claude-desktop",
+    label: "Claude Desktop",
+    kind: "url",
+    logo: "/agents/claude.svg",
+    // Claude Desktop et claude.ai ne lisent PAS la config de Claude Code : le
+    // serveur distant s'ajoute comme « connecteur personnalisé » (Réglages →
+    // Connecteurs → Ajouter un connecteur), en collant l'URL — l'OAuth est
+    // géré nativement au premier usage.
+    build: (endpoint) => endpoint,
   },
   {
     id: "codex",

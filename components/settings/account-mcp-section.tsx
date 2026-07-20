@@ -29,7 +29,13 @@ export function AccountMcpSection() {
       return;
     }
     await navigator.clipboard.writeText(artifact);
-    toast.success(agent.kind === "config" ? t("configCopied") : t("commandCopied"));
+    toast.success(
+      agent.kind === "config"
+        ? t("configCopied")
+        : agent.kind === "url"
+          ? t("urlCopied")
+          : t("commandCopied")
+    );
   };
 
   const actionLabel =
@@ -37,13 +43,17 @@ export function AccountMcpSection() {
       ? t("installIn", { name: selected.label })
       : selected.kind === "config"
         ? t("copyInstallConfig")
-        : t("copyInstallCommand");
+        : selected.kind === "url"
+          ? t("copyServerUrl")
+          : t("copyInstallCommand");
   const hint =
     selected.kind === "deeplink"
       ? t("mcpHintCursor")
       : selected.kind === "config"
         ? t("mcpHintWindsurf")
-        : t("mcpHintCommand");
+        : selected.kind === "url"
+          ? t("mcpHintConnector")
+          : t("mcpHintCommand");
 
   return (
     <SettingsSection title={t("mcpSectionTitle")} description={t("mcpSectionDesc")}>
