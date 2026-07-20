@@ -50,6 +50,7 @@ import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunWorking } from "@/lib/agent-api";
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
+import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
@@ -159,6 +160,13 @@ export function IssueSidePanel({
   // requests, board de feedback).
   const { runs } = useIssueAgentRunsQuery(issue?.id ?? null);
   const { agentsAllowed } = usePlanGates();
+  // Agent + PR indisponibles sans dépôt lié (MIN-80) : le serveur rejette de toute
+  // façon un lancement `noRepo`, on retire donc l'option en amont. Permissif tant
+  // que la requête charge → aucun flash sur le cas courant (projet AVEC dépôt).
+  const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
+    issue?.project_id ?? null
+  );
+  const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
   // Une conversation reprennable existe (au moins une run non `failed`).
@@ -240,10 +248,10 @@ export function IssueSidePanel({
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
   // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
   const launchAgent = useCallback(() => {
-    if (!agentsAllowed) return;
+    if (!agentsEnabled) return;
     if (hasAgentSession) setChatOpen(true);
     else startNewAgentSession();
-  }, [agentsAllowed, hasAgentSession, startNewAgentSession]);
+  }, [agentsEnabled, hasAgentSession, startNewAgentSession]);
 
   const openPr = useCallback(() => {
     if (prRun) router.push(`/pull-requests?run=${prRun.id}`);
@@ -413,7 +421,7 @@ export function IssueSidePanel({
     // Session existante → deux entrées : « Ouvrir l'agent » (reprend la dernière
     // run, en modal) et « Nouvelle session » (compose une run neuve sur le
     // ticket). Aucune session → une seule entrée « Lancer un agent » (à froid).
-    ...(!agentsAllowed
+    ...(!agentsEnabled
       ? []
       : hasAgentSession
         ? [
@@ -440,7 +448,7 @@ export function IssueSidePanel({
               onSelect: startNewAgentSession,
             },
           ]),
-    ...(agentsAllowed && prRun
+    ...(agentsEnabled && prRun
       ? [
           {
             id: "open-pr",
@@ -509,7 +517,7 @@ export function IssueSidePanel({
               )}
               {/* Agent de code : le seul état qui mérite l'en-tête (au travail,
                   ou une PR à relire) — le reste est dans le menu « ⋯ ». */}
-              {agentsAllowed && (
+              {agentsEnabled && (
                 <IssueAgentChip
                   working={agentWorking}
                   prRun={prRun}

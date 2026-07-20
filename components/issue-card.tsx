@@ -56,6 +56,7 @@ import {
 } from "@/components/agent/agent-activity-context";
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
+import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
@@ -803,6 +804,13 @@ export function IssueCard({
   // (aucune run, ou toutes terminées) elle en LANCE une nouvelle, à froid (MIN-68).
   const agentHasSession = useAgentHasSession(issue.id);
   const { agentsAllowed } = usePlanGates();
+  // Agent + PR indisponibles sans dépôt lié (MIN-80) : le serveur rejette de toute
+  // façon un lancement `noRepo`, on retire donc l'option en amont. Permissif tant
+  // que la requête charge → aucun flash sur le cas courant (projet AVEC dépôt).
+  const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
+    issue.project_id
+  );
+  const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
   // PR disponible pour ce ticket → chip « PR disponible » sur la carte + option menu.
   const pr = useAgentPr(issue.id);
   const router = useRouter();
@@ -866,7 +874,7 @@ export function IssueCard({
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
   // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
   const launchAgent = () => {
-    if (!agentsAllowed) return;
+    if (!agentsEnabled) return;
     if (agentHasSession) openAgentSession();
     else startNewAgentSession();
   };
@@ -948,7 +956,7 @@ export function IssueCard({
     // entrées : « Ouvrir l'agent » (rouvre la session, sa run la plus active) et
     // « Nouvelle session » (compose une run neuve sur le ticket). Aucune session →
     // une seule entrée « Lancer un agent » (compose à froid). ⇧A = 1re action.
-    ...(!agentsAllowed
+    ...(!agentsEnabled
       ? []
       : agentHasSession
         ? [
@@ -979,7 +987,7 @@ export function IssueCard({
             },
           ]),
     // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
-    ...(agentsAllowed && pr && openPr
+    ...(agentsEnabled && pr && openPr
       ? [
           {
             id: "open-pr",
