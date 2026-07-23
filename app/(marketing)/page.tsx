@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { HeroShader } from "@/components/marketing/hero-shader";
 import { Hero } from "@/components/marketing/hero";
 import { SectionWorkflow } from "@/components/marketing/section-workflow";
 import { SectionAgents } from "@/components/marketing/section-agents";
@@ -37,6 +38,10 @@ export default async function LandingPage() {
 
   return (
     <>
+      {/* Fond de page : posé ici et non dans le hero pour qu'il parte du haut
+          du document et passe derrière la navbar. Il s'ancre sur le
+          `relative isolate` du layout marketing (<main> n'est pas positionné). */}
+      <HeroShader />
       <Hero />
       <SectionWorkflow />
       <SectionAgents />

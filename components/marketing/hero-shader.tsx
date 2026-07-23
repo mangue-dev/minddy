@@ -14,6 +14,12 @@ import { useTheme } from "mangue-ui";
  * une batterie pour une bande de 200 px) et l'animation se fige si l'utilisateur
  * demande moins de mouvement. Un dégradé de masquage fond le shader dans la
  * page vers le bas, pour qu'il n'y ait pas de couture avec la section suivante.
+ *
+ * Se rend au niveau de la PAGE, pas du hero : ancré sur le `relative isolate`
+ * du layout marketing, il part du haut du document et passe derrière la navbar
+ * (transparente hors de sa pastille) grâce à `-z-10`. Le monter dans le hero
+ * le ferait démarrer sous les 80 px réservés à la barre, avec une couture
+ * horizontale visible juste en dessous.
  */
 export function HeroShader() {
   const { resolvedTheme } = useTheme();
@@ -41,7 +47,7 @@ export function HeroShader() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-0 h-[520px] transition-opacity duration-700 ease-out sm:h-[640px]"
+      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] transition-opacity duration-700 ease-out sm:h-[640px]"
       style={{
         opacity: enabled ? (isDark ? 0.5 : 0.35) : 0,
         maskImage: "linear-gradient(to bottom, black 0%, black 35%, transparent 100%)",

@@ -2,21 +2,21 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowRight, Plug } from "lucide-react";
 import { Button } from "mangue-ui";
-import { HeroShader } from "./hero-shader";
 import { ScreenshotSlot } from "./screenshot-slot";
 
 /**
  * Hero de la landing (MIN-73). Promesse en une phrase, deux actions, la capture
  * du produit. Le mot accentué passe en Instrument Serif italique — la même
  * respiration typographique que le reste de la marque.
+ *
+ * Le shader n'est PAS rendu ici : il est posé au niveau de la page pour partir
+ * du haut du document et passer derrière la navbar (voir `hero-shader.tsx`).
  */
 export async function Hero() {
   const t = await getTranslations("Landing");
 
   return (
-    <section className="relative isolate overflow-hidden pt-20 pb-16 sm:pb-24">
-      <HeroShader />
-
+    <section className="pt-10 pb-16 sm:pb-24">
       <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-3xl pt-10 text-center sm:pt-16">
           <Link

@@ -8,7 +8,12 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer";
  */
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background">
+    // `relative isolate` : bloc conteneur ET contexte d'empilement pour les
+    // fonds de page. La landing y ancre son shader en `-z-10` pour qu'il parte
+    // du haut du document — donc DERRIÈRE la navbar, qui est transparente hors
+    // de sa pastille. Sans ça, le fond démarrerait sous les 80 px réservés à la
+    // barre et laisserait une couture horizontale en travers de la page.
+    <div className="relative isolate flex min-h-[100dvh] flex-col bg-background">
       <MarketingNav />
       <main className="flex-1">{children}</main>
       <MarketingFooter />
