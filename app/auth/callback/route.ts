@@ -19,9 +19,13 @@ function parseOtpType(value: string | null): EmailOtpType | null {
     : null;
 }
 
-function buildFailureRedirect(origin: string, reason: string): NextResponse {
+function buildFailureRedirect(
+  origin: string,
+  reason: string,
+  error = "auth_callback_failed"
+): NextResponse {
   const url = new URL(`${origin}/login`);
-  url.searchParams.set("error", "auth_callback_failed");
+  url.searchParams.set("error", error);
   url.searchParams.set("reason", reason);
   return NextResponse.redirect(url.toString());
 }
@@ -37,6 +41,21 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const otpType = parseOtpType(searchParams.get("type"));
   const next = sanitizeInternalRedirectPath(searchParams.get("next"));
+
+  // Le provider (ou GoTrue) a refusé : il rebondit ici avec `error` en query —
+  // jamais de `code`. Distinguer le refus de consentement, qui n'est pas une
+  // panne, du reste (provider désactivé, redirect_uri non allowlistée…).
+  const providerError = searchParams.get("error");
+  if (providerError) {
+    const description =
+      searchParams.get("error_description") ?? searchParams.get("error_code") ?? "";
+    console.error(`[auth/callback] provider error: ${providerError} ${description}`);
+    return buildFailureRedirect(
+      origin,
+      providerError,
+      providerError === "access_denied" ? "oauth_denied" : "oauth_failed"
+    );
+  }
 
   if (!code && !(tokenHash && otpType)) {
     return buildFailureRedirect(origin, "missing_params");

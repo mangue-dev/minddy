@@ -318,6 +318,8 @@
   },
   "Auth": {
     "callbackFailed": "Le lien de confirmation est invalide ou expiré. Réessaie de te connecter.",
+    "oauthDenied": "Connexion annulée. Tu peux réessayer ou utiliser ton email.",
+    "oauthFailed": "La connexion via ce service a échoué. Réessaie ou utilise ton email.",
     "passwordMismatch": "Les mots de passe ne correspondent pas.",
     "confirmationSent": "On t'a envoyé un lien de confirmation à {email}. Clique dessus pour activer ton compte.",
     "signupSubtitle": "Crée ton compte pour commencer.",

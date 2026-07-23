@@ -16,6 +16,7 @@ import {
 } from "@/lib/server/oauth/authorize-validation";
 import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { displayName } from "@/lib/display-name";
+import { toNamed } from "@/lib/server/auth-users";
 import { OAuthConsentCard } from "@/components/oauth/consent-card";
 
 /**
@@ -94,13 +95,9 @@ export default async function OAuthAuthorizePage({
   }
 
   const { client, redirectUri, codeChallenge, scope, resource, state } = validation;
-  const userLabel = displayName({
-    full_name:
-      typeof user.user_metadata?.display_name === "string"
-        ? user.user_metadata.display_name
-        : null,
-    email: user.email,
-  });
+  // toNamed = même chaîne de résolution que partout ailleurs (display_name →
+  // full_name → name), donc un compte Google/GitHub s'affiche avec son nom.
+  const userLabel = displayName(toNamed(user));
 
   return (
     <OAuthConsentCard

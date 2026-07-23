@@ -36,11 +36,13 @@ function GoogleGlyph() {
   );
 }
 
+type OAuthProvider = "google" | "github";
+
 function LoginForm() {
   const t = useTranslations("Auth");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, signInWithPassword, signUpWithPassword } = useAuth();
+  const { user, signInWithPassword, signUpWithPassword, signInWithOAuth } = useAuth();
 
   const redirectTo = sanitizeInternalRedirectPath(searchParams.get("redirect"));
   const [isSignUp, setIsSignUp] = useState(searchParams.get("mode") === "signup");
@@ -50,13 +52,21 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Provider en cours de redirection — la page part vers Google/GitHub, donc cet
+  // état n'est jamais remis à null en cas de succès (seulement sur erreur).
+  const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
   const authErrorMessages: Record<string, string> = {
     auth_callback_failed: t("callbackFailed"),
+    oauth_denied: t("oauthDenied"),
+    oauth_failed: t("oauthFailed"),
   };
   const [error, setError] = useState<string | null>(
     authErrorMessages[searchParams.get("error") ?? ""] ?? null
   );
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Une seule tentative de connexion à la fois (email OU provider).
+  const busy = loading || oauthPending !== null;
 
   // Already authenticated (e.g. session restored) → leave the auth screen.
   useEffect(() => {
@@ -96,6 +106,19 @@ function LoginForm() {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOAuth = async (provider: OAuthProvider) => {
+    setError(null);
+    setNotice(null);
+    setOauthPending(provider);
+    try {
+      // Succès = la page navigue vers le provider ; on ne repasse jamais ici.
+      await signInWithOAuth(provider, redirectTo);
+    } catch (err) {
+      setError((err as Error).message);
+      setOauthPending(null);
     }
   };
 
@@ -139,23 +162,31 @@ function LoginForm() {
               </p>
             </div>
 
-            {/* Boutons OAuth — inertes pour l'instant (providers pas encore
-                configurés côté Supabase) : présents visuellement, sans action. */}
+            {/* Connexion via un provider — même bouton pour se connecter et
+                s'inscrire : Supabase crée le compte au premier passage. */}
             <div className="space-y-2.5">
               <Button
                 type="button"
                 variant="outline"
                 className="h-10 w-full justify-center gap-2.5"
+                disabled={busy}
+                onClick={() => void handleOAuth("google")}
               >
-                <GoogleGlyph />
+                {oauthPending === "google" ? <Spinner /> : <GoogleGlyph />}
                 {t("continueWithGoogle")}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 className="h-10 w-full justify-center gap-2.5"
+                disabled={busy}
+                onClick={() => void handleOAuth("github")}
               >
-                <Github className="size-4" />
+                {oauthPending === "github" ? (
+                  <Spinner />
+                ) : (
+                  <Github className="size-4" />
+                )}
                 {t("continueWithGitHub")}
               </Button>
             </div>
@@ -251,7 +282,7 @@ function LoginForm() {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={busy}
                 className="h-10 w-full justify-center gap-2"
               >
                 {loading && <Spinner />}
@@ -265,7 +296,8 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={toggleMode}
-                className="font-medium text-foreground underline-offset-4 hover:underline"
+                disabled={busy}
+                className="font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-60"
               >
                 {isSignUp ? t("signIn") : t("createAccountLink")}
               </button>

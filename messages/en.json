@@ -318,6 +318,8 @@
   },
   "Auth": {
     "callbackFailed": "The confirmation link is invalid or has expired. Try signing in again.",
+    "oauthDenied": "Sign-in cancelled. You can try again or use your email.",
+    "oauthFailed": "Signing in with that service failed. Try again or use your email.",
     "passwordMismatch": "Passwords don't match.",
     "confirmationSent": "We've sent a confirmation link to {email}. Click it to activate your account.",
     "signupSubtitle": "Create your account to get started.",
