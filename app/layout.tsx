@@ -6,6 +6,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider, Toaster } from "mangue-ui";
 import { Analytics } from "@vercel/analytics/next";
 import { CookieBanner } from "@/components/cookie-banner";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -20,6 +21,9 @@ const instrumentSerif = Instrument_Serif({
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Meta");
   return {
+    // Base des URLs relatives (canonical, OpenGraph) — sans elle, les pages
+    // publiques déclarent des `og:url` relatives, que les crawlers ignorent.
+    metadataBase: new URL(SITE_URL),
     // `default` applies to pages without their own title; `template` wraps
     // per-page titles set by nested (server) layouts, e.g. "Inbox · minddy".
     title: { default: "minddy", template: "%s · minddy" },

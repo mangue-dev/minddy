@@ -7,13 +7,12 @@ import { Button, cn, toast } from "mangue-ui";
 import {
   BILLING_PLANS,
   billingPlanRank,
-  usageMultiplierVsFree,
   annualPriceEur,
   annualMonthlyEquivalentEur,
   type BillingInterval,
-  type BillingPlan,
   type BillingPlanId,
 } from "@/lib/billing-plans";
+import { planFeatureLabels } from "@/lib/plan-features";
 import { useBillingSummary } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 
@@ -38,27 +37,6 @@ const PLAN_DESC_KEYS: Record<BillingPlanId, "planDescFree" | "planDescGo" | "pla
   go: "planDescGo",
   pro: "planDescPro",
 };
-
-function planFeatures(
-  plan: BillingPlan,
-  t: ReturnType<typeof useTranslations<"Billing">>
-): string[] {
-  const usage =
-    plan.id === "free"
-      ? t("featureBaseUsage")
-      : t("featureUsageMultiplier", { n: usageMultiplierVsFree(plan) });
-  return [
-    usage,
-    plan.maxProjects == null
-      ? t("featureUnlimitedProjects")
-      : t("featureMaxProjects", { n: plan.maxProjects }),
-    plan.maxIssuesPerProject == null
-      ? t("featureUnlimitedIssues")
-      : t("featureMaxIssues", { n: plan.maxIssuesPerProject }),
-    ...(plan.allowAgents ? [t("featureAgents")] : []),
-    ...(plan.allowMembers ? [t("featureMembers")] : []),
-  ];
-}
 
 export function PlanSection() {
   const t = useTranslations("Billing");
@@ -208,7 +186,7 @@ export function PlanSection() {
               </div>
 
               <ul className="mb-5 flex-1 space-y-2.5">
-                {planFeatures(plan, t).map((feature) => (
+                {planFeatureLabels(plan, t).map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
                     <span
                       className={cn(

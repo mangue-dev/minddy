@@ -25,12 +25,23 @@ import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 // anonymes : pas de session, et thème "system" comme les autres pages publiques.
 const LEGAL_ROUTES = new Set(["/legal", "/terms", "/privacy", "/cookies"]);
 
+// Site public (MIN-73) : landing + tarifs. Anonymes et indexables — c'est la
+// porte d'entrée, elle ne doit jamais renvoyer vers /login. La landing renvoie
+// elle-même les visiteurs déjà connectés vers /home (app/(marketing)/page.tsx).
+const MARKETING_ROUTES = new Set(["/", "/pricing"]);
+
 const PUBLIC_ROUTES = new Set([
   "/login",
   "/signup",
   "/favicon.ico",
   "/icon",
   "/manifest.json",
+  // Le matcher ne filtre que les extensions d'assets (svg, png, css…) : sans
+  // whitelist, les deux fichiers que lisent les crawlers repartiraient en
+  // redirection vers /login, et le site public serait invisible.
+  "/robots.txt",
+  "/sitemap.xml",
+  ...MARKETING_ROUTES,
   // Pages légales — lisibles sans compte (et indexables) : ce sont elles que
   // Stripe, Google et les utilisateurs vont chercher avant de créer un compte.
   ...LEGAL_ROUTES,
@@ -41,7 +52,18 @@ const PUBLIC_ROUTES = new Set([
 // forcément accessible sans session. `/share/` = liens publics de vues
 // (MIN-26) — la page valide elle-même le token (et le mot de passe).
 // `/f/` = boards publics de feedback (MIN-37) — token + session OTP/SSO propre.
-const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/", "/f/"];
+// `/opengraph-image` : la vignette de partage du site public, servie sous un
+// nom haché (`/opengraph-image-<hash>`) — d'où le préfixe. Sans elle, Slack,
+// X et les moteurs recevraient une redirection vers /login au lieu de l'image.
+const PUBLIC_PREFIXES = [
+  "/api/",
+  "/auth/",
+  "/_next/",
+  "/.well-known/",
+  "/share/",
+  "/f/",
+  "/opengraph-image",
+];
 
 // Domaines personnalisés (MIN-36) : chemins servis tels quels sur un host
 // custom. `/f/` + `/share/` = navigation croisée par token (onglets du site
@@ -50,11 +72,13 @@ const PUBLIC_PREFIXES = ["/api/", "/auth/", "/_next/", "/.well-known/", "/share/
 const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/api/", "/auth/", "/_next/", "/.well-known/"];
 const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
 
-// Pages publiques anonymes (board de feedback /f/, vues partagées /share/) : on
-// tague la requête pour que le root layout bascule le thème par défaut sur
-// "system" au lieu de "dark" (MIN-60). Le header étant posé côté serveur, le
-// script anti-FOUC du layout choisit le bon défaut dès le premier paint.
+// Pages publiques anonymes (board de feedback /f/, vues partagées /share/, site
+// marketing et pages légales) : on tague la requête pour que le root layout
+// bascule le thème par défaut sur "system" au lieu de "dark" (MIN-60). Le header
+// étant posé côté serveur, le script anti-FOUC du layout choisit le bon défaut
+// dès le premier paint.
 const PUBLIC_SITE_PREFIXES = ["/f/", "/share/"];
+const PUBLIC_SITE_ROUTES = new Set([...MARKETING_ROUTES, ...LEGAL_ROUTES]);
 const PUBLIC_THEME_HEADER = "x-minddy-public";
 
 function withPublicThemeHeader(request: NextRequest): { request: { headers: Headers } } {
@@ -144,10 +168,10 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/home", request.url));
       }
     }
-    // Board de feedback / vues partagées / pages légales : thème par défaut
+    // Board de feedback / vues partagées / site public : thème par défaut
     // "system" (MIN-60).
     if (
-      LEGAL_ROUTES.has(pathname) ||
+      PUBLIC_SITE_ROUTES.has(pathname) ||
       PUBLIC_SITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
     ) {
       return NextResponse.next(withPublicThemeHeader(request));
@@ -190,10 +214,10 @@ export async function proxy(request: NextRequest) {
     // pathname + search : /oauth/authorize doit retrouver ses paramètres
     // (client_id, code_challenge…) après le passage par /login.
     const target = pathname + request.nextUrl.search;
-    // '/' n'est qu'un redirecteur serveur vers /home : ne jamais le passer en
-    // `redirect`. Sinon la connexion renvoie l'utilisateur sur '/', dont la
-    // redirection déconnectée a été préchargée dans le cache du routeur par le
-    // logo <Link href="/"> de la page login — et il reste piégé sur /login.
+    // '/' est publique (la landing) et renvoie elle-même les connectés vers
+    // /home : la garder hors de `redirect` évite de ramener l'utilisateur sur
+    // une page qu'il vient de quitter. Défensif — cette branche n'est plus
+    // atteinte pour '/' depuis qu'elle est dans PUBLIC_ROUTES.
     if (target !== "/") {
       loginUrl.searchParams.set("redirect", target);
     }
