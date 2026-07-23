@@ -21,12 +21,19 @@ import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 // `/manifest.json` : le fetch d'un manifest n'envoie JAMAIS les cookies (sauf
 // crossorigin=use-credentials), donc sans whitelist il redirige vers /login et
 // le navigateur logge « Manifest: Syntax error » sur toutes les pages.
+// Mentions légales, CGU, confidentialité, cookies (app/(legal)). Publiques et
+// anonymes : pas de session, et thème "system" comme les autres pages publiques.
+const LEGAL_ROUTES = new Set(["/legal", "/terms", "/privacy", "/cookies"]);
+
 const PUBLIC_ROUTES = new Set([
   "/login",
   "/signup",
   "/favicon.ico",
   "/icon",
   "/manifest.json",
+  // Pages légales — lisibles sans compte (et indexables) : ce sont elles que
+  // Stripe, Google et les utilisateurs vont chercher avant de créer un compte.
+  ...LEGAL_ROUTES,
 ]);
 // `/api/` is excluded from middleware auth on purpose: route handlers
 // authenticate themselves (getAuthedUser) and must return JSON 401 — never an
@@ -137,8 +144,12 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/home", request.url));
       }
     }
-    // Board de feedback / vues partagées : thème par défaut "system" (MIN-60).
-    if (PUBLIC_SITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    // Board de feedback / vues partagées / pages légales : thème par défaut
+    // "system" (MIN-60).
+    if (
+      LEGAL_ROUTES.has(pathname) ||
+      PUBLIC_SITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    ) {
       return NextResponse.next(withPublicThemeHeader(request));
     }
     return NextResponse.next({ request });
