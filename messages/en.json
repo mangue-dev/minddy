@@ -617,6 +617,24 @@
     "integration": "Integration",
     "noIntegration": "No integration"
   },
+  "Onboarding": {
+    "stepIndicator": "Step {current} of {total}",
+    "skip": "Skip onboarding",
+    "projectTitle": "Your first project",
+    "projectDesc": "A project is a workspace: its issues, its objectives, its members. Start with the one you're working on right now.",
+    "projectCta": "Create a project",
+    "issueTitle": "Your first issue",
+    "issueDesc": "One thing to do, one line. A title is enough to start — priority, effort and objective come later, when you need them.",
+    "issueCta": "Create an issue",
+    "mcpTitle": "Connect an agent",
+    "mcpDesc": "Plug Claude Code, Codex or Cursor into minddy: your agent reads your issues, writes its plan and keeps it up to date as it works. Optional — you can do this later from your account settings.",
+    "mcpCta": "Continue",
+    "cyclesTitle": "Enable cycles",
+    "cyclesDesc": "Your personal week or fortnight, across all projects: what you're working on right now. Duration and pace are tuned later in settings.",
+    "cyclesToggle": "Enable cycles",
+    "cyclesCta": "Finish",
+    "doneToast": "You're all set."
+  },
   "Home": {
     "title": "My Projects",
     "greeting": "Hi, {name}",

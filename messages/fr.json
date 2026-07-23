@@ -617,6 +617,24 @@
     "integration": "Intégration",
     "noIntegration": "Sans intégration"
   },
+  "Onboarding": {
+    "stepIndicator": "Étape {current} sur {total}",
+    "skip": "Passer l'onboarding",
+    "projectTitle": "Ton premier projet",
+    "projectDesc": "Un projet, c'est un espace de travail : ses tickets, ses objectifs, ses membres. Commence par celui sur lequel tu travailles en ce moment.",
+    "projectCta": "Créer un projet",
+    "issueTitle": "Ton premier ticket",
+    "issueDesc": "Une chose à faire, une ligne. Un titre suffit pour commencer — priorité, effort et objectif s'ajoutent quand tu en as besoin.",
+    "issueCta": "Créer un ticket",
+    "mcpTitle": "Connecter un agent",
+    "mcpDesc": "Branche Claude Code, Codex ou Cursor sur minddy : ton agent lit tes tickets, écrit son plan et le tient à jour au fil de son travail. Facultatif — tu peux le faire plus tard depuis les réglages du compte.",
+    "mcpCta": "Continuer",
+    "cyclesTitle": "Activer les cycles",
+    "cyclesDesc": "Ta semaine ou quinzaine personnelle, tous projets confondus : ce sur quoi tu travailles en ce moment. La durée et le rythme se règlent ensuite dans les réglages.",
+    "cyclesToggle": "Activer les cycles",
+    "cyclesCta": "Terminer",
+    "doneToast": "Tout est prêt."
+  },
   "Home": {
     "title": "Mes Projets",
     "greeting": "Bonjour, {name}",
