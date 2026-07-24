@@ -14,6 +14,7 @@ import {
 } from "@/lib/billing-plans";
 import { planFeatureLabels } from "@/lib/plan-features";
 import { useAnalytics } from "@/lib/use-analytics";
+import { useTrackView } from "@/lib/use-track-view";
 
 /**
  * Cartes de plans du site public (MIN-73). Même grille et même hiérarchie que
@@ -40,6 +41,10 @@ const PLAN_DESC_KEYS: Record<BillingPlanId, "planDescFree" | "planDescGo" | "pla
 
 export function PricingPlans() {
   const { track } = useAnalytics();
+  // Marche intermédiaire de l'entonnoir : beaucoup de visiteurs passent par les
+  // tarifs avant de s'inscrire, et c'est là que se perdent ceux que le prix
+  // rebute. Sans cet événement, ce décrochage-là serait invisible.
+  useTrackView(true, "pricing", () => track("pricing_viewed", { surface: "marketing" }));
   const t = useTranslations("Billing");
   const tl = useTranslations("Landing");
   const locale = useLocale();

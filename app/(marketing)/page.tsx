@@ -10,6 +10,8 @@ import { SectionFeatures } from "@/components/marketing/section-features";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
 import { SectionFaq } from "@/components/marketing/section-faq";
 import { SectionCta } from "@/components/marketing/section-cta";
+import { StructuredData } from "@/components/marketing/structured-data";
+import { LandingViewed } from "@/components/marketing/landing-viewed";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Landing");
@@ -38,6 +40,8 @@ export default async function LandingPage() {
 
   return (
     <>
+      <StructuredData />
+      <LandingViewed />
       {/* Fond de page : posé ici et non dans le hero pour qu'il parte du haut
           du document et passe derrière la navbar. Il s'ancre sur le
           `relative isolate` du layout marketing (<main> n'est pas positionné). */}
