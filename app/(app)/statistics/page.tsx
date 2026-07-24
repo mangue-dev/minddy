@@ -2,162 +2,44 @@
 
 import { useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Skeleton, Tooltip, TooltipTrigger, TooltipContent } from "mangue-ui";
-import {
-  FilePlus2,
-  CheckCircle2,
-  FolderKanban,
-  CircleDot,
-  Flame,
-  Layers,
-  CalendarClock,
-  CalendarRange,
-  ListChecks,
-  Timer,
-  Info,
-  type LucideIcon,
-} from "lucide-react";
+import { Button } from "mangue-ui";
+import { BarChart3, Plus } from "lucide-react";
 import { useStatsQuery } from "@/lib/use-stats-query";
-import { ContributionHeatmap } from "@/components/contribution-heatmap";
-import { EFFORT_MAP } from "@/lib/issue-constants";
-import type { HeatmapDay, StatProjectBucket, StatsCycles } from "@/lib/types";
+import { useCreate } from "@/lib/create-context";
+import { useAuth } from "@/lib/auth-context";
+import { computeStreaks, dayInZone, fmtNum, heatmapTotals } from "@/lib/stats-derive";
 import { trackEvent } from "@/lib/analytics";
 import { useTrackView } from "@/lib/use-track-view";
+import { EmptyState } from "@/components/empty-state";
+import { ActivityHeatmap } from "@/components/stats/activity-heatmap";
+import { EffortDurations } from "@/components/stats/effort-durations";
+import { NowBand } from "@/components/stats/now-band";
+import { ProjectBreakdown } from "@/components/stats/project-breakdown";
+import { StatsSkeleton } from "@/components/stats/stats-skeleton";
+import {
+  Metric,
+  StatsCard,
+  StatsSection,
+  StatsSectionHeader,
+  TotalItem,
+} from "@/components/stats/stats-chrome";
+import type { StatsCycles } from "@/lib/types";
 
-/** Nombre → chaîne localisée (virgule FR, point EN), 1 décimale par défaut. */
-function fmtNum(value: number, locale: string, digits = 1): string {
-  return value.toLocaleString(locale, { maximumFractionDigits: digits });
-}
+/**
+ * Page statistiques (MIN-85 — refonte de MIN-12/MIN-58).
+ *
+ * La page se lit de haut en bas comme un récit, du plus actionnable au plus
+ * contemplatif : ce qui se passe maintenant → l'activité de l'année → où le
+ * travail est allé → à quel rythme il sort → les totaux depuis le début. Chaque
+ * étage a son poids visuel (bandeau à gros chiffres, cartes, bande compacte),
+ * et le titre d'une section vit toujours hors de sa carte — ce qui évite les
+ * cartes dans les cartes de la version précédente.
+ */
 
-/** Durée de complétion lisible : minutes < 90 min, heures < 48 h, sinon jours.
- *  Renvoie la clé de message d'unité + la valeur déjà arrondie. */
-function durationParts(seconds: number): {
-  key: "durationMinutes" | "durationHours" | "durationDays";
-  value: number;
-} {
-  const minutes = seconds / 60;
-  if (minutes < 90) return { key: "durationMinutes", value: Math.round(minutes) };
-  const hours = seconds / 3600;
-  if (hours < 48) return { key: "durationHours", value: Math.round(hours * 10) / 10 };
-  return { key: "durationDays", value: Math.round((seconds / 86400) * 10) / 10 };
-}
-
-/** Streak courant (jours consécutifs finissant à aujourd'hui, avec grâce si le
- *  jour courant est encore vide) + record sur la fenêtre. */
-function computeStreaks(days: HeatmapDay[]): { current: number; longest: number } {
-  let longest = 0;
-  let run = 0;
-  for (const d of days) {
-    if (d.count > 0) {
-      run++;
-      if (run > longest) longest = run;
-    } else {
-      run = 0;
-    }
-  }
-  let current = 0;
-  for (let i = days.length - 1; i >= 0; i--) {
-    if (days[i].count > 0) current++;
-    else if (i === days.length - 1) continue; // aujourd'hui vide : pas de rupture
-    else break;
-  }
-  return { current, longest };
-}
-
-/** Petit « i » avec une infobulle expliquant ce que compte une métrique. */
-function InfoHint({ text }: { text: string }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={text}
-          className="inline-flex text-muted-foreground/60 transition-colors hover:text-foreground"
-        >
-          <Info className="size-3.5" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-[240px] text-xs leading-snug">
-        {text}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  value,
-  label,
-  hint,
-  info,
-}: {
-  icon: LucideIcon;
-  value: number | string;
-  label: string;
-  hint?: string;
-  info?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-card-foreground">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
-        <Icon className="size-4 shrink-0" />
-        <span className="text-sm font-medium">{label}</span>
-        {info ? (
-          <span className="ml-auto">
-            <InfoHint text={info} />
-          </span>
-        ) : null}
-      </div>
-      <div className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
-      </div>
-      {hint ? <div className="text-xs text-muted-foreground">{hint}</div> : null}
-    </div>
-  );
-}
-
-function ProjectBar({
-  bucket,
-  max,
-  deletedLabel,
-}: {
-  bucket: StatProjectBucket;
-  max: number;
-  deletedLabel: string;
-}) {
-  const pct = max > 0 ? Math.round((bucket.completed / max) * 100) : 0;
-  const fill = bucket.deleted
-    ? "var(--muted-foreground)"
-    : bucket.color ?? "var(--primary)";
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between gap-2 text-sm">
-        <span
-          className={`truncate ${bucket.deleted ? "text-muted-foreground line-through" : "text-foreground/90"}`}
-        >
-          {bucket.name || "—"}
-          {bucket.deleted ? (
-            <span className="ml-1.5 text-xs no-underline">({deletedLabel})</span>
-          ) : null}
-        </span>
-        <span className="shrink-0 tabular-nums text-muted-foreground">
-          {bucket.completed}
-        </span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${Math.max(pct, bucket.completed > 0 ? 4 : 0)}%`, backgroundColor: fill }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Section « Cycles » (MIN-58) : tickets moyens par cycle, cadence de
- *  complétion vs échéance, et durée moyenne de complétion par effort. Masquée
- *  tant qu'aucune de ces trois métriques n'a de donnée. */
-function CyclesSection({ cycles }: { cycles: StatsCycles }) {
+/** Section « Rythme de travail » : tickets par cycle, cadence de complétion vs
+ *  échéance, et durée moyenne de complétion par effort. Rendue seulement si au
+ *  moins une des trois mesures a de la donnée. */
+function RhythmSection({ cycles }: { cycles: StatsCycles }) {
   const t = useTranslations("Stats");
   const locale = useLocale();
 
@@ -182,221 +64,183 @@ function CyclesSection({ cycles }: { cycles: StatsCycles }) {
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-border bg-card p-5 text-card-foreground">
-      <div className="mb-4 flex items-center gap-1.5">
-        <h2 className="text-sm font-semibold tracking-tight">{t("cycles")}</h2>
-        <InfoHint text={t("cyclesInfo")} />
+    <StatsSection title={t("rhythm")} description={t("rhythmSubtitle")}>
+      <div className="flex flex-col gap-4">
+        {(showPerCycle || showCadence) && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {showPerCycle && (
+              <StatsCard>
+                <Metric
+                  label={t("cycleTickets")}
+                  value={
+                    cycles.avgIssuesPerCycle !== null
+                      ? fmtNum(cycles.avgIssuesPerCycle, locale)
+                      : "—"
+                  }
+                  hint={t("cycleCount", { count: cycles.cycleCount })}
+                  info={t("cycleTicketsInfo")}
+                />
+              </StatsCard>
+            )}
+            {showCadence && (
+              <StatsCard>
+                <Metric
+                  label={t("cadence")}
+                  value={cadenceValue}
+                  hint={cadenceHint}
+                  info={t("cadenceInfo")}
+                />
+              </StatsCard>
+            )}
+          </div>
+        )}
+
+        {showEffort && (
+          <StatsCard className="flex flex-col gap-4">
+            <StatsSectionHeader
+              title={t("effortDuration")}
+              info={t("effortDurationInfo")}
+            />
+            <EffortDurations byEffort={cycles.byEffort} />
+          </StatsCard>
+        )}
       </div>
-
-      {(showPerCycle || showCadence) && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {showPerCycle && (
-            <StatCard
-              icon={Layers}
-              value={
-                cycles.avgIssuesPerCycle !== null
-                  ? fmtNum(cycles.avgIssuesPerCycle, locale)
-                  : "—"
-              }
-              label={t("cycleTickets")}
-              hint={t("cycleCount", { count: cycles.cycleCount })}
-              info={t("cycleTicketsInfo")}
-            />
-          )}
-          {showCadence && (
-            <StatCard
-              icon={CalendarClock}
-              value={cadenceValue}
-              label={t("cadence")}
-              hint={cadenceHint}
-              info={t("cadenceInfo")}
-            />
-          )}
-        </div>
-      )}
-
-      {showEffort && (
-        <div className={showPerCycle || showCadence ? "mt-5" : undefined}>
-          <div className="mb-3 flex items-center gap-1.5 text-muted-foreground">
-            <Timer className="size-4 shrink-0" />
-            <h3 className="text-sm font-medium text-foreground">
-              {t("effortDuration")}
-            </h3>
-            <InfoHint text={t("effortDurationInfo")} />
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {cycles.byEffort.map((e) => {
-              const parts = durationParts(e.avgSeconds);
-              return (
-                <div
-                  key={e.effort}
-                  className="rounded-lg border border-border bg-muted/30 p-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
-                      {EFFORT_MAP[e.effort].label}
-                    </span>
-                    <span className="text-[11px] tabular-nums text-muted-foreground">
-                      {t("effortSample", { count: e.sample })}
-                    </span>
-                  </div>
-                  <div className="mt-1.5 text-lg font-semibold tabular-nums tracking-tight text-foreground">
-                    {t(parts.key, { value: fmtNum(parts.value, locale) })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </section>
+    </StatsSection>
   );
 }
 
 export default function StatisticsPage() {
   const t = useTranslations("Stats");
   const { stats, loading } = useStatsQuery();
+  const { openCreateIssue, canCreate } = useCreate();
+  const { user } = useAuth();
   // Vue de la page stats — l'une des rares pages « consultées » plutôt
   // qu'« utilisées » : sans événement dédié, son usage réel est invisible.
   useTrackView(true, "viewed", () =>
-    trackEvent("statistics_viewed", { range: "default" })
+    trackEvent("statistics_viewed", { range: "default" }),
   );
 
-  const streaks = useMemo(
-    () => computeStreaks(stats?.heatmap.days ?? []),
-    [stats?.heatmap.days]
+  const days = stats?.heatmap.days;
+  const streak = useMemo(() => computeStreaks(days ?? []), [days]);
+  const year = useMemo(() => heatmapTotals(days ?? []), [days]);
+  // Jour d'inscription, converti dans le MÊME fuseau que le bucketing des
+  // événements (`heatmap.tz`) — sans quoi la case marquée pourrait tomber un
+  // jour à côté pour un compte créé en fin de soirée.
+  const tz = stats?.heatmap.tz;
+  const joinedDate = useMemo(
+    () => (tz ? dayInZone(user?.created_at, tz) : null),
+    [user?.created_at, tz],
   );
-  const maxCompleted = useMemo(
-    () => (stats?.perProject ?? []).reduce((m, p) => Math.max(m, p.completed), 0),
-    [stats?.perProject]
+
+  const header = (
+    <div className="mb-6">
+      <h1 className="font-display text-2xl font-semibold tracking-tight">
+        {t("title")}
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+    </div>
   );
 
   if (loading || !stats) {
     return (
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
-        <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-[104px] rounded-xl" />
-          ))}
-        </div>
-        <Skeleton className="mt-6 h-[180px] rounded-xl" />
+        {header}
+        <StatsSkeleton />
       </div>
     );
   }
 
+  // Compte neuf : rien de créé, rien de terminé, rien de coché. Aucune des
+  // sections n'a alors quoi que ce soit à raconter — on invite à démarrer.
   const isEmpty =
     stats.totals.created === 0 &&
     stats.totals.completed === 0 &&
     stats.totals.tasksCompleted === 0;
 
-  // Tendance de la semaine : le signe porte le sens, pas de couleur d'alerte —
-  // une semaine calme n'est pas une erreur.
-  const weekDelta = stats.week.completed - stats.week.previous;
-  const weekTrend =
-    weekDelta === 0
-      ? t("weekTrendFlat")
-      : weekDelta > 0
-        ? t("weekTrendUp", { value: weekDelta })
-        : t("weekTrendDown", { value: -weekDelta });
+  if (isEmpty) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-6 py-10">
+        {header}
+        <EmptyState
+          icon={<BarChart3 className="size-6" />}
+          title={t("emptyTitle")}
+          description={t("empty")}
+          action={
+            canCreate ? (
+              <Button onClick={() => openCreateIssue()}>
+                <Plus className="size-4" />
+                {t("emptyCta")}
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
-      <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">
-        {t("title")}
-      </h1>
+      {header}
 
-      {/* Cartes de synthèse : ce qui s'est accumulé, puis le moment présent. */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon={FilePlus2}
-          value={stats.totals.created}
-          label={t("created")}
-          info={t("createdInfo")}
-        />
-        <StatCard
-          icon={CheckCircle2}
-          value={stats.totals.completed}
-          label={t("completed")}
-          info={t("completedInfo")}
-        />
-        <StatCard
-          icon={ListChecks}
-          value={stats.totals.tasksCompleted}
-          label={t("tasksCompleted")}
-          info={t("tasksCompletedInfo")}
-        />
-        <StatCard
-          icon={CalendarRange}
-          value={stats.week.completed}
-          label={t("week")}
-          hint={weekTrend}
-          info={t("weekInfo")}
-        />
-        <StatCard
-          icon={CircleDot}
-          value={stats.workload.assignedOpen}
-          label={t("workload")}
-          hint={t("workloadInProgress", { count: stats.workload.inProgress })}
-          info={t("workloadInfo")}
-        />
-        <StatCard
-          icon={Flame}
-          value={t("streakDays", { count: streaks.current })}
-          label={t("streak")}
-          hint={t("streakRecord", { count: streaks.longest })}
-          info={t("streakInfo")}
-        />
-        <StatCard
-          icon={FolderKanban}
-          value={stats.totals.projects}
-          label={t("projects")}
-          info={t("projectsInfo")}
-        />
-      </div>
+      {/* 1 — Le présent : ce qu'il reste sur la pile, l'élan, la série. */}
+      <NowBand workload={stats.workload} week={stats.week} streak={streak} />
 
-      {/* Statistiques de cycle (MIN-58) */}
-      <CyclesSection cycles={stats.cycles} />
+      {/* 2 — L'année écoulée, avec son chiffre de tête avant la grille. */}
+      <StatsSection title={t("activity")} info={t("contributionsInfo")}>
+        <StatsCard className="flex flex-col gap-5">
+          <Metric
+            label={t("activityWindow")}
+            value={year.total}
+            hint={t("activityBreakdown", {
+              issues: year.issues,
+              tasks: year.tasks,
+              days: year.activeDays,
+            })}
+          />
+          <ActivityHeatmap heatmap={stats.heatmap} joinedDate={joinedDate} />
+        </StatsCard>
+      </StatsSection>
 
-      {/* Heatmap de contributions */}
-      <section className="mt-8 rounded-xl border border-border bg-card p-5 text-card-foreground">
-        <div className="mb-4">
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-sm font-semibold tracking-tight">{t("contributions")}</h2>
-            <InfoHint text={t("contributionsInfo")} />
-          </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {t("contributionsSubtitle")}
-          </p>
-        </div>
-        <ContributionHeatmap heatmap={stats.heatmap} />
-      </section>
+      {/* 3 — Où ce travail a atterri. */}
+      <StatsSection
+        title={t("perProject")}
+        info={t("perProjectInfo")}
+        description={t("perProjectSubtitle")}
+      >
+        <ProjectBreakdown
+          buckets={stats.perProject}
+          emptyLabel={t("perProjectEmpty")}
+        />
+      </StatsSection>
 
-      {/* Répartition par projet */}
-      <section className="mt-6 rounded-xl border border-border bg-card p-5 text-card-foreground">
-        <div className="mb-4 flex items-center gap-1.5">
-          <h2 className="text-sm font-semibold tracking-tight">{t("perProject")}</h2>
-          <InfoHint text={t("perProjectInfo")} />
-        </div>
-        {stats.perProject.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {isEmpty ? t("empty") : t("perProjectEmpty")}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {stats.perProject.map((bucket, i) => (
-              <ProjectBar
-                key={`${bucket.name ?? "?"}-${i}`}
-                bucket={bucket}
-                max={maxCompleted}
-                deletedLabel={t("deleted")}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* 4 — À quel rythme il sort (cycles, cadence, durées par effort). */}
+      <RhythmSection cycles={stats.cycles} />
+
+      {/* 5 — Les totaux à vie, en petit : le socle, pas l'actualité. */}
+      <StatsSection title={t("allTime")}>
+        <StatsCard className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+          <TotalItem
+            label={t("created")}
+            value={stats.totals.created}
+            info={t("createdInfo")}
+          />
+          <TotalItem
+            label={t("completed")}
+            value={stats.totals.completed}
+            info={t("completedInfo")}
+          />
+          <TotalItem
+            label={t("tasksCompleted")}
+            value={stats.totals.tasksCompleted}
+            info={t("tasksCompletedInfo")}
+          />
+          <TotalItem
+            label={t("projects")}
+            value={stats.totals.projects}
+            info={t("projectsInfo")}
+          />
+        </StatsCard>
+      </StatsSection>
     </div>
   );
 }
