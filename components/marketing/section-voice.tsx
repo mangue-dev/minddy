@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { MessagesSquare, Mic, PencilLine, type LucideIcon } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
+import { Reveal, RevealHeading } from "./reveal";
 
 /**
  * La dictée vocale — l'argument qui manquait à la page.
@@ -31,21 +32,37 @@ export async function SectionVoice() {
     >
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
+          <Reveal
+            as="span"
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"
+          >
             <Mic className="h-3.5 w-3.5" />
             {t("voiceBadge")}
-          </span>
-          <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-            {t("voiceTitle")}
-          </h2>
-          <p className="leading-relaxed text-pretty text-muted-foreground">
+          </Reveal>
+          <RevealHeading
+            className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+            text={t("voiceTitle")}
+          />
+          <Reveal
+            as="p"
+            delay={0.15}
+            className="leading-relaxed text-pretty text-muted-foreground"
+          >
             {t("voiceSubtitle")}
-          </p>
+          </Reveal>
         </header>
 
-        <ScreenshotSlot id="voiceDictate" />
+        <Reveal>
+          <ScreenshotSlot id="voiceDictate" />
+        </Reveal>
 
-        <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-16 md:grid-cols-3">
+        {/* Les grilles à filets (`gap-px` sur un fond `bg-border`) entrent d'un
+            seul tenant : y masquer les cartes une à une laisserait voir le fond
+            gris du conteneur pendant la cascade. */}
+        <Reveal
+          as="ul"
+          className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-16 md:grid-cols-3"
+        >
           {WAYS.map((way) => {
             const Icon = way.icon;
             return (
@@ -60,11 +77,14 @@ export async function SectionVoice() {
               </li>
             );
           })}
-        </ul>
+        </Reveal>
 
-        <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-pretty text-muted-foreground">
+        <Reveal
+          as="p"
+          className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-pretty text-muted-foreground"
+        >
           {t("voiceNote")}
-        </p>
+        </Reveal>
       </div>
     </section>
   );

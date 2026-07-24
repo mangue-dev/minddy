@@ -407,3 +407,171 @@ nav[aria-label="Navigation"]
 .scratchpad-editor .ProseMirror .scratchpad-section-launch:hover {
   color: var(--foreground);
 }
+
+/* ─── Landing : entrée du hero et apparitions au scroll ───────────────────
+   Tout est en CSS pur : les sections de la landing sont des Server Components
+   et doivent le rester. Le seul JavaScript est un IntersectionObserver par bloc
+   (components/marketing/reveal.tsx) qui pose `data-revealed` — aucune librairie
+   d'animation n'entre dans le bundle du site public.
+
+   Courbe commune : cubic-bezier(0.16, 1, 0.3, 1) — un « ease-out » très
+   prononcé qui démarre vite et s'arrête en douceur. C'est ce qui fait qu'une
+   apparition se remarque sans qu'on l'attende. */
+
+/* ─── Hero : cascade au chargement, sans JS ──────────────────────────────
+   Au-dessus de la ligne de flottaison, donc joué à l'affichage et non au
+   scroll : le hero est déjà visible quand la page arrive, un observer
+   n'ajouterait qu'une latence d'hydratation.
+
+   Détail non cosmétique du keyframe : le titre part d'`opacity: 0.1`, PAS de 0.
+   Chrome exclut les éléments à opacité nulle du calcul du LCP et repousserait
+   donc le LCP à la FIN du décalage mot à mot. Un plancher à 0.1 combiné au flou
+   reste imperceptible à l'œil mais garde le <h1> éligible dès la première
+   frame. Les éléments secondaires (pas le LCP) partent bien de 0. */
+@keyframes hero-word-in {
+  from {
+    opacity: 0.1;
+    filter: blur(8px);
+    transform: translateY(0.32em);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+.hero-word {
+  display: inline-block;
+  animation: hero-word-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--hero-i, 0) * 0.06s);
+}
+
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+/* Cascade qui prolonge le mot à mot du titre : la ligne suivante démarre avant
+   que la précédente ne soit posée, sinon l'ensemble traîne. */
+.hero-reveal {
+  animation: hero-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--hero-d, 0) * 1s);
+}
+
+/* La capture du hero est le second candidat LCP (le premier dès qu'une vraie
+   image remplace le gabarit) : elle repart donc du même plancher d'opacité que
+   le titre, sinon son retard dans la cascade deviendrait le score LCP. */
+@keyframes hero-fade-up-media {
+  from {
+    opacity: 0.1;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+.hero-reveal-media {
+  animation-name: hero-fade-up-media;
+}
+
+/* ─── Blocs qui apparaissent au scroll (<Reveal>, <RevealGroup>) ─────────
+   Sans JS et au rendu serveur, rien n'est masqué : `.reveal-ready` n'est posé
+   qu'au montage, donc la landing reste entièrement lisible si le script ne
+   part pas. `[data-revealed]` est posé par l'observer au premier passage. */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.reveal.reveal-ready {
+  opacity: 0;
+}
+.reveal.reveal-ready[data-revealed="true"] {
+  animation: reveal-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--reveal-d, 0) * 1s);
+}
+
+/* Groupe : un seul observer pour le conteneur, les enfants directs entrent en
+   cascade. Le décalage vit dans `--reveal-i` posé par nth-child, ce qui évite
+   d'envelopper chaque carte d'une grille dans son propre composant client (et
+   donc d'ajouter un <div> qui casserait la grille). */
+.reveal-group.reveal-ready > * {
+  opacity: 0;
+}
+.reveal-group.reveal-ready[data-revealed="true"] > * {
+  animation: reveal-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(
+    var(--reveal-d, 0) * 1s + var(--reveal-i, 0) * var(--reveal-step, 0.09s)
+  );
+}
+.reveal-group > *:nth-child(2) { --reveal-i: 1; }
+.reveal-group > *:nth-child(3) { --reveal-i: 2; }
+.reveal-group > *:nth-child(4) { --reveal-i: 3; }
+.reveal-group > *:nth-child(5) { --reveal-i: 4; }
+.reveal-group > *:nth-child(6) { --reveal-i: 5; }
+/* Au-delà de six, le décalage est plafonné : une liste longue ne doit pas
+   finir par attendre une seconde après le premier élément. */
+.reveal-group > *:nth-child(n + 7) { --reveal-i: 6; }
+
+/* ─── Titres de section, mot à mot (<RevealHeading>) ─────────────────────
+   Même principe : un observer sur le titre, le décalage par mot en CSS via
+   `--reveal-i` posé en inline. Le texte lisible est porté par aria-label, la
+   découpe en <span> est masquée aux lecteurs d'écran. */
+.reveal-word {
+  display: inline-block;
+}
+.reveal-heading.reveal-ready .reveal-word {
+  opacity: 0;
+}
+.reveal-heading.reveal-ready[data-revealed="true"] .reveal-word {
+  animation: reveal-word-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--reveal-i, 0) * var(--reveal-step, 0.05s));
+}
+@keyframes reveal-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+/* « Moins d'animation » : on ne raccourcit pas, on retire. Une durée quasi
+   nulle laisserait quand même le remplissage `both` appliquer le flou pendant
+   le délai de chaque mot — donc un titre flou tant qu'il n'a pas démarré. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-word,
+  .hero-reveal,
+  .reveal.reveal-ready,
+  .reveal.reveal-ready[data-revealed="true"],
+  .reveal-group.reveal-ready > *,
+  .reveal-group.reveal-ready[data-revealed="true"] > *,
+  .reveal-heading.reveal-ready .reveal-word {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    animation: none !important;
+  }
+}

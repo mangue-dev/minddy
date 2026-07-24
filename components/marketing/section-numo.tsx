@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Crosshair, PencilLine, Rocket, Search, type LucideIcon } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { ScreenshotSlot } from "./screenshot-slot";
+import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /**
  * Numo, l'assistant intégré — sa propre section plutôt qu'une case de la grille.
@@ -31,22 +32,32 @@ export async function SectionNumo() {
     <section id="numo" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 [&>*]:min-w-0">
-          <ScreenshotSlot id="numoPanel" />
+          <Reveal>
+            <ScreenshotSlot id="numoPanel" />
+          </Reveal>
 
           <div>
-            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
+            <Reveal
+              as="span"
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"
+            >
               <NumoIcon animated={false} className="h-3.5 w-auto text-primary" />
               Numo
-            </span>
+            </Reveal>
 
-            <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-              {t("numoTitle")}
-            </h2>
-            <p className="mb-8 leading-relaxed text-pretty text-muted-foreground">
+            <RevealHeading
+              className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+              text={t("numoTitle")}
+            />
+            <Reveal
+              as="p"
+              delay={0.15}
+              className="mb-8 leading-relaxed text-pretty text-muted-foreground"
+            >
               {t("numoSubtitle")}
-            </p>
+            </Reveal>
 
-            <ul className="flex flex-col gap-6">
+            <RevealGroup as="ul" className="flex flex-col gap-6">
               {CAPABILITIES.map((capability) => {
                 const Icon = capability.icon;
                 return (
@@ -65,11 +76,11 @@ export async function SectionNumo() {
                   </li>
                 );
               })}
-            </ul>
+            </RevealGroup>
           </div>
         </div>
 
-        <div className="mt-12 rounded-2xl border border-border bg-muted/30 p-5 sm:mt-16 sm:p-6">
+        <Reveal className="mt-12 rounded-2xl border border-border bg-muted/30 p-5 sm:mt-16 sm:p-6">
           <p className="mb-4 text-sm font-medium">{t("numoExamplesTitle")}</p>
           <ul className="flex flex-wrap gap-2">
             {EXAMPLES.map((example) => (
@@ -81,7 +92,7 @@ export async function SectionNumo() {
               </li>
             ))}
           </ul>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
+import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /**
  * « Ce qu'il y a dedans » (MIN-73). Deux captures pour les écrans qu'on ne
@@ -32,15 +33,20 @@ export async function SectionFeatures() {
     <section id="features" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
-          <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-            {t("featuresTitle")}
-          </h2>
-          <p className="leading-relaxed text-pretty text-muted-foreground">
+          <RevealHeading
+            className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+            text={t("featuresTitle")}
+          />
+          <Reveal
+            as="p"
+            delay={0.15}
+            className="leading-relaxed text-pretty text-muted-foreground"
+          >
             {t("featuresSubtitle")}
-          </p>
+          </Reveal>
         </header>
 
-        <div className="mb-12 grid gap-6 md:grid-cols-2 sm:mb-16">
+        <RevealGroup step={0.12} className="mb-12 grid gap-6 md:grid-cols-2 sm:mb-16">
           <figure className="flex flex-col gap-3">
             <ScreenshotSlot id="featureCycle" />
             <figcaption className="text-sm text-muted-foreground">
@@ -53,9 +59,14 @@ export async function SectionFeatures() {
               {t("featuresCaptionPalette")}
             </figcaption>
           </figure>
-        </div>
+        </RevealGroup>
 
-        <ul className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
+        {/* Grille à filets : entrée d'un bloc — masquer les cartes une à une
+            découvrirait le fond `bg-border` du conteneur. */}
+        <Reveal
+          as="ul"
+          className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2"
+        >
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
             return (
@@ -70,7 +81,7 @@ export async function SectionFeatures() {
               </li>
             );
           })}
-        </ul>
+        </Reveal>
       </div>
     </section>
   );

@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
+import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /**
  * Le carnet de tâches — la note personnelle qui vient avant le ticket.
@@ -37,19 +38,27 @@ export async function SectionScratchpad() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 [&>*]:min-w-0">
           <div>
-            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
+            <Reveal
+              as="span"
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"
+            >
               <NotebookPen className="h-3.5 w-3.5" />
               {t("scratchpadBadge")}
-            </span>
+            </Reveal>
 
-            <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-              {t("scratchpadTitle")}
-            </h2>
-            <p className="mb-8 leading-relaxed text-pretty text-muted-foreground">
+            <RevealHeading
+              className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+              text={t("scratchpadTitle")}
+            />
+            <Reveal
+              as="p"
+              delay={0.15}
+              className="mb-8 leading-relaxed text-pretty text-muted-foreground"
+            >
               {t("scratchpadSubtitle")}
-            </p>
+            </Reveal>
 
-            <ul className="flex flex-col gap-4">
+            <RevealGroup as="ul" step={0.07} className="flex flex-col gap-4">
               {POINTS.map((point) => {
                 const Icon = point.icon;
                 return (
@@ -63,10 +72,12 @@ export async function SectionScratchpad() {
                   </li>
                 );
               })}
-            </ul>
+            </RevealGroup>
           </div>
 
-          <ScreenshotSlot id="scratchpad" />
+          <Reveal delay={0.1}>
+            <ScreenshotSlot id="scratchpad" />
+          </Reveal>
         </div>
       </div>
     </section>

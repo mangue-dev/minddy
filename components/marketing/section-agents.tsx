@@ -4,6 +4,7 @@ import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { MCP_ENDPOINT } from "@/lib/site";
 import { AgentLogo } from "@/components/settings/agent-logo";
 import { CopyCommand } from "./copy-command";
+import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /**
  * Section MCP (MIN-73) — l'argument central : minddy n'est pas un tracker qu'on
@@ -30,14 +31,19 @@ export async function SectionAgents() {
             page latéralement sur mobile. */}
         <div className="grid items-start gap-10 md:grid-cols-2 md:gap-16 [&>*]:min-w-0">
           <div>
-            <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-              {t("agentsTitle")}
-            </h2>
-            <p className="mb-8 leading-relaxed text-pretty text-muted-foreground">
+            <RevealHeading
+              className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+              text={t("agentsTitle")}
+            />
+            <Reveal
+              as="p"
+              delay={0.15}
+              className="mb-8 leading-relaxed text-pretty text-muted-foreground"
+            >
               {t("agentsSubtitle")}
-            </p>
+            </Reveal>
 
-            <ul className="flex flex-col gap-3">
+            <RevealGroup as="ul" step={0.07} className="flex flex-col gap-3">
               {CAPABILITY_KEYS.map((key) => (
                 <li key={key} className="flex items-start gap-3">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -48,10 +54,13 @@ export async function SectionAgents() {
                   </span>
                 </li>
               ))}
-            </ul>
+            </RevealGroup>
           </div>
 
-          <div className="rounded-2xl border border-border bg-muted/30 p-5 sm:p-6">
+          <Reveal
+            delay={0.1}
+            className="rounded-2xl border border-border bg-muted/30 p-5 sm:p-6"
+          >
             <p className="mb-3 text-sm font-medium">{t("agentsInstallTitle")}</p>
             <CopyCommand command={claudeCode.build(MCP_ENDPOINT)} />
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
@@ -72,7 +81,7 @@ export async function SectionAgents() {
                 ))}
               </ul>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>

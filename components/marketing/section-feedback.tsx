@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ScreenshotSlot } from "./screenshot-slot";
+import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /**
  * Le board de feedback public — une section entière, pas une case de grille.
@@ -21,15 +22,20 @@ export async function SectionFeedback() {
     <section id="feedback" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
-          <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-            {t("feedbackTitle")}
-          </h2>
-          <p className="leading-relaxed text-pretty text-muted-foreground">
+          <RevealHeading
+            className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+            text={t("feedbackTitle")}
+          />
+          <Reveal
+            as="p"
+            delay={0.15}
+            className="leading-relaxed text-pretty text-muted-foreground"
+          >
             {t("feedbackSubtitle")}
-          </p>
+          </Reveal>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <RevealGroup step={0.12} className="grid gap-6 md:grid-cols-2">
           <figure className="flex flex-col gap-3">
             <ScreenshotSlot id="feedbackBoard" />
             <figcaption className="text-sm text-muted-foreground">
@@ -42,9 +48,14 @@ export async function SectionFeedback() {
               {t("feedbackCaptionInbox")}
             </figcaption>
           </figure>
-        </div>
+        </RevealGroup>
 
-        <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Grille à filets : elle entre d'un bloc, sinon le fond `bg-border`
+            apparaîtrait en aplat gris derrière les cartes encore masquées. */}
+        <Reveal
+          as="ol"
+          className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-16 sm:grid-cols-2 lg:grid-cols-4"
+        >
           {STEPS.map((step, index) => (
             <li key={step} className="bg-card p-6">
               <span className="mb-4 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted/60 font-mono text-sm text-muted-foreground">
@@ -56,11 +67,14 @@ export async function SectionFeedback() {
               </p>
             </li>
           ))}
-        </ol>
+        </Reveal>
 
-        <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-pretty text-muted-foreground">
+        <Reveal
+          as="p"
+          className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-pretty text-muted-foreground"
+        >
           {t("feedbackNote")}
-        </p>
+        </Reveal>
       </div>
     </section>
   );
