@@ -171,6 +171,9 @@ export interface AgentLoopResult {
   messages: AgentChatMessage[];
   /** Réponse finale du tour (fin naturelle : le modèle s'arrête sans tool-call). */
   reply?: string;
+  /** Le tour s'est terminé sur un ask_user : la session ATTEND la réponse de
+   *  l'utilisateur (stampé `awaiting_input` → point jaune sur les surfaces). */
+  askedUser?: boolean;
   /** Erreur LLM fatale (non reprenable) : renvoyée AVEC les messages pour que
    *  l'exécuteur persiste le checkpoint (pas de perte de contexte/steering). */
   errorMessage?: string;
@@ -855,6 +858,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         status: "completed",
         messages,
         reply: "",
+        askedUser: true,
         costUsd,
         usageSeqEnd: seq,
         rounds: round,

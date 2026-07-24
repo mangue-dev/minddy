@@ -21,7 +21,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const RUN_COLUMNS =
-  "id, status, model, model_forced, key_mode, triggered_by, prompt, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at";
+  "id, status, model, model_forced, key_mode, triggered_by, prompt, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

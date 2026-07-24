@@ -47,6 +47,7 @@ interface RunRow {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  awaiting_input: boolean;
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string } | null;
 }
@@ -85,6 +86,11 @@ export interface AgentSessionListItem {
    * Comparé au `last_read_at` de l'utilisateur → bulle bleue « terminé, non lu ».
    */
   lastCompletedAt: string | null;
+  /**
+   * La DERNIÈRE run de la session attend une réponse de l'utilisateur (tour
+   * terminé sur ask_user) → point JAUNE au lieu du bleu, mêmes règles de lecture.
+   */
+  awaitingInput: boolean;
 }
 
 export async function GET(request: NextRequest) {
@@ -94,7 +100,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, status, model, triggered_by, prompt, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, issue:issues(id, number, title), project:projects(id, key, name)",
+      "id, issue_id, status, model, triggered_by, prompt, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name)",
     )
     .order("created_at", { ascending: false });
 
@@ -129,6 +135,9 @@ export async function GET(request: NextRequest) {
         working: isWorking,
         runCount: 1,
         lastCompletedAt: r.completed_at,
+        // Seul le REPRÉSENTANT (dernière run) compte : une vieille run restée
+        // en attente est dépassée par la lignée.
+        awaitingInput: r.status === "completed" && r.awaiting_input,
       });
       continue;
     }

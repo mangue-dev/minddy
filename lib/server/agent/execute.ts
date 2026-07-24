@@ -924,6 +924,9 @@ export async function executeAgentRun(
       sandbox_stopped_at: null,
       last_activity_at: nowIso,
       interrupt_requested: false,
+      // Chaque entrée au repos REMET l'attente à zéro — seul le tour terminé sur
+      // un ask_user (ci-dessous) la lève.
+      awaiting_input: false,
     } satisfies Partial<Parameters<typeof stampRun>[1]>;
 
     // Enregistre le REPOS. Il n'y a plus qu'UN repos (modèle conversationnel) :
@@ -1010,6 +1013,9 @@ export async function executeAgentRun(
       await restStamp({
         checkpoint: { ...checkpoint, lastFilesSha: filesToSha },
         outcome: reply ? cap(reply, 4000) : null,
+        // Tour terminé sur un ask_user → la session ATTEND la réponse : point
+        // jaune sur les surfaces tant que l'utilisateur n'a pas répondu.
+        ...(result.askedUser ? { awaiting_input: true } : {}),
         ...(pushError ? { error_message: cap(pushError, 1000) } : {}),
       });
       return "completed";

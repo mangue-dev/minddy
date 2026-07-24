@@ -34,6 +34,7 @@ function sanitizeRun(run: AgentRun) {
     error_message: run.error_message,
     created_at: run.created_at,
     updated_at: run.updated_at,
+    awaiting_input: run.awaiting_input,
     // Stampé par trigger DB (hors du type AgentRun) — parité avec RUN_COLUMNS de
     // /api/issues/[id]/agent pour que le client réutilise AgentRunSummary tel quel.
     completed_at: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,

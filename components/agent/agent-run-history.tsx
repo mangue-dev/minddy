@@ -13,7 +13,11 @@ import {
 } from "mangue-ui";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
-import { isAgentRunActive, type AgentRunSummary } from "@/lib/agent-api";
+import {
+  isAgentRunActive,
+  isAgentRunAwaitingInput,
+  type AgentRunSummary,
+} from "@/lib/agent-api";
 
 /**
  * Historique des runs d'une issue (MIN-68). Une issue n'a plus UNE session
@@ -57,6 +61,10 @@ export function AgentRunHistory({
   // Au moins une run non consultée parmi celles listées → point bleu sur le déclencheur
   // (le dropdown est replié : sans ça la bulle serait invisible tant qu'il est fermé).
   const anyUnread = !!unreadRunIds && runs.some((r) => unreadRunIds.has(r.id));
+  // Non-lu ET en attente d'une réponse (ask_user) → le point passe au JAUNE.
+  const anyAwaiting =
+    !!unreadRunIds &&
+    runs.some((r) => unreadRunIds.has(r.id) && isAgentRunAwaitingInput(r));
 
   const fmt = (at: string): string =>
     format.dateTime(new Date(at), {
@@ -84,8 +92,11 @@ export function AgentRunHistory({
               : t("runHistory", { total: runs.length })}
             {anyUnread ? (
               <span
-                className="size-1.5 shrink-0 rounded-full bg-blue-500"
-                aria-label={t("unreadRun")}
+                className={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  anyAwaiting ? "bg-yellow-500" : "bg-blue-500",
+                )}
+                aria-label={anyAwaiting ? t("awaitingRun") : t("unreadRun")}
               />
             ) : null}
             <ChevronDown className="size-3" />
@@ -113,8 +124,13 @@ export function AgentRunHistory({
                 <span className="size-1.5 shrink-0 rounded-full bg-brand" />
               ) : unreadRunIds?.has(run.id) ? (
                 <span
-                  className="size-1.5 shrink-0 rounded-full bg-blue-500"
-                  aria-label={t("unreadRun")}
+                  className={cn(
+                    "size-1.5 shrink-0 rounded-full",
+                    isAgentRunAwaitingInput(run) ? "bg-yellow-500" : "bg-blue-500",
+                  )}
+                  aria-label={
+                    isAgentRunAwaitingInput(run) ? t("awaitingRun") : t("unreadRun")
+                  }
                 />
               ) : null}
             </DropdownMenuItem>

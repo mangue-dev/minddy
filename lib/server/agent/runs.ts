@@ -71,6 +71,10 @@ export interface AgentRun {
   cost_usd: number;
   outcome: string | null;
   error_message: string | null;
+  /** Le dernier tour s'est terminé sur un ask_user : la session attend la réponse
+   *  de l'utilisateur (point jaune sur les surfaces). Remis à false à chaque
+   *  autre entrée au repos. */
+  awaiting_input: boolean;
   /** Horloge d'inactivité : heartbeat client + steer + entrée au repos. Pilote le
    *  reaping de la sandbox idle. */
   last_activity_at: string;
@@ -343,6 +347,7 @@ export interface StampFields {
   last_activity_at?: string;
   interrupt_requested?: boolean;
   sandbox_stopped_at?: string | null;
+  awaiting_input?: boolean;
 }
 
 /**

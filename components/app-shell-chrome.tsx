@@ -206,6 +206,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { reads: agentReads } = useAgentReads();
   const anyAgentWorking = agentSessions.some((s) => s.working);
   const anyAgentUnread = agentSessions.some((s) => isAgentSessionUnread(s, agentReads));
+  // Une session attend une réponse (ask_user) et n'est pas lue → point JAUNE
+  // prioritaire sur le bleu « terminé, non lu ».
+  const anyAgentAwaiting = agentSessions.some(
+    (s) => s.awaitingInput && isAgentSessionUnread(s, agentReads),
+  );
 
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
@@ -502,6 +507,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     badge:
       agentsAllowed && anyAgentWorking ? (
         <Spinner className="size-3.5 text-muted-foreground" />
+      ) : agentsAllowed && anyAgentAwaiting ? (
+        // Une session attend une réponse de l'utilisateur → point JAUNE.
+        <span
+          className="size-2 rounded-full bg-yellow-500"
+          aria-label={t("agentsAwaiting")}
+        />
       ) : agentsAllowed && anyAgentUnread ? (
         <span
           className="size-2 rounded-full bg-blue-500"

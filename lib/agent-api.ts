@@ -70,6 +70,9 @@ export interface AgentRunSummary {
    * `last_read_at` de la session).
    */
   completed_at: string | null;
+  /** Le dernier tour s'est terminé sur un ask_user : la run ATTEND la réponse de
+   *  l'utilisateur → point JAUNE (mêmes règles de lecture que le non-lu). */
+  awaiting_input: boolean;
 }
 
 /**
@@ -519,6 +522,8 @@ export interface AgentSessionListItem {
    * bulle bleue « terminé, non lu ».
    */
   lastCompletedAt: string | null;
+  /** La DERNIÈRE run de la session attend une réponse (ask_user) → point JAUNE. */
+  awaitingInput: boolean;
 }
 
 export async function fetchAgentSessionsApi(): Promise<{
@@ -582,6 +587,17 @@ export function isAgentRunUnread(
   // Comparaison NUMÉRIQUE (formats de date hétérogènes — cf. isAgentSessionUnread).
   if (!lastReadAt) return true;
   return new Date(run.completed_at).getTime() > new Date(lastReadAt).getTime();
+}
+
+/**
+ * La run est AU REPOS EN ATTENTE d'une réponse de l'utilisateur (tour terminé
+ * sur ask_user, MIN-86) : les points « non lu » passent au JAUNE — la
+ * conversation est bloquée tant que l'utilisateur n'a pas répondu.
+ */
+export function isAgentRunAwaitingInput(
+  run: Pick<AgentRunSummary, "status" | "awaiting_input">,
+): boolean {
+  return run.status === "completed" && run.awaiting_input === true;
 }
 
 export async function postPrCommentApi(

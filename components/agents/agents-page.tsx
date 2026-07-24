@@ -136,6 +136,7 @@ export function AgentsPage() {
           working: false,
           runCount: 0,
           lastCompletedAt: null,
+          awaitingInput: false,
         }
       : null;
 
@@ -326,6 +327,8 @@ export function AgentsPage() {
                   ? issueIdentifier(s.project.key, s.issue.number)
                   : null;
               const unread = isAgentSessionUnread(s, reads);
+              // Question posée, réponse attendue → le non-lu passe au JAUNE.
+              const awaiting = unread && s.awaitingInput;
               return (
                 <button
                   key={key}
@@ -339,11 +342,15 @@ export function AgentsPage() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    {/* Agent terminé, non consulté → bulle bleue (comme un non-lu). */}
+                    {/* Agent terminé, non consulté → bulle bleue (comme un non-lu) ;
+                        JAUNE quand la session attend une réponse de l'utilisateur. */}
                     {unread && (
                       <span
-                        className="size-2 shrink-0 rounded-full bg-blue-500"
-                        aria-label={t("unread")}
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          awaiting ? "bg-yellow-500" : "bg-blue-500",
+                        )}
+                        aria-label={awaiting ? t("awaitingAnswer") : t("unread")}
                       />
                     )}
                     {identifier ? (
