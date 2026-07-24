@@ -29,6 +29,8 @@
     "copiedSectionToast": "Section copiée en prompt",
     "copyLine": "Copier en prompt",
     "copiedLineToast": "Tâche copiée en prompt",
+    "promoteToIssue": "Promouvoir en ticket",
+    "promotePrompt": "Convertis cette note de mon carnet de tâches en ticket :\n\n{note}\n\nSi la note n'est pas assez claire pour en faire un bon ticket, pose-moi des questions avant de le créer.",
     "emptyCopyToast": "Rien à copier pour l'instant",
     "close": "Fermer"
   },

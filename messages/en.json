@@ -29,6 +29,8 @@
     "copiedSectionToast": "Section copied as a prompt",
     "copyLine": "Copy as prompt",
     "copiedLineToast": "Task copied as a prompt",
+    "promoteToIssue": "Promote to issue",
+    "promotePrompt": "Turn this note from my task notebook into an issue:\n\n{note}\n\nIf the note isn't clear enough to make a good issue, ask me questions before creating it.",
     "emptyCopyToast": "Nothing to copy yet",
     "close": "Close"
   },

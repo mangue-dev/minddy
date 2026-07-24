@@ -28,20 +28,26 @@ import {
   Play,
 } from "lucide-react";
 import { SearchMenu } from "@/components/search-menu";
+import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
 import { TASK_MARKER_BY_STATE } from "@/lib/scratchpad";
 import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useScratchpad } from "@/lib/scratchpad-context";
 
 /**
  * Scratchpad tasks with the plan's FOUR states inside the WYSIWYG editor. The
- * checkbox and the per-line ⋯ menu (set state, copy the line as a prompt) come
- * from a React NodeView; the state persists as the node attribute `state` and
- * round-trips to markdown markers ([ ]/[~]/[x]/[-]) via task-markdown.ts.
+ * checkbox and the per-line ⋯ menu (set state, promote the note to an issue,
+ * copy the line as a prompt) come from a React NodeView; the state persists as
+ * the node attribute `state` and round-trips to markdown markers
+ * ([ ]/[~]/[x]/[-]) via task-markdown.ts.
  */
 function TaskItemView({ node, updateAttributes }: NodeViewProps) {
   const t = useTranslations("Plan");
   const tScratch = useTranslations("Scratchpad");
+  const { close: closeScratchpad } = useScratchpad();
+  const openAssistant = useAssistantPanel().open;
 
   const raw = node.attrs.state;
   const state: PlanTaskState = isPlanTaskState(raw) ? raw : "pending";
@@ -58,6 +64,19 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
       })
     );
     toast.success(tScratch("copiedLineToast"));
+  };
+
+  // « Promouvoir en ticket » : la note part telle quelle à Numo, qui la convertit
+  // en vrai ticket — et pose des questions plutôt que d'inventer si elle est
+  // trop floue. On ferme le carnet d'abord (son démontage flushe l'autosave, cf.
+  // scratchpad-editor.tsx) pour laisser la place au panneau. Pas de projectId :
+  // le panneau suit la route, donc le projet courant si on en consulte un, et en
+  // mode global Numo demande lequel — le carnet, lui, est cross-projet.
+  const promoteToIssue = () => {
+    const text = node.textContent.trim();
+    if (!text) return;
+    closeScratchpad();
+    openAssistant({ prompt: tScratch("promotePrompt", { note: text }) });
   };
 
   // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button
@@ -181,6 +200,22 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
             </CommandItem>
           )}
           <CommandSeparator className="my-1" />
+          <CommandItem
+            value={tScratch("promoteToIssue")}
+            keywords={[
+              "ticket",
+              "issue",
+              "promote",
+              "promouvoir",
+              "convertir",
+              "convert",
+              "numo",
+            ]}
+            onSelect={() => pick(promoteToIssue)}
+          >
+            <NumoIcon animated={false} className="size-4" />
+            {tScratch("promoteToIssue")}
+          </CommandItem>
           <CommandItem
             value={tScratch("copyLine")}
             keywords={["copy", "copier", "prompt", "agent"]}
