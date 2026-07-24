@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, GitBranch } from "lucide-react";
+import { ArrowRight, Check, ChevronsUpDown, GitBranch } from "lucide-react";
 import {
   Button,
   Command,
@@ -32,6 +32,11 @@ import {
  * lignée neuve) — partout ailleurs le picker est un chip verrouillé + tooltip,
  * comme le modèle. Pas de saisie libre : une branche inexistante ferait
  * échouer le clone, le listing fait foi.
+ *
+ * Une fois le travail commencé, la branche de travail RÉELLE de la session est
+ * connue (`workBranch`) : le chip verrouillé se dédouble en « origine →
+ * branche de session », la branche de session mise en avant (c'est là que
+ * l'agent pousse). Tant qu'elle n'est pas stampée, on n'affiche que l'origine.
  */
 
 const MAX_RESULTS = 50;
@@ -49,6 +54,8 @@ export function BranchCombobox({
   disabled,
   disabledTooltip,
   lockedBranch,
+  workBranch,
+  workBranchTooltip,
 }: {
   /** Ancrage ISSUE du listing (sessions de ticket). Exclusif avec `projectId`. */
   issueId?: string | null;
@@ -72,6 +79,14 @@ export function BranchCombobox({
    * ou la base de la lignée héritée). Repli : `value`, puis la branche par défaut.
    */
   lockedBranch?: string | null;
+  /**
+   * Branche de travail RÉELLE de la session (ex. `branch_name` de la run live),
+   * connue une fois le travail lancé. Présente → le chip verrouillé se dédouble
+   * en « origine → branche de session ». Null/absente → chip d'origine seul.
+   */
+  workBranch?: string | null;
+  /** Tooltip du chip dédoublé (remplace `disabledTooltip` quand `workBranch` existe). */
+  workBranchTooltip?: string;
 }) {
   // Chip verrouillé avec une branche connue → aucun listing à charger : on ne
   // paie l'appel provider que quand le picker est interactif (ou qu'il faut
@@ -108,18 +123,32 @@ export function BranchCombobox({
   // ModelCombobox — le <span> extérieur porte le hover, un bouton `disabled`
   // n'émettant pas d'événement pointer).
   if (disabled && disabledTooltip) {
-    const shown = lockedBranch || value || defaultBranch || defaultLabel;
+    const origin = lockedBranch || value || defaultBranch || defaultLabel;
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
             <span className="pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
               <GitBranch className="size-3.5 shrink-0" />
-              <span className="max-w-[9rem] truncate">{shown}</span>
+              {workBranch ? (
+                <>
+                  {/* Origine (contexte, en retrait) → branche de session (mise en
+                      avant : c'est la branche réelle de travail de la session). */}
+                  <span className="max-w-[7rem] truncate">{origin}</span>
+                  <ArrowRight className="size-3 shrink-0 opacity-60" />
+                  <span className="max-w-[10rem] truncate text-foreground/75">
+                    {workBranch}
+                  </span>
+                </>
+              ) : (
+                <span className="max-w-[9rem] truncate">{origin}</span>
+              )}
             </span>
           </span>
         </TooltipTrigger>
-        <TooltipContent side="top">{disabledTooltip}</TooltipContent>
+        <TooltipContent side="top">
+          {workBranch ? workBranchTooltip ?? disabledTooltip : disabledTooltip}
+        </TooltipContent>
       </Tooltip>
     );
   }

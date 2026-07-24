@@ -1127,6 +1127,7 @@
     "branchSearchLoading": "Chargement des branches…",
     "branchLocked": "La branche copiée au lancement est figée pour la session.",
     "branchInherited": "Le nouvel agent reprend la branche existante du ticket — sa base ne se rechoisit pas.",
+    "branchSessionLocked": "Cette session travaille sur {branch}, copiée de {origin}.",
     "launch": "Lancer",
     "prMerged": "PR fusionnée",
     "prClosed": "PR fermée",

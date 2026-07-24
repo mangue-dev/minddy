@@ -582,7 +582,10 @@ export function AgentConversation({
                     disabled
                     disabledTooltip={t("modelLocked")}
                   />
-                  {/* Branche copiée au lancement, figée elle aussi pour la session. */}
+                  {/* Branche copiée au lancement, figée elle aussi pour la session.
+                      Dès que la branche de travail est stampée (`branch_name`), le
+                      chip se dédouble en « origine → branche de session » pour
+                      montrer où l'agent pousse réellement. */}
                   <BranchCombobox
                     issueId={issueId}
                     value=""
@@ -595,6 +598,15 @@ export function AgentConversation({
                     disabled
                     disabledTooltip={t("branchLocked")}
                     lockedBranch={liveRun.base_branch}
+                    workBranch={liveRun.branch_name}
+                    workBranchTooltip={
+                      liveRun.branch_name
+                        ? t("branchSessionLocked", {
+                            origin: liveRun.base_branch ?? t("branchDefault"),
+                            branch: liveRun.branch_name,
+                          })
+                        : undefined
+                    }
                   />
                 </>
               }

@@ -106,17 +106,30 @@ export const allPullRequestsQueryKey = ["pull-requests", "all"] as const;
 /**
  * Liste globale des PR de Numo (page Pull Requests). Polling ~5 s tant qu'une PR
  * a un run actif (Numo retravaille dessus), sinon pas de polling.
+ *
+ * `refetchOnMount: always` (même raison que useAgentSessionsQuery) : au repos la
+ * liste ne poll plus ET l'app-shell garde ce cache chaud, donc un deep-link
+ * `?run=` arrivant sur un cache « frais » (staleTime global 5 min) ne verrait
+ * jamais la PR qu'on vient de créer. On expose aussi `fetching` : la page PR
+ * attend qu'un refetch en vol atterrisse avant de retomber sur la 1re PR de la
+ * liste, sinon le deep-link ouvrirait la dernière PR au lieu de la bonne.
  */
 export function useAllPullRequestsQuery() {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: allPullRequestsQueryKey,
     queryFn: fetchAllPullRequestsApi,
+    refetchOnMount: "always",
     refetchInterval: (query) => {
       const prs = query.state.data?.pullRequests ?? [];
       return prs.some((p) => p.activeRunId) ? 5000 : false;
     },
   });
-  return { pullRequests: data?.pullRequests ?? [], loading: isLoading, refetch };
+  return {
+    pullRequests: data?.pullRequests ?? [],
+    loading: isLoading,
+    fetching: isFetching,
+    refetch,
+  };
 }
 
 /** Clé de cache de la liste globale des sessions d'agent (page Agents). */

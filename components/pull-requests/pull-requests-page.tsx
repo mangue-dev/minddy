@@ -52,7 +52,7 @@ function stateVariant(
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const { pullRequests, loading, refetch } = useAllPullRequestsQuery();
+  const { pullRequests, loading, fetching, refetch } = useAllPullRequestsQuery();
 
   // Deep-link depuis la sidebar d'issue (« Voir la pull request ») : ?run=<id>
   // présélectionne la PR de ce run et bascule le filtre sur « tous » pour qu'elle
@@ -110,11 +110,17 @@ export function PullRequestsPage() {
   // que les données arrivent. `selected` renvoie null tout seul si l'id n'existe pas.
   useEffect(() => {
     if (filtered.length === 0) return;
-    if (!selectedRunId || !filtered.some((p) => holdsRun(p, selectedRunId))) {
-      setSelectedRunId(filtered[0].runId);
-    }
+    if (selectedRunId && filtered.some((p) => holdsRun(p, selectedRunId))) return;
+    // Sélection absente de la liste. Si un fetch est en vol (à la montée,
+    // `refetchOnMount: always` en déclenche toujours un), on ATTEND qu'il
+    // atterrisse : la PR qu'on vient de créer et qu'un deep-link `?run=` cible
+    // peut encore arriver. Retomber sur filtered[0] maintenant ouvrirait la
+    // DERNIÈRE PR au lieu de la bonne. Fetch terminé + toujours absente = run
+    // sans PR (vieux lien) → on prend la 1re par défaut.
+    if (fetching) return;
+    setSelectedRunId(filtered[0].runId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, selectedRunId]);
+  }, [filtered, selectedRunId, fetching]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
