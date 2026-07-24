@@ -4,6 +4,7 @@
     "srDescription": "Votre carnet de tâches personnel.",
     "open": "Carnet de tâches",
     "openAria": "Ouvrir le carnet de tâches (G puis N)",
+    "tasksLeft": "{count, plural, one {# tâche à faire} other {# tâches à faire}}",
     "placeholder": "Écris, ou tape « / » pour les commandes…",
     "slashTask": "Tâche",
     "slashDictate": "Dicter une tâche",

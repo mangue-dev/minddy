@@ -78,6 +78,24 @@ async function putScratchpad(content: string, rev: number): Promise<PutResult> {
   return { ok: true, content: d.content, updated_at: d.updated_at, rev: d.rev };
 }
 
+/**
+ * Task counts for the header trigger's badge — a light, always-on read of the
+ * very same cached note the modal edits. One small GET on load, then kept
+ * current for free: the RealtimeProvider invalidates SCRATCHPAD_KEY on every
+ * write (yours, another tab's, or the agent's via the MCP), and the modal's own
+ * saves write the cache directly, so the badge follows what you tick off live.
+ * Warming the cache also makes opening the notebook instant — it renders the
+ * cached note while it revalidates.
+ */
+export function useScratchpadProgress(): PlanProgress {
+  const { data } = useQuery({
+    queryKey: SCRATCHPAD_KEY,
+    queryFn: fetchScratchpad,
+    staleTime: 60_000,
+  });
+  return data?.progress ?? EMPTY.progress;
+}
+
 const responseOf = (content: string, updatedAt: string | null, rev: number): ScratchpadResponse => ({
   content,
   updated_at: updatedAt,

@@ -4,6 +4,7 @@
     "srDescription": "Your personal task notebook.",
     "open": "Task notebook",
     "openAria": "Open task notebook (G then N)",
+    "tasksLeft": "{count, plural, one {# task left} other {# tasks left}}",
     "placeholder": "Write, or type '/' for commands…",
     "slashTask": "Task",
     "slashDictate": "Dictate a task",
