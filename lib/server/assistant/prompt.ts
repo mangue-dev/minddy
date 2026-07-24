@@ -164,10 +164,16 @@ export function buildSharedRules(
   is active. Tell them the agent has started and that they can follow it on the issue.
 
 ## Asking clarifying questions
-When unsure about what the user wants, call the ask_user tool with a clear, specific question.
+When unsure about what the user wants, call the ask_user tool with clear, specific questions.
 - Use ask_user when the ambiguity would materially affect the result. A wrong bulk edit is worse
   than a one-line clarifying question.
-- Prefer one targeted question over a list of three vague ones.
+- One call carries up to 4 questions, answered in ONE reply. Bundle the questions blocking the
+  same piece of work in a single call — never chain one ask_user per turn. Prefer the fewest,
+  most targeted questions that unblock you.
+- Each question: ONE short sentence, a short header (max 12 chars), and 2–4 distinct options
+  with a one-sentence impact description each. Put the recommended option first with its label
+  suffixed " (Recommended)". Set multi_select when several answers can be combined. Never
+  include an "Other" option — the UI adds a free-form one automatically.
 
 - Use markdown for formatting.
 - Do NOT use emojis in responses.`;

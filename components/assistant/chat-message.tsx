@@ -20,8 +20,16 @@ interface ChatMessageProps {
     string,
     { status: "running" | "complete"; result?: unknown; success?: boolean }
   >;
-  /** Callback when a user clicks a suggested answer in ask_user tool */
-  onSuggestionClick?: (text: string) => void;
+  /**
+   * Masque la ligne ask_user de ce message : la question ACTIVE est rendue par la
+   * surface hôte à la place du composer (MIN-86), pas comme une bulle du fil.
+   */
+  askUserHidden?: boolean;
+  /**
+   * Réponse de l'utilisateur aux questions ask_user de ce message (la bulle user
+   * qui suivait, masquée du fil) — affichée dans les détails de la ligne.
+   */
+  askUserAnswer?: string | null;
   /** Whether this assistant message renders a Copy button under its text.
    *  Only the last assistant message of a turn should — mid-turn segments
    *  (text that precedes a tool call / a later assistant reply) read as one
@@ -107,7 +115,8 @@ function AssistantText({ content }: { content: string }) {
 export function ChatMessage({
   message,
   toolCallResults,
-  onSuggestionClick,
+  askUserHidden = false,
+  askUserAnswer,
   showCopyButton = true,
   isLatestMessage = false,
 }: ChatMessageProps) {
@@ -174,7 +183,8 @@ export function ChatMessage({
                     success: status?.success ?? true,
                   };
                 })}
-                onSuggestionClick={onSuggestionClick}
+                askUserHidden={askUserHidden}
+                askUserAnswer={askUserAnswer}
                 isLatest={isLatestMessage}
               />
             )}
@@ -223,6 +233,9 @@ export function StreamingMessage({
               result: tc.result,
               success: tc.success,
             }))}
+            // La question en cours de stream ne s'affiche pas en bulle : dès la
+            // fin du tour, la carte VIVANTE prend la place du composer.
+            askUserHidden
           />
         )}
       </div>

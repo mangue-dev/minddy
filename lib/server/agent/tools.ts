@@ -319,6 +319,67 @@ const CORE_TOOLS: AgentToolDef[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "ask_user",
+      description:
+        "Ask the user one or more clarifying questions and END YOUR TURN — the session pauses until they answer, then resumes with their reply. Use it when a genuine product or implementation decision blocks you AND the likely answers are enumerable (which approach, which of two behaviors, scope in/out); for open-ended questions just ask in your reply text instead. Bundle RELATED blocking questions into a single call rather than asking across several turns — they are all answered in ONE reply. The user may also skip the questions without answering — proceed with your best judgment then.",
+      parameters: {
+        type: "object",
+        properties: {
+          questions: {
+            type: "array",
+            description:
+              "Questions to show the user (1–4). Prefer the fewest that unblock the work.",
+            items: {
+              type: "object",
+              properties: {
+                question: {
+                  type: "string",
+                  description:
+                    "The complete question to ask. Clear, specific, ONE short sentence ending with a question mark.",
+                },
+                header: {
+                  type: "string",
+                  description:
+                    "Very short label displayed as a chip/tab (max 12 chars). Examples: 'Scope', 'Approach', 'Naming'.",
+                },
+                multi_select: {
+                  type: "boolean",
+                  description:
+                    "Set true when several answers can be combined (checkboxes). Omit/false for mutually exclusive choices (radio).",
+                },
+                options: {
+                  type: "array",
+                  description:
+                    "2–4 distinct choices (mutually exclusive unless multi_select). Put the recommended option FIRST and suffix its label with ' (Recommended)'. Do NOT include an 'Other' option — the client adds a free-form one automatically.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: {
+                        type: "string",
+                        description:
+                          "Concise display text for this choice (1–5 words).",
+                      },
+                      description: {
+                        type: "string",
+                        description:
+                          "One short sentence explaining what this choice means or its impact/tradeoff.",
+                      },
+                    },
+                    required: ["label"],
+                  },
+                },
+              },
+              required: ["question", "header", "options"],
+            },
+          },
+        },
+        required: ["questions"],
+      },
+    },
+  },
 ];
 
 /** Tools d'ANCRAGE TICKET : l'état vivant de l'issue + la PR du ticket. */
@@ -517,4 +578,4 @@ export const AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...ISSUE_ANCHOR_TOOLS
 export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...NOTEBOOK_ANCHOR_TOOLS];
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
-export const CONTROL_TOOLS = new Set(["update_plan"]);
+export const CONTROL_TOOLS = new Set(["update_plan", "ask_user"]);

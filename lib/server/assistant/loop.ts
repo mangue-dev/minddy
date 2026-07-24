@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { AssistantToolCall } from "@/lib/assistant-types";
+import { parseAskUserQuestions } from "@/lib/ask-user";
 import type { SafeEmitter } from "./sse";
 import {
   executeTool,
@@ -339,15 +340,17 @@ export async function processChat(
       for (const [, acc] of toolCallAccumulators) {
         if (acc.name === "ask_user") {
           // ask_user: emit a synthetic result and do NOT continue the loop
-          let question = "";
+          let parsed: Record<string, unknown> = {};
           try {
-            const parsed = JSON.parse(acc.arguments);
-            question = (parsed.question as string) || "";
+            parsed = JSON.parse(acc.arguments);
           } catch {
             // Invalid JSON from LLM
           }
+          const questions = parseAskUserQuestions(parsed).map(
+            (q) => q.question
+          );
 
-          const askResult = { status: "awaiting_user_response", question };
+          const askResult = { status: "awaiting_user_response", questions };
           emitter.emit("tool_result", {
             id: acc.id,
             name: "ask_user",

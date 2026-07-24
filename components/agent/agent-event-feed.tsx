@@ -66,6 +66,9 @@ type MessageItem = {
   isSummary?: boolean;
   /** Pour un summary : created_at de l'event `summary` (fin de tour → durée). */
   endedAt?: string;
+  /** Réponse de l'utilisateur aux questions ask_user de ce message (le
+      user_message qui suit, absorbé — pas de bulle, détails de la ligne). */
+  askUserAnswer?: string;
 };
 
 type FeedItem =
@@ -153,11 +156,18 @@ function str(v: unknown): string {
 function buildFeed(
   events: AgentRunEvent[],
   initialPrompt?: string | null,
-): { items: FeedItem[]; results: Map<string, ToolResult> } {
+): { items: FeedItem[]; results: Map<string, ToolResult>; userTexts: string[] } {
   const ordered = [...events].sort((a, b) => a.seq - b.seq);
   const items: FeedItem[] = [];
   const results = new Map<string, ToolResult>();
+  // TOUS les textes user reçus (bulles ET réponses absorbées par une question) —
+  // sert au dédoublonnage des bulles optimistes, qui ne peut plus se lire depuis
+  // les items seuls.
+  const userTexts: string[] = [];
   let current: MessageItem | null = null;
+  // Dernière question ask_user en attente : le prochain user_message est sa
+  // réponse (absorbée dans la ligne, pas de bulle).
+  let lastQuestion: MessageItem | null = null;
 
   // Bulle « originelle » : le prompt de lancement n'est PAS dans le flux d'events
   // (il alimente le message de tâche du LLM). On l'affiche en tête comme 1re bulle
@@ -165,6 +175,7 @@ function buildFeed(
   // émis en events `user_message` et rendus par la boucle ci-dessous.
   const prompt = (initialPrompt ?? "").trim();
   if (prompt) {
+    userTexts.push(prompt);
     items.push({
       kind: "message",
       message: makeMessage("initial-prompt", prompt, "user"),
@@ -179,6 +190,11 @@ function buildFeed(
 
   for (const e of ordered) {
     const p = e.payload ?? {};
+    // La fenêtre « le prochain user_message répond à la question » ne survit
+    // qu'aux events neutres — tout event de contenu (nouveau tour) la referme.
+    if (!["user_message", "question", "tool_result", "status"].includes(e.type)) {
+      lastQuestion = null;
+    }
     switch (e.type) {
       case "thinking": {
         const text = str(p.text);
@@ -211,9 +227,17 @@ function buildFeed(
       case "user_message": {
         const text = str(p.text);
         if (!text.trim()) break;
+        userTexts.push(text.trim());
+        current = null;
+        // Réponse à un ask_user : ABSORBÉE par la ligne de la question (détails
+        // au clic) — pas de bulle, le flow de lecture reste propre.
+        if (lastQuestion) {
+          lastQuestion.askUserAnswer = text;
+          lastQuestion = null;
+          break;
+        }
         // Message de steering de l'utilisateur : bulle user, ne rattache pas les
         // tool-calls suivants (ils appartiennent au prochain tour de l'agent).
-        current = null;
         items.push({
           kind: "message",
           message: makeMessage(e.id, text, "user"),
@@ -240,6 +264,36 @@ function buildFeed(
       case "tool_result": {
         const id = str(p.id);
         if (id) results.set(id, { status: "complete", success: p.success !== false });
+        break;
+      }
+      case "question": {
+        // ask_user (MIN-86) : l'agent pose des questions structurées et le tour se
+        // termine. Rendu comme un message de CLÔTURE de tour (isSummary → le
+        // déroulé se replie) portant un tool_call ask_user complet — le ChatMessage
+        // partagé le rend en carte de questions, à parité avec Numo.
+        const id = str(p.id) || e.id;
+        const questions = Array.isArray(p.questions) ? p.questions : [];
+        if (questions.length === 0) break;
+        const msg = makeMessage(e.id, null);
+        msg.tool_calls = [
+          {
+            id,
+            type: "function",
+            function: { name: "ask_user", arguments: JSON.stringify({ questions }) },
+          },
+        ];
+        results.set(id, { status: "complete", success: true });
+        const questionItem: MessageItem = {
+          kind: "message",
+          message: msg,
+          createdAt: e.created_at,
+          isSummary: true,
+          endedAt: e.created_at,
+        };
+        items.push(questionItem);
+        // Le prochain user_message est la réponse à cette question.
+        lastQuestion = questionItem;
+        current = null;
         break;
       }
       case "pr_opened": {
@@ -285,7 +339,7 @@ function buildFeed(
     }
   }
 
-  return { items, results };
+  return { items, results, userTexts };
 }
 
 /**
@@ -376,6 +430,9 @@ interface RenderContext {
   lastMessageId: string | null;
   /** Ouvre la vue diff de la session (dans la conversation) → lignes cliquables. */
   onOpenFile?: (path: string) => void;
+  /** Event `question` ACTIF, rendu par la conversation à la place du composer →
+      son item du fil est masqué (les questions passées restent, inertes). */
+  hiddenQuestionEventId?: string | null;
 }
 
 function FilesRow({
@@ -399,11 +456,15 @@ function FilesRow({
 
 function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
   if (it.kind === "message") {
+    // Question ACTIVE : la carte vivante est affichée par la conversation à la
+    // place du composer — sa bulle du fil ne se rend pas du tout.
+    if (it.message.id === ctx.hiddenQuestionEventId) return null;
     return (
       <ChatMessage
         key={it.message.id}
         message={it.message}
         toolCallResults={ctx.results}
+        askUserAnswer={it.askUserAnswer}
         showCopyButton={ctx.copyableIds.has(it.message.id)}
         isLatestMessage={it.message.id === ctx.lastMessageId}
       />
@@ -567,6 +628,7 @@ export function AgentEventFeed({
   className,
   pendingUserMessages = [],
   onOpenFile,
+  hiddenQuestionEventId,
 }: {
   /**
    * Session à suivre, ou `null` quand elle n'existe pas ENCORE : le POST de
@@ -581,6 +643,11 @@ export function AgentEventFeed({
   className?: string;
   /** Rend cliquables les fichiers des blocs de diff (ouvre la vue diff de la session). */
   onOpenFile?: (path: string) => void;
+  /**
+   * Event `question` ACTIF (MIN-86) : sa carte vivante est rendue par la
+   * conversation à la place du composer → son item du fil est masqué ici.
+   */
+  hiddenQuestionEventId?: string | null;
   /**
    * Messages que l'utilisateur vient d'envoyer, pas encore revenus du serveur.
    * Un message de steering ne devient un event `user_message` que lorsque la BOUCLE
@@ -606,8 +673,39 @@ export function AgentEventFeed({
     [fadeRef],
   );
 
-  const { items, results } = useMemo(() => buildFeed(events, prompt), [events, prompt]);
-  const blocks = useMemo(() => buildBlocks(items, active), [items, active]);
+  const { items, results, userTexts } = useMemo(
+    () => buildFeed(events, prompt),
+    [events, prompt],
+  );
+
+  // Bulles optimistes encore à afficher : dédoublonnées contre TOUS les textes
+  // user reçus (bulles ET réponses absorbées par une ligne de question).
+  const stillPending = unechoedMessages(pendingUserMessages, userTexts);
+
+  // Réponse EN VOL à la dernière question (optimiste) : rattachée tout de suite
+  // à sa ligne plutôt qu'affichée en bulle temporaire qui disparaîtrait à l'écho.
+  let displayItems = items;
+  let displayPending = stillPending;
+  if (stillPending.length > 0) {
+    const last = [...items]
+      .reverse()
+      .find((it): it is MessageItem => it.kind === "message");
+    if (
+      last &&
+      !last.askUserAnswer &&
+      last.message.tool_calls?.some((tc) => tc.function.name === "ask_user")
+    ) {
+      displayItems = items.map((it) =>
+        it === last ? { ...it, askUserAnswer: stillPending[0] } : it,
+      );
+      displayPending = stillPending.slice(1);
+    }
+  }
+
+  const blocks = useMemo(
+    () => buildBlocks(displayItems, active),
+    [displayItems, active],
+  );
 
   // Bouton copy sous la RÉPONSE DE CHAQUE TOUR (le résumé qui le clôt), pas sous le
   // seul dernier message de la session : une session en compte plusieurs et chacune
@@ -638,15 +736,6 @@ export function AgentEventFeed({
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   }, [items.length]);
 
-  // Bulles optimistes encore à afficher : celles dont l'écho serveur n'est pas
-  // encore arrivé (cf. lib/agent-pending.ts). Calculé AVANT le vide ci-dessous : au
-  // lancement d'une session, le fil n'a aucun event et c'est justement la bulle
-  // optimiste qui doit s'afficher — sortir ici l'aurait masquée.
-  const echoedTexts = items
-    .filter((it) => it.kind === "message" && it.message.role === "user")
-    .map((it) => ((it as MessageItem).message.content ?? "").trim());
-  const stillPending = unechoedMessages(pendingUserMessages, echoedTexts);
-
   if (items.length === 0 && stillPending.length === 0) {
     return (
       <div className={cn("flex items-center justify-center px-3 text-center", className)}>
@@ -676,7 +765,13 @@ export function AgentEventFeed({
     }
   }
 
-  const ctx: RenderContext = { results, copyableIds, lastMessageId, onOpenFile };
+  const ctx: RenderContext = {
+    results,
+    copyableIds,
+    lastMessageId,
+    onOpenFile,
+    hiddenQuestionEventId,
+  };
   // Le tour actif (accordéon ouvert « Travail depuis X ») porte déjà le signal
   // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore
   // (ex. juste après le lancement : prompt affiché, aucun pas produit).
@@ -712,7 +807,7 @@ export function AgentEventFeed({
         {/* Envoyés, pas encore revenus du serveur. Rendus APRÈS les blocs (et non
             injectés dans `items`) : un message user referme le tour en cours, donc
             les glisser dans le flux replierait l'accordéon du travail en direct. */}
-        {stillPending.map((text, i) => (
+        {displayPending.map((text, i) => (
           <ChatMessage
             key={`pending-${i}-${text}`}
             message={makeMessage(`pending-${i}`, text, "user")}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import {
   ChevronRight,
   FilePen,
@@ -51,8 +51,17 @@ interface ToolCallItem {
 
 interface ToolCallListProps {
   items: ToolCallItem[];
-  /** Callback when a user clicks a suggested answer (ask_user tool) */
-  onSuggestionClick?: (text: string) => void;
+  /**
+   * Masque les lignes ask_user de ce groupe : la question ACTIVE est rendue par
+   * la surface hôte À LA PLACE du composer (MIN-86) — le fil ne montre que les
+   * questions passées, repliées en ligne de tool-call.
+   */
+  askUserHidden?: boolean;
+  /**
+   * Réponse de l'utilisateur aux questions ask_user de ce message (le message
+   * user qui suit, masqué du fil) — affichée dans les détails de la ligne.
+   */
+  askUserAnswer?: string | null;
   /**
    * Ce groupe d'actions est-il la TÊTE VIVANTE de la conversation (aucun message
    * plus récent) ? Alors l'accordéon fermé montre sa dernière action avec un effet
@@ -413,7 +422,10 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: MessageCircleQuestion,
     getLabel: (args, _result, _success, status, t) => {
       if (status === "running") return t("askingUser");
-      return (args.question as string) || t("questionAsked");
+      const questions = parseAskUserQuestions(args);
+      if (questions.length > 1)
+        return t("questionsAsked", { count: questions.length });
+      return questions[0]?.question || t("questionAsked");
     },
   },
   // ── Agent de code (MIN-46) : mêmes lignes de tool-call que Numo. ──────────
@@ -495,45 +507,64 @@ function getToolView(item: ToolCallItem, t: TranslateFn) {
   return { Icon, label };
 }
 
-function AskUserCallout({
+/**
+ * Question passée : une LIGNE au style des tool-calls (le fil de lecture reste
+ * propre), repliable — le clic déplie les questions posées et les réponses
+ * données. La réponse de l'utilisateur ne s'affiche plus en bulle : elle vit ici.
+ */
+function AskUserSummaryRow({
   item,
-  onSuggestionClick,
+  answer,
   t,
 }: {
   item: ToolCallItem;
-  onSuggestionClick?: (text: string) => void;
+  answer?: string | null;
   t: TranslateFn;
 }) {
-  const parsedArgs = safeParseArgs(item.arguments);
-  const question = parsedArgs.question as string;
-  const suggestions = Array.isArray(parsedArgs.suggestions)
-    ? (parsedArgs.suggestions as string[])
-    : [];
+  const [open, setOpen] = useState(false);
+  // Comprend la forme actuelle {questions: [...]} comme la forme legacy
+  // mono-question {question, suggestions} des anciens messages persistés.
+  const questions = parseAskUserQuestions(safeParseArgs(item.arguments));
+  if (questions.length === 0) return null;
+
+  const entries = matchAskUserAnswers(questions, answer);
+  const matched = entries.some((e) => e.answer !== null);
+  const label = answer
+    ? t("askUserAnsweredLine")
+    : questions.length > 1
+      ? t("questionsAsked", { count: questions.length })
+      : t("questionAsked");
 
   return (
-    <div className="space-y-2.5">
-      <div className="flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand/5 px-3.5 py-3 text-sm leading-relaxed">
-        <MessageCircleQuestion className="h-4 w-4 shrink-0 mt-0.5 text-brand" />
-        <span>{question}</span>
-      </div>
-      {suggestions.length > 0 && onSuggestionClick && (
-        <Suggestions>
-          {suggestions.map((s, i) => (
-            <Suggestion
-              key={i}
-              suggestion={s}
-              onClick={onSuggestionClick}
-              className="hover:border-brand/40 hover:bg-brand/5"
-            />
+    <div className="flex flex-col">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen((o) => !o)}
+        className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+      >
+        <ChevronRight
+          className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-90")}
+        />
+        <MessageCircleQuestion className="h-3 w-3 shrink-0" />
+        <span className="flex-1 truncate">{label}</span>
+      </Button>
+      {open && (
+        <div className="ml-5 flex flex-col gap-1.5 py-1">
+          {entries.map((e, i) => (
+            <div key={i} className="flex flex-col text-xs">
+              <span className="text-muted-foreground">{e.question}</span>
+              {matched && e.answer && (
+                <span className="text-foreground">{e.answer}</span>
+              )}
+            </div>
           ))}
-          <Suggestion
-            suggestion=""
-            onClick={() => onSuggestionClick("")}
-            className="italic border-dashed hover:border-brand/40 hover:bg-brand/5"
-          >
-            {t("otherOption")}
-          </Suggestion>
-        </Suggestions>
+          {/* Réponse non appariable (skip, texte libre hors carte) : en bloc. */}
+          {answer && !matched && (
+            <div className="text-xs text-foreground">{answer}</div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -571,7 +602,12 @@ function ToolCallRow({
   );
 }
 
-export function ToolCallList({ items, onSuggestionClick, isLatest = false }: ToolCallListProps) {
+export function ToolCallList({
+  items,
+  askUserHidden = false,
+  askUserAnswer,
+  isLatest = false,
+}: ToolCallListProps) {
   const t = useTranslations("ToolCall");
   const [expanded, setExpanded] = useState(false);
 
@@ -670,14 +706,15 @@ export function ToolCallList({ items, onSuggestionClick, isLatest = false }: Too
   return (
     <div className="flex w-full flex-col gap-1.5">
       {renderRows()}
-      {askUserCallouts.map((item) => (
-        <AskUserCallout
-          key={item.id}
-          item={item}
-          onSuggestionClick={onSuggestionClick}
-          t={t}
-        />
-      ))}
+      {!askUserHidden &&
+        askUserCallouts.map((item) => (
+          <AskUserSummaryRow
+            key={item.id}
+            item={item}
+            answer={askUserAnswer}
+            t={t}
+          />
+        ))}
     </div>
   );
 }

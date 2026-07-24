@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { AssistantToolCall } from "@/lib/assistant-types";
+import { parseAskUserQuestions } from "@/lib/ask-user";
 import {
   recordAiUsage,
   parseOpenRouterUsage,
@@ -56,8 +57,10 @@ import {
  *  - chaque appel → `recordAiUsage(feature:'agent_code', run_id)` ; chaque étape
  *    → `emit` vers agent_run_events (live view).
  *  - FIN DE TOUR NATURELLE : le tour se termine quand le modèle répond SANS
- *    tool-call — sa réponse texte est le message à l'utilisateur (`reply`). Pas de
- *    tool de contrôle terminal (finish/ask_user supprimés — modèle conversationnel).
+ *    tool-call — sa réponse texte est le message à l'utilisateur (`reply`). Un seul
+ *    tool de contrôle peut aussi clore le tour : `ask_user` (MIN-86) — questions
+ *    structurées émises en event `question`, la session repose jusqu'à la réponse
+ *    (`finish` reste supprimé — modèle conversationnel).
  * Les tools « métier » (read_file/write_file/run_command/create_pr…) sont délégués
  * à `execTool` (fourni par execute.ts, qui détient le Sandbox).
  */
@@ -90,7 +93,8 @@ export type AgentEventType =
   | "summary"
   | "user_message"
   | "plan_update"
-  | "files_changed";
+  | "files_changed"
+  | "question";
 
 export type EmitAgentEvent = (
   type: AgentEventType,
@@ -765,6 +769,11 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       continue;
     }
 
+    // ask_user (MIN-86) : levé quand le round a posé des questions valides → le
+    // tour se termine après l'exécution de TOUS les tool-calls du round (chaque
+    // appel garde sa réponse : l'appariement du checkpoint reste intact).
+    let askedUser = false;
+
     for (const tc of stream.toolCalls) {
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
@@ -780,16 +789,44 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         continue;
       }
 
+      // ask_user (MIN-86) : tool de contrôle TERMINAL — répond au tool-call avec
+      // un statut d'attente, émet l'event `question` (le feed le rend en carte de
+      // questions), puis le tour se termine : la session repose jusqu'à la réponse
+      // de l'utilisateur, qui revient par le steering au tour suivant. Le parseur
+      // absorbe la forme legacy `{question, suggestions}` des vieux checkpoints.
+      if (name === "ask_user") {
+        const questions = parseAskUserQuestions(args);
+        if (questions.length === 0) {
+          messages.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify({
+              error:
+                "ask_user requires a non-empty `questions` array: [{question, suggestions?}].",
+            }),
+          });
+          continue;
+        }
+        messages.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: JSON.stringify({ status: "awaiting_user_response" }),
+        });
+        await emit("question", { id: tc.id, questions });
+        askedUser = true;
+        continue;
+      }
+
       // Shim LEGACY : les checkpoints d'avant le débridage portent un système qui
-      // décrit `finish`/`ask_user`. Ces tools n'existent plus — on répond au
-      // tool-call (l'appariement doit rester intact) en expliquant le nouveau
-      // protocole, et le modèle conclut son tour en texte au round suivant.
-      if (name === "finish" || name === "ask_user") {
+      // décrit `finish`. Ce tool n'existe plus — on répond au tool-call
+      // (l'appariement doit rester intact) en expliquant le nouveau protocole, et
+      // le modèle conclut son tour en texte au round suivant.
+      if (name === "finish") {
         messages.push({
           role: "tool",
           tool_call_id: tc.id,
           content: JSON.stringify({
-            error: `The ${name} tool no longer exists. Turns now end naturally: simply write your reply (or your question) as a plain text message with no tool calls.`,
+            error: `The finish tool no longer exists. Turns now end naturally: simply write your reply as a plain text message with no tool calls.`,
           }),
         });
         continue;
@@ -807,6 +844,21 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       }
       messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), 6000) });
       await emit("tool_result", { id: tc.id, name, success, preview: previewResult(result) });
+    }
+
+    // ask_user → FIN DE TOUR : les questions sont posées (event `question` émis),
+    // tous les tool-calls du round ont leur réponse dans `messages` (frontière
+    // sûre). Pas de `summary` — la carte de questions clôt le tour dans le feed ;
+    // `reply` vide → commit générique et pas d'outcome.
+    if (askedUser) {
+      return {
+        status: "completed",
+        messages,
+        reply: "",
+        costUsd,
+        usageSeqEnd: seq,
+        rounds: round,
+      };
     }
     // on reboucle (le tour ne se termine que sur une réponse sans tool-call)
   }

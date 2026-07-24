@@ -183,7 +183,8 @@ export type AgentEventType =
   | "summary"
   | "user_message"
   | "plan_update"
-  | "files_changed";
+  | "files_changed"
+  | "question";
 
 export interface AgentRunEvent {
   id: string;

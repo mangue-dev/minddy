@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Spinner, toast } from "mangue-ui";
+import { cn, Spinner, toast } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
+import { AskUserCard } from "@/components/assistant/ask-user-card";
+import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import {
   heartbeatAgentRunApi,
   interruptAgentRunApi,
@@ -22,6 +24,7 @@ import {
   agentRunQueryKey,
   allAgentSessionsQueryKey,
   issueAgentRunsQueryKey,
+  useAgentRunEventsQuery,
   useAgentRunQuery,
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
@@ -132,6 +135,7 @@ export function AgentConversation({
   showUnread?: boolean;
 }) {
   const t = useTranslations("Agent");
+  const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
 
   /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
@@ -248,6 +252,35 @@ export function AgentConversation({
   const steerable = liveRun
     ? isAgentRunResumable(liveRun.status) && isLatest && !delivered
     : false;
+
+  // Question ask_user ACTIVE (MIN-86) : le dernier event significatif du fil est
+  // une `question` (aucun message user ni résumé après) et l'agent est au repos,
+  // steerable, sans réponse déjà en vol. La carte vivante remplace alors le
+  // composer ; le feed masque la bulle correspondante. Même query react-query que
+  // le feed (clé partagée) → aucune requête supplémentaire.
+  const { events: liveEvents } = useAgentRunEventsQuery(
+    liveRun?.id ?? null,
+    working
+  );
+  const activeQuestion = useMemo((): {
+    eventId: string;
+    questions: AskUserQuestion[];
+  } | null => {
+    if (!liveRun || working || !steerable || pendingMessages.length > 0)
+      return null;
+    const ordered = [...liveEvents].sort((a, b) => a.seq - b.seq);
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const e = ordered[i];
+      if (e.type === "user_message" || e.type === "summary") return null;
+      if (e.type === "question") {
+        const questions = parseAskUserQuestions(
+          (e.payload ?? {}) as Record<string, unknown>
+        );
+        return questions.length > 0 ? { eventId: e.id, questions } : null;
+      }
+    }
+    return null;
+  }, [liveRun, working, steerable, pendingMessages, liveEvents]);
   // « Créer une pull request » a du sens quand la session est reprennable ET qu'aucune
   // PR n'existe encore : la barre de changements montre alors le bouton (si du travail
   // a été poussé). Sinon l'en-tête porte déjà « ouvrir la PR ».
@@ -493,6 +526,7 @@ export function AgentConversation({
             prompt={liveRun.prompt}
             pendingUserMessages={pendingMessages}
             onOpenFile={openDiff}
+            hiddenQuestionEventId={activeQuestion?.eventId}
             className="h-full py-4"
           />
         ) : launchText ? (
@@ -549,7 +583,21 @@ export function AgentConversation({
               onOpenFile={openDiff}
             />
           ) : null}
+          {/* Question active : la carte prend la PLACE du composer (pattern
+              Claude Code/Codex). Le ChatInput reste MONTÉ, masqué en CSS — le
+              brouillon de l'utilisateur survit et réapparaît après la réponse. */}
+          {liveRun && activeQuestion ? (
+            <div className="pb-3">
+              <AskUserCard
+                key={activeQuestion.eventId}
+                questions={activeQuestion.questions}
+                onAnswer={(text) => void sendLive(text)}
+                onSkip={() => void sendLive(tToolCall("skippedQuestions"))}
+              />
+            </div>
+          ) : null}
           {liveRun ? (
+            <div className={cn(activeQuestion && "hidden")}>
             <ChatInput
               key={liveRun.id}
               onSend={(message) => void sendLive(message)}
@@ -618,6 +666,7 @@ export function AgentConversation({
                 </>
               }
             />
+            </div>
           ) : (
             <ChatInput
               key="compose"

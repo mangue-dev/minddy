@@ -1079,21 +1079,59 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "ask_user",
       description:
-        "Ask the user a clarifying question when the ambiguity would materially affect the result. The conversation pauses until they answer.",
+        "Ask the user one or more clarifying questions when the ambiguity would materially affect the result. The conversation pauses until they answer, and all questions are answered in ONE reply. Bundle RELATED questions blocking the same piece of work into a single call instead of asking them one at a time across several turns. The user may also skip the questions without answering — proceed with your best judgment then.",
       parameters: {
         type: "object",
         properties: {
-          question: {
-            type: "string",
-            description: "The question to ask.",
-          },
-          suggestions: {
+          questions: {
             type: "array",
-            items: { type: "string" },
-            description: "Optional quick-reply suggestions (2–4).",
+            description:
+              "Questions to show the user (1–4). Prefer the fewest that unblock the work.",
+            items: {
+              type: "object",
+              properties: {
+                question: {
+                  type: "string",
+                  description:
+                    "The complete question to ask. Clear, specific, ONE short sentence ending with a question mark.",
+                },
+                header: {
+                  type: "string",
+                  description:
+                    "Very short label displayed as a chip/tab (max 12 chars). Examples: 'Scope', 'Layout', 'Priorité'.",
+                },
+                multi_select: {
+                  type: "boolean",
+                  description:
+                    "Set true when several answers can be combined (checkboxes). Omit/false for mutually exclusive choices (radio).",
+                },
+                options: {
+                  type: "array",
+                  description:
+                    "2–4 distinct choices (mutually exclusive unless multi_select). Put the recommended option FIRST and suffix its label with ' (Recommended)'. Do NOT include an 'Other' option — the client adds a free-form one automatically. Omit ONLY for a genuinely open-ended question (the user then gets a free text field).",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: {
+                        type: "string",
+                        description:
+                          "Concise display text for this choice (1–5 words).",
+                      },
+                      description: {
+                        type: "string",
+                        description:
+                          "One short sentence explaining what this choice means or its impact/tradeoff.",
+                      },
+                    },
+                    required: ["label"],
+                  },
+                },
+              },
+              required: ["question", "header"],
+            },
           },
         },
-        required: ["question"],
+        required: ["questions"],
       },
     },
   },

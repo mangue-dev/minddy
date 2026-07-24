@@ -42,6 +42,8 @@ import {
   ChatMessage,
   StreamingMessage,
 } from "@/components/assistant/chat-message";
+import { AskUserCard } from "@/components/assistant/ask-user-card";
+import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import { ConversationList } from "@/components/assistant/conversation-list";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
@@ -115,6 +117,7 @@ export const AssistantShell = forwardRef<
   const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
+  const tToolCall = useTranslations("ToolCall");
   const { refreshUser } = useAuth();
   const currentLocale = useLocale();
   const router = useRouter();
@@ -282,9 +285,12 @@ export const AssistantShell = forwardRef<
     [projectId, sendMessage]
   );
 
-  const handleSuggestionClick = useCallback(
+  // Réponse envoyée depuis une carte de questions ask_user (MIN-86) : part comme
+  // un message utilisateur normal — le tool result « awaiting_user_response » est
+  // déjà dans l'historique, la boucle reprend avec la réponse.
+  const handleAnswer = useCallback(
     (text: string) => {
-      if (!text) return;
+      if (!text.trim()) return;
       handleSend(text);
     },
     [handleSend]
@@ -313,6 +319,62 @@ export const AssistantShell = forwardRef<
   const isGeneratingServer = state.status === "generating_server";
   const isBusy = isStreaming || isGeneratingServer;
   const hasMessages = state.messages.length > 0 || isBusy;
+
+  // Question ask_user ACTIVE : le dernier message visible est un message
+  // assistant porteur d'un tool-call ask_user et Numo est au repos (il attend la
+  // réponse). La carte VIVANTE remplace alors le composer (pattern Claude
+  // Code/Codex) ; la bulle correspondante du fil est masquée. Les questions des
+  // tours passés restent dans le fil, inertes.
+  const activeAskUser = useMemo((): {
+    messageId: string;
+    questions: AskUserQuestion[];
+  } | null => {
+    if (isBusy) return null;
+    for (let i = state.messages.length - 1; i >= 0; i--) {
+      const m = state.messages[i];
+      if (m.role === "tool" || m.role === "system") continue;
+      if (m.role !== "assistant" || !m.tool_calls?.length) return null;
+      const call = m.tool_calls.find((c) => c.function.name === "ask_user");
+      if (!call) return null;
+      let args: Record<string, unknown> = {};
+      try {
+        args = JSON.parse(call.function.arguments);
+      } catch {
+        // Args invalides du LLM → pas de carte.
+      }
+      const questions = parseAskUserQuestions(args);
+      return questions.length > 0 ? { messageId: m.id, questions } : null;
+    }
+    return null;
+  }, [state.messages, isBusy]);
+
+  // Passer les questions : Numo reçoit un message user explicite et reprend.
+  const handleSkipQuestions = useCallback(() => {
+    handleSend(tToolCall("skippedQuestions"));
+  }, [handleSend, tToolCall]);
+
+  // Réponses aux questions ask_user : la bulle user qui suit un message porteur
+  // d'un ask_user est sa réponse — elle ne s'affiche PAS comme bulle (le flow de
+  // lecture reste propre) mais dans les détails de la ligne ask_user du fil.
+  const askUserReplies = useMemo(() => {
+    const byMessageId = new Map<string, string>();
+    const hiddenBubbleIds = new Set<string>();
+    let prevVisible: (typeof state.messages)[number] | null = null;
+    for (const m of state.messages) {
+      if (m.role === "tool" || m.role === "system") continue;
+      if (
+        m.role === "user" &&
+        m.content &&
+        prevVisible?.role === "assistant" &&
+        prevVisible.tool_calls?.some((c) => c.function.name === "ask_user")
+      ) {
+        byMessageId.set(prevVisible.id, m.content);
+        hiddenBubbleIds.add(m.id);
+      }
+      prevVisible = m;
+    }
+    return { byMessageId, hiddenBubbleIds };
+  }, [state.messages]);
 
   const allToolCallsComplete =
     state.activeToolCalls.length > 0 &&
@@ -524,15 +586,18 @@ export const AssistantShell = forwardRef<
                       : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
                   }
                 >
-                  {state.messages.map((msg) => (
-                    <ChatMessage
-                      key={msg.id}
-                      message={msg}
-                      toolCallResults={state.toolCallResults}
-                      onSuggestionClick={handleSuggestionClick}
-                      showCopyButton={copyButtonIds.has(msg.id)}
-                    />
-                  ))}
+                  {state.messages.map((msg) =>
+                    askUserReplies.hiddenBubbleIds.has(msg.id) ? null : (
+                      <ChatMessage
+                        key={msg.id}
+                        message={msg}
+                        toolCallResults={state.toolCallResults}
+                        askUserHidden={msg.id === activeAskUser?.messageId}
+                        askUserAnswer={askUserReplies.byMessageId.get(msg.id)}
+                        showCopyButton={copyButtonIds.has(msg.id)}
+                      />
+                    )
+                  )}
 
                   {isStreaming && (
                     <StreamingMessage
@@ -597,22 +662,35 @@ export const AssistantShell = forwardRef<
                         <Suggestion
                           key={k}
                           suggestion={prompt}
-                          onClick={handleSuggestionClick}
+                          onClick={handleAnswer}
                         />
                       );
                     })}
                   </Suggestions>
                 </div>
               )}
-              <ChatInput
-                ref={chatInputRef}
-                onSend={handleSend}
-                onAbort={abort}
-                isStreaming={isStreaming}
-                beam={isBusy}
-                noBorder={!hasMessages}
-                pageContext={pageContext}
-              />
+              {/* Question active : la carte prend la PLACE du composer. Le
+                  ChatInput reste MONTÉ (masqué en CSS) — son brouillon et son
+                  focus scope survivent, il réapparaît intact après la réponse. */}
+              {activeAskUser && (
+                <AskUserCard
+                  key={activeAskUser.messageId}
+                  questions={activeAskUser.questions}
+                  onAnswer={handleAnswer}
+                  onSkip={handleSkipQuestions}
+                />
+              )}
+              <div className={cn(activeAskUser && "hidden")}>
+                <ChatInput
+                  ref={chatInputRef}
+                  onSend={handleSend}
+                  onAbort={abort}
+                  isStreaming={isStreaming}
+                  beam={isBusy}
+                  noBorder={!hasMessages}
+                  pageContext={pageContext}
+                />
+              </div>
             </div>
           </>
         )}
