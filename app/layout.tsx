@@ -6,6 +6,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider, Toaster } from "mangue-ui";
 import { Analytics } from "@vercel/analytics/next";
 import { CookieBanner } from "@/components/cookie-banner";
+import { ThemeInitScript } from "@/components/theme-init-script";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -52,21 +53,11 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {/* Applique le thème AVANT le premier paint — le ThemeProvider de
-            mangue-ui ne le fait qu'en useEffect, d'où un flash light→dark à
-            chaque chargement, surtout visible sur les pages publiques
-            anonymes. Même logique que lui : localStorage "mangue-ui-theme",
-            défaut piloté par le serveur ("dark" pour l'app, "system" pour le
-            public). */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("mangue-ui-theme")||"${defaultTheme}";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){document.documentElement.classList.toggle("dark",${
-              defaultTheme === "system"
-                ? `matchMedia("(prefers-color-scheme: dark)").matches`
-                : "true"
-            });}})();`,
-          }}
-        />
+        {/* Thème appliqué AVANT le premier paint. Injecté hors de l'arbre React
+            (useServerInsertedHTML) : un <script> rendu par un composant fait
+            râler React 19 à chaque re-rendu client du root layout — voir le
+            composant. */}
+        <ThemeInitScript defaultTheme={defaultTheme} />
       </head>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}

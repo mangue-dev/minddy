@@ -1,7 +1,13 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { planProgress, type PlanProgress } from "@/lib/plan";
+import {
+  parsePlan,
+  planProgress,
+  setTaskState,
+  type PlanProgress,
+  type PlanTaskState,
+} from "@/lib/plan";
 import { MAX_SCRATCHPAD_LENGTH, tasksCheckedOff } from "@/lib/scratchpad";
 import { insertStatEvents } from "@/lib/server/stat-events";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -193,4 +199,60 @@ export async function mutateScratchpad(
     if (!write.conflicted) return { status: "ok", state: write };
   }
   return { status: "conflict" };
+}
+
+/** Un changement d'état demandé : `task_index` 0-based en ordre de document
+    (le `tasks` d'une lecture du carnet). */
+export interface ScratchpadTaskChange {
+  task_index: number;
+  state: PlanTaskState;
+}
+
+export type ScratchpadTaskChangeResult =
+  | { status: "ok"; state: ScratchpadState }
+  /** `expectedRev` dépassé : les index de l'appelant peuvent pointer ailleurs. */
+  | { status: "stale_rev"; rev: number }
+  /** Un index hors bornes rejette TOUT le lot (all-or-nothing). */
+  | { status: "out_of_range"; index: number; total: number }
+  /** Édition concurrente pendant l'écriture (CAS perdu) : relire et réessayer. */
+  | { status: "conflict" };
+
+/**
+ * Bascule l'état d'une ou plusieurs tâches EXISTANTES du carnet sans réécrire le
+ * doc — la voie précise pour cocher. Partagé par le tool MCP
+ * `minddy_update_scratchpad_task` et le tool `update_scratchpad_task` de l'agent
+ * de code (MIN-84) : mêmes index, mêmes gardes. `setTaskState` ne réécrit que le
+ * marqueur d'une ligne (adressée via `task.line`), le texte reste intact ;
+ * l'écriture part sous CAS sur le `rev` relu ici même.
+ */
+export async function applyScratchpadTaskChanges(
+  client: SupabaseClient,
+  userId: string,
+  changes: ScratchpadTaskChange[],
+  expectedRev?: number
+): Promise<ScratchpadTaskChangeResult> {
+  const current = await getScratchpad(client, userId);
+  // Garde anti-index périmés : si la note a avancé depuis la lecture dont
+  // viennent les index, le même index peut désigner une autre tâche — on refuse
+  // plutôt que de basculer la mauvaise ligne.
+  if (expectedRev !== undefined && current.rev !== expectedRev) {
+    return { status: "stale_rev", rev: current.rev };
+  }
+  const parsed = parsePlan(current.content);
+  for (const change of changes) {
+    if (change.task_index >= parsed.tasks.length) {
+      return {
+        status: "out_of_range",
+        index: change.task_index,
+        total: parsed.tasks.length,
+      };
+    }
+  }
+  let next = current.content;
+  for (const change of changes) {
+    next = setTaskState(next, parsed.tasks[change.task_index].line, change.state);
+  }
+  const saved = await setScratchpad(client, userId, next, current.rev);
+  if (saved.conflicted) return { status: "conflict" };
+  return { status: "ok", state: saved };
 }

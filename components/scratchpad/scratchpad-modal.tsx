@@ -14,13 +14,14 @@ import {
   TooltipTrigger,
   toast,
 } from "mangue-ui";
-import { Check, Copy, ListX, X } from "lucide-react";
+import { Bot, Check, Copy, ListX, X } from "lucide-react";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
 import { SLASH_MENU_ATTR } from "@/components/scratchpad/slash-command";
+import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 
 /**
  * Notes — the personal scratchpad, a minimal modal at the create-project
@@ -120,6 +121,19 @@ function ScratchpadBody() {
     toast.success(t("copiedSectionToast"));
   };
 
+  // « Lancer un agent » (MIN-84) : la note part BRUTE (pas le wrapper de copie —
+  // le serveur pose son propre contexte carnet) vers le composer de la page
+  // Agents, qui fait choisir projet / modèle / branche avant l'envoi.
+  const launchNote = useLaunchAgentNote();
+  const launchAll = () => {
+    const md = (markdownRef.current?.() ?? content).trim();
+    if (!md) {
+      toast(t("emptyCopyToast"));
+      return;
+    }
+    launchNote(md);
+  };
+
   const showSaveState = !isLoading && (isSaving || content.trim() !== "");
 
   return (
@@ -163,6 +177,22 @@ function ScratchpadBody() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("removeCompleted")}</TooltipContent>
+            </Tooltip>
+            {/* Lancer + copier côte à côte, dans cet ordre : parité avec les
+                boutons de section (robot à gauche du copy). */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("launchAgentAllAria")}
+                  onClick={launchAll}
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <Bot className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("launchAgentAll")}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -211,8 +241,10 @@ function ScratchpadBody() {
               initialValue={content}
               onChange={save}
               onCopySection={copySection}
+              onLaunchSection={launchNote}
               placeholder={t("placeholder")}
               copySectionLabel={t("copySection")}
+              launchSectionLabel={t("launchAgentSection")}
               markdownRef={markdownRef}
               applyExternalRef={applyRef}
               removeCompletedRef={removeCompletedRef}

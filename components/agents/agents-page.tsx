@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, cn } from "mangue-ui";
+import { NotebookPen } from "lucide-react";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { EmptyState } from "@/components/empty-state";
 import { AgentStatusBadge } from "@/components/agents/agent-status-badge";
 import { LaunchAgentPicker } from "@/components/agents/launch-agent-picker";
+import { NoteCompose } from "@/components/agents/note-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
 import { NumoIcon } from "@/components/numo-icon";
@@ -16,6 +18,7 @@ import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
+  NOTE_COMPOSE_PARAM,
   setAgentComposeDraft,
   useAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
@@ -41,19 +44,32 @@ function useIsWideViewport(): boolean {
 }
 
 /**
+ * Clé STABLE d'une session dans la liste : l'issue pour une session de ticket
+ * (ses runs successives partagent la clé), le run lui-même pour une session
+ * CARNET (MIN-84, `issue` null — le run EST la session).
+ */
+function sessionKey(s: AgentSessionListItem): string {
+  return s.issue?.id ?? s.runId;
+}
+
+/**
  * Page Agents — vue liste/détail façon Pull Requests : à gauche TOUTES les sessions
  * de l'agent Numo (tous projets accessibles, sans filtre), à droite la conversation
  * inline (`AgentSessionDetail` → `AgentConversation`, le même cœur que la modal). Une
- * SESSION = une issue ; le titre affiché est dérivé du titre de l'issue liée.
- * Alimentée par /api/agent-runs (dédoublonné par issue). La session sélectionnée est
- * publiée dans le contexte de Numo (il peut la lire / agir sur l'issue).
+ * SESSION = une issue (titre dérivé du ticket) OU un run carnet (MIN-84, titre =
+ * excerpt de la note). Alimentée par /api/agent-runs (dédoublonné par issue ; un run
+ * carnet est sa propre session). La session sélectionnée est publiée dans le
+ * contexte de Numo quand elle a une issue.
  *
- * Point d'entrée « Lancer un agent » (MIN-46) : le bouton du panneau d'issue pose un
- * BROUILLON (`useAgentComposeDraft`) et navigue ici avec `?compose=<issueId>`. On en
- * dérive une entrée synthétique en tête de liste, sélectionnée et ouverte en compose.
- * Purement optimiste : si l'utilisateur n'envoie pas le 1er message (il quitte ou
- * choisit une autre session), l'entrée disparaît sans qu'aucune run n'ait existé ;
- * dès qu'il l'envoie, la run réelle prend le relais dans le même volet.
+ * Points d'entrée « Lancer un agent » :
+ *  • ISSUE (MIN-46) : le bouton du panneau d'issue pose un BROUILLON
+ *    (`useAgentComposeDraft`, kind "issue") et navigue ici avec `?compose=<issueId>`.
+ *  • CARNET (MIN-84) : les boutons du carnet posent un brouillon kind "note" (la
+ *    note comme prompt) et naviguent avec `?compose=note` — le volet ouvre alors le
+ *    composer carnet (`NoteCompose` : projet + modèle + branche).
+ * Purement optimiste dans les deux cas : si l'utilisateur n'envoie pas le 1er
+ * message, l'entrée disparaît sans qu'aucune run n'ait existé ; dès qu'il l'envoie,
+ * la run réelle prend le relais dans le même volet.
  */
 export function AgentsPage() {
   const t = useTranslations("Agents");
@@ -64,7 +80,8 @@ export function AgentsPage() {
   const isWide = useIsWideViewport();
 
   // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?issue=<issueId> présélectionne
-  // la session de cette issue ; ?compose=<issueId> l'ouvre en brouillon de lancement.
+  // la session de cette issue ; ?compose=<issueId> l'ouvre en brouillon de
+  // lancement ; ?compose=note ouvre le brouillon carnet.
   const searchParams = useSearchParams();
   const issueParam = searchParams.get("issue");
   const composeParam = searchParams.get("compose");
@@ -72,88 +89,112 @@ export function AgentsPage() {
   const draft = useAgentComposeDraft();
   // Le brouillon n'est honoré que si l'URL le signale ENCORE : une navigation vers
   // /agents sans `?compose=` (retour plus tard) l'ignore, même s'il traîne en mémoire.
-  const draftHonored = !!draft && composeParam === draft.issueId;
+  const draftHonored =
+    !!draft &&
+    (draft.kind === "issue"
+      ? composeParam === draft.issueId
+      : composeParam === NOTE_COMPOSE_PARAM);
 
-  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(
+  const [selectedKey, setSelectedKey] = useState<string | null>(
     composeParam ?? issueParam,
   );
   const [mobileDetail, setMobileDetail] = useState(!!composeParam || !!issueParam);
   // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
   // Id de la run tout juste lancée depuis le brouillon : on garde le volet monté
-  // (même clé d'issue → aucun remount, transition compose → live fluide) jusqu'à ce
-  // que la liste des sessions rattrape cette run précise.
+  // (même clé → aucun remount, transition compose → live fluide) jusqu'à ce que la
+  // liste des sessions rattrape cette run précise.
   const [launchedRunId, setLaunchedRunId] = useState<string | null>(null);
 
-  // Entrée synthétique du brouillon, façonnée comme une vraie session pour traverser
-  // le même volet de détail (`AgentSessionDetail`). Aucune run réelle : `runId` est
-  // un marqueur, le volet s'ouvre en compose et la conversation gère le passage live.
-  const draftItem: AgentSessionListItem | null = draft
-    ? {
-        runId: `draft:${draft.issueId}`,
-        status: "queued",
-        model: null,
-        triggered_by: "button",
-        pr_number: null,
-        pr_url: null,
-        pr_state: null,
-        created_at: "",
-        updated_at: "",
-        issue: { id: draft.issueId, number: draft.issueNumber, title: draft.issueTitle },
-        project: { id: draft.projectId, key: draft.projectKey, name: draft.projectKey },
-        working: false,
-        runCount: 0,
-        lastCompletedAt: null,
-      }
+  // Clé de sélection du brouillon : l'issue visée (kind "issue") ou le marqueur
+  // `note` (kind "note" — aucune run, donc aucune clé de session réelle).
+  const draftKey = draft
+    ? draft.kind === "issue"
+      ? draft.issueId
+      : NOTE_COMPOSE_PARAM
     : null;
 
+  // Entrée synthétique du brouillon ISSUE, façonnée comme une vraie session pour
+  // traverser le même volet de détail (`AgentSessionDetail`). Aucune run réelle :
+  // `runId` est un marqueur, le volet s'ouvre en compose et la conversation gère le
+  // passage live. (Le brouillon CARNET a son propre volet, `NoteCompose`.)
+  const draftItem: AgentSessionListItem | null =
+    draft?.kind === "issue"
+      ? {
+          runId: `draft:${draft.issueId}`,
+          status: "queued",
+          model: null,
+          triggered_by: "button",
+          prompt: null,
+          pr_number: null,
+          pr_url: null,
+          pr_state: null,
+          created_at: "",
+          updated_at: "",
+          issue: { id: draft.issueId, number: draft.issueNumber, title: draft.issueTitle },
+          project: { id: draft.projectId, key: draft.projectKey, name: draft.projectKey },
+          working: false,
+          runCount: 0,
+          lastCompletedAt: null,
+        }
+      : null;
+
   const realForDraft = draft
-    ? sessions.find((s) => s.issue?.id === draft.issueId) ?? null
+    ? draft.kind === "issue"
+      ? sessions.find((s) => s.issue?.id === draft.issueId) ?? null
+      : sessions.find((s) => launchedRunId != null && s.runId === launchedRunId) ?? null
     : null;
-  // La liste a-t-elle rattrapé la run qu'on vient de lancer ? (représentant = la run
-  // la plus récente de l'issue → devient celle-ci une fois le refetch arrivé.)
-  const draftSettled = !!launchedRunId && realForDraft?.runId === launchedRunId;
+  // La liste a-t-elle rattrapé la run qu'on vient de lancer ? (Session d'issue : le
+  // représentant devient cette run ; session carnet : sa propre entrée apparaît.)
+  const draftSettled =
+    !!launchedRunId &&
+    (draft?.kind === "note"
+      ? realForDraft != null
+      : realForDraft?.runId === launchedRunId);
 
   // Le volet actif est-il le brouillon (compose) ? Vrai de la pose du brouillon
   // jusqu'à ce que la run lancée soit rattrapée par la liste (`draftSettled`).
   const composeSelected =
-    draftHonored && !!draft && selectedIssueId === draft.issueId && !draftSettled;
+    draftHonored && !!draftKey && selectedKey === draftKey && !draftSettled;
   // Carte synthétique en tête de liste : uniquement tant qu'aucune vraie session
-  // n'existe pour l'issue (sinon sa vraie carte tient déjà la place, en surbrillance).
+  // n'existe pour le brouillon (sinon sa vraie carte tient déjà la place).
   const showDraftEntry = composeSelected && !realForDraft;
 
   // Suit les changements de params (navigation client vers une autre entrée).
   useEffect(() => {
     if (!composeParam) return;
-    setSelectedIssueId(composeParam);
+    setSelectedKey(composeParam);
     setMobileDetail(true);
   }, [composeParam]);
   useEffect(() => {
     if (!issueParam) return;
-    setSelectedIssueId(issueParam);
+    setSelectedKey(issueParam);
     setMobileDetail(true);
   }, [issueParam]);
 
-  // Transition terminée : la run lancée figure dans la liste → on efface le brouillon
-  // et on reste sur la même issue (le volet est conservé, swap synthétique → réel
-  // sans coupure). On nettoie aussi `?compose=` de l'URL.
+  // Transition terminée : la run lancée figure dans la liste → on efface le
+  // brouillon et on sélectionne sa session (issue pour un brouillon issue, le run
+  // pour un brouillon carnet). On nettoie aussi `?compose=` de l'URL.
   useEffect(() => {
     if (!draftSettled || !draft) return;
-    setSelectedIssueId(draft.issueId);
+    setSelectedKey(draft.kind === "issue" ? draft.issueId : launchedRunId);
     setLaunchedRunId(null);
     setAgentComposeDraft(null);
     router.replace("/agents");
   }, [draftSettled]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const realSelected = sessions.find((s) => s.issue?.id === selectedIssueId) ?? null;
+  const realSelected = sessions.find((s) => sessionKey(s) === selectedKey) ?? null;
   // Élément affiché à droite : le brouillon en compose, sinon la vraie session.
   const activeItem = composeSelected ? draftItem : realSelected;
+  // Brouillon carnet affiché (volet NoteCompose, sans entrée AgentSessionDetail).
+  const noteComposeActive = composeSelected && draft?.kind === "note";
 
   // La conversation AFFICHÉE n'a jamais de bulle : on la marque lue à son ouverture ET
   // à chaque nouvelle fin de run tant qu'elle reste visible (dépendance sur
   // `lastCompletedAt`). « Visible » = desktop (le volet est toujours rendu) ou, sur
   // mobile, le volet détail ouvert ; sinon (liste mobile ou compose) on ne marque pas,
-  // pour ne pas effacer la bulle d'une session qu'on ne regarde pas.
+  // pour ne pas effacer la bulle d'une session qu'on ne regarde pas. Les sessions
+  // CARNET n'ont pas de suivi lu/non-lu (personnelles, pas d'issue à ancrer).
   const shownReal = !composeSelected && (isWide || mobileDetail) ? realSelected : null;
   useEffect(() => {
     const id = shownReal?.issue?.id;
@@ -182,22 +223,22 @@ export function AgentsPage() {
 
   // Garde une sélection valide : défaut = 1re session, avance quand la sélection
   // disparaît. On ne remet PAS à null sur liste vide (chargement / présélection
-  // deep-link), NI pendant un compose (l'issue du brouillon n'a pas de session : il
-  // ne faut pas sauter sur sessions[0]).
+  // deep-link), NI pendant un compose (le brouillon n'a pas de session : il ne faut
+  // pas sauter sur sessions[0]).
   useEffect(() => {
     if (composeSelected) return;
     if (sessions.length === 0) return;
-    if (!selectedIssueId || !sessions.some((s) => s.issue?.id === selectedIssueId)) {
-      setSelectedIssueId(sessions[0].issue?.id ?? null);
+    if (!selectedKey || !sessions.some((s) => sessionKey(s) === selectedKey)) {
+      setSelectedKey(sessions[0] ? sessionKey(sessions[0]) : null);
     }
-  }, [sessions, selectedIssueId, composeSelected]);
+  }, [sessions, selectedKey, composeSelected]);
 
   // Sélectionne une VRAIE session : abandonne le brouillon en cours (jamais envoyé →
   // effacé, comme quitter la page). Purement UI, aucune run n'a existé.
-  const selectReal = (issueId: string | null) => {
+  const selectReal = (key: string | null) => {
     if (draft) setAgentComposeDraft(null);
     setLaunchedRunId(null);
-    setSelectedIssueId(issueId);
+    setSelectedKey(key);
     setMobileDetail(true);
   };
 
@@ -244,43 +285,55 @@ export function AgentsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedIssueId(draft.issueId);
+                  setSelectedKey(draftKey);
                   setMobileDetail(true);
                 }}
                 className={cn(
                   "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none ring-1 ring-inset ring-primary/30 transition-colors",
-                  selectedIssueId === draft.issueId
+                  selectedKey === draftKey
                     ? "bg-muted"
                     : "hover:bg-muted/60 focus-visible:bg-muted/60",
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    {issueIdentifier(draft.projectKey, draft.issueNumber)}
-                  </span>
+                  {draft.kind === "issue" ? (
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      {issueIdentifier(draft.projectKey, draft.issueNumber)}
+                    </span>
+                  ) : (
+                    <span className="flex shrink-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                      <NotebookPen className="size-3.5" />
+                      {t("noteBadge")}
+                    </span>
+                  )}
                   <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                     <NumoIcon className="size-3" animated={false} />
                     {t("draftBadge")}
                   </span>
                 </div>
-                <span className="line-clamp-2 text-sm font-medium">{draft.issueTitle}</span>
+                <span className="line-clamp-2 text-sm font-medium">
+                  {draft.kind === "issue"
+                    ? draft.issueTitle
+                    : draft.prompt.trim() || t("noteSessionTitle")}
+                </span>
               </button>
             ) : null}
 
             {sessions.map((s) => {
+              const key = sessionKey(s);
               const identifier =
                 s.issue && s.project
                   ? issueIdentifier(s.project.key, s.issue.number)
-                  : "—";
+                  : null;
               const unread = isAgentSessionUnread(s, reads);
               return (
                 <button
-                  key={s.issue?.id ?? s.runId}
+                  key={key}
                   type="button"
-                  onClick={() => selectReal(s.issue?.id ?? null)}
+                  onClick={() => selectReal(key)}
                   className={cn(
                     "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-                    s.issue?.id === selectedIssueId
+                    key === selectedKey
                       ? "bg-muted"
                       : "hover:bg-muted/60 focus-visible:bg-muted/60",
                   )}
@@ -293,9 +346,17 @@ export function AgentsPage() {
                         aria-label={t("unread")}
                       />
                     )}
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                      {identifier}
-                    </span>
+                    {identifier ? (
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {identifier}
+                      </span>
+                    ) : (
+                      // Session CARNET : la note remplace le ticket.
+                      <span className="flex shrink-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                        <NotebookPen className="size-3.5" />
+                        {t("noteBadge")}
+                      </span>
+                    )}
                     <span className="ml-auto flex shrink-0 items-center gap-1.5">
                       <AgentStatusBadge
                         status={s.status}
@@ -308,7 +369,7 @@ export function AgentsPage() {
                     </span>
                   </div>
                   <span className="line-clamp-2 text-sm font-medium">
-                    {s.issue?.title ?? identifier}
+                    {s.issue?.title ?? s.prompt ?? t("noteSessionTitle")}
                   </span>
                   {s.project ? (
                     <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -330,12 +391,22 @@ export function AgentsPage() {
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        {activeItem ? (
+        {noteComposeActive && draft?.kind === "note" ? (
+          <NoteCompose
+            // Le pré-remplissage du composer est one-shot (montage) : une NOUVELLE
+            // note lancée depuis le carnet doit remonter un composer neuf.
+            key={draft.prompt}
+            initialText={draft.prompt}
+            onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
+          />
+        ) : activeItem ? (
           <AgentSessionDetail
             key={activeItem.issue?.id ?? activeItem.runId}
             item={activeItem}
             compose={composeSelected}
-            composeInitialText={composeSelected ? draft?.prompt : undefined}
+            composeInitialText={
+              composeSelected && draft?.kind === "issue" ? draft.prompt : undefined
+            }
             onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
             onBack={() => setMobileDetail(false)}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}

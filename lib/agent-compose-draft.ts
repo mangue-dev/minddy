@@ -3,17 +3,23 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Brouillon « optimiste » de lancement d'agent, posé par le bouton « Lancer un
- * agent » du panneau d'issue puis lu par la page Agents. Il porte juste de quoi
- * dessiner une ENTRÉE synthétique dans la liste (identifiant + titre de l'issue) et
- * amorcer la conversation en compose. Purement UI : si l'utilisateur n'envoie jamais
- * le 1er message, l'entrée est effacée sans qu'aucune run n'ait existé.
+ * Brouillon « optimiste » de lancement d'agent, posé par un bouton « Lancer un
+ * agent » (panneau d'issue, carte, picker de la page Agents — ou le CARNET,
+ * MIN-84) puis lu par la page Agents. Il porte juste de quoi dessiner une ENTRÉE
+ * synthétique dans la liste et amorcer la conversation en compose. Purement UI :
+ * si l'utilisateur n'envoie jamais le 1er message, l'entrée est effacée sans
+ * qu'aucune run n'ait existé.
  *
- * Store module-level (pas de contexte) : il n'a qu'un seul producteur (le bouton) et
+ * Deux formes : `issue` (l'historique — ancré à un ticket, `?compose=<issueId>`)
+ * et `note` (run carnet — la note est le prompt, le projet se choisit dans le
+ * composer, `?compose=note`).
+ *
+ * Store module-level (pas de contexte) : il n'a qu'un producteur à la fois et
  * un seul consommateur (la page), et doit survivre à la navigation `router.push`
  * entre les deux — ce qu'un état React local ne ferait pas.
  */
-export interface AgentComposeDraft {
+export interface AgentIssueComposeDraft {
+  kind: "issue";
   issueId: string;
   issueNumber: number;
   issueTitle: string;
@@ -26,6 +32,17 @@ export interface AgentComposeDraft {
    */
   prompt: string;
 }
+
+export interface AgentNoteComposeDraft {
+  kind: "note";
+  /** La note (markdown brut du carnet) — l'instruction du run, éditable avant envoi. */
+  prompt: string;
+}
+
+export type AgentComposeDraft = AgentIssueComposeDraft | AgentNoteComposeDraft;
+
+/** Valeur du paramètre `?compose=` qui désigne un brouillon CARNET. */
+export const NOTE_COMPOSE_PARAM = "note";
 
 let current: AgentComposeDraft | null = null;
 const listeners = new Set<() => void>();

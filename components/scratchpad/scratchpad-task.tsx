@@ -19,6 +19,7 @@ import {
   toast,
 } from "mangue-ui";
 import {
+  Bot,
   Check,
   Circle,
   CircleSlash,
@@ -35,6 +36,7 @@ import { TASK_MARKER_BY_STATE } from "@/lib/scratchpad";
 import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
+import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 
 /**
  * Scratchpad tasks with the plan's FOUR states inside the WYSIWYG editor. The
@@ -79,6 +81,16 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
     if (!text) return;
     closeScratchpad();
     openAssistant({ prompt: tScratch("promotePrompt", { note: text }) });
+  };
+
+  // « Lancer un agent » (MIN-84) : la ligne part telle quelle (marqueur compris —
+  // c'est du markdown honnête du carnet) comme instruction d'un run carnet ; le
+  // composer de la page Agents fait choisir le projet avant l'envoi.
+  const launchNote = useLaunchAgentNote();
+  const launchAgent = () => {
+    const text = node.textContent.trim();
+    if (!text) return;
+    launchNote(`- ${TASK_MARKER_BY_STATE[state]} ${text}`);
   };
 
   // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button
@@ -202,6 +214,14 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
             </CommandItem>
           )}
           <CommandSeparator className="my-1" />
+          <CommandItem
+            value={tScratch("launchAgent")}
+            keywords={["agent", "numo", "launch", "lancer", "run", "coder"]}
+            onSelect={() => pick(launchAgent)}
+          >
+            <Bot />
+            {tScratch("launchAgent")}
+          </CommandItem>
           <CommandItem
             value={tScratch("promoteToIssue")}
             keywords={[

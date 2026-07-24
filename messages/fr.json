@@ -21,9 +21,9 @@
     "removeCompleted": "Retirer les tâches terminées",
     "removedCompleted": "Tâches terminées retirées",
     "noCompleted": "Aucune tâche terminée",
-    "copyAll": "Tout copier",
+    "copyAll": "Tout copier en prompt",
     "copyAllAria": "Copier toutes les notes en prompt pour un agent",
-    "copySection": "Copier la section",
+    "copySection": "Copier la section en prompt",
     "copySectionAria": "Copier cette section en prompt pour un agent",
     "copiedToast": "Notes copiées en prompt",
     "copiedSectionToast": "Section copiée en prompt",
@@ -32,7 +32,11 @@
     "promoteToIssue": "Promouvoir en ticket",
     "promotePrompt": "Convertis cette note de mon carnet de tâches en ticket :\n\n{note}\n\nSi la note n'est pas assez claire pour en faire un bon ticket, pose-moi des questions avant de le créer. Une fois le ticket créé, retire cette note du carnet : elle vit désormais dans le ticket.",
     "emptyCopyToast": "Rien à copier pour l'instant",
-    "close": "Fermer"
+    "close": "Fermer",
+    "launchAgent": "Lancer un agent",
+    "launchAgentSection": "Lancer un agent sur la section",
+    "launchAgentAll": "Lancer un agent sur le carnet",
+    "launchAgentAllAria": "Lancer un agent sur tout le carnet"
   },
   "Activity": {
     "created": "a créé le ticket",
@@ -1174,7 +1178,15 @@
     "errorQuotaExceeded": "Limite d'usage mensuelle de l'agent atteinte.",
     "errorNoModelForProvider": "Choisis un modèle pour ce provider.",
     "errorSupersededRun": "Une session plus récente a repris ce ticket — lance un nouvel agent pour continuer.",
-    "errorPrMerged": "La pull request de cette session est fusionnée : son travail est livré. Lance un nouvel agent — il repartira d'une branche neuve."
+    "errorPrMerged": "La pull request de cette session est fusionnée : son travail est livré. Lance un nouvel agent — il repartira d'une branche neuve.",
+    "noteComposeIntro": "L'agent reçoit ta note comme instruction libre : choisis le projet (le dépôt qu'il clonera), ajuste la note si besoin, puis envoie.",
+    "noteComposePlaceholder": "Ta note — l'instruction de l'agent…",
+    "noteProjectPlaceholder": "Projet",
+    "noteProjectSearchPlaceholder": "Chercher un projet…",
+    "noteProjectSearchEmpty": "Aucun projet",
+    "noteProjectRequired": "Choisis d'abord un projet — c'est son dépôt que l'agent clone.",
+    "errorPromptRequired": "La note est vide — écris l'instruction de l'agent.",
+    "noteProjectTooltip": "Veuillez choisir le projet avant de lancer"
   },
   "Projects": {
     "newProject": "Nouveau Projet",
@@ -1601,7 +1613,9 @@
     "statusWorking": "En cours",
     "statusWaiting": "En attente",
     "statusFailed": "Échoué",
-    "statusCanceled": "Annulé"
+    "statusCanceled": "Annulé",
+    "noteBadge": "Carnet",
+    "noteSessionTitle": "Note du carnet"
   },
   "PullRequests": {
     "title": "Pull requests",

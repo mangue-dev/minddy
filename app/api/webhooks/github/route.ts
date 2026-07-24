@@ -107,7 +107,8 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
   // merged→done, closed→todo, reopened/ready_for_review→in_review.
   for (const run of runs) {
-    if (run.createdBy) {
+    // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+    if (run.createdBy && run.issueId) {
       await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
     }
   }

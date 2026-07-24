@@ -17,12 +17,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   // Tous les runs sauf `failed` : `buildAgentActivity` en dérive les runs ACTIFS
-  // (carte « Ouvrir l'agent ») et la PR la plus récente de chaque issue.
+  // (carte « Ouvrir l'agent ») et la PR la plus récente de chaque issue. Les runs
+  // CARNET (MIN-84, issue_id null) ne portent aucune activité d'issue : exclus.
   const { data } = await auth.supabase
     .from("agent_runs")
     .select("issue_id, status, id, pr_number, pr_state, created_at")
     .eq("project_id", id)
     .neq("status", "failed")
+    .not("issue_id", "is", null)
     .order("created_at", { ascending: false });
 
   const rows = (data ?? []) as AgentRunRow[];

@@ -85,25 +85,31 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   let resumed = false;
   if (RESUME_FROM.includes(run.status)) {
-    const [newer, active] = await Promise.all([
-      newerRunExistsForIssue(run.issue_id, run.created_at),
-      activeRunForIssue(run.issue_id),
-    ]);
-    // Une run PLUS RÉCENTE (non `failed`) existe : les runs d'une issue partagent
-    // la branche, la plus récente l'a fait avancer — reprendre celle-ci pousserait
-    // par-dessus un ancêtre (push rejeté). Une run passée est un HISTORIQUE : on
-    // la consulte, on ne la réveille pas.
-    if (newer) {
-      return NextResponse.json(
-        { error: "supersededRun", code: "supersededRun" },
-        { status: 409 },
-      );
-    }
-    if (active && active.id !== runId) {
-      return NextResponse.json(
-        { error: "alreadyRunning", code: "alreadyRunning" },
-        { status: 409 },
-      );
+    // Les notions de « run dépassée » et « une run occupe déjà le ticket » sont
+    // des règles du TICKET (les runs d'une issue partagent la branche). Un run
+    // CARNET (MIN-84, issue_id null) est une conversation autonome sur sa propre
+    // branche : toujours reprennable, jamais supplanté.
+    if (run.issue_id) {
+      const [newer, active] = await Promise.all([
+        newerRunExistsForIssue(run.issue_id, run.created_at),
+        activeRunForIssue(run.issue_id),
+      ]);
+      // Une run PLUS RÉCENTE (non `failed`) existe : les runs d'une issue partagent
+      // la branche, la plus récente l'a fait avancer — reprendre celle-ci pousserait
+      // par-dessus un ancêtre (push rejeté). Une run passée est un HISTORIQUE : on
+      // la consulte, on ne la réveille pas.
+      if (newer) {
+        return NextResponse.json(
+          { error: "supersededRun", code: "supersededRun" },
+          { status: 409 },
+        );
+      }
+      if (active && active.id !== runId) {
+        return NextResponse.json(
+          { error: "alreadyRunning", code: "alreadyRunning" },
+          { status: 409 },
+        );
+      }
     }
 
     // Chaque reprise démarre un TOUR facturé — même contrôle qu'au lancement
@@ -144,7 +150,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // PR en revue (open/draft) gouverne déjà son statut — même règle qu'au
       // lancement d'une run froide (launch.ts). Une PR refusée (closed → issue
       // `todo`) repasse bien en cours ; `merged` est déjà refusé plus haut.
-      if (run.pr_state !== "open" && run.pr_state !== "draft") {
+      // Run carnet : aucun ticket à synchroniser.
+      if (run.issue_id && run.pr_state !== "open" && run.pr_state !== "draft") {
         await syncIssueStatusOnAgentStart({ issueId: run.issue_id, actorId: auth.user.id });
       }
     }

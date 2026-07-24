@@ -135,6 +135,41 @@ export async function fetchIssueRepoBranchesApi(
   return parseJson(await fetch(`/api/issues/${issueId}/agent/branches`));
 }
 
+// ── Runs CARNET (MIN-84) : lancement sans ticket ─────────────────────────────
+
+/**
+ * Lance un run CARNET : sans ticket, ancré à un projet (le dépôt à cloner) +
+ * la note comme instruction. Chaque lancement est une conversation autonome.
+ */
+export async function launchNotebookAgentApi(body: {
+  projectId: string;
+  prompt: string;
+  model?: string;
+  baseBranch?: string;
+}): Promise<{ run: AgentRunSummary }> {
+  return parseJson(
+    await fetch(`/api/agent-runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+/** Branches du dépôt lié à un PROJET (compose d'un run carnet). */
+export async function fetchProjectRepoBranchesApi(
+  projectId: string,
+): Promise<{ branches: string[]; defaultBranch: string }> {
+  return parseJson(await fetch(`/api/projects/${projectId}/agent/branches`));
+}
+
+/** Détail (client-safe) d'un run — la conversation d'une session carnet. */
+export async function fetchAgentRunApi(
+  runId: string,
+): Promise<{ run: AgentRunSummary }> {
+  return parseJson(await fetch(`/api/agent-runs/${runId}`));
+}
+
 // ── Run détail / events / stop / PR ──────────────────────────────────────────
 
 export type AgentEventType =
@@ -449,11 +484,14 @@ export interface AgentSessionListItem {
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
+  /** Excerpt de la note (sessions CARNET, `issue` null) — leur « titre ». */
+  prompt: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
   created_at: string;
   updated_at: string;
+  /** Null = session CARNET (MIN-84) : le run est sa propre session. */
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string } | null;
   /** Un run de l'issue TRAVAILLE (queued/running) → spinner « Numo travaille ». */

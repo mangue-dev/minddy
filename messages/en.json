@@ -21,9 +21,9 @@
     "removeCompleted": "Remove completed tasks",
     "removedCompleted": "Completed tasks removed",
     "noCompleted": "No completed tasks",
-    "copyAll": "Copy all",
+    "copyAll": "Copy all as prompt",
     "copyAllAria": "Copy all notes as an agent prompt",
-    "copySection": "Copy section",
+    "copySection": "Copy section as prompt",
     "copySectionAria": "Copy this section as an agent prompt",
     "copiedToast": "Notes copied as a prompt",
     "copiedSectionToast": "Section copied as a prompt",
@@ -32,7 +32,11 @@
     "promoteToIssue": "Promote to issue",
     "promotePrompt": "Turn this note from my task notebook into an issue:\n\n{note}\n\nIf the note isn't clear enough to make a good issue, ask me questions before creating it. Once the issue exists, remove that note from the notebook — it lives in the issue now.",
     "emptyCopyToast": "Nothing to copy yet",
-    "close": "Close"
+    "close": "Close",
+    "launchAgent": "Launch an agent",
+    "launchAgentSection": "Launch an agent on this section",
+    "launchAgentAll": "Launch an agent on the notebook",
+    "launchAgentAllAria": "Launch an agent on the whole notebook"
   },
   "Activity": {
     "created": "created the issue",
@@ -1174,7 +1178,15 @@
     "errorQuotaExceeded": "Monthly agent usage limit reached.",
     "errorNoModelForProvider": "Pick a model for this provider.",
     "errorSupersededRun": "A newer session has taken over this issue — launch a new agent to carry on.",
-    "errorPrMerged": "This session's pull request is merged: its work is shipped. Launch a new agent — it will start from a fresh branch."
+    "errorPrMerged": "This session's pull request is merged: its work is shipped. Launch a new agent — it will start from a fresh branch.",
+    "noteComposeIntro": "The agent takes your note as a free-form instruction: pick the project (the repository it will clone), adjust the note if needed, then send.",
+    "noteComposePlaceholder": "Your note — the agent's instruction…",
+    "noteProjectPlaceholder": "Project",
+    "noteProjectSearchPlaceholder": "Search projects…",
+    "noteProjectSearchEmpty": "No projects",
+    "noteProjectRequired": "Pick a project first — the agent clones its repository.",
+    "errorPromptRequired": "The note is empty — write the agent's instruction.",
+    "noteProjectTooltip": "Please pick the project before launching"
   },
   "Projects": {
     "newProject": "New Project",
@@ -1601,7 +1613,9 @@
     "statusWorking": "Working",
     "statusWaiting": "Waiting",
     "statusFailed": "Failed",
-    "statusCanceled": "Canceled"
+    "statusCanceled": "Canceled",
+    "noteBadge": "Notebook",
+    "noteSessionTitle": "Notebook note"
   },
   "PullRequests": {
     "title": "Pull requests",

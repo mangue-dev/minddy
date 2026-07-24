@@ -10,8 +10,15 @@ import {
   forwardRef,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Button, SendButtonWithCost, cn } from "mangue-ui";
-import { Paperclip, Square } from "lucide-react";
+import {
+  Button,
+  SendButtonWithCost,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  cn,
+} from "mangue-ui";
+import { ArrowUp, Paperclip, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { PageContextBadge } from "@/components/assistant/page-context-badge";
@@ -70,6 +77,13 @@ interface ChatInputProps {
    * priorité). Défaut : off (le chat Numo garde Stop tant qu'il génère).
    */
   sendWhileStreaming?: boolean;
+  /**
+   * Bloque UNIQUEMENT l'envoi (saisie libre, Entrée inerte) : le bouton devient
+   * un chip inactif porteur de `sendDisabledTooltip`, qui explique quoi faire
+   * d'abord. Le composer carnet s'en sert tant qu'aucun projet n'est choisi.
+   */
+  sendDisabled?: boolean;
+  sendDisabledTooltip?: string;
 }
 
 export interface ChatInputHandle {
@@ -91,6 +105,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       leadingControls,
       beam,
       sendWhileStreaming,
+      sendDisabled,
+      sendDisabledTooltip,
     },
     ref
   ) {
@@ -150,7 +166,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
-      if (!value || disabled || uploads.uploading) return;
+      if (!value || disabled || sendDisabled || uploads.uploading) return;
       onSend(value, uploads.inputs);
       clearEditor();
       uploads.clear();
@@ -159,7 +175,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       // disparaît juste après), et dans le panneau Numo le FocusScope du Sheet le
       // rapatriait sur la coquille — d'où un halo de focus autour du panneau.
       editorRef.current?.focus();
-    }, [serializeContent, onSend, disabled, clearEditor, uploads]);
+    }, [serializeContent, onSend, disabled, sendDisabled, clearEditor, uploads]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -395,16 +411,36 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       disabled={disabled}
                     />
                   )}
-                  {!isEmpty && (
-                    <SendButtonWithCost
-                      cost={null}
-                      isLoading={false}
-                      disabled={(disabled ?? false) || uploads.uploading}
-                      onClick={handleSubmit}
-                      ariaLabel={t("send")}
-                      tooltipLabel={t("send")}
-                    />
-                  )}
+                  {!isEmpty &&
+                    (sendDisabled && sendDisabledTooltip ? (
+                      // Envoi bloqué avec explication : un <button disabled> natif
+                      // n'émet plus d'événements pointeur (le tooltip Radix ne
+                      // s'ouvrirait jamais) → même montage que le chip verrouillé
+                      // du BranchCombobox, le <span> extérieur porte le hover.
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex cursor-not-allowed">
+                            <span
+                              aria-label={t("send")}
+                              aria-disabled="true"
+                              className="pointer-events-none inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </span>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">{sendDisabledTooltip}</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <SendButtonWithCost
+                        cost={null}
+                        isLoading={false}
+                        disabled={(disabled ?? false) || (sendDisabled ?? false) || uploads.uploading}
+                        onClick={handleSubmit}
+                        ariaLabel={t("send")}
+                        tooltipLabel={t("send")}
+                      />
+                    ))}
                 </>
               )}
             </div>

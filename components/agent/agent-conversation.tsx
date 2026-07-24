@@ -19,8 +19,10 @@ import {
   type AgentRunSummary,
 } from "@/lib/agent-api";
 import {
+  agentRunQueryKey,
   allAgentSessionsQueryKey,
   issueAgentRunsQueryKey,
+  useAgentRunQuery,
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
 import { useAgentReads } from "@/lib/use-agent-reads";
@@ -71,8 +73,9 @@ const AGENT_ERROR_KEYS: Record<string, string> = {
  * lien PR pour la page).
  */
 export function AgentConversation({
-  issueId,
-  issueIdentifier,
+  issueId = null,
+  issueIdentifier = "",
+  noteRunId = null,
   initialRunId = null,
   initialCompose = false,
   active = true,
@@ -82,9 +85,16 @@ export function AgentConversation({
   initialComposeText,
   showUnread = false,
 }: {
-  issueId: string;
+  /** Issue d'ancrage — null pour une session CARNET (passer `noteRunId`). */
+  issueId?: string | null;
   /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
-  issueIdentifier: string;
+  issueIdentifier?: string;
+  /**
+   * Session CARNET (MIN-84) : le run EST la session — conversation d'UN run,
+   * sans historique d'issue ni phase compose (le run existe déjà ; le compose
+   * carnet vit dans NoteCompose, avant toute run).
+   */
+  noteRunId?: string | null;
   /**
    * Ouvre CETTE run (le panneau d'issue et la page Agents désignent la dernière).
    * Absent → on ouvre la session qui TRAVAILLE, à défaut la DERNIÈRE session de
@@ -132,14 +142,19 @@ export function AgentConversation({
   };
 
   /**
-   * Rafraîchit les runs de l'issue ET la liste globale des sessions (page Agents).
-   * Cette liste ne poll QUE si une session travaille déjà — sans invalidation
-   * explicite, lancer ou reprendre une run depuis la page la laisse figée sur le
-   * statut de la run précédente jusqu'au prochain rechargement complet.
+   * Rafraîchit les runs de l'ancrage (issue OU run carnet) ET la liste globale des
+   * sessions (page Agents). Cette liste ne poll QUE si une session travaille déjà —
+   * sans invalidation explicite, lancer ou reprendre une run depuis la page la
+   * laisse figée sur le statut de la run précédente jusqu'au prochain rechargement.
    */
   const refreshRuns = async (): Promise<void> => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) }),
+      issueId
+        ? queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) })
+        : Promise.resolve(),
+      noteRunId
+        ? queryClient.invalidateQueries({ queryKey: agentRunQueryKey(noteRunId) })
+        : Promise.resolve(),
       queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey }),
     ]);
   };
@@ -175,7 +190,15 @@ export function AgentConversation({
     setComposing(initialCompose);
   }, [initialRunId, initialCompose]);
 
-  const { runs, loading } = useIssueAgentRunsQuery(active ? issueId : null);
+  const { runs: issueRuns, loading: issueLoading } = useIssueAgentRunsQuery(
+    active && issueId ? issueId : null,
+  );
+  // Session CARNET : un seul run, interrogé directement (il EST la session).
+  const { run: noteRun, loading: noteLoading } = useAgentRunQuery(
+    active && noteRunId ? noteRunId : null,
+  );
+  const runs = noteRunId ? (noteRun ? [noteRun] : []) : issueRuns;
+  const loading = noteRunId ? noteLoading : issueLoading;
   // La run tout juste lancée est active mais pas encore dans `runs` : sans elle, on
   // proposerait « lancer un nouvel agent » sur une issue déjà occupée (→ 409).
   const knownRuns =
@@ -185,11 +208,12 @@ export function AgentConversation({
   // dernière consultation de la session. Réactif — le mark-read différé de la page
   // les efface. Hors /agents (`showUnread=false`), aucun suivi.
   const { reads } = useAgentReads();
-  const unreadRunIds = showUnread
-    ? new Set(
-        knownRuns.filter((r) => isAgentRunUnread(r, reads[issueId])).map((r) => r.id),
-      )
-    : undefined;
+  const unreadRunIds =
+    showUnread && issueId
+      ? new Set(
+          knownRuns.filter((r) => isAgentRunUnread(r, reads[issueId])).map((r) => r.id),
+        )
+      : undefined;
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Résolution de la session affichée : celle désignée, sinon celle qui travaille,
   // sinon la DERNIÈRE session NON `failed` de l'issue — une conversation au repos
@@ -282,7 +306,9 @@ export function AgentConversation({
   const modelRequired = provider === "generic" && !defaultModel && !model;
 
   const launch = async (message: string) => {
-    if (launching) return;
+    // La phase compose n'existe que pour un ancrage ISSUE (le compose carnet vit
+    // dans NoteCompose, avant toute run) : sans issue, rien à lancer ici.
+    if (launching || !issueId) return;
     if (modelRequired) {
       toast.error(t("modelRequired"));
       return;
@@ -378,9 +404,11 @@ export function AgentConversation({
     await steer(t("createPrPrompt"));
   };
 
+  // Session carnet introuvable / pas encore chargée → spinner, jamais de compose
+  // (le run existe forcément : la session est née d'un lancement).
   const phase: "live" | "loading" | "compose" = liveRun
     ? "live"
-    : loading
+    : loading || noteRunId
       ? "loading"
       : "compose";
 
@@ -425,8 +453,9 @@ export function AgentConversation({
       {/* Historique : navigation entre les runs successives de l'issue. « Lancer un
           nouvel agent » n'y figure que si aucune run n'est active. La barre se
           décolle de l'en-tête (`pt-3`) — sans quoi elle touche sa bordure sur la
-          page Agents et se lit comme une partie de l'en-tête plutôt que du fil. */}
-      {phase !== "loading" ? (
+          page Agents et se lit comme une partie de l'en-tête plutôt que du fil.
+          Session CARNET : un seul run, pas de lignée — aucune barre. */}
+      {phase !== "loading" && !noteRunId ? (
         <AgentRunHistory
           runs={knownRuns}
           selectedId={liveRun?.id ?? null}

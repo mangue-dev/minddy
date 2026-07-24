@@ -90,6 +90,7 @@ export function LaunchAgentPicker({ sessions }: { sessions: AgentSessionListItem
       ? ""
       : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
     setAgentComposeDraft({
+      kind: "issue",
       issueId,
       issueNumber: issue.number,
       issueTitle: issue.title,

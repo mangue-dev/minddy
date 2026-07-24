@@ -82,8 +82,10 @@ export function ScratchpadEditor({
   initialValue,
   onChange,
   onCopySection,
+  onLaunchSection,
   placeholder,
   copySectionLabel,
+  launchSectionLabel,
   markdownRef,
   applyExternalRef,
   removeCompletedRef,
@@ -91,8 +93,11 @@ export function ScratchpadEditor({
   initialValue: string;
   onChange: (markdown: string) => void;
   onCopySection: (markdown: string) => void;
+  /** « Lancer un agent » sur la section survolée (MIN-84) — markdown de la section. */
+  onLaunchSection: (markdown: string) => void;
   placeholder: string;
   copySectionLabel: string;
+  launchSectionLabel: string;
   /** Populated with a getter for the editor's live markdown, so the parent's
       "copy all" reflects the current text without waiting for a debounced save. */
   markdownRef?: MutableRefObject<(() => string) | null>;
@@ -171,6 +176,8 @@ export function ScratchpadEditor({
   onChangeRef.current = onChange;
   const onCopySectionRef = useRef(onCopySection);
   onCopySectionRef.current = onCopySection;
+  const onLaunchSectionRef = useRef(onLaunchSection);
+  onLaunchSectionRef.current = onLaunchSection;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleCommit = (markdown: string) => {
@@ -207,14 +214,21 @@ export function ScratchpadEditor({
 
   // Stable across the editor's life (SectionCopy reads options once at plugin
   // creation) — resolves the clicked heading's section from the live markdown.
-  const copySectionRef = useRef((headingIndex: number) => {
+  const resolveSection = (headingIndex: number): string | null => {
     const ed = editorRef.current;
-    if (!ed) return;
+    if (!ed) return null;
     const sections = splitScratchpadSections(getMarkdown(ed)).filter(
       (s) => s.title !== null
     );
-    const section = sections[headingIndex];
-    if (section) onCopySectionRef.current(section.markdown);
+    return sections[headingIndex]?.markdown ?? null;
+  };
+  const copySectionRef = useRef((headingIndex: number) => {
+    const markdown = resolveSection(headingIndex);
+    if (markdown) onCopySectionRef.current(markdown);
+  });
+  const launchSectionRef = useRef((headingIndex: number) => {
+    const markdown = resolveSection(headingIndex);
+    if (markdown) onLaunchSectionRef.current(markdown);
   });
 
   // pnpm resolves @tiptap/core twice (same 3.27.4 version, two symlink paths),
@@ -238,6 +252,8 @@ export function ScratchpadEditor({
     SectionCopy.configure({
       label: copySectionLabel,
       onCopy: (index) => copySectionRef.current(index),
+      launchLabel: launchSectionLabel,
+      onLaunch: (index) => launchSectionRef.current(index),
     }),
     SlashCommand.configure({ items: slashItems }),
   ] as unknown as Extensions;

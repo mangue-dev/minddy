@@ -9,6 +9,7 @@ import {
   AGENT_MAX_CONTINUATIONS,
 } from "@/lib/agent-models";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
+import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import {
   getOrCreateAgentSandbox,
@@ -36,10 +37,11 @@ import {
   type EmitAgentEvent,
   type ExecuteAgentTool,
 } from "./agent-loop";
-import { AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
+import { AGENT_TOOLS, NOTEBOOK_AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
 import {
   buildAgentSystemPrompt,
   buildAgentContextMessage,
+  buildNotebookContextMessage,
   buildInheritedPrMessage,
   buildInheritedBranchMessage,
   toPrLineThreads,
@@ -52,6 +54,11 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
 import { executeIssueTool, ISSUE_TOOL_NAMES, type IssueToolContext } from "./issue-tools";
+import {
+  executeNotebookTool,
+  NOTEBOOK_TOOL_NAMES,
+  type NotebookToolContext,
+} from "./notebook-tools";
 import {
   stampRun,
   getRun,
@@ -137,15 +144,26 @@ type CreatePrHandler = (args: {
   body?: string;
 }) => Promise<{ result: unknown; success: boolean }>;
 
+/** Ancrage des tools « métier » d'un run : ticket minddy ou carnet (MIN-84). */
+type ExecToolAnchor =
+  | { kind: "issue"; ctx: IssueToolContext }
+  | { kind: "notebook"; ctx: NotebookToolContext };
+
 /** Les tools « métier » de l'agent : Sandbox (fichiers/commandes), git/PR
-    (`createPr`) et ticket minddy (`issue-tools.ts`, routé par nom). */
+    (`createPr`) et, selon l'ancrage du run, ticket minddy (`issue-tools.ts`) ou
+    carnet (`notebook-tools.ts`) — routés par nom. */
 function makeExecTool(
   sandbox: Sandbox,
   createPr: CreatePrHandler,
-  issueToolCtx: IssueToolContext,
+  anchor: ExecToolAnchor,
 ): ExecuteAgentTool {
   return async (name, args) => {
-    if (ISSUE_TOOL_NAMES.has(name)) return await executeIssueTool(issueToolCtx, name, args);
+    if (anchor.kind === "issue" && ISSUE_TOOL_NAMES.has(name)) {
+      return await executeIssueTool(anchor.ctx, name, args);
+    }
+    if (anchor.kind === "notebook" && NOTEBOOK_TOOL_NAMES.has(name)) {
+      return await executeNotebookTool(anchor.ctx, name, args);
+    }
     switch (name) {
       case "create_pr": {
         return await createPr({
@@ -342,19 +360,19 @@ interface IssueContext {
   attachments: Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>;
 }
 
-async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
+async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueContext> {
   const service = getServiceClient();
   const [{ data: issue }, { data: project }, { data: attachmentRows }] = await Promise.all([
     service
       .from("issues")
       .select("number, title, description, plan")
-      .eq("id", run.issue_id)
+      .eq("id", issueId)
       .maybeSingle(),
     service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),
     service
       .from("attachments")
       .select("id, file_name, mime_type, size_bytes")
-      .eq("issue_id", run.issue_id)
+      .eq("issue_id", issueId)
       .order("created_at", { ascending: true }),
   ]);
   const key = (project as { key?: string } | null)?.key ?? "ISSUE";
@@ -377,6 +395,22 @@ async function loadIssueContext(run: AgentRun): Promise<IssueContext> {
       mimeType: a.mime_type ?? "application/octet-stream",
       sizeBytes: a.size_bytes ?? 0,
     })),
+  };
+}
+
+/** Contexte projet d'un run CARNET (MIN-84) : pas de ticket, juste le projet. */
+async function loadProjectContext(
+  projectId: string,
+): Promise<{ key: string; name: string | null }> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("projects")
+    .select("key, name")
+    .eq("id", projectId)
+    .maybeSingle();
+  return {
+    key: (data as { key?: string } | null)?.key ?? "PROJECT",
+    name: (data as { name?: string } | null)?.name ?? null,
   };
 }
 
@@ -403,17 +437,20 @@ async function buildInheritedPrContext(
     repo: AgentRepoContext;
   },
 ): Promise<string | null> {
+  // Un run CARNET n'hérite jamais (pas de lignée) : rien à raconter.
+  if (!run.issue_id) return null;
+  const issueId = run.issue_id;
   if (run.pr_number == null) {
     // Pas de PR : la branche héritée porte-t-elle du travail d'une session
     // précédente ? (Une branche neuve stampée par un premier chunk crashé, non.)
     if (!run.branch_name) return null;
     const inherited = await branchHasPriorRun(
-      run.issue_id,
+      issueId,
       run.branch_name,
       run.created_at,
     ).catch(() => false);
     if (!inherited) return null;
-    const previousSummary = await previousRunSummaryForIssue(run.issue_id, run.id).catch(
+    const previousSummary = await previousRunSummaryForIssue(issueId, run.id).catch(
       () => null,
     );
     return buildInheritedBranchMessage({ repo: opts.repo, previousSummary });
@@ -440,7 +477,7 @@ async function buildInheritedPrContext(
         number,
       })
       .catch(() => []),
-    previousRunSummaryForIssue(run.issue_id, run.id).catch(() => null),
+    previousRunSummaryForIssue(issueId, run.id).catch(() => null),
   ]);
 
   return buildInheritedPrMessage({
@@ -512,12 +549,22 @@ export async function executeAgentRun(
     if (!target) throw new Error("No repository linked to this project");
     const forge = forgeFor(target.provider);
 
-    const issue = await loadIssueContext(run);
+    // Ancrage du run : ticket minddy, ou CARNET (MIN-84, issue_id null) — la note
+    // du lanceur (run.prompt) est alors l'instruction, le projet le seul ancrage.
+    const issue = run.issue_id ? await loadIssueContext(run, run.issue_id) : null;
+    const project = issue
+      ? { key: issue.projectKey, name: issue.projectName }
+      : await loadProjectContext(run.project_id);
+    // Référence lisible du run dans les messages de commit (`wip(...)`).
+    const commitRef = issue?.identifier ?? "note";
     // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner).
     const commentLocale = await resolveRunLocale(run);
     const baseBranch = run.base_branch ?? target.defaultBranch;
     const workBranch =
-      run.branch_name ?? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`;
+      run.branch_name ??
+      (issue
+        ? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`
+        : `minddy/agent/note-${run.id.slice(0, 8)}`);
 
     // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
     // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
@@ -555,18 +602,26 @@ export async function executeAgentRun(
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
     } else {
-      const system = buildAgentSystemPrompt({ locale: commentLocale });
-      const contextMsg = buildAgentContextMessage({
-        issue: {
-          identifier: issue.identifier,
-          title: issue.title,
-          description: issue.description,
-          plan: issue.plan,
-        },
-        repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
-        projectName: issue.projectName,
-        attachments: issue.attachments,
+      const system = buildAgentSystemPrompt({
+        locale: commentLocale,
+        anchor: issue ? "issue" : "notebook",
       });
+      const contextMsg = issue
+        ? buildAgentContextMessage({
+            issue: {
+              identifier: issue.identifier,
+              title: issue.title,
+              description: issue.description,
+              plan: issue.plan,
+            },
+            repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+            projectName: issue.projectName,
+            attachments: issue.attachments,
+          })
+        : buildNotebookContextMessage({
+            repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+            projectName: project.name,
+          });
       messages = [
         { role: "system", content: system },
         { role: "user", content: contextMsg },
@@ -586,7 +641,20 @@ export async function executeAgentRun(
       const repoInstructions = await readRepoInstructions(sandbox);
       if (repoInstructions) messages.push({ role: "user", content: repoInstructions });
       // La demande du lanceur, en dernier : c'est À ELLE que l'agent répond.
-      if (run.prompt?.trim()) messages.push({ role: "user", content: run.prompt.trim() });
+      // Run CARNET : la note part emballée dans la MÊME structure que « copier
+      // le prompt » du carnet (balises <notes>, sémantique des cases, « ce sont
+      // des notes personnelles, pas une spec — demande avant de deviner »), SANS
+      // le bloc MCP : ses tools natifs (read_scratchpad…) le remplacent. La bulle
+      // de la conversation affiche `run.prompt` (la note brute) — le wrapper est
+      // de la plomberie, pas du contenu utilisateur.
+      if (run.prompt?.trim()) {
+        messages.push({
+          role: "user",
+          content: issue
+            ? run.prompt.trim()
+            : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
+        });
+      }
     }
 
     // État PR de la session, MUTÉ pendant le tour (create_pr, réouverture au push) :
@@ -612,14 +680,18 @@ export async function executeAgentRun(
         pr_url: pr.url,
         pr_state: prState.state,
       });
-      if (run.created_by) {
-        await syncIssueStatusFromPr({
-          issueId: run.issue_id,
-          actorId: run.created_by,
-          prState: prState.state,
-        });
+      // Run CARNET : aucun ticket à synchroniser ni à commenter — la PR vit dans
+      // la conversation de la session (et sur la page Pull requests).
+      if (issue && run.issue_id) {
+        if (run.created_by) {
+          await syncIssueStatusFromPr({
+            issueId: run.issue_id,
+            actorId: run.created_by,
+            prState: prState.state,
+          });
+        }
+        await postPrComment(run, issue.identifier, kind, pr.url, commentLocale, target.provider);
       }
-      await postPrComment(run, issue.identifier, kind, pr.url, commentLocale, target.provider);
     };
 
     /**
@@ -630,7 +702,12 @@ export async function executeAgentRun(
      * doublon) ; sinon → création. Une PR mergée n'est jamais réutilisée.
      */
     const createPr: CreatePrHandler = async ({ title, body }) => {
-      const prTitle = title || `${issue.identifier}: ${issue.title}`;
+      const prTitle =
+        title ||
+        (issue
+          ? `${issue.identifier}: ${issue.title}`
+          : // Run carnet : la première ligne de la note fait office de titre.
+            commitMessageFromReply(run.prompt ?? "", commitRef));
       const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
       try {
         await commitAndPush(sb, { authUrl: fresh.authUrl, workBranch, message: prTitle });
@@ -689,7 +766,7 @@ export async function executeAgentRun(
         // PR illisible / réouverture impossible (branche tête supprimée puis
         // recréée par notre push…) → on retombe sur une création propre.
       }
-      const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · issue ${issue.identifier}`;
+      const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · ${issue ? `issue ${issue.identifier}` : "note du carnet"}`;
       try {
         const pr = await forge.ensurePullRequest({
           token: fresh.token,
@@ -770,9 +847,30 @@ export async function executeAgentRun(
       Math.min(opts.deadlineMs - elapsedSetup - COMMIT_MARGIN_MS, AGENT_SOFT_DEADLINE_MS),
     );
 
+    // Ancrage des tools métier : ticket (issue-tools) ou carnet (notebook-tools).
+    const toolAnchor: ExecToolAnchor =
+      issue && run.issue_id
+        ? {
+            kind: "issue",
+            ctx: {
+              issueId: run.issue_id,
+              projectId: run.project_id,
+              projectKey: issue.projectKey,
+              actorId: run.created_by,
+            },
+          }
+        : {
+            kind: "notebook",
+            ctx: {
+              userId: run.created_by,
+              projectId: run.project_id,
+              projectKey: project.key,
+            },
+          };
+
     const result = await runAgentLoop({
       messages,
-      tools: AGENT_TOOLS,
+      tools: issue ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS,
       model: run.model,
       apiKey,
       baseUrl,
@@ -782,18 +880,15 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       contextWindow,
-      execTool: makeExecTool(sandbox, createPr, {
-        issueId: run.issue_id,
-        projectId: run.project_id,
-        projectKey: issue.projectKey,
-        actorId: run.created_by,
-      }),
+      execTool: makeExecTool(sandbox, createPr, toolAnchor),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).
       checkInterrupt: () => readInterruptFlag(run.id),
       // Miroir des états du checklist de l'agent vers le plan de l'issue liée.
-      syncPlan: (steps) => syncIssuePlanStates(run.issue_id, steps),
+      // Run carnet : pas d'issue — le cochage du carnet passe par le tool dédié.
+      syncPlan: (steps) =>
+        run.issue_id ? syncIssuePlanStates(run.issue_id, steps) : Promise.resolve(),
       emit,
       usageSeqStart,
     });
@@ -864,7 +959,7 @@ export async function executeAgentRun(
       const pushed = await commitAndPush(sandbox, {
         authUrl,
         workBranch,
-        message: commitMessageFromReply(reply, issue.identifier),
+        message: commitMessageFromReply(reply, commitRef),
       }).catch((err) => {
         pushError = (err as Error).message;
         console.error("[agent-execute] turn-end push failed:", pushError);
@@ -924,7 +1019,7 @@ export async function executeAgentRun(
     const wipPushed = await commitAndPush(sandbox, {
       authUrl: target.authUrl,
       workBranch,
-      message: `wip(${issue.identifier}): chunk ${run.continuations + 1}`,
+      message: `wip(${commitRef}): chunk ${run.continuations + 1}`,
     }).catch((err) => {
       // Un push raté ne doit pas perdre le checkpoint (l'état repo se re-poussera au chunk suivant).
       console.error("[agent-execute] WIP push failed:", (err as Error).message);
@@ -1160,7 +1255,7 @@ async function postPrComment(
   locale: Locale,
   provider: RepoProviderId,
 ): Promise<void> {
-  if (!run.created_by) return;
+  if (!run.created_by || !run.issue_id) return;
   try {
     const service = getServiceClient();
     const s = COMMENT_STRINGS[locale] ?? COMMENT_STRINGS.en;

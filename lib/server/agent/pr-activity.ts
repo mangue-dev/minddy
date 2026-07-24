@@ -21,7 +21,10 @@ export async function recordForgePrActionEvents(opts: {
   provider: ForgeProvider;
   login: string | null;
 }): Promise<void> {
-  const issueIds = [...new Set(opts.runs.map((r) => r.issueId))];
+  // Les runs CARNET (MIN-84) n'ont pas d'issue : rien à tracer pour eux.
+  const issueIds = [
+    ...new Set(opts.runs.map((r) => r.issueId).filter((id): id is string => id != null)),
+  ];
   if (issueIds.length === 0) return;
   await insertEvents(
     getServiceClient(),

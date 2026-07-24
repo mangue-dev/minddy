@@ -42,17 +42,27 @@ export type LaunchError =
   | "unsupportedProvider"
   | "alreadyRunning"
   | "quotaExceeded"
-  | "noModelForProvider";
+  | "noModelForProvider"
+  | "promptRequired";
 
 export type LaunchResult =
   | { ok: true; run: AgentRun }
   | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
 
 export interface LaunchAgentInput {
-  issueId: string;
+  /**
+   * Ticket d'ancrage. ABSENT → run CARNET (MIN-84) : l'agent est découplé du
+   * système de tickets — `projectId` (le dépôt à cloner) et `prompt` (la note,
+   * son instruction) sont alors requis. Un run carnet n'a ni lignée ni héritage :
+   * chaque lancement est une conversation autonome.
+   */
+  issueId?: string | null;
+  /** Projet du run carnet. Ignoré quand `issueId` est fourni (le projet vient du
+   *  ticket). L'appelant a déjà vérifié l'appartenance au projet. */
+  projectId?: string | null;
   userId: string;
   triggeredBy: "button" | "chat" | "mention";
-  /** Consigne libre en plus de l'issue (optionnelle). */
+  /** Consigne libre en plus de l'issue (optionnelle) — ou LA note (run carnet). */
   prompt?: string | null;
   /** Modèle explicite = override/forçage (numo ou l'utilisateur). */
   model?: string | null;
@@ -69,13 +79,23 @@ export interface LaunchAgentInput {
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
   const service = getServiceClient();
 
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, project_id")
-    .eq("id", input.issueId)
-    .maybeSingle();
-  if (!issue) return { ok: false, error: "issueNotFound" };
-  const projectId = (issue as { project_id: string }).project_id;
+  const issueId = input.issueId ?? null;
+  let projectId: string;
+  if (issueId) {
+    const { data: issue } = await service
+      .from("issues")
+      .select("id, project_id")
+      .eq("id", issueId)
+      .maybeSingle();
+    if (!issue) return { ok: false, error: "issueNotFound" };
+    projectId = (issue as { project_id: string }).project_id;
+  } else {
+    // Run CARNET : sans ticket, la note EST la mission — un run carnet sans
+    // instruction n'aurait rien à faire (un run d'issue, si : le ticket).
+    if (!input.projectId) return { ok: false, error: "issueNotFound" };
+    if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
+    projectId = input.projectId;
+  }
 
   const link = await getProjectLink(projectId);
   if (!link) return { ok: false, error: "noRepo" };
@@ -85,8 +105,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     return { ok: false, error: "unsupportedProvider" };
   }
 
-  const active = await activeRunForIssue(input.issueId);
-  if (active) return { ok: false, error: "alreadyRunning", run: active };
+  // « Un seul agent actif par ticket » est une règle du TICKET : les runs carnet,
+  // indépendants les uns des autres, peuvent travailler en parallèle (chacun sur
+  // sa branche). Le quota reste leur seul plafond.
+  if (issueId) {
+    const active = await activeRunForIssue(issueId);
+    if (active) return { ok: false, error: "alreadyRunning", run: active };
+  }
 
   const quota = await checkAgentQuota(input.userId);
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
@@ -107,13 +132,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // création → `execute.ts` pousse sur la bonne branche et met à jour la MÊME PR
   // le cas échéant (une `closed` est rouverte au push). Après un merge, plus rien
   // à hériter : branche neuve.
-  const inherited = await inheritableWorkForIssue(input.issueId);
+  // Un run carnet n'hérite jamais : pas de lignée, branche neuve à chaque fois.
+  const inherited = issueId ? await inheritableWorkForIssue(issueId) : null;
 
   let run: AgentRun;
   try {
     run = await createRun({
       projectId,
-      issueId: input.issueId,
+      issueId,
       repoLinkId: link.id,
       connectionId: link.connection_id,
       createdBy: input.userId,
@@ -131,29 +157,32 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   } catch (err) {
     // Course perdue contre un lancement concurrent (double-clic, deux onglets) :
     // l'index unique a tranché. Même réponse que le pré-check, pas un 500.
-    if (err instanceof ActiveRunExistsError) {
-      const winner = await activeRunForIssue(input.issueId);
+    // (Inatteignable pour un run carnet : les NULL sont distincts dans l'index.)
+    if (err instanceof ActiveRunExistsError && issueId) {
+      const winner = await activeRunForIssue(issueId);
       return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
     }
     throw err;
   }
 
-  // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
-  await insertEvents(service, [
-    {
-      issue_id: input.issueId,
-      actor_id: input.userId,
-      type: "agent_launched",
-      to_value: model,
-    },
-  ]);
+  if (issueId) {
+    // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
+    await insertEvents(service, [
+      {
+        issue_id: issueId,
+        actor_id: input.userId,
+        type: "agent_launched",
+        to_value: model,
+      },
+    ]);
 
-  // Agent lancé → l'issue passe « en cours » (MIN-46). Exception : la run hérite
-  // d'une PR encore en revue (open/draft) — c'est SON état qui gouverne le statut
-  // (in_review), on ne le fait pas régresser le temps d'une itération. Une PR
-  // refusée (closed → issue `todo`) repasse bien « en cours ».
-  if (inherited?.prState !== "open" && inherited?.prState !== "draft") {
-    await syncIssueStatusOnAgentStart({ issueId: input.issueId, actorId: input.userId });
+    // Agent lancé → l'issue passe « en cours » (MIN-46). Exception : la run hérite
+    // d'une PR encore en revue (open/draft) — c'est SON état qui gouverne le statut
+    // (in_review), on ne le fait pas régresser le temps d'une itération. Une PR
+    // refusée (closed → issue `todo`) repasse bien « en cours ».
+    if (inherited?.prState !== "open" && inherited?.prState !== "draft") {
+      await syncIssueStatusOnAgentStart({ issueId, actorId: input.userId });
+    }
   }
 
   kickAgentDrain(service);
@@ -177,7 +206,9 @@ export type ContinueResult =
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
 ): Promise<ContinueResult> {
-  const active = await activeRunForIssue(input.issueId);
+  // Chemin conversationnel d'ISSUE uniquement (@numo, chat) : un run carnet se
+  // reprend par SA conversation (/steer), jamais par ce raccourci.
+  const active = input.issueId ? await activeRunForIssue(input.issueId) : null;
   if (active) {
     const text = (input.prompt ?? "").trim();
     if (text) await insertRunMessage(active.id, input.userId, text);

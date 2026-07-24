@@ -235,6 +235,7 @@ export function IssueSidePanel({
       ? ""
       : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
     setAgentComposeDraft({
+      kind: "issue",
       issueId: issue.id,
       issueNumber: issue.number,
       issueTitle: issue.title,

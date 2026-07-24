@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  fetchAgentRunApi,
   fetchAgentRunEventsApi,
   fetchAgentRunPrApi,
   fetchAgentSessionsApi,
@@ -39,6 +40,32 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     },
   });
   return { runs: data?.runs ?? [], loading: isLoading };
+}
+
+/** Clé de cache du détail d'un run (conversation d'une session CARNET, MIN-84). */
+export function agentRunQueryKey(runId: string) {
+  return ["agent-run", runId] as const;
+}
+
+/**
+ * Détail d'UN run — la conversation d'une session carnet (le run EST la session,
+ * pas de liste de runs d'issue à interroger). Même cadence que les runs d'issue :
+ * ~3 s tant que l'agent travaille, ~12 s de backstop sinon (capte une reprise
+ * depuis un autre onglet), état frais à chaque montage.
+ */
+export function useAgentRunQuery(runId: string | null) {
+  const { data, isLoading } = useQuery({
+    queryKey: agentRunQueryKey(runId ?? ""),
+    queryFn: () => fetchAgentRunApi(runId as string),
+    enabled: !!runId,
+    refetchOnMount: "always",
+    refetchInterval: (query) => {
+      const run = query.state.data?.run;
+      if (run && isAgentRunWorking(run.status)) return 3000;
+      return run ? 12000 : false;
+    },
+  });
+  return { run: data?.run ?? null, loading: isLoading };
 }
 
 /**

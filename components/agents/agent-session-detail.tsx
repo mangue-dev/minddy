@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { ChevronLeft, GitPullRequest } from "lucide-react";
+import { ChevronLeft, GitPullRequest, NotebookPen } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
@@ -15,6 +15,9 @@ import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
  * la sidebar du ticket EN INLINE sur la page (pas de navigation vers le Kanban).
  * Cliquer un ticket ouvre sa session la plus ACTIVE (résolution par défaut de la
  * conversation), et donne accès à ses runs précédentes (MIN-68).
+ *
+ * Session CARNET (MIN-84, `issue` null) : le run EST la session — l'en-tête montre
+ * l'excerpt de la note (non cliquable), la conversation s'ancre sur `noteRunId`.
  */
 export function AgentSessionDetail({
   item,
@@ -45,9 +48,9 @@ export function AgentSessionDetail({
   const t = useTranslations("Agents");
   const router = useRouter();
 
-  // Garde-fou : sans issue/projet joint (RLS aberrante), on ne peut pas router la
-  // conversation vers une issue — on montre l'invite de sélection.
-  if (!item.issue || !item.project) {
+  // Garde-fou : sans projet joint (RLS aberrante), rien à afficher. Une session
+  // sans ISSUE est légitime : c'est une session carnet.
+  if (!item.project) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <p className="text-sm text-muted-foreground">{t("noSelection")}</p>
@@ -57,19 +60,72 @@ export function AgentSessionDetail({
 
   const issue = item.issue;
   const project = item.project;
+
+  const backButton = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label={t("backToList")}
+      className="md:hidden"
+      onClick={onBack}
+    >
+      <ChevronLeft />
+    </Button>
+  );
+
+  const prActions =
+    // En compose : pas de bouton PR (aucune run lancée ; la PR héritée n'existe
+    // qu'une fois le 1er message envoyé). Sinon, s'adapte à l'état de la PR :
+    // rien (pas de PR), bouton (disponible), ou lien texte vert (fusionnée).
+    compose || item.pr_number == null ? undefined : item.pr_state === "merged" ? (
+      <button
+        type="button"
+        onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
+        className="text-sm font-medium text-emerald-600 outline-none hover:underline dark:text-emerald-500"
+      >
+        {t("prMerged")}
+      </button>
+    ) : (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
+      >
+        <GitPullRequest className="size-3.5" />
+        {t("openPullRequest")}
+      </Button>
+    );
+
+  // ── Session CARNET : conversation d'UN run, en-tête = excerpt de la note ────
+  if (!issue) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <AgentConversation
+          key={item.runId}
+          noteRunId={item.runId}
+          active
+          showUnread={false}
+          headerTitle={
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {backButton}
+              <NotebookPen className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate text-sm font-medium">
+                {item.prompt || t("noteSessionTitle")}
+              </span>
+            </div>
+          }
+          headerActions={prActions}
+        />
+      </div>
+    );
+  }
+
   const identifier = issueIdentifier(project.key, issue.number);
 
   const headerTitle = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("backToList")}
-        className="md:hidden"
-        onClick={onBack}
-      >
-        <ChevronLeft />
-      </Button>
+      {backButton}
       {/* Titre cliquable → ouvre la sidebar du ticket en inline sur la page. */}
       <button
         type="button"
@@ -102,30 +158,7 @@ export function AgentSessionDetail({
         showUnread={showUnread}
         active
         headerTitle={headerTitle}
-        headerActions={
-          // En compose : pas de bouton PR (aucune run lancée ; la PR héritée n'existe
-          // qu'une fois le 1er message envoyé). Sinon, s'adapte à l'état de la PR :
-          // rien (pas de PR), bouton (disponible), ou lien texte vert (fusionnée).
-          compose || item.pr_number == null ? undefined : item.pr_state === "merged" ? (
-            <button
-              type="button"
-              onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
-              className="text-sm font-medium text-emerald-600 outline-none hover:underline dark:text-emerald-500"
-            >
-              {t("prMerged")}
-            </button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
-            >
-              <GitPullRequest className="size-3.5" />
-              {t("openPullRequest")}
-            </Button>
-          )
-        }
+        headerActions={prActions}
       />
     </div>
   );

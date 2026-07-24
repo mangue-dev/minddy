@@ -18,7 +18,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "mangue-ui";
-import { useIssueRepoBranchesQuery } from "@/lib/use-repo-branches-query";
+import {
+  useIssueRepoBranchesQuery,
+  useProjectRepoBranchesQuery,
+} from "@/lib/use-repo-branches-query";
 
 /**
  * Picker de la branche de BASE d'une session d'agent — le pendant du
@@ -34,7 +37,8 @@ import { useIssueRepoBranchesQuery } from "@/lib/use-repo-branches-query";
 const MAX_RESULTS = 50;
 
 export function BranchCombobox({
-  issueId,
+  issueId = null,
+  projectId = null,
   value,
   onChange,
   defaultLabel,
@@ -46,7 +50,10 @@ export function BranchCombobox({
   disabledTooltip,
   lockedBranch,
 }: {
-  issueId: string;
+  /** Ancrage ISSUE du listing (sessions de ticket). Exclusif avec `projectId`. */
+  issueId?: string | null;
+  /** Ancrage PROJET du listing (compose d'un run carnet, MIN-84). */
+  projectId?: string | null;
   /** "" = branche par défaut du dépôt ; sinon un nom de branche. */
   value: string;
   onChange: (value: string) => void;
@@ -68,10 +75,14 @@ export function BranchCombobox({
 }) {
   // Chip verrouillé avec une branche connue → aucun listing à charger : on ne
   // paie l'appel provider que quand le picker est interactif (ou qu'il faut
-  // résoudre le défaut à afficher).
-  const { branches, defaultBranch, loading } = useIssueRepoBranchesQuery(
-    disabled && lockedBranch ? null : issueId,
+  // résoudre le défaut à afficher). Deux ancrages exclusifs (issue ou projet),
+  // les deux hooks restent appelés inconditionnellement (règles des hooks).
+  const skipListing = !!(disabled && lockedBranch);
+  const issueBranches = useIssueRepoBranchesQuery(skipListing ? null : issueId);
+  const projectBranches = useProjectRepoBranchesQuery(
+    skipListing || issueId ? null : projectId,
   );
+  const { branches, defaultBranch, loading } = issueId ? issueBranches : projectBranches;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 

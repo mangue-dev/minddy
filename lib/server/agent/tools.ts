@@ -16,6 +16,12 @@ import "server-only";
  *                  pièces jointes), read_attachment, write_issue_plan (écrit le
  *                  plan du ticket SUR DEMANDE de l'utilisateur, sans l'appliquer)
  *                  — exécutés par lib/server/agent/issue-tools.ts.
+ *
+ * Deux JEUX selon l'ancrage du run (MIN-84) : `AGENT_TOOLS` (run de ticket) et
+ * `NOTEBOOK_AGENT_TOOLS` (run carnet — les tools ticket sont remplacés par
+ * read_scratchpad / update_scratchpad_task / create_issue, exécutés par
+ * lib/server/agent/notebook-tools.ts, et create_pr est reformulé sans ticket).
+ *
  * PAS de tool de fin de tour : le tour se termine quand l'agent répond en texte
  * (fin naturelle, comme une conversation). Les commits sont pilotés par le harnais
  * (commit+push au suspend et à chaque fin de tour) — pas de tool commit exposé,
@@ -38,7 +44,8 @@ export type AgentToolDef = {
 /** Timeout dur (ms) d'un `run_command`, appliqué côté Sandbox. */
 export const RUN_COMMAND_TIMEOUT_MS = 180_000;
 
-export const AGENT_TOOLS: AgentToolDef[] = [
+/** Cœur commun aux deux ancrages : exploration, édition, vérification, checklist. */
+const CORE_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
@@ -312,6 +319,10 @@ export const AGENT_TOOLS: AgentToolDef[] = [
       },
     },
   },
+];
+
+/** Tools d'ANCRAGE TICKET : l'état vivant de l'issue + la PR du ticket. */
+const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
@@ -389,6 +400,121 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     },
   },
 ];
+
+/** États de tâche du carnet, tels que le tool les accepte. */
+const NOTEBOOK_TASK_STATES = ["pending", "in_progress", "completed", "cancelled"];
+
+/** Tools d'ANCRAGE CARNET (MIN-84) : le carnet du lanceur + la promotion en ticket. */
+const NOTEBOOK_ANCHOR_TOOLS: AgentToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "read_scratchpad",
+      description:
+        "Re-read the launcher's notebook (their personal cross-project notes doc): the full markdown, plus every checkbox task parsed with a stable 0-based task_index, its text and its state (pending '- [ ]', in_progress '- [~]', completed '- [x]', cancelled '- [-]'), and `rev`, the doc's version. The note you were given at session start is a SNAPSHOT — call this whenever fresh state matters, and ALWAYS right before update_scratchpad_task so your indices and rev are current.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_scratchpad_task",
+      description:
+        "Flip the state of one or more existing notebook tasks WITHOUT rewriting the doc — the way to tick items off as you work. Mark the task you start 'in_progress' and the tasks you finish 'completed'. task_index comes from read_scratchpad (0-based, document order); pass expected_rev (the `rev` from that same read) so a concurrent edit by the user can never make you flip the wrong line. All-or-nothing: one out-of-range index rejects the whole call. Only the checkbox marker changes — never the task text.",
+      parameters: {
+        type: "object",
+        properties: {
+          tasks: {
+            type: "array",
+            description: "The task-state changes to apply.",
+            items: {
+              type: "object",
+              properties: {
+                task_index: {
+                  type: "number",
+                  description: "0-based task index, in document order (from read_scratchpad).",
+                },
+                state: {
+                  type: "string",
+                  enum: NOTEBOOK_TASK_STATES,
+                  description: "New state for this task.",
+                },
+              },
+              required: ["task_index", "state"],
+            },
+          },
+          expected_rev: {
+            type: "number",
+            description:
+              "The `rev` from the read_scratchpad whose indices you are using. Rejected if the notebook changed since — re-read and retry.",
+          },
+        },
+        required: ["tasks"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_issue",
+      description:
+        "Create a REAL ticket in the project this session works on. Use it ONLY when the work genuinely deserves a formal, trackable ticket (a substantial feature or bug the team should see) or when the user asks for one — never automatically, and never as a substitute for just doing the work. The note itself stays in the notebook; creating a ticket does not remove it.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Ticket title. Concise, imperative.",
+          },
+          description: {
+            type: "string",
+            description: "Ticket description in markdown (context, scope, acceptance).",
+          },
+          priority: {
+            type: "string",
+            enum: ["none", "urgent", "high", "medium", "low"],
+            description: "Optional priority.",
+          },
+          effort: {
+            type: "string",
+            enum: ["xs", "s", "m", "l", "xl"],
+            description: "Optional t-shirt effort estimate.",
+          },
+        },
+        required: ["title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_pr",
+      description:
+        "Open the pull request for this session's working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. The system commits and pushes your changes first, then opens the PR. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Pull request title. Imperative, concise, in English.",
+          },
+          body: {
+            type: "string",
+            description:
+              "Pull request description in markdown: what changed, why, how it was verified.",
+          },
+        },
+        required: ["title"],
+      },
+    },
+  },
+];
+
+/** Jeu complet d'un run de TICKET (l'historique — inchangé). */
+export const AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...ISSUE_ANCHOR_TOOLS];
+
+/** Jeu complet d'un run CARNET (MIN-84). */
+export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...NOTEBOOK_ANCHOR_TOOLS];
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
 export const CONTROL_TOOLS = new Set(["update_plan"]);

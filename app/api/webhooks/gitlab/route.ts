@@ -144,7 +144,8 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   // merged→done, closed→todo, open/reopen→in_review.
   if (prState) {
     for (const run of runs) {
-      if (run.createdBy) {
+      // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+      if (run.createdBy && run.issueId) {
         await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
       }
     }

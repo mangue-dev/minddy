@@ -21,6 +21,8 @@ function sanitizeRun(run: AgentRun) {
     model_forced: run.model_forced,
     key_mode: run.key_mode,
     triggered_by: run.triggered_by,
+    // Bulle « originelle » de la conversation (la note, pour un run carnet).
+    prompt: run.prompt,
     base_branch: run.base_branch,
     branch_name: run.branch_name,
     pr_number: run.pr_number,
@@ -32,6 +34,9 @@ function sanitizeRun(run: AgentRun) {
     error_message: run.error_message,
     created_at: run.created_at,
     updated_at: run.updated_at,
+    // Stampé par trigger DB (hors du type AgentRun) — parité avec RUN_COLUMNS de
+    // /api/issues/[id]/agent pour que le client réutilise AgentRunSummary tel quel.
+    completed_at: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,
   };
 }
 

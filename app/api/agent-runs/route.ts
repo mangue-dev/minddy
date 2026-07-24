@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { getProjectAccess } from "@/lib/server/project-access";
+import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 
 /**
  * Liste GLOBALE des sessions de l'agent de code (Numo), tous projets accessibles
- * confondus — alimente la page Agents. RLS `agent_runs` = can_access_project → le
- * cookie client suffit, aucun filtre projet manuel.
+ * confondus — alimente la page Agents. RLS `agent_runs` = can_access_project (et
+ * créateur seul pour les runs carnet) → le cookie client suffit, aucun filtre
+ * projet manuel.
  *
  * Une SESSION est scoppée à une ISSUE, mais une issue a PLUSIEURS runs successives
  * (MIN-68). On DÉDOUBLONNE donc par `issue_id` en gardant comme REPRÉSENTANT la
@@ -14,9 +17,18 @@ import { getAuthedUser } from "@/lib/server/api-auth";
  * profondeur de l'historique : la conversation de l'issue liste et rend
  * consultables les runs passées via son sélecteur de sessions. `working` signale
  * qu'un run de l'issue TRAVAILLE (queued/running) — pilote le spinner de la liste.
+ *
+ * Les runs CARNET (MIN-84, issue_id null) sont chacun leur PROPRE session — pas de
+ * dédoublonnage (aucune lignée) ; leur « titre » est l'excerpt de la note
+ * (`prompt`).
+ *
+ * POST = lancement d'un run CARNET : { projectId, prompt, model?, baseBranch? }.
  */
 
 export const runtime = "nodejs";
+// Le kick de launch draine le premier chunk dans after() : même fenêtre que la
+// route cron (270 s de budget) — même raison que le 300 de /api/issues/[id]/agent.
+export const maxDuration = 300;
 
 const WORKING_STATUSES = ["queued", "running"];
 
@@ -24,10 +36,11 @@ type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled"
 
 interface RunRow {
   id: string;
-  issue_id: string;
+  issue_id: string | null;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
+  prompt: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
@@ -38,17 +51,29 @@ interface RunRow {
   project: { id: string; key: string; name: string } | null;
 }
 
+/** Cap de l'excerpt de note renvoyé comme titre d'une session carnet. */
+const NOTE_EXCERPT_MAX = 200;
+
+function noteExcerpt(prompt: string | null): string | null {
+  if (!prompt?.trim()) return null;
+  const trimmed = prompt.trim();
+  return trimmed.length <= NOTE_EXCERPT_MAX ? trimmed : `${trimmed.slice(0, NOTE_EXCERPT_MAX)}…`;
+}
+
 export interface AgentSessionListItem {
   /** Run représentant de la session (pilote le détail / la conversation). */
   runId: string;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: RunRow["triggered_by"];
+  /** Excerpt de la note (sessions CARNET, issue null) — leur « titre ». */
+  prompt: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: RunRow["pr_state"];
   created_at: string;
   updated_at: string;
+  /** Null = session carnet (MIN-84). */
   issue: RunRow["issue"];
   project: RunRow["project"];
   /** Un run de l'issue TRAVAILLE (queued/running) → « Numo travaille ». */
@@ -69,7 +94,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, status, model, triggered_by, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, issue:issues(id, number, title), project:projects(id, key, name)",
+      "id, issue_id, status, model, triggered_by, prompt, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, issue:issues(id, number, title), project:projects(id, key, name)",
     )
     .order("created_at", { ascending: false });
 
@@ -80,17 +105,20 @@ export async function GET(request: NextRequest) {
   // DERNIÈRE session en date — c'est elle le représentant (badge fidèle à l'état de
   // la dernière session/PR ; ses `pr_*` portent déjà la PR héritée du ticket, même
   // si le run a échoué à l'amorçage). `working` = un run quelconque de l'issue
-  // travaille.
+  // travaille. Un run CARNET (issue_id null) est sa propre session : clé par run —
+  // sans quoi toutes les sessions carnet fusionneraient sous la clé null.
   const byIssue = new Map<string, AgentSessionListItem>();
   for (const r of rows) {
-    const existing = byIssue.get(r.issue_id);
+    const sessionKey = r.issue_id ?? `run:${r.id}`;
+    const existing = byIssue.get(sessionKey);
     const isWorking = WORKING_STATUSES.includes(r.status);
     if (!existing) {
-      byIssue.set(r.issue_id, {
+      byIssue.set(sessionKey, {
         runId: r.id,
         status: r.status,
         model: r.model,
         triggered_by: r.triggered_by,
+        prompt: r.issue_id ? null : noteExcerpt(r.prompt),
         pr_number: r.pr_number,
         pr_url: r.pr_url,
         pr_state: r.pr_state,
@@ -120,4 +148,72 @@ export async function GET(request: NextRequest) {
     a.created_at < b.created_at ? 1 : -1,
   );
   return NextResponse.json({ sessions });
+}
+
+const LAUNCH_ERROR_STATUS: Record<string, number> = {
+  issueNotFound: 404,
+  noRepo: 409,
+  unsupportedProvider: 409,
+  alreadyRunning: 409,
+  quotaExceeded: 402,
+  noModelForProvider: 400,
+  promptRequired: 400,
+};
+
+function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
+  const status = LAUNCH_ERROR_STATUS[result.error] ?? 400;
+  return NextResponse.json(
+    { error: result.error, code: result.error, run: result.run, quota: result.quota },
+    { status },
+  );
+}
+
+/**
+ * Lance un run CARNET (MIN-84) : sans ticket, ancré à un projet (le dépôt à
+ * cloner) + la note comme instruction. Membre du projet requis — le run est
+ * ensuite personnel (RLS : créateur seul).
+ */
+export async function POST(request: NextRequest) {
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  let body: { projectId?: string; prompt?: string; model?: string; baseBranch?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const projectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
+  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  if (!projectId) return NextResponse.json({ error: "projectId required" }, { status: 400 });
+  if (!prompt) {
+    return NextResponse.json(
+      { error: "promptRequired", code: "promptRequired" },
+      { status: 400 },
+    );
+  }
+
+  const access = await getProjectAccess(auth.user.id, projectId);
+  if (!access?.isMember) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : undefined;
+  const baseBranch =
+    typeof body.baseBranch === "string" && body.baseBranch.trim()
+      ? body.baseBranch.trim()
+      : undefined;
+
+  const result = await launchAgentRun({
+    projectId,
+    userId: auth.user.id,
+    triggeredBy: "button",
+    prompt,
+    model,
+    forced: !!model,
+    baseBranch,
+  });
+  if (!result.ok) return launchErrorResponse(result);
+  return NextResponse.json({ run: result.run });
 }

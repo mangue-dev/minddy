@@ -3,27 +3,34 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 /**
- * A hover "copy" button glued to every heading in the WYSIWYG note, so a whole
- * section (heading + its content, until the next heading) can be copied as an
- * agent prompt without leaving the single editable view. Implemented as a
- * ProseMirror widget decoration (not a NodeView) so it never touches the
- * heading's editable content or the cursor. `onCopy` gets the heading's 0-based
- * index among all headings — the caller maps it to the section markdown.
+ * Hover buttons glued to every heading in the WYSIWYG note : « copier la
+ * section » et « lancer un agent » sur la section (MIN-84) — la section = le
+ * heading + son contenu jusqu'au heading suivant. Implemented as ProseMirror
+ * widget decorations (not NodeViews) so they never touch the heading's editable
+ * content or the cursor. `onCopy` / `onLaunch` get the heading's 0-based index
+ * among all headings — the caller maps it to the section markdown.
  *
- * While the button is hovered/focused it also shows two pieces of shared "hover
+ * While a button is hovered/focused it also shows two pieces of shared "hover
  * chrome", both parented to the `.scratchpad-editor` container:
- *   - a tinted box behind the exact section that will be copied (heading → the
- *     last block before the next heading), so the copy target is unmistakable;
+ *   - a tinted box behind the exact section targeted (heading → the last block
+ *     before the next heading), so the target is unmistakable;
  *   - a styled tooltip on the button (matching the app's tooltips) instead of a
  *     raw browser `title`.
  */
 export interface SectionCopyOptions {
   onCopy: (headingIndex: number) => void;
   label: string;
+  /** « Lancer un agent » sur la section (absent → bouton non rendu). */
+  onLaunch?: (headingIndex: number) => void;
+  launchLabel?: string;
 }
 
 const COPY_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+
+/** lucide `bot`, même rendu que les icônes React (13px, stroke 2). */
+const BOT_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>';
 
 const HEADING_TAGS = new Set(["H1", "H2", "H3"]);
 
@@ -64,7 +71,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
       return chrome;
     };
 
-    const showFor = (btn: HTMLElement) => {
+    const showFor = (btn: HTMLElement, label: string) => {
       const c = ensureChrome();
       if (!c) return;
       const heading = btn.closest("h1, h2, h3") as HTMLElement | null;
@@ -90,7 +97,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
 
       // Tooltip centered above the button.
       const bRect = btn.getBoundingClientRect();
-      c.tip.textContent = options.label;
+      c.tip.textContent = label;
       c.tip.style.left = `${bRect.left - cRect.left + bRect.width / 2}px`;
       c.tip.style.top = `${bRect.top - cRect.top}px`;
       c.tip.classList.add("is-visible");
@@ -117,6 +124,38 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
         },
         props: {
           decorations: (state) => {
+            // One action button (shared wiring: section chrome + tooltip + click).
+            const makeButton = (
+              className: string,
+              svg: string,
+              label: string,
+              onClick: () => void
+            ): HTMLElement => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = className;
+              btn.contentEditable = "false";
+              btn.setAttribute("aria-label", label);
+              btn.innerHTML = svg;
+              // Keep focus/selection in the editor; just act.
+              btn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+              btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClick();
+              });
+              // Reveal the section target + tooltip while the button is the
+              // pointer/keyboard focus.
+              btn.addEventListener("mouseenter", () => showFor(btn, label));
+              btn.addEventListener("mouseleave", hide);
+              btn.addEventListener("focus", () => showFor(btn, label));
+              btn.addEventListener("blur", hide);
+              return btn;
+            };
+
             const decorations: Decoration[] = [];
             let headingIndex = -1;
             state.doc.descendants((node, pos) => {
@@ -126,34 +165,30 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
               decorations.push(
                 Decoration.widget(
                   pos + 1,
-                  () => {
-                    const btn = document.createElement("button");
-                    btn.type = "button";
-                    btn.className = "scratchpad-section-copy";
-                    btn.contentEditable = "false";
-                    btn.setAttribute("aria-label", options.label);
-                    btn.innerHTML = COPY_SVG;
-                    // Keep focus/selection in the editor; just copy.
-                    btn.addEventListener("mousedown", (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    });
-                    btn.addEventListener("click", (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      options.onCopy(index);
-                    });
-                    // Reveal the copy target + tooltip while the button is the
-                    // pointer/keyboard focus.
-                    btn.addEventListener("mouseenter", () => showFor(btn));
-                    btn.addEventListener("mouseleave", hide);
-                    btn.addEventListener("focus", () => showFor(btn));
-                    btn.addEventListener("blur", hide);
-                    return btn;
-                  },
+                  () =>
+                    makeButton("scratchpad-section-copy", COPY_SVG, options.label, () =>
+                      options.onCopy(index)
+                    ),
                   { side: -1, ignoreSelection: true, key: `section-copy-${index}` }
                 )
               );
+              // « Lancer un agent » sur la section (MIN-84) — à gauche du copy.
+              if (options.onLaunch) {
+                const onLaunch = options.onLaunch;
+                decorations.push(
+                  Decoration.widget(
+                    pos + 1,
+                    () =>
+                      makeButton(
+                        "scratchpad-section-launch",
+                        BOT_SVG,
+                        options.launchLabel ?? options.label,
+                        () => onLaunch(index)
+                      ),
+                    { side: -1, ignoreSelection: true, key: `section-launch-${index}` }
+                  )
+                );
+              }
             });
             return DecorationSet.create(state.doc, decorations);
           },

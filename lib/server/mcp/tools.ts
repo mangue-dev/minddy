@@ -63,6 +63,7 @@ import {
   getScratchpad,
   setScratchpad,
   mutateScratchpad,
+  applyScratchpadTaskChanges,
 } from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH, appendScratchpadTasks } from "@/lib/scratchpad";
 import { effortToPoints, statusCompletionCredit, todayISO } from "@/lib/cycle";
@@ -1639,45 +1640,37 @@ export function registerMinddyTools(server: McpServer): void {
       const auth = requireUser(extra);
       if ("error" in auth) return auth.error;
       try {
-        const service = getServiceClient();
-        const current = await getScratchpad(service, auth.userId);
-        // Guard against stale indices: if the note advanced past the version the
-        // caller read the indices from, the same index may now be a different
-        // task — refuse so the wrong item is never flipped.
-        if (
-          args.expected_rev !== undefined &&
-          current.rev !== args.expected_rev
-        ) {
+        // Logique partagée avec le tool `update_scratchpad_task` de l'agent de
+        // code (MIN-84) : mêmes index, mêmes gardes (rev périmé, all-or-nothing).
+        const result = await applyScratchpadTaskChanges(
+          getServiceClient(),
+          auth.userId,
+          args.tasks,
+          args.expected_rev
+        );
+        if (result.status === "stale_rev") {
           return fail(
             "conflict",
-            `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${current.rev}), so your task indices may no longer match. Call minddy_get_scratchpad again for fresh indices and retry.`
+            `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${result.rev}), so your task indices may no longer match. Call minddy_get_scratchpad again for fresh indices and retry.`
           );
         }
-        const parsed = parsePlan(current.content);
-        for (const change of args.tasks) {
-          if (change.task_index >= parsed.tasks.length) {
-            return fail(
-              "invalid_params",
-              `task_index ${change.task_index} is out of range — the scratchpad has ${parsed.tasks.length} task(s) (valid indices 0..${Math.max(0, parsed.tasks.length - 1)}).`
-            );
-          }
+        if (result.status === "out_of_range") {
+          return fail(
+            "invalid_params",
+            `task_index ${result.index} is out of range — the scratchpad has ${result.total} task(s) (valid indices 0..${Math.max(0, result.total - 1)}).`
+          );
         }
-        let next = current.content;
-        for (const change of args.tasks) {
-          next = setTaskState(next, parsed.tasks[change.task_index].line, change.state);
-        }
-        const saved = await setScratchpad(service, auth.userId, next, current.rev);
-        if (saved.conflicted) {
+        if (result.status === "conflict") {
           return fail(
             "conflict",
             "The scratchpad was edited concurrently while applying your change. Call minddy_get_scratchpad again for fresh indices and retry."
           );
         }
         return ok({
-          content: saved.content,
-          rev: saved.rev,
-          progress: saved.progress,
-          tasks: parsePlan(saved.content).tasks.map((t) => ({
+          content: result.state.content,
+          rev: result.state.rev,
+          progress: result.state.progress,
+          tasks: parsePlan(result.state.content).tasks.map((t) => ({
             index: t.index,
             text: t.text,
             state: t.state,

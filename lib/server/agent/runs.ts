@@ -43,7 +43,9 @@ export interface AgentCheckpoint {
 export interface AgentRun {
   id: string;
   project_id: string;
-  issue_id: string;
+  /** Null = run « carnet » (MIN-84) : ancré au projet + une instruction libre,
+   *  sans ticket. Aucune lignée : chaque run carnet est sa propre conversation. */
+  issue_id: string | null;
   repo_link_id: string | null;
   connection_id: string | null;
   status: AgentRunStatus;
@@ -89,7 +91,8 @@ const MAX_CRASH_ATTEMPTS = 2;
 
 export interface CreateRunInput {
   projectId: string;
-  issueId: string;
+  /** Null = run carnet (MIN-84), sans ticket. */
+  issueId: string | null;
   repoLinkId: string | null;
   connectionId: string | null;
   createdBy: string;
@@ -409,10 +412,11 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
   }
 }
 
-/** Run affecté par une synchro PR (pour aligner le statut d'issue côté appelant). */
+/** Run affecté par une synchro PR (pour aligner le statut d'issue côté appelant).
+    `issueId` null = run carnet : aucune issue à aligner. */
 export interface SyncedPrRun {
   id: string;
-  issueId: string;
+  issueId: string | null;
   createdBy: string | null;
 }
 
@@ -452,7 +456,7 @@ export async function findRunsForPr(opts: {
     .select("id, issue_id, created_by")
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
-  return ((runs ?? []) as Array<{ id: string; issue_id: string; created_by: string | null }>).map(
+  return ((runs ?? []) as Array<{ id: string; issue_id: string | null; created_by: string | null }>).map(
     (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
   );
 }
@@ -485,7 +489,7 @@ export async function syncPrState(opts: {
     .update(update)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
-  return ((runs ?? []) as Array<{ id: string; issue_id: string; created_by: string | null }>).map(
+  return ((runs ?? []) as Array<{ id: string; issue_id: string | null; created_by: string | null }>).map(
     (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
   );
 }

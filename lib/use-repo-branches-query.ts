@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchIssueRepoBranchesApi } from "@/lib/agent-api";
+import { fetchIssueRepoBranchesApi, fetchProjectRepoBranchesApi } from "@/lib/agent-api";
 
 /**
  * Branches du dépôt lié au projet de l'issue, pour le picker de branche de base
@@ -31,6 +31,32 @@ export function useIssueRepoBranchesQuery(issueId: string | null) {
     queryKey: issueRepoBranchesQueryKey(issueId ?? "none"),
     queryFn: () => fetchBranches(issueId as string),
     enabled: issueId != null,
+    staleTime: 2 * 60 * 1000,
+  });
+  return {
+    branches: data?.branches ?? [],
+    defaultBranch: data?.defaultBranch ?? null,
+    loading: isLoading,
+  };
+}
+
+/** Variante ancrée PROJET (compose d'un run carnet, MIN-84) — mêmes garanties. */
+export const projectRepoBranchesQueryKey = (projectId: string) =>
+  ["project-repo-branches", projectId] as const;
+
+async function fetchProjectBranches(projectId: string): Promise<RepoBranchesResult> {
+  try {
+    return await fetchProjectRepoBranchesApi(projectId);
+  } catch {
+    return { branches: [], defaultBranch: null };
+  }
+}
+
+export function useProjectRepoBranchesQuery(projectId: string | null) {
+  const { data, isLoading } = useQuery({
+    queryKey: projectRepoBranchesQueryKey(projectId ?? "none"),
+    queryFn: () => fetchProjectBranches(projectId as string),
+    enabled: projectId != null,
     staleTime: 2 * 60 * 1000,
   });
   return {

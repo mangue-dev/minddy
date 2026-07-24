@@ -126,6 +126,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (action === "request_changes") {
     const message = typeof body.message === "string" ? body.message.trim() : "";
     if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
+    // Run CARNET (MIN-84) : pas de lignée à relancer à froid — la demande de
+    // changements se fait en PARLANT à la session (sa conversation /steer, qui
+    // re-vérifie le quota). Refus explicite plutôt qu'une relance impossible.
+    if (!run.issue_id) {
+      return NextResponse.json(
+        { error: "notebookRun", code: "notebookRun" },
+        { status: 409 },
+      );
+    }
     if (run.pr_state === "merged") {
       return NextResponse.json(
         { error: "Pull request is merged", code: "prMerged" },
@@ -185,18 +194,23 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // du webhook (qui peut ne jamais arriver en dev).
       await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "merged", provider: target.provider });
       // PR mergée → l'issue passe en done (MIN-46). Acteur = le membre qui merge.
-      await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "merged" });
-      // Trace « a accepté la PR » dans l'activité de l'issue.
-      await recordPrActionEvent(run.issue_id, auth.user.id, "pr_accepted", run.pr_number);
+      // Run carnet : pas d'issue — rien à synchroniser ni à tracer.
+      if (run.issue_id) {
+        await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "merged" });
+        // Trace « a accepté la PR » dans l'activité de l'issue.
+        await recordPrActionEvent(run.issue_id, auth.user.id, "pr_accepted", run.pr_number);
+      }
       return NextResponse.json({ ok: true, pr_state: "merged" });
     }
     await forge.closePullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number });
     // Comme pour merge : tous les runs de la PR, pas seulement celui-ci.
     await syncPrState({ repoFullName: target.repoFullName, prNumber: run.pr_number, prState: "closed", provider: target.provider });
     // PR refusée → l'issue retourne « à faire » (todo, jamais annulée) — MIN-46.
-    await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "closed" });
-    // Trace « a refusé la PR » dans l'activité de l'issue.
-    await recordPrActionEvent(run.issue_id, auth.user.id, "pr_rejected", run.pr_number);
+    if (run.issue_id) {
+      await syncIssueStatusFromPr({ issueId: run.issue_id, actorId: auth.user.id, prState: "closed" });
+      // Trace « a refusé la PR » dans l'activité de l'issue.
+      await recordPrActionEvent(run.issue_id, auth.user.id, "pr_rejected", run.pr_number);
+    }
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {
     const status = isForgeApiError(err) ? 502 : 500;

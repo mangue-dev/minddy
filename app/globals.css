@@ -376,7 +376,8 @@ nav[aria-label="Navigation"]
 .scratchpad-editor .ProseMirror :is(h1, h2, h3) {
   position: relative;
 }
-.scratchpad-editor .ProseMirror .scratchpad-section-copy {
+.scratchpad-editor .ProseMirror .scratchpad-section-copy,
+.scratchpad-editor .ProseMirror .scratchpad-section-launch {
   position: absolute;
   top: 0.15rem;
   right: 0;
@@ -392,10 +393,17 @@ nav[aria-label="Navigation"]
   transition: opacity 0.12s, color 0.12s;
   cursor: pointer;
 }
+/* « Lancer un agent » sur la section (MIN-84) — à gauche du bouton copier. */
+.scratchpad-editor .ProseMirror .scratchpad-section-launch {
+  right: 1.75rem;
+}
 .scratchpad-editor .ProseMirror :is(h1, h2, h3):hover .scratchpad-section-copy,
-.scratchpad-editor .ProseMirror .scratchpad-section-copy:focus-visible {
+.scratchpad-editor .ProseMirror .scratchpad-section-copy:focus-visible,
+.scratchpad-editor .ProseMirror :is(h1, h2, h3):hover .scratchpad-section-launch,
+.scratchpad-editor .ProseMirror .scratchpad-section-launch:focus-visible {
   opacity: 1;
 }
-.scratchpad-editor .ProseMirror .scratchpad-section-copy:hover {
+.scratchpad-editor .ProseMirror .scratchpad-section-copy:hover,
+.scratchpad-editor .ProseMirror .scratchpad-section-launch:hover {
   color: var(--foreground);
 }
