@@ -26,6 +26,7 @@ export function AgentChangesBar({
   canCreatePr,
   requestingPr,
   onCreatePr,
+  onOpenFile,
 }: {
   runId: string;
   /** L'agent produit-il un tour en ce moment ? (pilote live vs repos.) */
@@ -35,6 +36,8 @@ export function AgentChangesBar({
   /** Demande de PR déjà envoyée (désactive le bouton le temps que l'agent reparte). */
   requestingPr: boolean;
   onCreatePr: () => void;
+  /** Ouvre la vue diff de la session → lignes de fichiers cliquables. */
+  onOpenFile?: (path: string) => void;
 }) {
   const t = useTranslations("Agent");
   const { events } = useAgentRunEventsQuery(runId, working);
@@ -54,6 +57,7 @@ export function AgentChangesBar({
           label={t("filesChangedTurn", { count: liveFiles.length })}
           live
           defaultOpen
+          onOpenFile={onOpenFile}
         />
       </div>
     );
@@ -66,6 +70,7 @@ export function AgentChangesBar({
         files={branch.files}
         truncated={branch.truncated}
         label={t("filesChanged", { count: branch.files.length })}
+        onOpenFile={onOpenFile}
         action={
           <Button
             type="button"

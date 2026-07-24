@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchAgentRunApi,
+  fetchAgentRunDiffApi,
   fetchAgentRunEventsApi,
   fetchAgentRunPrApi,
   fetchAgentSessionsApi,
@@ -98,6 +99,35 @@ export function useAgentRunPrQuery(runId: string, enabled: boolean) {
     enabled,
   });
   return { pr: data?.pr ?? null, files: data?.files ?? [], loading: isLoading, refetch };
+}
+
+/** Clé de cache du diff vivant d'un run (vue diff dans la conversation). */
+export function agentRunDiffQueryKey(runId: string) {
+  return ["agent-run-diff", runId] as const;
+}
+
+/**
+ * Diff vivant d'un run — la vue diff DANS la conversation, sans attendre la PR.
+ * Interrogé seulement quand la vue est OUVERTE (`enabled`) ; tant que l'agent
+ * travaille, re-poll ~7 s — le diff n'avance qu'aux pushes de fin de tour,
+ * inutile de suivre la cadence 2 s des events. `refetchOnMount: always` : la vue
+ * repart toujours d'un état frais à l'ouverture (le staleTime global de 5 min
+ * garderait sinon un diff d'avant le dernier tour).
+ */
+export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: boolean) {
+  const { data, isLoading } = useQuery({
+    queryKey: agentRunDiffQueryKey(runId),
+    queryFn: () => fetchAgentRunDiffApi(runId),
+    enabled,
+    refetchOnMount: "always",
+    refetchInterval: enabled && working ? 7000 : false,
+  });
+  return {
+    files: data?.files ?? [],
+    provider: data?.provider,
+    url: data?.url ?? null,
+    loading: isLoading,
+  };
 }
 
 /** Clé de cache de la liste globale des PR (MIN-66). */

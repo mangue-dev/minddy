@@ -374,7 +374,7 @@ interface RenderContext {
   results: Map<string, ToolResult>;
   copyableIds: Set<string>;
   lastMessageId: string | null;
-  /** Ouvre la vue diff d'un fichier (fourni quand une PR existe) → lignes cliquables. */
+  /** Ouvre la vue diff de la session (dans la conversation) → lignes cliquables. */
   onOpenFile?: (path: string) => void;
 }
 
@@ -579,7 +579,7 @@ export function AgentEventFeed({
   /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
   prompt?: string | null;
   className?: string;
-  /** Rend cliquables les fichiers des blocs de diff (fourni quand une PR existe). */
+  /** Rend cliquables les fichiers des blocs de diff (ouvre la vue diff de la session). */
   onOpenFile?: (path: string) => void;
   /**
    * Messages que l'utilisateur vient d'envoyer, pas encore revenus du serveur.

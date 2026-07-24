@@ -317,6 +317,49 @@ export async function getMergeBaseSha(opts: {
   return sha;
 }
 
+/**
+ * Diff CUMULÉ d'une branche de travail contre sa base — la vue diff d'une session
+ * SANS PR (le compare GitHub sert les fichiers au même format que pulls/{n}/files,
+ * depuis le merge base, comme une PR). `?per_page=1` borne la liste des COMMITS
+ * embarquée dans la réponse : les fichiers, eux, ne sont servis que sur la
+ * première page et arrivent entiers (plafond GitHub : 300).
+ * Lève GithubApiError(404) si la branche n'a pas (encore) été poussée.
+ */
+export async function compareBranches(opts: {
+  token: string;
+  repoFullName: string;
+  base: string;
+  head: string;
+}): Promise<{ files: PullRequestFile[]; url: string | null }> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  // Refs laissés tels quels — mêmes raisons que getMergeBaseSha (branches à slash).
+  const comparison = await ghJson<{
+    html_url?: string;
+    files?: Array<{
+      filename: string;
+      status: string;
+      additions: number;
+      deletions: number;
+      patch?: string;
+      previous_filename?: string;
+    }>;
+  }>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${opts.base}...${opts.head}?per_page=1`,
+    opts.token,
+  );
+  return {
+    files: (comparison.files ?? []).map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions,
+      patch: f.patch,
+      previous_filename: f.previous_filename,
+    })),
+    url: comparison.html_url ?? null,
+  };
+}
+
 /** Contenu brut d'un fichier à un ref donné, ou null s'il n'y existe pas. */
 export async function getFileAtRef(opts: {
   token: string;

@@ -7,13 +7,16 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 
 /**
- * Version BASE d'un fichier de la PR d'un run — la source dont la vue diff a
+ * Version BASE d'un fichier du diff d'un run — la source dont la vue diff a
  * besoin pour déplier le contexte masqué autour des hunks (façon GitHub).
  *  GET ?path=… → { content } (texte brut du fichier au merge base).
  *
- * Appelée à la demande, au premier dépliage d'un fichier : ouvrir une PR n'en
- * déclenche aucune. Le chemin demandé est validé contre les fichiers de CETTE
- * PR — sinon la route donnerait à lire n'importe quel fichier du dépôt.
+ * Deux sources, selon l'état du run : les fichiers de sa PR quand elle existe,
+ * sinon le compare base...branche de travail (vue diff DANS la conversation,
+ * avant toute PR). Appelée à la demande, au premier dépliage d'un fichier :
+ * ouvrir un diff n'en déclenche aucune. Le chemin demandé est validé contre les
+ * fichiers de CE diff — sinon la route donnerait à lire n'importe quel fichier
+ * du dépôt.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -39,8 +42,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const access = await getProjectAccess(auth.user.id, run.project_id);
   if (!access) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  if (run.pr_number == null) {
-    return NextResponse.json({ error: "This run has no pull request" }, { status: 400 });
+  const prNumber = run.pr_number;
+  if (prNumber == null && !run.branch_name) {
+    return NextResponse.json({ error: "This run has no diff" }, { status: 400 });
   }
 
   try {
@@ -48,31 +52,59 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
     const forge = forgeFor(target.provider);
 
-    const [pr, files] = await Promise.all([
-      forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
-      forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: run.pr_number }),
-    ]);
+    // Fichiers du diff + résolveur du ref de base — différé APRÈS la validation
+    // du chemin : pas d'appel merge base pour un chemin qui n'est pas du diff.
+    let files: Awaited<ReturnType<typeof forge.listPullRequestFiles>>;
+    let resolveRef: () => Promise<string>;
+    if (prNumber != null) {
+      const [pr, prFiles] = await Promise.all([
+        forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+        forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+      ]);
+      const base = pr.base;
+      const head = pr.headSha ?? pr.head;
+      if (!base || !head) {
+        return NextResponse.json({ error: "Pull request has no base or head" }, { status: 409 });
+      }
+      files = prFiles;
+      resolveRef = () =>
+        forge.getMergeBaseSha({
+          token: target.token,
+          repoFullName: target.repoFullName,
+          number: prNumber,
+          base,
+          head,
+        });
+    } else {
+      // Sans PR : le diff est le compare base...branche de travail (vue diff de
+      // la conversation) — même validation, merge base de BRANCHES pour le ref.
+      const base = run.base_branch ?? target.defaultBranch;
+      const head = run.branch_name;
+      if (!head) return NextResponse.json({ error: "This run has no diff" }, { status: 400 });
+      const compared = await forge.compareBranches({
+        token: target.token,
+        repoFullName: target.repoFullName,
+        base,
+        head,
+      });
+      files = compared.files;
+      resolveRef = () =>
+        forge.getBranchesMergeBaseSha({
+          token: target.token,
+          repoFullName: target.repoFullName,
+          base,
+          head,
+        });
+    }
 
-    // Le chemin doit être celui d'un fichier de la PR, côté base. Un fichier
+    // Le chemin doit être celui d'un fichier du diff, côté base. Un fichier
     // ajouté n'a pas de version de base : son patch EST déjà le fichier entier.
     const file = files.find((f) => basePathOf(f) === path);
     if (!file || file.status === "added") {
-      return NextResponse.json({ error: "File not found in this pull request" }, { status: 404 });
+      return NextResponse.json({ error: "File not found in this diff" }, { status: 404 });
     }
 
-    const base = pr.base;
-    const head = pr.headSha ?? pr.head;
-    if (!base || !head) {
-      return NextResponse.json({ error: "Pull request has no base or head" }, { status: 409 });
-    }
-
-    const ref = await forge.getMergeBaseSha({
-      token: target.token,
-      repoFullName: target.repoFullName,
-      number: run.pr_number,
-      base,
-      head,
-    });
+    const ref = await resolveRef();
     const content = await forge.getFileAtRef({
       token: target.token,
       repoFullName: target.repoFullName,

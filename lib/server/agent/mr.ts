@@ -269,6 +269,26 @@ async function listRawDiffs(
   );
 }
 
+/** Diff brut GitLab → fichier neutre (statut, compteurs +/−, patch unified). */
+function toPullRequestFile(d: RawDiff): PullRequestFile {
+  const { additions, deletions } = countDiffLines(d.diff ?? "");
+  return {
+    filename: d.new_path ?? d.old_path ?? "",
+    status: d.new_file
+      ? "added"
+      : d.deleted_file
+        ? "removed"
+        : d.renamed_file
+          ? "renamed"
+          : "modified",
+    additions,
+    deletions,
+    // Diff vide (binaire / trop gros) → undefined, comme le `patch` GitHub.
+    patch: d.diff || undefined,
+    previous_filename: d.renamed_file ? d.old_path : undefined,
+  };
+}
+
 /** Fichiers de la MR au format neutre (patches unified diff) — review in-app. */
 export async function listMergeRequestChanges(opts: {
   token: string;
@@ -276,24 +296,53 @@ export async function listMergeRequestChanges(opts: {
   number: number;
 }): Promise<PullRequestFile[]> {
   const diffs = await listRawDiffs(opts);
-  return diffs.map((d) => {
-    const { additions, deletions } = countDiffLines(d.diff ?? "");
-    return {
-      filename: d.new_path ?? d.old_path ?? "",
-      status: d.new_file
-        ? "added"
-        : d.deleted_file
-          ? "removed"
-          : d.renamed_file
-            ? "renamed"
-            : "modified",
-      additions,
-      deletions,
-      // Diff vide (binaire / trop gros) → undefined, comme le `patch` GitHub.
-      patch: d.diff || undefined,
-      previous_filename: d.renamed_file ? d.old_path : undefined,
-    };
-  });
+  return diffs.map(toPullRequestFile);
+}
+
+/**
+ * Diff CUMULÉ d'une branche de travail contre sa base — le miroir du compare
+ * GitHub (`pr.ts`), pour la vue diff d'une session SANS MR. `from...to` diffe
+ * depuis le merge base (défaut `straight=false` de l'API), comme une MR.
+ * L'URL web est construite à la main : l'API compare ne la renvoie pas.
+ * Lève GitlabApiError(404) si la branche n'a pas (encore) été poussée.
+ */
+export async function compareBranches(opts: {
+  token: string;
+  repoFullName: string;
+  base: string;
+  head: string;
+}): Promise<{ files: PullRequestFile[]; url: string | null }> {
+  const compare = await glJson<{ diffs?: RawDiff[] }>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/compare` +
+      `?from=${encodeURIComponent(opts.base)}&to=${encodeURIComponent(opts.head)}`,
+    opts.token,
+  );
+  return {
+    files: (compare.diffs ?? []).map(toPullRequestFile),
+    url:
+      `${GITLAB_HOST}/${opts.repoFullName}/-/compare/` +
+      `${encodeURIComponent(opts.base)}...${encodeURIComponent(opts.head)}`,
+  };
+}
+
+/**
+ * Merge base de deux BRANCHES — le pendant sans MR de `getMergeBaseSha` : la base
+ * du dépliage de contexte de la vue diff d'une session qui n'a pas encore de MR.
+ * GitLab l'expose directement (endpoint repository/merge_base).
+ */
+export async function getBranchesMergeBaseSha(opts: {
+  token: string;
+  repoFullName: string;
+  base: string;
+  head: string;
+}): Promise<string> {
+  const res = await glJson<{ id?: string }>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/merge_base` +
+      `?refs[]=${encodeURIComponent(opts.base)}&refs[]=${encodeURIComponent(opts.head)}`,
+    opts.token,
+  );
+  if (!res.id) throw new GitlabApiError("No merge base for these branches", 502);
+  return res.id;
 }
 
 /** Même plafond que `pr.ts` : 5 pages de 100 suffisent à un picker de branche. */

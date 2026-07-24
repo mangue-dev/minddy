@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner, toast } from "mangue-ui";
@@ -19,6 +18,7 @@ import {
   type AgentRunSummary,
 } from "@/lib/agent-api";
 import {
+  agentRunDiffQueryKey,
   agentRunQueryKey,
   allAgentSessionsQueryKey,
   issueAgentRunsQueryKey,
@@ -34,6 +34,7 @@ import { BranchCombobox } from "./branch-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 import { AgentChangesBar } from "./agent-changes-bar";
+import { AgentDiffSheet } from "./agent-diff-sheet";
 
 /** Codes d'erreur bruts des routes agent (lancement ET reprise) → clés i18n Agent. */
 const AGENT_ERROR_KEYS: Record<string, string> = {
@@ -132,7 +133,6 @@ export function AgentConversation({
 }) {
   const t = useTranslations("Agent");
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
   const agentErrorMessage = (err: unknown): string => {
@@ -178,6 +178,9 @@ export function AgentConversation({
   // Demande « créer la PR » envoyée : désactive le bouton le temps que l'agent
   // reparte (working) ou que la PR apparaisse. Remise à zéro par l'effet plus bas.
   const [requestingPr, setRequestingPr] = useState(false);
+  // Vue diff de la session (Sheet par-dessus la conversation) : ouverte en
+  // cliquant un fichier des blocs « fichiers changés », PR ou pas.
+  const [diffOpen, setDiffOpen] = useState(false);
   // L'utilisateur a explicitement choisi une session ou ouvert le composer : les
   // props ne reprennent plus la main. Sans ce garde, un changement d'`initialRunId`
   // (le représentant de l'issue bouge — ex. un coéquipier lance une run, le poll la
@@ -249,11 +252,10 @@ export function AgentConversation({
   // PR n'existe encore : la barre de changements montre alors le bouton (si du travail
   // a été poussé). Sinon l'en-tête porte déjà « ouvrir la PR ».
   const canCreatePr = steerable && liveRun?.pr_number == null;
-  // Une PR existe → les fichiers des blocs de diff mènent à sa vue diff in-app.
-  const openPrFile =
-    liveRun && liveRun.pr_number != null
-      ? () => router.push(`/pull-requests?run=${liveRun.id}`)
-      : undefined;
+  // Les fichiers des blocs « fichiers changés » ouvrent la vue diff de la session
+  // DANS la conversation (note scratchpad : voir le diff pendant que l'agent
+  // modifie, sans attendre la PR) — le Sheet montre le travail poussé, PR ou pas.
+  const openDiff = liveRun ? () => setDiffOpen(true) : undefined;
 
   // Changer de run vide les bulles optimistes : elles appartiennent à la
   // conversation qu'on quitte, pas à celle qu'on ouvre. `launchText` part avec :
@@ -262,6 +264,8 @@ export function AgentConversation({
     setPendingMessages([]);
     setLaunchText(null);
     setRequestingPr(false);
+    // La vue diff appartient à la session qu'on quitte.
+    setDiffOpen(false);
   }, [liveRun?.id]);
 
   // La demande de PR a « pris » dès que l'agent repart (working) ou que la PR existe :
@@ -274,12 +278,14 @@ export function AgentConversation({
   // avant de passer `completed` : le polling à 2 s s'arrête dès que le statut n'est
   // plus « travaille » et peut donc les manquer. On refetch une fois au passage
   // travail → repos pour que le bloc de fichiers settled et le bouton PR arrivent sans
-  // attendre un remontage.
+  // attendre un remontage. Même raison pour le diff de la session : le push final du
+  // tour arrive à cet instant, une vue diff ouverte doit le refléter sans re-poll.
   const wasWorkingRef = useRef(working);
   useEffect(() => {
     const runId = liveRun?.id;
     if (wasWorkingRef.current && !working && runId) {
       void queryClient.invalidateQueries({ queryKey: ["agent-run-events", runId] });
+      void queryClient.invalidateQueries({ queryKey: agentRunDiffQueryKey(runId) });
     }
     wasWorkingRef.current = working;
   }, [working, liveRun?.id, queryClient]);
@@ -486,7 +492,7 @@ export function AgentConversation({
             status={liveRun.status}
             prompt={liveRun.prompt}
             pendingUserMessages={pendingMessages}
-            onOpenFile={openPrFile}
+            onOpenFile={openDiff}
             className="h-full py-4"
           />
         ) : launchText ? (
@@ -540,6 +546,7 @@ export function AgentConversation({
               canCreatePr={canCreatePr}
               requestingPr={requestingPr}
               onCreatePr={() => void createPr()}
+              onOpenFile={openDiff}
             />
           ) : null}
           {liveRun ? (
@@ -657,6 +664,20 @@ export function AgentConversation({
           </div>
         </div>
       )}
+
+      {/* Vue diff de la session : Sheet par-dessus la conversation, alimentée par
+          le diff vivant du run (PR ou compare de branche). Montée dès qu'une
+          session est ouverte — la query ne part qu'à l'ouverture. */}
+      {liveRun ? (
+        <AgentDiffSheet
+          runId={liveRun.id}
+          open={diffOpen}
+          onOpenChange={setDiffOpen}
+          working={working}
+          baseBranch={liveRun.base_branch}
+          branchName={liveRun.branch_name}
+        />
+      ) : null}
     </div>
   );
 }

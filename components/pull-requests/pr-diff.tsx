@@ -218,6 +218,7 @@ function PrDiffFile({
   runId,
   prUrl,
   provider,
+  readOnly,
   collapsed,
   onToggle,
   reviewComments,
@@ -229,6 +230,8 @@ function PrDiffFile({
   runId: string;
   prUrl?: string | null;
   provider?: RepoProviderId;
+  /** Lecture seule : pas de bouton « + » de commentaire dans la gouttière. */
+  readOnly?: boolean;
   collapsed: boolean;
   onToggle: () => void;
   /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
@@ -403,6 +406,8 @@ function PrDiffFile({
 
   const renderGutter = useCallback(
     ({ change, side, inHoverState, renderDefault }: GutterOptions) => {
+      // Lecture seule (vue diff sans PR) : rien où poster → gouttière nue.
+      if (readOnly) return renderDefault();
       const anchor = gutterAnchor(change, side);
       const key = getChangeKey(change);
       // Pas d'ancre de ce côté, ou ligne hors des hunks d'origine → gouttière nue.
@@ -419,7 +424,7 @@ function PrDiffFile({
         </>
       );
     },
-    [commentableKeys],
+    [commentableKeys, readOnly],
   );
 
   const renderHunks = (rendered: HunkData[]): ReactElement[] => {
@@ -551,16 +556,20 @@ export function PrDiff({
   runId,
   prUrl,
   provider,
+  readOnly = false,
   reviewComments = NO_COMMENTS,
   onCommentPosted = noop,
   className,
 }: {
   files: PullRequestFile[];
-  /** Run porteur de la PR — sert à charger la version base d'un fichier au dépliage. */
+  /** Run porteur du diff — sert à charger la version base d'un fichier au dépliage. */
   runId: string;
   prUrl?: string | null;
   /** Provider du dépôt (vocabulaire des liens « Voir sur … ») — défaut GitHub. */
   provider?: RepoProviderId;
+  /** Lecture seule : pas de commentaires de review (vue diff sans PR — la
+      conversation de l'agent ; la review vit sur la page Pull requests). */
+  readOnly?: boolean;
   /** Commentaires de review de la PR, tous fichiers confondus. */
   reviewComments?: PullRequestReviewComment[];
   /** Rafraîchit les commentaires après un envoi réussi. */
@@ -649,6 +658,7 @@ export function PrDiff({
             runId={runId}
             prUrl={prUrl}
             provider={provider}
+            readOnly={readOnly}
             collapsed={collapsed.has(f.filename)}
             onToggle={() => toggle(f.filename)}
             reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}

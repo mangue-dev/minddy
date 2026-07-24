@@ -324,6 +324,20 @@ export async function fetchAgentRunPrApi(
 }
 
 /**
+ * Diff VIVANT d'un run — la vue diff DANS la conversation, sans attendre la PR :
+ * les fichiers/patches de la PR quand elle existe, sinon le compare
+ * base...branche de travail (le travail POUSSÉ, rafraîchi à chaque fin de tour).
+ * `url` : la PR ou la page compare du provider (liens « voir sur … »).
+ */
+export async function fetchAgentRunDiffApi(runId: string): Promise<{
+  files: PullRequestFile[];
+  provider?: RepoProviderId;
+  url: string | null;
+}> {
+  return parseJson(await fetch(`/api/agent-runs/${runId}/diff`));
+}
+
+/**
  * Version base d'un fichier de la PR (texte brut au merge base) — la source du
  * dépliage de contexte dans la vue diff. `path` = chemin côté base.
  */

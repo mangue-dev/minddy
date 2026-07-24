@@ -61,6 +61,24 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestFile[]>;
+  /** Diff CUMULÉ de la branche de travail contre sa base — la vue diff d'une
+      session SANS PR (mêmes fichiers/patches que listPullRequestFiles, depuis le
+      merge base). 404 provider si la branche n'a pas (encore) été poussée.
+      `url` : la page compare web du provider (liens « voir sur … »). */
+  compareBranches(opts: {
+    token: string;
+    repoFullName: string;
+    base: string;
+    head: string;
+  }): Promise<{ files: PullRequestFile[]; url: string | null }>;
+  /** Merge base de deux BRANCHES — le pendant sans PR de getMergeBaseSha, base
+      du dépliage de contexte de la vue diff d'une session sans PR. */
+  getBranchesMergeBaseSha(opts: {
+    token: string;
+    repoFullName: string;
+    base: string;
+    head: string;
+  }): Promise<string>;
   /** Base du diff servi : merge base VIVANT (GitHub, diff recalculé à la volée)
       ou `diff_refs.base_sha` PERSISTÉ (GitLab, diff figé au dernier push). */
   getMergeBaseSha(opts: {
@@ -133,6 +151,10 @@ const githubForge: Forge = {
   ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
   listPullRequestFiles: github.listPullRequestFiles,
+  compareBranches: github.compareBranches,
+  // Le compare GitHub est déjà branche-à-branche : la même fonction sert les
+  // deux surfaces (le `number` de l'interface n'y est pas utilisé).
+  getBranchesMergeBaseSha: github.getMergeBaseSha,
   getMergeBaseSha: github.getMergeBaseSha,
   getFileAtRef: github.getFileAtRef,
   mergePullRequest: github.mergePullRequest,
@@ -163,6 +185,8 @@ const gitlabForge: Forge = {
   ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
   listPullRequestFiles: gitlab.listMergeRequestChanges,
+  compareBranches: gitlab.compareBranches,
+  getBranchesMergeBaseSha: gitlab.getBranchesMergeBaseSha,
   getMergeBaseSha: gitlab.getMergeBaseSha,
   getFileAtRef: gitlab.getFileAtRef,
   mergePullRequest: gitlab.mergeMergeRequest,

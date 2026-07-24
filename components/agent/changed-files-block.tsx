@@ -15,8 +15,8 @@ import { changeTotals } from "@/lib/agent-changed-files";
  *  • dans le fil, SETTLED sous la réponse d'un tour ;
  *  • au-dessus du composer, LIVE pendant le travail, ou au repos avec le bouton
  *    « créer une pull request » passé en `action`.
- * `onOpenFile` rend les lignes cliquables (vers la vue diff de la PR) — fourni
- * seulement quand une PR existe.
+ * `onOpenFile` rend les lignes cliquables (vers la vue diff de la session, dans
+ * la conversation — PR ou pas).
  */
 
 function FileRow({
