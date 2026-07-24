@@ -12,12 +12,10 @@
    cascade (they come after the @import). The whole library recolors from
    --primary, and your own `bg-primary` / `text-foreground` utilities use the
    same variables. Change or delete the block below to make it your own. */
-:root {
-  --primary: #3098D0;
-}
-.dark {
-  --primary: #3098D0;
-}
+:root { --primary: oklch(0.21 0.012 265); }                          /* encre, texte blanc dessus */
+.dark { --primary: oklch(0.97 0.004 265); --primary-foreground: oklch(0.18 0.01 265); }
+
+
 
 /* ── Vue diff des Pull Requests (MIN-66) ──────────────────────────────────────
    react-diff-view expose des variables --diff-* ; ses défauts sont des pastels

@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { GrainGradient } from "@paper-design/shaders-react";
 import { useTheme } from "mangue-ui";
+import { useShaderPalette } from "@/lib/use-shader-palette";
 
 /**
  * Signature visuelle du hero (MIN-73) : le même shader « grain gradient » que le
- * panneau de connexion, en beaucoup plus discret — c'est un fond, pas un sujet.
+ * panneau de connexion — mêmes couleurs, dérivées du token `--primary` (cf.
+ * useShaderPalette) — en beaucoup plus discret : c'est un fond, pas un sujet.
  *
  * Réglages volontairement calmes (intensité et opacité basses, grande échelle) :
  * le texte du hero passe par-dessus et doit rester le point de contraste le plus
@@ -23,6 +25,7 @@ import { useTheme } from "mangue-ui";
  */
 export function HeroShader() {
   const { resolvedTheme } = useTheme();
+  const colors = useShaderPalette();
   const [enabled, setEnabled] = useState(false);
   const [reduced, setReduced] = useState(false);
 
@@ -57,7 +60,7 @@ export function HeroShader() {
       {enabled && (
         <GrainGradient
           style={{ width: "100%", height: "100%" }}
-          colors={["#b8e6ff", "#2f98d0"]}
+          colors={colors}
           colorBack={isDark ? "#0d0e10" : "#f3f4f6"}
           softness={0.72}
           intensity={0.16}

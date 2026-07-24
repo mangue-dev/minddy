@@ -3,16 +3,18 @@
 import { useEffect, useState } from "react";
 import { GrainGradient } from "@paper-design/shaders-react";
 import { useTheme } from "mangue-ui";
+import { useShaderPalette } from "@/lib/use-shader-palette";
 
 /**
  * Fond animé du panneau d'auth : le shader « grain gradient » de Paper Shaders,
- * réglé aux bleus minddy. Mêmes réglages dans les deux thèmes, seul le fond
- * change : blanc en clair, noir en sombre. Le WebGL n'est monté que sur ≥ lg
- * (le panneau est masqué en dessous) et l'animation se fige si l'utilisateur
- * préfère moins de mouvement.
+ * teinté par le token `--primary` (cf. useShaderPalette). Mêmes réglages dans
+ * les deux thèmes, seul le fond change : blanc en clair, noir en sombre. Le
+ * WebGL n'est monté que sur ≥ lg (le panneau est masqué en dessous) et
+ * l'animation se fige si l'utilisateur préfère moins de mouvement.
  */
 export function AuthShader() {
   const { resolvedTheme } = useTheme();
+  const colors = useShaderPalette();
   const [wide, setWide] = useState(false);
   const [reduced, setReduced] = useState(false);
 
@@ -45,7 +47,7 @@ export function AuthShader() {
       {wide && (
         <GrainGradient
           style={{ width: "100%", height: "100%" }}
-          colors={["#b8e6ff", "#2f98d0"]}
+          colors={colors}
           colorBack={colorBack}
           softness={0.64}
           intensity={0.2}
