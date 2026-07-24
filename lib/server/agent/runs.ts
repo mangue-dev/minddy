@@ -186,6 +186,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       scope: input.issueId ? "issue" : "notebook",
       has_base_branch: !!input.baseBranch,
       resumes_pr: input.prNumber != null,
+      project_id: input.projectId,
     },
     groups: { project: input.projectId },
   });
@@ -427,6 +428,7 @@ export async function stampRun(
         duration_bucket: run.created_at
           ? durationBucket(Date.now() - Date.parse(run.created_at))
           : "unknown",
+        project_id: run.project_id,
       },
       groups: { project: run.project_id },
     });

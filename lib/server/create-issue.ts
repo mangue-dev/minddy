@@ -373,6 +373,9 @@ export async function createIssueForProject({
       has_parent: data.parent_id != null,
       category_count: categoryIds.length,
       attachment_count: parsedAttachments.length,
+      // Doublon volontaire du groupe : une propriété se découpe gratuitement,
+      // l'agrégation par groupe suppose l'add-on payant (voir useAnalytics).
+      project_id: projectId,
     },
     groups: { project: projectId },
   });

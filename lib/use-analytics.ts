@@ -65,6 +65,28 @@ export function useAnalytics() {
   }, [posthog]);
 
   /**
+   * Projet courant attaché en PROPRIÉTÉ à tous les événements suivants.
+   *
+   * Doublon volontaire du groupe : l'analytics de groupe est un add-on PAYANT
+   * chez PostHog, alors qu'une propriété d'événement est gratuite et se découpe
+   * avec un simple « breakdown ». Sans ça, tant qu'on ne souscrit pas, la
+   * dimension projet serait présente dans les données mais inexploitable.
+   *
+   * Le groupe reste posé en parallèle : il ne coûte rien tant que l'add-on
+   * n'est pas activé (la facturation démarre à la souscription, pas à l'envoi),
+   * et le jour où il le serait, tout est déjà en place.
+   */
+  const setProjectContext = useCallback(
+    (projectId: string | null) => {
+      onAnalyticsReady(() => {
+        if (projectId) posthog?.register({ project_id: projectId });
+        else posthog?.unregister("project_id");
+      });
+    },
+    [posthog]
+  );
+
+  /**
    * Propriétés de personne aux jalons d'activation (`first_issue_at`,
    * `mcp_connected`…). Passe par l'API native plutôt que par `track({ $set })`
    * car le sanitizer rejette les clés préfixées par `$`.
@@ -77,7 +99,15 @@ export function useAnalytics() {
   );
 
   return useMemo(
-    () => ({ track, identify, reset, group, resetGroups, setPersonProperties }),
-    [track, identify, reset, group, resetGroups, setPersonProperties]
+    () => ({
+      track,
+      identify,
+      reset,
+      group,
+      resetGroups,
+      setProjectContext,
+      setPersonProperties,
+    }),
+    [track, identify, reset, group, resetGroups, setProjectContext, setPersonProperties]
   );
 }

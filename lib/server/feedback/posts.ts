@@ -136,6 +136,7 @@ export async function createFeedbackPost(input: {
       title_length_bucket: lengthBucket(title),
       body_length_bucket: lengthBucket(body),
       via_integration: !!input.integrationId,
+      project_id: input.projectId,
     },
     groups: { project: input.projectId },
   });

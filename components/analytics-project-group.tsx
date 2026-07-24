@@ -21,16 +21,21 @@ import { projectIdFromPath } from "@/lib/project-id-from-path";
  */
 export function AnalyticsProjectGroup() {
   const pathname = usePathname();
-  const { group, resetGroups } = useAnalytics();
+  const { group, resetGroups, setProjectContext } = useAnalytics();
 
   useEffect(() => {
     const projectId = projectIdFromPath(pathname ?? "");
+    // Deux canaux volontairement : la PROPRIÉTÉ `project_id` (gratuite, sur
+    // laquelle on peut découper dès aujourd'hui) et le GROUPE PostHog (qui
+    // n'apporte ses agrégats qu'avec l'add-on payant, mais ne coûte rien tant
+    // qu'on n'y souscrit pas — la facturation démarre à la souscription).
+    setProjectContext(projectId);
     if (projectId) {
       group("project", projectId);
     } else {
       resetGroups();
     }
-  }, [pathname, group, resetGroups]);
+  }, [pathname, group, resetGroups, setProjectContext]);
 
   return null;
 }

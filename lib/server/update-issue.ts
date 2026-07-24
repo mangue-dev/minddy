@@ -393,6 +393,7 @@ export async function updateIssueFields({
       field_count: Object.keys(updates).length,
       ...(typeof updates.status === "string" ? { status: updates.status } : {}),
       ...(typeof updates.priority === "string" ? { priority: updates.priority } : {}),
+      project_id: data.project_id as string,
     },
     groups: { project: data.project_id as string },
   });
