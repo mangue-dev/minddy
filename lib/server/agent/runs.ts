@@ -620,7 +620,15 @@ export async function appendEvent(
       .limit(1)
       .maybeSingle();
     const nextSeq = ((data as { seq: number } | null)?.seq ?? -1) + 1;
-    await service.from("agent_run_events").insert({ run_id: runId, seq: nextSeq, type, payload });
+    // supabase-js ne LÈVE pas sur un insert refusé (contrainte CHECK, RLS…) — il
+    // renvoie { error }. Sans ce log, un type d'event non déclaré dans le CHECK
+    // de agent_run_events disparaît en silence total (vécu sur `question`, MIN-86).
+    const { error } = await service
+      .from("agent_run_events")
+      .insert({ run_id: runId, seq: nextSeq, type, payload });
+    if (error) {
+      console.error(`[agent-runs] appendEvent(${type}) rejected:`, error.message);
+    }
   } catch (err) {
     console.error("[agent-runs] appendEvent failed:", (err as Error).message);
   }

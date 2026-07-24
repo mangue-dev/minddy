@@ -8,6 +8,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
+import { unechoedMessages } from "@/lib/agent-pending";
 import {
   heartbeatAgentRunApi,
   interruptAgentRunApi,
@@ -266,9 +267,17 @@ export function AgentConversation({
     eventId: string;
     questions: AskUserQuestion[];
   } | null => {
-    if (!liveRun || working || !steerable || pendingMessages.length > 0)
-      return null;
+    if (!liveRun || working || !steerable) return null;
     const ordered = [...liveEvents].sort((a, b) => a.seq - b.seq);
+    // Réponse déjà en vol ? `pendingMessages` n'est JAMAIS purgée en cas de succès
+    // (cf. lib/agent-pending.ts — la soustraction multi-ensemble en dépend) : on ne
+    // compte que les envois SANS écho serveur, sinon le premier steering de la
+    // session supprimerait la carte jusqu'au rechargement de la page.
+    const echoed = ordered
+      .filter((e) => e.type === "user_message")
+      .map((e) => (typeof e.payload?.text === "string" ? e.payload.text : ""));
+    if (liveRun.prompt?.trim()) echoed.push(liveRun.prompt);
+    if (unechoedMessages(pendingMessages, echoed).length > 0) return null;
     for (let i = ordered.length - 1; i >= 0; i--) {
       const e = ordered[i];
       if (e.type === "user_message" || e.type === "summary") return null;
