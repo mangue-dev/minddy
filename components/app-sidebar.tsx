@@ -163,18 +163,21 @@ function SidebarRow({
     );
   }
 
-  if (collapsed) {
+  if (collapsed || item.shortcut) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>{row}</TooltipTrigger>
-        <TooltipContent side="right" className="flex items-center gap-2">
+        <TooltipContent
+          side={collapsed ? "right" : "bottom"}
+          className="flex items-center gap-2"
+        >
           <span>{item.tooltip ?? item.label}</span>
           {item.shortcut && (
-            <KbdSequence
-              keys={[[CHORD_PREFIX.toUpperCase()], [item.shortcut]]}
-              size="sm"
-              separator={tk("then")}
-            />
+            <>
+              <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
+              <span>{tk("then")}</span>
+              <Kbd size="sm">{item.shortcut}</Kbd>
+            </>
           )}
         </TooltipContent>
       </Tooltip>
