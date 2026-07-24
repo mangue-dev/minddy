@@ -59,6 +59,46 @@ const SLOTS = {
     ratio: "4/3",
     src: null,
   },
+  numoPanel: {
+    id: "numoPanel",
+    route: "n'importe quelle page de l'app, panneau Numo ouvert",
+    shot:
+      "Le panneau Numo ouvert sur la droite : une instruction de l'utilisateur, la réponse de Numo, et deux ou trois appels d'outils dépliés (recherche de tickets, mise à jour groupée). Le badge de contexte visible en haut (« Ticket en contexte »).",
+    ratio: "4/3",
+    src: null,
+  },
+  voiceDictate: {
+    id: "voiceDictate",
+    route: "/projects/<id>/issues/<identifier>, dictée en cours",
+    shot:
+      "Un ticket ouvert pendant un enregistrement : bouton micro actif, popover de dictée (chronomètre + forme d'onde) et les champs du ticket — priorité, échéance, assigné — visibles autour. On doit comprendre que la voix remplit ces champs-là, pas seulement la description.",
+    ratio: "16/10",
+    src: null,
+  },
+  scratchpad: {
+    id: "scratchpad",
+    route: "n'importe quelle page de l'app, carnet ouvert (G puis N)",
+    shot:
+      "La modale du carnet de tâches : deux sections « ## », des tâches cochées et d'autres à faire, et une action de section visible au survol (« Copier la section en prompt » ou « Lancer un agent »).",
+    ratio: "4/3",
+    src: null,
+  },
+  feedbackBoard: {
+    id: "feedbackBoard",
+    route: "/f/<token> — board public, visiteur déconnecté",
+    shot:
+      "Le board public trié par votes : une dizaine de retours avec leur compteur, des badges de statut (Prévu, En cours, Livré), une réponse d'équipe dépliée sur l'un d'eux, et les catégories en colonne latérale.",
+    ratio: "16/10",
+    src: null,
+  },
+  feedbackInbox: {
+    id: "feedbackInbox",
+    route: "/projects/<id>/feedback — vue interne",
+    shot:
+      "Un retour vu côté équipe : le texte soumis, ses votes, la bannière de suggestion de fusion par l'IA, et les actions « Promouvoir en ticket » et « Réponse d'équipe ».",
+    ratio: "16/10",
+    src: null,
+  },
   featureCycle: {
     id: "featureCycle",
     route: "/home (bloc cycle) ou la page cycle",

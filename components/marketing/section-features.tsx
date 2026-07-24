@@ -4,8 +4,6 @@ import {
   Command,
   Inbox,
   LayoutList,
-  MessagesSquare,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
@@ -14,6 +12,10 @@ import { ScreenshotSlot } from "./screenshot-slot";
  * « Ce qu'il y a dedans » (MIN-73). Deux captures pour les écrans qu'on ne
  * devine pas (le cycle, la palette), puis une grille sobre : une ligne par
  * fonctionnalité, aucune promesse qui n'existe pas dans l'app.
+ *
+ * Numo, la dictée, le carnet et le board de feedback ont leur propre section
+ * plus haut : les répéter ici les ferait passer pour des détails de fin de
+ * page. Ne restent que les écrans du tracker lui-même.
  */
 
 const FEATURES: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
@@ -21,8 +23,6 @@ const FEATURES: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
   { key: "cycles", icon: CalendarRange },
   { key: "triage", icon: Inbox },
   { key: "palette", icon: Command },
-  { key: "feedback", icon: MessagesSquare },
-  { key: "numo", icon: Sparkles },
 ];
 
 export async function SectionFeatures() {
@@ -55,7 +55,7 @@ export async function SectionFeatures() {
           </figure>
         </div>
 
-        <ul className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
             return (

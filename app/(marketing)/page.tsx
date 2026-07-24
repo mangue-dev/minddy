@@ -6,6 +6,10 @@ import { HeroShader } from "@/components/marketing/hero-shader";
 import { Hero } from "@/components/marketing/hero";
 import { SectionWorkflow } from "@/components/marketing/section-workflow";
 import { SectionAgents } from "@/components/marketing/section-agents";
+import { SectionNumo } from "@/components/marketing/section-numo";
+import { SectionVoice } from "@/components/marketing/section-voice";
+import { SectionScratchpad } from "@/components/marketing/section-scratchpad";
+import { SectionFeedback } from "@/components/marketing/section-feedback";
 import { SectionFeatures } from "@/components/marketing/section-features";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
 import { SectionFaq } from "@/components/marketing/section-faq";
@@ -49,6 +53,13 @@ export default async function LandingPage() {
       <Hero />
       <SectionWorkflow />
       <SectionAgents />
+      {/* Les quatre sections que la grille « Ce qu'il y a dedans » expédiait en
+          une carte chacune : ce qu'on pilote depuis minddy (Numo, la voix, le
+          carnet), puis ce qui y entre depuis l'extérieur (le feedback). */}
+      <SectionNumo />
+      <SectionVoice />
+      <SectionScratchpad />
+      <SectionFeedback />
       <SectionFeatures />
       <SectionPricingTeaser />
       <SectionFaq />

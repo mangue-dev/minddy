@@ -35,8 +35,12 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
     titleKey: "footerColProduct",
     links: [
       { href: "/#workflow", labelKey: "navHowItWorks" },
-      { href: "/#features", labelKey: "navFeatures" },
       { href: "/#agents", labelKey: "footerAgents" },
+      { href: "/#numo", labelKey: "footerNumo" },
+      { href: "/#voice", labelKey: "footerVoice" },
+      { href: "/#scratchpad", labelKey: "footerScratchpad" },
+      { href: "/#feedback", labelKey: "footerFeedback" },
+      { href: "/#features", labelKey: "navFeatures" },
       { href: "/pricing", labelKey: "navPricing" },
     ],
   },
