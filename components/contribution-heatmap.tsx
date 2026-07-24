@@ -35,7 +35,6 @@ function toWeeks(days: HeatmapDay[]): HeatmapDay[][] {
 
 export function ContributionHeatmap({ heatmap }: { heatmap: StatsHeatmap }) {
   const t = useTranslations("Stats");
-  const tIssue = useTranslations("Issue");
   const format = useFormatter();
 
   const weeks = useMemo(() => toWeeks(heatmap.days), [heatmap.days]);
@@ -72,9 +71,13 @@ export function ContributionHeatmap({ heatmap }: { heatmap: StatsHeatmap }) {
         <div className="grid grid-flow-col grid-rows-7 gap-1">
           {heatmap.days.map((day) => {
             const date = parseYmd(day.date);
-            const label = `${day.count} ${
-              day.count === 1 ? tIssue("entity") : tIssue("entityPlural")
-            } · ${format.dateTime(date, {
+            // « 3 tickets · 2 tâches · 12 mars » — on n'affiche que ce qui
+            // existe ce jour-là, pour ne pas alourdir la moitié des cases.
+            const parts: string[] = [];
+            if (day.issues > 0) parts.push(t("dayIssues", { count: day.issues }));
+            if (day.tasks > 0) parts.push(t("dayTasks", { count: day.tasks }));
+            if (parts.length === 0) parts.push(t("dayNone"));
+            const label = `${parts.join(" · ")} · ${format.dateTime(date, {
               day: "numeric",
               month: "short",
               year: "numeric",

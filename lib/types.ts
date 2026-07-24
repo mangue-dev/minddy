@@ -100,6 +100,9 @@ export interface StatsTotals {
   created: number;
   completed: number;
   projects: number;
+  /** Tâches cochées dans le carnet, cumulées : le carnet étant une note libre
+   *  (on y coche puis on supprime), ce total vient du ledger, pas de la note. */
+  tasksCompleted: number;
 }
 
 export interface StatProjectBucket {
@@ -113,7 +116,12 @@ export interface StatProjectBucket {
 export interface HeatmapDay {
   /** Jour local (fuseau du user), format YYYY-MM-DD. */
   date: string;
+  /** Tout ce qui a été terminé ce jour-là = `issues` + `tasks`. */
   count: number;
+  /** Tickets passés en Terminé ce jour-là. */
+  issues: number;
+  /** Tâches cochées dans le carnet ce jour-là. */
+  tasks: number;
 }
 
 export interface StatsHeatmap {
@@ -132,6 +140,19 @@ export interface StatsWorkload {
   /** Issues ouvertes qui me sont assignées (live). */
   assignedOpen: number;
   inProgress: number;
+}
+
+/** Élan récent : ce qui a été terminé sur 7 jours glissants, et la même mesure
+ *  sur les 7 jours d'avant pour donner la tendance. */
+export interface StatsWeek {
+  /** Tickets terminés + tâches cochées sur les 7 derniers jours (aujourd'hui inclus). */
+  completed: number;
+  /** Part des tickets dans `completed`. */
+  issues: number;
+  /** Part des tâches du carnet dans `completed`. */
+  tasks: number;
+  /** Même total sur les 7 jours précédents — la base de comparaison. */
+  previous: number;
 }
 
 /** Temps moyen de complétion pour un niveau d'effort (MIN-58). */
@@ -164,6 +185,7 @@ export interface UserStats {
   perProject: StatProjectBucket[];
   heatmap: StatsHeatmap;
   workload: StatsWorkload;
+  week: StatsWeek;
   cycles: StatsCycles;
 }
 

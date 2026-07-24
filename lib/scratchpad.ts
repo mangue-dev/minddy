@@ -6,7 +6,7 @@
 // sections, and appending new tasks (used by the WYSIWYG editor and the MCP).
 
 import { diff3Merge } from "node-diff3";
-import { parsePlan, type PlanTaskState } from "@/lib/plan";
+import { diffPlanTasks, parsePlan, type PlanTaskState } from "@/lib/plan";
 
 /** Hard cap on the stored scratchpad markdown (aligned with plans). */
 export const MAX_SCRATCHPAD_LENGTH = 65_536;
@@ -289,4 +289,28 @@ export function removeCompletedTasks(content: string): {
 
   const kept = lines.filter((_, i) => !toRemove.has(i));
   return { content: kept.join("\n"), removed: completedLines.size };
+}
+
+/**
+ * Labels of the tasks that went from unchecked to CHECKED between two versions
+ * of the note — what the stats ledger records (lib/server/scratchpad.ts).
+ *
+ * The note keeps no history and is deliberately volatile: tasks are added,
+ * ticked, then cleared away. So a tick is only ever visible in the transition
+ * between two versions, and it has to be told apart from the churn around it:
+ *   - a task added ALREADY checked (a pasted list, an agent writing '- [x]')
+ *     is not a tick — nobody completed anything;
+ *   - deleting a checked task is not an un-tick, and re-adding it later is not
+ *     a second one;
+ *   - moving a task across sections leaves its state alone.
+ * Pairing is by label (the plan module's rule), so renaming a task while
+ * ticking it reads as a delete + an already-checked add, and is not counted.
+ */
+export function tasksCheckedOff(
+  before: string | null | undefined,
+  after: string | null | undefined
+): string[] {
+  return diffPlanTasks(before, after)
+    .filter((t) => t.to === "completed")
+    .map((t) => t.text);
 }

@@ -4,19 +4,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Une ligne du ledger de statistiques (`stat_events`). Append-only : on écrit
- * un event à la création d'une issue et un à chaque passage en `done`. Les
- * champs `project_*` / `issue_*` sont des SNAPSHOTS — ils restent lisibles même
- * après suppression de l'issue ou du projet (les FKs sont `on delete set null`).
+ * un event à la création d'une issue, un à chaque passage en `done`, et un à
+ * chaque tâche cochée dans le carnet de tâches. Les champs `project_*` /
+ * `issue_*` / `task_text` sont des SNAPSHOTS — ils restent lisibles même après
+ * suppression de l'issue, du projet (les FKs sont `on delete set null`) ou de la
+ * tâche (le carnet est une note libre, sans historique).
  */
 export interface StatEventRow {
   user_id: string;
-  kind: "issue_created" | "issue_completed";
+  kind: "issue_created" | "issue_completed" | "scratchpad_task_completed";
   occurred_at: string;
   project_id: string | null;
   project_name: string | null;
   issue_id: string | null;
   issue_number: number | null;
   issue_title: string | null;
+  /** Libellé de la tâche cochée (kind `scratchpad_task_completed`). */
+  task_text?: string | null;
 }
 
 /**

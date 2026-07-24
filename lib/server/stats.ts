@@ -7,13 +7,19 @@ import type {
   HeatmapDay,
   StatsCycleEffort,
   StatsCycles,
+  StatsWeek,
   StatsWorkload,
   UserStats,
 } from "@/lib/types";
 
 /** Forme brute renvoyée par la fonction SQL get_user_stats. */
 interface RawStats {
-  totals: { created: number; completed: number; projects: number };
+  totals: {
+    created: number;
+    completed: number;
+    projects: number;
+    tasks_completed: number;
+  };
   per_project: Array<{
     name: string | null;
     color: string | null;
@@ -21,7 +27,7 @@ interface RawStats {
     created: number;
     completed: number;
   }>;
-  days: Array<{ date: string; count: number }>;
+  days: Array<{ date: string; count: number; issues: number; tasks: number }>;
 }
 
 /** Forme brute renvoyée par la fonction SQL get_cycle_stats (MIN-58). */
@@ -98,14 +104,38 @@ function heatmapWindow(tz: string): { start: string; end: string; since: string 
 
 /** Densifie la série sparse du RPC en un point par jour de `start` à `end`. */
 function densify(start: string, end: string, sparse: RawStats["days"]): HeatmapDay[] {
-  const counts = new Map(sparse.map((d) => [d.date, d.count]));
+  const byDate = new Map(sparse.map((d) => [d.date, d]));
   const days: HeatmapDay[] = [];
   const endDate = new Date(`${end}T00:00:00Z`);
   for (let t = new Date(`${start}T00:00:00Z`).getTime(); t <= endDate.getTime(); t += DAY_MS) {
     const date = ymd(new Date(t));
-    days.push({ date, count: counts.get(date) ?? 0 });
+    const hit = byDate.get(date);
+    days.push({
+      date,
+      count: hit?.count ?? 0,
+      issues: hit?.issues ?? 0,
+      tasks: hit?.tasks ?? 0,
+    });
   }
   return days;
+}
+
+/**
+ * Élan récent, lu dans la série dense (qui se termine aujourd'hui, dans le
+ * fuseau de l'utilisateur) : les 7 derniers jours, et les 7 d'avant pour la
+ * tendance. Pas de requête supplémentaire — la heatmap couvre déjà l'année.
+ */
+function weekTotals(days: HeatmapDay[]): StatsWeek {
+  const sum = (slice: HeatmapDay[], pick: (d: HeatmapDay) => number) =>
+    slice.reduce((total, d) => total + pick(d), 0);
+  const last = days.slice(-7);
+  const previous = days.slice(-14, -7);
+  return {
+    completed: sum(last, (d) => d.count),
+    issues: sum(last, (d) => d.issues),
+    tasks: sum(last, (d) => d.tasks),
+    previous: sum(previous, (d) => d.count),
+  };
 }
 
 /**
@@ -158,6 +188,7 @@ export async function getUserStats(
       created: raw.totals?.created ?? 0,
       completed: raw.totals?.completed ?? 0,
       projects: raw.totals?.projects ?? 0,
+      tasksCompleted: raw.totals?.tasks_completed ?? 0,
     },
     perProject: (raw.per_project ?? []).map((p) => ({
       name: p.name,
@@ -168,6 +199,7 @@ export async function getUserStats(
     })),
     heatmap: { tz, start, end, max, days },
     workload,
+    week: weekTotals(days),
     cycles,
   };
 }

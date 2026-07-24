@@ -11,6 +11,8 @@ import {
   Flame,
   Layers,
   CalendarClock,
+  CalendarRange,
+  ListChecks,
   Timer,
   Info,
   type LucideIcon,
@@ -269,7 +271,7 @@ export default function StatisticsPage() {
           {t("title")}
         </h1>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 7 }).map((_, i) => (
             <Skeleton key={i} className="h-[104px] rounded-xl" />
           ))}
         </div>
@@ -278,7 +280,20 @@ export default function StatisticsPage() {
     );
   }
 
-  const isEmpty = stats.totals.created === 0 && stats.totals.completed === 0;
+  const isEmpty =
+    stats.totals.created === 0 &&
+    stats.totals.completed === 0 &&
+    stats.totals.tasksCompleted === 0;
+
+  // Tendance de la semaine : le signe porte le sens, pas de couleur d'alerte —
+  // une semaine calme n'est pas une erreur.
+  const weekDelta = stats.week.completed - stats.week.previous;
+  const weekTrend =
+    weekDelta === 0
+      ? t("weekTrendFlat")
+      : weekDelta > 0
+        ? t("weekTrendUp", { value: weekDelta })
+        : t("weekTrendDown", { value: -weekDelta });
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -286,7 +301,7 @@ export default function StatisticsPage() {
         {t("title")}
       </h1>
 
-      {/* Cartes de synthèse */}
+      {/* Cartes de synthèse : ce qui s'est accumulé, puis le moment présent. */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon={FilePlus2}
@@ -301,10 +316,17 @@ export default function StatisticsPage() {
           info={t("completedInfo")}
         />
         <StatCard
-          icon={FolderKanban}
-          value={stats.totals.projects}
-          label={t("projects")}
-          info={t("projectsInfo")}
+          icon={ListChecks}
+          value={stats.totals.tasksCompleted}
+          label={t("tasksCompleted")}
+          info={t("tasksCompletedInfo")}
+        />
+        <StatCard
+          icon={CalendarRange}
+          value={stats.week.completed}
+          label={t("week")}
+          hint={weekTrend}
+          info={t("weekInfo")}
         />
         <StatCard
           icon={CircleDot}
@@ -319,6 +341,12 @@ export default function StatisticsPage() {
           label={t("streak")}
           hint={t("streakRecord", { count: streaks.longest })}
           info={t("streakInfo")}
+        />
+        <StatCard
+          icon={FolderKanban}
+          value={stats.totals.projects}
+          label={t("projects")}
+          info={t("projectsInfo")}
         />
       </div>
 

@@ -4,6 +4,7 @@ import {
   mergeScratchpad,
   removeCompletedTasks,
   splitScratchpadSections,
+  tasksCheckedOff,
 } from "@/lib/scratchpad";
 import { parsePlan, setTaskState } from "@/lib/plan";
 
@@ -181,5 +182,72 @@ describe("mergeScratchpad", () => {
     const merged = mergeScratchpad(base, ours, theirs);
     expect(merged).toContain("a1 (mine)");
     expect(merged).not.toContain("a1 (agent)");
+  });
+});
+
+describe("tasksCheckedOff", () => {
+  it("reports a task the user just ticked", () => {
+    expect(tasksCheckedOff("- [ ] écrire la migration", "- [x] écrire la migration")).toEqual([
+      "écrire la migration",
+    ]);
+  });
+
+  it("reports a task ticked straight from in progress", () => {
+    expect(tasksCheckedOff("- [~] relire", "- [x] relire")).toEqual(["relire"]);
+  });
+
+  it("ignores a task that arrives already checked", () => {
+    // Liste collée, ou agent qui écrit '- [x]' via le MCP : personne n'a coché.
+    expect(tasksCheckedOff("- [ ] a", "- [ ] a\n- [x] importée")).toEqual([]);
+  });
+
+  it("ignores plain typing around the tasks", () => {
+    const before = "# Carnet\n\n- [x] déjà faite\n- [ ] en cours";
+    expect(tasksCheckedOff(before, `${before}\n\nune note libre`)).toEqual([]);
+  });
+
+  it("does not re-report a task that stays checked", () => {
+    expect(tasksCheckedOff("- [x] faite", "- [x] faite\n- [ ] neuve")).toEqual([]);
+  });
+
+  it("does not report deleting a checked task, nor re-adding it", () => {
+    // Le cycle de vie normal du carnet : on coche, on nettoie, on recommence.
+    expect(tasksCheckedOff("- [x] faite\n- [ ] b", "- [ ] b")).toEqual([]);
+    expect(tasksCheckedOff("- [ ] b", "- [ ] b\n- [x] faite")).toEqual([]);
+  });
+
+  it("reports an unchecked-then-rechecked task again", () => {
+    expect(tasksCheckedOff("- [x] a", "- [ ] a")).toEqual([]);
+    expect(tasksCheckedOff("- [ ] a", "- [x] a")).toEqual(["a"]);
+  });
+
+  it("survives a task moving to another section", () => {
+    const before = "# A\n\n- [ ] bouger\n\n# B\n";
+    const after = "# A\n\n# B\n\n- [x] bouger";
+    expect(tasksCheckedOff(before, after)).toEqual(["bouger"]);
+  });
+
+  it("reports each of several ticks in one save", () => {
+    expect(tasksCheckedOff("- [ ] a\n- [ ] b\n- [ ] c", "- [x] a\n- [ ] b\n- [x] c")).toEqual([
+      "a",
+      "c",
+    ]);
+  });
+
+  it("counts a checkbox once per occurrence when the label repeats", () => {
+    expect(tasksCheckedOff("- [ ] relire\n- [ ] relire", "- [x] relire\n- [ ] relire")).toEqual([
+      "relire",
+    ]);
+  });
+
+  it("ignores checkboxes inside a fenced code block", () => {
+    const before = "```md\n- [ ] exemple\n```";
+    const after = "```md\n- [x] exemple\n```";
+    expect(tasksCheckedOff(before, after)).toEqual([]);
+  });
+
+  it("handles an empty or missing note", () => {
+    expect(tasksCheckedOff("", "- [x] première")).toEqual([]);
+    expect(tasksCheckedOff(null, undefined)).toEqual([]);
   });
 });
