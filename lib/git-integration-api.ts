@@ -6,6 +6,7 @@ import type {
   GitConnection,
   ProjectGitLink,
 } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -95,6 +96,7 @@ export async function bindGitRepoApi(
 }
 
 export async function unlinkGitRepoApi(projectId: string): Promise<void> {
+  trackEvent("project_git_unlinked", { provider: "unknown" });
   await parseJson(
     await fetch(`/api/projects/${projectId}/git-link`, { method: "DELETE" }),
   );
@@ -112,6 +114,7 @@ export async function fetchGitConnectionsApi(): Promise<GitConnectionsResponse> 
 }
 
 export async function disconnectGitConnectionApi(id: string): Promise<void> {
+  trackEvent("git_connection_removed", { provider: "unknown" });
   await parseJson(
     await fetch(`/api/account/git-connections/${encodeURIComponent(id)}`, {
       method: "DELETE",

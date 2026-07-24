@@ -6,6 +6,7 @@ import { useAuth } from "./auth-context";
 import { useProjects } from "./projects-context";
 import { useGlobalBoardQuery } from "./use-global-board-query";
 import { resolveCyclePrefs } from "./cycle-prefs";
+import { useAnalytics } from "./use-analytics";
 import {
   ONBOARDING_DISMISSED_META_KEY,
   ONBOARDING_STARTED_META_KEY,
@@ -37,6 +38,7 @@ export function useOnboarding(): UseOnboardingResult {
   const { user, updateUserMetadata } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
   const { issues, loading: boardLoading } = useGlobalBoardQuery();
+  const { track, setPersonProperties } = useAnalytics();
 
   const [pendingSteps, setPendingSteps] = useState<OnboardingStepId[]>([]);
   const [pendingDismiss, setPendingDismiss] = useState(false);
@@ -92,9 +94,50 @@ export function useOnboarding(): UseOnboardingResult {
     });
   }, [loading, state.needsStartStamp, updateUserMetadata]);
 
+  /**
+   * Entonnoir d'activation (MIN-78). L'étape COURANTE vue est l'événement le
+   * plus précieux du produit : c'est lui qui dit où les nouveaux comptes
+   * décrochent. Émis une seule fois par étape et par session — sans le garde-fou,
+   * chaque rendu de la home en enverrait un.
+   */
+  const seenStepsRef = useRef<Set<OnboardingStepId>>(new Set());
+  useEffect(() => {
+    if (loading || !state.visible || !state.currentStepId) return;
+    const step = state.currentStepId;
+    if (seenStepsRef.current.has(step)) return;
+    seenStepsRef.current.add(step);
+    if (seenStepsRef.current.size === 1) {
+      track("onboarding_viewed", {
+        current_step: step,
+        completed_count: state.completedCount,
+      });
+    }
+    track("onboarding_step_viewed", {
+      step,
+      step_number: state.currentStepNumber,
+    });
+  }, [
+    loading,
+    state.visible,
+    state.currentStepId,
+    state.currentStepNumber,
+    state.completedCount,
+    track,
+  ]);
+
+  /** Onboarding bouclé : jalon de compte, pas seulement un événement. */
+  const completionSentRef = useRef(false);
+  useEffect(() => {
+    if (loading || !state.eligible || !state.allComplete || completionSentRef.current) return;
+    completionSentRef.current = true;
+    track("onboarding_completed", { steps_acknowledged: state.completedCount });
+    setPersonProperties(undefined, { onboarding_completed_at: new Date().toISOString() });
+  }, [loading, state.eligible, state.allComplete, state.completedCount, track, setPersonProperties]);
+
   const acknowledgeStep = useCallback(
     async (step: OnboardingStepId) => {
       if (!user) return;
+      track("onboarding_step_acknowledged", { step });
       setPendingSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
       try {
         await updateUserMetadata({
@@ -108,11 +151,15 @@ export function useOnboarding(): UseOnboardingResult {
         toast.error((e as Error).message);
       }
     },
-    [user, updateUserMetadata],
+    [user, updateUserMetadata, track],
   );
 
   const dismiss = useCallback(async () => {
     if (!user) return;
+    track("onboarding_dismissed", {
+      last_step: state.currentStepId ?? "none",
+      completed_count: state.completedCount,
+    });
     setPendingDismiss(true);
     try {
       await updateUserMetadata({ [ONBOARDING_DISMISSED_META_KEY]: true });
@@ -120,7 +167,7 @@ export function useOnboarding(): UseOnboardingResult {
       setPendingDismiss(false);
       toast.error((e as Error).message);
     }
-  }, [user, updateUserMetadata]);
+  }, [user, updateUserMetadata, track, state.currentStepId, state.completedCount]);
 
   return {
     ...state,

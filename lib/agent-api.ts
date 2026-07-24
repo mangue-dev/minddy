@@ -1,6 +1,8 @@
 "use client";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { trackEvent } from "./analytics";
+import { lengthBucket } from "./analytics-sanitize";
 
 /**
  * Fetchers client de l'agent de code (MIN-46) : lancer un run sur une issue et
@@ -119,6 +121,15 @@ export async function launchAgentRunApi(
   issueId: string,
   body: { prompt?: string; model?: string; baseBranch?: string },
 ): Promise<{ run: AgentRunSummary }> {
+  // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
+  trackEvent("agent_launched", {
+    model: body.model ?? "default",
+    has_branch: !!body.baseBranch,
+    provider: "unknown",
+    scope: "issue",
+    has_prompt: !!body.prompt,
+    prompt_length_bucket: lengthBucket(body.prompt),
+  });
   return parseJson(
     await fetch(`/api/issues/${issueId}/agent`, {
       method: "POST",
@@ -150,6 +161,14 @@ export async function launchNotebookAgentApi(body: {
   model?: string;
   baseBranch?: string;
 }): Promise<{ run: AgentRunSummary }> {
+  trackEvent("agent_launched", {
+    model: body.model ?? "default",
+    has_branch: !!body.baseBranch,
+    provider: "unknown",
+    scope: "notebook",
+    has_prompt: !!body.prompt,
+    prompt_length_bucket: lengthBucket(body.prompt),
+  });
   return parseJson(
     await fetch(`/api/agent-runs`, {
       method: "POST",
@@ -263,6 +282,7 @@ export async function fetchAgentRunEventsApi(
  * (L'endpoint reste /stop côté serveur.)
  */
 export async function interruptAgentRunApi(runId: string): Promise<void> {
+  trackEvent("agent_stopped", {});
   await parseJson(await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }));
 }
 
@@ -287,6 +307,7 @@ export async function steerAgentRunApi(
   runId: string,
   message: string,
 ): Promise<{ ok: true; status: AgentRunStatus }> {
+  trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/steer`, {
       method: "POST",
@@ -358,6 +379,7 @@ export async function actOnAgentPrApi(
   runId: string,
   action: "merge" | "close",
 ): Promise<{ ok: true; pr_state: string }> {
+  trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/pr`, {
       method: "POST",
@@ -376,6 +398,7 @@ export async function requestAgentPrChangesApi(
   message: string,
   model?: string,
 ): Promise<{ ok: true; run: { id: string } }> {
+  trackEvent("pr_review_submitted", { verdict: "request_changes" });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/pr`, {
       method: "POST",

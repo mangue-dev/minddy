@@ -9,6 +9,8 @@ import type {
   ConversationStatus,
 } from "./assistant-types";
 import type { AttachmentInput } from "./types";
+import { trackEvent } from "./analytics";
+import { durationBucket, errorReason, lengthBucket } from "./analytics-sanitize";
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -401,6 +403,18 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     ) => {
       if (!message.trim()) return;
 
+      // Analytics (MIN-78) : le message N'EST PAS envoyé — seulement sa
+      // longueur en tranche, et de quoi mesurer l'usage réel de Numo.
+      trackEvent("assistant_message_sent", {
+        has_page_context: !!options?.pageContext,
+        length_bucket: lengthBucket(message),
+        is_first_of_conversation: !state.conversationId,
+        has_project_scope: projectId !== null,
+        attachment_count: options?.attachments?.length ?? 0,
+      });
+      const startedAt = performance.now();
+      let toolCalls = 0;
+
       // Abort previous request if still running
       abortRef.current?.abort();
       stopPolling();
@@ -468,6 +482,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             } else if (line.startsWith("data: ") && eventType) {
               try {
                 const data = JSON.parse(line.slice(6));
+                if (eventType === "tool_call_start") toolCalls += 1;
                 handleSSEEvent(eventType, data, dispatch, onToolResultRef.current);
               } catch {
                 // Skip malformed data
@@ -476,6 +491,14 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             }
           }
         }
+
+        // Le flux est allé au bout : c'est la seule mesure fiable du temps de
+        // réponse de Numo et de son recours réel aux outils.
+        trackEvent("assistant_response_received", {
+          had_tool_calls: toolCalls > 0,
+          tool_count: toolCalls,
+          duration_bucket: durationBucket(performance.now() - startedAt),
+        });
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
 
@@ -504,6 +527,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           }
         }
 
+        trackEvent("assistant_response_failed", { reason: errorReason(err) });
         dispatch({
           type: "ERROR",
           message: (err as Error).message || "Connection failed",
@@ -519,6 +543,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       // Cancel any in-flight send so its later SSE chunks don't dispatch on
       // top of the conversation we are about to load.
       abortRef.current?.abort();
+      trackEvent("assistant_conversation_loaded", {});
       try {
         const messages = await fetchConversationMessages(conversationId);
         dispatch({
@@ -553,12 +578,14 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   const reset = useCallback(() => {
     abortRef.current?.abort();
     stopPolling();
+    trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });
   }, [stopPolling]);
 
   const abort = useCallback(() => {
     abortRef.current?.abort();
     stopPolling();
+    trackEvent("assistant_stopped", {});
     dispatch({ type: "DONE" });
   }, [stopPolling]);
 

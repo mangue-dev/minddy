@@ -5,6 +5,7 @@ import type {
   Objective,
   ObjectiveUpdateInput,
 } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -30,6 +31,7 @@ export async function createObjectiveApi(
   projectId: string,
   input: CreateObjectiveInput
 ): Promise<Objective> {
+  trackEvent("objective_created", {});
   return parseJson<Objective>(
     await fetch(`/api/projects/${projectId}/objectives`, {
       method: "POST",
@@ -43,6 +45,9 @@ export async function updateObjectiveApi(
   objectiveId: string,
   updates: ObjectiveUpdateInput
 ): Promise<Objective> {
+  for (const field of Object.keys(updates)) {
+    trackEvent("objective_updated", { field });
+  }
   return parseJson<Objective>(
     await fetch(`/api/objectives/${objectiveId}`, {
       method: "PATCH",
@@ -53,6 +58,7 @@ export async function updateObjectiveApi(
 }
 
 export async function deleteObjectiveApi(objectiveId: string): Promise<void> {
+  trackEvent("objective_deleted", {});
   const response = await fetch(`/api/objectives/${objectiveId}`, { method: "DELETE" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);

@@ -12,6 +12,7 @@ import {
   type PlanTask,
   type PlanTaskState,
 } from "@/lib/plan";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * The issue's implementation plan (Plan tab of the side panel): rendered
@@ -48,6 +49,7 @@ export function IssuePlan({
 
   const commitTaskState = (task: PlanTask, state: PlanTaskState) => {
     if (!plan || task.state === state) return;
+    trackEvent("plan_task_toggled", { to_state: state });
     onCommit(setTaskState(plan, task.line, state));
   };
 

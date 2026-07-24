@@ -56,6 +56,7 @@ import type {
   Issue,
   IssueUpdateInput,
 } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 /** Handle returned by record(): the canonical stack entry (rapid category
     toggles coalesce into one) and its retraction (write failed → drop it). */
@@ -422,7 +423,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       if (isTypingTarget(e.target)) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      run(e.shiftKey ? "redo" : "undo");
+      const direction = e.shiftKey ? "redo" : "undo";
+      trackEvent("undo_triggered", { action: direction });
+      run(direction);
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);

@@ -82,6 +82,7 @@ import type {
   TeamFeedbackDetail,
   TeamFeedbackListItem,
 } from "@/lib/server/feedback/team-queries";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * Onglet équipe du feedback (MIN-37) — deux panneaux façon triage : liste triée
@@ -536,7 +537,15 @@ function FeedbackDetail({
         method: "POST",
         body: JSON.stringify(payload ?? {}),
       }),
-    onSuccess: refreshDetail,
+    onSuccess: (_data, variables) => {
+      // Toutes les actions d'équipe (promouvoir, fusionner, annuler une
+      // fusion…) passent par cette mutation : le dernier segment du chemin EST
+      // le nom de l'action. Un seul point d'instrumentation plutôt qu'un par
+      // bouton, et les actions futures sont couvertes d'office.
+      const verb = variables.path.split("/").filter(Boolean).pop() ?? "unknown";
+      trackEvent("feedback_action", { action: verb });
+      return refreshDetail();
+    },
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
 

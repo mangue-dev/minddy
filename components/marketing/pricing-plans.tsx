@@ -13,6 +13,7 @@ import {
   type BillingPlanId,
 } from "@/lib/billing-plans";
 import { planFeatureLabels } from "@/lib/plan-features";
+import { useAnalytics } from "@/lib/use-analytics";
 
 /**
  * Cartes de plans du site public (MIN-73). Même grille et même hiérarchie que
@@ -38,6 +39,7 @@ const PLAN_DESC_KEYS: Record<BillingPlanId, "planDescFree" | "planDescGo" | "pla
 };
 
 export function PricingPlans() {
+  const { track } = useAnalytics();
   const t = useTranslations("Billing");
   const tl = useTranslations("Landing");
   const locale = useLocale();
@@ -146,7 +148,16 @@ export function PricingPlans() {
               </ul>
 
               <Button asChild variant={highlighted ? "default" : "outline"} className="w-full">
-                <Link href="/signup">
+                <Link
+                  href="/signup"
+                  onClick={() =>
+                    track("plan_cta_clicked", {
+                      plan_id: plan.id,
+                      interval,
+                      current_plan_id: "anonymous",
+                    })
+                  }
+                >
                   {isFree ? tl("pricingCtaFree") : tl("pricingCtaPaid")}
                 </Link>
               </Button>

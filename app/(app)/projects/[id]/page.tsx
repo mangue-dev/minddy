@@ -515,6 +515,9 @@ function ProjectBoard() {
         onCreate={createIssue}
         onCreateInProject={createIssueInProject}
         initialStatus={createStatus}
+        // Le board projet ouvre son propre dialog (préréglages de colonne) —
+        // distingué du dialog global dans les stats.
+        analyticsSource={activeObjective ? "objective" : "board"}
         initialObjectiveId={activeObjective?.id ?? null}
         initialAssigneeId={
           // On an assigned-to-me board, a new unassigned issue would instantly

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
+import { useAnalytics } from "@/lib/use-analytics";
 
 /**
  * Bandeau de consentement aux cookies analytiques. Ne s'affiche que tant
@@ -14,6 +15,7 @@ import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-cons
  */
 export function CookieBanner() {
   const t = useTranslations("CookieBanner");
+  const { track } = useAnalytics();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -21,6 +23,12 @@ export function CookieBanner() {
   }, []);
 
   const choose = (consent: CookieConsent) => {
+    // Tracké AVANT `writeConsent` : sur un refus, celui-ci déclenche
+    // `opt_out_capturing()` et l'événement ne partirait plus. Il est donc émis
+    // dans le mode pré-choix — anonyme et sans écriture sur l'appareil — ce qui
+    // permet de connaître le taux de refus sans rien conserver de la personne
+    // qui refuse.
+    track("cookie_consent_choice", { choice: consent });
     writeConsent(consent);
     setVisible(false);
   };

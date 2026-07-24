@@ -10,6 +10,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
+import { trackEvent } from "./analytics";
 
 /** Open state of the personal Notes modal, lifted so the header button, the
     command palette and the `G N` keyboard chord can all open it. */
@@ -25,9 +26,19 @@ const ScratchpadContext = createContext<ScratchpadContextValue | null>(null);
 
 export function ScratchpadProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const open = useCallback(() => setIsOpen(true), []);
+  const open = useCallback(() => {
+    trackEvent("scratchpad_opened", { source: "click" });
+    setIsOpen(true);
+  }, []);
   const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen((v) => !v), []);
+  const toggle = useCallback(
+    () =>
+      setIsOpen((v) => {
+        if (!v) trackEvent("scratchpad_opened", { source: "shortcut" });
+        return !v;
+      }),
+    []
+  );
   const value = useMemo<ScratchpadContextValue>(
     () => ({ isOpen, open, close, toggle, setOpen: setIsOpen }),
     [isOpen, open, close, toggle]

@@ -21,6 +21,8 @@ import { useStatsQuery } from "@/lib/use-stats-query";
 import { ContributionHeatmap } from "@/components/contribution-heatmap";
 import { EFFORT_MAP } from "@/lib/issue-constants";
 import type { HeatmapDay, StatProjectBucket, StatsCycles } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
+import { useTrackView } from "@/lib/use-track-view";
 
 /** Nombre → chaîne localisée (virgule FR, point EN), 1 décimale par défaut. */
 function fmtNum(value: number, locale: string, digits = 1): string {
@@ -254,6 +256,11 @@ function CyclesSection({ cycles }: { cycles: StatsCycles }) {
 export default function StatisticsPage() {
   const t = useTranslations("Stats");
   const { stats, loading } = useStatsQuery();
+  // Vue de la page stats — l'une des rares pages « consultées » plutôt
+  // qu'« utilisées » : sans événement dédié, son usage réel est invisible.
+  useTrackView(true, "viewed", () =>
+    trackEvent("statistics_viewed", { range: "default" })
+  );
 
   const streaks = useMemo(
     () => computeStreaks(stats?.heatmap.days ?? []),

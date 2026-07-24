@@ -34,6 +34,8 @@ import { SearchSelect } from "@/components/search-select";
 import { ProjectOrb } from "@/components/project-orb";
 import { ProjectIconPicker } from "@/components/project-icon-picker";
 import { WizardStepper } from "@/components/wizard-stepper";
+import { useAnalytics } from "@/lib/use-analytics";
+import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo, Project } from "@/lib/types";
 
 /**
@@ -84,6 +86,7 @@ export function CreateProjectWizard({
   const tIssue = useTranslations("Issue");
   const queryClient = useQueryClient();
   const { createProject, updateProject } = useProjects();
+  const { track } = useAnalytics();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [project, setProject] = useState<Project | null>(null);
@@ -140,7 +143,22 @@ export function CreateProjectWizard({
     setActiveConnectionId(resume.connectionId);
   }, [resume]);
 
+  // Entonnoir du wizard (MIN-78) : ouverture, étape vue, abandon. Sans
+  // « abandonné », on ne verrait que les projets créés — jamais l'étape qui
+  // fait décrocher (la leçon AutoKap : c'était l'étape GitHub obligatoire).
+  useTrackView(open, "opened", () =>
+    track("project_wizard_opened", { source: resume ? "resume" : "sidebar" })
+  );
+  // Clé = l'étape : chaque étape atteinte est comptée une fois, revenir en
+  // arrière ne la recompte pas (« combien de gens ont atteint l'étape N »).
+  useTrackView(open, step, () => track("project_wizard_step_viewed", { step }));
+
   const handleOpenChange = (next: boolean) => {
+    // Fermeture avant la dernière étape = abandon. `finish()` ferme via ce même
+    // chemin, mais seulement depuis l'étape finale, qui est exclue ici.
+    if (!next && step !== "finish") {
+      track("project_wizard_abandoned", { last_step: step });
+    }
     if (!next) reset();
     onOpenChange(next);
   };
@@ -175,6 +193,7 @@ export function CreateProjectWizard({
       if (!project) {
         const created = await createProject({ name: trimmedName, key: finalKey });
         setProject(created);
+        track("project_created", { has_icon: false, has_git_link: false });
         toast.success(t("projectCreated", { name: created.name }));
         // Le wizard vit hors de l'arbre des pages : la navigation se fait sous
         // la modale, le projet est déjà « chez lui » si le wizard est fermé.
@@ -224,6 +243,7 @@ export function CreateProjectWizard({
   const handleConnect = async (provider: RepoProviderId) => {
     if (!project) return;
     setConnecting(provider);
+    track("git_connection_started", { provider });
     try {
       const res = await startGitConnectApi(project.id, provider, "wizard");
       if (res.mode === "reuse") {
@@ -243,6 +263,7 @@ export function CreateProjectWizard({
     setBinding(true);
     try {
       await bindGitRepoApi(project.id, activeConnectionId, externalRepoId);
+      track("project_git_linked", { provider: link?.provider ?? "unknown" });
       toast.success(tSettings("gitRepoLinkedToast"));
       setActiveConnectionId(null);
       void queryClient.invalidateQueries({
@@ -282,6 +303,14 @@ export function CreateProjectWizard({
           queryKey: ["feedback-settings", project.id],
         });
       }
+      // Le wizard est allé au bout : on connaît enfin sa configuration réelle
+      // (dépôt lié, board de feedback, attribution automatique).
+      track("project_wizard_completed", {
+        has_git_link: !!link,
+        feedback_enabled: feedbackEnabled,
+        smart_assign_enabled: smartAssignEnabled,
+        auto_assign_enabled: autoAssignEnabled,
+      });
       toast.success(t("wizardDoneToast", { name: project.name }));
       handleOpenChange(false);
     } catch (err) {

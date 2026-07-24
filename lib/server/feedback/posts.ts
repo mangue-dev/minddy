@@ -17,6 +17,8 @@ import {
   type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
+import { captureServerEvent } from "@/lib/server/posthog";
+import { lengthBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Création des posts de feedback (MIN-37) — core partagé des trois canaux
@@ -119,6 +121,24 @@ export async function createFeedbackPost(input: {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   const post = data as FeedbackPostRow;
+
+  // Analytics (MIN-78). Le board public est visité par des ANONYMES : côté
+  // client, la plupart n'auront jamais tranché le bandeau cookies, et un retour
+  // envoyé depuis une intégration n'a pas de navigateur du tout. C'est donc ici
+  // qu'on compte. Ni le titre ni le corps ne partent — seulement leur volume.
+  captureServerEvent({
+    distinctId: input.authorId ?? input.createdByMember ?? "feedback:anonymous",
+    event: "public_feedback_created",
+    properties: {
+      source: input.source,
+      is_public: input.isPublic ?? true,
+      has_body: body.length > 0,
+      title_length_bucket: lengthBucket(title),
+      body_length_bucket: lengthBucket(body),
+      via_integration: !!input.integrationId,
+    },
+    groups: { project: input.projectId },
+  });
 
   // Activité : l'événement « créé » ancre le fil, attribué au bon canal.
   await emitFeedbackCreated(service, {

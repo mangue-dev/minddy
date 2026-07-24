@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
  * Votes (MIN-37) — 1 identité = 1 voix sur un post. Les compteurs dénormalisés
@@ -22,6 +23,13 @@ export async function votePost(params: { postId: string; userId: string }): Prom
       { post_id: params.postId, user_id: params.userId },
       { onConflict: "post_id,user_id", ignoreDuplicates: true }
     );
+  if (!error) {
+    captureServerEvent({
+      distinctId: params.userId,
+      event: "public_feedback_voted",
+      properties: { voted: true },
+    });
+  }
   return !error;
 }
 
@@ -32,5 +40,12 @@ export async function unvotePost(params: { postId: string; userId: string }): Pr
     .delete()
     .eq("post_id", params.postId)
     .eq("user_id", params.userId);
+  if (!error) {
+    captureServerEvent({
+      distinctId: params.userId,
+      event: "public_feedback_voted",
+      properties: { voted: false },
+    });
+  }
   return !error;
 }

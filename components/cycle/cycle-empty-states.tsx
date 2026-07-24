@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import type { CycleInfo } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * The three empty states of the cycle view (MIN-32):
@@ -117,6 +118,7 @@ export function CycleCompletedBanner() {
         | null;
       if (!response.ok) throw new Error(data?.error ?? "Request failed");
       const added = data?.added ?? 0;
+      trackEvent("cycle_filled", { added_count: added });
       toast.success(
         added > 0 ? t("refillAdded", { count: added }) : t("refillEmpty")
       );

@@ -25,6 +25,7 @@ import {
 } from "@/lib/server/smart-assign";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
+import { captureServerEvent } from "./posthog";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
@@ -52,6 +53,24 @@ export type CreateIssueResult =
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
     };
+
+/**
+ * D'où vient ce ticket ? Dérivé des marqueurs de provenance que les appelants
+ * posent déjà (`viaAssistant`, `mcpKeyId`, `integrationId`) — aucun nouveau
+ * paramètre à câbler dans la douzaine de routes qui créent des tickets.
+ */
+export function resolveIssueSource(params: {
+  viaAssistant?: boolean;
+  mcpKeyId?: string | null;
+  integrationId?: string | null;
+  actorId?: string | null;
+}): string {
+  if (params.integrationId) return "integration";
+  if (params.viaAssistant) return "numo";
+  if (params.mcpKeyId) return "mcp";
+  if (!params.actorId) return "system";
+  return "web";
+}
 
 export async function createIssueForProject({
   projectId,
@@ -335,6 +354,28 @@ export async function createIssueForProject({
       trigger: "create",
     });
   }
+
+  // Analytics serveur (MIN-78). C'est le comptage qui FAIT AUTORITÉ : il ne
+  // dépend ni du consentement cookies ni d'un navigateur — or une bonne partie
+  // des tickets de minddy naissent d'un agent MCP, de Numo ou d'une intégration,
+  // là où il n'y a personne devant un écran. `source` est la dimension qui
+  // permet de répondre à « qui crée vraiment les tickets ? ».
+  captureServerEvent({
+    distinctId: actorId ?? `integration:${integrationId ?? "unknown"}`,
+    event: "issue_created_server",
+    properties: {
+      source: resolveIssueSource({ viaAssistant, mcpKeyId, integrationId, actorId }),
+      status: data.status,
+      priority: data.priority,
+      effort: data.effort ?? "none",
+      has_description: !!data.description,
+      has_assignee: data.assignee_id != null,
+      has_parent: data.parent_id != null,
+      category_count: categoryIds.length,
+      attachment_count: parsedAttachments.length,
+    },
+    groups: { project: projectId },
+  });
 
   return { ok: true, issue: { ...data, category_ids: categoryIds } };
 }

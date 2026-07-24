@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
+import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
 
 const EMAIL_OTP_TYPES: ReadonlySet<EmailOtpType> = new Set([
   "signup",
@@ -28,6 +29,50 @@ function buildFailureRedirect(
   url.searchParams.set("error", error);
   url.searchParams.set("reason", reason);
   return NextResponse.redirect(url.toString());
+}
+
+/**
+ * Inscription ou connexion ? (MIN-78)
+ *
+ * C'est ICI que la question se tranche, et nulle part ailleurs : le serveur voit
+ * `created_at` et `last_sign_in_at` du compte au moment exact de l'échange.
+ * Un écart de quelques secondes entre les deux = première connexion. AutoKap
+ * avait tenté l'heuristique côté client (« compte créé il y a moins d'une
+ * minute »), qui étiquetait mal les premières connexions différées et
+ * double-comptait avec l'événement serveur — d'où ce choix.
+ *
+ * Ces événements partent quel que soit le consentement cookies : aucun cookie
+ * n'est posé de ce fait, et le `distinctId` est l'id du compte, que
+ * l'utilisateur nous confie déjà en créant ce compte.
+ */
+function trackAuthArrival(
+  user: { id: string; created_at?: string; last_sign_in_at?: string | null; app_metadata?: { provider?: string } } | null,
+  channel: "oauth" | "email_confirmation" | "otp"
+): void {
+  if (!user) return;
+  const provider = user.app_metadata?.provider ?? "email";
+  const createdAt = user.created_at ? Date.parse(user.created_at) : Number.NaN;
+  const lastSignIn = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : Number.NaN;
+  // Première connexion : la session en cours est la toute première du compte.
+  const isFirstSignIn =
+    !Number.isNaN(createdAt) &&
+    (Number.isNaN(lastSignIn) || Math.abs(lastSignIn - createdAt) < 10_000);
+
+  identifyServerUser(user.id, { signup_method: provider });
+
+  if (channel === "email_confirmation") {
+    captureServerEvent({
+      distinctId: user.id,
+      event: "signup_email_confirmed",
+      properties: { method: provider },
+    });
+  }
+
+  captureServerEvent({
+    distinctId: user.id,
+    event: isFirstSignIn ? "user_signed_up" : "user_signed_in",
+    properties: { method: provider, channel },
+  });
 }
 
 /**
@@ -81,13 +126,14 @@ export async function GET(request: NextRequest) {
 
   try {
     if (code) {
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         console.error("[auth/callback] exchangeCodeForSession failed:", error.message);
         return buildFailureRedirect(origin, "exchange_failed");
       }
+      trackAuthArrival(data.user, "oauth");
     } else if (tokenHash && otpType) {
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: otpType,
       });
@@ -95,6 +141,7 @@ export async function GET(request: NextRequest) {
         console.error("[auth/callback] verifyOtp failed:", error.message);
         return buildFailureRedirect(origin, "verify_failed");
       }
+      trackAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
     }
 
     return NextResponse.redirect(`${origin}${next}`);

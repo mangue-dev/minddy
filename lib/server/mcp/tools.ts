@@ -72,12 +72,15 @@ import type { ProjectAccess } from "@/lib/server/project-access";
 import {
   ok,
   fail,
+  getUserId,
   requireUser,
   resolveProject,
   resolveIssueRef,
   type ToolExtra,
   type ToolResult,
 } from "@/lib/server/mcp/tool-helpers";
+import { captureServerEvent } from "@/lib/server/posthog";
+import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Tools MCP de minddy — nommage minddy_<verbe>_<nom>, surface volontairement
@@ -297,7 +300,67 @@ async function withNames(
   }));
 }
 
-export function registerMinddyTools(server: McpServer): void {
+/**
+ * Enveloppe `registerTool` pour tracker CHAQUE appel d'outil MCP (MIN-78).
+ *
+ * Un décorateur unique plutôt que quarante `captureServerEvent` copiés dans les
+ * handlers : la couverture est totale, elle ne peut pas dériver, et un outil
+ * ajouté demain est instrumenté sans y penser. On mesure le nom de l'outil, sa
+ * durée et son issue (succès / erreur applicative) — jamais les arguments, qui
+ * portent des titres et des descriptions de tickets.
+ *
+ * C'est la seule fenêtre sur l'usage agent de minddy : par construction, aucun
+ * navigateur n'est impliqué ici, donc aucun événement client ne le verrait.
+ */
+function withToolAnalytics(server: McpServer): McpServer {
+  const original = server.registerTool.bind(server) as (
+    ...args: unknown[]
+  ) => unknown;
+
+  const wrapped = (name: string, config: unknown, handler: unknown) => {
+    const tracked = async (...args: unknown[]) => {
+      const extra = args[args.length - 1] as ToolExtra | undefined;
+      const startedAt = Date.now();
+      let outcome = "ok";
+      try {
+        const result = (await (handler as (...a: unknown[]) => Promise<ToolResult>)(
+          ...args
+        )) as ToolResult;
+        // Les tools ne lèvent pas : ils renvoient `fail(...)`, marqué isError.
+        if (result?.isError) outcome = "error";
+        return result;
+      } catch (err) {
+        outcome = "exception";
+        throw err;
+      } finally {
+        captureServerEvent({
+          distinctId: getUserId(extra ?? {}) ?? "mcp:anonymous",
+          event: "mcp_tool_called",
+          properties: {
+            tool_name: name,
+            outcome,
+            duration_bucket: durationBucket(Date.now() - startedAt),
+          },
+        });
+      }
+    };
+    return original(name, config, tracked);
+  };
+
+  // Proxy plutôt que mutation : le serveur MCP appartient à `mcp-handler`, on
+  // ne réécrit pas ses méthodes en place.
+  return new Proxy(server, {
+    get(target, prop, receiver) {
+      if (prop === "registerTool") return wrapped;
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as McpServer;
+}
+
+export function registerMinddyTools(rawServer: McpServer): void {
+  const server = withToolAnalytics(rawServer);
+
   // ── Lectures ──────────────────────────────────────────────────────────
 
   server.registerTool(

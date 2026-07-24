@@ -22,6 +22,7 @@ import {
   type ReactNode,
 } from "react";
 import type { IssueUpdateInput, Member } from "@/lib/types";
+import { trackEvent } from "./analytics";
 
 export interface BulkActionsRequest {
   /** Number of selected tickets — drives the item title, plurals and confirms. */
@@ -52,6 +53,10 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
   const [openSignal, setOpenSignal] = useState(0);
 
   const requestBulkActions = useCallback((next: BulkActionsRequest) => {
+    // MIN-75 : le bouton « Actions » de la pill de sélection. C'est le seul
+    // point de passage vers les actions groupées — la taille de la sélection
+    // dit si la fonction sert à deux tickets ou à trente.
+    trackEvent("bulk_selection_started", { surface: "board", count: next.count });
     setRequest(next);
     setOpenSignal((n) => n + 1);
   }, []);

@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { ArrowRight, Plug } from "lucide-react";
 import { Button } from "mangue-ui";
 import { ScreenshotSlot } from "./screenshot-slot";
+import { TrackedCta } from "./tracked-cta";
 
 /**
  * Hero de la landing (MIN-73). Promesse en une phrase, deux actions, la capture
@@ -38,13 +39,15 @@ export async function Hero() {
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/signup">
+              <TrackedCta href="/signup" location="hero">
                 {t("heroCtaPrimary")}
                 <ArrowRight data-icon="inline-end" />
-              </Link>
+              </TrackedCta>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/pricing">{t("heroCtaSecondary")}</Link>
+              <TrackedCta href="/pricing" location="hero">
+                {t("heroCtaSecondary")}
+              </TrackedCta>
             </Button>
           </div>
 

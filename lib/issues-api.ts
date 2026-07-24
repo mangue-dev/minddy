@@ -1,5 +1,7 @@
 "use client";
 
+import { trackEvent } from "./analytics";
+import { lengthBucket } from "./analytics-sanitize";
 import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -36,20 +38,111 @@ export async function createIssueApi(
   );
 }
 
+/** Contexte analytics facultatif — la surface d'où part l'édition (MIN-78). */
+export interface IssueMutationMeta {
+  /** « side_panel », « kanban », « palette », « context_menu », « bulk »… */
+  surface?: string;
+  /** État précédent, quand l'appelant le connaît (mise à jour optimiste). */
+  previousStatus?: string | null;
+}
+
+/**
+ * Traduit un patch en événements analytics (MIN-78).
+ *
+ * C'est ici, et pas dans chaque composant, parce que TOUTES les éditions de
+ * ticket convergent vers `updateIssueApi` : panneau latéral, menu contextuel,
+ * glisser-déposer du kanban, palette, actions groupées, annulation. Instrumenter
+ * le goulot d'étranglement plutôt que la douzaine d'appelants garantit qu'aucun
+ * chemin n'est oublié — et qu'un futur appelant est couvert d'office.
+ *
+ * Seules des MÉTADONNÉES partent : jamais le titre ni la description, seulement
+ * leur modification et la tranche de longueur.
+ */
+function trackIssueUpdate(updates: IssueUpdateInput, meta?: IssueMutationMeta): void {
+  const surface = meta?.surface ?? "unknown";
+  const patch = updates as Record<string, unknown>;
+
+  if (patch.status !== undefined) {
+    trackEvent("issue_status_changed", {
+      from: meta?.previousStatus ?? null,
+      to: String(patch.status),
+      surface,
+    });
+  }
+  if (patch.priority !== undefined) {
+    trackEvent("issue_priority_changed", { to: String(patch.priority), surface });
+  }
+  if (patch.assignee_id !== undefined) {
+    trackEvent("issue_assignee_changed", {
+      assigned: patch.assignee_id !== null,
+      surface,
+    });
+  }
+  if (patch.effort !== undefined) {
+    trackEvent("issue_effort_changed", { to: String(patch.effort ?? "none") });
+  }
+  if (patch.due_date !== undefined) {
+    trackEvent("issue_due_date_changed", { cleared: patch.due_date === null });
+  }
+  if (patch.cycle_id !== undefined) {
+    // Le cycle est un champ du ticket, mais l'action utilisateur est « ajouter
+    // à / retirer de mon cycle » — c'est sous ce nom qu'on veut la lire.
+    trackEvent(patch.cycle_id === null ? "cycle_issue_removed" : "cycle_issue_added", {
+      surface,
+    });
+  }
+  if (patch.duplicate_of_id !== undefined && patch.duplicate_of_id !== null) {
+    trackEvent("issue_relation_added", { relation: "duplicate" });
+  }
+  if (patch.objective_id !== undefined) {
+    trackEvent("issue_objective_changed", { assigned: patch.objective_id !== null });
+  }
+  if (patch.title !== undefined) trackEvent("issue_title_edited", {});
+  if (patch.description !== undefined) {
+    trackEvent("issue_description_edited", {
+      length_bucket: lengthBucket(
+        typeof patch.description === "string" ? patch.description : null
+      ),
+    });
+  }
+  if (patch.plan !== undefined) {
+    trackEvent("issue_plan_edited", {
+      task_count:
+        typeof patch.plan === "string"
+          ? (patch.plan.match(/^\s*[-*]\s*\[[ x~-]\]/gim)?.length ?? 0)
+          : 0,
+    });
+  }
+  if (patch.parent_id !== undefined) {
+    trackEvent("issue_relation_added", { relation: "parent" });
+  }
+}
+
 export async function updateIssueApi(
   issueId: string,
-  updates: IssueUpdateInput
+  updates: IssueUpdateInput,
+  meta?: IssueMutationMeta
 ): Promise<Issue> {
-  return parseJson<Issue>(
+  const issue = parseJson<Issue>(
     await fetch(`/api/issues/${issueId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     })
   );
+  // Tracké seulement après un aller-retour réussi — une édition rejetée par le
+  // serveur (quota, permission) n'est pas une édition.
+  void issue.then(
+    () => trackIssueUpdate(updates, meta),
+    () => {}
+  );
+  return issue;
 }
 
-export async function deleteIssueApi(issueId: string): Promise<void> {
+export async function deleteIssueApi(
+  issueId: string,
+  meta?: IssueMutationMeta
+): Promise<void> {
   const response = await fetch(`/api/issues/${issueId}`, { method: "DELETE" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
@@ -57,4 +150,5 @@ export async function deleteIssueApi(issueId: string): Promise<void> {
       (data as { error?: string } | null)?.error || "Delete failed"
     );
   }
+  trackEvent("issue_deleted", { surface: meta?.surface ?? "unknown" });
 }

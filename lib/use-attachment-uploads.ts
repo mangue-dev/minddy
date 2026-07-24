@@ -6,6 +6,8 @@ import { toast } from "mangue-ui";
 import { getSupabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/image-compress";
 import type { AttachmentInput } from "@/lib/types";
+import { trackEvent } from "./analytics";
+import { sizeBucket } from "./analytics-sanitize";
 
 /** Server-checked too (parseAttachmentsInput) — keep the two in sync. */
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -125,6 +127,15 @@ export function useAttachmentUploads(
                   : p
               )
             );
+            // Métadonnées seulement : ni le nom du fichier ni son contenu —
+            // le type MIME générique et la tranche de taille suffisent à savoir
+            // ce que les gens joignent (captures d'écran ? logs ? PDF ?).
+            trackEvent("attachment_uploaded", {
+              target: "issue",
+              size_bucket: sizeBucket(blob.size),
+              kind: mime.split("/")[0] || "unknown",
+              compressed: blob !== file,
+            });
             onUploadedRef.current?.(
               {
                 storage_path: path,

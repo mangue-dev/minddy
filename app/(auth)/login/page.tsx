@@ -11,6 +11,8 @@ import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { AuthShader } from "@/components/auth-shader";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
+import { useAnalytics } from "@/lib/use-analytics";
+import { errorReason } from "@/lib/analytics-sanitize";
 
 /** Logo Google multicolore (inline — pas d'asset externe). */
 function GoogleGlyph() {
@@ -43,6 +45,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signInWithPassword, signUpWithPassword, signInWithOAuth } = useAuth();
+  const { track } = useAnalytics();
 
   const redirectTo = sanitizeInternalRedirectPath(searchParams.get("redirect"));
   const [isSignUp, setIsSignUp] = useState(searchParams.get("mode") === "signup");
@@ -84,6 +87,7 @@ function LoginForm() {
     }
 
     setLoading(true);
+    track(isSignUp ? "signup_submitted" : "login_submitted", isSignUp ? {} : { method: "password" });
     try {
       if (isSignUp) {
         const { requiresEmailConfirmation } = await signUpWithPassword(
@@ -91,6 +95,9 @@ function LoginForm() {
           password,
           { fullName: fullName.trim() || undefined, redirectAfter: redirectTo }
         );
+        track("signup_succeeded", {
+          requires_email_confirmation: requiresEmailConfirmation,
+        });
         if (requiresEmailConfirmation) {
           setNotice(t("confirmationSent", { email }));
           setIsSignUp(false);
@@ -100,9 +107,14 @@ function LoginForm() {
         }
       } else {
         await signInWithPassword(email, password);
+        track("login_succeeded", { method: "password" });
       }
       router.push(redirectTo);
     } catch (err) {
+      // On envoie une CATÉGORIE, jamais le message : il peut porter l'email.
+      const reason = errorReason(err);
+      if (isSignUp) track("signup_failed", { reason });
+      else track("login_failed", { method: "password", reason });
       setError((err as Error).message);
     } finally {
       setLoading(false);
@@ -113,10 +125,12 @@ function LoginForm() {
     setError(null);
     setNotice(null);
     setOauthPending(provider);
+    track("oauth_initiated", { provider, context: isSignUp ? "signup" : "login" });
     try {
       // Succès = la page navigue vers le provider ; on ne repasse jamais ici.
       await signInWithOAuth(provider, redirectTo);
     } catch (err) {
+      track("login_failed", { method: provider, reason: errorReason(err) });
       setError((err as Error).message);
       setOauthPending(null);
     }

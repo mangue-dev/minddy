@@ -108,6 +108,18 @@ export default async function PrivacyPage() {
         <P>{t("agentText")}</P>
       </Section>
 
+      {/* Mesure d'audience (MIN-78). Section dédiée plutôt qu'une ligne dans le
+          tableau des données : la collecte a trois régimes selon le choix fait
+          sur le bandeau, et « avant tout choix » est le cas que personne
+          n'explique jamais alors que c'est le plus fréquent. */}
+      <Section title={t("analyticsTitle")}>
+        <Intro>{t("analyticsIntro")}</Intro>
+        <P>{t("analyticsAnonymous")}</P>
+        <P>{t("analyticsAccepted")}</P>
+        <P>{t("analyticsDeclined")}</P>
+        <P>{t("analyticsMinimization")}</P>
+      </Section>
+
       <Section title={t("thirdPartyTitle")}>
         <P>{t("thirdPartyText")}</P>
       </Section>

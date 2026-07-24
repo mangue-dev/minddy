@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import { Button } from "mangue-ui";
+import { TrackedCta } from "./tracked-cta";
 
 /** Dernière relance avant le footer (MIN-73). */
 export async function SectionCta() {
@@ -17,10 +17,10 @@ export async function SectionCta() {
           {t("ctaSubtitle")}
         </p>
         <Button asChild size="lg">
-          <Link href="/signup">
+          <TrackedCta href="/signup" location="cta_section">
             {t("ctaButton")}
             <ArrowRight data-icon="inline-end" />
-          </Link>
+          </TrackedCta>
         </Button>
       </div>
     </section>

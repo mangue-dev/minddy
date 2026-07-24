@@ -36,6 +36,7 @@ import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { trackEvent } from "@/lib/analytics";
 
 /** Leader key that arms a navigation chord. */
 export const CHORD_PREFIX = "g";
@@ -245,6 +246,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         if (isTypingTarget(e.target) || isDialogOpen()) return;
         e.preventDefault();
         e.stopImmediatePropagation();
+        trackEvent("cheatsheet_opened", {});
         setCheatsheetOpen(true);
         return;
       }

@@ -10,6 +10,7 @@ import {
   cn,
 } from "mangue-ui";
 import type { LucideIcon } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 export type SettingsTab = {
   value: string;
@@ -96,6 +97,12 @@ function SettingsTabs({
 
   const setActiveTab = useCallback(
     (value: string) => {
+      // Deux écrans partagent ce shell : les réglages du compte (/settings) et
+      // ceux d'un projet (/projects/<id>/settings). Le chemin les distingue.
+      trackEvent("settings_tab_switched", {
+        scope: pathname.startsWith("/projects/") ? "project" : "account",
+        tab: value,
+      });
       const params = new URLSearchParams(searchParams.toString());
       if (value === fallback) {
         params.delete("tab");

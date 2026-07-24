@@ -1,6 +1,8 @@
 "use client";
 
 import type { AttachmentInput, Comment, IssueEvent } from "./types";
+import { trackEvent } from "./analytics";
+import { lengthBucket } from "./analytics-sanitize";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -33,6 +35,14 @@ export async function addCommentApi(
   parentId: string | null = null,
   attachments: AttachmentInput[] = []
 ): Promise<Comment> {
+  // Seulement des métadonnées : la longueur en tranche, jamais le texte.
+  trackEvent("comment_added", {
+    target: "issue",
+    length_bucket: lengthBucket(body),
+    is_reply: parentId !== null,
+    mention_count: mentionedUserIds.length,
+    attachment_count: attachments.length,
+  });
   return parseJson<Comment>(
     await fetch(`/api/issues/${issueId}/comments`, {
       method: "POST",
@@ -82,6 +92,13 @@ export async function addFeedbackCommentApi(
   parentId: string | null = null,
   attachments: AttachmentInput[] = []
 ): Promise<Comment> {
+  trackEvent("comment_added", {
+    target: "feedback",
+    length_bucket: lengthBucket(body),
+    is_reply: parentId !== null,
+    mention_count: mentionedUserIds.length,
+    attachment_count: attachments.length,
+  });
   return parseJson<Comment>(
     await fetch(`/api/projects/${projectId}/feedback/${postId}/comments`, {
       method: "POST",
@@ -127,6 +144,7 @@ export async function deleteFeedbackCommentApi(
     const data = await response.json().catch(() => null);
     throw new Error((data as { error?: string } | null)?.error || "Delete failed");
   }
+  trackEvent("comment_deleted", { target: "feedback" });
 }
 
 export async function addObjectiveCommentApi(
@@ -136,6 +154,13 @@ export async function addObjectiveCommentApi(
   parentId: string | null = null,
   attachments: AttachmentInput[] = []
 ): Promise<Comment> {
+  trackEvent("comment_added", {
+    target: "objective",
+    length_bucket: lengthBucket(body),
+    is_reply: parentId !== null,
+    mention_count: mentionedUserIds.length,
+    attachment_count: attachments.length,
+  });
   return parseJson<Comment>(
     await fetch(`/api/objectives/${objectiveId}/comments`, {
       method: "POST",
@@ -160,6 +185,7 @@ export async function deleteAttachmentApi(attachmentId: string): Promise<void> {
       (data as { error?: string } | null)?.error || "Delete failed"
     );
   }
+  trackEvent("attachment_removed", { target: "issue" });
 }
 
 export async function updateCommentApi(commentId: string, body: string): Promise<Comment> {
@@ -180,4 +206,5 @@ export async function deleteCommentApi(commentId: string): Promise<void> {
       (data as { error?: string } | null)?.error || "Delete failed"
     );
   }
+  trackEvent("comment_deleted", { target: "issue" });
 }

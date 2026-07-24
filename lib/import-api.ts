@@ -1,6 +1,7 @@
 "use client";
 
 import type { ImportSource, ImportWarning } from "@/lib/import/types";
+import { trackEvent } from "./analytics";
 
 export interface ImportCommitResponse {
   source: ImportSource;
@@ -16,6 +17,7 @@ export async function importIssuesApi(
   projectId: string,
   csv: string
 ): Promise<ImportCommitResponse> {
+  trackEvent("import_started", { source: "csv" });
   const response = await fetch(`/api/projects/${projectId}/import`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -34,5 +36,13 @@ export async function importIssuesApi(
     throw new Error(message);
   }
   if (data == null) throw new Error("Empty response");
-  return data as ImportCommitResponse;
+  const result = data as ImportCommitResponse;
+  trackEvent("import_completed", {
+    source: result.source,
+    issue_count: result.created,
+    categories_created: result.categories_created,
+    sub_issues_linked: result.sub_issues_linked,
+    warning_count: result.warnings.length,
+  });
+  return result;
 }

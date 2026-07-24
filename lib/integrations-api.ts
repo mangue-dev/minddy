@@ -6,6 +6,7 @@ import type {
   IntegrationWebhookEvent,
   IntegrationWebhookScope,
 } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -42,6 +43,7 @@ export async function createIntegrationApi(
   name: string,
   kind: IntegrationKind
 ): Promise<{ integration: Integration; key: string }> {
+  trackEvent("integration_added", { kind });
   return parseJson(
     await fetch(`/api/projects/${projectId}/integrations`, {
       method: "POST",
@@ -76,6 +78,7 @@ export async function revokeIntegrationApi(
   projectId: string,
   integrationId: string
 ): Promise<void> {
+  trackEvent("integration_removed", { kind: "unknown" });
   await parseJson(
     await fetch(
       `/api/projects/${projectId}/integrations/${encodeURIComponent(integrationId)}`,

@@ -7,6 +7,8 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
+import { captureServerEvent } from "@/lib/server/posthog";
+import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Accès données des runs de l'agent de code (MIN-46) : création, claim CAS,
@@ -26,6 +28,13 @@ export type AgentRunStatus =
   | "completed"
   | "failed"
   | "canceled";
+
+/** Statuts dont on ne repart pas — ceux qui closent un run (analytics). */
+const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
+  "completed",
+  "failed",
+  "canceled",
+]);
 
 /** Contenu sérialisé du checkpoint (repris tel quel au chunk suivant). */
 export interface AgentCheckpoint {
@@ -163,6 +172,23 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
     throw new Error(error?.message ?? "Failed to create agent run");
   }
+  // Analytics (MIN-78) : le lancement est aussi tracké côté client, mais lui
+  // seul ne voit pas les runs déclenchés par mention ou relancés par le drain.
+  // Le prompt n'est jamais envoyé.
+  captureServerEvent({
+    distinctId: input.createdBy ?? "agent:system",
+    event: "agent_run_started",
+    properties: {
+      model: input.model ?? "default",
+      model_forced: input.modelForced,
+      key_mode: input.keyMode,
+      triggered_by: input.triggeredBy,
+      scope: input.issueId ? "issue" : "notebook",
+      has_base_branch: !!input.baseBranch,
+      resumes_pr: input.prNumber != null,
+    },
+    groups: { project: input.projectId },
+  });
   return data as AgentRun;
 }
 
@@ -381,7 +407,31 @@ export async function stampRun(
       error.message,
     );
   }
-  return (data as AgentRun | null) ?? null;
+
+  // Fin de run (MIN-78). Tracké ici et non dans la boucle d'exécution : c'est
+  // le passage OBLIGÉ vers un statut terminal, et le `.in(status, guard)`
+  // garantit qu'une seule mise à jour gagne — donc un seul événement par run,
+  // même si plusieurs chunks tentent de conclure.
+  const run = (data as AgentRun | null) ?? null;
+  if (run && TERMINAL_RUN_STATUSES.has(run.status)) {
+    captureServerEvent({
+      distinctId: run.created_by ?? "agent:system",
+      event: run.status === "completed" ? "agent_run_completed" : "agent_run_failed",
+      properties: {
+        status: run.status,
+        model: run.model ?? "default",
+        key_mode: run.key_mode,
+        triggered_by: run.triggered_by,
+        scope: run.issue_id ? "issue" : "notebook",
+        opened_pr: run.pr_number != null,
+        duration_bucket: run.created_at
+          ? durationBucket(Date.now() - Date.parse(run.created_at))
+          : "unknown",
+      },
+      groups: { project: run.project_id },
+    });
+  }
+  return run;
 }
 
 /**

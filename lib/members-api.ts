@@ -1,6 +1,7 @@
 "use client";
 
 import type { MembersResponse } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -23,6 +24,8 @@ export async function fetchMembersApi(projectId: string): Promise<MembersRespons
 }
 
 export async function inviteMemberApi(projectId: string, email: string): Promise<void> {
+  // L'email n'est JAMAIS envoyé — seulement le fait qu'une invitation part.
+  trackEvent("project_member_invited", {});
   await parseJson(
     await fetch(`/api/projects/${projectId}/members`, {
       method: "POST",
@@ -45,6 +48,7 @@ export async function cancelInvitationApi(
 }
 
 export async function removeMemberApi(projectId: string, userId: string): Promise<void> {
+  trackEvent("project_member_removed", {});
   await parseJson(
     await fetch(
       `/api/projects/${projectId}/members?userId=${encodeURIComponent(userId)}`,

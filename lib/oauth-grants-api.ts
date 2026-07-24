@@ -1,5 +1,7 @@
 "use client";
 
+import { trackEvent } from "./analytics";
+
 export interface OAuthGrant {
   id: string;
   client_id: string;
@@ -32,6 +34,7 @@ export async function fetchOAuthGrantsApi(): Promise<{ grants: OAuthGrant[] }> {
 }
 
 export async function revokeOAuthGrantApi(grantId: string): Promise<void> {
+  trackEvent("oauth_grant_revoked", {});
   await parseJson(
     await fetch(`/api/account/oauth-grants/${encodeURIComponent(grantId)}`, {
       method: "DELETE",

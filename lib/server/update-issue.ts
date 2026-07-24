@@ -21,6 +21,8 @@ import {
 } from "@/lib/server/smart-assign";
 import { scheduleCycleCapture } from "@/lib/server/cycles";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
+import { captureServerEvent } from "./posthog";
+import { resolveIssueSource } from "./create-issue";
 
 /**
  * Shared issue-update core: validates an untrusted field payload, applies it
@@ -378,6 +380,22 @@ export async function updateIssueFields({
   if ("status" in updates && updates.status !== before.status) {
     scheduleFeedbackStatusSync(issueId, updates.status, actorId);
   }
+
+  // Analytics serveur (MIN-78) : même raison que pour la création — une bonne
+  // part des mises à jour vient de MCP, de Numo ou de l'agent de code, hors
+  // navigateur. `fields` liste les champs touchés (jamais leurs valeurs texte).
+  captureServerEvent({
+    distinctId: actorId,
+    event: "issue_updated_server",
+    properties: {
+      source: resolveIssueSource({ viaAssistant, mcpKeyId, actorId }),
+      fields: Object.keys(updates).sort().join(","),
+      field_count: Object.keys(updates).length,
+      ...(typeof updates.status === "string" ? { status: updates.status } : {}),
+      ...(typeof updates.priority === "string" ? { priority: updates.priority } : {}),
+    },
+    groups: { project: data.project_id as string },
+  });
 
   return { ok: true, issue: mapIssueRow(data) };
 }

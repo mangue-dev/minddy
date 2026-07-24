@@ -1,6 +1,7 @@
 "use client";
 
 import type { CreateProjectInput, Project, ProjectUpdateInput } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -64,6 +65,7 @@ export async function importProjectIconApi(
 
 /** Retire l'icône du projet — retour à l'orbe générée (owner). */
 export async function clearProjectIconApi(id: string): Promise<void> {
+  trackEvent("project_icon_changed", { kind: "orb" });
   const response = await fetch(`/api/projects/${id}/icon`, { method: "DELETE" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
@@ -74,6 +76,7 @@ export async function clearProjectIconApi(id: string): Promise<void> {
 }
 
 export async function deleteProjectApi(id: string): Promise<void> {
+  trackEvent("project_deleted", { project_id: id });
   const response = await fetch(`/api/projects/${id}`, { method: "DELETE" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);

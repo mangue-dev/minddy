@@ -10,6 +10,7 @@ import type {
   BillingPlanId,
   UsageSegmentId,
 } from "@/lib/billing-plans";
+import { trackEvent } from "./analytics";
 
 /** Fetchers client du billing (MIN-72) : statut de plan, usage, checkout, portal. */
 
@@ -57,6 +58,7 @@ export async function createCheckoutApi(
   planId: BillingPlanId,
   interval: BillingInterval = "month"
 ): Promise<string> {
+  trackEvent("checkout_started", { plan_id: planId, interval });
   const { url } = await parseJson<{ url: string | null }>(
     await fetch("/api/billing/checkout", {
       method: "POST",
@@ -70,6 +72,7 @@ export async function createCheckoutApi(
 
 /** Ouvre le portal Stripe (gérer / changer / annuler) → URL de redirection. */
 export async function createPortalApi(): Promise<string> {
+  trackEvent("billing_portal_opened", { current_plan_id: "unknown" });
   const { url } = await parseJson<{ url: string }>(
     await fetch("/api/billing/portal", { method: "POST" })
   );

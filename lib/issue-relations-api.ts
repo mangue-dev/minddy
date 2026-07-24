@@ -1,6 +1,7 @@
 "use client";
 
 import type { CreateIssueRelationInput, IssueRelation } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -31,6 +32,7 @@ export async function addIssueRelationApi(
   projectId: string,
   input: CreateIssueRelationInput
 ): Promise<IssueRelation> {
+  trackEvent("issue_relation_added", { relation: input.type });
   return parseJson<IssueRelation>(
     await fetch(`/api/projects/${projectId}/issue-relations`, {
       method: "POST",
@@ -41,6 +43,7 @@ export async function addIssueRelationApi(
 }
 
 export async function removeIssueRelationApi(relationId: string): Promise<void> {
+  trackEvent("issue_relation_removed", { relation: "unknown" });
   const response = await fetch(`/api/issue-relations/${relationId}`, {
     method: "DELETE",
   });

@@ -8,6 +8,7 @@ import { Button, Sheet, SheetClose, SheetContent, SheetTitle, cn } from "mangue-
 import { MinddyLogo } from "@/components/minddy-logo";
 import { getSupabase } from "@/lib/supabase";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
+import { useAnalytics } from "@/lib/use-analytics";
 
 /**
  * Barre de navigation du site public (MIN-73) — landing, tarifs, pages légales.
@@ -77,6 +78,7 @@ function useHasSession(): boolean {
 }
 
 export function MarketingNav() {
+  const { track } = useAnalytics();
   const t = useTranslations("Landing");
   const [mobileOpen, setMobileOpen] = useState(false);
   const hasSession = useHasSession();
@@ -158,7 +160,12 @@ export function MarketingNav() {
                     <Link href="/login">{t("navSignIn")}</Link>
                   </Button>
                   <Button asChild size="sm" className="px-4">
-                    <Link href="/signup">{t("navGetStarted")}</Link>
+                    <Link
+                      href="/signup"
+                      onClick={() => track("landing_cta_clicked", { location: "nav" })}
+                    >
+                      {t("navGetStarted")}
+                    </Link>
                   </Button>
                 </>
               )}

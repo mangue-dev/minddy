@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { runFeedbackAnalysis } from "@/lib/server/feedback/analyze";
 import { runFeedbackClassification } from "@/lib/server/feedback/classify";
+import { captureServerEvent } from "@/lib/server/posthog";
+import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Cron horaire (Vercel Cron, vercel.json) : passe de merge IA (MIN-37) puis passe
@@ -21,6 +23,7 @@ export async function GET(request: NextRequest) {
 
   // Ordre merge → classify : un post absorbé par un merge (tombstone) sort de la
   // file de classification (claim exclut merged_into_id) et n'est pas publié à part.
+  const startedAt = Date.now();
   const report = await runFeedbackAnalysis();
   const classification = await runFeedbackClassification();
 
@@ -33,5 +36,13 @@ export async function GET(request: NextRequest) {
     service.from("feedback_sessions").delete().lt("expires_at", now),
   ]);
 
+  captureServerEvent({
+    distinctId: "cron",
+    event: "cron_executed",
+    properties: {
+      job: "feedback-analysis",
+      duration_bucket: durationBucket(Date.now() - startedAt),
+    },
+  });
   return NextResponse.json({ ok: true, report, classification });
 }

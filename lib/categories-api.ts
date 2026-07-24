@@ -1,6 +1,7 @@
 "use client";
 
 import type { Category, CategoryUpdateInput, CreateCategoryInput } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -26,6 +27,7 @@ export async function createCategoryApi(
   projectId: string,
   input: CreateCategoryInput
 ): Promise<Category> {
+  trackEvent("category_created", {});
   return parseJson<Category>(
     await fetch(`/api/projects/${projectId}/categories`, {
       method: "POST",
@@ -39,6 +41,7 @@ export async function updateCategoryApi(
   categoryId: string,
   updates: CategoryUpdateInput
 ): Promise<Category> {
+  trackEvent("category_updated", {});
   return parseJson<Category>(
     await fetch(`/api/categories/${categoryId}`, {
       method: "PATCH",
@@ -49,6 +52,7 @@ export async function updateCategoryApi(
 }
 
 export async function deleteCategoryApi(categoryId: string): Promise<void> {
+  trackEvent("category_deleted", {});
   const response = await fetch(`/api/categories/${categoryId}`, { method: "DELETE" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);

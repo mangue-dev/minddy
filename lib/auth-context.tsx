@@ -11,6 +11,7 @@ import {
 } from "react";
 import { getSupabase } from "./supabase";
 import { sanitizeInternalRedirectPath } from "./auth-redirect";
+import { useAnalytics } from "./use-analytics";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextValue {
@@ -65,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { track, identify, reset } = useAnalytics();
 
   // Snapshot du user le plus frais, lu par updateUserMetadata pour fusionner sur
   // la bonne base (le state en closure serait périmé dans une chaîne d'écritures).
@@ -86,19 +88,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
       resolved = true;
       window.clearTimeout(timeoutId);
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
+
+      // Analytics (MIN-78) : rattache les événements suivants au compte. Les
+      // événements d'inscription/connexion eux-mêmes sont émis par le SERVEUR
+      // (app/auth/callback), qui distingue de façon fiable une première
+      // connexion — l'heuristique client « compte créé il y a moins d'une
+      // minute » d'AutoKap a été abandonnée pour cette raison.
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && s?.user) {
+        identify(
+          s.user.id,
+          {
+            email: s.user.email,
+            name: (s.user.user_metadata?.full_name as string | undefined) ?? null,
+          },
+          {
+            signup_date: s.user.created_at,
+            signup_method: s.user.app_metadata?.provider ?? "email",
+          }
+        );
+      } else if (event === "SIGNED_OUT") {
+        track("user_signed_out", {});
+        reset();
+      }
     });
 
     return () => {
       window.clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [identify, reset, track]);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
     const { error } = await getSupabase().auth.signInWithPassword({

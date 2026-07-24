@@ -6,6 +6,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider, Toaster } from "mangue-ui";
 import { Analytics } from "@vercel/analytics/next";
 import { CookieBanner } from "@/components/cookie-banner";
+import { PostHogProvider } from "@/components/posthog-provider";
 import { ThemeInitScript } from "@/components/theme-init-script";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -64,9 +65,15 @@ export default async function RootLayout({
       >
         <ThemeProvider defaultTheme={defaultTheme}>
           <NextIntlClientProvider messages={messages}>
-            {children}
-            <Toaster />
-            <CookieBanner />
+            {/* PostHog (MIN-78). Englobe TOUT — y compris les pages publiques
+                (landing, board de feedback, vues partagées) : c'est là que se
+                joue l'acquisition. L'init est différée et cookieless tant que le
+                bandeau n'a pas été tranché — voir le composant. */}
+            <PostHogProvider>
+              {children}
+              <Toaster />
+              <CookieBanner />
+            </PostHogProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
         <Analytics />

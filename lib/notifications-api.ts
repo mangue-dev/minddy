@@ -1,6 +1,7 @@
 "use client";
 
 import type { MyNotification } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -43,10 +44,12 @@ const del = async (body: unknown): Promise<void> => {
 };
 
 export async function markReadApi(ids: string[]): Promise<void> {
+  trackEvent("notifications_marked_read", { count: ids.length });
   await patch({ ids });
 }
 
 export async function markAllReadApi(): Promise<void> {
+  trackEvent("notifications_marked_read", { count: -1, all: true });
   await patch({ all: true });
 }
 

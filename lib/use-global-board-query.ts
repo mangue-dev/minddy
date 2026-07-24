@@ -10,6 +10,7 @@ import {
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import { trackEvent } from "./analytics";
 import {
   addIssueRelationApi,
   removeIssueRelationApi,
@@ -111,7 +112,10 @@ export function useGlobalBoardQuery() {
       patchCache(issueId, patch as Partial<Issue>);
       // Single record point for updateIssue/moveIssue/setIssueCycle — recorded
       // with the optimistic patch so an instant ⌘Z works; retracted on failure.
-      const request = updateIssueApi(issueId, patch);
+      const request = updateIssueApi(issueId, patch, {
+        surface: "global_board",
+        previousStatus: current?.status ?? null,
+      });
       const before = current ? buildBeforePatch(current, patch) : null;
       const rec = before
         ? record(
@@ -147,8 +151,22 @@ export function useGlobalBoardQuery() {
       issueId: string,
       patch: { status?: Issue["status"]; position: number },
       projectId: string
-    ) => writeIssue(issueId, patch, projectId, false),
-    [writeIssue]
+    ) => {
+      // Un simple réordonnancement dans la même colonne n'est pas un
+      // changement d'état : seul un vrai passage de colonne est tracké.
+      const from = queryClient
+        .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
+        ?.issues.find((i) => i.id === issueId)?.status;
+      if (patch.status && patch.status !== from) {
+        trackEvent("issue_dragged", {
+          from: from ?? "unknown",
+          to: patch.status,
+          scope: "global",
+        });
+      }
+      return writeIssue(issueId, patch, projectId, false);
+    },
+    [writeIssue, queryClient]
   );
 
   const setCategories = useCallback(
@@ -163,6 +181,7 @@ export function useGlobalBoardQuery() {
         before.length !== categoryIds.length ||
         before.some((id) => !categoryIds.includes(id));
       const request = setIssueCategoriesApi(issueId, categoryIds);
+      if (changed) trackEvent("issue_category_changed", { count: categoryIds.length });
       const rec = changed
         ? record(
             { kind: "categories", projectId, issueId, before, after: categoryIds },
@@ -190,7 +209,7 @@ export function useGlobalBoardQuery() {
       // the aggregate cache carries both the issues and the relation rows.
       const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const target = board?.issues.find((i) => i.id === issueId);
-      const request = deleteIssueApi(issueId);
+      const request = deleteIssueApi(issueId, { surface: "global_board" });
       const rec =
         target && board
           ? record(

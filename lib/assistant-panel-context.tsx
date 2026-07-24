@@ -14,6 +14,7 @@ import {
 import { usePathname } from "next/navigation";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { trackEvent } from "@/lib/analytics";
 
 export interface OpenAssistantOptions {
   /**
@@ -107,12 +108,20 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   );
 
   const open = useCallback((opts?: OpenAssistantOptions) => {
+    // `prompt` = ouverture programmatique (home, action de ticket) ; sans lui
+    // c'est un clic direct sur le panneau.
+    trackEvent("assistant_opened", {
+      source: opts?.prompt ? "home" : opts?.pageContext ? "issue" : "fab",
+      has_page_context: !!opts?.pageContext,
+      autosend: !!opts?.prompt,
+    });
     setPendingOptions(opts ?? null);
     setActivePageContext(opts?.pageContext ?? null);
     setIsOpen(true);
   }, []);
 
   const close = useCallback(() => {
+    trackEvent("assistant_closed", {});
     setIsOpen(false);
     setActivePageContext(null);
   }, []);
@@ -120,9 +129,11 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(() => {
     setIsOpen((prev) => {
       if (prev) {
+        trackEvent("assistant_closed", {});
         setActivePageContext(null);
         return false;
       }
+      trackEvent("assistant_opened", { source: "shortcut", has_page_context: false, autosend: false });
       // Toggle-open clears any stale pending options/context from a previous open.
       setPendingOptions(null);
       setActivePageContext(null);

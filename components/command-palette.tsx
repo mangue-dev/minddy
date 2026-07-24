@@ -62,6 +62,7 @@ import {
 import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { useAnalytics } from "@/lib/use-analytics";
 import type { Issue } from "@/lib/types";
 import type { PaletteGroup } from "@/components/header-search-pill";
 import "./command-palette.css";
@@ -99,6 +100,7 @@ export interface CommandPaletteProps {
 }
 
 export function CommandPalette({ groups, open, onOpenChange }: CommandPaletteProps) {
+  const { track } = useAnalytics();
   const locale = useLocale();
   const tIssueUI = useTranslations("IssueUI");
   const tStatus = useTranslations("Status");
@@ -178,6 +180,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
 
       if (isMod && !e.shiftKey && !e.altKey && (key === "k" || key === "p")) {
         e.preventDefault();
+        if (!openRef.current) track("command_palette_opened", { source: "shortcut" });
         onOpenChange(!openRef.current);
         return;
       }
@@ -191,12 +194,13 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
             el.isContentEditable);
         if (typing) return; // F = plain text in editors
         e.preventDefault();
+        if (!openRef.current) track("command_palette_opened", { source: "shortcut" });
         onOpenChange(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onOpenChange]);
+  }, [onOpenChange, track]);
 
   // Une pill de board a demandé les actions groupées → on ouvre la palette en
   // mode bulk (elle affichera alors les options de la sélection).
@@ -258,6 +262,9 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
             entityType: it.entityType,
             data: it.data,
             execute: () => {
+              // `it.key` est un identifiant stable (cmd-*, id de ticket) —
+              // jamais le libellé traduit, qui fragmenterait les stats.
+              track("command_executed", { command_id: it.key, category: cat });
               it.onSelect?.();
             },
           };
@@ -275,7 +282,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
     });
 
     return mapped;
-  }, [groups, themeLabel]);
+  }, [groups, themeLabel, track]);
 
   // === Actions contextuelles des tickets (⌘; / →) ===
   // Chaque action ouvre un formulaire inline à un champ : le select s'ouvre
@@ -287,7 +294,10 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
       updates: Parameters<typeof updateIssueApi>[1],
       message: string
     ): Promise<ActionResult> => {
-      await updateIssueApi(issue.id, updates);
+      await updateIssueApi(issue.id, updates, {
+        surface: "palette",
+        previousStatus: issue.status,
+      });
       await queryClient.invalidateQueries({ queryKey: ["issues", issue.project_id] });
       toast.success(message);
       // closeMenu:false → retour à la recherche, l'icône de statut se met à jour
@@ -453,7 +463,11 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
             });
             await navigator.clipboard.writeText(prompt);
             if (autoStart) {
-              await updateIssueApi(issue.id, { status: "in_progress" });
+              await updateIssueApi(
+                issue.id,
+                { status: "in_progress" },
+                { surface: "palette", previousStatus: issue.status }
+              );
               await queryClient.invalidateQueries({
                 queryKey: ["issues", issue.project_id],
               });

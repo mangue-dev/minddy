@@ -46,6 +46,10 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useDrafts } from "@/lib/use-drafts";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
+import { useAnalytics } from "@/lib/use-analytics";
+import { useTrackView } from "@/lib/use-track-view";
+import { lengthBucket } from "@/lib/analytics-sanitize";
+import type { AnalyticsPropsFor } from "@/lib/analytics-events";
 import { eventKey } from "@/lib/keyboard/event-key";
 import type {
   IssueStatus,
@@ -83,6 +87,7 @@ export function CreateIssueDialog({
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
+  analyticsSource = "dialog",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -105,9 +110,12 @@ export function CreateIssueDialog({
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
+  /** Surface d'où vient la création — analytics uniquement (MIN-78). */
+  analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
   const { user } = useAuth();
+  const { track } = useAnalytics();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
@@ -171,6 +179,13 @@ export function CreateIssueDialog({
       assignee_id: initialAssigneeId ?? defaultAssigneeId,
     }));
   }, [open, initialStatus, initialObjectiveId, initialAssigneeId, defaultAssigneeId]);
+
+  // Ouverture du dialog (MIN-78) : le dénominateur du taux d'abandon — combien
+  // de dialogs ouverts finissent en ticket réellement créé. `useTrackView`
+  // garantit une seule émission par ouverture (StrictMode double les effets).
+  useTrackView(open, "opened", () =>
+    track("issue_create_dialog_opened", { source: analyticsSource })
+  );
 
   // Field shortcuts: while the dialog is open, S/P/E/A/L/D/O open the matching
   // picker (anchored on its trigger in the options row), reusing the board-card
@@ -289,6 +304,7 @@ export function CreateIssueDialog({
   const recoverDraft = (id: string) => {
     const draft = drafts.find(id);
     if (!draft) return;
+    track("issue_draft_recovered", {});
     setTitle(draft.title);
     setDescription(draft.description);
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
@@ -346,6 +362,21 @@ export function CreateIssueDialog({
         });
         toast.success(t("issueCreatedToast"));
       }
+      // Analytics (MIN-78) : métadonnées seulement — jamais le titre ni la
+      // description, seulement leur présence et la tranche de longueur.
+      track("issue_created", {
+        source: analyticsSource,
+        has_description: description.trim().length > 0,
+        has_categories: categoryIds.length > 0,
+        has_assignee: fields.assignee_id !== null,
+        priority: fields.priority,
+        status: fields.status,
+        effort: fields.effort,
+        cross_project: other !== null,
+        attachment_count: uploads.inputs.length,
+        description_length_bucket: lengthBucket(description),
+        created_from_draft: activeDraftId !== null,
+      });
       // The draft became a real issue — drop it from the local store (MIN-41).
       if (activeDraftId) {
         drafts.remove(activeDraftId);
@@ -559,7 +590,10 @@ export function CreateIssueDialog({
                 </span>
               ) : (
                 <DictateButton
-                  onTranscription={onTranscript}
+                  onTranscription={(text) => {
+                    track("issue_dictation_used", { surface: "create_dialog" });
+                    onTranscript(text);
+                  }}
                   disabled={submitting}
                   shortcutKey="shift+v"
                   className="-ml-2"

@@ -1,5 +1,7 @@
 "use client";
 
+import { trackEvent } from "./analytics";
+
 /**
  * Fetchers client de l'agent de code (MIN-46) : clés BYOK OpenRouter du compte
  * et modèle par défaut de l'utilisateur. La clé en clair n'est jamais renvoyée.
@@ -40,6 +42,8 @@ export async function addAiKeyApi(input: {
   key: string;
   baseUrl?: string;
 }): Promise<{ key: AiKey }> {
+  // Jamais la clé, évidemment — seulement le fournisseur choisi.
+  trackEvent("ai_key_added", { provider: input.provider });
   return parseJson(
     await fetch("/api/account/ai-keys", {
       method: "POST",
@@ -51,6 +55,7 @@ export async function addAiKeyApi(input: {
 
 /** Retire le BYOK actif (single-active : pas de provider à préciser). */
 export async function deleteAiKeyApi(): Promise<void> {
+  trackEvent("ai_key_removed", {});
   await parseJson(await fetch("/api/account/ai-keys", { method: "DELETE" }));
 }
 

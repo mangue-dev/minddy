@@ -1,6 +1,7 @@
 "use client";
 
 import type { CreateViewInput, View, ViewShare, ViewUpdateInput } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -32,6 +33,10 @@ export async function createViewApi(
   scope: ViewScope,
   input: CreateViewInput
 ): Promise<View> {
+  trackEvent("view_created", {
+    has_filters: Object.keys(input.filters ?? {}).length > 0,
+    scope: scope.kind,
+  });
   return parseJson<View>(
     await fetch(viewsUrl(scope), {
       method: "POST",
@@ -45,6 +50,7 @@ export async function updateViewApi(
   viewId: string,
   updates: ViewUpdateInput
 ): Promise<View> {
+  trackEvent("view_updated", {});
   return parseJson<View>(
     await fetch(`/api/views/${viewId}`, {
       method: "PATCH",
@@ -55,6 +61,7 @@ export async function updateViewApi(
 }
 
 export async function deleteViewApi(viewId: string): Promise<void> {
+  trackEvent("view_deleted", {});
   const response = await fetch(`/api/views/${viewId}`, { method: "DELETE" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
@@ -75,6 +82,7 @@ export async function updateViewShareApi(
   viewId: string,
   input: { level: "password" | "public"; password?: string }
 ): Promise<ViewShare> {
+  trackEvent("share_link_created", { has_password: input.level === "password" });
   const data = await parseJson<{ share: ViewShare }>(
     await fetch(`/api/views/${viewId}/share`, {
       method: "PUT",
@@ -86,6 +94,7 @@ export async function updateViewShareApi(
 }
 
 export async function deleteViewShareApi(viewId: string): Promise<void> {
+  trackEvent("share_link_revoked", {});
   await parseJson<{ ok: boolean }>(
     await fetch(`/api/views/${viewId}/share`, { method: "DELETE" })
   );

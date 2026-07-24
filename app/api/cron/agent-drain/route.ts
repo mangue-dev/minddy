@@ -3,6 +3,8 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { drainAgentRuns } from "@/lib/server/agent/drain";
 import { chainAgentDrain } from "@/lib/server/agent/drain-chain";
+import { captureServerEvent } from "@/lib/server/posthog";
+import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Worker de l'agent de code (MIN-46). Draine les runs dus (auto-budget 270s sous
@@ -22,7 +24,20 @@ async function handle(request: NextRequest) {
   }
 
   const service = getServiceClient();
+  const startedAt = Date.now();
   const summary = await drainAgentRuns(service);
+  // Santé du worker (MIN-78) : un cron qui ne réclame plus rien, ou qui frôle
+  // les 300 s, est un incident silencieux — invisible dans les stats produit.
+  captureServerEvent({
+    distinctId: "cron",
+    event: "cron_executed",
+    properties: {
+      job: "agent-drain",
+      claimed: summary.claimed,
+      duration_bucket: durationBucket(Date.now() - startedAt),
+      trigger: request.method === "POST" ? "chain" : "schedule",
+    },
+  });
 
   const chain = Number(request.nextUrl.searchParams.get("chain") ?? "0") || 0;
   if (summary.claimed > 0) {

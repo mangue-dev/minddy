@@ -16,6 +16,7 @@ import { OAUTH_CORS_HEADERS, NO_STORE_HEADERS, corsPreflight } from "@/lib/serve
 import { getClientIp } from "@/lib/server/request-ip";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getServiceClient } from "@/lib/supabase-service";
+import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
  * Endpoint token OAuth 2.1 (RFC 6749 §3.2) — public, CORS ouvert, réponses
@@ -152,6 +153,15 @@ async function handleAuthorizationCode(
 
   const pair = await issueTokens(claimed.grant_id);
   if (!pair) return tokenError("invalid_grant", "Grant has been revoked.");
+  // Analytics (MIN-78) : un agent vient de se connecter au MCP pour la première
+  // fois (l'échange du code n'a lieu qu'une fois par autorisation — les
+  // reconnexions passent par refresh_token). Le nom du client est déclaratif,
+  // mais c'est la seule façon de savoir QUELS agents utilisent minddy.
+  captureServerEvent({
+    distinctId: claimed.user_id ?? "oauth:unknown",
+    event: "oauth_grant_created",
+    properties: { client_id, scope: pair.scope },
+  });
   return tokenSuccess(pair);
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { MyInvitation } from "./types";
+import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -26,6 +27,9 @@ export async function respondInvitationApi(
   invitationId: string,
   action: "accept" | "reject"
 ): Promise<{ acceptedProjectId: string | null }> {
+  trackEvent("project_invitation_responded", {
+    response: action === "accept" ? "accepted" : "declined",
+  });
   return parseJson<{ acceptedProjectId: string | null }>(
     await fetch("/api/projects/invitations", {
       method: "PATCH",

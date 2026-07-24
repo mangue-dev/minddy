@@ -14,6 +14,7 @@ import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
+import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -49,6 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <AssistantFab />
                     <ScratchpadModal />
                     <KeyboardCheatsheet />
+                    <AnalyticsProjectGroup />
                   </UndoProvider>
                 </KeyboardProvider>
               </ScratchpadProvider>

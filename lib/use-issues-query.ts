@@ -10,6 +10,7 @@ import {
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import { trackEvent } from "./analytics";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
@@ -135,7 +136,10 @@ export function useIssuesQuery(projectId: string | null) {
         );
       }
       // The final patch (injected assignee included) against the pre-edit issue.
-      const request = updateIssueApi(issueId, patch);
+      const request = updateIssueApi(issueId, patch, {
+        surface: "project_board",
+        previousStatus: current?.status ?? null,
+      });
       const before = current && projectId ? buildBeforePatch(current, patch) : null;
       const rec = before
         ? record(
@@ -188,7 +192,7 @@ export function useIssuesQuery(projectId: string | null) {
           projectId,
         ]) ?? []
       ).filter((r) => r.source_id === issueId || r.target_id === issueId);
-      const request = deleteIssueApi(issueId);
+      const request = deleteIssueApi(issueId, { surface: "project_board" });
       const rec =
         target && projectId
           ? record(
@@ -245,8 +249,19 @@ export function useIssuesQuery(projectId: string | null) {
       queryClient.setQueryData<Issue[]>(key, (old) =>
         (old ?? []).map((i) => (i.id === issueId ? { ...i, ...write } : i))
       );
-      const request = updateIssueApi(issueId, write);
       const current = previous?.find((i) => i.id === issueId);
+      // Glisser-déposer : la surface qui dit si le kanban sert vraiment.
+      const request = updateIssueApi(issueId, write, {
+        surface: "kanban_drag",
+        previousStatus: current?.status ?? null,
+      });
+      if (patch.status && patch.status !== current?.status) {
+        trackEvent("issue_dragged", {
+          from: current?.status ?? "unknown",
+          to: patch.status,
+          scope: "project",
+        });
+      }
       const before = current ? buildBeforePatch(current, write) : null;
       const rec = before
         ? record(
