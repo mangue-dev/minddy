@@ -371,46 +371,48 @@ export function CreateProjectWizard({
                   className="w-full"
                 >
                   {step === "project" && (
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label
-                          htmlFor="project-name"
-                          className="text-sm font-medium"
-                        >
-                          {t("nameLabel")}
-                        </label>
-                        <Input
-                          id="project-name"
-                          autoFocus
-                          required
-                          value={name}
-                          onChange={(e) => handleNameChange(e.target.value)}
-                          placeholder={t("namePlaceholder")}
-                        />
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-end gap-3">
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <label
+                            htmlFor="project-name"
+                            className="text-sm font-medium"
+                          >
+                            {t("nameLabel")}
+                          </label>
+                          <Input
+                            id="project-name"
+                            autoFocus
+                            required
+                            value={name}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            placeholder={t("namePlaceholder")}
+                          />
+                        </div>
+                        <div className="flex w-28 shrink-0 flex-col gap-1.5">
+                          <label
+                            htmlFor="project-key"
+                            className="text-sm font-medium"
+                          >
+                            {t("keyLabel")}
+                          </label>
+                          <Input
+                            id="project-key"
+                            required
+                            value={key}
+                            onChange={(e) => {
+                              setKeyTouched(true);
+                              setKey(normalizeKey(e.target.value));
+                            }}
+                            placeholder="MIND"
+                            className="font-mono uppercase tracking-wide"
+                            maxLength={5}
+                          />
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label
-                          htmlFor="project-key"
-                          className="text-sm font-medium"
-                        >
-                          {t("keyLabel")}
-                        </label>
-                        <Input
-                          id="project-key"
-                          required
-                          value={key}
-                          onChange={(e) => {
-                            setKeyTouched(true);
-                            setKey(normalizeKey(e.target.value));
-                          }}
-                          placeholder="MIND"
-                          className="w-28 font-mono uppercase tracking-wide"
-                          maxLength={5}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          {t("keyHint")}
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t("keyHint")}
+                      </p>
                     </div>
                   )}
 

@@ -61,6 +61,7 @@ import {
 } from "@/lib/issue-constants";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { eventKey } from "@/lib/keyboard/event-key";
 import type { Issue } from "@/lib/types";
 import type { PaletteGroup } from "@/components/header-search-pill";
 import "./command-palette.css";
@@ -173,7 +174,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
-      const key = e.key.toLowerCase();
+      const key = eventKey(e);
 
       if (isMod && !e.shiftKey && !e.altKey && (key === "k" || key === "p")) {
         e.preventDefault();

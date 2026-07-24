@@ -17,6 +17,7 @@ import {
 } from "mangue-ui";
 
 import { DictateWaveform } from "./dictate-waveform";
+import { eventKey } from "@/lib/keyboard/event-key";
 
 const MAX_DURATION_MS = 90_000;
 const NEAR_LIMIT_MS = 10_000;
@@ -332,7 +333,7 @@ export function DictateButton({
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if (shortcutRequireShift ? !e.shiftKey : e.shiftKey) return;
-      if (e.key.toLowerCase() !== shortcutChar) return;
+      if (eventKey(e) !== shortcutChar) return;
       if (!shortcutRequireShift) {
         const el = e.target as HTMLElement | null;
         if (

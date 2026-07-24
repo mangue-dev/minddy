@@ -24,6 +24,7 @@ import {
 } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
+import { eventKey } from "@/lib/keyboard/event-key";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -123,7 +124,7 @@ export function useIssueFieldShortcuts(
           el.isContentEditable)
       )
         return;
-      const key = e.key.toLowerCase();
+      const key = eventKey(e);
       const action =
         actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
       if (action) {

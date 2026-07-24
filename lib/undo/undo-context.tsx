@@ -42,6 +42,7 @@ import {
 } from "@/lib/issue-relations-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
+import { eventKey } from "@/lib/keyboard/event-key";
 import {
   pushEntry,
   resolveAliased,
@@ -416,7 +417,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-      if (e.key.toLowerCase() !== "z") return;
+      if (eventKey(e) !== "z") return;
       // Text fields and TipTap keep their native undo while focused.
       if (isTypingTarget(e.target)) return;
       e.preventDefault();

@@ -35,6 +35,7 @@ import { toast, Kbd } from "mangue-ui";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
+import { eventKey } from "@/lib/keyboard/event-key";
 
 /** Leader key that arms a navigation chord. */
 export const CHORD_PREFIX = "g";
@@ -215,7 +216,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         (e.metaKey || e.ctrlKey) &&
         !e.altKey &&
         !e.shiftKey &&
-        e.key.toLowerCase() === "b"
+        eventKey(e) === "b"
       ) {
         if (isTypingTarget(e.target) || isDialogOpen()) return;
         e.preventDefault();
@@ -231,7 +232,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       if (armedRef.current) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        runChord(e.key.toLowerCase());
+        runChord(eventKey(e));
         disarm();
         return;
       }
@@ -247,7 +248,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
 
       if (e.shiftKey) return;
       if (isTypingTarget(e.target) || isDialogOpen()) return;
-      if (e.key.toLowerCase() !== CHORD_PREFIX) return;
+      if (eventKey(e) !== CHORD_PREFIX) return;
 
       // Arm the chord.
       e.preventDefault();

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { History, Maximize2, Minimize2, Plus, X } from "lucide-react";
 import {
   Button,
+  cn,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -508,115 +509,108 @@ export const AssistantShell = forwardRef<
               className="size-8 text-muted-foreground"
             />
           </div>
-        ) : !hasMessages ? (
-          /* Empty state — Numo greeting centered, suggestions + composer pinned. */
-          <div className="flex flex-1 flex-col">
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
-              <NumoIcon state="idle" className="size-12 text-foreground" />
-              <div className="max-w-xs space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  {t("greeting")}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t(descriptionKey)}
-                </p>
-              </div>
-            </div>
-            <div
-              className={
-                compact
-                  ? `mx-auto w-full min-w-0 ${convoMaxW} shrink-0 space-y-3 px-1.5 pb-1.5`
-                  : `mx-auto w-full min-w-0 ${convoMaxW} shrink-0 space-y-3 px-2 pb-2 md:px-0`
-              }
-            >
-              <div className="overflow-hidden px-3">
-                <Suggestions>
-                  {STARTER_KEYS.map((k) => {
-                    const prompt = t(`starter.${k}` as const);
-                    return (
-                      <Suggestion
-                        key={k}
-                        suggestion={prompt}
-                        onClick={handleSuggestionClick}
-                      />
-                    );
-                  })}
-                </Suggestions>
-              </div>
-              <ChatInput
-                ref={chatInputRef}
-                onSend={handleSend}
-                onAbort={abort}
-                isStreaming={isBusy}
-                beam={isBusy}
-                noBorder
-                pageContext={pageContext}
-              />
-            </div>
-          </div>
         ) : (
+          /* Accueil (greeting + suggestions) et conversation partagent LE MÊME
+             composer monté : le basculer d'une branche à l'autre au premier
+             message le démonterait, le focus partirait sur <body> et le
+             FocusScope du Sheet le poserait sur la coquille (halo de focus). */
           <>
-            <Conversation className="min-h-0 flex-1" initial="instant">
-              <ConversationContent
-                className={
-                  compact
-                    ? `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-5`
-                    : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
-                }
-              >
-                {state.messages.map((msg) => (
-                  <ChatMessage
-                    key={msg.id}
-                    message={msg}
-                    toolCallResults={state.toolCallResults}
-                    onSuggestionClick={handleSuggestionClick}
-                    showCopyButton={copyButtonIds.has(msg.id)}
-                  />
-                ))}
-
-                {isStreaming && (
-                  <StreamingMessage
-                    content={state.streamingContent}
-                    activeToolCalls={state.activeToolCalls}
-                  />
-                )}
-
-                {(showThinking || isGeneratingServer) && (
-                  <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                    <NumoIcon
-                      state="thinking"
-                      className="size-4 text-muted-foreground"
+            {hasMessages ? (
+              <Conversation className="min-h-0 flex-1" initial="instant">
+                <ConversationContent
+                  className={
+                    compact
+                      ? `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-5`
+                      : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
+                  }
+                >
+                  {state.messages.map((msg) => (
+                    <ChatMessage
+                      key={msg.id}
+                      message={msg}
+                      toolCallResults={state.toolCallResults}
+                      onSuggestionClick={handleSuggestionClick}
+                      showCopyButton={copyButtonIds.has(msg.id)}
                     />
-                    <span>
-                      {isGeneratingServer
-                        ? t("generatingServer")
-                        : t("thinking")}
-                    </span>
-                  </div>
-                )}
+                  ))}
 
-                {state.error && (
-                  <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                    {state.error}
-                  </div>
-                )}
-              </ConversationContent>
-              <ConversationScrollButton />
-            </Conversation>
+                  {isStreaming && (
+                    <StreamingMessage
+                      content={state.streamingContent}
+                      activeToolCalls={state.activeToolCalls}
+                    />
+                  )}
+
+                  {(showThinking || isGeneratingServer) && (
+                    <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                      <NumoIcon
+                        state="thinking"
+                        className="size-4 text-muted-foreground"
+                      />
+                      <span>
+                        {isGeneratingServer
+                          ? t("generatingServer")
+                          : t("thinking")}
+                      </span>
+                    </div>
+                  )}
+
+                  {state.error && (
+                    <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                      {state.error}
+                    </div>
+                  )}
+                </ConversationContent>
+                <ConversationScrollButton />
+              </Conversation>
+            ) : (
+              /* Empty state — Numo greeting centered above the composer. */
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+                <NumoIcon state="idle" className="size-12 text-foreground" />
+                <div className="max-w-xs space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {t("greeting")}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t(descriptionKey)}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div
-              className={
-                compact
-                  ? `mx-auto w-full ${convoMaxW} shrink-0 px-1.5 pb-1.5`
-                  : `mx-auto w-full ${convoMaxW} shrink-0 px-2 md:px-0`
-              }
+              className={cn(
+                `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
+                compact ? "px-1.5 pb-1.5" : "px-2 md:px-0",
+                // Accueil : gouttière sous les suggestions + coussin bas hors
+                // compact (le composer bordé apporte déjà le sien en conversation).
+                !hasMessages && "space-y-3",
+                !hasMessages && !compact && "pb-2",
+              )}
             >
+              {!hasMessages && (
+                <div className="overflow-hidden px-3">
+                  <Suggestions>
+                    {STARTER_KEYS.map((k) => {
+                      const prompt = t(`starter.${k}` as const);
+                      return (
+                        <Suggestion
+                          key={k}
+                          suggestion={prompt}
+                          onClick={handleSuggestionClick}
+                        />
+                      );
+                    })}
+                  </Suggestions>
+                </div>
+              )}
               <ChatInput
                 ref={chatInputRef}
                 onSend={handleSend}
                 onAbort={abort}
                 isStreaming={isStreaming}
                 beam={isBusy}
+                noBorder={!hasMessages}
                 pageContext={pageContext}
               />
             </div>

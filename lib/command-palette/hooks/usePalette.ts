@@ -35,6 +35,18 @@ export function isApplePlatform(): boolean {
   return /mac|iphone|ipad|ipod/i.test(navigator.platform ?? navigator.userAgent);
 }
 
+/**
+ * Lowercased `event.key`, or `""` when the event carries no key.
+ *
+ * Global `keydown` listeners also receive synthetic events dispatched by
+ * browser extensions and IME layers, which are often built with
+ * `new Event("keydown")` and have no `key` — `e.key.toLowerCase()` would throw
+ * and take the host app down. `""` matches no shortcut, so callers fall through.
+ */
+export function eventKey(e: Pick<KeyboardEvent, "key">): string {
+  return typeof e.key === "string" ? e.key.toLowerCase() : "";
+}
+
 function matchesCombo(e: KeyboardEvent, combo: string): boolean {
   const parts = combo.toLowerCase().split("+");
   const key = parts[parts.length - 1];
@@ -45,7 +57,7 @@ function matchesCombo(e: KeyboardEvent, combo: string): boolean {
   const mod = isApplePlatform() ? e.metaKey : e.ctrlKey;
 
   return (
-    e.key.toLowerCase() === key &&
+    eventKey(e) === key &&
     (!wantsMod || mod) &&
     (wantsShift ? e.shiftKey : !e.shiftKey) &&
     (wantsAlt ? e.altKey : !e.altKey)

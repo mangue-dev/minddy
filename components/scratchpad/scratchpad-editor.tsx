@@ -30,6 +30,7 @@ import {
 } from "@/components/scratchpad/slash-command";
 import { useDictation } from "@/components/scratchpad/use-dictation";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
+import { eventKey } from "@/lib/keyboard/event-key";
 
 /** mm:ss for the dictation timer. */
 function formatTime(ms: number): string {
@@ -287,7 +288,7 @@ export function ScratchpadEditor({
         (e.metaKey || e.ctrlKey) &&
         !e.shiftKey &&
         !e.altKey &&
-        e.key.toLowerCase() === "s"
+        eventKey(e) === "s"
       ) {
         e.preventDefault();
         flushRef.current();

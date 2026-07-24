@@ -34,6 +34,11 @@ const EXPANDED_DESKTOP =
 export function panelSheetClassName(displayMode: PanelDisplayMode): string {
   return cn(
     "p-0 gap-0",
+    // Pas de halo de focus sur la coquille : le FocusScope de Radix repose le
+    // focus sur le contenu du Sheet dès qu'il s'échappe (ex. l'input vidé après
+    // envoi), ce qui déclenchait l'outline blanche par défaut du navigateur
+    // autour de tout le panneau. Même parti pris que DialogContent (mangue-ui).
+    "outline-none",
     // Morph fluide compact ⇄ étendu — voir globals.css `.assistant-panel-morph`.
     "assistant-panel-morph",
     displayMode === "expanded" ? EXPANDED_DESKTOP : COMPACT_DESKTOP,

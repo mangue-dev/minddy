@@ -13,15 +13,24 @@ import { BorderBeam } from "border-beam";
 export function AgentBeam({
   active,
   className,
+  keepMounted = false,
   children,
 }: {
   active: boolean;
   className?: string;
+  /**
+   * Garde le wrapper monté même inactif (le liseré s'allume/s'éteint alors via
+   * `active`, avec son fondu). Indispensable dès que les enfants portent de
+   * l'état DOM — un composer, par exemple : sans ça, chaque bascule du liseré
+   * remonte l'arbre, ce qui perd le focus ET le texte en cours de frappe.
+   */
+  keepMounted?: boolean;
   children: ReactNode;
 }) {
-  if (!active) return <>{children}</>;
+  if (!active && !keepMounted) return <>{children}</>;
   return (
     <BorderBeam
+      active={active}
       size="pulse-inner"
       duration={4}
       colorVariant="colorful"

@@ -32,6 +32,7 @@ import {
 import { useCalculator } from "../hooks/useCalculator";
 import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
 import { useMobileGestures, useIsTouchDevice } from "../hooks/useMobileGestures";
+import { eventKey } from "../hooks/usePalette";
 import { usePaletteStore } from "../store";
 import styles from "../styles/SearchView.module.css";
 import type { ActionExecutionContext } from "../registry/types";
@@ -469,7 +470,7 @@ export function SearchView({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.key.toLowerCase() !== shortcuts.actionsKey) return;
+      if (eventKey(e) !== shortcuts.actionsKey) return;
       if (isActionsPopoverOpen) return;
 
       const item = itemsWithCalculator[activeIndex];

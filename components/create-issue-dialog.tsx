@@ -46,6 +46,7 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useDrafts } from "@/lib/use-drafts";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
+import { eventKey } from "@/lib/keyboard/event-key";
 import type {
   IssueStatus,
   IssuePriority,
@@ -189,7 +190,7 @@ export function CreateIssueDialog({
           el.isContentEditable)
       )
         return;
-      const field = SHORTCUT_KEYS[e.key.toLowerCase()];
+      const field = SHORTCUT_KEYS[eventKey(e)];
       if (!field) return;
       e.preventDefault();
       setOpenPicker(field);

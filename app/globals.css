@@ -143,6 +143,18 @@
   }
 }
 
+/* Liseré agent (AgentBeam) monté en permanence (`keepMounted`, ex. le composer
+   Numo) : au repos son wrapper doit être totalement inerte. BorderBeam pose un
+   `overflow: hidden` — utile pour le liseré, mais il rognerait alors le halo de
+   focus (ring-2) de la surface enveloppée. On ne le rétablit qu'à l'allumage et
+   pendant le fondu de sortie ([data-active] / [data-fading]).
+   Hors @layer et par spécificité (0,3,0) pour battre le `<style>` non layerisé
+   qu'injecte BorderBeam — un utilitaire Tailwind, lui, est dans @layer et
+   perdrait. */
+[data-beam]:not([data-active]):not([data-fading]) {
+  overflow: visible;
+}
+
 /* Shiki dual-theme support — !important needed to override inline styles */
 .dark .shiki,
 .dark .shiki span {

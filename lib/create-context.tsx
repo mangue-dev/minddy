@@ -24,6 +24,7 @@ import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { eventKey } from "@/lib/keyboard/event-key";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type {
   CreateIssueInput,
@@ -217,7 +218,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (projects.length === 0) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
+      const key = eventKey(e);
       if (key !== "c" && key !== "o") return;
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       const el = e.target as HTMLElement | null;

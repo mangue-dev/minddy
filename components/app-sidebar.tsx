@@ -329,14 +329,6 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-56">
-        {user?.email && (
-          <>
-            <div className="truncate px-2 py-1.5 text-xs text-muted-foreground">
-              {user.email}
-            </div>
-            <DropdownMenuSeparator />
-          </>
-        )}
         <DropdownMenuItem asChild>
           <Link href="/settings">
             <Settings />
@@ -366,6 +358,7 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
           <LogOut />
           {t("signOut")}
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <div className="px-2 py-1 text-center text-xs text-muted-foreground">
           {packageJson.version}
         </div>

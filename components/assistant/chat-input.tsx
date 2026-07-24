@@ -154,6 +154,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onSend(value, uploads.inputs);
       clearEditor();
       uploads.clear();
+      // Le caret reste dans le composer après l'envoi. Sans ça le focus s'échappe
+      // (vider un contentEditable le perd ; cliquer Envoyer focus un bouton qui
+      // disparaît juste après), et dans le panneau Numo le FocusScope du Sheet le
+      // rapatriait sur la coquille — d'où un halo de focus autour du panneau.
+      editorRef.current?.focus();
     }, [serializeContent, onSend, disabled, clearEditor, uploads]);
 
     const handleKeyDown = useCallback(
@@ -274,7 +279,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         className={noBorder ? "px-3 pb-3" : "px-3 py-3"}
         onMouseDown={handleContainerMouseDown}
       >
-        <AgentBeam active={!!beam} className="rounded-2xl">
+        {/* `keepMounted` : le composer ne doit JAMAIS être remonté quand le liseré
+            s'allume ou s'éteint — sinon l'éditeur perd le focus (le FocusScope du
+            Sheet le repose alors sur la coquille) et le texte tapé pendant la
+            réponse disparaît. */}
+        <AgentBeam active={!!beam} keepMounted className="rounded-2xl">
         <div
           className={cn(
             "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
