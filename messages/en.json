@@ -853,7 +853,10 @@
     "searchPlaceholder": "Search…",
     "noResults": "No results.",
     "feedback": "Feedback",
-    "adminDashboard": "Admin dashboard"
+    "adminDashboard": "Admin dashboard",
+    "syncPrompt": "Copy git sync prompt",
+    "syncPromptCopied": "Git sync prompt copied",
+    "syncPromptText": "Synchronize the local git repo with `origin` so they are strictly identical (0 commits ahead, 0 behind on the current branch).\n\n1. Run `git fetch --all --prune`, then compare the local branch to its upstream.\n2. If they have diverged, rebase my local commits on top of the upstream (linear history, no merge commit).\n3. Review the resulting history before pushing, then push as a fast-forward. Only use `--force-with-lease` if strictly necessary, and warn me first.\n4. Finish by confirming the state: 0 ahead / 0 behind.\n\nDon't touch my uncommitted files; if a rebase conflict occurs, stop and show me the conflict."
   },
   "Keyboard": {
     "then": "then",
@@ -868,6 +871,7 @@
     "shortcuts": {
       "navHome": "Go to Home",
       "navInbox": "Go to Inbox",
+      "navAgents": "Go to Agents",
       "navAssistant": "Open Numo assistant",
       "navNotes": "Open task notebook",
       "navAllIssues": "Go to issues",

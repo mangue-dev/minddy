@@ -27,6 +27,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
     shortcuts: [
       { id: "nav.home", labelKey: "navHome", keys: [["G"], ["H"]] },
       { id: "nav.inbox", labelKey: "navInbox", keys: [["G"], ["I"]] },
+      { id: "nav.agents", labelKey: "navAgents", keys: [["G"], ["J"]] },
       { id: "nav.assistant", labelKey: "navAssistant", keys: [["G"], ["A"]] },
       { id: "nav.notes", labelKey: "navNotes", keys: [["G"], ["N"]] },
       { id: "nav.allIssues", labelKey: "navAllIssues", keys: [["G"], ["B"]] },

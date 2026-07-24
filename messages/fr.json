@@ -853,7 +853,10 @@
     "searchPlaceholder": "Rechercher…",
     "noResults": "Aucun résultat.",
     "feedback": "Feedback",
-    "adminDashboard": "Dashboard administrateur"
+    "adminDashboard": "Dashboard administrateur",
+    "syncPrompt": "Copier le prompt de sync git",
+    "syncPromptCopied": "Prompt de sync git copié",
+    "syncPromptText": "Synchronise le dépôt git local avec `origin` pour qu'ils soient strictement identiques (0 commit en avance, 0 en retard sur la branche courante).\n\n1. `git fetch --all --prune`, puis compare la branche locale à son upstream.\n2. En cas de divergence, rebase mes commits locaux au-dessus de l'upstream (historique linéaire, aucun merge commit).\n3. Vérifie l'historique obtenu avant de pousser, puis push en fast-forward. N'utilise `--force-with-lease` que si c'est indispensable, et préviens-moi avant.\n4. Termine en confirmant l'état : 0 en avance / 0 en retard.\n\nNe touche pas à mes fichiers non commités ; en cas de conflit de rebase, arrête-toi et montre-moi le conflit."
   },
   "Keyboard": {
     "then": "puis",
@@ -868,6 +871,7 @@
     "shortcuts": {
       "navHome": "Aller à l'accueil",
       "navInbox": "Aller à l'inbox",
+      "navAgents": "Aller aux Agents",
       "navAssistant": "Ouvrir l'assistant Numo",
       "navNotes": "Ouvrir le carnet de tâches",
       "navAllIssues": "Aller aux tickets",

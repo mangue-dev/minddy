@@ -5,7 +5,7 @@
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar) and
 // a short "G then…" toast appears (covers the collapsed-sidebar case).
 //
-//   Global:      G H home · G I inbox · G A assistant (Numo) · G N notes
+//   Global:      G H home · G I inbox · G J agents · G A assistant (Numo) · G N notes
 //   In a project: G B all issues · G M my issues · G O objectives
 //                 G T triage · G S project settings
 //
@@ -162,6 +162,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           return true;
         case "i":
           go("/inbox");
+          return true;
+        case "j":
+          go("/agents");
           return true;
         case "a":
           toggleAssistantRef.current();

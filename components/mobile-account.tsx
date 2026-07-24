@@ -3,9 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import packageJson from "@/package.json";
-import { useTheme } from "mangue-ui";
+import { toast, useTheme } from "mangue-ui";
 import {
   BarChart3,
+  ClipboardCopy,
   CreditCard,
   Megaphone,
   Settings,
@@ -135,6 +136,34 @@ export function useAccountActions(): {
       icon: Megaphone,
       keywords: ["feedback", "support", "retour", "avis"],
       onSelect: openFeedbackBoard,
+    },
+    // Copie dans le presse-papiers le prompt de synchronisation git (localisé
+    // FR/EN) prêt à coller dans un agent de code — pas de navigation, juste un
+    // writeText + toast, comme l'action « Copier le prompt » d'un ticket.
+    {
+      key: "cmd-git-sync-prompt",
+      label: t("syncPrompt"),
+      icon: ClipboardCopy,
+      keywords: [
+        "git",
+        "sync",
+        "synchroniser",
+        "synchronize",
+        "prompt",
+        "copier",
+        "copy",
+        "rebase",
+        "push",
+        "pull",
+        "dépôt",
+        "depot",
+        "repo",
+      ],
+      onSelect: () => {
+        void navigator.clipboard
+          .writeText(t("syncPromptText"))
+          .then(() => toast.success(t("syncPromptCopied")));
+      },
     },
     ...THEME_CHOICES.map((c) => ({
       key: `cmd-${c.value}`,

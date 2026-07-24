@@ -168,7 +168,7 @@ function SidebarRow({
       <Tooltip>
         <TooltipTrigger asChild>{row}</TooltipTrigger>
         <TooltipContent
-          side={collapsed ? "right" : "bottom"}
+          side="right"
           className="flex items-center gap-2"
         >
           <span>{item.tooltip ?? item.label}</span>

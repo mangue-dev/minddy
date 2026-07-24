@@ -495,6 +495,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     icon: NumoNavIcon,
     href: "/agents",
     active: pathname.startsWith("/agents"),
+    shortcut: "J",
     showBadgeCollapsed: true,
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
