@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "mangue-ui";
 import { displayName } from "@/lib/display-name";
 import { useAutosize } from "@/lib/use-autosize";
@@ -76,6 +76,7 @@ export function MentionTextarea({
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [mention, setMention] = useState<{ at: number; query: string } | null>(null);
+  const [selected, setSelected] = useState(0);
   useAutosize(ref, value);
 
   const mentionables = includeNumo ? [...members, NUMO_MENTION] : members;
@@ -87,6 +88,12 @@ export function MentionTextarea({
         .slice(0, 6)
     : [];
   const open = !!mention && suggestions.length > 0;
+  // Typing narrows the list under the cursor, so keep the highlight in range.
+  const active = Math.min(selected, Math.max(0, suggestions.length - 1));
+
+  // Back to the first suggestion whenever the query changes — and on reopen,
+  // which always passes through `undefined` (menu closed) first.
+  useEffect(() => setSelected(0), [mention?.query]);
 
   const refresh = () => {
     const el = ref.current;
@@ -126,9 +133,20 @@ export function MentionTextarea({
           if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) refresh();
         }}
         onKeyDown={(e) => {
+          // Arrows must not reach the textarea: the caret would move out of the
+          // "@query" and drop the mention.
+          if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            e.preventDefault();
+            const n = suggestions.length;
+            setSelected((s) => {
+              const from = Math.min(s, n - 1);
+              return e.key === "ArrowDown" ? (from + 1) % n : (from - 1 + n) % n;
+            });
+            return;
+          }
           if (open && e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
             e.preventDefault();
-            pick(suggestions[0]);
+            pick(suggestions[active]);
             return;
           }
           if (open && e.key === "Escape") {
@@ -161,7 +179,7 @@ export function MentionTextarea({
             dropUp ? "bottom-full mb-1" : "top-full mt-1"
           )}
         >
-          {suggestions.map((m) => (
+          {suggestions.map((m, index) => (
             <button
               key={m.user_id}
               type="button"
@@ -169,7 +187,11 @@ export function MentionTextarea({
                 e.preventDefault();
                 pick(m);
               }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+              onMouseEnter={() => setSelected(index)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
+                index === active && "bg-muted"
+              )}
             >
               {m.user_id === NUMO_MENTION_ID ? (
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">

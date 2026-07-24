@@ -941,7 +941,7 @@
     "noColor": "Aucune couleur",
     "colorAria": "Couleur {color}",
     "editObjectiveTitle": "Modifier l'objectif",
-    "namePlaceholder": "Refonte de l'UI",
+    "namePlaceholder": "Titre de l'objectif",
     "descriptionPlaceholder": "Description (optionnelle)",
     "noLead": "Sans lead",
     "statusFieldLabel": "Statut",

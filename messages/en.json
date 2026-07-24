@@ -941,7 +941,7 @@
     "noColor": "No color",
     "colorAria": "Color {color}",
     "editObjectiveTitle": "Edit objective",
-    "namePlaceholder": "Refactor UI",
+    "namePlaceholder": "Objective title",
     "descriptionPlaceholder": "Description (optional)",
     "noLead": "No lead",
     "statusFieldLabel": "Status",
