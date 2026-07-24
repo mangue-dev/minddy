@@ -67,8 +67,10 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
   };
 
   // « Promouvoir en ticket » : la note part telle quelle à Numo, qui la convertit
-  // en vrai ticket — et pose des questions plutôt que d'inventer si elle est
-  // trop floue. On ferme le carnet d'abord (son démontage flushe l'autosave, cf.
+  // en vrai ticket — pose des questions plutôt que d'inventer si elle est trop
+  // floue, puis retire la note du carnet (il a les outils scratchpad) une fois le
+  // ticket créé : elle vit désormais dans le tracker.
+  // On ferme le carnet d'abord (son démontage flushe l'autosave, cf.
   // scratchpad-editor.tsx) pour laisser la place au panneau. Pas de projectId :
   // le panneau suit la route, donc le projet courant si on en consulte un, et en
   // mode global Numo demande lequel — le carnet, lui, est cross-projet.

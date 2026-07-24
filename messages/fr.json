@@ -30,7 +30,7 @@
     "copyLine": "Copier en prompt",
     "copiedLineToast": "Tâche copiée en prompt",
     "promoteToIssue": "Promouvoir en ticket",
-    "promotePrompt": "Convertis cette note de mon carnet de tâches en ticket :\n\n{note}\n\nSi la note n'est pas assez claire pour en faire un bon ticket, pose-moi des questions avant de le créer.",
+    "promotePrompt": "Convertis cette note de mon carnet de tâches en ticket :\n\n{note}\n\nSi la note n'est pas assez claire pour en faire un bon ticket, pose-moi des questions avant de le créer. Une fois le ticket créé, retire cette note du carnet : elle vit désormais dans le ticket.",
     "emptyCopyToast": "Rien à copier pour l'instant",
     "close": "Fermer"
   },
@@ -1568,7 +1568,19 @@
     "addToCycleFailed": "Échec de l'ajout au cycle",
     "removingFromCycle": "Retrait du cycle…",
     "removedFromCycle": "{count, plural, one {# ticket retiré du cycle} other {# tickets retirés du cycle}}",
-    "removeFromCycleFailed": "Échec du retrait du cycle"
+    "removeFromCycleFailed": "Échec du retrait du cycle",
+    "loadingScratchpad": "Lecture du carnet de tâches…",
+    "scratchpadLoaded": "Carnet de tâches lu",
+    "loadScratchpadFailed": "Échec de la lecture du carnet de tâches",
+    "addingScratchpadTasks": "Ajout au carnet de tâches…",
+    "scratchpadTasksAdded": "{count, plural, one {# tâche ajoutée au carnet} other {# tâches ajoutées au carnet}}",
+    "addScratchpadTasksFailed": "Échec de l'ajout au carnet de tâches",
+    "updatingScratchpadTasks": "Mise à jour des tâches du carnet…",
+    "scratchpadTasksUpdated": "{count, plural, one {# tâche du carnet mise à jour} other {# tâches du carnet mises à jour}}",
+    "updateScratchpadTasksFailed": "Échec de la mise à jour des tâches du carnet",
+    "updatingScratchpad": "Mise à jour du carnet de tâches…",
+    "scratchpadUpdated": "Carnet de tâches mis à jour",
+    "updateScratchpadFailed": "Échec de la mise à jour du carnet de tâches"
   },
   "Agents": {
     "title": "Agents",

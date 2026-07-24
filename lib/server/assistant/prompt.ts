@@ -73,6 +73,27 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   to ["@me"]) can never change and it cannot be deleted — its other filters, sort and
   display remain editable via update_view.`;
 
+const SCRATCHPAD_BLOCK = `## Task notebook (the user's personal scratchpad)
+Every account has ONE task notebook ("carnet de tâches" in French, "task notebook" in
+English): a single markdown doc of the quick things the user wants to do right now — the
+in-app replacement for a personal problems.md file. It is PERSONAL and CROSS-PROJECT (it
+belongs to the user, never to a project) and it contains no issues, just free notes.
+- Format: '##' section headings + the same checkbox tasks as an issue plan — "- [ ]" to do,
+  "- [~]" in progress, "- [x]" done, "- [-]" dropped. Prose is allowed anywhere.
+- It is deliberately VOLATILE and has no history: items get jotted down, ticked off, then
+  wiped by "remove completed tasks". It is a working surface, never a spec or an archive.
+- It is NOT the backlog. A notebook line is a two-minute thing that doesn't deserve an issue.
+  Never promote one into an issue unless the user asks ("fais-en un ticket").
+- Reading: get_scratchpad returns the raw markdown, the task list with 0-based indices, the
+  section titles, and \`rev\` (the version).
+- Writing: prefer the surgical tools — add_scratchpad_tasks to append new tasks (optionally
+  under a '##' section), update_scratchpad_tasks to flip existing tasks by index. Fall back to
+  set_scratchpad (which REWRITES the whole doc) only to edit task text, delete lines or
+  restructure sections.
+- The user may have the notebook open and be typing in it while you write, so ALWAYS read it
+  first and pass back the \`rev\` you read. On a conflict, re-read, reapply your change onto the
+  fresh content, and retry — never clobber what they wrote.`;
+
 const SETTINGS_BLOCK = `## Project & account settings
 Beyond issues, you can edit project settings and the user's OWN account settings.
 - Project settings are OWNER ONLY (these tools fail for a non-owner — check roles via
@@ -204,6 +225,8 @@ ${VOCABULARY_BLOCK}
 
 ${FEEDBACK_BLOCK}
 
+${SCRATCHPAD_BLOCK}
+
 ${SETTINGS_BLOCK}
 
 ${buildSharedRules(locale, defaultStatus)}`;
@@ -238,6 +261,8 @@ ${VOCABULARY_BLOCK}
   ('@me' = the viewing user). filters.integration null = issues not from an integration.
 
 ${FEEDBACK_BLOCK}
+
+${SCRATCHPAD_BLOCK}
 
 ${SETTINGS_BLOCK}
 
@@ -330,6 +355,8 @@ ${objectiveLines}
 ${categoryLines}
 
 ${VOCABULARY_BLOCK}
+
+${SCRATCHPAD_BLOCK}
 
 ${SETTINGS_BLOCK}
 
@@ -427,6 +454,8 @@ ${categoryLines}
 
 ${VOCABULARY_BLOCK}
 
+${SCRATCHPAD_BLOCK}
+
 ${SETTINGS_BLOCK}
 
 ## Comment mode rules (fire and forget)
@@ -508,6 +537,8 @@ ${threadLines}
 ${memberLines}
 
 ${VOCABULARY_BLOCK}
+
+${SCRATCHPAD_BLOCK}
 
 ## Feedback tools
 You can act on THIS feedback post directly — the tools default to it when you omit feedback_post_id:

@@ -34,6 +34,23 @@ import {
 } from "@/lib/server/cycles";
 import { todayISO, type FillWeights } from "@/lib/cycle";
 import {
+  getScratchpad,
+  mutateScratchpad,
+  setScratchpad,
+} from "@/lib/server/scratchpad";
+import {
+  appendScratchpadTasks,
+  splitScratchpadSections,
+  MAX_SCRATCHPAD_LENGTH,
+  type NewTask,
+} from "@/lib/scratchpad";
+import {
+  isPlanTaskState,
+  parsePlan,
+  setTaskState,
+  type PlanTaskState,
+} from "@/lib/plan";
+import {
   assertIssueInProject,
   getIssue,
   listIssues,
@@ -331,6 +348,16 @@ export async function executeTool(
       toolName === "remove_issues_from_cycle"
     ) {
       return executeCycleTool(toolName, args, ctx);
+    }
+
+    // ── Scratchpad tools (the user's personal task notebook) ────────────
+    if (
+      toolName === "get_scratchpad" ||
+      toolName === "add_scratchpad_tasks" ||
+      toolName === "update_scratchpad_tasks" ||
+      toolName === "set_scratchpad"
+    ) {
+      return executeScratchpadTool(toolName, args, ctx);
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
@@ -1201,4 +1228,200 @@ async function executeCycleTool(
   }
 
   return toolError(`Unknown cycle tool: ${toolName}`);
+}
+
+// ── Scratchpad (the personal task notebook) ─────────────────────────────
+// Personal and cross-project like the cycle: no project scope, addressed by the
+// requesting user alone. Same cores as the MCP tools and /api/me/scratchpad
+// (lib/server/scratchpad.ts), so the compare-and-swap on `rev`, the stats ledger
+// and the realtime broadcast that refreshes an open editor all apply here too.
+// Through the service client: the row is keyed by user_id, and in @Numo comment
+// mode the RLS client isn't necessarily bound to the user we act for.
+
+const scratchpadTaskList = (content: string) =>
+  parsePlan(content).tasks.map((t) => ({
+    index: t.index,
+    text: t.text,
+    state: t.state,
+  }));
+
+const scratchpadSections = (content: string): string[] =>
+  splitScratchpadSections(content)
+    .map((s) => s.title)
+    .filter((title): title is string => title !== null);
+
+/** `expected_rev` when the model passed a usable one, else null (unconditional). */
+function parseExpectedRev(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+const STALE_REV = (expected: number, actual: number, indices: boolean) =>
+  `The notebook changed since rev ${expected} (it is now at rev ${actual}) — the user edited it meanwhile. Call get_scratchpad again${indices ? " for fresh task indices" : ", reapply your change onto the fresh content"}, then retry.`;
+
+const CONCURRENT_EDIT =
+  "The notebook is being edited right now; call get_scratchpad again and retry.";
+
+async function executeScratchpadTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext
+): Promise<ToolExecution> {
+  const db = ctx.service;
+
+  if (toolName === "get_scratchpad") {
+    const state = await getScratchpad(db, ctx.userId);
+    return {
+      result: {
+        content: state.content,
+        updated_at: state.updated_at,
+        rev: state.rev,
+        progress: state.progress,
+        tasks: scratchpadTaskList(state.content),
+        sections: scratchpadSections(state.content),
+      },
+      success: true,
+    };
+  }
+
+  if (toolName === "add_scratchpad_tasks") {
+    const raw = Array.isArray(args.tasks) ? args.tasks : null;
+    if (!raw || raw.length === 0 || raw.length > 50) {
+      return toolError("tasks must be a list of 1 to 50 tasks.");
+    }
+    const tasks: NewTask[] = [];
+    for (const item of raw) {
+      const row = item as Record<string, unknown>;
+      const text = typeof row.text === "string" ? row.text.trim() : "";
+      if (!text) return toolError("Every task needs a non-empty text.");
+      const state = row.state;
+      if (state !== undefined && !isPlanTaskState(state)) {
+        return toolError(
+          `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`
+        );
+      }
+      tasks.push({
+        text: text.slice(0, 2000),
+        state: isPlanTaskState(state) ? state : "pending",
+      });
+    }
+    const section =
+      typeof args.section === "string" && args.section.trim()
+        ? args.section.trim()
+        : undefined;
+
+    // Appending is position-independent: mutateScratchpad re-reads and re-appends
+    // under CAS on conflict, so the tasks land on top of the user's latest text.
+    const result = await mutateScratchpad(db, ctx.userId, (content) =>
+      appendScratchpadTasks(content, tasks, section)
+    );
+    if (result.status === "aborted") {
+      const current = await getScratchpad(db, ctx.userId);
+      const known = scratchpadSections(current.content);
+      return toolError(
+        `Section "${section}" was not found. ${known.length > 0 ? `Existing sections: ${known.join(", ")}.` : "The notebook has no sections yet."} Omit "section" to add at the end, or create the heading with set_scratchpad first.`
+      );
+    }
+    if (result.status === "conflict") return toolError(CONCURRENT_EDIT);
+    return {
+      result: {
+        added: tasks.length,
+        rev: result.state.rev,
+        progress: result.state.progress,
+        tasks: scratchpadTaskList(result.state.content),
+      },
+      success: true,
+    };
+  }
+
+  if (toolName === "update_scratchpad_tasks") {
+    const raw = Array.isArray(args.tasks) ? args.tasks : null;
+    if (!raw || raw.length === 0 || raw.length > 50) {
+      return toolError("tasks must be a list of 1 to 50 task-state changes.");
+    }
+    const changes: { index: number; state: PlanTaskState }[] = [];
+    for (const item of raw) {
+      const row = item as Record<string, unknown>;
+      const index = row.task_index;
+      if (typeof index !== "number" || !Number.isInteger(index) || index < 0) {
+        return toolError("task_index must be a non-negative integer.");
+      }
+      const state = row.state;
+      if (!isPlanTaskState(state)) {
+        return toolError(
+          `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`
+        );
+      }
+      changes.push({ index, state });
+    }
+
+    const expectedRev = parseExpectedRev(args.expected_rev);
+    const current = await getScratchpad(db, ctx.userId);
+    // Stale indices point at other tasks — refuse rather than flip the wrong one.
+    if (expectedRev !== null && current.rev !== expectedRev) {
+      return toolError(STALE_REV(expectedRev, current.rev, true));
+    }
+    const parsed = parsePlan(current.content);
+    for (const change of changes) {
+      if (change.index >= parsed.tasks.length) {
+        return toolError(
+          `task_index ${change.index} is out of range — the notebook has ${parsed.tasks.length} task(s)${parsed.tasks.length > 0 ? ` (valid indices 0..${parsed.tasks.length - 1})` : ""}.`
+        );
+      }
+    }
+    let next = current.content;
+    for (const change of changes) {
+      next = setTaskState(next, parsed.tasks[change.index].line, change.state);
+    }
+    const saved = await setScratchpad(db, ctx.userId, next, current.rev);
+    if (saved.conflicted) return toolError(CONCURRENT_EDIT);
+    return {
+      result: {
+        updated: changes.length,
+        rev: saved.rev,
+        progress: saved.progress,
+        tasks: scratchpadTaskList(saved.content),
+      },
+      success: true,
+    };
+  }
+
+  // set_scratchpad — full rewrite of the notebook.
+  const content = typeof args.content === "string" ? args.content : null;
+  if (content === null) {
+    return toolError(
+      "content must be a string — the FULL new notebook markdown (call get_scratchpad first and keep what you are not changing)."
+    );
+  }
+  if (content.length > MAX_SCRATCHPAD_LENGTH) {
+    return toolError(
+      `The notebook is capped at ${MAX_SCRATCHPAD_LENGTH} characters.`
+    );
+  }
+  const expectedRev = parseExpectedRev(args.expected_rev);
+  if (expectedRev !== null) {
+    const write = await setScratchpad(db, ctx.userId, content, expectedRev);
+    if (write.conflicted) {
+      return toolError(STALE_REV(expectedRev, write.rev, false));
+    }
+    return {
+      result: {
+        rev: write.rev,
+        progress: write.progress,
+        tasks: scratchpadTaskList(write.content),
+      },
+      success: true,
+    };
+  }
+  const result = await mutateScratchpad(db, ctx.userId, () => content);
+  if (result.status !== "ok") return toolError(CONCURRENT_EDIT);
+  return {
+    result: {
+      rev: result.state.rev,
+      progress: result.state.progress,
+      tasks: scratchpadTaskList(result.state.content),
+    },
+    success: true,
+  };
 }

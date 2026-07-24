@@ -22,6 +22,8 @@ import {
   MailX,
   MessageCircleQuestion,
   MessageSquare,
+  Notebook,
+  NotebookPen,
   Plug,
   Search,
   Settings2,
@@ -363,6 +365,48 @@ const TOOL_META: Record<string, ToolMeta> = {
       if (!success) return t("removeFromCycleFailed");
       const removed = typeof result?.removed === "number" ? result.removed : 0;
       return t("removedFromCycle", { count: removed });
+    },
+  },
+  get_scratchpad: {
+    icon: Notebook,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingScratchpad");
+      return success ? t("scratchpadLoaded") : t("loadScratchpadFailed");
+    },
+  },
+  add_scratchpad_tasks: {
+    icon: NotebookPen,
+    getLabel: (args, result, success, status, t) => {
+      if (status === "running") return t("addingScratchpadTasks");
+      if (!success) return t("addScratchpadTasksFailed");
+      const added =
+        typeof result?.added === "number"
+          ? result.added
+          : Array.isArray(args.tasks)
+            ? args.tasks.length
+            : 0;
+      return t("scratchpadTasksAdded", { count: added });
+    },
+  },
+  update_scratchpad_tasks: {
+    icon: ListChecks,
+    getLabel: (args, result, success, status, t) => {
+      if (status === "running") return t("updatingScratchpadTasks");
+      if (!success) return t("updateScratchpadTasksFailed");
+      const updated =
+        typeof result?.updated === "number"
+          ? result.updated
+          : Array.isArray(args.tasks)
+            ? args.tasks.length
+            : 0;
+      return t("scratchpadTasksUpdated", { count: updated });
+    },
+  },
+  set_scratchpad: {
+    icon: NotebookPen,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingScratchpad");
+      return success ? t("scratchpadUpdated") : t("updateScratchpadFailed");
     },
   },
   ask_user: {

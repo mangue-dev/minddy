@@ -5,6 +5,8 @@ import {
   ISSUE_PRIORITIES,
   ISSUE_EFFORTS,
 } from "@/lib/issue-validation";
+import { PLAN_TASK_STATES } from "@/lib/plan";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
@@ -962,6 +964,115 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
+  // ── Scratchpad (the user's personal task notebook) ────────────────────
+  {
+    type: "function",
+    function: {
+      name: "get_scratchpad",
+      description:
+        "Read the user's TASK NOTEBOOK (scratchpad): their single personal, cross-project notes doc of quick things to do right now — not tied to any project, and not the backlog. Markdown with '##' section headings and the same checkbox tasks as an issue plan ('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped), prose allowed anywhere. Returns the raw markdown, the task progress, the flat task list with its 0-based index in document order (pass those indices to update_scratchpad_tasks), the section titles (the values `section` takes in add_scratchpad_tasks), and `rev` — the version to pass back to a write so a concurrent edit by the user is never overwritten. ALWAYS call this before writing to the notebook.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_scratchpad_tasks",
+      description:
+        "Append one or more NEW tasks to the task notebook without rewriting it — the tool for 'note ça dans mon carnet' / 'add this to my notes'. Each task defaults to 'pending' (unchecked) and must be a single short line. By default they land at the END of the notebook; pass `section` (the exact text of an existing '##' heading, see get_scratchpad) to append at the end of that section instead — an unknown section is rejected. Notebook items are quick personal to-dos: never create an issue for them unless the user asks.",
+      parameters: {
+        type: "object",
+        properties: {
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                text: {
+                  type: "string",
+                  description: "The task text (single line).",
+                },
+                state: {
+                  type: "string",
+                  enum: [...PLAN_TASK_STATES],
+                  description: "Initial state (default: pending).",
+                },
+              },
+              required: ["text"],
+            },
+            description: "The tasks to add, in order (1–50).",
+          },
+          section: {
+            type: "string",
+            description:
+              "Exact text of a '##' section heading to append under. Omit to add at the end of the notebook.",
+          },
+        },
+        required: ["tasks"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_scratchpad_tasks",
+      description:
+        "Flip the state of one or more EXISTING notebook tasks WITHOUT rewriting the doc — the precise way to tick items off. Tasks are 0-indexed in document order (the `tasks` array of get_scratchpad); each keeps its text, only its checkbox marker changes. To add tasks use add_scratchpad_tasks; to edit a task's text or remove lines use set_scratchpad. Indices are validated all-or-nothing: a single out-of-range index rejects the whole call. Pass `expected_rev` (the `rev` of the get_scratchpad whose indices you are using) so a concurrent edit can't make you flip the wrong task.",
+      parameters: {
+        type: "object",
+        properties: {
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                task_index: {
+                  type: "number",
+                  description: "0-based task index, in document order.",
+                },
+                state: {
+                  type: "string",
+                  enum: [...PLAN_TASK_STATES],
+                },
+              },
+              required: ["task_index", "state"],
+            },
+            description: "The task-state changes to apply (1–50).",
+          },
+          expected_rev: {
+            type: "number",
+            description:
+              "The `rev` from the get_scratchpad whose task indices you are using. If the notebook changed since, the indices may point elsewhere and the call is rejected — re-read for fresh indices and retry.",
+          },
+        },
+        required: ["tasks"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_scratchpad",
+      description:
+        `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: editing a task's text, removing lines, adding/renaming/reordering '##' sections, writing prose. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). ALWAYS pass expected_rev (the \`rev\` from your get_scratchpad): the write is rejected instead of clobbering the user's concurrent edits.`,
+      parameters: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            description:
+              "The full new notebook markdown (replaces everything currently there).",
+          },
+          expected_rev: {
+            type: "number",
+            description:
+              "The `rev` from the get_scratchpad you based this on. If it no longer matches (the user edited meanwhile) the write is rejected — re-read, reapply, retry.",
+          },
+        },
+        required: ["content"],
+      },
+    },
+  },
   // ── Interaction ──────────────────────────────────────────────────────
   {
     type: "function",
@@ -1053,7 +1164,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
 
 // Tools that operate on the requesting user's own account, not on a project —
 // they must NOT receive a project_id (neither in global mode nor otherwise).
-// The cycle is personal & cross-project (MIN-32), so its tools live here too.
+// The cycle (MIN-32) and the task notebook are personal & cross-project, so
+// their tools live here too.
 export const ACCOUNT_TOOLS = new Set([
   "get_account_settings",
   "update_account_settings",
@@ -1062,6 +1174,10 @@ export const ACCOUNT_TOOLS = new Set([
   "fill_cycle",
   "add_issues_to_cycle",
   "remove_issues_from_cycle",
+  "get_scratchpad",
+  "add_scratchpad_tasks",
+  "update_scratchpad_tasks",
+  "set_scratchpad",
 ]);
 
 // Tools that never take a project (ask_user + the account-level tools).

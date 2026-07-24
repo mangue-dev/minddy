@@ -30,7 +30,7 @@
     "copyLine": "Copy as prompt",
     "copiedLineToast": "Task copied as a prompt",
     "promoteToIssue": "Promote to issue",
-    "promotePrompt": "Turn this note from my task notebook into an issue:\n\n{note}\n\nIf the note isn't clear enough to make a good issue, ask me questions before creating it.",
+    "promotePrompt": "Turn this note from my task notebook into an issue:\n\n{note}\n\nIf the note isn't clear enough to make a good issue, ask me questions before creating it. Once the issue exists, remove that note from the notebook — it lives in the issue now.",
     "emptyCopyToast": "Nothing to copy yet",
     "close": "Close"
   },
@@ -1568,7 +1568,19 @@
     "addToCycleFailed": "Couldn't add to the cycle",
     "removingFromCycle": "Removing from the cycle…",
     "removedFromCycle": "{count, plural, one {# issue removed from the cycle} other {# issues removed from the cycle}}",
-    "removeFromCycleFailed": "Couldn't remove from the cycle"
+    "removeFromCycleFailed": "Couldn't remove from the cycle",
+    "loadingScratchpad": "Reading the task notebook…",
+    "scratchpadLoaded": "Task notebook read",
+    "loadScratchpadFailed": "Couldn't read the task notebook",
+    "addingScratchpadTasks": "Adding to the task notebook…",
+    "scratchpadTasksAdded": "{count, plural, one {# task added to the notebook} other {# tasks added to the notebook}}",
+    "addScratchpadTasksFailed": "Couldn't add to the task notebook",
+    "updatingScratchpadTasks": "Updating the notebook tasks…",
+    "scratchpadTasksUpdated": "{count, plural, one {# notebook task updated} other {# notebook tasks updated}}",
+    "updateScratchpadTasksFailed": "Couldn't update the notebook tasks",
+    "updatingScratchpad": "Updating the task notebook…",
+    "scratchpadUpdated": "Task notebook updated",
+    "updateScratchpadFailed": "Couldn't update the task notebook"
   },
   "Agents": {
     "title": "Agents",
