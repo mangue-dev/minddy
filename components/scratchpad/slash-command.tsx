@@ -85,25 +85,54 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   );
 });
 
-/** Imperative render for the suggestion utility: the menu lives INSIDE the
-    editor wrapper (absolute, wrapper-local coordinates) so it isn't affected by
-    the dialog's transform and doesn't count as an "outside" click. */
+/** Marks the portaled menu so the notebook dialog can tell a click in it apart
+    from a click outside itself (see components/scratchpad/scratchpad-modal.tsx). */
+export const SLASH_MENU_ATTR = "data-slash-menu";
+
+/** Viewport breathing room, and the gap between the caret and the menu. */
+const EDGE = 8;
+const GAP = 6;
+
+/**
+ * Imperative render for the suggestion utility. The menu is portaled to <body>
+ * and positioned in VIEWPORT coordinates: inside the note it was clipped by the
+ * scroll container, and anchoring it to the dialog is no better — the dialog is
+ * `-translate-1/2`, which makes it the containing block of any fixed child and
+ * clips them anyway (`overflow-hidden`).
+ *
+ * Living outside the dialog costs two things, both handled: a modal Radix dialog
+ * sets `pointer-events: none` on everything below it (so the menu re-enables its
+ * own), and it reads a click in the menu as a click outside itself (so the menu
+ * is tagged, and ScratchpadModal keeps the dialog open for those).
+ */
 function renderSlashMenu() {
   let renderer: ReactRenderer<SlashMenuRef, SlashProps> | null = null;
   let menuEl: HTMLElement | null = null;
-  let wrapperEl: HTMLElement | null = null;
+  let caretRect: (() => DOMRect | null) | null = null;
 
-  const place = (rect: DOMRect | null | undefined) => {
-    if (!menuEl || !wrapperEl || !rect) return;
-    const wrap = wrapperEl.getBoundingClientRect();
-    const menuH = menuEl.offsetHeight;
-    const openBelow = rect.bottom + 6 + menuH <= window.innerHeight - 8;
-    menuEl.style.position = "absolute";
-    menuEl.style.zIndex = "50";
-    menuEl.style.top = `${
-      openBelow ? rect.bottom - wrap.top + 6 : rect.top - wrap.top - menuH - 6
-    }px`;
-    menuEl.style.left = `${rect.left - wrap.left}px`;
+  const place = () => {
+    const rect = caretRect?.();
+    if (!menuEl || !rect) return;
+    const { offsetWidth: w, offsetHeight: h } = menuEl;
+    const below = window.innerHeight - rect.bottom - GAP - EDGE;
+    const above = rect.top - GAP - EDGE;
+    // Below the caret by default; flip up when it doesn't fit there and the room
+    // above is better. Then clamp, so a menu taller than either side still lands
+    // inside the window instead of running off it.
+    const openBelow = h <= below || below >= above;
+    const top = openBelow ? rect.bottom + GAP : rect.top - GAP - h;
+    const clamp = (v: number, max: number) =>
+      Math.round(Math.min(Math.max(v, EDGE), Math.max(EDGE, max)));
+    menuEl.style.top = `${clamp(top, window.innerHeight - h - EDGE)}px`;
+    menuEl.style.left = `${clamp(rect.left, window.innerWidth - w - EDGE)}px`;
+  };
+
+  // React renders the menu through EditorContent's portals, so after a props
+  // change the new size only lands on the next frame — measure again then, or a
+  // filtered-down list would be placed with its previous height.
+  const reposition = () => {
+    place();
+    requestAnimationFrame(place);
   };
 
   return {
@@ -113,26 +142,35 @@ function renderSlashMenu() {
         editor: props.editor,
       });
       menuEl = renderer.element as HTMLElement;
-      wrapperEl =
-        (props.editor.view.dom.closest(".scratchpad-editor") as HTMLElement) ??
-        null;
-      wrapperEl?.appendChild(menuEl);
-      place(props.clientRect?.());
+      menuEl.setAttribute(SLASH_MENU_ATTR, "");
+      menuEl.style.position = "fixed";
+      menuEl.style.zIndex = "60"; // above the dialog (z-50), like tooltips
+      menuEl.style.pointerEvents = "auto";
+      caretRect = () => props.clientRect?.() ?? null;
+      document.body.appendChild(menuEl);
+      reposition();
+      // The caret moves under the menu when the note scrolls or the window is
+      // resized, and the suggestion plugin only calls us on doc/selection change.
+      window.addEventListener("scroll", place, true);
+      window.addEventListener("resize", place);
     },
     onUpdate: (props: SlashProps) => {
       renderer?.updateProps(props);
-      place(props.clientRect?.());
+      caretRect = () => props.clientRect?.() ?? null;
+      reposition();
     },
     onKeyDown: (props: { event: KeyboardEvent }) => {
       if (props.event.key === "Escape") return false;
       return renderer?.ref?.onKeyDown(props.event) ?? false;
     },
     onExit: () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
       menuEl?.remove();
       renderer?.destroy();
       renderer = null;
       menuEl = null;
-      wrapperEl = null;
+      caretRect = null;
     },
   };
 }

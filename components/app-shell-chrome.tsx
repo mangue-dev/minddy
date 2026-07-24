@@ -21,6 +21,7 @@ import {
   Keyboard,
   GitPullRequest,
   NotebookPen,
+  IterationCw,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -303,6 +304,25 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("allIssues"),
           icon: LayoutGrid,
           onSelect: () => router.push("/all"),
+        },
+        {
+          // Le cycle est personnel et cross-projet : il vit sur /all en mode
+          // cycle (MIN-32), jamais scopé à un projet — même destination que
+          // l'onglet ↗ des boards et la carte de la home.
+          key: "go-cycle",
+          label: t("cycle"),
+          icon: IterationCw,
+          keywords: [
+            "cycle",
+            "sprint",
+            "semaine",
+            "week",
+            "quinzaine",
+            "fortnight",
+            "itération",
+            "iteration",
+          ],
+          onSelect: () => router.push("/all?view=cycle"),
         },
         {
           key: "go-account-settings",

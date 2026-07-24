@@ -247,7 +247,15 @@ export function ScratchpadEditor({
     autofocus: "end",
     extensions,
     content: initialValue,
-    editorProps: { attributes: { class: PROSE } },
+    editorProps: {
+      attributes: { class: PROSE },
+      // Keep the caret off the bottom edge: ProseMirror scrolls it into view
+      // with this much room to spare, so writing at the end of a long note
+      // happens comfortably above the fold instead of on the last visible pixel
+      // (the trailing space below is the wrapper's pb-[40vh]).
+      scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
+      scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
+    },
     onCreate: ({ editor }) => {
       editorRef.current = editor;
       if (markdownRef) markdownRef.current = () => getMarkdown(editor);
@@ -321,9 +329,13 @@ export function ScratchpadEditor({
   const nearLimit =
     dictation.status === "recording" && dictation.elapsedMs >= 80_000;
 
+  // The bottom padding is room to scroll PAST the last line, so a note that
+  // grows to the bottom isn't pinned against the edge. It sits on the editor
+  // wrapper rather than the modal's scroll container so that empty space stays
+  // click-to-write (the mousedown below drops the caret at the end).
   return (
     <div
-      className="scratchpad-editor relative min-h-[55vh] cursor-text"
+      className="scratchpad-editor relative min-h-[55vh] cursor-text pb-[40vh]"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) editor?.commands.focus("end");
       }}

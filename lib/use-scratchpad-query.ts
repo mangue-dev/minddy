@@ -252,6 +252,8 @@ export function useScratchpadDoc({
   return {
     content: data?.content ?? "",
     progress: data?.progress ?? EMPTY.progress,
+    /** When the note last reached the server — the save indicator's "… ago". */
+    updatedAt: data?.updated_at ?? null,
     isLoading,
     isSaving,
     save,

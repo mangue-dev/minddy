@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
   Dialog,
@@ -20,6 +20,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
+import { SLASH_MENU_ATTR } from "@/components/scratchpad/slash-command";
 
 /**
  * Notes — the personal scratchpad, a minimal modal at the create-project
@@ -36,6 +37,13 @@ export function ScratchpadModal() {
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
         showCloseButton={false}
+        // The `/` menu is portaled to <body> so the window, not the note's
+        // scroll box, bounds it — which makes Radix read a click in it as a
+        // click outside the dialog. Keep the notebook open for those.
+        onInteractOutside={(event) => {
+          const target = event.target as Element | null;
+          if (target?.closest?.(`[${SLASH_MENU_ATTR}]`)) event.preventDefault();
+        }}
         className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>
@@ -48,6 +56,28 @@ export function ScratchpadModal() {
   );
 }
 
+/**
+ * "Saved 5 minutes ago" — the tooltip behind the save tick. Once opened, Radix
+ * keeps the tooltip content mounted, so reading the clock at mount would freeze
+ * the label at "just now" for as long as the notebook stays open; a slow tick
+ * keeps it honest between hovers.
+ */
+function SavedAgo({ updatedAt }: { updatedAt: string | null }) {
+  const t = useTranslations("Scratchpad");
+  const format = useFormatter();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const at = updatedAt ? new Date(updatedAt).getTime() : NaN;
+  // Under a minute the relative formatter counts seconds out loud ("saved 4
+  // seconds ago"), which is noisier than the text we just removed.
+  if (!Number.isFinite(at) || now - at < 60_000) return <>{t("savedJustNow")}</>;
+  return <>{t("savedAgo", { time: format.relativeTime(at, now) })}</>;
+}
+
 function ScratchpadBody() {
   const t = useTranslations("Scratchpad");
   const { isOpen, setOpen } = useScratchpad();
@@ -58,7 +88,7 @@ function ScratchpadBody() {
   >(null);
   const removeCompletedRef = useRef<(() => number) | null>(null);
 
-  const { content, isLoading, isSaving, save } = useScratchpadDoc({
+  const { content, updatedAt, isLoading, isSaving, save } = useScratchpadDoc({
     open: isOpen,
     liveRef: markdownRef,
     applyRef,
@@ -95,18 +125,25 @@ function ScratchpadBody() {
   return (
     <>
       {showSaveState && (
-        <div className="absolute top-4 left-5 z-30 flex items-center gap-1.5 text-xs text-muted-foreground">
-          {isSaving ? (
-            <>
-              <Spinner className="size-3" />
-              {t("saving")}
-            </>
-          ) : (
-            <>
-              <Check className="size-3.5" />
-              {t("saved")}
-            </>
-          )}
+        <div className="absolute top-3.5 left-3.5 z-30 flex size-8 items-center justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                role="status"
+                aria-label={isSaving ? t("saving") : t("saved")}
+                className="flex text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+              >
+                {isSaving ? (
+                  <Spinner className="size-3.5" />
+                ) : (
+                  <Check className="size-3.5" />
+                )}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isSaving ? t("saving") : <SavedAgo updatedAt={updatedAt} />}
+            </TooltipContent>
+          </Tooltip>
         </div>
       )}
 
