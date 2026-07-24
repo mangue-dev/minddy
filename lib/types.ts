@@ -73,7 +73,18 @@ export interface Comment {
   updated_at: string;
 }
 
-export type NotificationType = "assigned" | "mention" | "comment";
+export type NotificationType =
+  | "assigned"
+  | "mention"
+  | "comment"
+  /** The code agent finished a turn on an issue I launched it on. */
+  | "agent_done"
+  /** The code agent asked a question and waits for my answer. */
+  | "agent_question"
+  /** The code agent failed to start or died on an error. */
+  | "agent_failed"
+  /** A new feedback post arrived on the project's board. */
+  | "feedback_new";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {
@@ -93,6 +104,8 @@ export interface MyNotification {
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;
+  /** First characters of the comment that triggered a mention/comment row. */
+  comment_excerpt: string | null;
 }
 
 // ── Statistiques utilisateur (MIN-12) ────────────────────────────────────────

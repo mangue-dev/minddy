@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
 
@@ -384,6 +385,42 @@ export async function stampRun(
 }
 
 /**
+ * Inbox (MIN-82) : prévient le LANCEUR du run — question posée, tour terminé,
+ * échec. C'est le seul endroit où « se notifier soi-même » est voulu : l'acteur
+ * est l'agent, pas l'utilisateur. `replaceUnread` garde au plus une
+ * notification agent non lue par ticket (une longue session n'empile pas un
+ * « terminé » par tour). Best-effort — ne casse jamais le run.
+ */
+export async function notifyAgentRun(
+  run: {
+    created_by: string | null;
+    project_id: string;
+    issue_id: string | null;
+  },
+  type: "agent_done" | "agent_question" | "agent_failed",
+): Promise<void> {
+  // Run carnet (issue_id null) : pas de cible où renvoyer — pas de notification.
+  if (!run.created_by || !run.issue_id) return;
+  try {
+    await insertNotifications(
+      getServiceClient(),
+      [
+        {
+          user_id: run.created_by,
+          project_id: run.project_id,
+          type,
+          issue_id: run.issue_id,
+          actor_id: null,
+        },
+      ],
+      { replaceUnread: true },
+    );
+  } catch (e) {
+    console.error("[agent-runs] notify failed:", (e as Error).message);
+  }
+}
+
+/**
  * Récupère les runs `running` bloqués (fonction morte : started_at trop vieux) :
  * requeue tant qu'il reste des tentatives, sinon échoue. À appeler en tête de
  * chaque drain (filet ultime, comme AutoKap).
@@ -392,10 +429,16 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
   const cutoff = new Date(Date.now() - STUCK_RUNNING_MS).toISOString();
   const { data } = await service
     .from("agent_runs")
-    .select("id, attempts")
+    .select("id, attempts, created_by, project_id, issue_id")
     .eq("status", "running")
     .lt("started_at", cutoff);
-  const rows = (data ?? []) as Array<{ id: string; attempts: number }>;
+  const rows = (data ?? []) as Array<{
+    id: string;
+    attempts: number;
+    created_by: string | null;
+    project_id: string;
+    issue_id: string | null;
+  }>;
   for (const row of rows) {
     if (row.attempts < MAX_CRASH_ATTEMPTS) {
       await service
@@ -413,6 +456,7 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
         })
         .eq("id", row.id)
         .eq("status", "running");
+      await notifyAgentRun(row, "agent_failed");
     }
   }
 }

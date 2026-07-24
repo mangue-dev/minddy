@@ -4,9 +4,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useAuth } from "./auth-context";
 import {
+  clearReadNotificationsApi,
   fetchNotificationsApi,
   markAllReadApi,
   markReadApi,
+  markUnreadApi,
+  removeNotificationsApi,
 } from "./notifications-api";
 import type { MyNotification } from "./types";
 
@@ -29,48 +32,101 @@ export function useNotifications() {
     [notifications]
   );
 
-  // Optimiste (MIN-40) : estampille `read_at` dans le cache tout de suite pour
-  // que le surlignage non-lu ET le badge de la sidebar se vident sans attendre.
+  // Optimiste (MIN-40) : applique la mutation dans le cache tout de suite pour
+  // que le surlignage non-lu ET le badge de la sidebar bougent sans attendre.
   // Rollback à l'échec ; le realtime réconcilie les autres onglets/clients.
-  const stampRead = useCallback(
-    (matches: (n: MyNotification) => boolean) => {
+  const mutate = useCallback(
+    (apply: (old: MyNotification[]) => MyNotification[]) => {
       const previous =
         queryClient.getQueryData<MyNotification[]>(NOTIFICATIONS_KEY);
-      const now = new Date().toISOString();
       queryClient.setQueryData<MyNotification[]>(NOTIFICATIONS_KEY, (old) =>
-        (old ?? []).map((n) =>
-          n.read_at || !matches(n) ? n : { ...n, read_at: now }
-        )
+        apply(old ?? [])
       );
       return () => queryClient.setQueryData(NOTIFICATIONS_KEY, previous);
     },
     [queryClient]
   );
 
-  const markRead = useCallback(
-    async (ids: string[]) => {
-      if (ids.length === 0) return;
-      const idSet = new Set(ids);
-      const rollback = stampRead((n) => idSet.has(n.id));
+  const run = useCallback(
+    async (
+      apply: (old: MyNotification[]) => MyNotification[],
+      request: () => Promise<void>
+    ) => {
+      const rollback = mutate(apply);
       try {
-        await markReadApi(ids);
+        await request();
       } catch (err) {
         rollback();
         throw err;
       }
     },
-    [stampRead]
+    [mutate]
+  );
+
+  const markRead = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      const now = new Date().toISOString();
+      await run(
+        (old) =>
+          old.map((n) =>
+            n.read_at || !idSet.has(n.id) ? n : { ...n, read_at: now }
+          ),
+        () => markReadApi(ids)
+      );
+    },
+    [run]
   );
 
   const markAllRead = useCallback(async () => {
-    const rollback = stampRead(() => true);
-    try {
-      await markAllReadApi();
-    } catch (err) {
-      rollback();
-      throw err;
-    }
-  }, [stampRead]);
+    const now = new Date().toISOString();
+    await run(
+      (old) => old.map((n) => (n.read_at ? n : { ...n, read_at: now })),
+      () => markAllReadApi()
+    );
+  }, [run]);
 
-  return { notifications, unreadCount, loading: isLoading, markRead, markAllRead };
+  const markUnread = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      await run(
+        (old) =>
+          old.map((n) => (idSet.has(n.id) ? { ...n, read_at: null } : n)),
+        () => markUnreadApi(ids)
+      );
+    },
+    [run]
+  );
+
+  const remove = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      await run(
+        (old) => old.filter((n) => !idSet.has(n.id)),
+        () => removeNotificationsApi(ids)
+      );
+    },
+    [run]
+  );
+
+  const clearRead = useCallback(async () => {
+    await run(
+      (old) => old.filter((n) => !n.read_at),
+      () => clearReadNotificationsApi()
+    );
+  }, [run]);
+
+  return {
+    notifications,
+    unreadCount,
+    loading: isLoading,
+    markRead,
+    markAllRead,
+    markUnread,
+    remove,
+    clearRead,
+  };
 }

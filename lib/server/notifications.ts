@@ -1,11 +1,17 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { NotificationType } from "@/lib/types";
+import {
+  categoryOfNotificationType,
+  resolveNotificationPrefs,
+  type NotificationPrefs,
+} from "@/lib/notification-prefs";
 
 export interface NotificationRow {
   user_id: string;
   project_id: string | null;
-  type: "assigned" | "mention" | "comment";
+  type: NotificationType;
   issue_id: string | null;
   /** Set instead of issue_id when the notification points at an objective. */
   objective_id?: string | null;
@@ -15,12 +21,68 @@ export interface NotificationRow {
   actor_id: string | null;
 }
 
+/** The agent types displace each other: one live agent notification per issue. */
+const AGENT_TYPES: readonly NotificationType[] = [
+  "agent_done",
+  "agent_question",
+  "agent_failed",
+];
+
+const siblingTypes = (type: NotificationType): readonly NotificationType[] =>
+  AGENT_TYPES.includes(type) ? AGENT_TYPES : [type];
+
 export async function insertNotifications(
   service: SupabaseClient,
-  rows: NotificationRow[]
+  rows: NotificationRow[],
+  opts: { replaceUnread?: boolean } = {}
 ): Promise<void> {
   if (rows.length === 0) return;
-  const { error } = await service.from("notifications").insert(rows);
+
+  // Per-recipient preference filter (MIN-82): a category switched off in the
+  // account settings drops the row here, at the single insertion point every
+  // producer funnels through. Fail-open — a prefs read error never censors.
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const prefsById = new Map<string, NotificationPrefs>();
+  await Promise.all(
+    userIds.map(async (uid) => {
+      try {
+        const { data } = await service.auth.admin.getUserById(uid);
+        prefsById.set(
+          uid,
+          resolveNotificationPrefs(
+            (data?.user?.user_metadata ?? null) as Record<string, unknown> | null
+          )
+        );
+      } catch (e) {
+        console.error("[notifications] prefs read failed:", (e as Error).message);
+      }
+    })
+  );
+  const kept = rows.filter((r) => {
+    const prefs = prefsById.get(r.user_id);
+    return !prefs || prefs[categoryOfNotificationType(r.type)];
+  });
+  if (kept.length === 0) return;
+
+  // replaceUnread: the fresh notification displaces its unread predecessor for
+  // the same recipient/target (agent runs — a long session must not stack one
+  // row per turn). Best-effort: a failed delete only leaves a duplicate.
+  if (opts.replaceUnread) {
+    await Promise.all(
+      kept.map((r) => {
+        let del = service
+          .from("notifications")
+          .delete()
+          .eq("user_id", r.user_id)
+          .in("type", siblingTypes(r.type) as string[])
+          .is("read_at", null);
+        del = r.issue_id ? del.eq("issue_id", r.issue_id) : del.is("issue_id", null);
+        return del;
+      })
+    );
+  }
+
+  const { error } = await service.from("notifications").insert(kept);
   if (error) console.error("[notifications] insert failed:", error.message);
 }
 

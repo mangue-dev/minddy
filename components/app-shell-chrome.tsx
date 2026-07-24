@@ -470,7 +470,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     badge:
       unreadCount > 0 ? (
         <span className="flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
-          {unreadCount}
+          {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       ) : undefined,
   };

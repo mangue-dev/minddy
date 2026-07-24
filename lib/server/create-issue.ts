@@ -17,6 +17,7 @@ import {
   stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
+import { insertNotifications } from "@/lib/server/notifications";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
   isSmartAssignEligibleStatus,
@@ -296,6 +297,21 @@ export async function createIssueForProject({
         });
       }
       await insertStatEvents(service, statRows);
+    }
+
+    // Notify a user the issue was born assigned to (never on self-assign) —
+    // the update path only covers later re-assignments (MIN-82).
+    const bornAssignee = data.assignee_id as string | null;
+    if (bornAssignee && bornAssignee !== actorId) {
+      await insertNotifications(service, [
+        {
+          user_id: bornAssignee,
+          project_id: projectId,
+          type: "assigned",
+          issue_id: data.id as string,
+          actor_id: actorId,
+        },
+      ]);
     }
   };
   const deferSideEffects = () =>

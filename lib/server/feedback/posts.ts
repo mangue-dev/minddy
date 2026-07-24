@@ -3,6 +3,10 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { embedText, toVectorLiteral } from "@/lib/server/embeddings";
 import {
+  insertNotifications,
+  projectMemberIds,
+} from "@/lib/server/notifications";
+import {
   emitFeedbackCreated,
   emitFeedbackFieldChanges,
 } from "@/lib/server/feedback/events";
@@ -123,6 +127,28 @@ export async function createFeedbackPost(input: {
     createdByMember: input.createdByMember ?? null,
     integrationId: input.integrationId ?? null,
   });
+
+  // Inbox (MIN-82) : un feedback qui ARRIVE (board public / API) prévient toute
+  // l'équipe — sans ça, on ne découvre les retours qu'en ouvrant le board. La
+  // saisie interne ne notifie pas (l'équipe est déjà au courant : elle l'écrit).
+  if (input.source !== "internal") {
+    try {
+      const members = await projectMemberIds(service, input.projectId);
+      await insertNotifications(
+        service,
+        [...members].map((uid) => ({
+          user_id: uid,
+          project_id: input.projectId,
+          type: "feedback_new" as const,
+          issue_id: null,
+          feedback_post_id: post.id,
+          actor_id: null,
+        }))
+      );
+    } catch (e) {
+      console.error("[feedback-posts] notify failed:", (e as Error).message);
+    }
+  }
 
   if (!input.authorId) return { ok: true, post };
 

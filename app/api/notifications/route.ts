@@ -6,6 +6,14 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
+/** Longueur de l'extrait de commentaire montré sous la ligne d'inbox. */
+const EXCERPT_MAX = 140;
+
+const excerptOf = (body: string): string => {
+  const flat = body.replace(/\s+/g, " ").trim();
+  return flat.length > EXCERPT_MAX ? `${flat.slice(0, EXCERPT_MAX - 1)}…` : flat;
+};
+
 /** GET /api/notifications — the caller's notifications, hydrated for the Inbox. */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -25,8 +33,9 @@ export async function GET(request: NextRequest) {
   }
   if (!notifs || notifs.length === 0) return NextResponse.json([]);
 
-  // Hydrate issue / project / actor (service — the recipient may not be able to
-  // read the actor's profile, and issue/project reads are simplest server-side).
+  // Hydrate issue / project / actor / comment excerpt (service — the recipient
+  // may not be able to read the actor's profile, and entity reads are simplest
+  // server-side).
   const service = getServiceClient();
   const issueIds = [...new Set(notifs.map((n) => n.issue_id).filter(Boolean))] as string[];
   const objectiveIds = [...new Set(notifs.map((n) => n.objective_id).filter(Boolean))] as string[];
@@ -35,28 +44,39 @@ export async function GET(request: NextRequest) {
   ] as string[];
   const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
   const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
+  const commentIds = [...new Set(notifs.map((n) => n.comment_id).filter(Boolean))] as string[];
 
-  const [{ data: issues }, { data: objectives }, { data: feedbackPosts }, { data: projects }, actorsById] =
-    await Promise.all([
-      issueIds.length
-        ? service.from("issues").select("id, number, title").in("id", issueIds)
-        : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
-      objectiveIds.length
-        ? service.from("objectives").select("id, name").in("id", objectiveIds)
-        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-      feedbackPostIds.length
-        ? service.from("feedback_posts").select("id, title").in("id", feedbackPostIds)
-        : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-      projectIds.length
-        ? service.from("projects").select("id, key").in("id", projectIds)
-        : Promise.resolve({ data: [] as { id: string; key: string }[] }),
-      fetchAuthUsersById(service, actorIds),
-    ]);
+  const [
+    { data: issues },
+    { data: objectives },
+    { data: feedbackPosts },
+    { data: projects },
+    actorsById,
+    { data: comments },
+  ] = await Promise.all([
+    issueIds.length
+      ? service.from("issues").select("id, number, title").in("id", issueIds)
+      : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
+    objectiveIds.length
+      ? service.from("objectives").select("id, name").in("id", objectiveIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    feedbackPostIds.length
+      ? service.from("feedback_posts").select("id, title").in("id", feedbackPostIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    projectIds.length
+      ? service.from("projects").select("id, key").in("id", projectIds)
+      : Promise.resolve({ data: [] as { id: string; key: string }[] }),
+    fetchAuthUsersById(service, actorIds),
+    commentIds.length
+      ? service.from("comments").select("id, body").in("id", commentIds)
+      : Promise.resolve({ data: [] as { id: string; body: string }[] }),
+  ]);
 
   const issueMap = new Map((issues ?? []).map((i) => [i.id, i]));
   const objectiveMap = new Map((objectives ?? []).map((o) => [o.id, o]));
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
+  const commentMap = new Map((comments ?? []).map((c) => [c.id, c.body as string]));
 
   const result: MyNotification[] = notifs.map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
@@ -64,6 +84,7 @@ export async function GET(request: NextRequest) {
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
     const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
+    const commentBody = n.comment_id ? commentMap.get(n.comment_id) : undefined;
     return {
       id: n.id,
       type: n.type,
@@ -79,13 +100,18 @@ export async function GET(request: NextRequest) {
       project_id: n.project_id,
       project_key: project?.key ?? null,
       actor_name: actor ? displayName(toNamed(actor)) : null,
+      comment_excerpt: commentBody ? excerptOf(commentBody) : null,
     };
   });
 
   return NextResponse.json(result);
 }
 
-/** PATCH /api/notifications — mark read. Body: { ids: string[] } or { all: true }. */
+/**
+ * PATCH /api/notifications — flip read state.
+ * Body: { ids: string[] } | { all: true } to mark read, { ids, read: false }
+ * to mark back unread.
+ */
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -97,15 +123,25 @@ export async function PATCH(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const { ids, all } = (body ?? {}) as { ids?: unknown; all?: unknown };
-  const now = new Date().toISOString();
+  const { ids, all, read } = (body ?? {}) as {
+    ids?: unknown;
+    all?: unknown;
+    read?: unknown;
+  };
+  const markRead = read !== false;
+  const validIds = Array.isArray(ids)
+    ? ids.filter((v): v is string => typeof v === "string")
+    : [];
 
   // RLS restricts updates to the caller's own rows.
-  let query = auth.supabase.from("notifications").update({ read_at: now }).is("read_at", null);
-  if (all === true) {
+  let query = auth.supabase
+    .from("notifications")
+    .update({ read_at: markRead ? new Date().toISOString() : null });
+  if (markRead) query = query.is("read_at", null);
+  if (all === true && markRead) {
     // no extra filter — all of my unread
-  } else if (Array.isArray(ids) && ids.length > 0) {
-    query = query.in("id", ids.filter((v): v is string => typeof v === "string"));
+  } else if (validIds.length > 0) {
+    query = query.in("id", validIds);
   } else {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -113,6 +149,45 @@ export async function PATCH(request: NextRequest) {
   const { error } = await query;
   if (error) {
     console.error("[api/notifications] mark read failed:", error.message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/notifications — remove rows for good.
+ * Body: { ids: string[] } for specific rows, { allRead: true } to clear
+ * everything already read.
+ */
+export async function DELETE(request: NextRequest) {
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+  }
+  const { ids, allRead } = (body ?? {}) as { ids?: unknown; allRead?: unknown };
+  const validIds = Array.isArray(ids)
+    ? ids.filter((v): v is string => typeof v === "string")
+    : [];
+
+  // RLS restricts deletes to the caller's own rows.
+  let query = auth.supabase.from("notifications").delete();
+  if (allRead === true) {
+    query = query.not("read_at", "is", null);
+  } else if (validIds.length > 0) {
+    query = query.in("id", validIds);
+  } else {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error("[api/notifications] delete failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json({ ok: true });

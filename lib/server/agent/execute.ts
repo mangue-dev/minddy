@@ -69,6 +69,7 @@ import {
   readInterruptFlag,
   clearInterrupt,
   hasPendingRunMessages,
+  notifyAgentRun,
   type AgentRun,
   type AgentCheckpoint,
 } from "./runs";
@@ -936,9 +937,11 @@ export async function executeAgentRun(
     // Si un message de steering est arrivé APRÈS la dernière frontière de round
     // (fenêtre de finalisation : commit+push), on RE-QUEUE au lieu de reposer →
     // le drain relance la boucle qui le draine aussitôt.
+    // Renvoie `pending` : true = la session repart aussitôt (steering en file) —
+    // l'appelant s'en sert pour NE PAS notifier un repos qui n'en est pas un.
     const restStamp = async (
       extra: Partial<Parameters<typeof stampRun>[1]>,
-    ): Promise<void> => {
+    ): Promise<boolean> => {
       const pending = await hasPendingRunMessages(run.id);
       await stampRun(run.id, {
         status: pending ? "queued" : "completed",
@@ -946,6 +949,7 @@ export async function executeAgentRun(
         ...(pending ? { not_before: new Date().toISOString() } : {}),
         ...extra,
       });
+      return pending;
     };
 
     // ── Fin de tour NATURELLE : push du travail, PAS de PR automatique ────────
@@ -1010,7 +1014,7 @@ export async function executeAgentRun(
 
       // `outcome` = la dernière réponse de la session : c'est elle qu'une future
       // session froide recevra comme résumé du travail précédent.
-      await restStamp({
+      const pending = await restStamp({
         checkpoint: { ...checkpoint, lastFilesSha: filesToSha },
         outcome: reply ? cap(reply, 4000) : null,
         // Tour terminé sur un ask_user → la session ATTEND la réponse : point
@@ -1018,6 +1022,11 @@ export async function executeAgentRun(
         ...(result.askedUser ? { awaiting_input: true } : {}),
         ...(pushError ? { error_message: cap(pushError, 1000) } : {}),
       });
+      // Inbox (MIN-82) : repos réel seulement — un re-queue immédiat (steering
+      // en file) n'est pas une fin de tour du point de vue de l'utilisateur.
+      if (!pending) {
+        await notifyAgentRun(run, result.askedUser ? "agent_question" : "agent_done");
+      }
       return "completed";
     }
 
@@ -1037,10 +1046,11 @@ export async function executeAgentRun(
     // boucle ; le checkpoint (dont un éventuel steering injecté ce round) est conservé
     // → l'utilisateur peut renvoyer un message pour reprendre.
     if (result.status === "error") {
-      await restStamp({
+      const pending = await restStamp({
         checkpoint,
         error_message: result.errorMessage ? cap(result.errorMessage, 1000) : null,
       });
+      if (!pending) await notifyAgentRun(run, "agent_failed");
       return "completed";
     }
 
@@ -1075,7 +1085,8 @@ export async function executeAgentRun(
       await emit("error", {
         message: "Tour trop long (budget épuisé) — envoie un message pour continuer.",
       });
-      await restStamp({ checkpoint });
+      const pending = await restStamp({ checkpoint });
+      if (!pending) await notifyAgentRun(run, "agent_failed");
       return "completed";
     }
 
@@ -1110,6 +1121,7 @@ export async function executeAgentRun(
           last_activity_at: new Date().toISOString(),
           interrupt_requested: false,
         });
+        await notifyAgentRun(run, "agent_failed");
         return "completed";
       }
       await stampRun(run.id, {
@@ -1118,6 +1130,7 @@ export async function executeAgentRun(
         checkpoint: null,
         continuations: 0,
       });
+      await notifyAgentRun(run, "agent_failed");
       return "failed";
     }
     // Erreur EN COURS DE TOUR → la session reste reprennable : REPOS, checkpoint du
@@ -1146,6 +1159,7 @@ export async function executeAgentRun(
       last_activity_at: new Date().toISOString(),
       interrupt_requested: false,
     });
+    if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
   } finally {
     // Métrage du compute sandbox (MIN-72) : chaque tranche d'exécution où la

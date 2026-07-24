@@ -22,22 +22,42 @@ export async function fetchNotificationsApi(): Promise<MyNotification[]> {
   return parseJson<MyNotification[]>(await fetch("/api/notifications"));
 }
 
-export async function markReadApi(ids: string[]): Promise<void> {
+const patch = async (body: unknown): Promise<void> => {
   await parseJson(
     await fetch("/api/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify(body),
     })
   );
+};
+
+const del = async (body: unknown): Promise<void> => {
+  await parseJson(
+    await fetch("/api/notifications", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  );
+};
+
+export async function markReadApi(ids: string[]): Promise<void> {
+  await patch({ ids });
 }
 
 export async function markAllReadApi(): Promise<void> {
-  await parseJson(
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    })
-  );
+  await patch({ all: true });
+}
+
+export async function markUnreadApi(ids: string[]): Promise<void> {
+  await patch({ ids, read: false });
+}
+
+export async function removeNotificationsApi(ids: string[]): Promise<void> {
+  await del({ ids });
+}
+
+export async function clearReadNotificationsApi(): Promise<void> {
+  await del({ allRead: true });
 }
