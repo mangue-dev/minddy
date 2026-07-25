@@ -24,6 +24,10 @@ import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import {
+  defaultCreateProjectId,
+  lastCreateProjectId,
+} from "@/lib/last-create-project";
 import { eventKey } from "@/lib/keyboard/event-key";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type {
@@ -46,7 +50,8 @@ const ObjectiveDialog = dynamic(
 );
 
 interface OpenIssueOptions {
-  /** Target project; defaults to the current route's project, else the first. */
+  /** Target project; defaults to the current route's project, else the last one
+   *  a ticket was created in, else the first. */
   projectId?: string;
   status?: IssueStatus;
   objectiveId?: string | null;
@@ -54,7 +59,7 @@ interface OpenIssueOptions {
 }
 
 interface OpenObjectiveOptions {
-  /** Target project; defaults to the current route's project, else the first. */
+  /** Same defaulting as {@link OpenIssueOptions.projectId}. */
   projectId?: string;
 }
 
@@ -79,9 +84,9 @@ function activeObjectiveIdFromUrl(): string | null {
  * App-wide issue/objective creation (MIN-33). Mounts {@link CreateIssueDialog}
  * and {@link ObjectiveDialog} once so "Nouveau ticket/objectif" works from
  * anywhere — the home page, the cross-project board, the header, the mobile "+"
- * — not just inside a project. The target project defaults to the current route
- * (else the first project); both dialogs let the user retarget via their split
- * button. Writes go through the by-project APIs + cache invalidation (the same
+ * — not just inside a project. The target project defaults to the current route,
+ * else the last project a ticket was created in (see {@link lastCreateProjectId}),
+ * else the first; both dialogs let the user retarget via their split button. Writes go through the by-project APIs + cache invalidation (the same
  * non-optimistic path the project board already uses), so a project board
  * sharing the `["issues", projectId]` cache reflects the new row on refetch.
  *
@@ -167,8 +172,15 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   );
 
   const resolveTarget = useCallback(
-    (projectId?: string) =>
-      projectId ?? projectIdFromPath(pathname) ?? projects[0]?.id ?? null,
+    (projectId?: string) => {
+      if (projectId) return projectId;
+      const fromPath = projectIdFromPath(pathname);
+      if (fromPath) return fromPath;
+      // Hors projet (accueil, board agrégé, palette) : le dernier projet où un
+      // ticket a été créé, pas le premier de la liste — celui-ci n'est qu'un
+      // artefact du tri.
+      return defaultCreateProjectId(projects, lastCreateProjectId());
+    },
     [pathname, projects]
   );
 

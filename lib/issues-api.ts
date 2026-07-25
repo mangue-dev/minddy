@@ -2,6 +2,7 @@
 
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
+import { rememberCreateProject } from "./last-create-project";
 import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -29,13 +30,20 @@ export async function createIssueApi(
   projectId: string,
   input: CreateIssueInput
 ): Promise<Issue> {
-  return parseJson<Issue>(
+  const issue = await parseJson<Issue>(
     await fetch(`/api/projects/${projectId}/issues`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     })
   );
+  // Toutes les créations côté client passent par ici (tableau de projet, board
+  // agrégé, dialog global, palette, annulation) : c'est donc le seul endroit à
+  // instrumenter pour mémoriser le dernier projet où un ticket a été créé, qui
+  // sert de projet par défaut au dialog quand la route n'en désigne aucun. Après
+  // le succès seulement — une création refusée ne déplace pas le défaut.
+  rememberCreateProject(projectId);
+  return issue;
 }
 
 /** Contexte analytics facultatif — la surface d'où part l'édition (MIN-78). */
