@@ -39,13 +39,39 @@ import { useScratchpad } from "@/lib/scratchpad-context";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 
 /**
+ * Ligne de titre markdown (niveau compris) de la SECTION dans laquelle vit le
+ * bloc situé en `pos` — le dernier heading qui le précède, ou null si la tâche
+ * traîne avant tout titre. Reprise telle quelle en tête du markdown copié /
+ * lancé : c'est ce qui permet au prompt de nommer la section (lib/scratchpad-prompt.ts).
+ */
+function sectionHeadingAt(
+  editor: NodeViewProps["editor"],
+  pos: number | undefined
+): string | null {
+  if (pos == null) return null;
+  const doc = editor.state.doc;
+  if (pos < 0 || pos > doc.content.size) return null;
+  // La tâche vit dans une taskList : on remonte à son bloc de premier niveau,
+  // puis on balaie ses prédécesseurs à l'envers jusqu'au premier heading.
+  for (let i = doc.resolve(pos).index(0) - 1; i >= 0; i--) {
+    const child = doc.child(i);
+    if (child.type.name !== "heading") continue;
+    const text = child.textContent.trim();
+    if (!text) return null; // titre vide = pas de section nommable
+    const level = Math.min(6, Math.max(1, Number(child.attrs.level) || 2));
+    return `${"#".repeat(level)} ${text}`;
+  }
+  return null;
+}
+
+/**
  * Scratchpad tasks with the plan's FOUR states inside the WYSIWYG editor. The
  * checkbox and the per-line ⋯ menu (set state, promote the note to an issue,
  * copy the line as a prompt) come from a React NodeView; the state persists as
  * the node attribute `state` and round-trips to markdown markers
  * ([ ]/[~]/[x]/[-]) via task-markdown.ts.
  */
-function TaskItemView({ node, updateAttributes }: NodeViewProps) {
+function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const t = useTranslations("Plan");
   const tScratch = useTranslations("Scratchpad");
   const { close: closeScratchpad } = useScratchpad();
@@ -57,13 +83,24 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
   const toggled: PlanTaskState = struck ? "pending" : "completed";
 
   const set = (next: PlanTaskState) => updateAttributes({ state: next });
-  const copyLine = () => {
+
+  // Le markdown que porte la ligne quand elle sort du carnet (copie ou agent) :
+  // la tâche telle quelle, marqueur compris, PRÉCÉDÉE du titre de sa section —
+  // seul moyen de dire à l'agent d'où elle vient (le prompt le reformule en
+  // clair, cf. lib/scratchpad-prompt.ts). Null si la ligne est vide.
+  const taskMarkdown = (): string | null => {
     const text = node.textContent.trim();
-    if (!text) return;
+    if (!text) return null;
+    const line = `- ${TASK_MARKER_BY_STATE[state]} ${text}`;
+    const heading = sectionHeadingAt(editor, getPos());
+    return heading ? `${heading}\n\n${line}` : line;
+  };
+
+  const copyLine = () => {
+    const md = taskMarkdown();
+    if (!md) return;
     void navigator.clipboard.writeText(
-      buildScratchpadPrompt(`- ${TASK_MARKER_BY_STATE[state]} ${text}`, {
-        section: true,
-      })
+      buildScratchpadPrompt(md, { section: true })
     );
     toast.success(tScratch("copiedLineToast"));
   };
@@ -83,14 +120,14 @@ function TaskItemView({ node, updateAttributes }: NodeViewProps) {
     openAssistant({ prompt: tScratch("promotePrompt", { note: text }) });
   };
 
-  // « Lancer un agent » (MIN-84) : la ligne part telle quelle (marqueur compris —
-  // c'est du markdown honnête du carnet) comme instruction d'un run carnet ; le
-  // composer de la page Agents fait choisir le projet avant l'envoi.
+  // « Lancer un agent » (MIN-84) : la ligne part telle quelle (marqueur et titre
+  // de section compris — c'est du markdown honnête du carnet, et la note est le
+  // SEUL canal jusqu'à l'agent) comme instruction d'un run carnet ; le composer
+  // de la page Agents fait choisir le projet avant l'envoi.
   const launchNote = useLaunchAgentNote();
   const launchAgent = () => {
-    const text = node.textContent.trim();
-    if (!text) return;
-    launchNote(`- ${TASK_MARKER_BY_STATE[state]} ${text}`);
+    const md = taskMarkdown();
+    if (md) launchNote(md);
   };
 
   // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button
