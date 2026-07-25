@@ -10,9 +10,9 @@
  * Tout passe par ce module, qui applique les garde-fous suivants :
  *
  *   1. Tables sur liste blanche (captures/lib/config.mjs).
- *   2. Chaque ligne insérée doit être rattachée au compte de démo. Une ligne
- *      qui pointe vers un vrai utilisateur ou un vrai projet est REJETÉE
- *      avant d'atteindre le réseau.
+ *   2. Chaque ligne insérée doit être rattachée au monde de démo, par un
+ *      propriétaire, un projet, ou une ligne parente elle-même prouvée de
+ *      démo. Une ligne qui pointe ailleurs est REJETÉE avant le réseau.
  *   3. Toute modification ou tout retrait relit les lignes visées et vérifie
  *      qu'elles sont bien à nous AVANT d'agir. On ne fait jamais confiance
  *      au filtre.
@@ -31,6 +31,7 @@ import {
   ALLOWED_RPC,
   DEMO_EMAIL,
   DEMO_EMAIL_PATTERN,
+  TABLE_SCOPES,
   WRITABLE_TABLES,
 } from "./config.mjs";
 
@@ -43,6 +44,85 @@ function adminClient() {
   );
 }
 
+// ── Cohérence du périmètre, vérifiée au chargement ───────────────────────────
+// Une table sans ancrage laisserait passer n'importe quelle ligne. Un parent
+// déclaré après son enfant ne serait pas encore résolu au moment de valider.
+// Les deux sont des erreurs de configuration, pas des cas limites : on refuse
+// de démarrer plutôt que d'écrire avec un garde-fou troué.
+const DECLARATION_ORDER = Object.keys(TABLE_SCOPES);
+for (const [table, spec] of Object.entries(TABLE_SCOPES)) {
+  const anchors = [spec.ownerColumn, spec.projectColumn, ...(spec.parents || [])];
+  if (anchors.filter(Boolean).length === 0) {
+    throw new Error(`captures: la table "${table}" n'a aucun ancrage dans config.mjs.`);
+  }
+  for (const parent of spec.parents || []) {
+    if (!TABLE_SCOPES[parent.table]) {
+      throw new Error(`captures: "${table}" référence la table "${parent.table}", non déclarée.`);
+    }
+    if (DECLARATION_ORDER.indexOf(parent.table) >= DECLARATION_ORDER.indexOf(table)) {
+      throw new Error(
+        `captures: "${table}" doit être déclarée APRÈS son parent "${parent.table}".`,
+      );
+    }
+  }
+}
+
+/** Tables servant de parent à au moins une autre : leurs ids doivent être résolus. */
+const PARENT_TABLES = new Set(
+  Object.values(TABLE_SCOPES).flatMap((spec) => (spec.parents || []).map((p) => p.table)),
+);
+PARENT_TABLES.add("projects"); // ancrage de `projectColumn`
+
+/**
+ * Liste les comptes de la famille de démo.
+ *
+ * La résolution passe par l'API admin de Supabase Auth, PAS par une table
+ * miroir : `public.profiles` a été supprimée (migration 20260706130000) et
+ * minddy lit désormais les identités directement dans `auth.users` — même
+ * source de vérité que `lib/server/auth-users.ts` côté app.
+ */
+async function listDemoAccounts(admin) {
+  const family = [];
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error(`captures: lecture des comptes impossible — ${error.message}`);
+    for (const user of data.users) {
+      if (!DEMO_EMAIL_PATTERN.test(user.email || "")) continue;
+      const meta = user.user_metadata || {};
+      family.push({
+        id: user.id,
+        email: user.email,
+        full_name: meta.display_name || meta.full_name || meta.name || null,
+      });
+    }
+    if (data.users.length < 200) break;
+  }
+  return family;
+}
+
+/**
+ * Applique à une requête les filtres d'ancrage d'une table. Renvoie `null` si
+ * un ancrage est vide — auquel cas il n'existe AUCUNE ligne de démo pour cette
+ * table, et il ne faut surtout pas lancer une requête sans filtre.
+ */
+function applyAnchors(query, spec, world) {
+  if (spec.projectColumn) {
+    const projects = world.demoIds.projects;
+    if (!projects || projects.size === 0) return null;
+    query = query.in(spec.projectColumn, [...projects]);
+  }
+  if (spec.ownerColumn) {
+    if (world.demoUserIds.size === 0) return null;
+    query = query.in(spec.ownerColumn, [...world.demoUserIds]);
+  }
+  for (const parent of spec.parents || []) {
+    const ids = world.demoIds[parent.table];
+    if (!ids || ids.size === 0) return null;
+    query = query.in(parent.column, [...ids]);
+  }
+  return query;
+}
+
 /**
  * Ouvre le monde de démo : résout le compte, ses projets, et renvoie un
  * handle que les scripts de seed utilisent. Échoue si le compte n'existe pas
@@ -51,13 +131,7 @@ function adminClient() {
 export async function openDemoWorld({ allowMissing = false } = {}) {
   const admin = adminClient();
 
-  const { data: profiles, error } = await admin
-    .from("profiles")
-    .select("id, email, full_name")
-    .ilike("email", "captures-demo%");
-  if (error) throw new Error(`captures: lecture des profils impossible — ${error.message}`);
-
-  const family = (profiles || []).filter((p) => DEMO_EMAIL_PATTERN.test(p.email || ""));
+  const family = await listDemoAccounts(admin);
   if (family.length === 0 && !allowMissing) {
     throw new Error(
       `captures: le compte de démo (${DEMO_EMAIL}) n'existe pas encore. ` +
@@ -67,37 +141,75 @@ export async function openDemoWorld({ allowMissing = false } = {}) {
 
   const world = {
     admin,
-    demoUserIds: new Set(family.map((p) => p.id)),
+    demoUserIds: new Set(family.map((u) => u.id)),
     demoUsers: family,
-    demoProjectIds: new Set(),
+    /** Identifiants des lignes de démo, par table. Sert d'ancrage aux enfants. */
+    demoIds: {},
+    demoProjects: [],
+
+    /** Re-résout la famille de démo, ses projets, et tous les ids d'ancrage. */
     async refresh() {
-      if (this.demoUserIds.size === 0) return;
-      const { data, error: e } = await admin
-        .from("projects")
-        .select("id, name, key")
-        .in("owner_id", [...this.demoUserIds]);
-      if (e) throw new Error(`captures: lecture des projets de démo impossible — ${e.message}`);
+      const fresh = await listDemoAccounts(admin);
+      this.demoUsers = fresh;
+      this.demoUserIds = new Set(fresh.map((u) => u.id));
+      this.demoIds = {};
+
+      // Ordre de déclaration = ordre de dépendance : quand on résout une table,
+      // les ids de ses parents sont déjà connus.
+      for (const table of DECLARATION_ORDER) {
+        if (!PARENT_TABLES.has(table)) continue;
+        const spec = TABLE_SCOPES[table];
+        const idColumn = spec.idColumn || "id";
+        const query = applyAnchors(admin.from(table).select(idColumn), spec, this);
+        if (!query) {
+          this.demoIds[table] = new Set();
+          continue;
+        }
+        const { data, error } = await query.limit(5000);
+        if (error) {
+          throw new Error(`captures: résolution des ids de démo sur ${table} — ${error.message}`);
+        }
+        this.demoIds[table] = new Set((data || []).map((r) => r[idColumn]));
+      }
+
+      const { data, error } = this.demoUserIds.size
+        ? await admin
+            .from("projects")
+            .select("id, name, key, deleted_at")
+            .in("owner_id", [...this.demoUserIds])
+        : { data: [], error: null };
+      if (error) throw new Error(`captures: lecture des projets de démo — ${error.message}`);
       this.demoProjects = data || [];
-      this.demoProjectIds = new Set(this.demoProjects.map((p) => p.id));
     },
   };
+
+  // Amorçage : `projects` s'ancre sur les comptes, tout le reste en découle.
+  world.demoIds.projects = new Set();
   await world.refresh();
   return world;
 }
 
-/** Vérifie qu'une ligne ne peut toucher que le périmètre de démo. */
+/**
+ * Vérifie qu'une ligne ne peut toucher que le périmètre de démo.
+ *
+ * Tous les ancrages déclarés doivent passer. Un parent inconnu du monde de
+ * démo — parce qu'il n'existe pas, ou parce qu'il appartient à quelqu'un
+ * d'autre — fait échouer la validation avant tout accès réseau.
+ */
 function validateRow(world, table, row, index) {
-  const spec = WRITABLE_TABLES[table];
+  const spec = TABLE_SCOPES[table];
   const where = `${table}[${index}]`;
 
-  const owner = row[spec.ownerColumn];
-  if (!owner) {
-    throw new Error(`captures: ${where} — colonne de rattachement "${spec.ownerColumn}" absente.`);
-  }
-  if (!world.demoUserIds.has(owner)) {
-    throw new Error(
-      `captures: ${where} — "${spec.ownerColumn}" ne pointe pas vers le compte de démo. REFUSÉ.`,
-    );
+  if (spec.ownerColumn) {
+    const owner = row[spec.ownerColumn];
+    if (!owner) {
+      throw new Error(`captures: ${where} — colonne de rattachement "${spec.ownerColumn}" absente.`);
+    }
+    if (!world.demoUserIds.has(owner)) {
+      throw new Error(
+        `captures: ${where} — "${spec.ownerColumn}" ne pointe pas vers le compte de démo. REFUSÉ.`,
+      );
+    }
   }
 
   if (spec.projectColumn) {
@@ -105,10 +217,24 @@ function validateRow(world, table, row, index) {
     if (!projectId) {
       throw new Error(`captures: ${where} — "${spec.projectColumn}" absent.`);
     }
-    if (!world.demoProjectIds.has(projectId)) {
+    if (!world.demoIds.projects.has(projectId)) {
       throw new Error(
         `captures: ${where} — "${spec.projectColumn}" vise un projet qui n'appartient pas ` +
           `au compte de démo. REFUSÉ.`,
+      );
+    }
+  }
+
+  for (const parent of spec.parents || []) {
+    const value = row[parent.column];
+    if (!value) {
+      throw new Error(`captures: ${where} — "${parent.column}" absent.`);
+    }
+    const known = world.demoIds[parent.table];
+    if (!known || !known.has(value)) {
+      throw new Error(
+        `captures: ${where} — "${parent.column}" vise une ligne de ${parent.table} qui n'est pas ` +
+          `du monde de démo (ou pas encore appliquée). REFUSÉ.`,
       );
     }
   }
@@ -128,21 +254,31 @@ function validateRow(world, table, row, index) {
  * Compte, pour chaque table écrivable, les lignes situées HORS du périmètre
  * de démo. Ce vecteur doit être rigoureusement identique avant et après un
  * seed. Tout écart signifie qu'on a touché à de la donnée qui n'est pas à nous.
+ *
+ * Mesuré par différence (total − démo) plutôt que par un NOT IN : deux
+ * comptages d'en-tête, aucune liste d'identifiants à faire transiter, et le
+ * résultat reste juste quel que soit le nombre de lignes de démo.
  */
 export async function measureBlastRadius(world) {
   const counts = {};
   for (const [table, spec] of Object.entries(WRITABLE_TABLES)) {
-    let query = world.admin.from(table).select("*", { count: "exact", head: true });
-
-    if (spec.projectColumn && world.demoProjectIds.size > 0) {
-      query = query.not(spec.projectColumn, "in", `(${[...world.demoProjectIds].join(",")})`);
-    } else if (!spec.projectColumn && world.demoUserIds.size > 0) {
-      query = query.not(spec.ownerColumn, "in", `(${[...world.demoUserIds].join(",")})`);
-    }
-
-    const { count, error } = await query;
+    const { count: total, error } = await world.admin
+      .from(table)
+      .select("*", { count: "exact", head: true });
     if (error) throw new Error(`captures: comptage impossible sur ${table} — ${error.message}`);
-    counts[table] = count ?? 0;
+
+    const scoped = applyAnchors(
+      world.admin.from(table).select("*", { count: "exact", head: true }),
+      spec,
+      world,
+    );
+    let mine = 0;
+    if (scoped) {
+      const { count, error: e } = await scoped;
+      if (e) throw new Error(`captures: comptage de démo sur ${table} — ${e.message}`);
+      mine = count ?? 0;
+    }
+    counts[table] = (total ?? 0) - mine;
   }
   return counts;
 }
@@ -248,7 +384,9 @@ export function createPlan(world) {
         if (step.kind === "insert") {
           lines.push(`  • Créer ${step.rows.length} × ${step.label}`);
           for (const row of step.rows.slice(0, 5)) {
-            const summary = row.title || row.name || row.email || JSON.stringify(row).slice(0, 60);
+            const summary =
+              row.title || row.name || row.email || row.pseudonym || row.content?.slice(0, 60) ||
+              JSON.stringify(row).slice(0, 60);
             const extra = [row.status, row.priority].filter(Boolean).join(", ");
             lines.push(`      - ${summary}${extra ? ` (${extra})` : ""}`);
           }
@@ -332,7 +470,7 @@ export async function callRpc(world, name, args) {
   if (!ALLOWED_RPC.has(name)) {
     throw new Error(`captures: RPC "${name}" non autorisée.`);
   }
-  if (args?.p_project_id && !world.demoProjectIds.has(args.p_project_id)) {
+  if (args?.p_project_id && !world.demoIds.projects.has(args.p_project_id)) {
     throw new Error(`captures: RPC "${name}" visait un projet hors démo. REFUSÉ.`);
   }
   const { data, error } = await world.admin.rpc(name, args);
@@ -371,6 +509,32 @@ export async function deleteDemoWorld(world, { confirmed } = {}) {
       `captures: ALERTE — la suppression a touché des lignes hors démo :\n  ${lost.join("\n  ")}`,
     );
   }
+}
+
+/**
+ * Modifie les préférences d'un compte de DÉMO (`user_metadata`).
+ *
+ * Certaines vues ne se règlent pas par une table : la cadence et l'intensité
+ * du cycle vivent dans les métadonnées du compte (`lib/cycle-prefs.ts`). La
+ * fonction refuse tout compte hors famille de démo, et fusionne au lieu
+ * d'écraser — les métadonnées existantes (nom affiché) sont préservées.
+ */
+export async function updateDemoUserMetadata(world, { userId, patch, confirmed } = {}) {
+  if (confirmed !== true) {
+    throw new Error("captures: modification de compte demandée sans confirmation explicite.");
+  }
+  if (!world.demoUserIds.has(userId)) {
+    throw new Error(`captures: ${userId} n'est pas un compte de démo. REFUSÉ.`);
+  }
+  const { data: current, error: readError } = await world.admin.auth.admin.getUserById(userId);
+  if (readError) throw new Error(`captures: lecture du compte — ${readError.message}`);
+  if (!DEMO_EMAIL_PATTERN.test(current.user?.email || "")) {
+    throw new Error(`captures: ${current.user?.email} ne correspond pas au motif de démo. REFUSÉ.`);
+  }
+  const { error } = await world.admin.auth.admin.updateUserById(userId, {
+    user_metadata: { ...(current.user.user_metadata || {}), ...patch },
+  });
+  if (error) throw new Error(`captures: écriture des préférences — ${error.message}`);
 }
 
 /**
