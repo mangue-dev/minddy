@@ -2,16 +2,20 @@
  * Catalogue des captures du site public (MIN-73).
  *
  * Chaque entrée est une commande de capture : quel écran ouvrir, dans quel état,
- * et dans quel rapport d'image l'afficher. Tant que `src` vaut `null`, le
- * composant `<ScreenshotSlot>` rend un cadre de réservation qui affiche la
- * consigne — la mise en page est donc déjà juste, seule l'image manque.
+ * et dans quel rapport d'image l'afficher. Tant qu'aucune image n'est publiée
+ * pour la variante demandée, le composant `<ScreenshotSlot>` rend un cadre de
+ * réservation qui affiche la consigne — la mise en page est donc déjà juste,
+ * seule l'image manque.
  *
- * Pour brancher les vraies captures (produites par AutoKap) : renseigner `src`.
- * `src` est un patron où `{theme}` et `{lang}` sont substitués à l'affichage, ce
- * qui permet de servir la bonne variante clair/sombre et FR/EN depuis un même
- * endpoint — par exemple
- * `"/api/autokap/assets/<id>?theme={theme}&lang={lang}&w=1600&format=webp"`.
+ * Les captures sont produites par le dossier `captures/` (skills
+ * `capture-world` pour les données, `capture-shot` pour les images), publiées
+ * dans `public/captures/` sous le nom `<id>-<langue>-<thème>.webp`, et
+ * recensées dans `screenshot-manifest.ts` par `node captures/lib/publish.mjs`.
+ *
+ * `src` ne sert plus qu'aux exceptions : une image posée à la main, hors de
+ * cette chaîne. C'est un patron où `{theme}` et `{lang}` sont substitués.
  */
+import { PUBLISHED_SCREENSHOTS } from "./screenshot-manifest";
 
 export interface ScreenshotSlot {
   /** Clé stable, utilisée comme identifiant dans le code des sections. */
@@ -22,7 +26,10 @@ export interface ScreenshotSlot {
   shot: string;
   /** Rapport d'image du cadre, en notation CSS `aspect-ratio`. */
   ratio: string;
-  /** Patron d'URL de la capture. `null` = pas encore produite. */
+  /**
+   * Exception : patron d'URL d'une image posée à la main, hors de la chaîne
+   * `captures/`. `null` = comportement normal, l'image vient du manifeste.
+   */
   src: string | null;
 }
 
@@ -121,11 +128,22 @@ export type ScreenshotSlotId = keyof typeof SLOTS;
 
 export const SCREENSHOT_SLOTS: Record<ScreenshotSlotId, ScreenshotSlot> = SLOTS;
 
-/** Résout le patron `src` d'un emplacement pour un thème et une langue donnés. */
+/**
+ * L'URL de la capture d'un emplacement, pour une langue et un thème donnés —
+ * ou `null` s'il n'y en a pas, auquel cas le cadre de réservation s'affiche.
+ *
+ * La correspondance est EXACTE : une variante non publiée ne se rabat pas sur
+ * une autre. Servir une capture française sur la page anglaise, ou une image
+ * claire sur un fond sombre, se remarque plus qu'un cadre vide — et masquerait
+ * le fait qu'il reste une capture à produire.
+ */
 export function screenshotSrc(
   slot: ScreenshotSlot,
   { theme, lang }: { theme: "light" | "dark"; lang: string },
 ): string | null {
-  if (!slot.src) return null;
-  return slot.src.replaceAll("{theme}", theme).replaceAll("{lang}", lang);
+  if (slot.src) {
+    return slot.src.replaceAll("{theme}", theme).replaceAll("{lang}", lang);
+  }
+  const key = `${slot.id}-${lang}-${theme}`;
+  return PUBLISHED_SCREENSHOTS.has(key) ? `/captures/${key}.webp` : null;
 }

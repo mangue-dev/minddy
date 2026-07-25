@@ -116,6 +116,44 @@ Puis une ligne dans `history.jsonl` :
 Le `commit` est `git rev-parse --short HEAD`. C'est lui qui rend les
 rafraîchissements intelligents.
 
+### 6. Publier sur la landing
+
+Un PNG dans `out/` ne s'affiche nulle part. Pour qu'il atteigne la landing :
+
+```js
+import { publishShot, writeManifest } from "../../lib/publish.mjs";
+
+for (const locale of ["fr", "en"]) {
+  for (const theme of ["light", "dark"]) {
+    await publishShot({
+      slot: "heroBoard",                                   // id de screenshot-slots.ts
+      lang: locale,
+      theme,
+      input: `captures/shots/<nom>/out/${locale}-${theme}.png`,
+    });
+  }
+}
+await writeManifest();
+```
+
+Ce que ça fait : conversion en WebP redimensionné (le composant rend
+`<Image unoptimized>`, donc Next ne recompresse rien — un PNG 2× brut ferait
+plusieurs mégaoctets), écriture dans `public/captures/` sous le nom
+`<emplacement>-<langue>-<thème>.webp`, puis régénération de
+`components/marketing/screenshot-manifest.ts`.
+
+**Le manifeste est la sécurité du dispositif.** La landing ne pointe une image
+que si elle existe vraiment sur le disque ; sinon l'emplacement rend son cadre
+de réservation. On peut donc publier écran par écran sans jamais afficher une
+image cassée, et supprimer un fichier suffit à le retirer de la page — il n'y a
+aucune liste à tenir à la main.
+
+La correspondance est exacte : une variante manquante ne se rabat pas sur une
+autre. Une capture française sur la page anglaise se remarquerait plus qu'un
+cadre vide, et masquerait le travail restant.
+
+Pour voir l'état publié : `node captures/lib/publish.mjs --list`.
+
 ## Rafraîchir une capture existante
 
 C'est ici que le dossier versionné paie.
@@ -155,13 +193,22 @@ d'image à installer.
   donne un flash ou un thème faux.
 - **Première capture d'une session** : sans `document.fonts.ready`, l'image sort
   avec la police de repli et un métrage différent. `settle()` s'en charge.
+- **Le bandeau cookies traîne en bas de l'écran.** C'est un
+  `div[role="dialog"]` fixé en bas de page ; il faut l'accepter ou le retirer
+  avant la prise, sinon il se retrouve sur toutes les captures.
 - **Une capture verte peut être vide.** C'est le mode d'échec le plus courant et
   le plus coûteux. Regarde les images.
+- **Le cycle ne suit pas l'horloge figée.** Elle ne vaut que pour le navigateur ;
+  la quinzaine affichée est calculée côté serveur, à l'heure réelle. Si l'écran
+  du cycle sort vide, c'est que la fenêtre a basculé — voir `world.md`.
 - **Ne jamais assigner un ticket de démo à un vrai utilisateur** : les garde-fous
   refusent, mais l'intention n'a pas lieu d'être.
 
 ## Ce que ce skill ne fait pas
 
 - Il ne crée aucune donnée en base. C'est `capture-world`.
-- Il ne touche à aucun code de l'application.
+- Il ne modifie aucun code de l'application, à une exception près et elle est
+  générée : `components/marketing/screenshot-manifest.ts`, réécrit par
+  `publish.mjs` à partir du contenu de `public/captures/`. Le catalogue
+  `screenshot-slots.ts`, lui, ne se touche pas ici.
 - Il ne produit ni clips ni vidéos : hors périmètre, définitivement.
