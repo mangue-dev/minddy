@@ -39,6 +39,9 @@ const DRY_RUN = process.argv.includes("--dry-run");
  * plutôt qu'au ras du sol.
  */
 const CYCLE_PREFS = {
+  // Les cycles sont OPT-IN : sans ce drapeau, la ligne existe en base mais
+  // l'application affiche « Activer les cycles » et l'écran reste vide.
+  cycles_enabled: true,
   cycle_duration_weeks: DEMO_CADENCE.durationWeeks,
   cycle_start_dow: DEMO_CADENCE.startDow,
   cycle_intensity: "light",

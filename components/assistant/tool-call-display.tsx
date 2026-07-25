@@ -461,8 +461,21 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   apply_edits: {
     icon: FileStack,
+    // `changes` n'existe QUE dans les arguments bruts du modèle. Ce que le fil
+    // d'un run relit, c'est le résumé à plat écrit par `toolArgSummary`
+    // (lib/server/agent/agent-loop.ts) : `{ count, paths }`. Sans ces deux
+    // replis, tout batch multi-fichiers s'affichait « Édition de 0 fichier(s) »,
+    // trois lignes au-dessus de son propre « 3 fichiers modifiés ».
     getLabel: (args, _r, _s, _st, t) =>
-      t("agentApplyEdits", { count: Array.isArray(args.changes) ? args.changes.length : 0 }),
+      t("agentApplyEdits", {
+        count: Array.isArray(args.changes)
+          ? args.changes.length
+          : typeof args.count === "number"
+            ? args.count
+            : Array.isArray(args.paths)
+              ? args.paths.length
+              : 0,
+      }),
   },
   move_file: {
     icon: FileSymlink,
