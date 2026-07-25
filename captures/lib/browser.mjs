@@ -46,6 +46,12 @@ export async function openPage({
     ([themeValue, frozenIso]) => {
       try {
         localStorage.setItem("mangue-ui-theme", themeValue);
+
+        // Bandeau cookies : sans choix enregistré, il se pose en bas de TOUTES
+        // les pages et se retrouve sur toutes les captures. On répond
+        // « declined » plutôt qu'« accepted » — un robot de capture n'a rien à
+        // envoyer aux analytics. Clé et valeurs : lib/cookie-consent.ts.
+        localStorage.setItem("cookie_consent", "declined");
       } catch {}
 
       // Horloge figée : les dates relatives ("il y a 2 jours") deviennent
@@ -71,8 +77,59 @@ export async function openPage({
     { name: "NEXT_LOCALE", value: locale, url: CAPTURE.baseUrl },
   ]);
 
+  await alignStoredViewNames(context, locale);
+
   const page = await context.newPage();
   return { browser, context, page };
+}
+
+/**
+ * Noms de vues traduits UNE FOIS, à la création, puis figés en base.
+ *
+ * `ensureBaselineViews` (lib/server/views.ts) crée les vues de départ avec le
+ * libellé traduit dans la langue de la requête, et l'écrit dans la table
+ * `views`. Ce n'est donc plus une traduction mais une donnée : le compte de
+ * démo ayant vu son premier board en français, la capture ANGLAISE affichait
+ * un onglet « Toutes » au milieu d'une interface anglaise.
+ *
+ * On réécrit la réponse de l'API en vol, pour que le libellé corresponde à la
+ * langue de la capture. Deux raisons de faire ça ici plutôt qu'en base :
+ *   - aucune écriture en production, donc rien à défaire ni à surveiller ;
+ *   - l'image montre ce qu'un vrai utilisateur de cette langue verrait — chez
+ *     lui, la vue aurait été créée dans SA langue.
+ *
+ * Seules les vues `custom` sont concernées : celles de type `my` sont
+ * réétiquetées par l'interface d'après leur `kind`, jamais d'après leur nom.
+ */
+export const DEFAULT_VIEW_NAMES = {
+  // Board.defaultViewName dans messages/<locale>.json
+  fr: "Toutes",
+  en: "All",
+};
+
+async function alignStoredViewNames(context, locale) {
+  const target = DEFAULT_VIEW_NAMES[locale];
+  if (!target) return;
+  const known = Object.values(DEFAULT_VIEW_NAMES);
+
+  await context.route("**/api/**/views", async (route) => {
+    const response = await route.fetch();
+    if (!response.ok()) return route.fulfill({ response });
+
+    let body;
+    try {
+      body = await response.json();
+    } catch {
+      return route.fulfill({ response });
+    }
+
+    if (Array.isArray(body)) {
+      for (const view of body) {
+        if (view?.kind === "custom" && known.includes(view.name)) view.name = target;
+      }
+    }
+    await route.fulfill({ response, json: body });
+  });
 }
 
 /**

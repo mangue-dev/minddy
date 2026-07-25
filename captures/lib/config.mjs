@@ -69,6 +69,20 @@ export const TABLE_SCOPES = {
     projectColumn: "project_id",
   },
 
+  // ── Plan du compte ───────────────────────────────────────────────────────
+  // `admin_override_plan_id` est le levier prévu par le schéma pour offrir un
+  // plan sans passer par Stripe (« offrir Pro à un testeur »), et il est
+  // PRIORITAIRE sur l'état Stripe (resolvePlanFromBillingAccount). On n'écrit
+  // que cette colonne : aucune ligne Stripe n'est créée, aucun paiement, aucun
+  // abonnement. Le compte de démo a besoin de Pro parce que le plan `free`
+  // ferme les agents ET les pull requests derrière `AgentsPlanGate`.
+  billing_accounts: {
+    writable: true,
+    ownerColumn: "user_id",
+    userRefColumns: ["user_id"],
+    idColumn: "user_id",
+  },
+
   // ── Cycle et carnet : personnels, cross-projet ───────────────────────────
   cycles: {
     writable: true,

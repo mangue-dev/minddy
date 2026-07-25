@@ -6,4 +6,12 @@
 // image absente, elle rend son cadre de réservation à la place.
 
 export const PUBLISHED_SCREENSHOTS: ReadonlySet<string> = new Set([
+  "featurePalette-en-dark",
+  "featurePalette-en-light",
+  "featurePalette-fr-dark",
+  "featurePalette-fr-light",
+  "heroBoard-en-dark",
+  "heroBoard-en-light",
+  "heroBoard-fr-dark",
+  "heroBoard-fr-light",
 ]);
