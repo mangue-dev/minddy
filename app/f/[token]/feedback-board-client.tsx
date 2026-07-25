@@ -591,8 +591,7 @@ function ComposerDialog({
             onCheckedChange={setIsPublic}
           />
         </div>
-        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
-          <p className="text-xs text-muted-foreground">{t("composerIntro")}</p>
+        <div className="mt-3 flex items-center justify-end gap-4 border-t pt-3">
           <Button onClick={() => title.trim() && submit()} disabled={pending || !title.trim()}>
             {pending && <Spinner />}
             {t("submitPost")}

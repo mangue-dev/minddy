@@ -222,8 +222,6 @@ export function AdminQuotasDashboard() {
             ))}
           </div>
         )}
-
-        <p className="text-xs text-muted-foreground">{t("quotas.footnote")}</p>
       </section>
     </div>
   );

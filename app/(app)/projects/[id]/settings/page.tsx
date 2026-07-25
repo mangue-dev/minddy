@@ -353,7 +353,6 @@ export default function ProjectSettingsPage() {
     <>
       <SettingsShell
         title={t("title")}
-        description={t("subtitle")}
         defaultTab="general"
         tabs={tabs}
         topSlot={

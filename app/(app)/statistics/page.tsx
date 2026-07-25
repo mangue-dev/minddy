@@ -55,8 +55,8 @@ function RhythmSection({ cycles }: { cycles: StatsCycles }) {
   if (offset !== null) {
     const rounded = Math.round(Math.abs(offset) * 10) / 10;
     if (rounded < 0.05) {
+      // Pile à l'échéance : la valeur se suffit, pas de hint.
       cadenceValue = t("cadenceOnTimeValue");
-      cadenceHint = t("cadenceOnTime");
     } else {
       cadenceValue = t("cadenceDays", { value: fmtNum(rounded, locale) });
       cadenceHint = offset < 0 ? t("cadenceEarly") : t("cadenceLate");
@@ -64,7 +64,7 @@ function RhythmSection({ cycles }: { cycles: StatsCycles }) {
   }
 
   return (
-    <StatsSection title={t("rhythm")} description={t("rhythmSubtitle")}>
+    <StatsSection title={t("rhythm")}>
       <div className="flex flex-col gap-4">
         {(showPerCycle || showCadence) && (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -205,7 +205,6 @@ export default function StatisticsPage() {
       <StatsSection
         title={t("perProject")}
         info={t("perProjectInfo")}
-        description={t("perProjectSubtitle")}
       >
         <ProjectBreakdown
           buckets={stats.perProject}

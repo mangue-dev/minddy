@@ -50,6 +50,8 @@ export type CreateIssueResult =
         | "databaseError"
         | "attachmentInvalid"
         | "issueLimitReached";
+      /** ICU values the message needs (ex. `limit` pour `issueLimitReached`). */
+      params?: Record<string, string | number>;
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
     };
@@ -105,7 +107,13 @@ export async function createIssueForProject({
     await ensureIssueLimit(projectId);
   } catch (err) {
     if (isPlanLimitError(err)) {
-      return { ok: false, status: err.status, errorKey: "issueLimitReached" };
+      // `params` porte la limite du plan — le message l'affiche.
+      return {
+        ok: false,
+        status: err.status,
+        errorKey: "issueLimitReached",
+        params: err.params,
+      };
     }
     throw err;
   }

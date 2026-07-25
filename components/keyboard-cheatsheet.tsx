@@ -42,11 +42,25 @@ export function KeyboardCheatsheet() {
                     className="flex items-center justify-between gap-4 py-1.5"
                   >
                     <span className="text-sm">{tShortcut(sc.labelKey)}</span>
-                    <KbdSequence
-                      keys={sc.keys.map((step) => step.map(resolveKeyToken))}
-                      size="sm"
-                      separator={tk("then")}
-                    />
+                    <span className="flex items-center gap-1.5">
+                      <KbdSequence
+                        keys={sc.keys.map((step) => step.map(resolveKeyToken))}
+                        size="sm"
+                        separator={tk("then")}
+                      />
+                      {sc.altKeys && (
+                        <>
+                          <span className="text-xs text-muted-foreground">/</span>
+                          <KbdSequence
+                            keys={sc.altKeys.map((step) =>
+                              step.map(resolveKeyToken)
+                            )}
+                            size="sm"
+                            separator={tk("then")}
+                          />
+                        </>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

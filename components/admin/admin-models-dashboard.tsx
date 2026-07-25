@@ -97,7 +97,13 @@ export function AdminModelsDashboard() {
               {i > 0 && <Separator />}
               <SettingsSection
                 title={t(`groups.${group}.title`)}
-                description={t(`groups.${group}.desc`)}
+                // Description optionnelle : certains groupes s'expliquent par
+                // les descriptions de leurs champs.
+                description={
+                  t.has(`groups.${group}.desc`)
+                    ? t(`groups.${group}.desc`)
+                    : undefined
+                }
               >
                 <div className="space-y-6">
                   {fieldsByGroup[group].map((field) => (
@@ -132,7 +138,9 @@ function ConfigRow({
 }) {
   const t = useTranslations("Admin");
   const label = t(`fields.${field.key}.label`);
-  const desc = t(`fields.${field.key}.desc`);
+  // Description optionnelle : un champ dont le libellé se suffit n'en a pas.
+  const descKey = `fields.${field.key}.desc`;
+  const desc = t.has(descKey) ? t(descKey) : null;
 
   if (loading) {
     return (
@@ -159,7 +167,7 @@ function ModelRow({
 }: {
   field: AiConfigField;
   label: string;
-  desc: string;
+  desc: string | null;
   value: string | null;
   onSaved: (key: string, value: string) => void;
 }) {
@@ -194,7 +202,7 @@ function ModelRow({
       <label htmlFor={`cfg-${field.key}`} className="text-sm font-medium">
         {label}
       </label>
-      <p className="text-xs text-muted-foreground">{desc}</p>
+      {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
       <div className="mt-1 flex items-center gap-2">
         <Input
           id={`cfg-${field.key}`}
@@ -231,7 +239,7 @@ function FlagRow({
 }: {
   field: AiConfigField;
   label: string;
-  desc: string;
+  desc: string | null;
   value: string | null;
   onSaved: (key: string, value: string) => void;
 }) {
@@ -256,7 +264,7 @@ function FlagRow({
         <label htmlFor={`cfg-${field.key}`} className="text-sm font-medium">
           {label}
         </label>
-        <p className="text-xs text-muted-foreground">{desc}</p>
+        {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
       </div>
       <Switch
         id={`cfg-${field.key}`}

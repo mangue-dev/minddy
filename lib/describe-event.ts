@@ -1,5 +1,6 @@
 import { EFFORT_MAP, issueIdentifier, type IssueEffort } from "./issue-constants";
 import { displayName } from "./display-name";
+import { forgePrActor, isForgePrEvent } from "./pr-events";
 import type { Category, Issue, IssueEvent, Member, Objective } from "./types";
 
 /** Translator scoped to the "Activity" namespace (next-intl useTranslations). */
@@ -50,6 +51,20 @@ function issueRef(ctx: EventContext, tr: EventTranslators, id: string | null): s
   const i = ctx.issues.find((x) => x.id === id);
   return i ? issueIdentifier(ctx.projectKey, i.number) : tr.t("issueSome");
 }
+/**
+ * Clé d'activité d'une action de review, selon la forge : GitLab dit « merge
+ * request !123 » là où GitHub dit « pull request #123 ». Le provider n'est
+ * encodé (dans `from_value`) que pour les actions venues d'un webhook — une
+ * action faite in-app porte un acteur minddy et reste sur le vocabulaire PR.
+ */
+function prEventKey(
+  e: IssueEvent,
+  action: "Approved" | "Accepted" | "Rejected" | "ChangesRequested"
+): string {
+  const provider = isForgePrEvent(e) ? forgePrActor(e.from_value).provider : "github";
+  return `${provider === "gitlab" ? "mr" : "pr"}${action}`;
+}
+
 const IMPORT_SOURCE_LABELS: Record<string, string> = {
   linear: "Linear",
   jira: "Jira",
@@ -99,13 +114,13 @@ export function describeEvent(
   // refuser / approuver / demander des changements sont tracées — pas les
   // commentaires. Émises in-app (acteur = membre) ou par le webhook GitHub.
   if (e.type === "pr_approved")
-    return t("prApproved", { number: e.to_value ?? "" });
+    return t(prEventKey(e, "Approved"), { number: e.to_value ?? "" });
   if (e.type === "pr_accepted")
-    return t("prAccepted", { number: e.to_value ?? "" });
+    return t(prEventKey(e, "Accepted"), { number: e.to_value ?? "" });
   if (e.type === "pr_rejected")
-    return t("prRejected", { number: e.to_value ?? "" });
+    return t(prEventKey(e, "Rejected"), { number: e.to_value ?? "" });
   if (e.type === "pr_changes_requested")
-    return t("prChangesRequested", { number: e.to_value ?? "" });
+    return t(prEventKey(e, "ChangesRequested"), { number: e.to_value ?? "" });
   if (e.type === "plan_task_completed")
     return t("planTaskCompleted", { text: e.to_value ?? "" });
   if (e.type === "plan_task_started")
@@ -208,10 +223,10 @@ export function describeObjectiveEvent(
       case "color":
         return t("objectiveColorChanged");
       default:
-        return t("updated");
+        return t("objectiveUpdated");
     }
   }
-  return t("updated");
+  return t("objectiveUpdated");
 }
 
 /** Localized description of a FEEDBACK activity event (without the actor).
@@ -263,8 +278,8 @@ export function describeFeedbackEvent(
           ? t("feedbackRejected")
           : t("feedbackPublished");
       default:
-        return t("updated");
+        return t("feedbackUpdated");
     }
   }
-  return t("updated");
+  return t("feedbackUpdated");
 }

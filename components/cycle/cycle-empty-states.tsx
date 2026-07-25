@@ -135,7 +135,6 @@ export function CycleCompletedBanner() {
       <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{t("completedTitle")}</p>
-        <p className="text-xs text-muted-foreground">{t("completedDesc")}</p>
       </div>
       <Button size="sm" variant="outline" onClick={() => void refill()} disabled={refilling}>
         {refilling ? <Loader2 className="animate-spin" /> : <IterationCw />}

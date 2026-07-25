@@ -64,7 +64,10 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   const rate = checkSessionRateLimit(auth.user.id, "custom-domain", { limit: 10 });
   if (!rate.allowed) {
     return NextResponse.json(
-      { error: t("invalidRequest"), retry_after: rate.retryAfter },
+      {
+        error: t("tooManyAttempts", { seconds: rate.retryAfter }),
+        retry_after: rate.retryAfter,
+      },
       { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
     );
   }

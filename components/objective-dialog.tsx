@@ -366,8 +366,10 @@ export function ObjectiveDialog({
           className="p-8 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
+          {/* Titre lecteur d'écran : à l'édition, le nom de l'objectif dit
+              mieux de quoi il s'agit qu'un intitulé générique. */}
           <DialogTitle className="sr-only">
-            {objective ? t("editObjectiveTitle") : t("newObjective")}
+            {objective ? objective.name : t("newObjective")}
           </DialogTitle>
 
           <form onSubmit={handleSubmit} className="relative flex flex-col rounded-lg">

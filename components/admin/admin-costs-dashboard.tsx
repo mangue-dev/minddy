@@ -21,6 +21,10 @@ const FEATURES = [
   "feedback_classify",
   "feedback_analyze",
   "embedding",
+  "agent_code",
+  // Temps machine de la sandbox, pas un appel LLM : la colonne Tokens reste
+  // vide pour ces lignes.
+  "sandbox_compute",
 ] as const;
 type Feature = (typeof FEATURES)[number];
 

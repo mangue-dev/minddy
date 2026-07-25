@@ -77,7 +77,6 @@ export default function AccountSettingsPage() {
   return (
     <SettingsShell
       title={t("title")}
-      description={t("subtitle")}
       defaultTab="profile"
       tabs={tabs}
       maxWidth={880}

@@ -85,7 +85,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     input: (body ?? {}) as Record<string, unknown>,
   });
   if (!result.ok) {
-    const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
+    const message =
+      result.rawMessage ?? t(result.errorKey ?? "databaseError", result.params);
     return NextResponse.json({ error: message }, { status: result.status });
   }
   return NextResponse.json(result.issue, { status: 201 });

@@ -41,12 +41,14 @@ export default function HomePage() {
   const onboarding = useOnboarding();
 
   const meta = user?.user_metadata as AuthMeta | undefined;
+  // Repli vide : sans nom ni e-mail, on salue sans prénom plutôt que d'injecter
+  // un mot bouche-trou dans la phrase.
   const name = displayName(
     {
       full_name: meta?.display_name || meta?.full_name || meta?.name || null,
       email: user?.email ?? null,
     },
-    t("greetingFallback"),
+    "",
   );
 
   return (
@@ -58,7 +60,7 @@ export default function HomePage() {
           disabled next to the step's own call to action. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold tracking-tight">
-          {t("greeting", { name })}
+          {name ? t("greeting", { name }) : t("greetingNoName")}
         </h1>
         {!onboarding.visible && (
           <Button onClick={() => openCreateIssue()} disabled={!canCreate}>

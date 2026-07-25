@@ -11,6 +11,8 @@ export interface CheatsheetShortcut {
   /** i18n key under `Keyboard.shortcuts`. */
   labelKey: string;
   keys: string[][];
+  /** Combinaison ÉQUIVALENTE (pas une suite) — rendue après un « / ». */
+  altKeys?: string[][];
 }
 
 export interface CheatsheetSection {
@@ -32,6 +34,13 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "nav.notes", labelKey: "navNotes", keys: [["G"], ["N"]] },
       { id: "nav.allIssues", labelKey: "navAllIssues", keys: [["G"], ["B"]] },
       { id: "nav.myIssues", labelKey: "navMyIssues", keys: [["G"], ["M"]] },
+    ],
+  },
+  {
+    // Ces chords ne sont routés que depuis un projet (keyboard-context runChord).
+    id: "project",
+    titleKey: "project",
+    shortcuts: [
       { id: "nav.objectives", labelKey: "navObjectives", keys: [["G"], ["O"]] },
       { id: "nav.triage", labelKey: "navTriage", keys: [["G"], ["T"]] },
       {
@@ -45,7 +54,12 @@ export const CHEATSHEET: CheatsheetSection[] = [
     id: "general",
     titleKey: "general",
     shortcuts: [
-      { id: "gen.palette", labelKey: "palette", keys: [["mod", "K"]] },
+      {
+        id: "gen.palette",
+        labelKey: "palette",
+        keys: [["mod", "K"]],
+        altKeys: [["mod", "P"]],
+      },
       { id: "gen.search", labelKey: "search", keys: [["F"]] },
       { id: "gen.toggleSidebar", labelKey: "toggleSidebar", keys: [["mod", "B"]] },
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
@@ -74,6 +88,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "card.dueDate", labelKey: "dueDate", keys: [["D"]] },
       { id: "card.objective", labelKey: "objective", keys: [["O"]] },
       { id: "card.copyPrompt", labelKey: "copyPrompt", keys: [["⇧", "P"]] },
+      { id: "card.launchAgent", labelKey: "launchAgent", keys: [["⇧", "A"]] },
     ],
   },
 ];

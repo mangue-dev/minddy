@@ -169,7 +169,7 @@ export function AccountPreferencesSection() {
 
   return (
     <>
-      <SettingsSection title={tLang("title")} description={tLang("subtitle")}>
+      <SettingsSection title={tLang("title")}>
         <Select
           value={currentLocale}
           onValueChange={(value) => void switchLocale(value as Locale)}
@@ -190,7 +190,7 @@ export function AccountPreferencesSection() {
 
       <Separator />
 
-      <SettingsSection title={ta("themeTitle")} description={ta("themeDesc")}>
+      <SettingsSection title={ta("themeTitle")}>
         <div className="inline-flex rounded-lg border border-border p-0.5">
           {themeOptions.map((o) => {
             const active = mounted && theme === o.value;
@@ -218,10 +218,7 @@ export function AccountPreferencesSection() {
 
       <Separator />
 
-      <SettingsSection
-        title={ta("autoAssignTitle")}
-        description={ta("autoAssignDesc")}
-      >
+      <SettingsSection title={ta("autoAssignTitle")}>
         <div className="flex items-center gap-3">
           <Switch
             id="account-auto-assign"

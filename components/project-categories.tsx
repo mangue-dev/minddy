@@ -5,7 +5,11 @@ import { useTranslations } from "next-intl";
 import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-ui";
 import { Pencil, Plus, Trash2, Check, X } from "lucide-react";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
-import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from "@/lib/category-colors";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_COLOR_NAMES,
+  DEFAULT_CATEGORY_COLOR,
+} from "@/lib/category-colors";
 import type { Category } from "@/lib/types";
 
 function Swatches({
@@ -16,6 +20,7 @@ function Swatches({
   onChange: (color: string) => void;
 }) {
   const t = useTranslations("Categories");
+  const tColors = useTranslations("Categories.colors");
   return (
     <div className="flex flex-wrap gap-1.5">
       {CATEGORY_COLORS.map((c) => (
@@ -23,7 +28,7 @@ function Swatches({
           key={c}
           type="button"
           onClick={() => onChange(c)}
-          aria-label={t("colorSwatchAria", { color: c })}
+          aria-label={t("colorSwatchAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
           className={cn(
             "size-5 rounded-full ring-offset-2 ring-offset-background transition-shadow",
             value === c && "ring-2 ring-ring"
@@ -118,7 +123,6 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
   const t = useTranslations("Categories");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
-  const ti = useTranslations("Issue");
   const { categories, createCategory, updateCategory, deleteCategory } =
     useCategoriesQuery(projectId);
 
@@ -189,7 +193,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
           if (!next) setToDelete(null);
         }}
         title={toDelete ? t("deleteCategoryTitle", { name: toDelete.name }) : ""}
-        description={t("deleteCategoryDescription", { entityPlural: ti("entityPlural") })}
+        description={t("deleteCategoryDescription")}
         confirmLabel={tc("delete")}
         onConfirm={async () => {
           if (!toDelete) return;

@@ -29,7 +29,6 @@ export default function BillingPage() {
 
       <header className="mb-8">
         <h1 className="text-xl font-semibold tracking-tight">{t("pageTitle")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("pageSubtitle")}</p>
       </header>
 
       <div className="space-y-10">

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -112,7 +113,9 @@ export async function POST(request: NextRequest) {
     .select(SANITIZED)
     .single();
   if (error || !data) {
-    return NextResponse.json({ error: error?.message ?? "Failed to save key" }, { status: 500 });
+    console.error("[api/account/ai-keys] upsert failed:", error?.message);
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: t("aiKeySaveFailed") }, { status: 500 });
   }
 
   if (previousProvider !== provider) await clearDefaultModel(service, auth.user.id);

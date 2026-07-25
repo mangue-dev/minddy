@@ -665,6 +665,7 @@ export function BoardToolbar({
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
   const tSort = useTranslations("Sort");
+  const tApi = useTranslations("ApiErrors");
 
   const activeView = views.find((v) => v.id === activeViewId) ?? null;
   // The system view is neither renamable, nor deletable, nor unlockable.
@@ -705,9 +706,10 @@ export function BoardToolbar({
     const to = tabKeys.indexOf(String(over.id));
     if (from === -1 || to === -1) return;
     // Optimistic: setOrder patches the cache instantly, then persists.
-    void setOrder(arrayMove(tabKeys, from, to)).catch((err) =>
-      toast.error((err as Error).message)
-    );
+    void setOrder(arrayMove(tabKeys, from, to)).catch((err) => {
+      console.error("[board-toolbar] tab order save failed", err);
+      toast.error(tApi("tabOrderSaveFailed"));
+    });
   };
 
   return (

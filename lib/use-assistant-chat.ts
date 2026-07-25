@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useReducer, useRef } from "react";
+import { useTranslations } from "next-intl";
 import type {
   AssistantMessage,
   AssistantToolCall,
@@ -292,13 +293,16 @@ function reducer(
 
 const POLL_INTERVAL_MS = 2000;
 
+/** `errorMessage` is the localized sentence surfaced to the user when the read
+    fails — this helper lives outside the hook, so the caller translates it. */
 async function fetchConversationStatus(
-  conversationId: string
+  conversationId: string,
+  errorMessage: string
 ): Promise<{ status: ConversationStatus; error_message: string | null }> {
   const res = await fetch(
     `/api/assistant/conversations/${conversationId}/status`
   );
-  if (!res.ok) throw new Error("Failed to fetch status");
+  if (!res.ok) throw new Error(errorMessage);
   return res.json();
 }
 
@@ -325,6 +329,7 @@ export interface UseAssistantChatOptions {
 }
 
 export function useAssistantChat(options?: UseAssistantChatOptions) {
+  const tApi = useTranslations("ApiErrors");
   const [state, dispatch] = useReducer(reducer, initialState);
   const abortRef = useRef<AbortController | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -347,8 +352,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
       const poll = async () => {
         try {
-          const { status, error_message } =
-            await fetchConversationStatus(conversationId);
+          const { status, error_message } = await fetchConversationStatus(
+            conversationId,
+            tApi("statusFetchFailed")
+          );
 
           if (status === "idle") {
             // Generation complete - reload messages
@@ -389,7 +396,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
       poll();
     },
-    [stopPolling]
+    [stopPolling, tApi]
   );
 
   const sendMessage = useCallback(
@@ -506,7 +513,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         const convId = state.conversationId;
         if (convId) {
           try {
-            const { status } = await fetchConversationStatus(convId);
+            const { status } = await fetchConversationStatus(
+              convId,
+              tApi("statusFetchFailed")
+            );
             if (status === "generating") {
               startPolling(convId);
               return;
@@ -534,7 +544,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         });
       }
     },
-    [state.conversationId, startPolling, stopPolling]
+    [state.conversationId, startPolling, stopPolling, tApi]
   );
 
   const loadConversation = useCallback(
@@ -553,8 +563,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         });
 
         // Check if server is still generating for this conversation
-        const { status, error_message } =
-          await fetchConversationStatus(conversationId);
+        const { status, error_message } = await fetchConversationStatus(
+          conversationId,
+          tApi("statusFetchFailed")
+        );
         if (status === "generating") {
           startPolling(conversationId);
         } else if (status === "error") {
@@ -567,12 +579,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         console.error("[assistant] loadConversation failed", err);
         dispatch({
           type: "ERROR",
-          message:
-            (err as Error)?.message ?? "Failed to load conversation",
+          message: (err as Error)?.message ?? tApi("conversationLoadFailed"),
         });
       }
     },
-    [startPolling, stopPolling]
+    [startPolling, stopPolling, tApi]
   );
 
   const reset = useCallback(() => {

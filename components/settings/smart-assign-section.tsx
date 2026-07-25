@@ -85,10 +85,7 @@ export function SmartAssignSection({
   };
 
   return (
-    <SettingsSection
-      title={t("smartAssignTab")}
-      description={t("smartAssignSectionDesc")}
-    >
+    <SettingsSection title={t("smartAssignTab")}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3">

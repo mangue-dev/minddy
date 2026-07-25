@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createSupabaseFromRequest } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
@@ -145,6 +145,9 @@ export async function POST(request: NextRequest) {
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.
   const locale = await getLocale();
+  // Idem pour les messages d'erreur : le traducteur est capturé ici puis appelé
+  // depuis le stream, où le contexte de requête n'est plus disponible.
+  const tApi = await getTranslations("ApiErrors");
 
   // Where Numo-created issues land without an explicit status — the user's
   // Account → Preferences choice (defaults to triage).
@@ -199,7 +202,7 @@ export async function POST(request: NextRequest) {
 
     if (convError || !conv) {
       return Response.json(
-        { error: "Failed to create conversation" },
+        { error: tApi("conversationCreateFailed") },
         { status: 500 }
       );
     }
@@ -265,7 +268,7 @@ export async function POST(request: NextRequest) {
       .from("conversations")
       .update({ status: "idle" })
       .eq("id", convId);
-    return Response.json({ error: "Failed to save message" }, { status: 500 });
+    return Response.json({ error: tApi("messageSaveFailed") }, { status: 500 });
   }
 
   // Build system prompt and select tool set based on mode
@@ -450,7 +453,7 @@ export async function POST(request: NextRequest) {
         emitter.close();
       } catch (err) {
         clearTimeout(timeout);
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        const errorMessage = err instanceof Error ? err.message : tApi("unexpected");
 
         // Set conversation status to error
         await service
