@@ -1,36 +1,44 @@
 import { getTranslations } from "next-intl/server";
 import {
   CalendarRange,
-  Command,
   Inbox,
+  Layers,
   LayoutList,
+  ListFilter,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
-import { Reveal, RevealGroup, RevealHeading } from "./reveal";
+import { Reveal, RevealHeading } from "./reveal";
 
 /**
- * « Ce qu'il y a dedans » (MIN-73). Deux captures pour les écrans qu'on ne
- * devine pas (le cycle, la palette), puis une grille sobre : une ligne par
- * fonctionnalité, aucune promesse qui n'existe pas dans l'app.
+ * §2 — « Le tracker ». Ex-`#features`, remontée juste après le hero.
  *
- * Numo, la dictée, le carnet et le board de feedback ont leur propre section
- * plus haut : les répéter ici les ferait passer pour des détails de fin de
- * page. Ne restent que les écrans du tracker lui-même.
+ * C'était la dernière section de contenu : la page traversait quatre sections
+ * d'IA avant de montrer le produit, et le titre « Tout ce qu'il faut. Rien de
+ * plus. » arrivait après six sections qui le contredisaient. En position 2 il
+ * ouvre au lieu de conclure — le titre n'a pas eu besoin d'être réécrit, juste
+ * déplacé.
+ *
+ * La palette ⌘K n'est plus ici : elle ouvre `<SectionSpeed>`, avec sa capture.
+ * Ce qui reste est bien le tracker — les écrans où l'on regarde les tickets,
+ * pas les gestes pour les manipuler.
  */
 
 const FEATURES: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
   { key: "board", icon: LayoutList },
+  { key: "all", icon: Layers },
+  { key: "inbox", icon: Inbox },
+  { key: "objectives", icon: Target },
   { key: "cycles", icon: CalendarRange },
-  { key: "triage", icon: Inbox },
-  { key: "palette", icon: Command },
+  { key: "triage", icon: ListFilter },
 ];
 
-export async function SectionFeatures() {
+export async function SectionTracker() {
   const t = await getTranslations("Landing");
 
   return (
-    <section id="features" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
+    <section id="tracker" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
           <RevealHeading
@@ -46,20 +54,15 @@ export async function SectionFeatures() {
           </Reveal>
         </header>
 
-        <RevealGroup step={0.12} className="mb-12 grid gap-6 md:grid-cols-2 sm:mb-16">
-          <figure className="flex flex-col gap-3">
-            <ScreenshotSlot id="featureCycle" />
-            <figcaption className="text-sm text-muted-foreground">
-              {t("featuresCaptionCycle")}
-            </figcaption>
-          </figure>
-          <figure className="flex flex-col gap-3">
-            <ScreenshotSlot id="featurePalette" />
-            <figcaption className="text-sm text-muted-foreground">
-              {t("featuresCaptionPalette")}
-            </figcaption>
-          </figure>
-        </RevealGroup>
+        {/* Une seule capture depuis que la palette est partie : elle prend donc
+            toute la largeur utile plutôt que la moitié d'une grille à deux
+            colonnes, où elle serait restée seule à côté d'un vide. */}
+        <Reveal as="figure" className="mx-auto mb-12 flex max-w-4xl flex-col gap-3 sm:mb-16">
+          <ScreenshotSlot id="featureCycle" />
+          <figcaption className="text-center text-sm text-muted-foreground">
+            {t("featuresCaptionCycle")}
+          </figcaption>
+        </Reveal>
 
         {/* Grille à filets : entrée d'un bloc — masquer les cartes une à une
             découvrirait le fond `bg-border` du conteneur. */}

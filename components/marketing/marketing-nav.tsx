@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Equal, HelpCircle, LayoutGrid, Route, Tag, type LucideIcon } from "lucide-react";
+import { Bot, Equal, HelpCircle, LayoutGrid, Tag, type LucideIcon } from "lucide-react";
 import { Button, Sheet, SheetClose, SheetContent, SheetTitle, cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { getSupabase } from "@/lib/supabase";
@@ -28,10 +28,19 @@ type NavLink = {
 
 // Ancres directes plutôt qu'un popover : sur un site de deux pages, un menu
 // déroulant coûte un clic pour rien.
+//
+// Les quatre entrées suivent le plan de la page. Avant, la nav pointait sur
+// `#workflow` et `#features` — deux ancres qui n'existent plus comme sections —
+// et ignorait `#agents`, qui est pourtant la cible du badge du hero.
+//
+// « Tarifs » vise la section de la landing et non `/pricing` : le comparatif
+// complet reste à un clic, par le lien « Comparer les plans en détail » sous les
+// cartes. Le préfixe `/#` garantit le retour vers la landing depuis /pricing ou
+// une page légale.
 const LINKS: ReadonlyArray<NavLink> = [
-  { href: "/#workflow", key: "navHowItWorks", icon: Route },
-  { href: "/#features", key: "navFeatures", icon: LayoutGrid },
-  { href: "/pricing", key: "navPricing", icon: Tag },
+  { href: "/#tracker", key: "navFeatures", icon: LayoutGrid },
+  { href: "/#agents", key: "navAgents", icon: Bot },
+  { href: "/#pricing", key: "navPricing", icon: Tag },
   { href: "/#faq", key: "navFaq", icon: HelpCircle },
 ];
 

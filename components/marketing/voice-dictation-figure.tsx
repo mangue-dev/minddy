@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { cn } from "mangue-ui";
 import { ArrowDown, ArrowRight, Mic } from "lucide-react";
 import { PriorityIndicator } from "@/components/issue-indicators";
@@ -25,7 +25,8 @@ import { UserAvatar } from "@/components/user-avatar";
  *     lus dans le namespace `Dictate` ;
  *   - la priorité et l'assigné sont rendus par `PriorityIndicator` et
  *     `UserAvatar`, les composants du board ;
- *   - les noms de champs viennent de `Field`, la priorité de `Priority`.
+ *   - les noms de champs viennent de `Field`, la priorité de `Priority` ;
+ *   - l'échéance est calculée au rendu (`nextFriday`), jamais écrite en dur.
  * Si le produit change ces éléments, la figure change avec lui.
  *
  * Composant SERVEUR : aucun JavaScript n'est envoyé pour cette section. La forme
@@ -35,6 +36,26 @@ import { UserAvatar } from "@/components/user-avatar";
 
 /** Enveloppe d'une voix qui parle. Bornes du vrai composant : 4 px → 32 px. */
 const WAVEFORM = [6, 11, 19, 27, 32, 23, 14, 8, 12, 21, 29, 24, 17, 10, 14, 7];
+
+/**
+ * L'échéance de la figure, calculée au rendu — elle répond à « pour vendredi »
+ * dans la phrase dictée.
+ *
+ * Elle était écrite en dur dans le catalogue i18n (« ven. 24 juil. »), donc
+ * périmée le lendemain : la page annonçait une échéance déjà passée. Le vendredi
+ * en cours ne compte pas — « pour vendredi », dit un vendredi, veut dire le
+ * suivant. La page n'est pas prérendue (le layout lit la session pour rediriger
+ * un visiteur connecté), la date suit donc le calendrier.
+ */
+function nextFriday(locale: string) {
+  const d = new Date();
+  d.setDate(d.getDate() + (((5 - d.getDay() + 7) % 7) || 7));
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(d);
+}
 
 /** Repère qui relie un morceau de la phrase au champ qu'il a rempli. */
 function Marker({ n, className }: { n: number; className?: string }) {
@@ -97,6 +118,7 @@ export async function VoiceDictationFigure() {
   const tPriority = await getTranslations("Priority");
 
   const assignee = t("voiceFigureAssignee");
+  const due = nextFriday(await getLocale());
 
   return (
     <figure className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
@@ -168,7 +190,7 @@ export async function VoiceDictationFigure() {
               {tPriority("high")}
             </Row>
             <Row n={3} label={tField("dueDate")}>
-              {t("voiceFigureDue")}
+              {due}
             </Row>
             <Row n={4} label={tField("assignee")}>
               <UserAvatar

@@ -57,9 +57,9 @@ const SLOTS = {
   },
   workflowIssue: {
     id: "workflowIssue",
-    route: "/projects/<id>/issues/<identifier>",
+    route: "/projects/<id>, un ticket ouvert dans le panneau latéral, onglet Plan",
     shot:
-      "Le détail d'une issue avec sa description ET son plan d'implémentation visible : quelques tâches cochées, une en cours, le reste à faire. C'est l'écran qui montre que le plan est une vraie donnée, pas un commentaire.",
+      "Le panneau latéral d'un ticket, onglet « Plan » actif : quelques tâches cochées, une en cours, le reste à faire, avec le compteur d'avancement sur l'onglet. Description et plan sont deux onglets exclusifs — un seul est visible à la fois. C'est l'écran qui montre que le plan est une vraie donnée, pas un commentaire.",
     ratio: "4/3",
     src: null,
   },
@@ -75,15 +75,15 @@ const SLOTS = {
     id: "workflowPr",
     route: "/pull-requests",
     shot:
-      "La vue Pull Request d'une issue : en-tête branche → branche, description générée, et un diff par fichier avec ajouts/suppressions colorés.",
+      "La page Pull requests : à gauche la liste des PR de l'agent Numo, à droite le détail — en-tête ticket + badge d'état + lien « PR #n », barre d'actions (Accepter / Refuser / Demander des changements), onglet « Fichiers modifiés » ouvert sur un diff par fichier avec ajouts/suppressions colorés. L'onglet est à basculer à la main : le détail s'ouvre sur « Conversation ».",
     ratio: "4/3",
     src: null,
   },
   numoPanel: {
     id: "numoPanel",
-    route: "n'importe quelle page de l'app, panneau Numo ouvert",
+    route: "/projects/<id>, panneau Numo ouvert par G puis A, passé en mode étendu",
     shot:
-      "Le panneau Numo ouvert sur la droite : une instruction de l'utilisateur, la réponse de Numo, et deux ou trois appels d'outils dépliés (recherche de tickets, mise à jour groupée). Le badge de contexte visible en haut (« Ticket en contexte »).",
+      "Le panneau Numo ouvert en mode étendu par-dessus le board : l'instruction de l'utilisateur, les réponses de Numo, et entre elles les deux lignes d'action qu'il a menées (« 3 tickets trouvés », puis « 2 tickets modifiés ») — ces lignes ne se déplient pas, c'est leur état complet. Le badge de contexte dans le composeur, qui porte le nom de la vue affichée.",
     ratio: "4/3",
     src: null,
   },

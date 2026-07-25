@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations, useFormatter } from "next-intl";
+import { useTranslations, useFormatter, useNow } from "next-intl";
 import { Button, IconButton, Skeleton, cn, toast } from "mangue-ui";
 import {
   Inbox,
@@ -83,6 +83,9 @@ export default function InboxPage() {
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
   const format = useFormatter();
+  // Référence de temps stable pour les horodatages relatifs, rafraîchie
+  // chaque minute — sans ça next-intl retombe sur Date.now() et prévient.
+  const now = useNow({ updateInterval: 60_000 });
   const {
     notifications,
     unreadCount,
@@ -290,7 +293,7 @@ export default function InboxPage() {
                           minute: "2-digit",
                         })}
                       >
-                        {format.relativeTime(new Date(n.created_at))}
+                        {format.relativeTime(new Date(n.created_at), now)}
                       </span>
                     </button>
                     {/* Actions au survol — en calque sur l'horodatage. */}

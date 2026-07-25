@@ -4,13 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { HeroShader } from "@/components/marketing/hero-shader";
 import { Hero } from "@/components/marketing/hero";
-import { SectionWorkflow } from "@/components/marketing/section-workflow";
+import { SectionTracker } from "@/components/marketing/section-tracker";
+import { SectionSpeed } from "@/components/marketing/section-speed";
 import { SectionAgents } from "@/components/marketing/section-agents";
-import { SectionNumo } from "@/components/marketing/section-numo";
-import { SectionVoice } from "@/components/marketing/section-voice";
-import { SectionScratchpad } from "@/components/marketing/section-scratchpad";
 import { SectionFeedback } from "@/components/marketing/section-feedback";
-import { SectionFeatures } from "@/components/marketing/section-features";
+import { SectionMore } from "@/components/marketing/section-more";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
 import { SectionFaq } from "@/components/marketing/section-faq";
 import { SectionCta } from "@/components/marketing/section-cta";
@@ -51,16 +49,20 @@ export default async function LandingPage() {
           `relative isolate` du layout marketing (<main> n'est pas positionné). */}
       <HeroShader />
       <Hero />
-      <SectionWorkflow />
+      {/* Six sections de contenu au lieu de neuf, dans l'ordre de la
+          démonstration : le produit d'abord (c'est un vrai tracker), la vitesse
+          ensuite (peu de gestes, pas seulement peu d'écrans), l'IA en troisième
+          (elle s'y branche, elle ne le remplace pas), puis ce qui entre depuis
+          l'extérieur, puis le rappel que le reste est déjà là.
+          L'ancienne page ouvrait sur quatre sections d'IA — dont trois
+          racontaient le même geste — et ne montrait le tracker qu'en 8ᵉ
+          position, sous un titre « Tout ce qu'il faut. Rien de plus. » que tout
+          ce qui précédait contredisait. */}
+      <SectionTracker />
+      <SectionSpeed />
       <SectionAgents />
-      {/* Les quatre sections que la grille « Ce qu'il y a dedans » expédiait en
-          une carte chacune : ce qu'on pilote depuis minddy (Numo, la voix, le
-          carnet), puis ce qui y entre depuis l'extérieur (le feedback). */}
-      <SectionNumo />
-      <SectionVoice />
-      <SectionScratchpad />
       <SectionFeedback />
-      <SectionFeatures />
+      <SectionMore />
       <SectionPricingTeaser />
       <SectionFaq />
       <SectionCta />

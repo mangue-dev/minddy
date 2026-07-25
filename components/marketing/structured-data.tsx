@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { BILLING_PLANS } from "@/lib/billing-plans";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 
 /**
@@ -18,9 +19,21 @@ import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
  *
  * La description suit la langue servie : le graphe décrit la page telle qu'elle
  * est rendue, pas une version canonique qui n'existe nulle part.
+ *
+ * Les prix sont DÉRIVÉS de `BILLING_PLANS`, jamais recopiés : `offers` est le
+ * seul champ que Google exploite pour un rich result prix sur une
+ * `SoftwareApplication`, et le seul moyen de signaler qu'un palier gratuit
+ * existe. Une copie en dur se serait désynchronisée au premier changement de
+ * tarif — l'erreur exacte que la landing vient de corriger ailleurs.
  */
 export async function StructuredData() {
-  const t = await getTranslations("Landing");
+  const [t, tb] = await Promise.all([
+    getTranslations("Landing"),
+    getTranslations("Billing"),
+  ]);
+
+  const prices = BILLING_PLANS.map((plan) => plan.priceEurMonthly);
+  const planNameKey = { free: "planFree", go: "planGo", pro: "planPro" } as const;
 
   const graph = {
     "@context": "https://schema.org",
@@ -49,6 +62,30 @@ export async function StructuredData() {
         applicationCategory: "DeveloperApplication",
         operatingSystem: "Web",
         publisher: { "@id": `${SITE_URL}/#organization` },
+        offers: {
+          "@type": "AggregateOffer",
+          priceCurrency: "EUR",
+          lowPrice: Math.min(...prices),
+          highPrice: Math.max(...prices),
+          offerCount: BILLING_PLANS.length,
+          offers: BILLING_PLANS.map((plan) => ({
+            "@type": "Offer",
+            name: tb(planNameKey[plan.id]),
+            price: plan.priceEurMonthly,
+            priceCurrency: "EUR",
+            url: `${SITE_URL}/pricing`,
+            // Sans `billingDuration`, un prix mensuel se lit comme un prix
+            // unique : P1M dit que les 8 € sont récurrents.
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: plan.priceEurMonthly,
+              priceCurrency: "EUR",
+              billingDuration: 1,
+              billingIncrement: 1,
+              unitCode: "MON",
+            },
+          })),
+        },
       },
     ],
   };

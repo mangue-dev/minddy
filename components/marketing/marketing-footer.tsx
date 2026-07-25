@@ -34,13 +34,19 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColProduct",
     links: [
-      { href: "/#workflow", labelKey: "navHowItWorks" },
-      { href: "/#agents", labelKey: "footerAgents" },
-      { href: "/#numo", labelKey: "footerNumo" },
+      // Ordre du nouveau plan de la landing. `#numo`, `#voice`, `#scratchpad`
+      // et `#workflow` ne sont plus des sections mais restent des ancres, posées
+      // sur les blocs qui les ont absorbés : ces liens — et ceux déjà partagés —
+      // tombent toujours au bon endroit.
+      { href: "/#tracker", labelKey: "navFeatures" },
+      { href: "/#speed", labelKey: "footerSpeed" },
       { href: "/#voice", labelKey: "footerVoice" },
       { href: "/#scratchpad", labelKey: "footerScratchpad" },
+      { href: "/#agents", labelKey: "footerAgents" },
+      { href: "/#workflow", labelKey: "navHowItWorks" },
+      { href: "/#numo", labelKey: "footerNumo" },
       { href: "/#feedback", labelKey: "footerFeedback" },
-      { href: "/#features", labelKey: "navFeatures" },
+      { href: "/#more", labelKey: "footerMore" },
       { href: "/pricing", labelKey: "navPricing" },
     ],
   },

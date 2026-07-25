@@ -8,9 +8,15 @@ import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
  *
  * Le texte est en anglais (la locale par défaut) : l'image est générée une fois
  * au build, elle ne peut pas suivre la langue du visiteur.
+ *
+ * ⚠ Les trois chaînes ci-dessous sont une COPIE FIGÉE de `en.Landing.metaTitle`
+ * et `en.Landing.metaDescription` — hors du catalogue i18n, donc hors de portée
+ * d'un audit de copy. À resynchroniser À LA MAIN chaque fois que ces deux clés
+ * changent, sinon la vignette de partage continue d'annoncer une promesse que
+ * la page ne tient plus.
  */
 
-export const alt = "minddy — the issue tracker your agents drive";
+export const alt = "minddy — the issue tracker that stays simple";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -49,10 +55,11 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            The issue tracker your agents drive.
+            A complete issue tracker that stays obvious.
           </span>
           <span style={{ fontSize: 30, color: "#9ca3af", maxWidth: 820, lineHeight: 1.4 }}>
-            They read the issue, write their plan, tick the tasks off and open the pull request.
+            Issues, objectives, cycles, user feedback and coding agents in one minimal
+            tracker: one way to do each thing, nothing to configure.
           </span>
         </div>
 

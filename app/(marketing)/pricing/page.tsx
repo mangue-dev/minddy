@@ -9,7 +9,18 @@ import { FaqAccordion } from "@/components/marketing/faq-accordion";
 /** Page tarifs publique (MIN-73) : les cartes de plans, le détail ligne à ligne,
     et les seules questions qui portent sur l'argent. */
 
-const PRICING_FAQ_KEYS = ["usage", "overage", "change", "refund"] as const;
+// Les quatre premières portent sur l'argent ; `mcp` et `byok` ferment les deux
+// objections que le tableau laisse ouvertes — brancher SES agents par MCP n'est
+// gardé par aucun plan (seul l'agent Numo l'est), et une clé perso lève le
+// plafond d'usage sans lever la porte de plan.
+const PRICING_FAQ_KEYS = [
+  "usage",
+  "overage",
+  "change",
+  "refund",
+  "mcp",
+  "byok",
+] as const;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Pricing");
