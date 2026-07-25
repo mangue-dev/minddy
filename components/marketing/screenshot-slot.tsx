@@ -17,6 +17,13 @@ import {
  * bougera pas quand les vraies captures arriveront. Tant que l'entrée du
  * catalogue n'a pas de `src`, on rend la consigne de capture à l'écran : la
  * landing reste lisible et la commande de capture reste sous les yeux.
+ *
+ * PAS D'ANGLES ARRONDIS SUR L'IMAGE. Le cadre les portait (`rounded-xl` sur le
+ * conteneur qui rogne), et une capture d'application a du contenu jusque dans
+ * ses coins : la barre latérale en haut à gauche, le bord d'une carte, un
+ * compteur. L'arrondi mordait dedans — un rognage silencieux, différent d'une
+ * capture à l'autre selon ce qui traînait dans l'angle. Une capture se montre
+ * entière ou pas du tout ; c'est le filet qui délimite l'image, pas une découpe.
  */
 export function ScreenshotSlot({
   id,
@@ -39,7 +46,7 @@ export function ScreenshotSlot({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-border bg-card shadow-sm",
+        "relative overflow-hidden border border-border bg-card shadow-sm",
         className,
       )}
       style={{ aspectRatio: slot.ratio }}

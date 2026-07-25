@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { MessagesSquare, Mic, PencilLine, type LucideIcon } from "lucide-react";
-import { ScreenshotSlot } from "./screenshot-slot";
+import { VoiceDictationFigure } from "./voice-dictation-figure";
 import { Reveal, RevealHeading } from "./reveal";
 
 /**
@@ -14,6 +14,11 @@ import { Reveal, RevealHeading } from "./reveal";
  * où `DictateButton` est monté (création et détail de ticket, commentaires,
  * pull request, carnet, champ de Numo), et la limite de 1 min 30 est celle du
  * composant (`MAX_DURATION_MS`).
+ *
+ * Seule section sans capture, et c'est délibéré : voir `VoiceDictationFigure`.
+ * Le popover de dictée n'existe qu'après un `getUserMedia` réussi — hors de
+ * portée d'un robot de capture — et il ne montrerait de toute façon que le fait
+ * d'enregistrer, quand l'argument est ce que la phrase dite devient.
  */
 
 const WAYS: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
@@ -53,7 +58,7 @@ export async function SectionVoice() {
         </header>
 
         <Reveal>
-          <ScreenshotSlot id="voiceDictate" />
+          <VoiceDictationFigure />
         </Reveal>
 
         {/* Les grilles à filets (`gap-px` sur un fond `bg-border`) entrent d'un

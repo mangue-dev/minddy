@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GrainGradient } from "@paper-design/shaders-react";
 import { useTheme } from "mangue-ui";
 import { useShaderPalette } from "@/lib/use-shader-palette";
@@ -22,12 +22,26 @@ import { useShaderPalette } from "@/lib/use-shader-palette";
  * (transparente hors de sa pastille) grâce à `-z-10`. Le monter dans le hero
  * le ferait démarrer sous les 80 px réservés à la barre, avec une couture
  * horizontale visible juste en dessous.
+ *
+ * IL S'ARRÊTE QUAND ON L'A DÉPASSÉ. La librairie ne met la boucle en pause que
+ * si l'ONGLET est caché (`document.hidden`) : elle n'a pas d'IntersectionObserver.
+ * Mesuré sur la landing, le shader demandait donc encore 120 images par seconde
+ * alors qu'il était à 10 700 px au-dessus du viewport — pour un fond que
+ * personne ne regarde, sur toute la longueur de la page. L'observer ci-dessous
+ * passe `speed` à 0 dès qu'il sort du champ, ce que `setCurrentSpeed` traduit
+ * par un `cancelAnimationFrame` (shader-mount.js) : la boucle s'arrête net.
+ *
+ * On ne DÉMONTE pas le shader pour autant — ça détruirait le contexte WebGL et
+ * il faudrait le recréer à chaque retour en haut de page, ce qui coûte plus
+ * cher que de laisser un canvas figé sur sa dernière image.
  */
 export function HeroShader() {
   const { resolvedTheme } = useTheme();
   const colors = useShaderPalette();
   const [enabled, setEnabled] = useState(false);
   const [reduced, setReduced] = useState(false);
+  const [onScreen, setOnScreen] = useState(true);
+  const holder = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const mqWide = window.matchMedia("(min-width: 640px)");
@@ -45,10 +59,24 @@ export function HeroShader() {
     };
   }, []);
 
+  useEffect(() => {
+    const el = holder.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    // Une marge de 200 px relance l'animation juste avant qu'elle redevienne
+    // visible : personne ne doit voir le fond repartir sous ses yeux.
+    const io = new IntersectionObserver(
+      ([entry]) => setOnScreen(entry.isIntersecting),
+      { rootMargin: "200px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [enabled]);
+
   const isDark = resolvedTheme === "dark";
 
   return (
     <div
+      ref={holder}
       aria-hidden="true"
       className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] transition-opacity duration-700 ease-out sm:h-[640px]"
       style={{
@@ -66,7 +94,7 @@ export function HeroShader() {
           intensity={0.16}
           noise={0.08}
           shape="wave"
-          speed={reduced ? 0 : 0.7}
+          speed={reduced || !onScreen ? 0 : 0.7}
           scale={2.6}
           rotation={100}
         />

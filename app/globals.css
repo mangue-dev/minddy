@@ -436,13 +436,12 @@ nav[aria-label="Navigation"]
   }
   to {
     opacity: 1;
-    filter: blur(0);
     transform: none;
   }
 }
 .hero-word {
   display: inline-block;
-  animation: hero-word-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: hero-word-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   animation-delay: calc(var(--hero-i, 0) * 0.06s);
 }
 
@@ -455,13 +454,12 @@ nav[aria-label="Navigation"]
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 /* Cascade qui prolonge le mot à mot du titre : la ligne suivante démarre avant
    que la précédente ne soit posée, sinon l'ensemble traîne. */
 .hero-reveal {
-  animation: hero-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: hero-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   animation-delay: calc(var(--hero-d, 0) * 1s);
 }
 
@@ -477,7 +475,6 @@ nav[aria-label="Navigation"]
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 .hero-reveal-media {
@@ -487,7 +484,21 @@ nav[aria-label="Navigation"]
 /* ─── Blocs qui apparaissent au scroll (<Reveal>, <RevealGroup>) ─────────
    Sans JS et au rendu serveur, rien n'est masqué : `.reveal-ready` n'est posé
    qu'au montage, donc la landing reste entièrement lisible si le script ne
-   part pas. `[data-revealed]` est posé par l'observer au premier passage. */
+   part pas. `[data-revealed]` est posé par l'observer au premier passage.
+
+   REMPLISSAGE `backwards`, PAS `both` — ici comme dans le hero. Une animation
+   en `both` retient son état d'arrivée : la landing gardait ainsi 114 éléments
+   (dont 51 mots de titres) sous `filter: blur(0px)` une fois le scroll passé.
+   `blur(0)` n'est pas `none` : chaque élément filtré reste une couche que le
+   navigateur rasterise à part, et un changement de zoom les refait toutes d'un
+   coup — d'où l'effondrement de fluidité au zoom après avoir scrollé.
+
+   Retirer `filter` du dernier keyframe NE SUFFIT PAS : le navigateur génère
+   alors un keyframe implicite depuis la valeur de base, et l'interpolation vers
+   `none` calcule justement `blur(0px)`, que `both` fige. Il faut donc que
+   l'animation LÂCHE l'élément à la fin. `backwards` ne remplit que le délai
+   d'attente ; l'état final est porté par le style de base (`opacity: 1`), qui
+   ne déclare aucun filtre. */
 @keyframes reveal-in {
   from {
     opacity: 0;
@@ -497,7 +508,6 @@ nav[aria-label="Navigation"]
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 
@@ -505,7 +515,8 @@ nav[aria-label="Navigation"]
   opacity: 0;
 }
 .reveal.reveal-ready[data-revealed="true"] {
-  animation: reveal-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  opacity: 1;
+  animation: reveal-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   animation-delay: calc(var(--reveal-d, 0) * 1s);
 }
 
@@ -517,7 +528,8 @@ nav[aria-label="Navigation"]
   opacity: 0;
 }
 .reveal-group.reveal-ready[data-revealed="true"] > * {
-  animation: reveal-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  opacity: 1;
+  animation: reveal-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   animation-delay: calc(
     var(--reveal-d, 0) * 1s + var(--reveal-i, 0) * var(--reveal-step, 0.09s)
   );
@@ -542,7 +554,8 @@ nav[aria-label="Navigation"]
   opacity: 0;
 }
 .reveal-heading.reveal-ready[data-revealed="true"] .reveal-word {
-  animation: reveal-word-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  opacity: 1;
+  animation: reveal-word-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   animation-delay: calc(var(--reveal-i, 0) * var(--reveal-step, 0.05s));
 }
 @keyframes reveal-word-in {
@@ -554,7 +567,6 @@ nav[aria-label="Navigation"]
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 

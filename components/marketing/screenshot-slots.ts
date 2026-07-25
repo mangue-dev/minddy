@@ -7,6 +7,19 @@
  * réservation qui affiche la consigne — la mise en page est donc déjà juste,
  * seule l'image manque.
  *
+ * **Une consigne d'ici n'est pas une vérité sur le produit.** Cinq des onze
+ * entrées d'origine décrivaient une UI qui n'existe pas : une route de détail
+ * d'issue (c'est un panneau latéral), une vue « description ET plan » que des
+ * onglets rendent exclusives, des appels d'outils « dépliés » qui ne se
+ * déplient pas, un badge de contexte inatteignable, une réponse d'équipe absente
+ * du board public. Lire l'écran visé avant de capturer, et corriger l'intention
+ * plutôt que le produit — chaque `captures/shots/<nom>/intent.md` dit laquelle.
+ *
+ * `voiceDictate` a été RETIRÉ : la dictée n'est pas photographiable (le popover
+ * n'existe qu'après un `getUserMedia` réussi) et, surtout, une capture montrerait
+ * qu'on enregistre au lieu de montrer ce que la phrase dite devient. La section
+ * rend `<VoiceDictationFigure>`, une figure, à la place.
+ *
  * Les captures sont produites par le dossier `captures/` (skills
  * `capture-world` pour les données, `capture-shot` pour les images), publiées
  * dans `public/captures/` sous le nom `<id>-<langue>-<thème>.webp`, et
@@ -72,14 +85,6 @@ const SLOTS = {
     shot:
       "Le panneau Numo ouvert sur la droite : une instruction de l'utilisateur, la réponse de Numo, et deux ou trois appels d'outils dépliés (recherche de tickets, mise à jour groupée). Le badge de contexte visible en haut (« Ticket en contexte »).",
     ratio: "4/3",
-    src: null,
-  },
-  voiceDictate: {
-    id: "voiceDictate",
-    route: "/projects/<id>/issues/<identifier>, dictée en cours",
-    shot:
-      "Un ticket ouvert pendant un enregistrement : bouton micro actif, popover de dictée (chronomètre + forme d'onde) et les champs du ticket — priorité, échéance, assigné — visibles autour. On doit comprendre que la voix remplit ces champs-là, pas seulement la description.",
-    ratio: "16/10",
     src: null,
   },
   scratchpad: {

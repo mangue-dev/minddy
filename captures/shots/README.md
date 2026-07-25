@@ -19,8 +19,13 @@ Cible : `CAPTURE_BASE_URL=https://www.minddy.app`.
 | `numoPanel` | `numo/` | 4/3 | 1447 × 1085 | publié |
 | `workflowPr` | `pull-request/` | 4/3 | 1447 × 1085 | publié |
 | `scratchpad` | `carnet/` | 4/3 | 1024 × 768 | publié |
-| `workflowAgent` | `agent/` | 4/3 | 1447 × 1085 | **prêt, en attente d'un déploiement** |
-| `voiceDictate` | — | 16/10 | — | hors de portée : exige un micro |
+| `workflowAgent` | `agent/` | 4/3 | 1447 × 1085 | publié |
+
+**Les dix emplacements du catalogue sont publiés.** Le onzième, `voiceDictate`,
+a été retiré : la dictée s'illustre par une figure
+(`components/marketing/voice-dictation-figure.tsx`) et non par une capture — le
+popover n'existe qu'après un `getUserMedia` réussi, et il ne montrerait de toute
+façon que le fait d'enregistrer, pas ce que la phrase dite devient.
 
 ## La fenêtre dépend du CADRE, pas de l'envie
 
