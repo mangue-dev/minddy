@@ -1916,7 +1916,7 @@
       "testMode": "Mode test",
       "refresh": "Actualiser",
       "chartTitle": "Entrées et coûts par jour",
-      "chartInfo": "Le revenu monte, le coût descend, sur une seule échelle en euros. Les abonnements sont étalés au prorata de leur période de service — un prélèvement mensuel posé en une seule barre serait illisible. Les remboursements, eux, tombent au jour où ils surviennent.",
+      "chartInfo": "Le revenu monte, le coût descend, sur une seule échelle en euros. Chaque encaissement est porté ENTIER par le jour où il tombe — un prélèvement mensuel est une barre le jour du prélèvement, pas une moyenne étalée. Les remboursements suivent la même règle.",
       "legendRevenue": "Entrées",
       "legendCost": "Coûts IA",
       "tooltipRevenue": "Entrées : {amount}",

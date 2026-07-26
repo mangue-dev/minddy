@@ -859,7 +859,7 @@ export interface AdminFinanceDay {
   costUsd: number;
   /** `null` tant qu'aucun taux n'est connu — à distinguer de « zéro euro ». */
   costEur: number | null;
-  /** Encaissements ÉTALÉS au prorata de leur période de service. */
+  /** Encaissements ENTIERS, au jour où ils tombent — jamais lissés. */
   revenueEur: number;
   marginEur: number | null;
   usdEur: number | null;

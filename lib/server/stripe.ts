@@ -77,8 +77,8 @@ export interface StripeBalanceTransaction {
   currency: string;
   created: number;
   description: string | null;
-  /** Présent seulement avec `expand[]=data.source` : l'objet à l'origine. */
-  source?: { id: string; object: string; customer?: string | null } | string | null;
+  /** Id de l'objet à l'origine (charge, refund…). Non expandé. */
+  source?: string | null;
 }
 
 export interface StripeEvent<T = unknown> {
@@ -270,10 +270,10 @@ const BALANCE_TX_MAX_PAGES = 10;
 const BALANCE_TX_PAGE_SIZE = 100;
 
 /**
- * Le ledger depuis une date (MIN-92). `expand[]=data.source` ramène l'objet à
- * l'origine de chaque ligne — et donc le `customer` — SANS appel supplémentaire :
- * c'est ce qui permet de savoir si un encaissement est mensuel ou annuel (via
- * `billing_accounts`) et de l'étaler sur la bonne durée.
+ * Le ledger depuis une date (MIN-92). Chaque ligne porte son `net` et son jour :
+ * c'est tout ce dont la page Finances a besoin, puisqu'un encaissement est
+ * affiché entier au jour où il tombe. (Pas d'`expand[]=data.source` : il ne
+ * servait qu'à retrouver le client pour étaler la somme sur sa période.)
  *
  * Pagination bornée à 1 000 lignes. Ce n'est pas une limite gênante aujourd'hui
  * (le compte en a deux) mais c'est un garde-fou explicite : le jour où le
@@ -290,7 +290,6 @@ export async function listStripeBalanceTransactions(params: {
     const query = new URLSearchParams();
     query.set("limit", String(BALANCE_TX_PAGE_SIZE));
     query.set("created[gte]", String(Math.floor(params.since.getTime() / 1000)));
-    query.set("expand[]", "data.source");
     if (startingAfter) query.set("starting_after", startingAfter);
 
     const result: StripeList<StripeBalanceTransaction> & { has_more?: boolean } =
@@ -306,15 +305,6 @@ export async function listStripeBalanceTransactions(params: {
   }
 
   return { transactions, truncated: true };
-}
-
-/** Le client à l'origine d'une ligne, quand `data.source` a été expandé. */
-export function balanceTransactionCustomerId(
-  transaction: StripeBalanceTransaction
-): string | null {
-  const source = transaction.source;
-  if (!source || typeof source === "string") return null;
-  return source.customer ?? null;
 }
 
 export function stripeUnixToIso(value: number | null | undefined): string | null {

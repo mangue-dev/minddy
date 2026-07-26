@@ -1916,7 +1916,7 @@
       "testMode": "Test mode",
       "refresh": "Refresh",
       "chartTitle": "Income and costs per day",
-      "chartInfo": "Revenue goes up, cost goes down, on a single euro scale. Subscriptions are spread pro rata over their service period — a monthly charge shown as one bar would be unreadable. Refunds land on the day they happen.",
+      "chartInfo": "Revenue goes up, cost goes down, on a single euro scale. Each payment is shown WHOLE on the day it lands — a monthly charge is one bar on the charge date, not a smoothed average. Refunds follow the same rule.",
       "legendRevenue": "Income",
       "legendCost": "AI costs",
       "tooltipRevenue": "Income: {amount}",

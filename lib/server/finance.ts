@@ -11,11 +11,8 @@ import {
   type BillingAccount,
 } from "@/lib/server/billing-accounts";
 import {
-  balanceTransactionCustomerId,
   isStripeConfigured,
   listStripeBalanceTransactions,
-  getIntervalForStripePrice,
-  type StripeBalanceTransaction,
 } from "@/lib/server/stripe";
 import { fetchOpenRouterKeyStatus } from "@/lib/server/openrouter-key";
 import { getLatestFxRate } from "@/lib/server/fx";
@@ -43,16 +40,6 @@ const REVENUE_TX_TYPES = new Set([
   "payment_refund",
   "adjustment", // litiges / chargebacks
 ]);
-
-/** Une charge n'est jamais étalée : c'est un service rendu sur une PÉRIODE. */
-const SPREAD_TX_TYPES = new Set(["charge", "payment"]);
-
-/**
- * Recul de lecture du ledger. Un abonnement annuel encaissé il y a onze mois
- * verse encore sa part quotidienne dans la fenêtre affichée : sans ce recul, la
- * courbe montrerait du revenu à zéro pour un client bien actif.
- */
-const LEDGER_LOOKBACK_DAYS = 400;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -91,47 +78,11 @@ interface CostDay {
   runs: number;
 }
 
-/**
- * Étale un encaissement sur sa période de service. Un prélèvement mensuel posé
- * en une barre le jour du débit serait illisible à côté d'un coût quotidien :
- * sur la courbe, on répartit. Les tuiles du haut, elles, portent les chiffres
- * réels non lissés.
- */
-function spreadCharge(
-  chargedAt: Date,
-  interval: "month" | "year"
-): { start: Date; days: number } {
-  const end = interval === "year" ? addMonths(chargedAt, 12) : addMonths(chargedAt, 1);
-  const days = Math.max(
-    1,
-    Math.round((end.getTime() - chargedAt.getTime()) / 86_400_000)
-  );
-  return { start: chargedAt, days };
-}
-
-/**
- * La cadence facturée à ce client. On la lit sur le compte minddy correspondant
- * (`stripe_customer_id` → `stripe_price_id`), ce que `expand[]=data.source`
- * rend possible sans un seul appel Stripe de plus. Client inconnu → mensuel,
- * l'hypothèse la plus courante.
- */
-function intervalForTransaction(
-  transaction: StripeBalanceTransaction,
-  priceByCustomer: Map<string, string | null>
-): "month" | "year" {
-  const customerId = balanceTransactionCustomerId(transaction);
-  if (!customerId) return "month";
-  const priceId = priceByCustomer.get(customerId);
-  return getIntervalForStripePrice(priceId) === "year" ? "year" : "month";
-}
-
 async function loadBillingAccounts(): Promise<Array<Partial<BillingAccount>>> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("billing_accounts")
-    .select(
-      "user_id, stripe_customer_id, stripe_price_id, stripe_plan_id, stripe_subscription_status"
-    );
+    .select("user_id, stripe_price_id, stripe_plan_id, stripe_subscription_status");
   if (error) throw new Error(error.message);
   return (data ?? []) as Array<Partial<BillingAccount>>;
 }
@@ -205,7 +156,6 @@ export async function getFinanceSummary(options: {
   }
 
   const now = new Date();
-  const today = isoDay(now);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const nextMonthStart = addMonths(monthStart, 1);
   const windowStart = addDays(now, -(windowDays - 1));
@@ -224,8 +174,11 @@ export async function getFinanceSummary(options: {
     fetchOpenRouterKeyStatus(),
     getLatestFxRate(),
     isStripeConfigured()
-      ? listStripeBalanceTransactions({
-          since: addDays(now, -LEDGER_LOOKBACK_DAYS),
+      ? // Même recul que les coûts : chaque encaissement est porté par SA
+        // journée, donc rien avant la fenêtre (ou avant le début du mois, pour
+        // les tuiles) ne peut plus influencer ce qu'on affiche.
+        listStripeBalanceTransactions({
+          since: addDays(now, -(costSpan - 1)),
         }).catch((err) => {
           console.error("[finance] Stripe injoignable :", (err as Error).message);
           return null;
@@ -236,14 +189,12 @@ export async function getFinanceSummary(options: {
   if (costsRes.error) throw new Error(costsRes.error.message);
   const costDays = (costsRes.data ?? []) as CostDay[];
 
-  // ── revenu, étalé au prorata sur la courbe ────────────────────────────────
-  const priceByCustomer = new Map<string, string | null>();
-  for (const account of accounts) {
-    if (account.stripe_customer_id) {
-      priceByCustomer.set(account.stripe_customer_id, account.stripe_price_id ?? null);
-    }
-  }
-
+  // ── revenu : chaque encaissement ENTIER, au jour où il tombe ──────────────
+  // Pas de lissage. Le graphique montre la trésorerie telle qu'elle s'est
+  // produite — un prélèvement mensuel est une barre, le jour du prélèvement —
+  // et non une moyenne quotidienne reconstruite. Les remboursements et les
+  // litiges suivent la même règle, au jour où ils surviennent : on ne réécrit
+  // jamais le passé.
   const revenueByDay = new Map<string, number>();
   let monthNetEur = 0;
   let monthFeesEur = 0;
@@ -266,24 +217,8 @@ export async function getFinanceSummary(options: {
       monthFeesEur += transaction.fee / 100;
     }
 
-    if (!SPREAD_TX_TYPES.has(transaction.type)) {
-      // Remboursements et litiges tombent au jour où ils surviennent : on ne
-      // réécrit pas le passé.
-      const day = isoDay(at);
-      revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + netEur);
-      continue;
-    }
-
-    const { start, days } = spreadCharge(
-      at,
-      intervalForTransaction(transaction, priceByCustomer)
-    );
-    const perDay = netEur / days;
-    for (let offset = 0; offset < days; offset++) {
-      const day = isoDay(addDays(start, offset));
-      if (day > today) break;
-      revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + perDay);
-    }
+    const day = isoDay(at);
+    revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + netEur);
   }
 
   // ── la série affichée ─────────────────────────────────────────────────────
