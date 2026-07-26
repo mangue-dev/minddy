@@ -752,6 +752,8 @@
     "createdByIntegration": "Created via the {name} integration",
     "createdByIntegrationGeneric": "Created via an integration",
     "copyAsPrompt": "Copy as prompt",
+    "actionWritePlan": "Generate a plan",
+    "actionImplement": "Implement the issue",
     "promptCopied": "Prompt copied. Paste it into your coding agent.",
     "promptCopiedMoved": "Prompt copied. The issue moved to “In Progress”.",
     "moreActionsAriaLabel": "Issue actions"
@@ -1018,6 +1020,10 @@
     "emptyTitle": "No plan for this issue yet",
     "emptyHint": "Write the plan in markdown. Each checkbox is a tracked task: `- [ ]` to do, `- [~]` in progress, `- [x]` completed, `- [-]` cancelled.",
     "addPlan": "Add a plan",
+    "writeWithNumo": "Write with the Numo agent",
+    "copyPlanPrompt": "Copy prompt",
+    "copyPlanPromptHint": "Copies a prompt asking your coding agent to write this issue's plan.",
+    "planPromptCopied": "Prompt copied. Paste it into your coding agent to have it write the plan.",
     "editAriaLabel": "Edit the plan",
     "editorPlaceholder": "## Approach\n\n- [ ] First task\n- [ ] Second task",
     "markPending": "Mark as to do",
@@ -1138,7 +1144,7 @@
   },
   "Agent": {
     "sectionTitle": "Numo agent",
-    "menuLaunch": "Launch the Numo agent…",
+    "menuLaunch": "Launch the Numo agent",
     "dialogTitle": "Numo agent conversation",
     "dialogDescription": "The agent works in a sandbox on the project's repository. It opens a pull request when that's useful.",
     "modelDefault": "My default model",
@@ -1187,7 +1193,8 @@
       "xs": "This is a small, well-scoped change (XS). Implement it directly — no need to write a plan first. Verify your work when done.",
       "s": "This is a small task (S). Sketch a short, lightweight plan first only if the change benefits from one, then implement it and verify your work.",
       "xl": "This is a large task (XL). Start by writing a thorough implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Then STOP and ask whether to start implementing now; don't begin coding until I confirm.",
-      "default": "Start by writing a clear implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Once the plan is in place, implement it and verify your work."
+      "default": "Start by writing a clear implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Once the plan is in place, implement it and verify your work.",
+      "writePlan": "Your only job here is to write this issue's implementation plan. Explore the code, then write a short context (goal, approach), ordered checkbox tasks naming the exact files and functions to touch, and a verification step. Save the plan on the issue, then STOP: don't implement anything until I ask."
     },
     "openAgent": "Open the Numo agent",
     "newSession": "New session",

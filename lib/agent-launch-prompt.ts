@@ -1,14 +1,18 @@
 import type { IssueEffort } from "@/lib/issue-constants";
 import { parsePlan } from "@/lib/plan";
 
-/** Clé i18n du corps du prompt de lancement (namespace `Agent.launchPrompt`). */
+/** Clé i18n du corps du prompt de lancement (namespace `Agent.launchPrompt`).
+ *  `writePlan` n'est jamais choisie par `agentLaunchPromptVariant` : c'est une
+ *  demande EXPLICITE de l'utilisateur (bouton « Écrire avec Numo » de l'onglet
+ *  Plan) — cadrer le ticket, sans l'implémenter. */
 export type AgentLaunchPromptVariant =
   | "planExists"
   | "planExistsXl"
   | "xs"
   | "s"
   | "xl"
-  | "default";
+  | "default"
+  | "writePlan";
 
 /**
  * Choisit la variante du prompt pré-écrit du composer de lancement selon l'issue.

@@ -2,9 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Progress } from "mangue-ui";
-import { Pencil } from "lucide-react";
+import {
+  Button,
+  Progress,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "mangue-ui";
+import { ClipboardCopy, Pencil } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { NumoIcon } from "@/components/numo-icon";
 import { TaskRow } from "@/components/plan-task-row";
 import {
   parsePlan,
@@ -20,13 +27,24 @@ import { trackEvent } from "@/lib/analytics";
  * an explicit Save/Cancel (a blur-commit would fire spurious task events on a
  * half-edited plan). The markdown is the single source of truth — every task
  * interaction rewrites one line and commits the full document (lib/plan.ts).
+ *
+ * Plan vide : trois façons de le remplir — laisser un agent Numo le cadrer,
+ * copier le prompt pour un agent externe (MCP), ou l'écrire à la main. Les deux
+ * premières sont optionnelles : le panneau ne les passe que quand elles ont un
+ * sens (agents autorisés + dépôt lié pour Numo).
  */
 export function IssuePlan({
   plan,
   onCommit,
+  onWriteWithAgent,
+  onCopyPrompt,
 }: {
   plan: string | null;
   onCommit: (plan: string | null) => void;
+  /** Ouvre le composer d'agent avec un prompt « écris le plan ». */
+  onWriteWithAgent?: () => void;
+  /** Copie le prompt « écris le plan » pour un agent externe. */
+  onCopyPrompt?: () => void;
 }) {
   const t = useTranslations("Plan");
   const tCommon = useTranslations("Common");
@@ -91,7 +109,37 @@ export function IssuePlan({
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
         <p className="text-sm font-medium">{t("emptyTitle")}</p>
         <p className="max-w-sm text-xs text-muted-foreground">{t("emptyHint")}</p>
-        <Button variant="outline" size="sm" onClick={startEditing}>
+        {/* Les deux façons de faire écrire le plan, puis — en retrait — celle
+            qui consiste à l'écrire soi-même. */}
+        {(onWriteWithAgent || onCopyPrompt) && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {onWriteWithAgent && (
+              <Button size="sm" onClick={onWriteWithAgent}>
+                <NumoIcon animated={false} className="size-4" />
+                {t("writeWithNumo")}
+              </Button>
+            )}
+            {onCopyPrompt && (
+              // Le libellé ne dit pas QUEL prompt : l'infobulle le dit.
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={onCopyPrompt}>
+                    <ClipboardCopy className="size-4" />
+                    {t("copyPlanPrompt")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-64 text-center">
+                  {t("copyPlanPromptHint")}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )}
+        <Button
+          variant={onWriteWithAgent || onCopyPrompt ? "ghost" : "outline"}
+          size="sm"
+          onClick={startEditing}
+        >
           {t("addPlan")}
         </Button>
       </div>

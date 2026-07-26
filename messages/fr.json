@@ -752,6 +752,8 @@
     "createdByIntegration": "Créé via l'intégration {name}",
     "createdByIntegrationGeneric": "Créé via une intégration",
     "copyAsPrompt": "Copier le prompt",
+    "actionWritePlan": "Générer un plan",
+    "actionImplement": "Implémenter le ticket",
     "promptCopied": "Prompt copié. Collez-le dans votre agent de code.",
     "promptCopiedMoved": "Prompt copié. Le ticket est passé « En cours ».",
     "moreActionsAriaLabel": "Actions du ticket"
@@ -1018,6 +1020,10 @@
     "emptyTitle": "Aucun plan pour ce ticket",
     "emptyHint": "Écrivez le plan en markdown. Chaque case à cocher est une tâche suivie : `- [ ]` à faire, `- [~]` en cours, `- [x]` terminée, `- [-]` annulée.",
     "addPlan": "Ajouter un plan",
+    "writeWithNumo": "Écrire avec l'agent Numo",
+    "copyPlanPrompt": "Copier le prompt",
+    "copyPlanPromptHint": "Copie un prompt qui demande à votre agent d'écrire le plan de ce ticket.",
+    "planPromptCopied": "Prompt copié. Collez-le dans votre agent de code pour qu'il écrive le plan.",
     "editAriaLabel": "Modifier le plan",
     "editorPlaceholder": "## Approche\n\n- [ ] Première tâche\n- [ ] Deuxième tâche",
     "markPending": "Marquer à faire",
@@ -1138,7 +1144,7 @@
   },
   "Agent": {
     "sectionTitle": "Agent Numo",
-    "menuLaunch": "Lancer l'agent Numo…",
+    "menuLaunch": "Lancer l'agent Numo",
     "dialogTitle": "Conversation avec l'agent Numo",
     "dialogDescription": "L'agent travaille dans une sandbox sur le dépôt du projet. Il ouvre une pull request quand c'est utile.",
     "modelDefault": "Mon modèle par défaut",
@@ -1187,7 +1193,8 @@
       "xs": "C'est un petit changement bien cadré (XS). Implémente-le directement — inutile d'écrire un plan d'abord. Vérifie ton travail une fois terminé.",
       "s": "C'est une petite tâche (S). Esquisse d'abord un plan léger seulement si le changement le justifie, puis implémente-le et vérifie ton travail.",
       "xl": "C'est une grosse tâche (XL). Commence par écrire un plan d'implémentation complet sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Puis ARRÊTE-TOI et demande s'il faut commencer l'implémentation maintenant ; ne code rien tant que je n'ai pas confirmé.",
-      "default": "Commence par écrire un plan d'implémentation clair sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Une fois le plan en place, implémente-le et vérifie ton travail."
+      "default": "Commence par écrire un plan d'implémentation clair sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Une fois le plan en place, implémente-le et vérifie ton travail.",
+      "writePlan": "Ton seul travail ici est d'écrire le plan d'implémentation de ce ticket. Explore le code, puis rédige un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers et fonctions exacts à toucher, et une étape de vérification. Enregistre le plan sur le ticket, puis ARRÊTE-TOI : n'implémente rien tant que je ne te l'ai pas demandé."
     },
     "openAgent": "Ouvrir l'agent Numo",
     "newSession": "Nouvelle session",

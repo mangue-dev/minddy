@@ -17,16 +17,14 @@ import { AgentBeam } from "@/components/agent-beam";
 import {
   Calendar,
   ChevronRight,
-  ClipboardCopy,
   GitPullRequest,
   IterationCw,
   Link2,
   ListChecks,
-  Plus,
   Triangle,
   User,
 } from "lucide-react";
-import { NumoIcon } from "@/components/numo-icon";
+import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -84,7 +82,7 @@ import {
   KEY_FOR_FIELD,
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
-import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { buildIssuePlanPrompt, buildIssuePrompt } from "@/lib/issue-prompt";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/attachments";
@@ -795,6 +793,7 @@ export function IssueCard({
   const tRel = useTranslations("Relations");
   const tAttach = useTranslations("Attachments");
   const tAgent = useTranslations("Agent");
+  const tPlan = useTranslations("Plan");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -854,13 +853,7 @@ export function IssueCard({
   const openAgentSession = () => {
     router.push(`/agents?issue=${issue.id}`);
   };
-  const startNewAgentSession = () => {
-    // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
-    // composer VIERGE : l'utilisateur dicte lui-même la consigne. Premier lancement à
-    // froid → prompt d'amorçage (contexte du ticket, adapté à son plan / effort).
-    const prompt = agentHasSession
-      ? ""
-      : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
+  const composeAgentSession = (prompt: string) => {
     setAgentComposeDraft({
       kind: "issue",
       issueId: issue.id,
@@ -871,6 +864,22 @@ export function IssueCard({
       prompt,
     });
     router.push(`/agents?compose=${issue.id}`);
+  };
+  const startNewAgentSession = () => {
+    // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
+    // composer VIERGE : l'utilisateur dicte lui-même la consigne. Premier lancement à
+    // froid → prompt d'amorçage (contexte du ticket, adapté à son plan / effort).
+    const prompt = agentHasSession
+      ? ""
+      : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
+    composeAgentSession(prompt);
+  };
+  // « Générer un plan » : session neuve dont la consigne est de CADRER le
+  // ticket — écrire le plan, puis s'arrêter avant d'implémenter.
+  const writePlanWithAgent = () => {
+    composeAgentSession(
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.writePlan")}`
+    );
   };
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
   // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
@@ -890,6 +899,26 @@ export function IssueCard({
       (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
     );
   }, [candidateIssues, relations, issue.id]);
+  // Contexte commun aux deux prompts copiables (implémenter le ticket, écrire
+  // son plan) : relations et catégories, résolues en noms lisibles.
+  const promptContext = () => {
+    // Relations de l'issue (type + identifiant + titre de l'autre issue) — le
+    // titre est résolu depuis candidateIssues (la liste complète du projet),
+    // qui n'existe que dans l'app authentifiée : aucune fuite côté board public.
+    const titleById = new Map((candidateIssues ?? []).map((i) => [i.id, i.title]));
+    return {
+      relations: (relations ?? []).map((r) => ({
+        type: r.relation,
+        identifier: issueIdentifier(projectKey, r.otherNumber),
+        title: titleById.get(r.otherId) ?? "",
+      })),
+      // Noms des catégories (les IDs vivent sur l'issue, les noms dans categoryMap).
+      categories: issue.category_ids
+        .map((cid) => categoryMap.get(cid)?.name)
+        .filter((name): name is string => !!name),
+    };
+  };
+
   const copyPrompt = async () => {
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
     // désactivable dans Compte → Préférences). On n'avance que les statuts
@@ -902,26 +931,12 @@ export function IssueCard({
     const promptIssue = autoStart
       ? { ...issue, status: "in_progress" as const }
       : issue;
-    // Relations de l'issue (type + identifiant + titre de l'autre issue) — le
-    // titre est résolu depuis candidateIssues (la liste complète du projet),
-    // qui n'existe que dans l'app authentifiée : aucune fuite côté board public.
-    const titleById = new Map((candidateIssues ?? []).map((i) => [i.id, i.title]));
-    const promptRelations = (relations ?? []).map((r) => ({
-      type: r.relation,
-      identifier: issueIdentifier(projectKey, r.otherNumber),
-      title: titleById.get(r.otherId) ?? "",
-    }));
-    // Noms des catégories (les IDs vivent sur l'issue, les noms dans categoryMap).
-    const promptCategories = issue.category_ids
-      .map((cid) => categoryMap.get(cid)?.name)
-      .filter((name): name is string => !!name);
     const prompt = buildIssuePrompt({
       issue: promptIssue,
       projectId,
       projectKey,
-      categories: promptCategories,
-      relations: promptRelations,
       attachmentCount: issue.attachment_count,
+      ...promptContext(),
     });
     await navigator.clipboard.writeText(prompt);
     if (autoStart) {
@@ -931,6 +946,31 @@ export function IssueCard({
       toast.success(t("promptCopied"));
     }
   };
+
+  // « Générer un plan » côté prompt : la consigne de cadrage, pour un agent
+  // externe. Pas de démarrage automatique — planifier n'est pas commencer.
+  const copyPlanPrompt = async () => {
+    await navigator.clipboard.writeText(
+      buildIssuePlanPrompt({
+        issue,
+        projectId,
+        projectKey,
+        attachmentCount: issue.attachment_count,
+        ...promptContext(),
+      })
+    );
+    toast.success(tPlan("planPromptCopied"));
+  };
+
+  const agentActions = useAgentMenuActions({
+    agentsEnabled,
+    hasSession: agentHasSession,
+    onCopyPrompt: () => void copyPrompt(),
+    onCopyPlanPrompt: () => void copyPlanPrompt(),
+    onImplementWithAgent: startNewAgentSession,
+    onWritePlanWithAgent: writePlanWithAgent,
+    onOpenSession: openAgentSession,
+  });
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
   // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
@@ -945,48 +985,10 @@ export function IssueCard({
   );
 
   const menuActions: ContextMenuAction[] = [
-    {
-      id: "copy-prompt",
-      label: t("copyAsPrompt"),
-      keywords: ["copy", "prompt", "agent", "copier"],
-      icon: <ClipboardCopy className="size-4" />,
-      shortcut: "⇧P",
-      onSelect: () => void copyPrompt(),
-    },
-    // Agent de code sur ce ticket, sur la PAGE Agents. Session existante → deux
-    // entrées : « Ouvrir l'agent » (rouvre la session, sa run la plus active) et
-    // « Nouvelle session » (compose une run neuve sur le ticket). Aucune session →
-    // une seule entrée « Lancer un agent » (compose à froid). ⇧A = 1re action.
-    ...(!agentsEnabled
-      ? []
-      : agentHasSession
-        ? [
-            {
-              id: "open-agent",
-              label: tAgent("openAgent"),
-              keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
-              icon: <NumoIcon className="size-4" />,
-              shortcut: "⇧A",
-              onSelect: openAgentSession,
-            },
-            {
-              id: "new-agent-session",
-              label: tAgent("newSession"),
-              keywords: ["agent", "new", "nouvelle", "session", "launch", "lancer", "numo"],
-              icon: <Plus className="size-4" />,
-              onSelect: startNewAgentSession,
-            },
-          ]
-        : [
-            {
-              id: "launch-agent",
-              label: tAgent("menuLaunch"),
-              keywords: ["agent", "launch", "lancer", "code", "ai", "numo"],
-              icon: <NumoIcon className="size-4" />,
-              shortcut: "⇧A",
-              onSelect: startNewAgentSession,
-            },
-          ]),
+    // Prompt et agent : deux sous-menus « Générer un plan » / « Implémenter le
+    // ticket », partagés avec le panneau latéral. L'agent de code travaille sur
+    // la PAGE Agents ; ⇧P et ⇧A restent sur la branche « implémenter ».
+    ...agentActions,
     // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
     ...(agentsEnabled && pr && openPr
       ? [

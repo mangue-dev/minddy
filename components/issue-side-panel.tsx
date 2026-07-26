@@ -20,10 +20,8 @@ import {
 } from "mangue-ui";
 import {
   ChevronRight,
-  ClipboardCopy,
   GitPullRequest,
   MoreHorizontal,
-  Plus,
   Trash2,
   X,
 } from "lucide-react";
@@ -41,6 +39,7 @@ import { SubIssuesSection } from "@/components/sub-issues-section";
 import { RelationsSection } from "@/components/relations-section";
 import { AgentChatModal } from "@/components/agent/agent-chat-modal";
 import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
+import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   IssueActionsMenu,
   type ContextMenuAction,
@@ -52,7 +51,7 @@ import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
-import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { buildIssuePlanPrompt, buildIssuePrompt } from "@/lib/issue-prompt";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import {
   resolvePromptCopyAutoStart,
@@ -225,6 +224,23 @@ export function IssueSidePanel({
   //    garder le ticket sous les yeux (la carte, elle, navigue vers /agents) ;
   //  • lancer une session NEUVE — pose un brouillon de composition optimiste et
   //    ouvre son composer (`?compose=`), même si le ticket a déjà une session.
+  const composeAgentSession = useCallback(
+    (prompt: string) => {
+      if (!issue) return;
+      setAgentComposeDraft({
+        kind: "issue",
+        issueId: issue.id,
+        issueNumber: issue.number,
+        issueTitle: issue.title,
+        projectId: issue.project_id,
+        projectKey,
+        prompt,
+      });
+      router.push(`/agents?compose=${issue.id}`);
+    },
+    [issue, projectKey, router]
+  );
+
   const startNewAgentSession = useCallback(() => {
     if (!issue) return;
     // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
@@ -234,17 +250,20 @@ export function IssueSidePanel({
     const prompt = hasAgentSession
       ? ""
       : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
-    setAgentComposeDraft({
-      kind: "issue",
-      issueId: issue.id,
-      issueNumber: issue.number,
-      issueTitle: issue.title,
-      projectId: issue.project_id,
-      projectKey,
-      prompt,
-    });
-    router.push(`/agents?compose=${issue.id}`);
-  }, [issue, hasAgentSession, projectKey, router, tAgent]);
+    composeAgentSession(prompt);
+  }, [issue, hasAgentSession, projectKey, composeAgentSession, tAgent]);
+
+  // « Écrire avec Numo » (onglet Plan, plan vide) : session neuve dont la
+  // consigne est de CADRER le ticket — écrire le plan sur le ticket, puis
+  // s'arrêter. Toujours une session neuve, même si le ticket en a déjà une :
+  // le composer s'ouvre avec la consigne, l'utilisateur l'envoie (ou l'amende).
+  const writePlanWithAgent = useCallback(() => {
+    if (!issue) return;
+    const identifier = issueIdentifier(projectKey, issue.number);
+    composeAgentSession(
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.writePlan")}`
+    );
+  }, [issue, projectKey, composeAgentSession, tAgent]);
 
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
   // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
@@ -258,8 +277,26 @@ export function IssueSidePanel({
     if (prRun) router.push(`/pull-requests?run=${prRun.id}`);
   }, [prRun, router]);
 
+  // Contexte partagé par les deux prompts copiables (travailler sur le ticket,
+  // écrire son plan) : relations résolues et noms des catégories.
+  const promptContext = useMemo(() => {
+    if (!issue) return null;
+    const titleById = new Map(allIssues.map((i) => [i.id, i.title]));
+    return {
+      relations: resolvedRelations.map((r) => ({
+        type: r.relation,
+        identifier: issueIdentifier(projectKey, r.otherNumber),
+        title: titleById.get(r.otherId) ?? "",
+      })),
+      // Noms des catégories (les IDs vivent sur l'issue, les noms dans `categories`).
+      categories: issue.category_ids
+        .map((cid) => categories.find((c) => c.id === cid)?.name)
+        .filter((name): name is string => !!name),
+    };
+  }, [issue, allIssues, resolvedRelations, categories, projectKey]);
+
   const copyPrompt = useCallback(async () => {
-    if (!issue) return;
+    if (!issue || !promptContext) return;
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
     // désactivable dans Compte → Préférences). On n'avance que les statuts
     // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
@@ -271,23 +308,13 @@ export function IssueSidePanel({
     const promptIssue = autoStart
       ? { ...issue, status: "in_progress" as const }
       : issue;
-    const titleById = new Map(allIssues.map((i) => [i.id, i.title]));
-    const promptRelations = resolvedRelations.map((r) => ({
-      type: r.relation,
-      identifier: issueIdentifier(projectKey, r.otherNumber),
-      title: titleById.get(r.otherId) ?? "",
-    }));
-    // Noms des catégories (les IDs vivent sur l'issue, les noms dans `categories`).
-    const promptCategories = issue.category_ids
-      .map((cid) => categories.find((c) => c.id === cid)?.name)
-      .filter((name): name is string => !!name);
     await navigator.clipboard.writeText(
       buildIssuePrompt({
         issue: promptIssue,
         projectId: issue.project_id,
         projectKey,
-        categories: promptCategories,
-        relations: promptRelations,
+        categories: promptContext.categories,
+        relations: promptContext.relations,
         attachmentCount: issue.attachment_count,
       })
     );
@@ -299,16 +326,39 @@ export function IssueSidePanel({
     } else {
       toast.success(t("promptCopied"));
     }
-  }, [
-    issue,
-    allIssues,
-    resolvedRelations,
-    categories,
-    projectKey,
-    user?.user_metadata,
-    onUpdate,
-    t,
-  ]);
+  }, [issue, promptContext, projectKey, user?.user_metadata, onUpdate, t]);
+
+  // « Copier le prompt » de l'onglet Plan : le même ticket, mais une consigne
+  // de CADRAGE (écrire le plan, ne rien implémenter) — pour un agent externe,
+  // qui l'enregistrera sur le ticket via le MCP. Aucun démarrage automatique
+  // ici : planifier n'est pas commencer le travail.
+  const copyPlanPrompt = useCallback(async () => {
+    if (!issue || !promptContext) return;
+    await navigator.clipboard.writeText(
+      buildIssuePlanPrompt({
+        issue,
+        projectId: issue.project_id,
+        projectKey,
+        categories: promptContext.categories,
+        relations: promptContext.relations,
+        attachmentCount: issue.attachment_count,
+      })
+    );
+    toast.success(tPlan("planPromptCopied"));
+  }, [issue, promptContext, projectKey, tPlan]);
+
+  // « Copier le prompt » et « Lancer l'agent Numo » : deux sous-menus, chacun
+  // avec « Générer un plan » / « Implémenter le ticket » (hook partagé avec les
+  // cartes du board).
+  const agentActions = useAgentMenuActions({
+    agentsEnabled,
+    hasSession: hasAgentSession,
+    onCopyPrompt: () => void copyPrompt(),
+    onCopyPlanPrompt: () => void copyPlanPrompt(),
+    onImplementWithAgent: startNewAgentSession,
+    onWritePlanWithAgent: writePlanWithAgent,
+    onOpenSession: () => setChatOpen(true),
+  });
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
   // body; the picker opens at the cursor, in the key/value section. `d` maps to
@@ -412,43 +462,7 @@ export function IssueSidePanel({
   // Menu « ⋯ » de l'en-tête : la parité d'actions avec le clic droit d'une carte
   // (prompt, agent, PR, cycle), plus la suppression qui vivait ici avant.
   const menuActions: ContextMenuAction[] = [
-    {
-      id: "copy-prompt",
-      label: t("copyAsPrompt"),
-      icon: <ClipboardCopy className="size-4" />,
-      shortcut: "⇧P",
-      onSelect: () => void copyPrompt(),
-    },
-    // Session existante → deux entrées : « Ouvrir l'agent » (reprend la dernière
-    // run, en modal) et « Nouvelle session » (compose une run neuve sur le
-    // ticket). Aucune session → une seule entrée « Lancer un agent » (à froid).
-    ...(!agentsEnabled
-      ? []
-      : hasAgentSession
-        ? [
-            {
-              id: "open-agent",
-              label: tAgent("openAgent"),
-              icon: <NumoIcon className="size-4" />,
-              shortcut: "⇧A",
-              onSelect: () => setChatOpen(true),
-            },
-            {
-              id: "new-agent-session",
-              label: tAgent("newSession"),
-              icon: <Plus className="size-4" />,
-              onSelect: startNewAgentSession,
-            },
-          ]
-        : [
-            {
-              id: "launch-agent",
-              label: tAgent("menuLaunch"),
-              icon: <NumoIcon className="size-4" />,
-              shortcut: "⇧A",
-              onSelect: startNewAgentSession,
-            },
-          ]),
+    ...agentActions,
     ...(agentsEnabled && prRun
       ? [
           {
@@ -615,6 +629,10 @@ export function IssueSidePanel({
                   key={issue.id}
                   plan={issue.plan}
                   onCommit={(plan) => void patch({ plan })}
+                  // Numo n'apparaît que là où il peut travailler : plan payant
+                  // + dépôt lié (même porte que ⇧A / le menu « ⋯ »).
+                  onWriteWithAgent={agentsEnabled ? writePlanWithAgent : undefined}
+                  onCopyPrompt={() => void copyPlanPrompt()}
                 />
               </TabsContent>
 
