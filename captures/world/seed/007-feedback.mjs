@@ -25,6 +25,7 @@
 import { randomBytes } from "node:crypto";
 import { openDemoWorld, createPlan } from "../../lib/guards.mjs";
 import { resolvePeople, requireProject } from "./_people.mjs";
+import { categoryLabel, resolveCategories } from "./_categories.mjs";
 import { currentCycleWindow, spreadInWindow } from "./_cycle-window.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -55,7 +56,7 @@ const POSTS = [
     status: "planned",
     votes: 24,
     at: 0.05,
-    category: "Fonctionnalité",
+    category: "feature",
   },
   {
     title: "Slack alerts when an incident opens",
@@ -63,7 +64,7 @@ const POSTS = [
     status: "in_progress",
     votes: 18,
     at: 0.1,
-    category: "Fonctionnalité",
+    category: "feature",
     teamResponse:
       "This is being built right now — it ships with the next release. It will post on open, update and resolve, with one channel per service.",
   },
@@ -73,7 +74,7 @@ const POSTS = [
     status: "in_progress",
     votes: 15,
     at: 0.15,
-    category: "Bug",
+    category: "bug",
   },
   {
     title: "Subscribe to a single service, not the whole page",
@@ -81,7 +82,7 @@ const POSTS = [
     status: "planned",
     votes: 11,
     at: 0.25,
-    category: "Fonctionnalité",
+    category: "feature",
   },
   {
     title: "Dark mode for the public status page",
@@ -89,7 +90,7 @@ const POSTS = [
     status: "open",
     votes: 9,
     at: 0.35,
-    category: "Design",
+    category: "design",
   },
   {
     title: "Export incident history as CSV",
@@ -97,7 +98,7 @@ const POSTS = [
     status: "open",
     votes: 7,
     at: 0.45,
-    category: "Fonctionnalité",
+    category: "feature",
   },
   {
     /* Le doublon : c'est lui qui porte la bannière de suggestion de fusion. */
@@ -115,7 +116,7 @@ const POSTS = [
     status: "shipped",
     votes: 4,
     at: 0.6,
-    category: "Amélioration",
+    category: "improvement",
   },
   {
     title: "An RSS feed of incidents",
@@ -123,7 +124,7 @@ const POSTS = [
     status: "open",
     votes: 2,
     at: 0.75,
-    category: "Fonctionnalité",
+    category: "feature",
   },
 ];
 
@@ -139,7 +140,7 @@ function describeIntent(window) {
       post.status,
       post.teamResponse ? "réponse d'équipe" : null,
       post.mergeSuggestedInto ? "fusion suggérée par l'IA" : null,
-      post.category ? `catégorie ${post.category}` : null,
+      post.category ? `catégorie ${categoryLabel(post.category)}` : null,
     ].filter(Boolean);
     lines.push(`      - ${post.title} (${extras.join(", ")})`);
   }
@@ -309,12 +310,10 @@ async function main() {
   }
 
   // ── 6. Les catégories ──────────────────────────────────────────────────────
-  const { data: categories, error: catError } = await world.admin
-    .from("categories")
-    .select("id, name")
-    .eq("project_id", project.id);
-  if (catError) throw new Error(`captures: lecture des catégories — ${catError.message}`);
-  const byName = new Map((categories || []).map((c) => [c.name, c]));
+  // Désignées par clé courte (`feature`), jamais par leur libellé : celui-ci a
+  // été renommé en anglais par 013-categories-en.mjs, et le résolveur partagé
+  // accepte les deux noms.
+  const categories = await resolveCategories(world, project.id);
 
   const { data: existingLinks } = await world.admin
     .from("feedback_post_categories")
@@ -325,8 +324,8 @@ async function main() {
   const missingLinks = [];
   for (const post of POSTS) {
     if (!post.category) continue;
-    const category = byName.get(post.category);
-    if (!category) throw new Error(`captures: catégorie « ${post.category} » absente du projet.`);
+    const category = categories.get(post.category);
+    if (!category) throw new Error(`captures: catégorie « ${post.category} » inconnue.`);
     const row = knownPosts.get(post.title);
     if (linked.has(`${row.id}:${category.id}`)) continue;
     missingLinks.push({ post_id: row.id, category_id: category.id });

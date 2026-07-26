@@ -9,6 +9,8 @@ import {
   isPlanLimitError,
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
+import { seedDefaultCategories } from "@/lib/server/categories";
+import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 
 /** GET /api/projects — list the caller's accessible (owned + member) projects. */
@@ -94,5 +96,17 @@ export async function POST(request: NextRequest) {
     console.error("[api/projects] create failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
+
+  // Les catégories par défaut, dans la langue de celui qui crée le projet.
+  // C'était un trigger Postgres, qui écrivait six noms français à tout le
+  // monde — la base ne connaît pas la langue de l'appelant, l'app si.
+  const tCategories = await getTranslations("Categories.defaults");
+  await seedDefaultCategories({
+    projectId: data.id as string,
+    names: Object.fromEntries(
+      DEFAULT_CATEGORIES.map((category) => [category.key, tCategories(category.key)])
+    ),
+  });
+
   return NextResponse.json(data, { status: 201 });
 }

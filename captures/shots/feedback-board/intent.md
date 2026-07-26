@@ -46,9 +46,10 @@ fr/light, fr/dark, en/light, en/dark
   public. `authed: false` est la première ligne du script.
 - **Les titres des retours sont des données anglaises**, donc des ancres
   valables pour les deux langues. Les statuts et le tri, eux, sont traduits.
-- **Les catégories s'affichent en français dans les deux langues.** Elles sont
-  créées par le trigger `projects_seed_categories` à la naissance du projet,
-  avec des noms français, et ce sont des données depuis. Ce n'est pas un défaut
-  de la capture — c'est un vrai sujet produit, hors du périmètre de ce dossier.
+- **Les catégories sont passées en anglais le 26 juillet 2026**, comme le reste
+  du monde de démo (`013-categories-en.mjs`). Les PNG de `out/`, plus anciens,
+  affichent encore « Fonctionnalité » et « Amélioration » : ils sont à refaire.
+  Le sujet produit reste entier — un vrai projet créé en anglais naît toujours
+  avec des catégories françaises, c'est le trigger `projects_seed_categories`.
 - **Le nombre de votes vient d'un trigger.** Les 95 votes correspondent à des
   lignes réelles ; un compteur écrit à la main dériverait au premier vote.

@@ -566,6 +566,14 @@
       "teal": "turquoise",
       "violet": "violet"
     },
+    "defaults": {
+      "bug": "Bug",
+      "feature": "Fonctionnalité",
+      "improvement": "Amélioration",
+      "design": "Design",
+      "documentation": "Documentation",
+      "technical": "Technique"
+    },
     "newCategoryLabel": "Nouvelle catégorie",
     "newCategoryPlaceholder": "Bug, Feature, Design…",
     "emptyState": "{noCategories} pour l'instant.",

@@ -13,6 +13,13 @@ seconde : un tracker de tickets sobre, rempli d'un vrai travail d'équipe.
 - **Quatre colonnes entières** : Backlog (2), À faire (3), En cours (4),
   En revue (2). `Terminé` et `Annulé` tombent hors cadre — voir le cadrage.
 - Des titres crédibles, en anglais, aucun lorem.
+- **Une description sur chaque carte** — l'aperçu de trois lignes sous le
+  titre, qui donne sa hauteur à la carte et prouve qu'un ticket de minddy
+  contient autre chose qu'un intitulé.
+- **Une catégorie sur chaque carte** : pastille colorée + nom, en bas à droite.
+  Elles sont nommées en anglais depuis le 26 juillet 2026 (`013-categories-en.mjs`),
+  sans quoi la variante anglaise afficherait « Fonctionnalité ». Deux cartes en
+  portent deux, et affichent donc un « +1 » : AUR-1 et AUR-11.
 - Des priorités variées, dont **un urgent** (AUR-1) — c'est le repère visuel
   qui prouve que la priorité se lit d'un coup d'œil.
 - Des efforts variés (xs → xl).
@@ -56,6 +63,10 @@ mieux ; sinon l'image est jugée sans ce critère.
 
 ## Pièges connus
 
+- **Les PNG de `out/` sont périmés.** Ils datent du 25 juillet, avant que les
+  tickets ne portent description et catégorie : les cartes y sont plus courtes
+  et leur coin bas-droit dit « Aucune ». La prochaine prise sera plus haute —
+  les colonnes défileront davantage, c'est attendu.
 - **La coupe à droite.** Premier run en 1440 × 900 : la colonne « En revue »
   tranchée au tiers d'une carte. Ça ne se lit pas comme « il y en a plus à
   droite », ça se lit comme une image cassée. D'où la largeur calée sur la

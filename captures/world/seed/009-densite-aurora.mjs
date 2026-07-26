@@ -16,6 +16,8 @@
  */
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { resolvePeople, requireProject } from "./_people.mjs";
+import { categoryLabel } from "./_categories.mjs";
+import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -29,6 +31,7 @@ const ISSUES = [
     title: "Two-factor authentication for the workspace",
     description:
       "Enterprise prospects raise it on every call. TOTP and recovery codes first; single sign-on is a separate conversation.",
+    categories: ["feature"],
     status: "backlog",
     priority: "medium",
     effort: "l",
@@ -39,6 +42,7 @@ const ISSUES = [
     title: "Audit log for workspace admins",
     description:
       "Who changed what, and when. Ninety days of retention covers what we sell today.",
+    categories: ["feature"],
     status: "backlog",
     priority: "low",
     effort: "l",
@@ -47,6 +51,9 @@ const ISSUES = [
   },
   {
     title: "Merge two accounts created with the same email",
+    description:
+      "People sign up with Google, then again with a password, and end up with two half-empty workspaces.",
+    categories: ["improvement"],
     status: "backlog",
     priority: "low",
     effort: "m",
@@ -57,6 +64,7 @@ const ISSUES = [
     title: "Inline editing of issue titles on the board",
     description:
       "Renaming a ticket takes four clicks today. Double-click the title, type, press Enter.",
+    categories: ["improvement"],
     status: "todo",
     priority: "high",
     effort: "m",
@@ -65,6 +73,9 @@ const ISSUES = [
   },
   {
     title: "Remember the last used filter per project",
+    description:
+      "Filters reset on every visit. Keep the last one per project, and let a single click clear it.",
+    categories: ["improvement"],
     status: "todo",
     priority: "low",
     effort: "xs",
@@ -77,9 +88,13 @@ function describeIntent() {
   const lines = ["  • Ajouter 5 tickets au projet Aurora :"];
   for (const issue of ISSUES) {
     const who = issue.assignee ? ` → ${issue.assignee}` : " → non assigné";
-    const desc = issue.description ? " · avec description" : "";
-    lines.push(`      - [${issue.status}] ${issue.title} [${issue.priority}/${issue.effort}]${who}${desc}`);
+    const cats = (issue.categories ?? []).map(categoryLabel).join(", ");
+    lines.push(
+      `      - [${issue.status}] ${issue.title} [${issue.priority}/${issue.effort}]${who}` +
+        `${cats ? ` · ${cats}` : ""}`,
+    );
   }
+  lines.push(describeMetadata(ISSUES));
   return lines.join("\n");
 }
 
@@ -128,13 +143,15 @@ async function main() {
 
   if (rows.length === 0) {
     console.log("  → rien à ajouter, les colonnes sont déjà équilibrées");
-    return;
+  } else {
+    const plan = createPlan(world);
+    plan.insert("issues", rows, "ticket");
+    console.log(plan.describe());
+    await plan.apply({ confirmed: true });
   }
 
-  const plan = createPlan(world);
-  plan.insert("issues", rows, "ticket");
-  console.log(plan.describe());
-  await plan.apply({ confirmed: true });
+  // Descriptions et catégories — seconde passe, voir `_issues.mjs`.
+  await syncIssueMetadata(world, project, ISSUES);
 
   const { data: after } = await world.admin
     .from("issues")
@@ -142,7 +159,7 @@ async function main() {
     .eq("project_id", project.id);
   const counts = {};
   for (const i of after || []) counts[i.status] = (counts[i.status] || 0) + 1;
-  console.log(`\n  → ${rows.length} tickets ajoutés. Colonnes d'Aurora :`, counts);
+  console.log(`\n  → ${rows.length} ticket(s) ajouté(s). Colonnes d'Aurora :`, counts);
 }
 
 await main();

@@ -63,10 +63,25 @@ export const TABLE_SCOPES = {
     projectColumn: "project_id",
     userRefColumns: ["created_by", "assignee_id"],
   },
-  /** Créées par un trigger à la naissance du projet — ancrage seul, jamais écrites. */
+  // Les six étiquettes d'un projet. Elles venaient d'un trigger qui les nommait
+  // en FRANÇAIS quelle que soit la langue de l'utilisateur ; c'est désormais
+  // `POST /api/projects` qui les sème, traduites (migration 20260904090000).
+  // Les seeds écrivant en base sans passer par l'app, ils les posent eux-mêmes,
+  // en anglais comme le reste du monde de démo (`_categories.mjs`), et
+  // `013-categories-en.mjs` a renommé celles qui existaient déjà.
   categories: {
-    writable: false,
+    writable: true,
     projectColumn: "project_id",
+  },
+  // Rattachement ticket ↔ catégorie. Aucune colonne propre : la ligne n'est
+  // acceptable que si le ticket ET la catégorie visés sont eux-mêmes prouvés
+  // de démo.
+  issue_categories: {
+    writable: true,
+    parents: [
+      { column: "issue_id", table: "issues" },
+      { column: "category_id", table: "categories" },
+    ],
   },
 
   // ── Plan du compte ───────────────────────────────────────────────────────

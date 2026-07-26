@@ -3,6 +3,51 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { DEFAULT_CATEGORY_COLOR, isValidColor } from "@/lib/category-colors";
+import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
+
+/**
+ * Pose le jeu de catégories par défaut sur un projet neuf, dans la langue de
+ * celui qui le crée (`names`, déjà traduits par l'appelant depuis
+ * `Categories.defaults`).
+ *
+ * C'était un trigger Postgres, qui écrivait six noms français quelle que soit
+ * la langue de l'utilisateur — voir `lib/default-categories.ts`. Comme pour les
+ * vues par défaut (`ensureBaselineViews`), c'est désormais l'application qui
+ * sème, parce qu'elle est le seul endroit qui connaît la langue.
+ *
+ * Ne sème QUE si le projet n'a aucune catégorie : rejouable, et sans risque de
+ * doubler celles d'un projet qui en a déjà. Un échec est journalisé, jamais
+ * levé — un projet créé sans ses étiquettes reste parfaitement utilisable, et
+ * l'utilisateur peut les ajouter à la main.
+ */
+export async function seedDefaultCategories({
+  projectId,
+  names,
+}: {
+  projectId: string;
+  names: Record<string, string>;
+}): Promise<void> {
+  const service = getServiceClient();
+
+  const { count, error: countError } = await service
+    .from("categories")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId);
+  if (countError) {
+    console.error("[categories] default seed lookup failed:", countError.message);
+    return;
+  }
+  if (count) return;
+
+  const { error } = await service.from("categories").insert(
+    DEFAULT_CATEGORIES.map((category) => ({
+      project_id: projectId,
+      name: names[category.key] ?? category.key,
+      color: category.color,
+    }))
+  );
+  if (error) console.error("[categories] default seed failed:", error.message);
+}
 
 /**
  * Shared category-creation core, used by POST /api/projects/[id]/categories

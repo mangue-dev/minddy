@@ -20,6 +20,8 @@
  */
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { resolvePeople } from "./_people.mjs";
+import { categoryLabel, ensureCategories } from "./_categories.mjs";
+import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 import { currentCycleWindow, spreadInWindow } from "./_cycle-window.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -37,6 +39,7 @@ const ISSUES = [
     title: "Redesign the status page",
     description:
       "The current page lists raw service names. Group them by what a customer actually notices: sign-in, sending, dashboards.",
+    categories: ["design"],
     status: "done",
     priority: "high",
     effort: "m",
@@ -48,6 +51,7 @@ const ISSUES = [
     title: "Retry failed webhook deliveries",
     description:
       "A webhook that fails once is never retried. Back off exponentially for an hour, then park it in a dead-letter list the team can replay.",
+    categories: ["bug"],
     status: "done",
     priority: "urgent",
     effort: "l",
@@ -57,6 +61,9 @@ const ISSUES = [
   },
   {
     title: "Show the last delivery attempt on each endpoint",
+    description:
+      "When a webhook stops working, the first question is always when it last ran. Put the answer on the endpoint row.",
+    categories: ["improvement"],
     status: "done",
     priority: "medium",
     effort: "s",
@@ -66,6 +73,9 @@ const ISSUES = [
   },
   {
     title: "Rate-limit the public status API",
+    description:
+      "One integration polls the endpoint every second. Cap it per address, with a header that tells callers to slow down.",
+    categories: ["technical"],
     status: "done",
     priority: "medium",
     effort: "m",
@@ -75,6 +85,9 @@ const ISSUES = [
   },
   {
     title: "Collapse duplicate incidents into one timeline",
+    description:
+      "The same outage gets opened three times by three probes. Group them under one incident, keep every timestamp.",
+    categories: ["improvement"],
     status: "done",
     priority: "low",
     effort: "s",
@@ -86,6 +99,7 @@ const ISSUES = [
     title: "Subscribe to incidents by email",
     description:
       "Let customers follow a single service instead of the whole status page. One confirmation email, one unsubscribe link, no account required.",
+    categories: ["feature"],
     status: "in_progress",
     priority: "high",
     effort: "l",
@@ -94,6 +108,9 @@ const ISSUES = [
   },
   {
     title: "Incident templates for common outages",
+    description:
+      "Writing the first update while everything burns is the worst moment to look for words. Pre-fill the ones we send every time.",
+    categories: ["feature"],
     status: "in_progress",
     priority: "medium",
     effort: "m",
@@ -102,6 +119,9 @@ const ISSUES = [
   },
   {
     title: "Backfill uptime history from the old provider",
+    description:
+      "Two years of measurements sit in the tool we are leaving. Import them so the graphs do not start at zero.",
+    categories: ["technical"],
     status: "todo",
     priority: "medium",
     effort: "l",
@@ -110,6 +130,9 @@ const ISSUES = [
   },
   {
     title: "Publish a JSON feed of current incidents",
+    description:
+      "Customers want to surface our status inside their own dashboards. Expose exactly what the page shows, nothing more.",
+    categories: ["feature"],
     status: "todo",
     priority: "low",
     effort: "s",
@@ -118,6 +141,9 @@ const ISSUES = [
   },
   {
     title: "Custom domain for the status page",
+    description:
+      "Serve the page on status.customer.com instead of our subdomain, with the certificate issued automatically.",
+    categories: ["feature"],
     status: "backlog",
     priority: "medium",
     effort: "l",
@@ -126,6 +152,9 @@ const ISSUES = [
   },
   {
     title: "Postmortem editor with a shared template",
+    description:
+      "Every postmortem is written from scratch, in a different document. One template, attached to the incident it explains.",
+    categories: ["documentation"],
     status: "backlog",
     priority: "low",
     effort: "xl",
@@ -134,6 +163,9 @@ const ISSUES = [
   },
   {
     title: "Alert when a probe flaps more than twice an hour",
+    description:
+      "A service that goes up and down repeatedly still looks healthy on average. Catch the pattern and page someone.",
+    categories: ["improvement"],
     status: "in_review",
     priority: "high",
     effort: "m",
@@ -153,9 +185,14 @@ function describeIntent(window) {
     lines.push(`      ${status} (${list.length}) :`);
     for (const issue of list) {
       const who = issue.assignee ? ` → ${issue.assignee}` : " → non assigné";
-      lines.push(`        - ${issue.title} [${issue.priority}/${issue.effort}]${who}`);
+      const cats = (issue.categories ?? []).map(categoryLabel).join(", ");
+      lines.push(
+        `        - ${issue.title} [${issue.priority}/${issue.effort}]${who}` +
+          `${cats ? ` · ${cats}` : ""}`,
+      );
     }
   }
+  lines.push(describeMetadata(ISSUES));
   return lines.join("\n");
 }
 
@@ -183,6 +220,9 @@ async function main() {
   } else {
     console.log(`  → projet ${project.key} déjà là, réutilisé`);
   }
+
+  // Voir 002 : les catégories viennent de l'app, pas d'un trigger.
+  await ensureCategories(world, project.id);
 
   const { data: existing, error } = await world.admin
     .from("issues")
@@ -215,14 +255,16 @@ async function main() {
 
   if (rows.length === 0) {
     console.log("  → rien à ajouter, le board de Beacon est déjà complet");
-    return;
+  } else {
+    const plan = createPlan(world);
+    plan.insert("issues", rows, "ticket");
+    console.log(plan.describe());
+    await plan.apply({ confirmed: true });
+    console.log(`  → ${rows.length} ticket(s) ajoutés à ${project.key}`);
   }
 
-  const plan = createPlan(world);
-  plan.insert("issues", rows, "ticket");
-  console.log(plan.describe());
-  await plan.apply({ confirmed: true });
-  console.log(`  → ${rows.length} ticket(s) ajoutés à ${project.key}`);
+  // Descriptions et catégories — seconde passe, voir `_issues.mjs`.
+  await syncIssueMetadata(world, project, ISSUES);
 }
 
 await main();

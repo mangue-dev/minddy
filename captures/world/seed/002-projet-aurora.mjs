@@ -18,6 +18,8 @@
  *   node captures/world/seed/002-projet-aurora.mjs             # applique
  */
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
+import { categoryLabel, ensureCategories } from "./_categories.mjs";
+import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -58,12 +60,18 @@ truth and a new action can never ship without its hint.
  * Le board. Les dates sont antérieures au 15 juillet 2026, l'instant figé des
  * captures (`CAPTURE.frozenNow`), pour que les mentions « il y a 3 jours »
  * soient stables et crédibles d'un run à l'autre.
+ *
+ * CHAQUE ticket porte une description et au moins une catégorie : c'est la
+ * carte du hero qui les rend (aperçu sur trois lignes sous le titre, pastille
+ * colorée + nom en bas à droite), et une carte sans elles paraît vide. Les
+ * catégories sont désignées par clé courte — voir `_categories.mjs`.
  */
 const ISSUES = [
   {
     title: "Dark mode flickers on first paint",
     description:
       "The theme is read from localStorage after hydration, so the light palette shows for a frame before the dark one takes over. Most visible on slow connections.",
+    categories: ["bug", "design"],
     status: "in_progress",
     priority: "urgent",
     effort: "s",
@@ -75,6 +83,7 @@ const ISSUES = [
     title: "Add keyboard shortcuts to the command palette",
     description:
       "Power users live in the palette but still reach for the mouse to run an action. Show the shortcut next to each row, and make it work from anywhere in the app.",
+    categories: ["feature"],
     plan: PALETTE_PLAN,
     status: "in_progress",
     priority: "high",
@@ -88,6 +97,7 @@ const ISSUES = [
     title: "Rework the onboarding checklist",
     description:
       "Only one person in ten finishes the current checklist. Cut it to three steps and let people skip straight to the board.",
+    categories: ["design"],
     status: "in_progress",
     priority: "high",
     effort: "m",
@@ -99,6 +109,7 @@ const ISSUES = [
     title: "Cache avatar lookups on the members endpoint",
     description:
       "Every board load resolves the same handful of accounts one round-trip at a time. A short in-memory TTL removes the N+1.",
+    categories: ["technical"],
     status: "in_progress",
     priority: "medium",
     effort: "s",
@@ -110,6 +121,7 @@ const ISSUES = [
     title: "Bulk-assign issues from the board",
     description:
       "Select several rows, then assign them in one go instead of opening each ticket.",
+    categories: ["feature"],
     status: "todo",
     priority: "high",
     effort: "m",
@@ -119,6 +131,9 @@ const ISSUES = [
   },
   {
     title: "Weekly activity digest by email",
+    description:
+      "One email on Monday morning: what shipped, what moved, what stalled. Opt-in per project, unsubscribe in one click.",
+    categories: ["feature"],
     status: "todo",
     priority: "medium",
     effort: "l",
@@ -127,6 +142,9 @@ const ISSUES = [
   },
   {
     title: "Export a project as CSV",
+    description:
+      "Board data people can drop into a spreadsheet: one row per ticket, with its status, assignee and effort.",
+    categories: ["feature"],
     status: "todo",
     priority: "low",
     effort: "s",
@@ -137,6 +155,7 @@ const ISSUES = [
     title: "Fix timezone drift on due dates",
     description:
       "A due date set at 23:00 in Paris shows as the day before for anyone west of UTC. Store the date, not the instant.",
+    categories: ["bug"],
     status: "in_review",
     priority: "high",
     effort: "s",
@@ -146,6 +165,9 @@ const ISSUES = [
   },
   {
     title: "Persist the sidebar collapsed state",
+    description:
+      "Collapsing the sidebar only lasts until the next page load. Remember the choice per account, not per tab.",
+    categories: ["improvement"],
     status: "in_review",
     priority: "low",
     effort: "xs",
@@ -155,6 +177,9 @@ const ISSUES = [
   },
   {
     title: "Slack notifications for mentions",
+    description:
+      "Being mentioned in a comment should reach people where they already are. Direct message first, channel routing later.",
+    categories: ["feature"],
     status: "backlog",
     priority: "medium",
     effort: "l",
@@ -163,6 +188,9 @@ const ISSUES = [
   },
   {
     title: "Public roadmap page",
+    description:
+      "A read-only page showing what shipped, what is in progress and what is planned — fed by the board, with no second list to maintain.",
+    categories: ["feature", "design"],
     status: "backlog",
     priority: "low",
     effort: "xl",
@@ -171,6 +199,9 @@ const ISSUES = [
   },
   {
     title: "Drag issues between columns",
+    description:
+      "Moving a ticket meant opening it and changing its status. Drag the card, drop it in the column, done.",
+    categories: ["feature"],
     status: "done",
     priority: "high",
     effort: "m",
@@ -181,6 +212,9 @@ const ISSUES = [
   },
   {
     title: "Invite teammates by email",
+    description:
+      "Send an invitation from the project settings, with a link that expires after seven days.",
+    categories: ["feature"],
     status: "done",
     priority: "medium",
     effort: "s",
@@ -220,9 +254,14 @@ function describeIntent() {
     for (const issue of list) {
       const who = issue.assignee ? ` → ${issue.assignee}` : " → non assigné";
       const plan = issue.plan ? " · avec plan d'implémentation" : "";
-      lines.push(`        - ${issue.title} [${issue.priority}/${issue.effort}]${who}${plan}`);
+      const cats = (issue.categories ?? []).map(categoryLabel).join(", ");
+      lines.push(
+        `        - ${issue.title} [${issue.priority}/${issue.effort}]${who}${plan}` +
+          `${cats ? ` · ${cats}` : ""}`,
+      );
     }
   }
+  lines.push(describeMetadata(ISSUES));
   return lines.join("\n");
 }
 
@@ -249,6 +288,10 @@ async function main() {
   } else {
     console.log(`  → projet ${project.key} déjà là, réutilisé`);
   }
+
+  // Les catégories ne viennent plus d'un trigger : c'est l'app qui les sème, et
+  // les seeds écrivent en base sans passer par elle. Voir `_categories.mjs`.
+  await ensureCategories(world, project.id);
 
   // ── Les collègues ──────────────────────────────────────────────────────────
   const { data: existingMembers, error: memberError } = await world.admin
@@ -300,17 +343,22 @@ async function main() {
 
   if (missingMembers.length === 0 && missingIssues.length === 0) {
     console.log("  → rien à ajouter, le board est déjà complet");
-    return;
+  } else {
+    const plan = createPlan(world);
+    if (missingMembers.length > 0) plan.insert("project_members", missingMembers, "collègue");
+    if (missingIssues.length > 0) plan.insert("issues", missingIssues, "ticket");
+    console.log(plan.describe());
+    await plan.apply({ confirmed: true });
+    console.log(
+      `  → ${missingMembers.length} collègue(s) et ${missingIssues.length} ticket(s) ajoutés`,
+    );
   }
 
-  const plan = createPlan(world);
-  if (missingMembers.length > 0) plan.insert("project_members", missingMembers, "collègue");
-  if (missingIssues.length > 0) plan.insert("issues", missingIssues, "ticket");
-  console.log(plan.describe());
-  await plan.apply({ confirmed: true });
-  console.log(
-    `  → ${missingMembers.length} collègue(s) et ${missingIssues.length} ticket(s) ajoutés`,
-  );
+  // ── Descriptions et catégories ─────────────────────────────────────────────
+  // Seconde passe obligatoire : un rattachement de catégorie ne peut pas être
+  // inséré dans le même plan que le ticket qu'il vise. Elle rattrape aussi les
+  // tickets semés avant que ces champs n'existent dans ce fichier.
+  await syncIssueMetadata(world, project, ISSUES);
 }
 
 await main();
