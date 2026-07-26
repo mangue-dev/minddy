@@ -43,12 +43,47 @@ export const LANGS = ["fr", "en"];
 export const THEMES = ["light", "dark"];
 
 /**
- * Largeur servie. Les captures sont prises en 2× (3200 px pour un cadre de
- * 1600) : 1600 px reste du 2× pour un emplacement affiché autour de 800 px,
- * sans traîner un fichier de plusieurs mégaoctets.
+ * Largeur servie par défaut.
+ *
+ * Le composant rend `<Image unoptimized>` : Next ne génère AUCUN `srcset`, donc
+ * un seul fichier sert tous les écrans. Il doit donc porter la définition du
+ * cas le plus exigeant — un écran Retina —, soit 2× la largeur d'affichage.
+ *
+ * Mesuré sur la landing en 1920 de large, la plupart des emplacements
+ * s'affichent autour de 520-540 px (deux colonnes dans un conteneur de
+ * 1104 px). 1600 px leur donne donc déjà 3×, largement au-delà du nécessaire :
+ * pour eux, ce n'est pas la définition qui manquait, c'était la qualité.
  */
 const DEFAULT_WIDTH = 1600;
-const DEFAULT_QUALITY = 82;
+
+/**
+ * Les deux emplacements PLEINE LARGEUR, qui ne rentrent pas dans le cas
+ * général : à 1600 px ils étaient servis en dessous du 2×, et ça se voyait.
+ *
+ *   heroBoard     1102 px affichés → 1,45× à 1600. C'est la première image de
+ *                 la page, et la plus grande.
+ *   featureCycle   894 px affichés → 1,79× à 1600.
+ *
+ * Les valeurs sont 2× la largeur mesurée, arrondies au multiple de 16. Les
+ * remesurer si la largeur du conteneur de la landing change (`max-w-6xl`
+ * aujourd'hui, moins les 24 px de marge de chaque côté).
+ */
+const SLOT_WIDTHS = {
+  heroBoard: 2208,
+  featureCycle: 1792,
+};
+
+/**
+ * Qualité WebP. 82 rendait le texte d'interface pâteux — des captures d'app,
+ * c'est presque uniquement du petit texte et des bords nets, exactement ce que
+ * la compression avec pertes dégrade en premier. 92 double à peine le poids
+ * (le hero passe de 109 à 220 Ko) et rend les glyphes francs.
+ */
+const DEFAULT_QUALITY = 92;
+
+/** `effort` maximal : plus lent à l'encodage, plus petit à qualité égale. On
+    publie une poignée d'images à la main, la seconde gagnée ne vaut rien. */
+const WEBP_EFFORT = 6;
 
 /** Identifiants d'emplacement déclarés dans le catalogue. */
 export async function knownSlotIds() {
@@ -75,7 +110,9 @@ export async function publishShot({
   lang,
   theme,
   input,
-  width = DEFAULT_WIDTH,
+  // Un emplacement pleine largeur porte sa propre cible ; les autres tiennent
+  // largement dans la valeur commune. Voir `SLOT_WIDTHS`.
+  width = SLOT_WIDTHS[slot] ?? DEFAULT_WIDTH,
   quality = DEFAULT_QUALITY,
 }) {
   const slots = await knownSlotIds();
@@ -102,14 +139,20 @@ export async function publishShot({
   // jamais agrandie — ça ne ferait que la rendre floue et plus lourde.
   await image
     .resize({ width, withoutEnlargement: true })
-    .webp({ quality })
+    .webp({ quality, effort: WEBP_EFFORT })
     .toFile(output);
 
   const { size } = await stat(output);
+  const { width: servedWidth } = await sharp(output).metadata();
+
+  // La densité réellement servie : un chiffre sous 2 veut dire qu'un écran
+  // Retina interpolera l'image, et ça se voit sur du texte d'interface. C'est
+  // la seule mesure qui dise si `SLOT_WIDTHS` est encore juste.
   return {
     output,
     name: basename(output),
     sourceWidth: meta.width ?? null,
+    servedWidth: servedWidth ?? null,
     bytes: size,
   };
 }

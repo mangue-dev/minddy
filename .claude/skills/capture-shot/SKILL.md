@@ -142,6 +142,14 @@ plusieurs mégaoctets), écriture dans `public/captures/` sous le nom
 `<emplacement>-<langue>-<thème>.webp`, puis régénération de
 `components/marketing/screenshot-manifest.ts`.
 
+**La règle de définition : 2× la largeur d'affichage, au minimum.** `unoptimized`
+veut dire aucun `srcset` — un seul fichier sert tous les écrans, il doit donc
+porter le cas Retina. `publishShot` renvoie `servedWidth` : divisé par la
+largeur affichée sur la landing, ça donne la densité réelle. En dessous de 2, le
+texte d'interface est interpolé et ça se voit. Les emplacements pleine largeur
+(`heroBoard`, `featureCycle`) ont leur cible dans `SLOT_WIDTHS` ; les autres
+s'affichent autour de 530 px et tiennent largement dans la valeur commune.
+
 **Le manifeste est la sécurité du dispositif.** La landing ne pointe une image
 que si elle existe vraiment sur le disque ; sinon l'emplacement rend son cadre
 de réservation. On peut donc publier écran par écran sans jamais afficher une
