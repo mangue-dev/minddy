@@ -25,7 +25,10 @@ import {
   type BillingPlanId,
   type UsageSegmentId,
 } from "@/lib/billing-plans";
-import { useBillingSummary } from "@/lib/use-billing-query";
+import {
+  roundRemainingPercent,
+  useBillingSummary,
+} from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { NumoIcon } from "@/components/numo-icon";
 
@@ -65,7 +68,7 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
 
 export function UsageIndicator() {
   const t = useTranslations("Billing");
-  const { loading, percent, state } = useBillingSummary();
+  const { loading, remainingPercent, state } = useBillingSummary();
   const [open, setOpen] = useState(false);
 
   const stateClass =
@@ -88,7 +91,9 @@ export function UsageIndicator() {
           )}
         >
           <Gauge className="size-[15px]" strokeWidth={2} />
-          {loading ? "…" : t("usagePercent", { percent: Math.round(percent) })}
+          {loading
+            ? "…"
+            : t("usagePercent", { percent: roundRemainingPercent(remainingPercent) })}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8} className="w-80 p-0">
@@ -100,9 +105,9 @@ export function UsageIndicator() {
 }
 
 /**
- * En-tête (% consommé + chip de plan), barre segmentée avec survol par type,
- * dépensé/restant en USD, date de reset et lignes du détail. Autonome (lit
- * `useBillingSummary`) — l'appelant possède la coquille (popover ou carte).
+ * En-tête (% RESTANT + chip de plan), jauge qui se vide avec survol par type,
+ * date de reset et lignes du détail. Autonome (lit `useBillingSummary`) —
+ * l'appelant possède la coquille (popover ou carte).
  *
  * @param bordered Sépare les blocs par des bordures hautes (carte settings) ;
  *   omis pour le popover.
@@ -110,8 +115,15 @@ export function UsageIndicator() {
 export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean }) {
   const t = useTranslations("Billing");
   const locale = useLocale();
-  const { loading, planId, includedUsd, percent, state, segments, nextResetAt } =
-    useBillingSummary();
+  const {
+    loading,
+    planId,
+    includedUsd,
+    remainingPercent,
+    state,
+    segments,
+    nextResetAt,
+  } = useBillingSummary();
 
   const [hoveredId, setHoveredId] = useState<UsageSegmentId | null>(null);
 
@@ -122,17 +134,20 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
     ...SEGMENT_UI[segment.id],
   }));
 
-  // Les segments tuilent la barre consécutivement (même échelle que le
-  // remplissage, dénominateur = budget) : le segment survolé commence après la
-  // largeur cumulée des types précédents — il s'allume en place, pas depuis le
-  // bord gauche. Une ligne à zéro n'apporte aucun segment.
+  // La jauge affiche le RESTANT : elle est pleine au début de la période et se
+  // vide par la droite. Les types consommés tuilent donc consécutivement la
+  // portion vidée (même échelle, dénominateur = budget), à partir du bord du
+  // remplissage : le segment survolé s'allume en place. Une ligne à zéro
+  // n'apporte aucun segment.
   const hoveredIndex = rows.findIndex((row) => row.id === hoveredId);
   const hovered = hoveredIndex >= 0 ? rows[hoveredIndex] : null;
   const usdBefore = hovered
     ? rows.slice(0, hoveredIndex).reduce((sum, row) => sum + row.usd, 0)
     : 0;
   const hoveredOffset =
-    hovered && includedUsd > 0 ? Math.min((usdBefore / includedUsd) * 100, 100) : 0;
+    hovered && includedUsd > 0
+      ? Math.min(remainingPercent + (usdBefore / includedUsd) * 100, 100)
+      : 0;
   const hoveredWidth =
     hovered && hovered.usd > 0 && includedUsd > 0
       ? Math.min((hovered.usd / includedUsd) * 100, 100 - hoveredOffset)
@@ -160,7 +175,7 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-semibold tabular-nums leading-none text-foreground">
-            {loading ? "—" : `${Math.round(percent)}%`}
+            {loading ? "—" : `${roundRemainingPercent(remainingPercent)}%`}
           </span>
           <span className="text-sm text-muted-foreground">
             {t("ofBudget")}
@@ -173,19 +188,15 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
 
       <div className={cn("space-y-2 px-4 py-3", bordered && "border-t border-border")}>
         <div className="relative">
-          {/* Le remplissage de base s'estompe pendant le survol pour que le
-              segment coloré du type se lise clairement, même à teinte proche. */}
+          {/* Remplissage = budget restant : plein à la remise à zéro, vide une
+              fois le budget consommé. */}
           <Progress
-            value={loading ? 0 : percent}
-            className={cn(
-              "h-1.5",
-              indicatorClass,
-              hoveredWidth > 0 && "[&>div]:opacity-40"
-            )}
+            value={loading ? 0 : remainingPercent}
+            className={cn("h-1.5", indicatorClass)}
           />
-          {/* Surcouche de survol : peint le segment du type survolé en place,
-              dans sa couleur. Glisse à sa position et s'étire ; largeur 0 +
-              fondu au repos. */}
+          {/* Surcouche de survol : peint le segment du type survolé en place
+              dans la portion consommée, dans sa couleur. Glisse à sa position
+              et s'étire ; largeur 0 + fondu au repos. */}
           <div
             aria-hidden
             className={cn(
@@ -207,6 +218,11 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
       </div>
 
       <div className={cn("px-4 py-3", bordered && "border-t border-border")}>
+        {/* La jauge compte le restant, le détail compte le consommé : on le dit,
+            sinon les deux pourcentages se lisent dans le même sens. */}
+        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+          {t("breakdownTitle")}
+        </p>
         <ul className="space-y-1">
           {rows.map((row) => {
             const rowPercent =

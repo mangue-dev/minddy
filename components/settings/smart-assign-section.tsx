@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Badge, Button, Spinner, Switch, toast } from "mangue-ui";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";
-import { initials as toInitials } from "@/lib/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { SettingsSection } from "@/components/settings-shell";
 import { AutoTextarea } from "@/components/auto-textarea";
@@ -128,9 +128,12 @@ export function SmartAssignSection({
                     htmlFor={`smart-assign-rule-${m.user_id}`}
                     className="flex items-center gap-2 text-sm font-medium"
                   >
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-                      {toInitials(displayName(m, "?"))}
-                    </span>
+                    <UserAvatar
+                      url={m.avatar_url}
+                      name={displayName(m)}
+                      seed={m.user_id}
+                      className="size-6 text-[10px]"
+                    />
                     <span className="truncate">{displayName(m)}</span>
                     {m.is_owner && (
                       <Badge variant="secondary">{tm("owner")}</Badge>

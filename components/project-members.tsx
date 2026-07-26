@@ -5,13 +5,9 @@ import { useTranslations } from "next-intl";
 import { Badge, Button, Input, Spinner, toast } from "mangue-ui";
 import { UserPlus, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
-import { initials as toInitials } from "@/lib/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
 import type { Member } from "@/lib/types";
-
-function initials(m: Member): string {
-  return toInitials(resolveDisplayName(m, "?"));
-}
 
 function displayName(m: Member): string {
   return resolveDisplayName(m);
@@ -96,9 +92,12 @@ export function ProjectMembers({
           <ul className="flex flex-col divide-y divide-border">
             {members.map((m) => (
               <li key={m.user_id} className="flex items-center gap-3 py-2">
-                <span className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                  {initials(m)}
-                </span>
+                <UserAvatar
+                  url={m.avatar_url}
+                  name={displayName(m)}
+                  seed={m.user_id}
+                  className="size-8 text-xs"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{displayName(m)}</p>
                   {m.email && m.full_name && (

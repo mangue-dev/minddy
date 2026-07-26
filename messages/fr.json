@@ -233,7 +233,8 @@
   "Billing": {
     "usageAria": "Usage du plan",
     "usagePercent": "{percent} %",
-    "ofBudget": "du budget IA utilisé",
+    "ofBudget": "du budget IA restant",
+    "breakdownTitle": "Déjà consommé",
     "planFree": "Free",
     "planGo": "Go",
     "planPro": "Pro",
