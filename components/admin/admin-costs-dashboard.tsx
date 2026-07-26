@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Separator, Skeleton, Spinner } from "mangue-ui";
+import { ModelBadge } from "@/components/model-badge";
 
 /**
  * Dashboard admin du suivi des coûts LLM (`/admin` → onglet « Coûts IA »).
@@ -139,12 +140,13 @@ export function AdminCostsDashboard() {
   );
 
   return (
-    <div className="mx-auto max-w-[880px] space-y-8 p-4 md:p-8">
+    /* La largeur et les marges viennent du shell (`admin-dashboard`) : les
+       quatre onglets partagent un seul conteneur, sinon leurs contenus ne
+       s'alignent pas d'un onglet à l'autre. */
+    <div className="space-y-8">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">
-            {t("costs.title")}
-          </h1>
+          <h2 className="text-sm font-semibold">{t("costs.title")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("costs.subtitle")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1 rounded-lg bg-muted p-[3px]">
@@ -406,8 +408,14 @@ function RunRowItem({
                       <td className="py-1 pr-3 tabular-nums text-muted-foreground">
                         {c.seq + 1}
                       </td>
-                      <td className="py-1 pr-3 font-mono text-[11px]">
-                        {c.model ?? "—"}
+                      {/* Le modèle se lit par sa marque, pas par son slug
+                          OpenRouter : logo + nom formaté, l'id brut au survol. */}
+                      <td className="py-1 pr-3">
+                        {c.model ? (
+                          <ModelBadge model={c.model} size={12} />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="py-1 pr-3 text-right tabular-nums text-muted-foreground">
                         {fmtInt(c.prompt_tokens)}

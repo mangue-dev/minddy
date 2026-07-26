@@ -4,11 +4,24 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
 
 /**
- * Catalogue de modèles du provider ACTIF (BYOK ou clé plateforme) pour le picker
- * de l'agent (MIN-46). Alimenté par `/api/agent/models`. `staleTime` long : le
- * catalogue bouge lentement. La clé de query est invalidée quand le BYOK change
+ * Catalogue de modèles pour le picker (MIN-46). `staleTime` long : le catalogue
+ * bouge lentement. La clé de query est invalidée quand le BYOK change
  * (cf. account-ai-keys-section) → le provider et la liste se rafraîchissent.
+ *
+ * Deux portées :
+ *  - `user` (défaut) → `/api/agent/models`, le provider ACTIF du compte (son
+ *    BYOK ou la clé plateforme) : ce que SON agent peut lancer ;
+ *  - `platform` → `/api/admin/models-catalog`, la clé plateforme OpenRouter
+ *    sans filtre tool-calling, pour la config admin (MIN-90). Le BYOK de l'admin
+ *    n'a rien à faire là : `app_config` tourne sur la plateforme.
  */
+
+export type AgentModelsScope = "user" | "platform";
+
+const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
+  user: "/api/agent/models",
+  platform: "/api/admin/models-catalog",
+};
 
 export interface AgentModel {
   id: string;
@@ -24,8 +37,8 @@ interface AgentModelsResult {
   models: AgentModel[];
 }
 
-async function fetchAgentModels(): Promise<AgentModelsResult> {
-  const res = await fetch("/api/agent/models");
+async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsResult> {
+  const res = await fetch(SCOPE_ENDPOINTS[scope]);
   if (!res.ok) return { provider: DEFAULT_AGENT_PROVIDER, defaultModel: null, models: [] };
   const data = (await res.json()) as {
     provider?: AgentProviderId;
@@ -39,10 +52,11 @@ async function fetchAgentModels(): Promise<AgentModelsResult> {
   };
 }
 
-export function useAgentModelsQuery() {
+export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
   const { data, isLoading } = useQuery({
-    queryKey: agentModelsQueryKey,
-    queryFn: fetchAgentModels,
+    // Une portée = un catalogue : les deux ne doivent jamais partager un cache.
+    queryKey: scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope],
+    queryFn: () => fetchAgentModels(scope),
     staleTime: 60 * 60 * 1000,
   });
   return {

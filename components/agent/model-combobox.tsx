@@ -20,7 +20,10 @@ import {
 } from "mangue-ui";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import {
+  useAgentModelsQuery,
+  type AgentModelsScope,
+} from "@/lib/use-agent-models-query";
 
 /**
  * Picker de modèle recherchable de l'agent (MIN-46). Recherche dans le catalogue
@@ -45,6 +48,7 @@ export function ModelCombobox({
   disabled,
   disabledTooltip,
   variant = "field",
+  scope = "user",
 }: {
   /** "" = suit mon modèle par défaut ; sinon un id de modèle. */
   value: string;
@@ -68,8 +72,13 @@ export function ModelCombobox({
    * `compact` : petit pill (logo + nom) pour la barre d'un composer de chat.
    */
   variant?: "field" | "compact";
+  /**
+   * Catalogue interrogé. `user` (défaut) = le provider actif du compte ;
+   * `platform` = la clé plateforme OpenRouter, pour la config admin.
+   */
+  scope?: AgentModelsScope;
 }) {
-  const { provider, models, loading } = useAgentModelsQuery();
+  const { provider, models, loading } = useAgentModelsQuery(scope);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -210,9 +219,7 @@ export function ModelCombobox({
             {results.map((m) => (
               <CommandItem key={m.id} value={m.id} onSelect={() => select(m.id)}>
                 {logoFor(m.id)}
-                <span className="flex-1 truncate" title={m.id}>
-                  {formatModelName(m.id)}
-                </span>
+                <span className="flex-1 truncate">{formatModelName(m.id)}</span>
                 <Check
                   className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")}
                 />

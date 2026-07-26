@@ -69,6 +69,21 @@ export async function getAppConfigValues(
   return result;
 }
 
+/**
+ * Remet une clé à son défaut PRODUIT en supprimant sa ligne : la lecture
+ * retombe alors sur le `fallback` du registre (`lib/ai-model-config.ts`), qui
+ * suivra les futurs changements de défaut. Écrire l'id du défaut à la place
+ * figerait le réglage sur la valeur d'aujourd'hui.
+ */
+export async function clearAppConfigValue(key: string): Promise<void> {
+  const supabase = getServiceClient();
+  const { error } = await supabase.from("app_config").delete().eq("key", key);
+  if (error) {
+    throw new Error(`Failed to clear app_config[${key}]: ${error.message}`);
+  }
+  cache.delete(key); // invalidate immediately
+}
+
 export async function setAppConfigValue(key: string, value: string): Promise<void> {
   const supabase = getServiceClient();
   const { error } = await supabase

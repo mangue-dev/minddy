@@ -2,6 +2,7 @@ import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants"
 import type { ObjectiveStatus } from "./objective-constants";
 import type { CycleIntensity } from "./cycle-prefs";
 import type { RepoProviderId } from "./repo-providers";
+import type { BillingPlanId } from "./billing-plans";
 
 export interface Objective {
   id: string;
@@ -741,4 +742,109 @@ export interface CandidateRepo {
   name: string;
   full_name: string;
   default_branch: string | null;
+}
+
+// ── Console d'administration (MIN-90) ────────────────────────────────────────
+// Miroir exact de ce que renvoient `/api/admin/users` et `/api/admin/overview`.
+// Ces écrans sont réservés aux admins (`lib/server/admin.ts`) : à la différence
+// du reste de l'app, ils affichent l'email brut — c'est l'identifiant avec
+// lequel un admin travaille (support, override, recherche).
+
+/** Un compte, tel que la vue « Utilisateurs » du dashboard admin le montre. */
+export interface AdminUserRow {
+  userId: string;
+  /** Nom d'affichage résolu (lib/display-name), jamais l'email brut. */
+  name: string;
+  email: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  /** Dernière CONNEXION (ne bouge pas au rafraîchissement de jeton). */
+  lastSignInAt: string | null;
+  /** Dernier signe de vie, connexion ou trace d'activité — cf. la migration. */
+  lastActivityAt: string | null;
+  emailConfirmed: boolean;
+  /**
+   * Compte INTERNE (équipe, démo, bot) : il reste listé et administrable ici,
+   * mais ne compte dans aucune statistique de la vue d'ensemble.
+   */
+  internal: boolean;
+  /** Projets possédés + projets rejoints. */
+  projects: number;
+  projectsOwned: number;
+  /** Tickets des projets auxquels il a accès. */
+  issues: number;
+  /** Tickets écrits de sa main. */
+  issuesCreated: number;
+  onboarding: {
+    /** L'onboarding lui a été présenté au moins une fois. */
+    started: boolean;
+    completed: number;
+    total: number;
+    allComplete: boolean;
+    dismissed: boolean;
+    /** Étape en cours, null si tout est franchi. */
+    currentStep: string | null;
+  };
+  billing: {
+    planId: BillingPlanId;
+    /** Miroir de BillingPlanSource (lib/server/billing-accounts, server-only). */
+    source: "admin_override" | "stripe" | "default";
+    override: BillingPlanId | null;
+    overrideNote: string | null;
+    stripePlanId: string | null;
+    stripeStatus: string | null;
+  };
+  usage: {
+    /** Budget mensuel inclus par son plan (USD de coût brut). */
+    budgetUsd: number;
+    /** Ce que le budget compte vraiment (fenêtre réelle + remise à zéro). */
+    spentUsd: number;
+    /** Dépense réelle du mois calendaire — intacte après une remise à zéro. */
+    spentMonthUsd: number;
+    calls: number;
+    blocked: boolean;
+    /** Filigrane de remise à zéro admin, s'il y en a un. */
+    resetAt: string | null;
+  };
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserRow[];
+  /** Nombre de comptes correspondant à la recherche, avant pagination. */
+  total: number;
+}
+
+/** Un jour de la série d'activité de la vue d'ensemble. */
+export interface AdminOverviewDay {
+  day: string;
+  signups: number;
+  active: number;
+}
+
+/**
+ * Tout ce que porte cet objet EXCLUT les comptes internes — c'est le point de
+ * la vue d'ensemble. `internalUsers` dit combien ont été mis de côté, pour
+ * qu'un chiffre en baisse reste explicable.
+ */
+export interface AdminOverview {
+  totalUsers: number;
+  internalUsers: number;
+  newUsers7d: number;
+  newUsers30d: number;
+  activeToday: number;
+  active7d: number;
+  active30d: number;
+  totalProjects: number;
+  totalIssues: number;
+  days: AdminOverviewDay[];
+  /** Comptes par plan effectif (override admin → Stripe → free). */
+  plans: Array<{ planId: BillingPlanId; count: number }>;
+  onboarding: {
+    /** Comptes à qui l'onboarding a été présenté. */
+    started: number;
+    /** Parmi eux, ceux qui ont franchi les quatre étapes. */
+    completed: number;
+    /** Parmi eux, ceux qui l'ont explicitement passé. */
+    dismissed: number;
+  };
 }

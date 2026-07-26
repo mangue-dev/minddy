@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
-import { getAppConfigValues, setAppConfigValue } from "@/lib/server/app-config";
+import {
+  clearAppConfigValue,
+  getAppConfigValues,
+  setAppConfigValue,
+} from "@/lib/server/app-config";
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_KEYS,
@@ -35,7 +39,9 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/admin/app-config — set one AI knob. Only registry keys are
- * writable; flags must be "true"/"false"; model ids must be non-empty.
+ * writable; flags must be "true"/"false". A model key accepts an EMPTY value,
+ * which clears the row so the registry fallback applies again — that's the
+ * picker's "default model" option (MIN-90).
  */
 export async function PATCH(request: NextRequest) {
   const denied = await requireAdmin(request);
@@ -67,12 +73,13 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
-  } else if (!trimmed) {
-    return NextResponse.json({ error: "Value is required" }, { status: 400 });
   }
 
   try {
-    await setAppConfigValue(key, trimmed);
+    // Modèle vidé = retour au défaut du registre : on supprime la ligne plutôt
+    // que d'y écrire l'id du défaut, pour que le réglage suive ses évolutions.
+    if (!isFlagKey(key) && !trimmed) await clearAppConfigValue(key);
+    else await setAppConfigValue(key, trimmed);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     console.error("[admin/app-config PATCH]", message);

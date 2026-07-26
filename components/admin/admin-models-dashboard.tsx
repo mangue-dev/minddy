@@ -2,16 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Input,
-  Separator,
-  Skeleton,
-  Spinner,
-  Switch,
-  toast,
-} from "mangue-ui";
+import { Separator, Skeleton, Spinner, Switch, toast } from "mangue-ui";
 import { SettingsSection } from "@/components/settings-shell";
+import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_GROUPS,
@@ -78,11 +71,11 @@ export function AdminModelsDashboard() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-[880px] space-y-8 p-4 md:p-8">
+    /* Largeur et marges héritées du shell (`admin-dashboard`) — un seul
+       conteneur pour les quatre onglets. */
+    <div className="space-y-8">
       <header>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
+        <h2 className="text-sm font-semibold">{t("title")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </header>
 
@@ -158,6 +151,20 @@ function ConfigRow({
   );
 }
 
+/**
+ * Un réglage de modèle. Le contrôle est le picker de l'app (`ModelCombobox`,
+ * portée `platform`) : on choisit une MARQUE et un NOM — l'id OpenRouter ne
+ * s'affiche nulle part, c'est un détail de transport.
+ *
+ * Le catalogue vient de la clé plateforme, pas du BYOK de l'admin qui regarde :
+ * ces modèles-là tournent sur la plateforme, un id Anthropic écrit ici serait
+ * cassé au runtime. La saisie libre reste offerte (un modèle tout juste sorti
+ * peut manquer au catalogue), et « modèle par défaut » efface le réglage — il
+ * suit alors le défaut produit au lieu d'être figé sur sa valeur du jour.
+ *
+ * Plus de bouton « Enregistrer » : un choix dans une liste est un acte unique,
+ * il s'enregistre à la sélection (comme l'interrupteur de `FlagRow`).
+ */
 function ModelRow({
   field,
   label,
@@ -172,19 +179,14 @@ function ModelRow({
   onSaved: (key: string, value: string) => void;
 }) {
   const t = useTranslations("Admin");
-  const tCommon = useTranslations("Common");
+  // Les libellés du picker vivent dans le namespace Agent : c'est le MÊME
+  // composant que celui de l'agent, tous ses points d'usage les partagent.
+  const tAgent = useTranslations("Agent");
   const saved = value ?? "";
-  const [draft, setDraft] = useState(saved);
   const [busy, setBusy] = useState(false);
 
-  // Re-sync when the loaded value arrives / changes underneath us.
-  useEffect(() => setDraft(saved), [saved]);
-
-  const dirty = draft.trim() !== saved.trim();
-
-  const save = async () => {
-    const next = draft.trim();
-    if (!next || !dirty || busy) return;
+  const select = async (next: string) => {
+    if (busy || next === saved) return;
     setBusy(true);
     try {
       await patchConfig(field.key, next);
@@ -199,32 +201,22 @@ function ModelRow({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={`cfg-${field.key}`} className="text-sm font-medium">
-        {label}
-      </label>
+      <span className="text-sm font-medium">{label}</span>
       {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
-      <div className="mt-1 flex items-center gap-2">
-        <Input
-          id={`cfg-${field.key}`}
-          value={draft}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          placeholder={field.fallback}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void save();
-          }}
-          className="max-w-md font-mono text-[13px]"
+      <div className="mt-1 flex max-w-md items-center gap-2">
+        <ModelCombobox
+          scope="platform"
+          value={saved}
+          onChange={(next) => void select(next)}
+          disabled={busy}
+          defaultLabel={t("fieldDefault")}
+          defaultModelId={field.fallback}
+          placeholder={tAgent("modelSearchPlaceholder")}
+          emptyLabel={tAgent("modelSearchEmpty")}
+          loadingLabel={tAgent("modelSearchLoading")}
+          freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
         />
-        <Button
-          type="button"
-          onClick={() => void save()}
-          disabled={busy || !dirty || !draft.trim()}
-        >
-          {busy && <Spinner />}
-          {tCommon("save")}
-        </Button>
+        {busy ? <Spinner className="shrink-0" /> : null}
       </div>
     </div>
   );

@@ -150,3 +150,37 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
     return { provider, defaultModel, models: hit?.models ?? [] };
   }
 }
+
+/**
+ * Catalogue de la clé PLATEFORME (OpenRouter), pour le dashboard admin.
+ *
+ * Différence assumée avec `getAgentModelsForUser` : on ignore le BYOK de l'admin
+ * qui regarde. Les modèles d'`app_config` tournent tous sur la clé plateforme —
+ * proposer le catalogue Anthropic d'un admin en BYOK ferait écrire des ids
+ * inutilisables au runtime.
+ *
+ * Le filtre tool-calling est CONSERVÉ : presque tous les réglages admin
+ * (Numo, assignation, classification, analyse) forcent un tool call et casseraient
+ * sur un modèle qui n'en fait pas. Restent deux réglages non conversationnels —
+ * transcription et embeddings — que le catalogue d'OpenRouter n'expose de toute
+ * façon PAS (son `/models` ne liste que des modèles de chat) : ils se règlent par
+ * la saisie libre du picker, et c'est le seul chemin possible.
+ *
+ * Même contrat de robustesse que le catalogue utilisateur : ne lève jamais.
+ */
+export async function getPlatformModelCatalog(): Promise<AgentModelEntry[]> {
+  const baseUrl = normalizeBaseUrl(resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!);
+  const apiKey = process.env.OPENROUTER_API_KEY;
+
+  const cacheKey = `platform|${baseUrl}`;
+  const hit = cache.get(cacheKey);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.models;
+
+  try {
+    const models = await listOpenRouter(baseUrl, apiKey);
+    cache.set(cacheKey, { at: Date.now(), models });
+    return models;
+  } catch {
+    return hit?.models ?? [];
+  }
+}
