@@ -265,6 +265,12 @@ export interface Project {
   /** Smart Assign rules, user_id → free text describing the member's preferred
       tasks (kept on the project — the owner has no project_members row). */
   smart_assign_rules: Record<string, string>;
+  /** Numo reviews incoming feedback (categorize, junk, sensitive) before it is
+      published. Off means feedback goes out as submitted. */
+  feedback_review_enabled: boolean;
+  /** When the review is on but the owner's AI budget is spent: publish without
+      review instead of holding the feedback back. */
+  feedback_review_skip_over_budget: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -285,6 +291,8 @@ export interface ProjectUpdateInput {
   smart_assign_enabled?: boolean;
   auto_assign_enabled?: boolean;
   smart_assign_rules?: Record<string, string>;
+  feedback_review_enabled?: boolean;
+  feedback_review_skip_over_budget?: boolean;
 }
 
 export interface Member {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,9 +34,12 @@ import {
   Info,
   MessagesSquare,
   RefreshCw,
+  Sparkles,
+  TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
+import { useProjects } from "@/lib/projects-context";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
   CustomDomainSection,
@@ -498,7 +501,107 @@ export function ProjectFeedbackSettings({
           </Collapsible>
         </div>
       </Channel>
+
+      {/* ── Revue par Numo : s'applique aux trois canaux ────────────────── */}
+      <NumoReviewSetting projectId={projectId} isOwner={isOwner} />
     </div>
+  );
+}
+
+/**
+ * Revue par Numo — l'étape qui catégorise, filtre et modère chaque retour avant
+ * publication. Deux interrupteurs, sur le projet (pas sur le board : la revue
+ * couvre aussi l'API et la saisie interne).
+ *
+ * Le second n'existe que tant que le premier est armé : il ne répond qu'à la
+ * question « et si le budget IA est épuisé ? ». Désarmer la revue est possible
+ * mais déconseillé, d'où l'avertissement en clair plutôt qu'un simple libellé.
+ */
+function NumoReviewSetting({
+  projectId,
+  isOwner,
+}: {
+  projectId: string;
+  isOwner: boolean;
+}) {
+  const t = useTranslations("Settings");
+  const { projects, updateProject } = useProjects();
+  const project = projects.find((p) => p.id === projectId);
+
+  // Miroir local pour que les switches suivent le doigt, puis reconciliation
+  // depuis le projet (refetch) — le pattern de SmartAssignSection.
+  const [reviewOn, setReviewOn] = useState(project?.feedback_review_enabled !== false);
+  const [skipOn, setSkipOn] = useState(
+    project?.feedback_review_skip_over_budget === true,
+  );
+  useEffect(() => {
+    if (!project) return;
+    setReviewOn(project.feedback_review_enabled !== false);
+    setSkipOn(project.feedback_review_skip_over_budget === true);
+  }, [project]);
+
+  if (!project) return null;
+
+  const patch = async (
+    field: "feedback_review_enabled" | "feedback_review_skip_over_budget",
+    next: boolean,
+    revert: (value: boolean) => void,
+  ) => {
+    revert(next);
+    try {
+      await updateProject(projectId, { [field]: next });
+    } catch (e) {
+      revert(!next);
+      toast.error((e as Error).message);
+    }
+  };
+
+  return (
+    <Channel
+      icon={Sparkles}
+      title={t("feedbackReviewTitle")}
+      hint={t("feedbackReviewDesc")}
+      help={t("feedbackReviewHelp")}
+      status={
+        <StatusPill
+          active={reviewOn}
+          label={reviewOn ? t("feedbackActive") : t("feedbackInactive")}
+        />
+      }
+      control={
+        <Switch
+          checked={reviewOn}
+          disabled={!isOwner}
+          onCheckedChange={(v) =>
+            void patch("feedback_review_enabled", v, setReviewOn)
+          }
+        />
+      }
+    >
+      {!reviewOn && (
+        <div className="py-3.5">
+          <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+            {t("feedbackReviewOffWarning")}
+          </p>
+        </div>
+      )}
+      {reviewOn && (
+        <Row
+          label={t("feedbackReviewSkipLabel")}
+          hint={t("feedbackReviewSkipDesc")}
+          control={
+            <Switch
+              checked={skipOn}
+              disabled={!isOwner}
+              onCheckedChange={(v) =>
+                void patch("feedback_review_skip_over_budget", v, setSkipOn)
+              }
+            />
+          }
+        />
+      )}
+    </Channel>
   );
 }
 

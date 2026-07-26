@@ -1,7 +1,12 @@
 import "server-only";
 
+import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { embedText, toVectorLiteral } from "@/lib/server/embeddings";
+import {
+  isFeedbackReviewEnabled,
+  reviewFeedbackPost,
+} from "@/lib/server/feedback/review";
 import {
   insertNotifications,
   projectMemberIds,
@@ -55,6 +60,8 @@ export interface FeedbackPostRow {
   suggested_confidence: number | null;
   source: FeedbackPostSource;
   analyzed_at: string | null;
+  /** Échecs consécutifs de la passe de revue — 3 = abandon (MIN-87). */
+  analysis_failures: number;
   team_response: string | null;
   team_response_at: string | null;
   created_at: string;
@@ -63,7 +70,7 @@ export interface FeedbackPostRow {
 
 /** Colonnes rendues aux appelants — jamais l'embedding (payload inutile). */
 export const FEEDBACK_POST_SELECT =
-  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, team_response, team_response_at, created_at, updated_at";
+  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, team_response, team_response_at, created_at, updated_at";
 
 export type CreateFeedbackPostResult =
   | { ok: true; post: FeedbackPostRow }
@@ -91,10 +98,22 @@ export async function createFeedbackPost(input: {
   const body = (input.body ?? "").trim().slice(0, FEEDBACK_BODY_MAX);
   if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
 
+  // Usage imputé au projet SEULEMENT : `authorId` est un `feedback_users.id`
+  // (un visiteur du board), pas un compte auth — le poser dans `ai_usage.user_id`
+  // violait la FK vers auth.users et faisait perdre la ligne à chaque soumission.
+  // `recordAiUsage` impute au owner du projet, celui dont le budget autorise l'appel.
   const embedding = await embedText(body ? `${title}\n\n${body}` : title, {
     timeoutMs: EMBED_TIMEOUT_MS,
-    record: { projectId: input.projectId, userId: input.authorId },
+    record: { projectId: input.projectId },
   });
+
+  // Revue avant publication (MIN-54) : les soumissions board/API attendent la
+  // passe IA (modération + catégorisation) avant d'apparaître sur le board ; la
+  // saisie interne (équipe de confiance) est publiée d'emblée. Si la revue est
+  // désarmée — kill-switch d'instance ou réglage du projet — retenir les posts
+  // n'aurait aucun sens : personne ne viendrait les publier.
+  const reviewEnabled = await isFeedbackReviewEnabled(input.projectId);
+  const heldForReview = input.source !== "internal" && reviewEnabled;
 
   const { data, error } = await service
     .from("feedback_posts")
@@ -107,10 +126,7 @@ export async function createFeedbackPost(input: {
       submitted_title: title,
       submitted_body: body,
       is_public: input.isPublic ?? true,
-      // Revue avant publication (MIN-54) : les soumissions board/API attendent la
-      // passe IA (catégorisation + modération) avant d'apparaître sur le board ;
-      // la saisie interne (équipe de confiance) est publiée d'emblée.
-      review_state: input.source === "internal" ? "published" : "pending",
+      review_state: heldForReview ? "pending" : "published",
       source: input.source,
       embedding: embedding ? toVectorLiteral(embedding) : null,
     })
@@ -148,6 +164,23 @@ export async function createFeedbackPost(input: {
     createdByMember: input.createdByMember ?? null,
     integrationId: input.integrationId ?? null,
   });
+
+  // Revue immédiate (MIN-87), après la réponse : un retour retenu pour revue
+  // apparaît sur le board en quelques secondes au lieu d'attendre le cron
+  // horaire. Le cron reste le filet de sécurité (LLM en panne, budget à sec) ; le
+  // claim empêche les deux de traiter le même post. Best-effort de bout en bout :
+  // hors contexte de requête, `after` lève — la revue attendra simplement le cron.
+  try {
+    after(async () => {
+      try {
+        await reviewFeedbackPost(post.id, post.project_id);
+      } catch (e) {
+        console.error("[feedback-posts] inline review failed:", (e as Error).message);
+      }
+    });
+  } catch {
+    // Pas de contexte de requête (script, worker) : le cron s'en chargera.
+  }
 
   // Inbox (MIN-82) : un feedback qui ARRIVE (board public / API) prévient toute
   // l'équipe — sans ça, on ne découvre les retours qu'en ouvrant le board. La

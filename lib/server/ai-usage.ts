@@ -118,8 +118,53 @@ function toRow(input: AiUsageInput) {
 }
 
 /**
+ * Imputation des jobs de fond (MIN-87) — cache court des owners de projet.
+ *
+ * Le budget d'usage est compté PAR USER (`get_user_usage_since` filtre sur
+ * `user_id`) : une ligne sans `user_id` n'entre donc dans le compteur de
+ * personne. Or les passes de fond (revue du feedback, smart-assign, embeddings
+ * du board public) sont AUTORISÉES par le budget du owner du projet
+ * (`ownerHasUsageBudget`) — les laisser hors compteur revenait à ouvrir une
+ * consommation illimitée à côté de la porte qui la garde. Tout appel rattaché à
+ * un projet est donc imputé à son owner quand aucun utilisateur n'est nommé.
+ */
+const OWNER_CACHE_TTL_MS = 60_000;
+const ownerCache = new Map<string, { ownerId: string | null; expiresAt: number }>();
+
+async function resolveProjectOwners(projectIds: string[]): Promise<Map<string, string | null>> {
+  const now = Date.now();
+  const resolved = new Map<string, string | null>();
+  const missing: string[] = [];
+  for (const id of new Set(projectIds)) {
+    const cached = ownerCache.get(id);
+    if (cached && cached.expiresAt > now) resolved.set(id, cached.ownerId);
+    else missing.push(id);
+  }
+  if (missing.length === 0) return resolved;
+
+  const service = getServiceClient();
+  const { data } = await service.from("projects").select("id, owner_id").in("id", missing);
+  for (const row of (data ?? []) as { id: string; owner_id: string | null }[]) {
+    resolved.set(row.id, row.owner_id);
+    ownerCache.set(row.id, { ownerId: row.owner_id, expiresAt: now + OWNER_CACHE_TTL_MS });
+  }
+  // Projet introuvable : on mémorise l'absence pour ne pas re-interroger en boucle.
+  for (const id of missing) {
+    if (!resolved.has(id)) {
+      resolved.set(id, null);
+      ownerCache.set(id, { ownerId: null, expiresAt: now + OWNER_CACHE_TTL_MS });
+    }
+  }
+  return resolved;
+}
+
+/**
  * Enregistre un (ou plusieurs) appel(s) IA dans le ledger `ai_usage`. Best-effort :
  * log l'erreur et l'avale — n'interrompt jamais l'appelant.
+ *
+ * Les lignes sans `userId` mais rattachées à un projet sont imputées au owner du
+ * projet : c'est lui qui paye l'IA déclenchée par son board public ou par les
+ * passes de fond, et c'est son budget qui les autorise.
  */
 export async function recordAiUsage(
   input: AiUsageInput | AiUsageInput[]
@@ -127,6 +172,17 @@ export async function recordAiUsage(
   const rows = (Array.isArray(input) ? input : [input]).map(toRow);
   if (rows.length === 0) return;
   try {
+    const orphans = rows
+      .filter((r) => !r.user_id && r.project_id)
+      .map((r) => r.project_id as string);
+    if (orphans.length > 0) {
+      const owners = await resolveProjectOwners(orphans);
+      for (const row of rows) {
+        if (!row.user_id && row.project_id) {
+          row.user_id = owners.get(row.project_id) ?? null;
+        }
+      }
+    }
     const service = getServiceClient();
     const { error } = await service.from("ai_usage").insert(rows);
     if (error) console.error("[ai-usage] insert failed:", error.message);

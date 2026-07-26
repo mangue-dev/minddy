@@ -67,6 +67,15 @@ export async function updateProjectSettings({
   if (typeof input.auto_assign_enabled === "boolean") {
     updates.auto_assign_enabled = input.auto_assign_enabled;
   }
+  // Revue Numo du feedback : deux interrupteurs indépendants du plan (les
+  // désarmer ne coûte rien — c'est les armer qui consomme, et le budget les
+  // arbitre au moment de la passe).
+  if (typeof input.feedback_review_enabled === "boolean") {
+    updates.feedback_review_enabled = input.feedback_review_enabled;
+  }
+  if (typeof input.feedback_review_skip_over_budget === "boolean") {
+    updates.feedback_review_skip_over_budget = input.feedback_review_skip_over_budget;
+  }
   if (typeof input.smart_assign_enabled === "boolean") {
     if (
       input.smart_assign_enabled &&

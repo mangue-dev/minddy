@@ -27,6 +27,9 @@ import {
   Skeleton,
   Spinner,
   SplitButton,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -47,6 +50,7 @@ import {
   ShieldAlert,
   Sparkles,
   Trash2,
+  TriangleAlert,
   Undo2,
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
@@ -131,16 +135,35 @@ function CategorySummary({
   );
 }
 
+/**
+ * Un retour qui réclame une décision humaine (MIN-87) : pas encore publié, ou
+ * publié mais signalé sensible. C'est la matière du filtre « À revoir » — sans
+ * lui, un post que la revue automatique n'a pas su trancher reste invisible.
+ */
+function needsHumanReview(post: TeamFeedbackListItem): boolean {
+  return post.review_state !== "published" || post.sensitivity !== null;
+}
+
+/** La revue automatique a abandonné (3 échecs) : à trancher à la main (MIN-87). */
+function reviewGaveUp(post: {
+  analysis_failures: number;
+  classified_at: string | null;
+}): boolean {
+  return post.analysis_failures >= 3 && post.classified_at === null;
+}
+
 /** Badges d'état de revue IA (MIN-54) : en attente de publication, rejeté (junk),
     et alerte contenu sensible (le motif est en tooltip). Partagé liste + détail. */
 function ReviewBadges({
   reviewState,
   sensitivity,
   moderationReason,
+  reviewFailed,
 }: {
   reviewState: FeedbackReviewState;
   sensitivity: string | null;
   moderationReason: string | null;
+  reviewFailed?: boolean;
 }) {
   const t = useTranslations("FeedbackBoard");
   return (
@@ -149,6 +172,15 @@ function ReviewBadges({
         <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
           <Clock className="size-2.5" />
           {t("reviewPending")}
+        </span>
+      )}
+      {reviewFailed && (
+        <span
+          title={t("reviewFailedHint")}
+          className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+        >
+          <TriangleAlert className="size-2.5" />
+          {t("reviewFailed")}
         </span>
       )}
       {reviewState === "rejected" && (
@@ -194,6 +226,19 @@ export function FeedbackTeamPage() {
   const [mobileDetail, setMobileDetail] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Filtre « À revoir » (MIN-87) : ce que la revue automatique n'a pas tranché
+  // (en attente, écarté, sensible) est noyé dans une liste triée par votes. Le
+  // filtre n'apparaît que s'il y a matière — pas de bouton mort.
+  const [onlyToReview, setOnlyToReview] = useState(false);
+  const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
+  const visiblePosts = useMemo(
+    () => (onlyToReview ? posts.filter(needsHumanReview) : posts),
+    [posts, onlyToReview]
+  );
+  useEffect(() => {
+    if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
+  }, [toReviewCount, onlyToReview]);
+
   // Side panel d'issue : le ticket lié s'ouvre ICI, sans navigation — même
   // câblage que le board (issues + relations + collections du projet).
   const { issues, createIssue, updateIssue, deleteIssue, setCategories } =
@@ -236,14 +281,14 @@ export function FeedbackTeamPage() {
   );
 
   useEffect(() => {
-    if (posts.length === 0) {
+    if (visiblePosts.length === 0) {
       if (selectedId !== null) setSelectedId(null);
       return;
     }
-    if (!selectedId || !posts.some((p) => p.id === selectedId)) {
-      setSelectedId(posts[0].id);
+    if (!selectedId || !visiblePosts.some((p) => p.id === selectedId)) {
+      setSelectedId(visiblePosts[0].id);
     }
-  }, [posts, selectedId]);
+  }, [visiblePosts, selectedId]);
 
   // Deep link from an Inbox notification: ?post=<id> selects that feedback and
   // opens the detail on mobile, then strips the param so a background list
@@ -277,8 +322,10 @@ export function FeedbackTeamPage() {
         {/* Header façon triage : gros titre + compteur discret. */}
         <div className="flex items-center gap-2 px-4 pt-5 pb-2">
           <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
-          {posts.length > 0 && (
-            <span className="text-sm tabular-nums text-muted-foreground">{posts.length}</span>
+          {visiblePosts.length > 0 && (
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {visiblePosts.length}
+            </span>
           )}
           <Button
             variant="ghost"
@@ -290,6 +337,23 @@ export function FeedbackTeamPage() {
             {t("newFeedback")}
           </Button>
         </div>
+        {toReviewCount > 0 && (
+          <Tabs
+            value={onlyToReview ? "review" : "all"}
+            onValueChange={(v) => setOnlyToReview(v === "review")}
+            className="px-4 pb-1"
+          >
+            <TabsList variant="line" className="w-full justify-start p-0">
+              <TabsTrigger value="all">{t("filterAll")}</TabsTrigger>
+              <TabsTrigger value="review" className="gap-1.5">
+                {t("filterToReview")}
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {toReviewCount}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex flex-col gap-2 p-4">
@@ -297,7 +361,7 @@ export function FeedbackTeamPage() {
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
             </div>
-          ) : posts.length === 0 ? (
+          ) : visiblePosts.length === 0 ? (
             <div className="p-4">
               <EmptyState
                 icon={<MessagesSquare className="size-6" />}
@@ -307,7 +371,7 @@ export function FeedbackTeamPage() {
             </div>
           ) : (
             <ul>
-              {posts.map((post) => (
+              {visiblePosts.map((post) => (
                 <li key={post.id}>
                   <button
                     type="button"
@@ -341,6 +405,7 @@ export function FeedbackTeamPage() {
                           reviewState={post.review_state}
                           sensitivity={post.sensitivity}
                           moderationReason={post.moderation_reason}
+                          reviewFailed={reviewGaveUp(post)}
                         />
                         {post.suggested_merge_into_id && (
                           <Sparkles className="size-3 text-brand" />
@@ -655,6 +720,7 @@ function FeedbackDetail({
             reviewState={post.review_state}
             sensitivity={post.sensitivity}
             moderationReason={post.moderation_reason}
+            reviewFailed={reviewGaveUp(post)}
           />
         </span>
         <div className="ml-auto flex items-center gap-1.5">
