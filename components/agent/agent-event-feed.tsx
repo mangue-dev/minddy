@@ -2,24 +2,16 @@
 
 import {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
-import { useNow, useTranslations } from "next-intl";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  cn,
-} from "mangue-ui";
+import { useTranslations } from "next-intl";
+import { cn } from "mangue-ui";
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronRight,
   Circle,
   CircleDot,
   CircleSlash,
@@ -27,6 +19,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
+import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -91,7 +84,7 @@ type FeedItem =
 
 /**
  * Un TOUR : accordéon du déroulé.
- *  • ACTIF (agent au travail) → ouvert par défaut, chrono live « Travail depuis X ».
+ *  • ACTIF (agent au travail) → ouvert par défaut, chrono live « Travaille depuis X ».
  *  • TERMINÉ (résumé final) → se referme tout seul, « A travaillé pendant X » + résumé.
  * `key` dérive du 1er item de travail (stable entre l'état actif et terminé du même
  * tour) → la MÊME instance persiste, d'où l'animation de fermeture auto.
@@ -477,10 +470,8 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
 
 /**
  * Un tour : accordéon du déroulé (ouvert en direct pendant le travail, refermé tout
- * seul une fois terminé) + résumé final visible dessous.
- *  • `active` → ouvert par défaut, en-tête « Travail depuis X » qui compte en direct.
- *  • terminé → l'en-tête devient « A travaillé pendant X » et l'accordéon se referme
- *    automatiquement (restant repliable/dépliable à la main).
+ * seul une fois terminé — voir `WorkAccordion`, partagé avec le chat Numo) + résumé
+ * final visible dessous.
  */
 function TurnGroup({
   work,
@@ -499,56 +490,11 @@ function TurnGroup({
   active: boolean;
   ctx: RenderContext;
 }) {
-  const t = useTranslations("Agent");
-
-  // Ouvert par défaut tant que l'agent TRAVAILLE ; se referme automatiquement au
-  // passage travail → terminé, tout en restant repliable à la main.
-  const [open, setOpen] = useState(active);
-  const wasActive = useRef(active);
-  useEffect(() => {
-    if (wasActive.current && !active) setOpen(false);
-    wasActive.current = active;
-  }, [active]);
-
-  // Chrono : compte en direct (tick 1 s) tant qu'actif, sinon durée figée.
-  const now = useNow({ updateInterval: active ? 1000 : undefined });
-  const startMs = Date.parse(startedAt);
-  const safeStart = Number.isNaN(startMs) ? now.getTime() : startMs;
-  const ms = active
-    ? Math.max(0, now.getTime() - safeStart)
-    : Math.max(0, Date.parse(endedAt ?? startedAt) - safeStart);
-  const totalSec = Math.max(1, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSec / 60);
-  const seconds = totalSec % 60;
-  const label = active
-    ? minutes > 0
-      ? t("workingSinceMinutes", { minutes, seconds })
-      : t("workingSinceSeconds", { seconds })
-    : minutes > 0
-      ? t("workedForMinutes", { minutes, seconds })
-      : t("workedForSeconds", { seconds });
-
   return (
     <div className="flex flex-col gap-3">
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger className="group flex w-full items-center gap-1.5 pb-2.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-          <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-          <span className={cn(active && "text-shimmer")}>{label}</span>
-        </CollapsibleTrigger>
-        {/* Bordure fixe pleine largeur sous le toggle : sépare l'indicateur des
-            messages. Toujours visible (ouvert comme fermé), elle ne se déplace pas —
-            le contenu s'anime en dessous. */}
-        <div className="border-t border-border" />
-        {/* La classe d'ouverture est répétée ICI À DESSEIN : mangue-ui la déclare bien
-            sur CollapsibleContent, mais son scanner Tailwind ne l'émet pas (collée à
-            un `${}`), d'où l'absence d'animation à l'OUVERTURE. La citer proprement
-            dans notre source force la génération de l'utilitaire. Ne pas retirer. */}
-        <CollapsibleContent className="data-[state=open]:animate-[collapsible-down_220ms_ease-out]">
-          <div className="flex flex-col gap-3 pt-3">
-            {work.map((it) => renderItem(it, ctx))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <WorkAccordion startedAt={startedAt} endedAt={endedAt} active={active}>
+        {work.map((it) => renderItem(it, ctx))}
+      </WorkAccordion>
       {summary ? renderItem(summary, ctx) : null}
       {/* Fichiers changés du tour : sous la réponse, hors de l'accordéon de travail. */}
       {files.map((it) => renderItem(it, ctx))}
@@ -772,7 +718,7 @@ export function AgentEventFeed({
     onOpenFile,
     hiddenQuestionEventId,
   };
-  // Le tour actif (accordéon ouvert « Travail depuis X ») porte déjà le signal
+  // Le tour actif (accordéon ouvert « Travaille depuis X ») porte déjà le signal
   // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore
   // (ex. juste après le lancement : prompt affiché, aucun pas produit).
   const hasActiveTurn = blocks.some((b) => b.type === "turn" && b.active);

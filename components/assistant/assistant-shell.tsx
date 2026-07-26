@@ -43,11 +43,16 @@ import {
   StreamingMessage,
 } from "@/components/assistant/chat-message";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
+import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
+import { buildAssistantBlocks } from "@/lib/assistant-turns";
 import { ConversationList } from "@/components/assistant/conversation-list";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
-import type { AssistantPageContext } from "@/lib/assistant-types";
+import type {
+  AssistantMessage,
+  AssistantPageContext,
+} from "@/lib/assistant-types";
 import type { AttachmentInput } from "@/lib/types";
 
 const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
@@ -376,13 +381,56 @@ export const AssistantShell = forwardRef<
     return { byMessageId, hiddenBubbleIds };
   }, [state.messages]);
 
+  // Fil de lecture en TOURS, à parité avec le fil de l'agent de code : tout ce que
+  // Numo a fait avant de répondre (narration intermédiaire, appels d'outils) se
+  // replie dans un accordéon « Travaille depuis X » / « A travaillé pendant X », et
+  // seule la réponse reste visible dessous — on suit le travail, puis on lit le
+  // message final, au lieu de recevoir le tour d'un bloc.
+  const blocks = useMemo(
+    () =>
+      buildAssistantBlocks(state.messages, {
+        active: isBusy,
+        pendingWork:
+          state.activeToolCalls.length > 0 || state.streamingContent.length > 0,
+      }),
+    [
+      state.messages,
+      isBusy,
+      state.activeToolCalls.length,
+      state.streamingContent.length,
+    ]
+  );
+
+  // Le tour actif montre-t-il déjà du travail ? Son en-tête chronométré porte alors
+  // le signal « Numo travaille » et l'indicateur de réflexion ferait doublon.
+  const lastBlock = blocks[blocks.length - 1];
+  const activeTurnHasWork =
+    lastBlock?.kind === "turn" &&
+    lastBlock.active &&
+    (lastBlock.work.length > 0 || state.activeToolCalls.length > 0);
+
   const allToolCallsComplete =
     state.activeToolCalls.length > 0 &&
     state.activeToolCalls.every((tc) => tc.status === "complete");
   const showThinking =
     isStreaming &&
     !state.streamingContent &&
-    (state.activeToolCalls.length === 0 || allToolCallsComplete);
+    (state.activeToolCalls.length === 0 || allToolCallsComplete) &&
+    !activeTurnHasWork;
+
+  const renderMessage = (msg: AssistantMessage) =>
+    // Réponse à une question ask_user : elle ne s'affiche pas en bulle, mais dans
+    // les détails de la ligne de question (askUserReplies).
+    askUserReplies.hiddenBubbleIds.has(msg.id) ? null : (
+      <ChatMessage
+        key={msg.id}
+        message={msg}
+        toolCallResults={state.toolCallResults}
+        askUserHidden={msg.id === activeAskUser?.messageId}
+        askUserAnswer={askUserReplies.byMessageId.get(msg.id)}
+        showCopyButton={copyButtonIds.has(msg.id)}
+      />
+    );
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-muted/30">
@@ -586,25 +634,45 @@ export const AssistantShell = forwardRef<
                       : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
                   }
                 >
-                  {state.messages.map((msg) =>
-                    askUserReplies.hiddenBubbleIds.has(msg.id) ? null : (
-                      <ChatMessage
-                        key={msg.id}
-                        message={msg}
-                        toolCallResults={state.toolCallResults}
-                        askUserHidden={msg.id === activeAskUser?.messageId}
-                        askUserAnswer={askUserReplies.byMessageId.get(msg.id)}
-                        showCopyButton={copyButtonIds.has(msg.id)}
-                      />
-                    )
-                  )}
-
-                  {isStreaming && (
-                    <StreamingMessage
-                      content={state.streamingContent}
-                      activeToolCalls={state.activeToolCalls}
-                    />
-                  )}
+                  {blocks.map((block) => {
+                    if (block.kind === "message")
+                      return renderMessage(block.message);
+                    // Round EN VOL : dès qu'il porte un appel d'outil, tout le round
+                    // (son texte compris) est du travail et rejoint le déroulé.
+                    // Sinon son texte est la réponse en train de s'écrire, affichée
+                    // sous l'accordéon — là où le message final restera.
+                    const streamingIsWork =
+                      block.active && state.activeToolCalls.length > 0;
+                    const hasWork = block.work.length > 0 || streamingIsWork;
+                    return (
+                      <div key={block.key} className="flex flex-col gap-3">
+                        {hasWork && (
+                          <WorkAccordion
+                            startedAt={block.startedAt}
+                            endedAt={block.endedAt}
+                            active={block.active}
+                          >
+                            {block.work.map((msg) => renderMessage(msg))}
+                            {streamingIsWork && (
+                              <StreamingMessage
+                                content={state.streamingContent}
+                                activeToolCalls={state.activeToolCalls}
+                              />
+                            )}
+                          </WorkAccordion>
+                        )}
+                        {block.summary ? renderMessage(block.summary) : null}
+                        {block.active &&
+                        !streamingIsWork &&
+                        state.streamingContent ? (
+                          <StreamingMessage
+                            content={state.streamingContent}
+                            activeToolCalls={[]}
+                          />
+                        ) : null}
+                      </div>
+                    );
+                  })}
 
                   {(showThinking || isGeneratingServer) && (
                     <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
