@@ -20,27 +20,15 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
-import { displayName } from "@/lib/display-name";
+import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
 
-type AuthMeta = {
-  display_name?: string;
-  full_name?: string;
-  name?: string;
+type AuthMeta = AuthNameMeta & {
   avatar_url?: string;
   picture?: string;
 };
-
-/** Display name from Supabase auth metadata (display_name → full_name → name),
-    never the raw email — mirrors the desktop sidebar. */
-function accountName(meta: AuthMeta | undefined, email: string | null, fallback: string) {
-  return displayName(
-    { full_name: meta?.display_name || meta?.full_name || meta?.name || null, email },
-    fallback
-  );
-}
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -194,7 +182,7 @@ export function MobileMenuFooter() {
   const t = useTranslations("Nav");
   const { user } = useAuth();
   const meta = user?.user_metadata as AuthMeta | undefined;
-  const name = accountName(meta, user?.email ?? null, t("accountFallback"));
+  const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const avatarUrl = meta?.avatar_url || meta?.picture || null;
 
   return (

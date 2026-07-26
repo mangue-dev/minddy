@@ -38,8 +38,8 @@ import {
   ArrowUpRight,
   Shield,
 } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth-context";
+import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
@@ -222,18 +222,6 @@ function SidebarNav({
 
 /* ─── Footer ───────────────────────────────────────────────────────── */
 
-/** The user's first name: first token of the Supabase auth display name
-    (display_name / full_name / name), else the email local-part. */
-function firstNameOf(user: User | null, fallback: string): string {
-  const meta = user?.user_metadata as
-    | { display_name?: string; full_name?: string; name?: string }
-    | undefined;
-  const full = meta?.display_name || meta?.full_name || meta?.name;
-  if (full) return full.trim().split(/\s+/)[0];
-  const local = user?.email?.split("@")[0];
-  return local || fallback;
-}
-
 /** 1–2 letter initials for the avatar fallback (mirrors AutoKap). */
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -306,12 +294,12 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const { user, signOut } = useAuth();
   const isAdmin = useIsAdmin();
-  const firstName = firstNameOf(user, t("accountFallback"));
   const meta = user?.user_metadata as
-    | { avatar_url?: string; picture?: string }
+    | (AuthNameMeta & { avatar_url?: string; picture?: string })
     | undefined;
+  const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const avatarUrl = meta?.avatar_url || meta?.picture || null;
-  const seed = user?.email || firstName;
+  const seed = user?.email || name;
 
   return (
     <DropdownMenu>
@@ -321,11 +309,11 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
           collapsed ? "w-9 justify-center" : "w-full gap-3 px-3.5 text-left",
         )}
       >
-        <UserAvatar avatarUrl={avatarUrl} name={firstName} seed={seed} />
+        <UserAvatar avatarUrl={avatarUrl} name={name} seed={seed} />
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {firstName}
+              {name}
             </span>
             <MoreHorizontal className="size-4 shrink-0 text-muted-foreground" />
           </>

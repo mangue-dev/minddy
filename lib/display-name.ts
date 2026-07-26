@@ -11,6 +11,13 @@
 
 type NamedUser = { full_name?: string | null; email?: string | null };
 
+/** The Supabase auth `user_metadata` keys that can carry a display name. */
+export type AuthNameMeta = {
+  display_name?: string;
+  full_name?: string;
+  name?: string;
+};
+
 /** The handle part of an email ("bob@minddy.co" → "bob"), or null. */
 export function emailLocalPart(email: string | null | undefined): string | null {
   if (!email) return null;
@@ -28,4 +35,17 @@ export function displayName(
   const name = user?.full_name?.trim();
   if (name) return name;
   return emailLocalPart(user?.email) ?? fallback;
+}
+
+/** Display name for the signed-in account, read from its Supabase auth
+    `user_metadata` (display_name → full_name → name) then the email handle.
+    Returned whole — never shortened to the first name — so the sidebar, the
+    mobile menu and the rest of the app all name the account the same way. */
+export function authDisplayName(
+  meta: AuthNameMeta | null | undefined,
+  email: string | null | undefined,
+  fallback = "User"
+): string {
+  const full = meta?.display_name || meta?.full_name || meta?.name || null;
+  return displayName({ full_name: full, email }, fallback);
 }
