@@ -1061,13 +1061,10 @@
     "searchIssue": "Rechercher un ticket…"
   },
   "Profile": {
-    "changePhoto": "Changer la photo",
-    "removePhoto": "Retirer",
-    "photoHint": "Image de 25 Mo max, compressée automatiquement.",
+    "newAvatar": "Nouvel avatar",
+    "avatarHint": "Votre avatar est généré à partir de votre compte. Relancez le tirage autant de fois que vous voulez.",
     "nameLabel": "Nom",
     "namePlaceholder": "Votre nom",
-    "imageOnly": "Choisissez un fichier image.",
-    "imageTooLarge": "Image trop lourde (25 Mo max).",
     "nameEmpty": "Le nom ne peut pas être vide.",
     "updated": "Profil mis à jour."
   },

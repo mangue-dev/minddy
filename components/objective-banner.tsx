@@ -78,11 +78,9 @@ export function ObjectiveBanner({
         {lead && (
           <div className="flex items-center gap-2">
             <UserAvatar
-              url={lead.avatar_url}
-              name={displayName(lead)}
-              seed={lead.user_id}
+              seed={lead.avatar_seed}
               title={displayName(lead)}
-              className="size-7 text-[11px]"
+              className="size-7"
             />
             <div className="flex min-w-0 flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">

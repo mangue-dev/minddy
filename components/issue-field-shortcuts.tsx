@@ -297,10 +297,8 @@ export function IssueShortcutMenu({
               {...checked(issue.assignee_id === m.user_id)}
             >
               <UserAvatar
-                url={m.avatar_url}
-                name={displayName(m)}
-                seed={m.user_id}
-                className="size-5 text-[9px]"
+                seed={m.avatar_seed}
+                className="size-5"
               />
               <span className="truncate">{displayName(m)}</span>
             </CommandItem>

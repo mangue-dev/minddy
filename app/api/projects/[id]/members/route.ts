@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import {
   cancelInvitation,
   inviteMember,
@@ -56,21 +57,24 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
-  const usersById = await fetchAuthUsersById(service, [
-    ownerId,
-    ...(memberRows ?? []).map((m) => m.user_id as string),
+  const memberIds = [ownerId, ...(memberRows ?? []).map((m) => m.user_id as string)];
+  const [usersById, seeds] = await Promise.all([
+    fetchAuthUsersById(service, memberIds),
+    fetchAvatarSeeds(service, memberIds),
   ]);
 
   const members: Member[] = [
     {
       user_id: ownerId,
       ...toNamed(usersById.get(ownerId)),
+      avatar_seed: seeds.get(ownerId) ?? ownerId,
       role: "owner",
       is_owner: true,
     },
     ...(memberRows ?? []).map((m) => ({
       user_id: m.user_id as string,
       ...toNamed(usersById.get(m.user_id as string)),
+      avatar_seed: seeds.get(m.user_id as string) ?? (m.user_id as string),
       role: "member" as const,
       is_owner: false,
     })),

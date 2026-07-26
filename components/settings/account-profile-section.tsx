@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner, toast } from "mangue-ui";
-import { Upload } from "lucide-react";
+import { Shuffle } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { getSupabase } from "@/lib/supabase";
 import { emailLocalPart } from "@/lib/display-name";
-import { avatarColor, initials } from "@/lib/avatar";
-import { compressImage } from "@/lib/image-compress";
+import { useMyAvatarSeed, useRegenerateAvatar } from "@/lib/use-my-avatar";
 import { SettingsSection } from "@/components/settings-shell";
-
-// Anything under this is accepted and compressed down to fit; above it we ask
-// for a smaller file (avoids loading a huge image into a canvas).
-const HARD_CAP = 25 * 1024 * 1024; // 25 MB
+import { UserAvatar } from "@/components/user-avatar";
 
 /** Read a string key off the user's auth metadata. */
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -22,17 +17,17 @@ function metaString(meta: Record<string, unknown>, key: string): string {
 }
 
 /**
- * Account profile: avatar + display name (+ read-only email). Both editable
- * fields live on the Supabase Auth account — the name in `user_metadata`
- * (display_name/full_name), the avatar as a Storage file whose URL is saved to
- * `user_metadata.avatar_url`. Ported from the former ProfileDialog.
+ * Account profile: avatar + display name (+ read-only email).
+ *
+ * The avatar can't be chosen: it is drawn from a seed the account carries
+ * (public.user_avatars), and the only handle on it is a reroll. The name still
+ * lives on the Supabase Auth account (`user_metadata.display_name/full_name`).
  */
 export function AccountProfileSection() {
   const { user, updateUser } = useAuth();
   const t = useTranslations("Profile");
   const ta = useTranslations("Account");
   const tCommon = useTranslations("Common");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const currentName =
@@ -41,14 +36,10 @@ export function AccountProfileSection() {
     metaString(meta, "name") ||
     emailLocalPart(user?.email) ||
     "";
-  const currentAvatar =
-    metaString(meta, "avatar_url") || metaString(meta, "picture") || null;
-  const seed = user?.id || user?.email || currentName || "?";
+  const seed = useMyAvatarSeed();
+  const regenerate = useRegenerateAvatar();
 
   const [name, setName] = useState(currentName);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [removeAvatar, setRemoveAvatar] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Adopt the account's current name once the user resolves.
@@ -57,26 +48,7 @@ export function AccountProfileSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentName]);
 
-  const shownAvatar = removeAvatar ? null : preview || currentAvatar;
-  const dirty = name.trim() !== currentName || file !== null || removeAvatar;
-
-  const pickFile = (f: File | null) => {
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error(t("imageOnly"));
-      return;
-    }
-    if (f.size > HARD_CAP) {
-      toast.error(t("imageTooLarge"));
-      return;
-    }
-    setPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(f);
-    });
-    setFile(f);
-    setRemoveAvatar(false);
-  };
+  const dirty = name.trim() !== currentName;
 
   const save = async () => {
     if (!user) return;
@@ -87,49 +59,24 @@ export function AccountProfileSection() {
     }
     setBusy(true);
     try {
-      // avatar_url: undefined = leave as-is, null = remove, string = new upload.
-      let avatarUrl: string | null | undefined;
-      if (removeAvatar) {
-        avatarUrl = null;
-      } else if (file) {
-        const supabase = getSupabase();
-        const compressed = await compressImage(file);
-        const path = `${user.id}/avatar`;
-        const { error: upErr } = await supabase.storage
-          .from("avatars")
-          .upload(path, compressed, {
-            upsert: true,
-            contentType: compressed.type || "image/webp",
-          });
-        if (upErr) throw upErr;
-        const { data: pub } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(path);
-        avatarUrl = `${pub.publicUrl}?t=${Date.now()}`;
-      }
-
       await updateUser({
         // Spread existing metadata so we never drop provider fields
-        // (picture, locale…) regardless of merge-vs-replace behavior.
-        data: {
-          ...meta,
-          full_name: trimmed,
-          display_name: trimmed,
-          ...(avatarUrl !== undefined ? { avatar_url: avatarUrl } : {}),
-        },
+        // (locale…) regardless of merge-vs-replace behavior.
+        data: { ...meta, full_name: trimmed, display_name: trimmed },
       });
-      setFile(null);
-      setPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      setRemoveAvatar(false);
       toast.success(t("updated"));
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
     }
+  };
+
+  const reroll = () => {
+    if (regenerate.isPending) return;
+    regenerate.mutate(undefined, {
+      onError: (e) => toast.error((e as Error).message),
+    });
   };
 
   return (
@@ -140,64 +87,22 @@ export function AccountProfileSection() {
       <div className="space-y-6">
         {/* Avatar */}
         <div className="flex items-center gap-4">
-          {shownAvatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={shownAvatar}
-              alt=""
-              className="size-16 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="flex size-16 shrink-0 items-center justify-center rounded-full text-xl font-semibold text-white"
-              style={{ backgroundColor: avatarColor(seed) }}
-            >
-              {initials(name || currentName || "?")}
-            </span>
-          )}
+          <UserAvatar seed={seed} className="size-16" />
 
           <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap gap-2">
+            <div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => fileRef.current?.click()}
+                onClick={reroll}
+                disabled={regenerate.isPending}
               >
-                <Upload />
-                {t("changePhoto")}
+                {regenerate.isPending ? <Spinner /> : <Shuffle />}
+                {t("newAvatar")}
               </Button>
-              {shownAvatar && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => {
-                    setPreview((prev) => {
-                      if (prev) URL.revokeObjectURL(prev);
-                      return null;
-                    });
-                    setFile(null);
-                    setRemoveAvatar(true);
-                  }}
-                >
-                  {t("removePhoto")}
-                </Button>
-              )}
             </div>
-            <p className="text-xs text-muted-foreground">{t("photoHint")}</p>
+            <p className="text-xs text-muted-foreground">{t("avatarHint")}</p>
           </div>
-
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              pickFile(e.target.files?.[0] ?? null);
-              e.target.value = "";
-            }}
-          />
         </div>
 
         {/* Name */}

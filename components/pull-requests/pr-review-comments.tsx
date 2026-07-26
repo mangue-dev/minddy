@@ -3,9 +3,6 @@
 import { useCallback, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
   Button,
   Spinner,
   cn,
@@ -14,6 +11,7 @@ import {
 import { ChevronDown, ChevronRight, CornerDownRight } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { Markdown } from "@/components/markdown";
+import { UserAvatar } from "@/components/user-avatar";
 import { replyPrReviewCommentApi, type PullRequestReviewComment } from "@/lib/agent-api";
 import { displayLineOf } from "@/lib/pr-review-threads";
 import type { PrReviewThread } from "@/lib/pr-review-diff";
@@ -76,12 +74,11 @@ function CommentBody({ comment }: { comment: PullRequestReviewComment }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <Avatar className="size-5 shrink-0 text-[9px]">
-          {comment.user?.avatar_url ? (
-            <AvatarImage src={comment.user.avatar_url} alt={comment.user.login} />
-          ) : null}
-          <AvatarFallback>{(comment.user?.login ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          url={comment.user?.avatar_url}
+          seed={comment.user?.login ?? "?"}
+          className="size-5"
+        />
         <span className="min-w-0 truncate text-sm font-medium text-foreground">
           {comment.user?.login ?? "—"}
         </span>

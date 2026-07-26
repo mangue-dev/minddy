@@ -140,15 +140,10 @@ function ActorAvatar({
   name: string;
   className?: string;
 }) {
-  const url = id ? members.find((m) => m.user_id === id)?.avatar_url ?? null : null;
-  return (
-    <UserAvatar
-      url={url}
-      name={name}
-      seed={id ?? name}
-      className={cn("size-5 text-[9px]", className)}
-    />
-  );
+  // Un acteur hors projet (compte parti, action système) n'a pas de membre à
+  // qui emprunter sa graine : son nom fait un repli stable.
+  const seed = (id ? members.find((m) => m.user_id === id)?.avatar_seed : null) ?? name;
+  return <UserAvatar seed={seed} className={cn("size-5", className)} />;
 }
 
 /** Avatar for actions triggered through Numo — the assistant's face instead of

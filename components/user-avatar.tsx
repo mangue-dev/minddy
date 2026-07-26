@@ -1,21 +1,32 @@
+"use client";
+
+import BoringAvatar from "boring-avatars";
 import { cn } from "mangue-ui";
-import { avatarColor, initials } from "@/lib/avatar";
+import { AVATAR_COLORS, AVATAR_VARIANT } from "@/lib/avatar";
 
 /**
- * Circular user avatar: the uploaded profile picture when available, else
- * deterministic colored initials. Size + text size come from `className`
- * (e.g. "size-6 text-[10px]").
+ * Circular user avatar: the deterministic mark generated from `seed` (see
+ * lib/avatar.ts). Size comes from `className` (e.g. "size-6").
+ *
+ * `url` is for identities that come with a real picture and aren't minddy
+ * accounts — GitHub/GitLab authors on a pull request. minddy accounts have no
+ * picture at all: their mark is generated, and never uploaded.
+ *
+ * A missing `seed` renders a neutral disc rather than a mark: the seed is
+ * fetched (`useMyAvatarSeed`), and drawing one from a fallback value would flash
+ * the WRONG mark for a frame before the real one lands.
+ *
+ * `boring-avatars` calls `useId` for its clip mask, hence "use client" — the
+ * component is a leaf, so the boundary costs nothing.
  */
 export function UserAvatar({
   url,
-  name,
   seed,
   className,
   title,
 }: {
   url?: string | null;
-  name: string;
-  seed: string;
+  seed: string | null | undefined;
   className?: string;
   title?: string;
 }) {
@@ -30,17 +41,29 @@ export function UserAvatar({
       />
     );
   }
+  if (!seed) {
+    return (
+      <span
+        aria-hidden
+        className={cn("block shrink-0 rounded-full bg-muted", className)}
+      />
+    );
+  }
   return (
     <span
       aria-hidden
       title={title}
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
-        className
-      )}
-      style={{ backgroundColor: avatarColor(seed) }}
+      className={cn("block shrink-0 overflow-hidden rounded-full", className)}
     >
-      {initials(name)}
+      <BoringAvatar
+        name={seed}
+        variant={AVATAR_VARIANT}
+        colors={AVATAR_COLORS}
+        size="100%"
+        // `block` sinon le SVG reste en ligne et son interligne le décale d'un
+        // ou deux pixels dans la pastille.
+        className="block"
+      />
     </span>
   );
 }

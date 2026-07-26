@@ -329,11 +329,9 @@ function AssigneePick({
   const tField = useTranslations("Field");
   const avatar = assignee ? (
     <UserAvatar
-      url={assignee.avatar_url}
-      name={displayName(assignee)}
-      seed={assignee.user_id}
+      seed={assignee.avatar_seed}
       title={displayName(assignee)}
-      className="size-6 text-[10px]"
+      className="size-6"
     />
   ) : (
     <span
@@ -350,10 +348,8 @@ function AssigneePick({
     keywords: m.email ? [m.email] : undefined,
     icon: (
       <UserAvatar
-        url={m.avatar_url}
-        name={displayName(m)}
-        seed={m.user_id}
-        className="size-5 text-[9px]"
+        seed={m.avatar_seed}
+        className="size-5"
       />
     ),
   }));

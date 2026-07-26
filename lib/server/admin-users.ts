@@ -125,12 +125,3 @@ export async function setUserInternal(
   if (updateError) throw new Error(updateError.message);
 }
 
-/** Avatar du compte, s'il en a un (même clés que lib/server/auth-users). */
-export function avatarOf(row: AdminUserRpcRow): string | null {
-  const meta = (row.meta ?? {}) as Record<string, unknown>;
-  for (const key of ["avatar_url", "picture"]) {
-    const value = meta[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return null;
-}

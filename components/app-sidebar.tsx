@@ -41,7 +41,9 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
+import { useMyAvatarSeed } from "@/lib/use-my-avatar";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { UserAvatar } from "@/components/user-avatar";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import {
@@ -239,55 +241,6 @@ function SidebarNav({
 
 /* ─── Footer ───────────────────────────────────────────────────────── */
 
-/** 1–2 letter initials for the avatar fallback (mirrors AutoKap). */
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-/** Deterministic HSL so the same user always gets the same fallback color. */
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    hash |= 0;
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue} 55% 45%)`;
-}
-
-function UserAvatar({
-  avatarUrl,
-  name,
-  seed,
-}: {
-  avatarUrl: string | null;
-  name: string;
-  seed: string;
-}) {
-  if (avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={avatarUrl}
-        alt=""
-        className="size-[22px] shrink-0 rounded-full object-cover"
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      className="flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-      style={{ backgroundColor: avatarColor(seed) }}
-    >
-      {getInitials(name)}
-    </span>
-  );
-}
-
 function ThemeItem({
   value,
   icon: Icon,
@@ -311,12 +264,9 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const { user, signOut } = useAuth();
   const isAdmin = useIsAdmin();
-  const meta = user?.user_metadata as
-    | (AuthNameMeta & { avatar_url?: string; picture?: string })
-    | undefined;
+  const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
-  const avatarUrl = meta?.avatar_url || meta?.picture || null;
-  const seed = user?.email || name;
+  const seed = useMyAvatarSeed();
 
   return (
     <DropdownMenu>
@@ -326,7 +276,7 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
           collapsed ? "w-9 justify-center" : "w-full gap-3 px-3.5 text-left",
         )}
       >
-        <UserAvatar avatarUrl={avatarUrl} name={name} seed={seed} />
+        <UserAvatar seed={seed} className="size-[22px]" />
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 truncate text-sm font-medium">

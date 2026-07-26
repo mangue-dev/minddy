@@ -185,11 +185,9 @@ function ObjectivesInner() {
                       </div>
                       {lead && (
                         <UserAvatar
-                          url={lead.avatar_url}
-                          name={displayName(lead)}
-                          seed={lead.user_id}
+                          seed={lead.avatar_seed}
                           title={displayName(lead)}
-                          className="hidden size-7 shrink-0 text-[11px] sm:flex"
+                          className="hidden size-7 shrink-0 sm:flex"
                         />
                       )}
                     </button>

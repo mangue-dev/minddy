@@ -182,10 +182,8 @@ export function AssigneePicker({
     keywords: m.email ? [m.email] : undefined,
     icon: (
       <UserAvatar
-        url={m.avatar_url}
-        name={displayName(m)}
-        seed={m.user_id}
-        className="size-5 text-[9px]"
+        seed={m.avatar_seed}
+        className="size-5"
       />
     ),
   }));

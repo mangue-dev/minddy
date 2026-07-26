@@ -129,10 +129,8 @@ export function SmartAssignSection({
                     className="flex items-center gap-2 text-sm font-medium"
                   >
                     <UserAvatar
-                      url={m.avatar_url}
-                      name={displayName(m)}
-                      seed={m.user_id}
-                      className="size-6 text-[10px]"
+                      seed={m.avatar_seed}
+                      className="size-6"
                     />
                     <span className="truncate">{displayName(m)}</span>
                     {m.is_owner && (

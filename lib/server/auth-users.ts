@@ -20,17 +20,20 @@ function pickString(meta: Record<string, unknown>, keys: string[]): string | nul
   return null;
 }
 
-/** Map an auth user to minddy's { email, full_name, avatar_url } display shape.
-    Name: display_name → full_name → name. Avatar: avatar_url → picture. */
+/** Map an auth user to minddy's { email, full_name } display shape.
+    Name: display_name → full_name → name.
+
+    No avatar here on purpose: the picture is no longer an account field. Every
+    account carries a generated mark, whose seed lives in its own table — see
+    lib/server/avatar-seeds.ts. */
 export function toNamed(
   user: User | null | undefined
-): { email: string | null; full_name: string | null; avatar_url: string | null } {
-  if (!user) return { email: null, full_name: null, avatar_url: null };
+): { email: string | null; full_name: string | null } {
+  if (!user) return { email: null, full_name: null };
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   return {
     email: user.email ?? null,
     full_name: pickString(meta, ["display_name", "full_name", "name"]),
-    avatar_url: pickString(meta, ["avatar_url", "picture"]),
   };
 }
 

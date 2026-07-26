@@ -4,13 +4,14 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import { getUserUsage } from "@/lib/server/usage";
 import {
-  avatarOf,
   fetchAdminUsers,
   nameOf,
   onboardingOf,
   setUserInternal,
   type AdminUserRpcRow,
 } from "@/lib/server/admin-users";
+import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
+import { getServiceClient } from "@/lib/supabase-service";
 import {
   DEFAULT_BILLING_PLAN_ID,
   coerceBillingPlanId,
@@ -100,6 +101,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
   }
 
+  const seeds = await fetchAvatarSeeds(
+    getServiceClient(),
+    page.rows.map((row) => row.user_id)
+  );
+
   const users: AdminUserRow[] = await Promise.all(
     page.rows.map(async (row) => {
       const resolved = await usageOf(row);
@@ -107,7 +113,7 @@ export async function GET(request: NextRequest) {
         userId: row.user_id,
         name: nameOf(row),
         email: row.email,
-        avatarUrl: avatarOf(row),
+        avatarSeed: seeds.get(row.user_id) ?? row.user_id,
         createdAt: row.created_at,
         lastSignInAt: row.last_sign_in_at,
         lastActivityAt: row.last_activity_at,

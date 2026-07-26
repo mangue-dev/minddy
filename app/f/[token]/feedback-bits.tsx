@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { ChevronUp } from "lucide-react";
 import { cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { UserAvatar } from "@/components/user-avatar";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { FeedbackPostStatus, PublicCategory } from "@/lib/feedback/types";
 
@@ -104,7 +105,9 @@ export function VoteButton({
   );
 }
 
-/** Avatar déterministe d'un pseudonyme : initiale sur un fond teinté stable. */
+/** Avatar déterministe d'un pseudonyme : la même marque abstraite que dans
+    l'app, semée sur le pseudonyme plutôt que sur un identifiant de compte —
+    les votants du board public sont anonymes. */
 export function PseudonymAvatar({
   name,
   className,
@@ -112,19 +115,5 @@ export function PseudonymAvatar({
   name: string;
   className?: string;
 }) {
-  let hash = 5381;
-  for (let i = 0; i < name.length; i++) hash = (hash * 33) ^ name.charCodeAt(i);
-  const hue = Math.abs(hash) % 360;
-  return (
-    <span
-      aria-hidden
-      style={{ backgroundColor: `oklch(0.65 0.11 ${hue})` }}
-      className={cn(
-        "flex size-5 shrink-0 select-none items-center justify-center rounded-full text-[10px] font-semibold text-white/90",
-        className
-      )}
-    >
-      {name.charAt(0).toUpperCase()}
-    </span>
-  );
+  return <UserAvatar seed={name} className={cn("size-5", className)} />;
 }

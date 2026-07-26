@@ -194,9 +194,8 @@ export async function VoiceDictationFigure() {
             </Row>
             <Row n={4} label={tField("assignee")}>
               <UserAvatar
-                name={assignee}
                 seed={assignee}
-                className="size-5 text-[9px]"
+                className="size-5"
               />
               {assignee}
             </Row>

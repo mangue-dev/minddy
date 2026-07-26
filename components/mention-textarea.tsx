@@ -41,7 +41,7 @@ const NUMO_MENTION = {
   user_id: NUMO_MENTION_ID,
   email: null,
   full_name: "Numo",
-  avatar_url: null,
+  avatar_seed: NUMO_MENTION_ID,
   role: "member",
   is_owner: false,
 } as unknown as Member;
@@ -199,10 +199,8 @@ export function MentionTextarea({
                 </span>
               ) : (
                 <UserAvatar
-                  url={m.avatar_url}
-                  name={memberLabel(m)}
-                  seed={m.user_id}
-                  className="size-5 text-[9px]"
+                  seed={m.avatar_seed}
+                  className="size-5"
                 />
               )}
               <span className="truncate">{memberLabel(m)}</span>

@@ -1061,13 +1061,10 @@
     "searchIssue": "Search an issue…"
   },
   "Profile": {
-    "changePhoto": "Change photo",
-    "removePhoto": "Remove",
-    "photoHint": "Any image up to 25 MB, compressed automatically.",
+    "newAvatar": "New avatar",
+    "avatarHint": "Your avatar is generated from your account. Reroll it as many times as you like.",
     "nameLabel": "Name",
     "namePlaceholder": "Your name",
-    "imageOnly": "Choose an image file.",
-    "imageTooLarge": "Image too large (25 MB max).",
     "nameEmpty": "Name can't be empty.",
     "updated": "Profile updated."
   },

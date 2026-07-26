@@ -300,7 +300,8 @@ export interface Member {
   user_id: string;
   email: string | null;
   full_name: string | null;
-  avatar_url: string | null;
+  /** Graine de l'avatar généré (public.user_avatars), jamais une URL d'image. */
+  avatar_seed: string;
   role: "owner" | "member";
   is_owner: boolean;
 }
@@ -756,7 +757,8 @@ export interface AdminUserRow {
   /** Nom d'affichage résolu (lib/display-name), jamais l'email brut. */
   name: string;
   email: string | null;
-  avatarUrl: string | null;
+  /** Graine de l'avatar généré (public.user_avatars), jamais une URL d'image. */
+  avatarSeed: string;
   createdAt: string;
   /** Dernière CONNEXION (ne bouge pas au rafraîchissement de jeton). */
   lastSignInAt: string | null;

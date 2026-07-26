@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "./auth-users";
+import { fetchAvatarSeeds } from "./avatar-seeds";
 import type { Member } from "@/lib/types";
 
 /**
@@ -51,9 +52,13 @@ export async function buildMembersByProject(
         .order("created_at", { ascending: true })
     : { data: [] as { project_id: string; user_id: string }[] };
 
-  const usersById = await fetchAuthUsersById(service, [
+  const ids = [
     ...projectRows.map((p) => p.owner_id),
     ...(memberRows ?? []).map((m) => m.user_id as string),
+  ];
+  const [usersById, seeds] = await Promise.all([
+    fetchAuthUsersById(service, ids),
+    fetchAvatarSeeds(service, ids),
   ]);
 
   const members: Record<string, Member[]> = {};
@@ -62,6 +67,7 @@ export async function buildMembersByProject(
       {
         user_id: p.owner_id,
         ...toNamed(usersById.get(p.owner_id)),
+        avatar_seed: seeds.get(p.owner_id) ?? p.owner_id,
         role: "owner",
         is_owner: true,
       },
@@ -71,6 +77,7 @@ export async function buildMembersByProject(
     (members[m.project_id] ??= []).push({
       user_id: m.user_id,
       ...toNamed(usersById.get(m.user_id)),
+      avatar_seed: seeds.get(m.user_id) ?? m.user_id,
       role: "member",
       is_owner: false,
     });

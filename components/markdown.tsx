@@ -78,10 +78,8 @@ function MentionBadge({ userId, members }: { userId: string; members: Member[] }
   return (
     <span className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pr-1.5 pl-1 align-middle text-[0.9em] font-medium text-primary">
       <UserAvatar
-        url={m?.avatar_url ?? null}
-        name={name}
         seed={userId}
-        className="size-4 text-[8px]"
+        className="size-4"
       />
       @{name}
     </span>

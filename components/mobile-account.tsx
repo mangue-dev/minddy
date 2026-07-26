@@ -23,20 +23,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
+import { useMyAvatarSeed } from "@/lib/use-my-avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
-
-type AuthMeta = AuthNameMeta & {
-  avatar_url?: string;
-  picture?: string;
-};
-
-function initialsOf(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 const THEME_CHOICES: { value: "light" | "dark" | "system"; icon: LucideIcon; key: string }[] = [
   { value: "light", icon: Sun, key: "themeLight" },
@@ -187,28 +177,14 @@ export function useAccountActions(): {
 export function MobileMenuFooter() {
   const t = useTranslations("Nav");
   const { user } = useAuth();
-  const meta = user?.user_metadata as AuthMeta | undefined;
+  const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
-  const avatarUrl = meta?.avatar_url || meta?.picture || null;
+  const seed = useMyAvatarSeed();
 
   return (
     <div className="flex flex-col gap-2 px-1">
       <div className="flex items-center gap-3">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt=""
-            className="size-8 shrink-0 rounded-full object-cover"
-          />
-        ) : (
-          <span
-            aria-hidden
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground"
-          >
-            {initialsOf(name)}
-          </span>
-        )}
+        <UserAvatar seed={seed} className="size-8" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{name}</div>
           {user?.email ? (

@@ -93,10 +93,8 @@ export function ProjectMembers({
             {members.map((m) => (
               <li key={m.user_id} className="flex items-center gap-3 py-2">
                 <UserAvatar
-                  url={m.avatar_url}
-                  name={displayName(m)}
-                  seed={m.user_id}
-                  className="size-8 text-xs"
+                  seed={m.avatar_seed}
+                  className="size-8"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{displayName(m)}</p>

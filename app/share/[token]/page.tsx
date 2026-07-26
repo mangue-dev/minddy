@@ -13,6 +13,7 @@ import { displayName } from "@/lib/display-name";
 import { resolveRelations } from "@/lib/relation-constants";
 import { filterIssues, viewConfigOf } from "@/lib/view-filter";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import {
   SHARE_UNLOCK_COOKIE,
@@ -132,14 +133,17 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
       ...(membersRes.data ?? []).map((m) => m.user_id as string),
     ]),
   ];
-  const usersById = await fetchAuthUsersById(service, memberIds);
+  const [usersById, seeds] = await Promise.all([
+    fetchAuthUsersById(service, memberIds),
+    fetchAvatarSeeds(service, memberIds),
+  ]);
   const members: Member[] = memberIds.map((id) => {
     const named = toNamed(usersById.get(id));
     return {
       user_id: id,
       email: null,
       full_name: displayName(named),
-      avatar_url: named.avatar_url,
+      avatar_seed: seeds.get(id) ?? id,
       role: id === project.owner_id ? "owner" : "member",
       is_owner: id === project.owner_id,
     };

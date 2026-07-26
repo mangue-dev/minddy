@@ -233,10 +233,8 @@ export function AssigneeCompact({
     keywords: m.email ? [m.email] : undefined,
     icon: (
       <UserAvatar
-        url={m.avatar_url}
-        name={displayName(m)}
-        seed={m.user_id}
-        className="size-5 text-[9px]"
+        seed={m.avatar_seed}
+        className="size-5"
       />
     ),
   }));
@@ -254,10 +252,8 @@ export function AssigneeCompact({
         <button type="button" aria-label={t("changeAssigneeAria")} className={BARE}>
           {current ? (
             <UserAvatar
-              url={current.avatar_url}
-              name={displayName(current)}
-              seed={current.user_id}
-              className="size-6 text-[10px]"
+              seed={current.avatar_seed}
+              className="size-6"
             />
           ) : (
             <UserCircle2

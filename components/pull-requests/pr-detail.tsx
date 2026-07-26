@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
   Badge,
   Button,
   Dialog,
@@ -34,6 +31,7 @@ import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
@@ -89,10 +87,11 @@ function ThreadComment({
   return (
     <li className="group/comment flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
       <div className="flex items-center gap-2">
-        <Avatar className="size-5 shrink-0 text-[9px]">
-          {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.login} /> : null}
-          <AvatarFallback>{(user?.login ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          url={user?.avatar_url}
+          seed={user?.login ?? "?"}
+          className="size-5"
+        />
         <span className="min-w-0 truncate text-sm font-medium text-foreground">
           {user?.login ?? "—"}
         </span>
