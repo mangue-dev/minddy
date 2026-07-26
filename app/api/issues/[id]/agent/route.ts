@@ -66,9 +66,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { data: issue } = await auth.supabase.from("issues").select("id").eq("id", id).maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
-  let body: { prompt?: string; model?: string; baseBranch?: string } = {};
+  type LaunchBody = {
+    prompt?: string;
+    model?: string;
+    baseBranch?: string;
+    intent?: "implement" | "plan";
+  };
+  let body: LaunchBody = {};
   try {
-    body = (await request.json()) as { prompt?: string; model?: string; baseBranch?: string };
+    body = (await request.json()) as LaunchBody;
   } catch {
     // corps vide accepté
   }
@@ -87,6 +93,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     model,
     forced: !!model,
     baseBranch,
+    // Cadrage (« Générer un plan » / « Vérifier le plan ») : le lancement ne fait
+    // pas démarrer le ticket. Tout le reste vaut « implémenter ».
+    intent: body.intent === "plan" ? "plan" : "implement",
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

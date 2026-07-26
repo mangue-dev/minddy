@@ -74,6 +74,12 @@ export interface LaunchAgentInput {
    * travail existe déjà, sa base ne se rechoisit pas.
    */
   baseBranch?: string | null;
+  /**
+   * Ce qu'on demande à l'agent, du point de vue du TICKET. `plan` (« Générer un
+   * plan » / « Vérifier le plan ») CADRE le ticket sans le commencer : le statut
+   * n'avance pas. Défaut : `implement` — le ticket passe « en cours ».
+   */
+  intent?: "implement" | "plan";
 }
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
@@ -176,11 +182,17 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       },
     ]);
 
-    // Agent lancé → l'issue passe « en cours » (MIN-46). Exception : la run hérite
-    // d'une PR encore en revue (open/draft) — c'est SON état qui gouverne le statut
-    // (in_review), on ne le fait pas régresser le temps d'une itération. Une PR
-    // refusée (closed → issue `todo`) repasse bien « en cours ».
-    if (inherited?.prState !== "open" && inherited?.prState !== "draft") {
+    // Agent lancé → l'issue passe « en cours » (MIN-46). Deux exceptions :
+    //  • run de CADRAGE (`intent: "plan"` — écrire ou vérifier le plan) : on ne
+    //    commence pas le ticket, on le prépare ; son statut ne bouge pas ;
+    //  • la run hérite d'une PR encore en revue (open/draft) — c'est SON état qui
+    //    gouverne le statut (in_review), on ne le fait pas régresser le temps d'une
+    //    itération. Une PR refusée (closed → issue `todo`) repasse bien « en cours ».
+    if (
+      input.intent !== "plan" &&
+      inherited?.prState !== "open" &&
+      inherited?.prState !== "draft"
+    ) {
       await syncIssueStatusOnAgentStart({ issueId, actorId: input.userId });
     }
   }

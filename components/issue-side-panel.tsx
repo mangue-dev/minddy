@@ -47,7 +47,10 @@ import {
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import { isAgentRunWorking } from "@/lib/agent-api";
-import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import {
+  setAgentComposeDraft,
+  type AgentComposeIntent,
+} from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import {
@@ -231,7 +234,7 @@ export function IssueSidePanel({
   //  • lancer une session NEUVE — pose un brouillon de composition optimiste et
   //    ouvre son composer (`?compose=`), même si le ticket a déjà une session.
   const composeAgentSession = useCallback(
-    (prompt: string) => {
+    (prompt: string, intent: AgentComposeIntent = "implement") => {
       if (!issue) return;
       setAgentComposeDraft({
         kind: "issue",
@@ -241,6 +244,7 @@ export function IssueSidePanel({
         projectId: issue.project_id,
         projectKey,
         prompt,
+        intent,
       });
       router.push(`/agents?compose=${issue.id}`);
     },
@@ -264,11 +268,14 @@ export function IssueSidePanel({
   // quand il n'y en a pas, le reprendre point par point quand il existe — puis
   // s'arrêter. Toujours une session neuve, même si le ticket en a déjà une : le
   // composer s'ouvre avec la consigne, l'utilisateur l'envoie (ou l'amende).
+  // `intent: "plan"` : ce lancement-là ne fait PAS démarrer le ticket (le
+  // serveur ne le passe pas « en cours ») — planifier n'est pas commencer.
   const writePlanWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
+      "plan"
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 

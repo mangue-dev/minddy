@@ -52,7 +52,10 @@ import {
   useAgentPr,
   type IssuePr,
 } from "@/components/agent/agent-activity-context";
-import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import {
+  setAgentComposeDraft,
+  type AgentComposeIntent,
+} from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import {
@@ -852,7 +855,10 @@ export function IssueCard({
   const openAgentSession = () => {
     router.push(`/agents?issue=${issue.id}`);
   };
-  const composeAgentSession = (prompt: string) => {
+  const composeAgentSession = (
+    prompt: string,
+    intent: AgentComposeIntent = "implement"
+  ) => {
     setAgentComposeDraft({
       kind: "issue",
       issueId: issue.id,
@@ -861,6 +867,7 @@ export function IssueCard({
       projectId: issue.project_id,
       projectKey,
       prompt,
+      intent,
     });
     router.push(`/agents?compose=${issue.id}`);
   };
@@ -878,10 +885,12 @@ export function IssueCard({
   const issueHasPlan = hasPlanTasks(issue.plan);
   // « Générer un plan » / « Vérifier le plan » : session neuve dont la consigne
   // est de CADRER le ticket — écrire le plan s'il n'en a pas, le relire point
-  // par point s'il en a déjà un, puis s'arrêter avant d'implémenter.
+  // par point s'il en a déjà un, puis s'arrêter avant d'implémenter. `intent:
+  // "plan"` : le ticket ne passe pas « en cours », cadrer n'est pas commencer.
   const writePlanWithAgent = () => {
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
+      "plan"
     );
   };
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.

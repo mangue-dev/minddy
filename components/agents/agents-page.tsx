@@ -414,6 +414,14 @@ export function AgentsPage() {
             composeInitialText={
               composeSelected && draft?.kind === "issue" ? draft.prompt : undefined
             }
+            // Cadrage (« Générer un plan » / « Vérifier le plan ») : le ticket ne
+            // démarre pas au lancement. Le brouillon porte l'intention du bouton
+            // d'origine, pas ce que le composer contient au moment de l'envoi.
+            composeIntent={
+              composeSelected && draft?.kind === "issue"
+                ? draft.intent ?? "implement"
+                : undefined
+            }
             onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
             onBack={() => setMobileDetail(false)}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}

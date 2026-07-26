@@ -119,7 +119,13 @@ export async function fetchIssueAgentRunsApi(
 
 export async function launchAgentRunApi(
   issueId: string,
-  body: { prompt?: string; model?: string; baseBranch?: string },
+  body: {
+    prompt?: string;
+    model?: string;
+    baseBranch?: string;
+    /** `plan` = cadrer sans commencer : le serveur ne passe pas l'issue « en cours ». */
+    intent?: "implement" | "plan";
+  },
 ): Promise<{ run: AgentRunSummary }> {
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
   trackEvent("agent_launched", {

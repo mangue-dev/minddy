@@ -9,6 +9,7 @@ import { ChatInput } from "@/components/assistant/chat-input";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import { unechoedMessages } from "@/lib/agent-pending";
+import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 import {
   heartbeatAgentRunApi,
   interruptAgentRunApi,
@@ -88,6 +89,7 @@ export function AgentConversation({
   headerActions,
   onLaunched,
   initialComposeText,
+  composeIntent = "implement",
   showUnread = false,
 }: {
   /** Issue d'ancrage — null pour une session CARNET (passer `noteRunId`). */
@@ -129,6 +131,13 @@ export function AgentConversation({
    * librement éditable. Sans lui, le composer démarre vide (« New run », modal).
    */
   initialComposeText?: string;
+  /**
+   * Ce que le point d'entrée demandait à l'agent : `plan` (« Générer un plan » /
+   * « Vérifier le plan ») CADRE le ticket sans le commencer — le serveur ne le
+   * passe alors pas « en cours ». Suit le brouillon, pas le texte du composer :
+   * l'utilisateur reste libre de réécrire la consigne.
+   */
+  composeIntent?: AgentComposeIntent;
   /**
    * Marque les runs terminées non consultées d'une bulle bleue dans le sélecteur de
    * sessions (page Agents). Hors /agents (ex. modal de reprise), laissé à false.
@@ -375,6 +384,7 @@ export function AgentConversation({
         // Le serveur l'ignore si la lignée hérite déjà d'une branche (le picker
         // est alors verrouillé — ceinture et bretelles côté course).
         baseBranch: baseBranch || undefined,
+        intent: composeIntent,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
       // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.

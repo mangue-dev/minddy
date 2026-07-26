@@ -18,6 +18,15 @@ import { useSyncExternalStore } from "react";
  * un seul consommateur (la page), et doit survivre à la navigation `router.push`
  * entre les deux — ce qu'un état React local ne ferait pas.
  */
+/**
+ * Ce qu'on demande à l'agent, du point de vue du TICKET — pas du prompt, que
+ * l'utilisateur peut réécrire. `plan` = cadrer (écrire ou vérifier le plan) :
+ * le ticket ne DÉMARRE pas pour autant, le serveur ne le passe donc pas
+ * « en cours » (planifier n'est pas commencer le travail — même règle que le
+ * prompt copié, qui n'auto-démarre que sur la branche « implémenter »).
+ */
+export type AgentComposeIntent = "implement" | "plan";
+
 export interface AgentIssueComposeDraft {
   kind: "issue";
   issueId: string;
@@ -31,6 +40,8 @@ export interface AgentIssueComposeDraft {
    * Éditable avant envoi ; vidé s'il n'est jamais envoyé, comme le reste du brouillon.
    */
   prompt: string;
+  /** Défaut : `implement` (le lancement fait démarrer le ticket). */
+  intent?: AgentComposeIntent;
 }
 
 export interface AgentNoteComposeDraft {

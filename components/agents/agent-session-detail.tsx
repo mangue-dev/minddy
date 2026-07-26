@@ -7,6 +7,7 @@ import { ChevronLeft, GitPullRequest, NotebookPen } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
+import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 
 /**
  * Panneau de détail d'une session d'agent (page Agents) : un en-tête épuré (retour
@@ -25,6 +26,7 @@ export function AgentSessionDetail({
   onOpenIssue,
   compose = false,
   composeInitialText,
+  composeIntent,
   onLaunched,
   showUnread = false,
 }: {
@@ -40,6 +42,11 @@ export function AgentSessionDetail({
   compose?: boolean;
   /** Prompt pré-écrit amorçant le composer en compose (relayé à la conversation). */
   composeInitialText?: string;
+  /**
+   * Ce que demandait le point d'entrée : `plan` (cadrage) ne fait pas démarrer le
+   * ticket au lancement, `implement` si. Relayé tel quel à la conversation.
+   */
+  composeIntent?: AgentComposeIntent;
   /** Relayé à la conversation : une run neuve vient d'être lancée depuis le compose. */
   onLaunched?: (run: AgentRunSummary) => void;
   /** Affiche les bulles bleues « terminé, non lu » sur le sélecteur de runs (page Agents). */
@@ -154,6 +161,7 @@ export function AgentSessionDetail({
         initialRunId={null}
         initialCompose={compose}
         initialComposeText={compose ? composeInitialText : undefined}
+        composeIntent={compose ? composeIntent : undefined}
         onLaunched={onLaunched}
         showUnread={showUnread}
         active
