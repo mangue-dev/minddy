@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type { EmailOtpType, User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
+import { notifyNewUser } from "@/lib/server/brrr";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
 
 const EMAIL_OTP_TYPES: ReadonlySet<EmailOtpType> = new Set([
@@ -44,9 +45,13 @@ function buildFailureRedirect(
  * Ces événements partent quel que soit le consentement cookies : aucun cookie
  * n'est posé de ce fait, et le `distinctId` est l'id du compte, que
  * l'utilisateur nous confie déjà en créant ce compte.
+ *
+ * C'est aussi d'ici que part l'alerte push « nouvel utilisateur » (MIN-92) :
+ * même signal, deux destinations — PostHog pour le compte, le téléphone pour
+ * l'événement.
  */
-function trackAuthArrival(
-  user: { id: string; created_at?: string; last_sign_in_at?: string | null; app_metadata?: { provider?: string } } | null,
+function onAuthArrival(
+  user: User | null,
   channel: "oauth" | "email_confirmation" | "otp"
 ): void {
   if (!user) return;
@@ -73,6 +78,14 @@ function trackAuthArrival(
     event: isFirstSignIn ? "user_signed_up" : "user_signed_in",
     properties: { method: provider, channel },
   });
+
+  // Le compte vient d'être créé → vibration. Attention, ce n'est pas exactement
+  // `isFirstSignIn` : un lien de confirmation cliqué dix minutes après le
+  // formulaire sort de la fenêtre de 10 s, et reste pourtant une inscription —
+  // c'est même le chemin normal, l'instance Supabase exige la confirmation.
+  if (isFirstSignIn || channel === "email_confirmation") {
+    notifyNewUser(user);
+  }
 }
 
 /**
@@ -131,7 +144,7 @@ export async function GET(request: NextRequest) {
         console.error("[auth/callback] exchangeCodeForSession failed:", error.message);
         return buildFailureRedirect(origin, "exchange_failed");
       }
-      trackAuthArrival(data.user, "oauth");
+      onAuthArrival(data.user, "oauth");
     } else if (tokenHash && otpType) {
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -141,7 +154,7 @@ export async function GET(request: NextRequest) {
         console.error("[auth/callback] verifyOtp failed:", error.message);
         return buildFailureRedirect(origin, "verify_failed");
       }
-      trackAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
+      onAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
     }
 
     return NextResponse.redirect(`${origin}${next}`);

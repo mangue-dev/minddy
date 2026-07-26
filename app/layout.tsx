@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider, Toaster } from "mangue-ui";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/cookie-banner";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { ThemeInitScript } from "@/components/theme-init-script";
@@ -77,6 +78,7 @@ export default async function RootLayout({
           </NextIntlClientProvider>
         </ThemeProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
