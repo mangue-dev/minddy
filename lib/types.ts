@@ -848,3 +848,67 @@ export interface AdminOverview {
     dismissed: number;
   };
 }
+
+/**
+ * Une journée de la page Finances (MIN-92). La série est DENSIFIÉE côté SQL :
+ * une journée sans appel IA est une barre à zéro, pas un trou.
+ */
+export interface AdminFinanceDay {
+  /** `YYYY-MM-DD`, UTC. */
+  day: string;
+  costUsd: number;
+  /** `null` tant qu'aucun taux n'est connu — à distinguer de « zéro euro ». */
+  costEur: number | null;
+  /** Encaissements ÉTALÉS au prorata de leur période de service. */
+  revenueEur: number;
+  marginEur: number | null;
+  usdEur: number | null;
+  calls: number;
+  runs: number;
+}
+
+/**
+ * Le payload de `/api/admin/finance`. `days` porte la courbe (revenu lissé),
+ * `month` porte les chiffres RÉELS non lissés des tuiles : les deux ne
+ * s'additionnent pas, et c'est voulu.
+ */
+export interface AdminFinance {
+  windowDays: number;
+  days: AdminFinanceDay[];
+  month: {
+    /** Encaissé net de frais Stripe ET de remboursements, sur le mois courant. */
+    netCollectedEur: number;
+    stripeFeesEur: number;
+    costUsd: number;
+    costEur: number | null;
+    marginEur: number | null;
+  };
+  /** Revenu récurrent théorique — indicateur, jamais la base de la marge. */
+  mrrEur: number;
+  payingAccounts: number;
+  byPlan: Array<{ planId: BillingPlanId; count: number; mrrEur: number }>;
+  /** Taux appliqué le plus récent, avec sa date (un cron muet devient visible). */
+  fx: { day: string; usdEur: number } | null;
+  /** Plafond mensuel de la clé OpenRouter. `null` si illisible. */
+  cap: {
+    limitUsd: number | null;
+    usageUsd: number;
+    remainingUsd: number | null;
+    percent: number | null;
+    /** Premier jour du mois suivant : la remise à zéro du plafond. */
+    resetDay: string;
+    projectedExhaustionDay: string | null;
+  } | null;
+  stripe: {
+    configured: boolean;
+    reachable: boolean;
+    /** Clé `sk_test_` : l'API est la même, les montants ne sont pas réels. */
+    testMode: boolean;
+    /** Pagination du ledger interrompue par le garde-fou. */
+    truncated: boolean;
+    /** Au moins une ligne dans une devise autre que l'EUR a été ignorée. */
+    ignoredCurrency: boolean;
+  };
+  /** Instant de la lecture Stripe — l'UI en tire « actualisé il y a X min ». */
+  fetchedAt: string;
+}

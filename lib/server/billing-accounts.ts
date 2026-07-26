@@ -5,11 +5,13 @@ import {
   DEFAULT_BILLING_PLAN_ID,
   getBillingPlan,
   coerceBillingPlanId,
+  type BillingInterval,
   type BillingPlan,
   type BillingPlanId,
 } from "@/lib/billing-plans";
 import {
   fetchStripeSubscription,
+  getIntervalForStripePrice,
   getPlanIdForStripePrice,
   getStripeSubscriptionPeriod,
   coerceStripePlanId,
@@ -76,6 +78,34 @@ export function resolvePlanFromBillingAccount(account: BillingAccount | null): {
   }
 
   return { planId: DEFAULT_BILLING_PLAN_ID, source: "default" };
+}
+
+/**
+ * « Combien ce compte PAIE-t-il ? » — à ne pas confondre avec
+ * `resolvePlanFromBillingAccount`, qui répond à « à quoi a-t-il DROIT ? ».
+ *
+ * Deux questions distinctes, d'où deux résolveurs. Un override admin donne des
+ * droits sans générer un centime : c'est un cadeau, jamais du revenu. Un compte
+ * free avec un override pro paie donc 0 € ; un compte Go payant avec un override
+ * pro paie Go. Ce résolveur IGNORE donc `admin_override_plan_id` et ne lit que
+ * l'abonnement Stripe réel.
+ *
+ * (Sur le graphique la question ne se pose même pas — le revenu y vient des
+ * balance transactions, et un cadeau ne produit aucune transaction. C'est le MRR
+ * théorique, calculé à partir des abonnements en base, qui a besoin de la règle.)
+ */
+export function resolvePaidPlanFromBillingAccount(
+  account: BillingAccount | null
+): { planId: BillingPlanId; interval: BillingInterval } | null {
+  const stripePlanId = coerceBillingPlanId(account?.stripe_plan_id);
+  if (!stripePlanId || stripePlanId === "free") return null;
+  if (!shouldUseStripePlan(account?.stripe_subscription_status)) return null;
+  return {
+    planId: stripePlanId,
+    // Price inconnu (promo, ancien tarif) → mensuel, l'hypothèse la plus
+    // conservatrice : elle ne gonfle pas le MRR.
+    interval: getIntervalForStripePrice(account?.stripe_price_id) ?? "month",
+  };
 }
 
 export async function getBillingAccountForUser(

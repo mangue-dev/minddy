@@ -57,6 +57,30 @@ export interface StripeSubscription {
   metadata?: Record<string, string>;
 }
 
+/**
+ * Une ligne du LEDGER Stripe (MIN-92) — tout ce qui a bougé d'argent sur le
+ * compte. Meilleure source que les charges seules pour une page de finances :
+ * les remboursements et les litiges s'y comptent tout seuls (lignes négatives,
+ * `type: refund` / `adjustment`), et chaque ligne porte son `fee`, donc le `net`
+ * réellement encaissé — une marge calculée sur le brut serait fausse.
+ */
+export interface StripeBalanceTransaction {
+  id: string;
+  /** `charge`, `refund`, `adjustment`, `payout`, `stripe_fee`… */
+  type: string;
+  /** Brut, en plus petite unité (centimes). Négatif pour un remboursement. */
+  amount: number;
+  /** Commission Stripe prélevée sur cette ligne. */
+  fee: number;
+  /** `amount - fee` : ce qui atterrit vraiment sur le compte. */
+  net: number;
+  currency: string;
+  created: number;
+  description: string | null;
+  /** Présent seulement avec `expand[]=data.source` : l'objet à l'origine. */
+  source?: { id: string; object: string; customer?: string | null } | string | null;
+}
+
 export interface StripeEvent<T = unknown> {
   id: string;
   type: string;
@@ -118,6 +142,31 @@ export function getPlanIdForStripePrice(
     priceId === process.env.STRIPE_PRICE_ID_PRO_YEARLY
   ) {
     return "pro";
+  }
+  return null;
+}
+
+/**
+ * La CADENCE d'un price configuré. Le pendant de `getPlanIdForStripePrice` :
+ * l'un dit quel plan, l'autre à quel rythme il est facturé. Utilisé par la page
+ * Finances, qui doit étaler un encaissement annuel sur douze mois et non sur un.
+ * `null` pour un price inconnu (promo, ancien tarif) — l'appelant décide.
+ */
+export function getIntervalForStripePrice(
+  priceId: string | null | undefined
+): BillingInterval | null {
+  if (!priceId) return null;
+  if (
+    priceId === process.env.STRIPE_PRICE_ID_GO_YEARLY ||
+    priceId === process.env.STRIPE_PRICE_ID_PRO_YEARLY
+  ) {
+    return "year";
+  }
+  if (
+    priceId === process.env.STRIPE_PRICE_ID_GO ||
+    priceId === process.env.STRIPE_PRICE_ID_PRO
+  ) {
+    return "month";
   }
   return null;
 }
@@ -214,6 +263,58 @@ export async function fetchStripeSubscription(
   return stripeRequest<StripeSubscription>(
     `/v1/subscriptions/${subscriptionId}`
   );
+}
+
+/** Au-delà, on arrête de paginer. Cf. le commentaire de la fonction. */
+const BALANCE_TX_MAX_PAGES = 10;
+const BALANCE_TX_PAGE_SIZE = 100;
+
+/**
+ * Le ledger depuis une date (MIN-92). `expand[]=data.source` ramène l'objet à
+ * l'origine de chaque ligne — et donc le `customer` — SANS appel supplémentaire :
+ * c'est ce qui permet de savoir si un encaissement est mensuel ou annuel (via
+ * `billing_accounts`) et de l'étaler sur la bonne durée.
+ *
+ * Pagination bornée à 1 000 lignes. Ce n'est pas une limite gênante aujourd'hui
+ * (le compte en a deux) mais c'est un garde-fou explicite : le jour où le
+ * volume la touche, c'est précisément le signal qu'il faut une table miroir
+ * plutôt que de rejouer tout l'historique à chaque chargement de page.
+ */
+export async function listStripeBalanceTransactions(params: {
+  since: Date;
+}): Promise<{ transactions: StripeBalanceTransaction[]; truncated: boolean }> {
+  const transactions: StripeBalanceTransaction[] = [];
+  let startingAfter: string | null = null;
+
+  for (let page = 0; page < BALANCE_TX_MAX_PAGES; page++) {
+    const query = new URLSearchParams();
+    query.set("limit", String(BALANCE_TX_PAGE_SIZE));
+    query.set("created[gte]", String(Math.floor(params.since.getTime() / 1000)));
+    query.set("expand[]", "data.source");
+    if (startingAfter) query.set("starting_after", startingAfter);
+
+    const result: StripeList<StripeBalanceTransaction> & { has_more?: boolean } =
+      await stripeRequest<StripeList<StripeBalanceTransaction> & { has_more?: boolean }>(
+        `/v1/balance_transactions?${query.toString()}`
+      );
+
+    transactions.push(...result.data);
+    if (!result.has_more || result.data.length === 0) {
+      return { transactions, truncated: false };
+    }
+    startingAfter = result.data[result.data.length - 1].id;
+  }
+
+  return { transactions, truncated: true };
+}
+
+/** Le client à l'origine d'une ligne, quand `data.source` a été expandé. */
+export function balanceTransactionCustomerId(
+  transaction: StripeBalanceTransaction
+): string | null {
+  const source = transaction.source;
+  if (!source || typeof source === "string") return null;
+  return source.customer ?? null;
 }
 
 export function stripeUnixToIso(value: number | null | undefined): string | null {

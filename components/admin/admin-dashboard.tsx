@@ -7,12 +7,16 @@ import { useTranslations } from "next-intl";
 import { AdminOverviewDashboard } from "./admin-overview-dashboard";
 import { AdminUsersDashboard } from "./admin-users-dashboard";
 import { AdminModelsDashboard } from "./admin-models-dashboard";
-import { AdminCostsDashboard } from "./admin-costs-dashboard";
+import { AdminFinanceDashboard } from "./admin-finance-dashboard";
 
 /**
  * Shell du `/admin` (MIN-90). Quatre onglets : « Vue d'ensemble » (l'app en
  * chiffres), « Utilisateurs » (LA vue des comptes, où vivent désormais toutes
- * les actions admin), « Coûts IA » et « Modèles ».
+ * les actions admin), « Finances » et « Modèles ».
+ *
+ * « Finances » (MIN-92) remplace l'ancien « Coûts IA », qui ne montrait qu'une
+ * moitié de l'équation. Sa valeur d'onglet est un CONTRAT : c'est l'URL que
+ * porte la notification push du garde-fou de dépense (`/admin?tab=finances`).
  *
  * Les onglets « Quotas » et « Facturation » ont disparu : ils n'étaient pas des
  * écrans mais des actions — remettre un budget à zéro, forcer un plan — et une
@@ -27,7 +31,7 @@ import { AdminCostsDashboard } from "./admin-costs-dashboard";
  * Accès verrouillé côté serveur par `app/(app)/admin/layout.tsx`.
  */
 
-const TABS = ["overview", "users", "costs", "models"] as const;
+const TABS = ["overview", "users", "finances", "models"] as const;
 type AdminTab = (typeof TABS)[number];
 
 const DEFAULT_TAB: AdminTab = "overview";
@@ -78,8 +82,8 @@ export function AdminDashboard() {
         <TabsContent value="users">
           <AdminUsersDashboard />
         </TabsContent>
-        <TabsContent value="costs">
-          <AdminCostsDashboard />
+        <TabsContent value="finances">
+          <AdminFinanceDashboard />
         </TabsContent>
         <TabsContent value="models">
           <AdminModelsDashboard />

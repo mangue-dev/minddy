@@ -3,6 +3,7 @@ import { after } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { getAppEnv, type AppEnv } from "@/lib/env";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * Alertes push brrr.now (MIN-92) — celles qui font vibrer le TÉLÉPHONE.
@@ -30,6 +31,8 @@ export interface BrrrPush {
   /** Regroupe les alertes de même nature dans l'app brrr. */
   threadId?: string;
   sound?: BrrrSound;
+  /** Où mène la notification. Une alerte doit ouvrir l'écran qui l'explique. */
+  openUrl?: string;
 }
 
 /** Au-delà, on abandonne : une alerte en retard ne vaut pas une lambda bloquée. */
@@ -61,6 +64,7 @@ export async function sendBrrr(push: BrrrPush): Promise<void> {
         message: push.message,
         ...(push.threadId ? { thread_id: push.threadId } : {}),
         ...(push.sound ? { sound: push.sound } : {}),
+        ...(push.openUrl ? { open_url: push.openUrl } : {}),
       }),
       signal: controller.signal,
     });
@@ -113,5 +117,35 @@ export function notifyNewUser(user: User): void {
     message: `${name ? `${name} (${email})` : email} vient de s'inscrire via ${provider}.`,
     threadId: "new-user",
     sound: "cha_ching",
+  });
+}
+
+/**
+ * « Le plafond de la clé OpenRouter est presque atteint. » (MIN-92)
+ *
+ * Ce qui casse ici, c'est Numo, la dictée et le traitement du feedback qui
+ * s'arrêtent net jusqu'au mois suivant — d'où le push plutôt qu'un email.
+ *
+ * ATTENDU, pas programmé via `after()` : l'appelant est un cron, il n'y a aucune
+ * réponse utilisateur à ne pas retarder, et l'envoi doit être parti avant que la
+ * lambda rende la main. Le franchissement de seuil et l'anti-répétition se
+ * décident chez l'appelant (`app/api/cron/spend-guard/route.ts`) : cette
+ * fonction ne fait qu'envoyer.
+ */
+export async function notifySpendGuard(params: {
+  threshold: number;
+  percent: number;
+  usageUsd: number;
+  limitUsd: number;
+}): Promise<void> {
+  const remaining = Math.max(params.limitUsd - params.usageUsd, 0);
+  await sendBrrr({
+    title: `⚠️ Plafond IA à ${params.percent} %${envSuffix(getAppEnv())}`,
+    message:
+      `${params.usageUsd.toFixed(2)} $ consommés sur ${params.limitUsd.toFixed(0)} $ ce mois-ci ` +
+      `(${remaining.toFixed(2)} $ restants). Au plafond, Numo, la dictée et le feedback s'arrêtent.`,
+    threadId: "spend-guard",
+    sound: "brrr",
+    openUrl: `${SITE_URL}/admin?tab=finances`,
   });
 }
