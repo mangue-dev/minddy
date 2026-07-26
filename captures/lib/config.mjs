@@ -83,6 +83,18 @@ export const TABLE_SCOPES = {
     idColumn: "user_id",
   },
 
+  // ── Avatar ───────────────────────────────────────────────────────────────
+  // La graine du portrait généré (lib/avatar.ts). Écrivable parce qu'un board
+  // photographié doit montrer des personnes qu'on distingue : le tirage étant
+  // aléatoire, deux membres peuvent tomber sur des fonds voisins, et le seul
+  // remède prévu par le produit est d'en retirer un nouveau.
+  user_avatars: {
+    writable: true,
+    ownerColumn: "user_id",
+    userRefColumns: ["user_id"],
+    idColumn: "user_id",
+  },
+
   // ── Cycle et carnet : personnels, cross-projet ───────────────────────────
   cycles: {
     writable: true,
