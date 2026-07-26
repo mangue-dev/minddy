@@ -81,11 +81,12 @@ export async function SectionSpeed() {
             <h3 className="mb-3 text-2xl font-semibold tracking-tight">
               {t("feature_palette_title")}
             </h3>
-            <p className="mb-4 leading-relaxed text-pretty text-muted-foreground">
+            {/* La liste des raccourcis (« G puis I », « ⇧V »…) a sauté : le
+                visiteur qui ne connaît pas minddy veut savoir ce qu'on y gagne,
+                pas quelle touche appuyer. Les raccourcis s'apprennent dans
+                l'app, où ils sont affichés à côté de chaque action. */}
+            <p className="leading-relaxed text-pretty text-muted-foreground">
               {t("feature_palette_body")}
-            </p>
-            <p className="text-sm leading-relaxed text-pretty text-muted-foreground">
-              {t("speedShortcuts")}
             </p>
           </div>
         </RevealGroup>
@@ -139,13 +140,6 @@ export async function SectionSpeed() {
                 </li>
               );
             })}
-          </Reveal>
-
-          <Reveal
-            as="p"
-            className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-pretty text-muted-foreground"
-          >
-            {t("voiceNote")}
           </Reveal>
         </div>
 

@@ -18,9 +18,13 @@ import { Reveal, RevealGroup, RevealHeading } from "./reveal";
  * promotion en ticket et statut public aligné sur le ticket lié.
  *
  * Le 2ᵉ temps est le filtre, pas les doublons : c'est la question qu'on se pose
- * en ouvrant un board public (« qu'est-ce qui va s'afficher sous mon nom ? »),
- * et la réponse était enterrée dans le paragraphe de bas de section. Le
- * regroupement des doublons y a été replié — c'est un des gestes du filtre.
+ * en ouvrant un board public (« qu'est-ce qui va s'afficher sous mon nom ? »).
+ * Le regroupement des doublons y est replié — c'est un des gestes du filtre.
+ *
+ * Le paragraphe de bas de section (API, saisie pour un utilisateur, prompt
+ * d'intégration) est parti avec la passe de resserrage : trois détails
+ * d'implémentation qui n'aidaient pas à décider, et qui sont à leur place dans
+ * la doc, pas sous quatre cartes qui racontent déjà le trajet complet.
  */
 
 const STEPS = ["post", "moderate", "decide", "status"] as const;
@@ -80,13 +84,6 @@ export async function SectionFeedback() {
               </p>
             </li>
           ))}
-        </Reveal>
-
-        <Reveal
-          as="p"
-          className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-pretty text-muted-foreground"
-        >
-          {t("feedbackNote")}
         </Reveal>
       </div>
     </section>
