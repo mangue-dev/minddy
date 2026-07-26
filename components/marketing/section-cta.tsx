@@ -1,18 +1,31 @@
 import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import { Button } from "mangue-ui";
+import { CtaShader } from "./hero-shader";
 import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";
 
-/** Dernière relance avant le footer (MIN-73). */
+/**
+ * Dernière relance avant le footer (MIN-73). Partagée par la landing et la page
+ * tarifs : les deux se terminent sur la même demande, il n'y a pas de raison
+ * qu'elles ne se terminent pas sur le même écran.
+ *
+ * Un écran, justement : la section occupe presque toute la hauteur du viewport
+ * et centre son contenu, avec le fond animé du hero derrière. C'est le seul
+ * moment de la page, avec le hero, où on ne demande pas de lire mais de cliquer.
+ *
+ * `relative isolate` : le shader est un enfant en `-z-10`, il doit rester
+ * derrière le texte de la section sans passer derrière le fond de la page.
+ */
 export async function SectionCta() {
   const t = await getTranslations("Landing");
 
   return (
-    <section className="border-t border-border py-16 sm:py-24">
+    <section className="relative isolate flex min-h-[80vh] items-center overflow-hidden border-t border-border py-24 sm:min-h-screen sm:py-32">
+      <CtaShader />
       <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
         <RevealHeading
-          className="mb-4 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+          className="mb-4 text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
           text={t("ctaTitle")}
         />
         <Reveal

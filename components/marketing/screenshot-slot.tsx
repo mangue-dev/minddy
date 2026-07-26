@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useLocale } from "next-intl";
 import { ImageIcon } from "lucide-react";
@@ -24,6 +25,19 @@ import {
  * compteur. L'arrondi mordait dedans — un rognage silencieux, différent d'une
  * capture à l'autre selon ce qui traînait dans l'angle. Une capture se montre
  * entière ou pas du tout ; c'est le filet qui délimite l'image, pas une découpe.
+ *
+ * ENTRÉE À LA CHARGE, pas seulement au scroll. Les blocs de la landing entrent
+ * via `<Reveal>` quand ils croisent le viewport — mais une capture est en
+ * `loading="lazy"` : elle COMMENCE à se télécharger à peu près à ce
+ * moment-là. L'apparition du conteneur jouait donc sur un cadre vide, et
+ * l'image tombait dedans d'un coup, sans transition, une fois l'animation
+ * finie. Le fondu ci-dessous est porté par l'image elle-même et part de son
+ * `load` : c'est le seul instant qui corresponde à « l'image apparaît ». Même
+ * courbe que le texte, pour que ça se lise comme la même page.
+ *
+ * La capture du hero en est exemptée (`priority`) : c'est le candidat LCP, et
+ * la démarrer à opacité nulle repousserait la métrique d'autant. Elle garde la
+ * cascade CSS du hero, qui part d'un plancher d'opacité non nul.
  */
 export function ScreenshotSlot({
   id,
@@ -43,6 +57,21 @@ export function ScreenshotSlot({
     lang: locale,
   });
 
+  const [mounted, setMounted] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const img = useRef<HTMLImageElement | null>(null);
+  // `mounted` : même garde que `<Reveal>`. Le rendu serveur ne masque RIEN, donc
+  // la landing reste lisible si le script ne part pas — on ne peut pas cacher
+  // une image derrière une animation qui a besoin de JavaScript pour finir.
+  // `complete` : une image déjà en cache peut être chargée AVANT que React
+  // n'ait branché son `onLoad`. Les deux états sont posés dans le même effet,
+  // donc dans le même rendu : une image déjà là n'a jamais l'occasion de
+  // disparaître pour réapparaître.
+  useEffect(() => {
+    setMounted(true);
+    if (img.current?.complete) setLoaded(true);
+  }, [src]);
+
   return (
     <div
       className={cn(
@@ -53,6 +82,7 @@ export function ScreenshotSlot({
     >
       {src ? (
         <Image
+          ref={img}
           src={src}
           alt={slot.shot}
           fill
@@ -60,7 +90,14 @@ export function ScreenshotSlot({
           priority={priority}
           loading={priority ? undefined : "lazy"}
           sizes="(min-width: 1024px) 960px, 100vw"
-          className="object-cover object-top"
+          onLoad={() => setLoaded(true)}
+          className={cn(
+            "object-cover object-top",
+            !priority && [
+              "transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+              mounted && !loaded && "scale-[1.03] opacity-0 blur-md",
+            ],
+          )}
         />
       ) : (
         <div className="absolute inset-0 flex flex-col justify-between gap-4 bg-muted/40 p-5 [background-image:repeating-linear-gradient(135deg,transparent,transparent_10px,var(--color-border)_10px,var(--color-border)_11px)] [background-size:auto] opacity-90">

@@ -2,10 +2,8 @@ import { getTranslations } from "next-intl/server";
 import { Check, Crosshair, PencilLine, Search, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
-import { MCP_ENDPOINT } from "@/lib/site";
 import { AgentLogo } from "@/components/settings/agent-logo";
 import { NumoIcon } from "@/components/numo-icon";
-import { CopyCommand } from "./copy-command";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 import type { ScreenshotSlotId } from "./screenshot-slots";
@@ -63,7 +61,6 @@ const NUMO_EXAMPLES = ["triage", "assign", "view", "plan"] as const;
 
 export async function SectionAgents() {
   const t = await getTranslations("Landing");
-  const claudeCode = MCP_AGENTS.find((agent) => agent.id === "claude") ?? MCP_AGENTS[0];
 
   return (
     <section id="agents" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
@@ -101,32 +98,29 @@ export async function SectionAgents() {
             </RevealGroup>
           </div>
 
+          {/* Une vitrine, pas un mode d'emploi : des cases logo + nom, et rien
+              à copier. Le visiteur n'installe pas depuis la landing — il veut
+              savoir si SON agent est de la partie. La commande d'installation
+              (et son bouton « copier ») vit dans les réglages du compte, là où
+              elle sert vraiment. */}
           <Reveal
             delay={0.1}
             className="rounded-2xl border border-border bg-muted/30 p-5 sm:p-6"
           >
-            <p className="mb-3 text-sm font-medium">{t("agentsInstallTitle")}</p>
-            <CopyCommand command={claudeCode.build(MCP_ENDPOINT)} />
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              {t("agentsInstallNote")}
-            </p>
+            <p className="mb-4 text-sm font-medium">{t("agentsCompatible")}</p>
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {MCP_AGENTS.map((agent) => (
+                <li
+                  key={agent.id}
+                  className="flex flex-col items-center justify-center gap-2.5 rounded-xl border border-border bg-card px-2 py-5 text-center text-xs font-medium text-foreground/90 shadow-sm"
+                >
+                  <AgentLogo agent={agent} className="h-6 w-6" />
+                  {agent.label}
+                </li>
+              ))}
+            </ul>
 
-            <div className="mt-6 border-t border-border pt-5">
-              <p className="mb-4 text-xs text-muted-foreground">{t("agentsCompatible")}</p>
-              <ul className="flex flex-wrap items-center gap-2">
-                {MCP_AGENTS.map((agent) => (
-                  <li
-                    key={agent.id}
-                    className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground/90 shadow-sm"
-                  >
-                    <AgentLogo agent={agent} className="h-3.5 w-3.5" />
-                    {agent.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <p className="mt-6 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-5 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
               {t("agentsPlanNote")}
             </p>
           </Reveal>

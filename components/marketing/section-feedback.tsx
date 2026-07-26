@@ -5,15 +5,25 @@ import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 /**
  * Le board de feedback public — une section entière, pas une case de grille.
  *
+ * Elle est AMENÉE, elle ne tombe pas : jusqu'ici tout ce qui entre dans le
+ * tracker vient de l'équipe ou de ses agents, et on passait sans prévenir à une
+ * page publique ouverte à des inconnus. La ligne de bascule (`feedbackLead`)
+ * pose ce changement d'origine avant que le titre n'arrive.
+ *
  * Deux captures (la page publique, puis la même demande vue côté équipe) parce
  * que la fonctionnalité a deux faces, et quatre temps numérotés pour le trajet
- * d'un retour : posté → regroupé → tranché → suivi. Tout ce qui est décrit ici
- * existe : SSO du board, détection des doublons à la publication, fusion des
- * votes, réponse d'équipe, promotion en ticket et statut public aligné sur le
- * ticket lié.
+ * d'un retour : posté → filtré → tranché → suivi. Tout ce qui est décrit ici
+ * existe : SSO du board, détection des doublons à la publication, modération et
+ * catégorisation par Numo avant publication, fusion des votes, réponse d'équipe,
+ * promotion en ticket et statut public aligné sur le ticket lié.
+ *
+ * Le 2ᵉ temps est le filtre, pas les doublons : c'est la question qu'on se pose
+ * en ouvrant un board public (« qu'est-ce qui va s'afficher sous mon nom ? »),
+ * et la réponse était enterrée dans le paragraphe de bas de section. Le
+ * regroupement des doublons y a été replié — c'est un des gestes du filtre.
  */
 
-const STEPS = ["post", "dedupe", "decide", "status"] as const;
+const STEPS = ["post", "moderate", "decide", "status"] as const;
 
 export async function SectionFeedback() {
   const t = await getTranslations("Landing");
@@ -22,6 +32,9 @@ export async function SectionFeedback() {
     <section id="feedback" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
+          <Reveal as="p" className="mb-4 text-sm font-medium text-muted-foreground">
+            {t("feedbackLead")}
+          </Reveal>
           <RevealHeading
             className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
             text={t("feedbackTitle")}

@@ -116,8 +116,10 @@ export function PricingPlans() {
               )}
 
               <div className="mb-5">
-                <h3 className="text-sm font-bold tracking-tight">{t(PLAN_LABEL_KEYS[plan.id])}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                <h3 className="text-xl font-semibold tracking-tight">
+                  {t(PLAN_LABEL_KEYS[plan.id])}
+                </h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                   {t(PLAN_DESC_KEYS[plan.id])}
                 </p>
               </div>
@@ -163,7 +165,10 @@ export function PricingPlans() {
                     })
                   }
                 >
-                  {isFree ? tl("pricingCtaFree") : tl("pricingCtaPaid")}
+                  {/* Même libellé sur les trois cartes : payant ou non, le seul
+                      geste possible depuis le site public est de créer un
+                      compte gratuit — le plan se choisit ensuite dans l'app. */}
+                  {tl("pricingCta")}
                 </Link>
               </Button>
             </div>

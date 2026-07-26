@@ -2,11 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GrainGradient } from "@paper-design/shaders-react";
-import { useTheme } from "mangue-ui";
+import { cn, useTheme } from "mangue-ui";
 import { useShaderPalette } from "@/lib/use-shader-palette";
 
 /**
- * Signature visuelle du hero (MIN-73) : le même shader « grain gradient » que le
+ * Le fond animé de la landing (MIN-73), monté deux fois : sous le hero et sous
+ * la dernière relance, pour que la page se referme comme elle s'ouvre. Tout ce
+ * qui suit vaut pour les deux ; seules la géométrie et le masque changent.
+ *
+ * C'est le même shader « grain gradient » que le
  * panneau de connexion — mêmes couleurs, dérivées du token `--primary` (cf.
  * useShaderPalette) — en beaucoup plus discret : c'est un fond, pas un sujet.
  *
@@ -35,7 +39,22 @@ import { useShaderPalette } from "@/lib/use-shader-palette";
  * il faudrait le recréer à chaque retour en haut de page, ce qui coûte plus
  * cher que de laisser un canvas figé sur sa dernière image.
  */
-export function HeroShader() {
+/** Dégradé de masquage : le shader ne s'arrête jamais net, il se fond dans la
+    page. Le hero se dissout vers le bas ; le CTA, pris entre deux sections, se
+    dissout des deux côtés. */
+const MASKS = {
+  hero: "linear-gradient(to bottom, black 0%, black 35%, transparent 100%)",
+  cta: "linear-gradient(to bottom, transparent 0%, black 35%, black 68%, transparent 100%)",
+} as const;
+
+function GrainBackdrop({
+  className,
+  mask,
+}: {
+  /** Géométrie du fond : c'est l'appelant qui décide où il se pose. */
+  className: string;
+  mask: string;
+}) {
   const { resolvedTheme } = useTheme();
   const colors = useShaderPalette();
   const [enabled, setEnabled] = useState(false);
@@ -78,11 +97,14 @@ export function HeroShader() {
     <div
       ref={holder}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] transition-opacity duration-700 ease-out sm:h-[640px]"
+      className={cn(
+        "pointer-events-none transition-opacity duration-700 ease-out",
+        className,
+      )}
       style={{
         opacity: enabled ? (isDark ? 0.5 : 0.35) : 0,
-        maskImage: "linear-gradient(to bottom, black 0%, black 35%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 35%, transparent 100%)",
+        maskImage: mask,
+        WebkitMaskImage: mask,
       }}
     >
       {enabled && (
@@ -101,4 +123,24 @@ export function HeroShader() {
       )}
     </div>
   );
+}
+
+/** Le fond du haut de page, posé au niveau de la PAGE (voir plus haut). */
+export function HeroShader() {
+  return (
+    <GrainBackdrop
+      className="absolute inset-x-0 top-0 -z-10 h-[520px] sm:h-[640px]"
+      mask={MASKS.hero}
+    />
+  );
+}
+
+/**
+ * Le même fond sous la dernière relance : la page se referme sur l'image qui
+ * l'a ouverte. Il remplit la section (qui porte `relative isolate`) au lieu de
+ * partir du haut du document, et se fond en haut comme en bas pour ne faire de
+ * couture ni avec la FAQ ni avec le pied de page.
+ */
+export function CtaShader() {
+  return <GrainBackdrop className="absolute inset-0 -z-10" mask={MASKS.cta} />;
 }

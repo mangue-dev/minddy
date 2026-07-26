@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Languages, Link2, Upload, Webhook, type LucideIcon } from "lucide-react";
+import { Link2, Plug2, Upload, type LucideIcon } from "lucide-react";
 import { Reveal, RevealHeading } from "./reveal";
 
 /**
@@ -19,13 +19,18 @@ import { Reveal, RevealHeading } from "./reveal";
  * Ce qui a été laissé dehors sciemment : les statistiques, les sous-tickets et
  * les relations « bloque / bloqué par ». Ils existent aussi ; les ajouter ferait
  * exactement le catalogue qu'on évite.
+ *
+ * Deux entrées ont été retirées. Les WEBHOOKS SORTANTS n'existent pas : les
+ * seules routes `app/api/webhooks/*` reçoivent GitHub et GitLab, minddy ne
+ * prévient aucun outil tiers. Et les langues et les thèmes ne sont pas un
+ * argument de vente : c'est une préférence d'affichage, à sa place dans les
+ * réglages du compte, pas dans une page qui promet de la sobriété.
  */
 
 const ITEMS: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
   { key: "share", icon: Link2 },
   { key: "import", icon: Upload },
-  { key: "api", icon: Webhook },
-  { key: "i18n", icon: Languages },
+  { key: "api", icon: Plug2 },
 ];
 
 export async function SectionMore() {

@@ -293,7 +293,6 @@ export interface AnalyticsEventProps {
   landing_cta_clicked: { location: "hero" | "nav" | "pricing_teaser" | "cta_section" | "footer" | "faq" };
   landing_section_viewed: { section: string };
   landing_faq_opened: { question_index: number };
-  landing_command_copied: NoProps;
 
   // ── Recherche, raccourcis, divers ──
   search_opened: { source: string };
@@ -531,7 +530,6 @@ const EVENT_NAMES = [
   "landing_cta_clicked",
   "landing_section_viewed",
   "landing_faq_opened",
-  "landing_command_copied",
   // Divers
   "search_opened",
   "search_result_selected",

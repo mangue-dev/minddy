@@ -16,7 +16,7 @@ import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
  * la page ne tient plus.
  */
 
-export const alt = "minddy — the issue tracker that stays simple";
+export const alt = "minddy, the issue tracker that stays simple";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
