@@ -30,7 +30,10 @@ const handler = createMcpHandler(
       "ordered checkbox tasks naming the actual code to touch (exact file paths, " +
       "components, functions, migrations), and a verification step. Checkbox lines are " +
       "trackable tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' completed, " +
-      "'- [-]' cancelled. When asked to plan work, write the full plan into the issue " +
+      "'- [-]' cancelled — except under a '## Questions' heading, where they are open " +
+      "questions rather than work and never count towards progress (park one there only " +
+      "when a detail is blocking; otherwise decide and state the assumption). " +
+      "When asked to plan work, write the full plan into the issue " +
       "(create/update); while executing one, keep task states current with " +
       "minddy_update_plan_task (mark the task you start '- [~]', finished '- [x]'). " +
       "Issues, objectives and comments can carry file attachments: minddy_get_issue " +

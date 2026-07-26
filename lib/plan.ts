@@ -4,6 +4,10 @@
 //
 // The markdown is the single source of truth. Tasks are checkbox lines:
 //   - [ ] pending · - [~] in progress · - [x] completed · - [-] cancelled
+// Checkboxes under a "Questions" heading are OPEN QUESTIONS, not work: they
+// stay tasks (same indices, same interactions — ticking one means "answered")
+// but count for nothing, so a plan waiting on three decisions doesn't read as
+// 0/8 when it holds 5 real steps.
 // Known v1 limitation: a checkbox inside a blockquote or an ordered list is
 // still parsed as a task (rendered without its surrounding decoration).
 
@@ -28,9 +32,11 @@ export interface PlanTask {
   /** Label after the marker, trimmed (inline markdown preserved). */
   text: string;
   state: PlanTaskState;
+  /** Sits under a "Questions" heading: an open question, not a work task. */
+  question: boolean;
 }
 
-/** Cancelled tasks are excluded from both counts. */
+/** Cancelled tasks and questions are excluded from both counts. */
 export interface PlanProgress {
   done: number;
   total: number;
@@ -49,6 +55,10 @@ export interface ParsedPlan {
 // Groups: 1 = indentation, 2 = bullet + brackets prefix, 3 = state char, 4 = text.
 const TASK_LINE = /^(\s*)([-*+] \[)([ ~xX-])(\]\s+)(.*)$/;
 const FENCE_LINE = /^\s{0,3}(`{3,}|~{3,})/;
+// Groups: 1 = hashes (rank), 2 = heading text.
+const HEADING_LINE = /^\s{0,3}(#{1,6})\s+(.*)$/;
+/** Opens a questions section — "Questions", "Open questions", "Questions ouvertes". */
+const QUESTION_HEADING = /\bquestions?\b/i;
 
 const STATE_BY_MARKER: Record<string, PlanTaskState> = {
   " ": "pending",
@@ -83,6 +93,9 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
   const lines = plan.split("\n");
   let proseStart: number | null = null;
   let fence: string | null = null; // opening fence chars while inside a code block
+  // Rank of the open "Questions" heading, null outside one. A heading of the
+  // same or higher rank closes the section; a deeper one nests inside it.
+  let questionRank: number | null = null;
 
   const flushProse = (end: number) => {
     if (proseStart === null) return;
@@ -104,6 +117,15 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
         fence = null;
     }
 
+    if (!fence) {
+      const heading = line.match(HEADING_LINE);
+      if (heading) {
+        const rank = heading[1].length;
+        if (questionRank !== null && rank <= questionRank) questionRank = null;
+        if (QUESTION_HEADING.test(heading[2])) questionRank = rank;
+      }
+    }
+
     const match = fence ? null : line.match(TASK_LINE);
     if (!match) {
       if (proseStart === null) proseStart = i;
@@ -117,6 +139,7 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
       depth: indentDepth(match[1]),
       text: match[5].trim(),
       state: STATE_BY_MARKER[match[3]],
+      question: questionRank !== null,
     };
     tasks.push(task);
 
@@ -126,7 +149,7 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
   }
   flushProse(lines.length);
 
-  const active = tasks.filter((t) => t.state !== "cancelled");
+  const active = tasks.filter((t) => t.state !== "cancelled" && !t.question);
   return {
     tasks,
     segments,

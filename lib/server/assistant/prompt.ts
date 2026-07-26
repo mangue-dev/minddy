@@ -53,7 +53,11 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   context (goal, approach), then ordered checkbox tasks each naming the ACTUAL code to touch
   (exact file paths, components, functions, migrations, routes), ending with a verification
   step. Never a vague todo list. Trackable task lines: "- [ ]" pending, "- [~]" in progress,
-  "- [x]" done, "- [-]" cancelled; prose is allowed between task blocks. Read it via get_issue;
+  "- [x]" done, "- [-]" cancelled; prose is allowed between task blocks. Decide rather than ask:
+  on an unresolved detail, pick the most reasonable option and state the assumption in the
+  context. If something is genuinely blocking, use ask_user; only park it under a
+  "## Questions" heading of the plan (checkboxes there are open questions, excluded from
+  progress) when the answer can wait. Read it via get_issue;
   write it via update_issues { fields: { plan } }, ALWAYS sending the complete updated markdown
   (task state changes are diffed and logged server-side). When you work through a plan, keep
   task states current: mark the task you start "- [~]" and finished ones "- [x]".

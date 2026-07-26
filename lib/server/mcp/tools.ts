@@ -143,7 +143,12 @@ const PLAN_FIELD = z
       "verification step (how to test end-to-end). 'Add POST handler in " +
       "app/api/foo/route.ts with zod validation' is a good task; 'do the backend' " +
       "is not. Checkbox states: '- [ ]' pending, '- [~]' in progress, '- [x]' " +
-      "completed, '- [-]' cancelled. Prose between task blocks is allowed. To " +
+      "completed, '- [-]' cancelled. Prose between task blocks is allowed. " +
+      "DECIDE rather than ask: on an unresolved detail, pick the most reasonable " +
+      "option and state the assumption in the context section. Park a question " +
+      "only when being wrong is expensive, under a '## Questions' heading — " +
+      "checkboxes there are open questions, not work, and stay out of the " +
+      "progress count (tick one to mark it answered). To " +
       "flip ONE task's state while executing, prefer minddy_update_plan_task " +
       "instead of resending the whole plan."
   );
