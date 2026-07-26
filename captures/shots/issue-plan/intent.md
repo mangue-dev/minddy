@@ -1,6 +1,17 @@
 # Le ticket et son plan d'implémentation
 
-Emplacement de landing : `workflowIssue`, premier des trois temps de la section
+> **Cette capture n'est plus branchée sur la landing.** Depuis le 2026-07-26,
+> l'emplacement `workflowIssue` est servi par `shots/issue-create` : le premier
+> temps s'appelle « Vous décrivez » et montre désormais le geste de
+> l'utilisateur — la modale de création — au lieu du plan écrit par l'agent.
+>
+> Le dossier est gardé tel quel : le script marche, l'intention est juste, et le
+> plan reste la meilleure preuve en image que les tâches sont une donnée suivie.
+> S'il fallait le remontrer, sa place serait le DEUXIÈME temps (« L'agent Numo
+> exécute »), dont le texte dit maintenant « il écrit son plan ». Il faudrait
+> alors un emplacement à lui, `workflowAgent` étant pris par le run.
+
+Emplacement de landing (historique) : `workflowIssue`, premier des trois temps de la section
 « Du ticket à la pull request ». Le texte à côté de l'image dit : *« L'agent
 transforme la description en plan d'implémentation : des tâches ordonnées qui
 nomment les fichiers à toucher, stockées sur le ticket lui-même. »* C'est cette

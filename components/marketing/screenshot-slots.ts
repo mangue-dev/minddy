@@ -57,9 +57,9 @@ const SLOTS = {
   },
   workflowIssue: {
     id: "workflowIssue",
-    route: "/projects/<id>, un ticket ouvert dans le panneau latéral, onglet Plan",
+    route: "/projects/<id>, modale de création ouverte (c)",
     shot:
-      "Le panneau latéral d'un ticket, onglet « Plan » actif : quelques tâches cochées, une en cours, le reste à faire, avec le compteur d'avancement sur l'onglet. Description et plan sont deux onglets exclusifs, un seul est visible à la fois. C'est l'écran qui montre que le plan est une vraie donnée, pas un commentaire.",
+      "La modale « Nouveau ticket » sur le board : un titre, une description de deux phrases, et trois propriétés posées — priorité haute, effort M, catégorie Feature. Le bouton de création est actif. C'est le geste de l'utilisateur, et rien d'autre : le premier temps de la section s'appelle « Vous décrivez ».",
     ratio: "4/3",
     src: null,
   },
