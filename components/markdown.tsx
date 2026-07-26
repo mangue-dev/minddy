@@ -131,6 +131,31 @@ export function Markdown({
           pre: (props) => (
             <pre className="my-2 overflow-x-auto rounded-lg bg-muted p-3 text-xs" {...props} />
           ),
+          /* GFM tables can be arbitrarily wide: keep them in their own scroll
+             box so a wide one never stretches (nor side-scrolls) the comment
+             around it. `min-w-max` lets the table keep its natural width inside
+             that box instead of being squeezed into towering rows, while
+             `w-full` still makes a small table fill the width; long cells stay
+             readable by wrapping at 20rem. */
+          table: (props) => (
+            <div className="my-2 max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-border">
+              <table
+                className="w-full min-w-max border-collapse text-left text-[0.9em]"
+                {...props}
+              />
+            </div>
+          ),
+          thead: (props) => <thead className="bg-muted/60" {...props} />,
+          tr: (props) => (
+            <tr className="border-b border-border/60 last:border-0" {...props} />
+          ),
+          th: (props) => (
+            <th
+              className="max-w-80 px-2.5 py-1.5 font-medium text-foreground"
+              {...props}
+            />
+          ),
+          td: (props) => <td className="max-w-80 px-2.5 py-1.5 align-top" {...props} />,
           h1: (props) => <h1 className="mt-3 mb-1 text-base font-semibold" {...props} />,
           h2: (props) => <h2 className="mt-3 mb-1 text-sm font-semibold" {...props} />,
           h3: (props) => <h3 className="mt-2 mb-1 text-sm font-semibold" {...props} />,
