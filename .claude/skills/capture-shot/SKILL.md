@@ -154,6 +154,19 @@ cadre vide, et masquerait le travail restant.
 
 Pour voir l'état publié : `node captures/lib/publish.mjs --list`.
 
+**Livrer sans recapturer.** Après avoir regardé les images, relancer le script
+avec `--publish` rejoue toutes les prises pour ne livrer que des fichiers déjà
+sur le disque. Quand la seule chose qui reste à faire est la livraison :
+
+```bash
+node captures/lib/publish.mjs --shots              # tous les dossiers
+node captures/lib/publish.mjs --shots numo agent   # … ou seulement ceux-là
+```
+
+L'emplacement visé est lu dans le `const SLOT` de chaque `shot.mjs`. Un dossier
+qui porte `const RETIRED = true` est sauté : c'est ainsi qu'une capture
+débranchée garde son script et son intention sans repartir en production.
+
 ## Rafraîchir une capture existante
 
 C'est ici que le dossier versionné paie.

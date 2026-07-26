@@ -22,6 +22,8 @@
  *
  *   node captures/lib/publish.mjs            # régénère le manifeste
  *   node captures/lib/publish.mjs --list     # ce qui est publié aujourd'hui
+ *   node captures/lib/publish.mjs --shots    # livre les PNG déjà produits
+ *   node captures/lib/publish.mjs --shots numo agent   # … ou seulement ceux-là
  */
 import { mkdir, readdir, readFile, writeFile, stat } from "node:fs/promises";
 import { basename, resolve } from "node:path";
@@ -154,7 +156,102 @@ export async function writeManifest() {
   return { published, orphans };
 }
 
+/**
+ * Publie les PNG DÉJÀ produits par les dossiers de `captures/shots/`, sans
+ * relancer une seule capture.
+ *
+ * La recette dit « regarde les images, puis relance avec --publish » — mais ce
+ * second passage rejoue les 40 prises pour ne livrer que des fichiers qui sont
+ * déjà sur le disque, et qu'on vient justement de regarder. Cette fonction est
+ * ce qu'on veut à ce moment-là : livrer ce qui a été validé, à l'identique.
+ *
+ * L'emplacement visé est lu dans le `const SLOT` de chaque `shot.mjs`, pour
+ * qu'il n'existe pas de deuxième table de correspondance à tenir à jour.
+ */
+export async function publishExistingShots(names) {
+  const shotsDir = resolve(ROOT, "captures/shots");
+  const dirs = names?.length
+    ? names
+    : (await readdir(shotsDir, { withFileTypes: true }))
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name);
+
+  const done = [];
+  const skipped = [];
+  const claimed = new Map();
+
+  for (const name of dirs.sort()) {
+    let source;
+    try {
+      source = await readFile(resolve(shotsDir, name, "shot.mjs"), "utf8");
+    } catch {
+      skipped.push(`${name} — pas de shot.mjs`);
+      continue;
+    }
+    // Une capture débranchée garde son dossier — script en état de marche,
+    // intention à jour — mais ne doit plus atteindre la landing. Elle le déclare
+    // elle-même par `const RETIRED = true`, en tête de son `shot.mjs`.
+    if (/^const RETIRED = true/m.test(source)) {
+      skipped.push(`${name} — retiré de la landing (RETIRED)`);
+      continue;
+    }
+
+    const slot = /^const SLOT = "([^"]+)"/m.exec(source)?.[1];
+    if (!slot) {
+      skipped.push(`${name} — aucun \`const SLOT\` déclaré`);
+      continue;
+    }
+    // Filet de sécurité si deux dossiers actifs visent le même emplacement : le
+    // second effacerait le premier en silence. On refuse les deux — l'ordre du
+    // disque n'a pas à décider laquelle des deux images part en production.
+    if (claimed.has(slot)) {
+      skipped.push(
+        `${name} — CONFLIT sur ${slot}, déjà livré par « ${claimed.get(slot)} ». ` +
+          `Marquer l'un des deux \`const RETIRED = true\`.`,
+      );
+      continue;
+    }
+
+    const variants = [];
+    for (const lang of LANGS) {
+      for (const theme of THEMES) {
+        const input = `captures/shots/${name}/out/${lang}-${theme}.png`;
+        try {
+          await stat(resolve(ROOT, input));
+        } catch {
+          continue;
+        }
+        const { bytes } = await publishShot({ slot, lang, theme, input });
+        variants.push(`${lang}-${theme} (${(bytes / 1024).toFixed(0)} Ko)`);
+      }
+    }
+
+    if (variants.length === 0) {
+      skipped.push(`${name} — aucun PNG dans out/`);
+      continue;
+    }
+    claimed.set(slot, name);
+    done.push({ name, slot, variants });
+  }
+
+  return { done, skipped };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
+  // `--shots [nom…]` livre ce qui est déjà dans les `out/`, sans recapturer.
+  const flag = process.argv.indexOf("--shots");
+  if (flag !== -1) {
+    const only = process.argv.slice(flag + 1).filter((a) => !a.startsWith("-"));
+    const { done, skipped } = await publishExistingShots(only);
+    for (const { name, slot, variants } of done) {
+      console.log(`${name} → ${slot} : ${variants.join(", ")}`);
+    }
+    if (skipped.length > 0) {
+      console.log("\nIgnorés :");
+      for (const s of skipped) console.log(`  ${s}`);
+    }
+  }
+
   const { published, orphans } = await writeManifest();
 
   if (published.length === 0) {

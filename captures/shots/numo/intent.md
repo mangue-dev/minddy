@@ -7,10 +7,15 @@ main. »*
 
 ## Ce que l'image doit montrer
 
-- La conversation **« Sweep the unassigned backlog »** en entier : l'instruction
-  de Camille, les trois réponses de Numo, et entre elles les **deux actions**
-  qu'il a menées — une recherche (`3 tickets trouvés`) puis une modification
-  groupée (`2 tickets modifiés`).
+- La conversation **« Sweep the unassigned backlog »** : l'instruction de
+  Camille, le **résumé de travail replié** (« A travaillé pendant 1 minute et
+  3 secondes »), puis la réponse finale.
+- Que Numo **a travaillé** : c'est le résumé de durée qui le dit, et la réponse
+  qui le prouve en nommant les tickets modifiés.
+- Le **badge de contexte** dans le composeur : Numo sait ce qu'on a sous les
+  yeux.
+- L'app **derrière**, en retrait : l'assistant y vit, mais c'est de lui qu'on
+  parle.
 - Que Numo **agit** et ne se contente pas de répondre : la dernière réponse cite
   les tickets modifiés par leur identifiant (AUR-11, AUR-7).
 - Le **badge de contexte** dans le composeur : Numo sait ce qu'on a sous les
@@ -22,16 +27,49 @@ main. »*
 `/projects/<aurora>`, connecté en Camille Roy. Panneau ouvert par **G puis A**,
 conversation chargée depuis la liste, puis passé en mode **étendu**.
 
-## Deux consignes du catalogue qui ne survivent pas au produit
+## On photographie le fil REPLIÉ, et le panneau en taille normale
 
-**« Deux ou trois appels d'outils dépliés. »** Ça n'existe pas. Un appel d'outil
-seul se rend en **ligne non interactive** — une icône, un libellé, rien à
-déplier (`ToolCallRow`, tool-call-display.tsx). Le seul dépliage du composant
-est un accordéon qui apparaît quand un même tour appelle **plusieurs** outils :
-il résume « n actions », et l'ouvrir affiche… les mêmes lignes. Ni arguments ni
-résultats ne sont jamais montrés. Les deux lignes d'action de cette
-conversation sont donc l'état complet, pas un état replié. `world.md` reprenait
-la même formule ; elle est fausse au même titre.
+Deux décisions prises le 2026-07-26, dans cet ordre — la seconde découle de la
+première.
+
+**Replié.** Le tour de travail de Numo est rangé derrière un résumé de durée,
+comme dans le fil de l'agent de code. C'est l'état par défaut du produit, et
+c'est celui qu'on montre : le résumé dit que Numo a travaillé, la réponse finale
+nomme les tickets qu'il a modifiés. Déplier étalait son raisonnement sur toute
+la hauteur du panneau pour démontrer ce que la phrase de conclusion dit déjà.
+
+**Panneau étendu.** Il l'était par contrainte — le fil déplié débordait de
+73 px — et il le reste par choix. Étendu, Numo occupe le centre de l'image et le
+board passe derrière en décor. En taille normale les deux se disputent le
+regard, et le board gagne : il est plus dense, plus coloré, plus grand. Or la
+section parle de l'assistant.
+
+Le prix est un bas de panneau vide, le fil replié étant court. C'est du calme
+autour du propos, pas un manque — et l'essai en taille normale l'a confirmé :
+on y lisait le board avant de voir Numo.
+
+Le résumé se désigne par sa **durée** : la seule partie du libellé qui vienne
+des horodatages et non d'une traduction, donc la seule qui vaille dans les deux
+langues. Même procédé que `shots/agent`.
+
+> État précédent, gardé parce qu'il explique la consigne du catalogue : les
+> appels d'outils se rendaient **en ligne**, non interactifs, et la consigne
+> « deux ou trois appels d'outils dépliés » décrivait une UI inexistante. Le
+> dépliage existe maintenant, mais il porte le tour entier, pas un appel.
+
+## 1 min 3 s est une donnée, pas un hasard
+
+La durée affichée est la soustraction du premier horodatage au dernier. Le fil
+tenait sur **douze minutes rondes** : invraisemblable pour deux recherches et une
+mise à jour groupée, et le « et 0 seconde » d'une durée pile sonnait faux.
+
+`captures/world/seed/006-numo.mjs` date maintenant les six messages sur
+**0 s, 4 s, 9 s, 31 s, 38 s, 63 s** — intervalles inégaux, parce que le temps de
+lire un résultat n'est pas celui d'écrire une phrase. Le script de capture
+vérifie cette durée : changer le déroulé du seed casse la capture, et c'est
+voulu.
+
+## Une consigne du catalogue qui ne survit pas au produit
 
 **« Le badge Ticket en contexte. »** Il faudrait ouvrir Numo depuis un ticket
 ouvert — c'est ce qu'annonçait `world.md`, et c'est **impossible** : le panneau

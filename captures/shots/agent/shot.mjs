@@ -8,11 +8,9 @@
  *   node captures/shots/agent/shot.mjs             # produit les PNG
  *   node captures/shots/agent/shot.mjs --publish   # + livre sur la landing
  */
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
-import { ROOT } from "../../lib/env.mjs";
+import { toolCallLabel } from "../../lib/messages.mjs";
 
 const SLOT = "workflowAgent";
 const OUT = "captures/shots/agent/out";
@@ -44,12 +42,17 @@ const VARIANTS = [
   { locale: "en", theme: "dark" },
 ];
 
-/** « Édition de {count} fichier(s) » — interpolation simple du catalogue de l'app. */
+/**
+ * « Édition de 3 fichiers », reconstruit depuis le catalogue de l'app.
+ *
+ * La clé était une interpolation simple (`{count} fichier(s)`) et le
+ * `.replace("{count}", …)` d'origine suffisait. Elle est devenue un PLURIEL ICU
+ * (commit `5d18182`, qui a au passage corrigé le « 0 fichier(s) » décrit dans
+ * `intent.md`), et ce remplacement produisait alors le motif brut — introuvable
+ * dans la page, donc capture en échec. `icuPlural` gère les deux formes.
+ */
 async function applyEditsLabel(locale) {
-  const catalog = JSON.parse(
-    await readFile(resolve(ROOT, `messages/${locale}.json`), "utf8"),
-  ).ToolCall;
-  return catalog.agentApplyEdits.replace("{count}", "3");
+  return toolCallLabel(locale, "agentApplyEdits", 3);
 }
 
 async function capture({ locale, theme }) {

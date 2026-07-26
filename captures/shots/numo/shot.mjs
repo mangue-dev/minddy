@@ -1,17 +1,15 @@
 /**
- * numoPanel — la conversation « Sweep the unassigned backlog », panneau étendu.
+ * numoPanel — « Sweep the unassigned backlog », fil replié, panneau étendu.
  *
- * Voir `intent.md` : deux consignes du catalogue décrivent une UI qui n'existe
- * pas (appels d'outils « dépliés », badge « Ticket en contexte »).
+ * Voir `intent.md` : une consigne du catalogue décrit une UI qui n'existe pas
+ * (badge « Ticket en contexte »).
  *
  *   node captures/shots/numo/shot.mjs             # produit les PNG
  *   node captures/shots/numo/shot.mjs --publish   # + livre sur la landing
  */
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
-import { ROOT } from "../../lib/env.mjs";
+import { toolCallLabel } from "../../lib/messages.mjs";
 
 const SLOT = "numoPanel";
 const OUT = "captures/shots/numo/out";
@@ -28,21 +26,27 @@ const EXPAND = { fr: "Agrandir", en: "Expand" };
 const EXPANDED_WIDTH = 896;
 
 /**
- * Les libellés d'action sont des pluriels ICU du catalogue de l'app. On les
- * reconstruit à partir de `messages/<langue>.json` au lieu de les recopier :
- * une capture ne doit pas continuer à passer si le produit change ce texte.
+ * Le résumé de travail se désigne par sa DURÉE — la seule partie du libellé
+ * commune au français (« A travaillé pendant 1 minute et 3 secondes ») et à
+ * l'anglais (« Worked for 1 minute and 3 seconds »), parce qu'elle vient des
+ * horodatages et non d'une traduction. Même procédé que `shots/agent`.
+ *
+ * Ces 1 min 3 s sont une donnée : les six messages du fil sont datés par
+ * `captures/world/seed/006-numo.mjs`. Changer le déroulé là-bas casse ce
+ * contrôle ici, et c'est voulu.
  */
-function icuPlural(pattern, count) {
-  const other = /other\s*\{([^}]*)\}/.exec(pattern);
-  if (!other) throw new Error(`captures: pluriel ICU illisible — ${pattern}`);
-  return other[1].replaceAll("#", String(count));
-}
+const DURATION = /\b1\b[^0-9]*\b3\b/;
 
+/**
+ * Les libellés d'action, reconstruits depuis le catalogue de l'app plutôt que
+ * recopiés : une capture ne doit pas continuer à passer si le produit change
+ * ce texte.
+ */
 async function toolLabels(locale) {
-  const catalog = JSON.parse(
-    await readFile(resolve(ROOT, `messages/${locale}.json`), "utf8"),
-  ).ToolCall;
-  return [icuPlural(catalog.foundIssues, 3), icuPlural(catalog.issuesUpdated, 2)];
+  return Promise.all([
+    toolCallLabel(locale, "foundIssues", 3),
+    toolCallLabel(locale, "issuesUpdated", 2),
+  ]);
 }
 
 const PUBLISH = process.argv.includes("--publish");
@@ -81,7 +85,22 @@ async function capture({ locale, theme }) {
       .getByText("Nobody owns anything", { exact: false })
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    // Étendu : en compact le fil déborde de 73 px et coupe une extrémité.
+    // Le tour de travail reste REPLIÉ : c'est l'état par défaut du produit, et
+    // c'est celui qu'on photographie. Le résumé de durée suffit à dire que Numo
+    // a travaillé, et la réponse finale nomme les tickets qu'il a modifiés —
+    // déplier étalerait le raisonnement sur toute la hauteur du panneau pour
+    // montrer ce que la phrase de conclusion dit déjà.
+    const summary = page.locator('[role="log"]').first().getByRole("button", { name: DURATION });
+    await summary.waitFor({ state: "visible", timeout: 10_000 });
+
+    // Panneau ÉTENDU. Ce n'est plus une contrainte de débordement — le fil
+    // replié tiendrait en taille normale — mais un choix de cadrage : étendu,
+    // Numo occupe le centre de l'image et le board passe derrière en décor. En
+    // taille normale les deux se disputent le regard, et le board gagne, parce
+    // qu'il est plus dense et plus coloré. La section parle de l'assistant.
+    //
+    // Le prix assumé : le fil replié est court, donc le bas du panneau reste
+    // vide. C'est du calme autour du propos, pas un manque.
     await panel.getByRole("button", { name: EXPAND[locale], exact: true }).click();
     await page.waitForFunction(
       (width) => {
@@ -108,7 +127,10 @@ async function capture({ locale, theme }) {
           (el) => el.getBoundingClientRect().width > 0,
         ).length;
         return {
-          missingLabels: labels.filter((l) => !text.includes(l)),
+          // REPLIÉ : les libellés d'action ne doivent PAS être là. Les voir
+          // signifierait que le résumé s'est ouvert, seul, entre deux runs.
+          leakedLabels: labels.filter((l) => text.includes(l)),
+          hasSummary: !!log && /\b1\b[^0-9]*\b3\b/.test(text),
           hasInstruction: text.includes("Nobody owns anything"),
           hasOutcome: text.includes("AUR-11") && text.includes("AUR-7"),
           hasContext: (dialog?.textContent || "").includes(viewName),
@@ -121,10 +143,17 @@ async function capture({ locale, theme }) {
     if (!check.hasInstruction) {
       throw new Error(`${locale}/${theme} — l'instruction de Camille est absente du fil.`);
     }
-    if (check.missingLabels.length > 0) {
+    if (!check.hasSummary) {
       throw new Error(
-        `${locale}/${theme} — action(s) absente(s) du fil : ${check.missingLabels.join(", ")}. ` +
-          `Numo a l'air de répondre sans rien faire, ce qui est l'inverse du propos.`,
+        `${locale}/${theme} — le résumé « A travaillé pendant 1 minute et 3 secondes » ` +
+          `est absent du fil. Sans lui, Numo a l'air de répondre sans rien faire, ce qui ` +
+          `est l'inverse du propos. Vérifier le déroulé dans world/seed/006-numo.mjs.`,
+      );
+    }
+    if (check.leakedLabels.length > 0) {
+      throw new Error(
+        `${locale}/${theme} — le résumé de travail est DÉPLIÉ : ${check.leakedLabels.join(", ")} ` +
+          `apparaissent dans le fil. La capture doit montrer l'état replié.`,
       );
     }
     if (!check.hasOutcome) {
@@ -148,7 +177,7 @@ async function capture({ locale, theme }) {
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);
-    return { path, locale, theme, labels };
+    return { path, locale, theme };
   } finally {
     await browser.close();
   }
@@ -157,7 +186,7 @@ async function capture({ locale, theme }) {
 const results = [];
 for (const variant of VARIANTS) {
   const r = await capture(variant);
-  console.log(`  ${r.locale}/${r.theme} → ${r.path} · ${r.labels.join(" · ")}`);
+  console.log(`  ${r.locale}/${r.theme} → ${r.path} · résumé de travail replié (1 min 3 s)`);
   results.push(r);
 }
 

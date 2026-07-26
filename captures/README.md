@@ -94,10 +94,25 @@ node captures/lib/session.mjs            # rafraîchit la session de démo
 node captures/shots/<nom>/shot.mjs       # produit la capture
 ```
 
-Par défaut les captures visent `http://localhost:3000`. Pour viser la prod :
+Par défaut les captures visent `http://localhost:3000`. Pour viser un
+déploiement :
 
 ```bash
-CAPTURE_BASE_URL=https://minddy.app node captures/shots/<nom>/shot.mjs
+CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/<nom>/shot.mjs
+CAPTURE_BASE_URL=https://www.minddy.app node captures/shots/<nom>/shot.mjs
+```
+
+`preview` et `www` partagent la MÊME base : le monde de démo est le même des deux
+côtés, seul le code diffère. C'est ce qui rend `preview` utile ici — une capture
+qui casse là-bas et passe en prod signale un changement d'UI pas encore livré,
+pas une donnée manquante. La session est liée à l'origine : changer de cible
+demande de rejouer `node captures/lib/session.mjs` avec le même
+`CAPTURE_BASE_URL`.
+
+Pour livrer des PNG déjà produits, sans relancer une seule prise :
+
+```bash
+node captures/lib/publish.mjs --shots
 ```
 
 ## Ce qui est versionné, et pourquoi

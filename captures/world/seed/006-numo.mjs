@@ -50,12 +50,31 @@ const BUMPED = ["AUR-11", "AUR-7"];
 const UPDATE_RESULT = { updated: BUMPED.length, identifiers: BUMPED };
 
 /**
- * Le fil, dans l'ordre. `at` est une position relative dans la quinzaine
- * courante — la conversation doit être récente pour que l'horodatage affiché
- * ait l'air vivant.
+ * Le déroulé, en SECONDES depuis le premier message.
+ *
+ * L'app affiche la durée d'un tour de travail (« A travaillé pendant … »,
+ * `Agent.workedForMinutes`) en soustrayant le premier horodatage du dernier.
+ * Le fil tenait sur douze minutes rondes, ce qui est invraisemblable pour deux
+ * recherches et une mise à jour groupée — et le « et 0 seconde » d'une durée
+ * pile sonnait faux. Une minute trois, avec des intervalles inégaux : le temps
+ * de lire un résultat n'est pas celui d'écrire une phrase.
+ */
+const TIMELINE = [0, 4, 9, 31, 38, 63];
+
+/** Les six horodatages du fil, dans l'ordre. Partagés par la création et le
+    réalignement, pour qu'il n'existe qu'une seule définition du déroulé. */
+function timelineFor(window) {
+  const base = Date.parse(spreadInWindow(window, 1, 14));
+  return TIMELINE.map((seconds) => new Date(base + seconds * 1000).toISOString());
+}
+
+/**
+ * Le fil, dans l'ordre. Il est daté dans la quinzaine courante — la
+ * conversation doit être récente pour que l'horodatage affiché ait l'air vivant.
  */
 function buildMessages(conversationId, window) {
-  const at = (fraction, minute) => spreadInWindow(window, fraction, 14).replace(":00:00", `:${minute}:00`);
+  const stamps = timelineFor(window);
+  const at = (index) => stamps[index];
 
   return [
     {
@@ -63,7 +82,7 @@ function buildMessages(conversationId, window) {
       role: "user",
       content:
         "Nobody owns anything in the Aurora backlog. Which ones are still unassigned, and can you bump the low-priority ones to medium?",
-      created_at: at(0.98, "02"),
+      created_at: at(0),
     },
     {
       conversation_id: conversationId,
@@ -79,7 +98,7 @@ function buildMessages(conversationId, window) {
           },
         },
       ],
-      created_at: at(0.98, "04"),
+      created_at: at(1),
     },
     {
       conversation_id: conversationId,
@@ -87,7 +106,7 @@ function buildMessages(conversationId, window) {
       tool_call_id: SEARCH_CALL,
       tool_name: "search_issues",
       content: JSON.stringify(SEARCH_RESULT),
-      created_at: at(0.98, "05"),
+      created_at: at(2),
     },
     {
       conversation_id: conversationId,
@@ -104,7 +123,7 @@ function buildMessages(conversationId, window) {
           },
         },
       ],
-      created_at: at(0.99, "11"),
+      created_at: at(3),
     },
     {
       conversation_id: conversationId,
@@ -112,16 +131,71 @@ function buildMessages(conversationId, window) {
       tool_call_id: UPDATE_CALL,
       tool_name: "update_issues",
       content: JSON.stringify(UPDATE_RESULT),
-      created_at: at(0.99, "12"),
+      created_at: at(4),
     },
     {
       conversation_id: conversationId,
       role: "assistant",
       content:
         "Done — AUR-11 and AUR-7 are medium now. Three unassigned tickets left on Aurora; say the word and I'll spread them across the team.",
-      created_at: at(1, "14"),
+      created_at: at(5),
     },
   ];
+}
+
+/**
+ * Redate les messages d'une conversation déjà en base sur le déroulé courant.
+ *
+ * Le script est idempotent par le TITRE : une conversation déjà là est laissée
+ * telle quelle, et changer `TIMELINE` ne suffirait donc pas à corriger ce qui
+ * est photographié. Même logique qu'`applyBump` : on réaligne l'existant au
+ * lieu de tout détruire pour tout recréer.
+ */
+async function alignTimeline(world, conversation, window) {
+  const { data, error } = await world.admin
+    .from("assistant_messages")
+    .select("id, role, created_at")
+    .eq("conversation_id", conversation.id)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`captures: lecture des messages — ${error.message}`);
+
+  const messages = data || [];
+  const stamps = timelineFor(window);
+  if (messages.length !== stamps.length) {
+    throw new Error(
+      `captures: la conversation « ${TITLE} » porte ${messages.length} messages, ` +
+        `le déroulé en décrit ${stamps.length}. Réaligner à l'aveugle daterait ` +
+        `les mauvaises lignes — corriger TIMELINE, ou la conversation.`,
+    );
+  }
+
+  const drifted = messages
+    .map((message, index) => ({ message, want: stamps[index] }))
+    .filter(({ message, want }) => Date.parse(message.created_at) !== Date.parse(want));
+
+  // `conversations.updated_at` n'est PAS à nous : le trigger
+  // `conversations_set_updated_at` (migration 20260707160000_assistant) le
+  // repose à `now()` à chaque UPDATE. Le viser ne changerait rien et laisserait
+  // le script réclamer la même modification à chaque exécution. Il ne se voit
+  // pas sur la capture — la liste range la conversation sous « Aujourd'hui »,
+  // ce que `now()` donne de toute façon.
+  if (drifted.length === 0) {
+    console.log("  → déroulé déjà à l'heure : rien à redater");
+    return;
+  }
+
+  const span = (TIMELINE[TIMELINE.length - 1] - TIMELINE[0]) / 60;
+  console.log(
+    `  Redater le fil sur ${Math.floor(span)} min ${(TIMELINE[TIMELINE.length - 1] % 60)} s ` +
+      `(${drifted.length} message(s) à déplacer)`,
+  );
+
+  const plan = createPlan(world);
+  for (const { message, want } of drifted) {
+    plan.update("assistant_messages", { id: message.id }, { created_at: want }, `message ${message.role}`);
+  }
+  console.log(plan.describe());
+  await plan.apply({ confirmed: true });
 }
 
 /** Applique aux tickets la mise à jour groupée que la conversation annonce. */
@@ -169,7 +243,7 @@ async function main() {
 
   const { data: existing, error } = await world.admin
     .from("conversations")
-    .select("id, title")
+    .select("id, title, updated_at")
     .eq("user_id", people.camille)
     .eq("project_id", project.id)
     .eq("title", TITLE);
@@ -181,7 +255,9 @@ async function main() {
   await applyBump(world, project);
 
   if ((existing || []).length > 0) {
-    console.log(`  → conversation « ${TITLE} » déjà là, laissée telle quelle`);
+    console.log(`  → conversation « ${TITLE} » déjà là, contenu laissé tel quel`);
+    // Le déroulé, lui, se rattrape : c'est lui qui donne la durée affichée.
+    await alignTimeline(world, existing[0], window);
     return;
   }
 

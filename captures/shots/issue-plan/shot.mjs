@@ -11,6 +11,14 @@
 import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
+/**
+ * Débranché de la landing depuis le 2026-07-26 : `workflowIssue` est servi par
+ * `shots/issue-create`. Le drapeau est lu par `publish.mjs --shots`, qui saute
+ * ce dossier — sans lui, l'ordre du disque déciderait laquelle des deux images
+ * part en production. Voir `intent.md`.
+ */
+const RETIRED = true;
+
 const SLOT = "workflowIssue";
 const OUT = "captures/shots/issue-plan/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
@@ -35,6 +43,21 @@ const PLAN_ANCHORS = [
 ];
 
 const PUBLISH = process.argv.includes("--publish");
+
+// `workflowIssue` est servi par `shots/issue-create` depuis le 2026-07-26 — voir
+// `intent.md`. Ce script vise donc le MÊME emplacement qu'un autre, et publier
+// écraserait la modale de création par le plan, sans un mot. Produire les PNG
+// reste permis : le script est gardé en état de marche, seul le raccordement à
+// la landing est coupé.
+if (PUBLISH) {
+  console.error(
+    "captures: `issue-plan` n'alimente plus la landing.\n" +
+      "L'emplacement `workflowIssue` est servi par `captures/shots/issue-create`, et\n" +
+      "publier d'ici l'écraserait. Pour remettre le plan sur la page, il lui faut son\n" +
+      "propre emplacement dans screenshot-slots.ts — voir intent.md.",
+  );
+  process.exit(1);
+}
 const VARIANTS = [
   { locale: "fr", theme: "light" },
   { locale: "fr", theme: "dark" },
