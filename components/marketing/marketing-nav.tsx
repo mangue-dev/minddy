@@ -3,9 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bot, Equal, HelpCircle, LayoutGrid, Tag, type LucideIcon } from "lucide-react";
+import {
+  Boxes,
+  Equal,
+  LayoutGrid,
+  MessagesSquare,
+  Plug,
+  Route,
+  Tag,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { Button, Sheet, SheetClose, SheetContent, SheetTitle, cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { NumoIcon } from "@/components/numo-icon";
+import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
 import { getSupabase } from "@/lib/supabase";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -26,23 +38,47 @@ type NavLink = {
   icon: LucideIcon;
 };
 
-// Ancres directes plutôt qu'un popover : sur un site de deux pages, un menu
-// déroulant coûte un clic pour rien.
-//
-// Les quatre entrées suivent le plan de la page. Avant, la nav pointait sur
-// `#workflow` et `#features` — deux ancres qui n'existent plus comme sections —
-// et ignorait `#agents`, qui est pourtant la cible du badge du hero.
-//
-// « Tarifs » vise la section de la landing et non `/pricing` : le comparatif
-// complet reste à un clic, par le lien « Comparer les plans en détail » sous les
-// cartes. Le préfixe `/#` garantit le retour vers la landing depuis /pricing ou
-// une page légale.
-const LINKS: ReadonlyArray<NavLink> = [
-  { href: "/#tracker", key: "navFeatures", icon: LayoutGrid },
-  { href: "/#agents", key: "navAgents", icon: Bot },
-  { href: "/#pricing", key: "navPricing", icon: Tag },
-  { href: "/#faq", key: "navFaq", icon: HelpCircle },
+/**
+ * Le menu « Produit » : les six sections de la landing, chacune avec ce qu'on y
+ * trouve. La nav listait quatre ancres nues — « Le tracker », « Les agents »,
+ * « Tarifs », « FAQ » — dont deux n'apprenaient rien à qui ne connaît pas
+ * minddy, et laissait de côté la moitié de la page (la vitesse, le board de
+ * feedback, le reste). Un mot qui regroupe vaut mieux que quatre qui se
+ * devinent.
+ */
+const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
+  { key: "tracker", href: "/#tracker", icon: LayoutGrid },
+  { key: "speed", href: "/#speed", icon: Zap },
+  { key: "agents", href: "/#agents", icon: Plug },
+  { key: "numo", href: "/#numo", icon: null },
+  { key: "feedback", href: "/#feedback", icon: MessagesSquare },
+  { key: "more", href: "/#more", icon: Boxes },
 ];
+
+/**
+ * Les deux liens directs qui accompagnent le menu.
+ *
+ * « Comment ça marche » vise `#workflow`, le parcours ticket → pull request :
+ * c'est la question que se pose un visiteur qui vient de lire le hero, et la
+ * section y répond en trois images. La FAQ a quitté la nav — elle est en bas de
+ * page, on y arrive en lisant, pas en la cherchant, et elle occupait une place
+ * de nav pour une objection qu'on n'a pas encore.
+ *
+ * « Tarifs » vise la section de la landing et non `/pricing` : le comparatif
+ * complet reste à un clic, par le lien « Comparer les plans en détail » sous les
+ * cartes. Le préfixe `/#` garantit le retour vers la landing depuis /pricing ou
+ * une page légale.
+ */
+const LINKS: ReadonlyArray<NavLink> = [
+  { href: "/#workflow", key: "navHowItWorks", icon: Route },
+  { href: "/#pricing", key: "navPricing", icon: Tag },
+];
+
+/** Ligne et pastille d'icône du tiroir mobile, partagées par ses deux blocs. */
+const MOBILE_ROW =
+  "flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted active:scale-[0.99]";
+const MOBILE_ICON =
+  "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/60 text-muted-foreground";
 
 function NavLogo() {
   return (
@@ -131,6 +167,7 @@ export function MarketingNav() {
           </Link>
 
           <nav className="hidden items-center gap-5 text-sm text-muted-foreground md:flex lg:gap-7">
+            <NavProductMenu entries={PRODUCT_ENTRIES} label={t("navProduct")} />
             {LINKS.map((link) =>
               link.href.startsWith("/#") ? (
                 <a key={link.href} href={link.href} className="transition-colors hover:text-foreground">
@@ -200,14 +237,42 @@ export function MarketingNav() {
             </Link>
           </div>
 
+          {/* Au tactile il n'y a pas de survol, donc pas de menu : le tiroir
+              déplie ce que le menu « Produit » regroupe, sous son intitulé, et
+              les deux liens directs suivent. Mêmes cibles, même ordre. */}
           <div className="flex-1 overflow-y-auto p-3">
+            <p className="px-2.5 pt-1 pb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              {t("navProduct")}
+            </p>
+            {PRODUCT_ENTRIES.map((entry) => (
+              <SheetClose key={entry.href} asChild>
+                <a href={entry.href} className={MOBILE_ROW}>
+                  <span className={MOBILE_ICON}>
+                    {entry.icon ? (
+                      <entry.icon className="h-4 w-4" />
+                    ) : (
+                      <NumoIcon animated={false} className="h-3.5 w-auto" />
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">
+                      {t(`navMenu_${entry.key}_title`)}
+                    </span>
+                    <span className="block text-xs leading-snug text-muted-foreground">
+                      {t(`navMenu_${entry.key}_desc`)}
+                    </span>
+                  </span>
+                </a>
+              </SheetClose>
+            ))}
+
+            <div className="my-2 border-t border-border" />
+
             {LINKS.map((link) => {
               const Icon = link.icon;
-              const className =
-                "flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted active:scale-[0.99]";
               const content = (
                 <>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/60 text-muted-foreground">
+                  <span className={MOBILE_ICON}>
                     <Icon className="h-4 w-4" />
                   </span>
                   <span className="text-sm font-medium text-foreground">{t(link.key)}</span>
@@ -216,11 +281,11 @@ export function MarketingNav() {
               return (
                 <SheetClose key={link.href} asChild>
                   {link.href.startsWith("/#") ? (
-                    <a href={link.href} className={className}>
+                    <a href={link.href} className={MOBILE_ROW}>
                       {content}
                     </a>
                   ) : (
-                    <Link href={link.href} className={className}>
+                    <Link href={link.href} className={MOBILE_ROW}>
                       {content}
                     </Link>
                   )}

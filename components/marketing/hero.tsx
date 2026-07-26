@@ -117,10 +117,18 @@ export async function Hero() {
                 <ArrowRight data-icon="inline-end" />
               </TrackedCta>
             </Button>
+            {/* L'action secondaire ne vise plus /pricing : demander le prix à
+                quelqu'un qui vient de lire le titre arrive trop tôt, et la note
+                juste en dessous répond déjà (« gratuit jusqu'à 2 projets »).
+                Elle envoie au parcours ticket → pull request, la question
+                qu'on se pose réellement à cet instant.
+
+                Et elle n'est plus `TrackedCta` : `landing_cta_clicked` compte
+                les entrées vers l'INSCRIPTION, or c'est devenu un défilement
+                dans la page. L'y laisser gonflerait « hero » avec des gens qui
+                voulaient seulement lire la suite. */}
             <Button asChild size="lg" variant="outline">
-              <TrackedCta href="/pricing" location="hero">
-                {t("heroCtaSecondary")}
-              </TrackedCta>
+              <a href="/#workflow">{t("heroCtaSecondary")}</a>
             </Button>
           </div>
 
