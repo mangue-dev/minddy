@@ -67,4 +67,28 @@ describe("buildIssuePlanPrompt", () => {
     expect(prompt).toContain("MIN-42-plan.md");
     expect(prompt).toContain("point me to it");
   });
+
+  it("plan existant : demande de le VÉRIFIER point par point, pas d'en écrire un", () => {
+    const prompt = buildIssuePlanPrompt({
+      ...input,
+      issue: { ...issue, plan: "## Approche\n\n- [x] a\n- [ ] b\n- [ ] c" } as Issue,
+    });
+    expect(prompt).toContain("Review the implementation plan");
+    expect(prompt).toContain("task by task");
+    expect(prompt).toContain("(1/3 tasks done)");
+    expect(prompt).not.toContain("Write the implementation plan");
+    // Le plan lui-même n'est jamais inliné : l'agent le lit via le MCP.
+    expect(prompt).not.toContain("- [x] a");
+    expect(prompt).toContain("minddy_get_issue");
+    expect(prompt).toContain("minddy_update_issues");
+    expect(prompt).toContain("ask me to paste the current plan");
+  });
+
+  it("plan sans tâche (prose seule) : reste une demande d'écriture", () => {
+    const prompt = buildIssuePlanPrompt({
+      ...input,
+      issue: { ...issue, plan: "Quelques notes en vrac." } as Issue,
+    });
+    expect(prompt).toContain("Write the implementation plan");
+  });
 });

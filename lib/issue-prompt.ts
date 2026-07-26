@@ -1,4 +1,4 @@
-import { parsePlan } from "@/lib/plan";
+import { hasPlanTasks, parsePlan } from "@/lib/plan";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
@@ -124,14 +124,19 @@ If the minddy MCP tools are not available, that's fine — just work on the issu
 }
 
 /**
- * Variante « écrire le plan » du prompt : l'agent CADRE le ticket et rien de
- * plus — il explore le code, écrit le plan sur le ticket (via le MCP quand il
- * l'a, sinon en markdown dans sa réponse) et s'arrête avant d'implémenter.
- * Sert le bouton « Copier le prompt » de l'onglet Plan, quand celui-ci est vide.
+ * Variante « cadrer le ticket » du prompt : l'agent travaille le PLAN et rien
+ * de plus — il explore le code, écrit le plan sur le ticket (via le MCP quand
+ * il l'a, sinon en markdown dans sa réponse) et s'arrête avant d'implémenter.
+ * Sert le bouton « Copier le prompt » de l'onglet Plan.
+ *
+ * Le plan existe déjà → on ne redemande pas de l'écrire : le prompt bascule sur
+ * une RELECTURE point par point (`buildIssuePlanReviewPrompt`).
  */
 export function buildIssuePlanPrompt(input: IssuePromptInput): string {
   const { issue, projectId, projectKey } = input;
   const identifier = issueIdentifier(projectKey, issue.number);
+
+  if (hasPlanTasks(issue.plan)) return buildIssuePlanReviewPrompt(input);
 
   return `Write the implementation plan for this minddy issue. Do NOT implement it.
 
@@ -146,4 +151,33 @@ Optionally, if minddy MCP tools are available in your environment (parameters fo
 If the minddy MCP tools are not available, that's fine — write the plan to a local markdown file (e.g. \`${identifier}-plan.md\`) and point me to it. Don't paste a long plan into your answer: a file is where I can actually read and keep it.
 
 Stop once the plan is written: don't start implementing until I ask.`;
+}
+
+/**
+ * Variante « vérifier le plan » : le ticket a DÉJÀ un plan, on ne demande donc
+ * pas d'en écrire un — l'agent le reprend tâche par tâche face au code réel,
+ * corrige ce qui a dérivé, et s'arrête avant d'implémenter.
+ * Le plan n'est pas inliné (potentiellement 64 Ko) : l'agent le lit via le MCP,
+ * et sans MCP il le demande plutôt que de l'inventer.
+ */
+export function buildIssuePlanReviewPrompt(input: IssuePromptInput): string {
+  const { issue, projectId, projectKey } = input;
+  const identifier = issueIdentifier(projectKey, issue.number);
+  const { progress } = parsePlan(issue.plan);
+
+  return `Review the implementation plan of this minddy issue, task by task. Do NOT implement it.
+
+${issueBlock(input)}
+
+This issue already has an implementation plan (${progress.done}/${progress.total} tasks done); it is intentionally not inlined here, so read it before saying anything about it.
+
+Then go through it one task at a time, checking each against the real code: is it still accurate (right files, right components, right approach), still needed, and in the right order? Is a step missing, or vague enough to be useless? Correct what has drifted, drop what the code no longer calls for, add what's missing, and make sure the plan ends on a verification step. Leave completed tasks — \`- [x]\` — and their progress alone: they describe work already done.
+
+Optionally, if minddy MCP tools are available in your environment (parameters for this issue: project_id "${projectId}", issue "${identifier}"):
+- Read the full issue and its plan with \`minddy_get_issue\` first — plus its description, attachments and relations.
+- Save the corrected plan back to the issue's \`plan\` field with \`minddy_update_issues\`, preserving the task markers of everything already done.
+
+If the minddy MCP tools are not available, ask me to paste the current plan before reviewing it — don't guess at what it contains.
+
+Report what you changed and why, then stop: don't start implementing until I ask.`;
 }

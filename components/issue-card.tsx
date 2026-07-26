@@ -55,7 +55,10 @@ import {
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
+import {
+  agentLaunchPromptVariant,
+  agentPlanPromptVariant,
+} from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
@@ -93,7 +96,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
-import { planProgress, type PlanProgress } from "@/lib/plan";
+import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 
 /** Strip common markdown so the description preview reads as plain text. */
 function plainPreview(md: string): string {
@@ -870,11 +873,15 @@ export function IssueCard({
       : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
     composeAgentSession(prompt);
   };
-  // « Générer un plan » : session neuve dont la consigne est de CADRER le
-  // ticket — écrire le plan, puis s'arrêter avant d'implémenter.
+  // Un plan existe déjà → les entrées « plan » (menu ⋯, prompt copié, agent)
+  // basculent de « générer » à « vérifier ».
+  const issueHasPlan = hasPlanTasks(issue.plan);
+  // « Générer un plan » / « Vérifier le plan » : session neuve dont la consigne
+  // est de CADRER le ticket — écrire le plan s'il n'en a pas, le relire point
+  // par point s'il en a déjà un, puis s'arrêter avant d'implémenter.
   const writePlanWithAgent = () => {
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.writePlan")}`
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`
     );
   };
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
@@ -943,8 +950,10 @@ export function IssueCard({
     }
   };
 
-  // « Générer un plan » côté prompt : la consigne de cadrage, pour un agent
-  // externe. Pas de démarrage automatique — planifier n'est pas commencer.
+  // « Générer un plan » / « Vérifier le plan » côté prompt : la consigne de
+  // cadrage, pour un agent externe — `buildIssuePlanPrompt` bascule seul sur la
+  // relecture quand le plan existe. Pas de démarrage automatique : planifier
+  // n'est pas commencer.
   const copyPlanPrompt = async () => {
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
@@ -955,12 +964,15 @@ export function IssueCard({
         ...promptContext(),
       })
     );
-    toast.success(tPlan("planPromptCopied"));
+    toast.success(
+      tPlan(issueHasPlan ? "reviewPromptCopied" : "planPromptCopied")
+    );
   };
 
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: agentHasSession,
+    hasPlan: issueHasPlan,
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onImplementWithAgent: startNewAgentSession,

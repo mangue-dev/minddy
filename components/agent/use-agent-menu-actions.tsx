@@ -11,10 +11,14 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
  * prompt, lancer l'agent Numo — partagées par les cartes du board et le panneau
  * latéral, pour qu'elles ne divergent pas.
  *
- * Chacune est un SOUS-MENU avec les deux façons de travailler un ticket :
- * « Générer un plan » (cadrer, sans coder) et « Implémenter le ticket ». Les
- * raccourcis clavier ne bougent pas — ⇧P copie le prompt d'implémentation, ⇧A
- * lance l'agent dessus — et s'affichent donc sur cette feuille-là.
+ * Chacune est un SOUS-MENU avec les deux façons de travailler un ticket : le
+ * plan (cadrer, sans coder) et « Implémenter le ticket ». Les raccourcis
+ * clavier ne bougent pas — ⇧P copie le prompt d'implémentation, ⇧A lance
+ * l'agent dessus — et s'affichent donc sur cette feuille-là.
+ *
+ * La feuille « plan » suit l'état du ticket : « Générer un plan » quand il n'en
+ * a pas, « Vérifier le plan » quand il en a un — en redemander un n'aurait pas
+ * de sens, et le prompt sous-jacent bascule de la même façon.
  *
  * Session existante : « Ouvrir l'agent » reste une entrée simple (elle rouvre la
  * conversation, elle ne lance rien) et c'est « Nouvelle session » qui porte le
@@ -23,6 +27,7 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 export function useAgentMenuActions({
   agentsEnabled,
   hasSession,
+  hasPlan,
   onCopyPrompt,
   onCopyPlanPrompt,
   onImplementWithAgent,
@@ -33,6 +38,8 @@ export function useAgentMenuActions({
   agentsEnabled: boolean;
   /** Le ticket a déjà une conversation d'agent. */
   hasSession: boolean;
+  /** Le ticket a déjà un plan (au moins une tâche) → vérifier, plutôt qu'écrire. */
+  hasPlan: boolean;
   onCopyPrompt: () => void;
   onCopyPlanPrompt: () => void;
   onImplementWithAgent: () => void;
@@ -44,7 +51,20 @@ export function useAgentMenuActions({
   const tAgent = useTranslations("Agent");
 
   return useMemo(() => {
-    const planKeywords = ["plan", "planifier", "cadrer", "scope", "générer"];
+    // Les deux libellés restent cherchables ensemble : quel que soit l'état du
+    // ticket, taper « plan » ou « vérifier » trouve l'entrée.
+    const planKeywords = [
+      "plan",
+      "planifier",
+      "cadrer",
+      "scope",
+      "générer",
+      "vérifier",
+      "verify",
+      "review",
+      "check",
+    ];
+    const planLabel = hasPlan ? t("actionReviewPlan") : t("actionWritePlan");
     const implementKeywords = ["implement", "implémenter", "code", "coder", "build"];
 
     const copyPrompt: ContextMenuAction = {
@@ -55,7 +75,7 @@ export function useAgentMenuActions({
       children: [
         {
           id: "copy-prompt-plan",
-          label: t("actionWritePlan"),
+          label: planLabel,
           keywords: planKeywords,
           icon: <ListChecks className="size-4" />,
           onSelect: onCopyPlanPrompt,
@@ -79,7 +99,7 @@ export function useAgentMenuActions({
     const launchChildren: ContextMenuAction[] = [
       {
         id: "agent-plan",
-        label: t("actionWritePlan"),
+        label: planLabel,
         keywords: planKeywords,
         icon: <ListChecks className="size-4" />,
         onSelect: onWritePlanWithAgent,
@@ -126,6 +146,7 @@ export function useAgentMenuActions({
   }, [
     agentsEnabled,
     hasSession,
+    hasPlan,
     onCopyPrompt,
     onCopyPlanPrompt,
     onImplementWithAgent,

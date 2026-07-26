@@ -1,10 +1,12 @@
 import type { IssueEffort } from "@/lib/issue-constants";
-import { parsePlan } from "@/lib/plan";
+import { hasPlanTasks } from "@/lib/plan";
 
 /** Clé i18n du corps du prompt de lancement (namespace `Agent.launchPrompt`).
- *  `writePlan` n'est jamais choisie par `agentLaunchPromptVariant` : c'est une
- *  demande EXPLICITE de l'utilisateur (bouton « Écrire avec Numo » de l'onglet
- *  Plan) — cadrer le ticket, sans l'implémenter. */
+ *  `writePlan` / `reviewPlan` ne sont jamais choisies par
+ *  `agentLaunchPromptVariant` : elles répondent à une demande EXPLICITE de
+ *  l'utilisateur (entrée « Générer un plan » / « Vérifier le plan », bouton de
+ *  l'onglet Plan) — cadrer le ticket, sans l'implémenter. Voir
+ *  `agentPlanPromptVariant`. */
 export type AgentLaunchPromptVariant =
   | "planExists"
   | "planExistsXl"
@@ -12,7 +14,8 @@ export type AgentLaunchPromptVariant =
   | "s"
   | "xl"
   | "default"
-  | "writePlan";
+  | "writePlan"
+  | "reviewPlan";
 
 /**
  * Choisit la variante du prompt pré-écrit du composer de lancement selon l'issue.
@@ -32,8 +35,8 @@ export function agentLaunchPromptVariant(issue: {
   plan: string | null;
   effort: IssueEffort | null;
 }): AgentLaunchPromptVariant {
-  const hasPlan = parsePlan(issue.plan).tasks.length > 0;
-  if (hasPlan) return issue.effort === "xl" ? "planExistsXl" : "planExists";
+  if (hasPlanTasks(issue.plan))
+    return issue.effort === "xl" ? "planExistsXl" : "planExists";
 
   switch (issue.effort) {
     case "xs":
@@ -48,4 +51,15 @@ export function agentLaunchPromptVariant(issue: {
       // Effort M/L ou non renseigné : cadrer puis exécuter.
       return "default";
   }
+}
+
+/**
+ * Variante du prompt quand l'utilisateur demande explicitement de travailler le
+ * PLAN et rien d'autre : l'écrire s'il n'existe pas, le VÉRIFIER point par point
+ * s'il existe déjà — redemander un plan à un ticket qui en a un n'a pas de sens.
+ */
+export function agentPlanPromptVariant(issue: {
+  plan: string | null;
+}): "writePlan" | "reviewPlan" {
+  return hasPlanTasks(issue.plan) ? "reviewPlan" : "writePlan";
 }

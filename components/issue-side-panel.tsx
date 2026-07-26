@@ -50,7 +50,10 @@ import { isAgentRunWorking } from "@/lib/agent-api";
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
+import {
+  agentLaunchPromptVariant,
+  agentPlanPromptVariant,
+} from "@/lib/agent-launch-prompt";
 import { buildIssuePlanPrompt, buildIssuePrompt } from "@/lib/issue-prompt";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import {
@@ -69,7 +72,7 @@ import { IssuePlan } from "@/components/issue-plan";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
-import { planProgress } from "@/lib/plan";
+import { hasPlanTasks, planProgress } from "@/lib/plan";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
@@ -202,6 +205,9 @@ export function IssueSidePanel({
   }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = useMemo(() => planProgress(issue?.plan), [issue?.plan]);
+  // Un plan existe déjà → les entrées « plan » (menu ⋯, onglet Plan, prompt
+  // copié, agent Numo) basculent de « générer » à « vérifier ».
+  const issueHasPlan = hasPlanTasks(issue?.plan);
 
   // This issue's relations, resolved to the display shape (with the other
   // issue's number) and priority-sorted. Numbers come from allIssues so a
@@ -253,15 +259,16 @@ export function IssueSidePanel({
     composeAgentSession(prompt);
   }, [issue, hasAgentSession, projectKey, composeAgentSession, tAgent]);
 
-  // « Écrire avec Numo » (onglet Plan, plan vide) : session neuve dont la
-  // consigne est de CADRER le ticket — écrire le plan sur le ticket, puis
-  // s'arrêter. Toujours une session neuve, même si le ticket en a déjà une :
-  // le composer s'ouvre avec la consigne, l'utilisateur l'envoie (ou l'amende).
+  // « Écrire avec Numo » / « Vérifier le plan avec Numo » (onglet Plan) :
+  // session neuve dont la consigne est de CADRER le ticket — écrire le plan
+  // quand il n'y en a pas, le reprendre point par point quand il existe — puis
+  // s'arrêter. Toujours une session neuve, même si le ticket en a déjà une : le
+  // composer s'ouvre avec la consigne, l'utilisateur l'envoie (ou l'amende).
   const writePlanWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.writePlan")}`
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
@@ -329,9 +336,10 @@ export function IssueSidePanel({
   }, [issue, promptContext, projectKey, user?.user_metadata, onUpdate, t]);
 
   // « Copier le prompt » de l'onglet Plan : le même ticket, mais une consigne
-  // de CADRAGE (écrire le plan, ne rien implémenter) — pour un agent externe,
-  // qui l'enregistrera sur le ticket via le MCP. Aucun démarrage automatique
-  // ici : planifier n'est pas commencer le travail.
+  // de CADRAGE (écrire le plan quand il manque, le vérifier point par point
+  // quand il existe — `buildIssuePlanPrompt` bascule seul) pour un agent
+  // externe, qui l'enregistrera sur le ticket via le MCP. Aucun démarrage
+  // automatique ici : planifier n'est pas commencer le travail.
   const copyPlanPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
     await navigator.clipboard.writeText(
@@ -344,15 +352,18 @@ export function IssueSidePanel({
         attachmentCount: issue.attachment_count,
       })
     );
-    toast.success(tPlan("planPromptCopied"));
-  }, [issue, promptContext, projectKey, tPlan]);
+    toast.success(
+      tPlan(issueHasPlan ? "reviewPromptCopied" : "planPromptCopied")
+    );
+  }, [issue, promptContext, projectKey, issueHasPlan, tPlan]);
 
   // « Copier le prompt » et « Lancer l'agent Numo » : deux sous-menus, chacun
-  // avec « Générer un plan » / « Implémenter le ticket » (hook partagé avec les
-  // cartes du board).
+  // avec la feuille « plan » (générer ou vérifier, selon le ticket) et
+  // « Implémenter le ticket » (hook partagé avec les cartes du board).
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: hasAgentSession,
+    hasPlan: issueHasPlan,
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onImplementWithAgent: startNewAgentSession,
@@ -630,9 +641,14 @@ export function IssueSidePanel({
                   plan={issue.plan}
                   onCommit={(plan) => void patch({ plan })}
                   // Numo n'apparaît que là où il peut travailler : plan payant
-                  // + dépôt lié (même porte que ⇧A / le menu « ⋯ »).
+                  // + dépôt lié (même porte que ⇧A / le menu « ⋯ »). Les prompts
+                  // copiables, eux, marchent avec n'importe quel agent externe.
                   onWriteWithAgent={agentsEnabled ? writePlanWithAgent : undefined}
                   onCopyPrompt={() => void copyPlanPrompt()}
+                  onImplementWithAgent={
+                    agentsEnabled ? startNewAgentSession : undefined
+                  }
+                  onCopyImplementPrompt={() => void copyPrompt()}
                 />
               </TabsContent>
 

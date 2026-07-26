@@ -766,6 +766,7 @@
     "createdByIntegrationGeneric": "Créé via une intégration",
     "copyAsPrompt": "Copier le prompt",
     "actionWritePlan": "Générer un plan",
+    "actionReviewPlan": "Vérifier le plan",
     "actionImplement": "Implémenter le ticket",
     "promptCopied": "Prompt copié. Collez-le dans votre agent de code.",
     "promptCopiedMoved": "Prompt copié. Le ticket est passé « En cours ».",
@@ -1037,6 +1038,9 @@
     "copyPlanPrompt": "Copier le prompt",
     "copyPlanPromptHint": "Copie un prompt qui demande à votre agent d'écrire le plan de ce ticket.",
     "planPromptCopied": "Prompt copié. Collez-le dans votre agent de code pour qu'il écrive le plan.",
+    "implementWithNumo": "Implémenter avec Numo",
+    "reviewWithNumo": "Vérifier le plan avec Numo",
+    "reviewPromptCopied": "Prompt copié. Collez-le dans votre agent de code pour qu'il vérifie le plan.",
     "editAriaLabel": "Modifier le plan",
     "editorPlaceholder": "## Approche\n\n- [ ] Première tâche\n- [ ] Deuxième tâche",
     "markPending": "Marquer à faire",
@@ -1204,7 +1208,8 @@
       "s": "C'est une petite tâche (S). Esquisse d'abord un plan léger seulement si le changement le justifie, puis implémente-le et vérifie ton travail.",
       "xl": "C'est une grosse tâche (XL). Commence par écrire un plan d'implémentation complet sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Puis ARRÊTE-TOI et demande s'il faut commencer l'implémentation maintenant ; ne code rien tant que je n'ai pas confirmé.",
       "default": "Commence par écrire un plan d'implémentation clair sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Une fois le plan en place, implémente-le et vérifie ton travail.",
-      "writePlan": "Ton seul travail ici est d'écrire le plan d'implémentation de ce ticket. Explore le code, puis rédige un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers et fonctions exacts à toucher, et une étape de vérification. Enregistre le plan sur le ticket, puis ARRÊTE-TOI : n'implémente rien tant que je ne te l'ai pas demandé."
+      "writePlan": "Ton seul travail ici est d'écrire le plan d'implémentation de ce ticket. Explore le code, puis rédige un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers et fonctions exacts à toucher, et une étape de vérification. Enregistre le plan sur le ticket, puis ARRÊTE-TOI : n'implémente rien tant que je ne te l'ai pas demandé.",
+      "reviewPlan": "Ce ticket a déjà un plan d'implémentation : ton seul travail ici est de le VÉRIFIER, pas d'en écrire un nouveau ni de l'implémenter. Lis-le, puis reprends-le tâche par tâche face au code réel — chacune est-elle toujours juste (bons fichiers, bonne approche), toujours nécessaire, et dans le bon ordre ? Manque-t-il une étape ? Corrige ce qui a dérivé, retire ce que le code ne justifie plus, ajoute ce qui manque, et laisse les tâches déjà terminées et leur avancée intactes. Enregistre le plan corrigé sur le ticket, puis ARRÊTE-TOI en me disant ce que tu as changé."
     },
     "openAgent": "Ouvrir l'agent Numo",
     "newSession": "Nouvelle session",

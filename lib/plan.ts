@@ -163,6 +163,12 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
 export const planProgress = (plan: string | null | undefined): PlanProgress =>
   parsePlan(plan).progress;
 
+/** Le ticket porte-t-il un plan exploitable (au moins une tâche) ? C'est la
+ *  question que posent l'UI — « Générer un plan » ou « Vérifier le plan » — et
+ *  les prompts, qui demandent d'ÉCRIRE le plan ou de le RELIRE point par point. */
+export const hasPlanTasks = (plan: string | null | undefined): boolean =>
+  parsePlan(plan).tasks.length > 0;
+
 /** Rewrite exactly one task line's state marker, leaving every other byte intact. */
 export function setTaskState(
   plan: string,

@@ -4,12 +4,16 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Progress,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "mangue-ui";
-import { ClipboardCopy, Pencil } from "lucide-react";
+import { ChevronDown, ClipboardCopy, Code2, ListChecks, Pencil } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { TaskRow } from "@/components/plan-task-row";
@@ -32,21 +36,33 @@ import { trackEvent } from "@/lib/analytics";
  * copier le prompt pour un agent externe (MCP), ou l'écrire à la main. Les deux
  * premières sont optionnelles : le panneau ne les passe que quand elles ont un
  * sens (agents autorisés + dépôt lié pour Numo).
+ *
+ * Plan rempli : le plan est écrit, la suite est de l'IMPLÉMENTER — c'est le
+ * bouton principal, en tête de l'onglet. En dessous, les deux façons de le
+ * reprendre d'abord : le faire vérifier point par point par Numo, ou copier un
+ * prompt pour un agent externe (au choix : implémenter, ou vérifier le plan).
  */
 export function IssuePlan({
   plan,
   onCommit,
   onWriteWithAgent,
   onCopyPrompt,
+  onImplementWithAgent,
+  onCopyImplementPrompt,
 }: {
   plan: string | null;
   onCommit: (plan: string | null) => void;
-  /** Ouvre le composer d'agent avec un prompt « écris le plan ». */
+  /** Ouvre le composer d'agent avec un prompt « écris / vérifie le plan ». */
   onWriteWithAgent?: () => void;
-  /** Copie le prompt « écris le plan » pour un agent externe. */
+  /** Copie le prompt « écris / vérifie le plan » pour un agent externe. */
   onCopyPrompt?: () => void;
+  /** Ouvre le composer d'agent avec le prompt « implémente le ticket ». */
+  onImplementWithAgent?: () => void;
+  /** Copie le prompt « implémente le ticket » pour un agent externe. */
+  onCopyImplementPrompt?: () => void;
 }) {
   const t = useTranslations("Plan");
+  const tIssue = useTranslations("IssueUI");
   const tCommon = useTranslations("Common");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -54,6 +70,10 @@ export function IssuePlan({
   const { segments, progress } = useMemo(() => parsePlan(plan), [plan]);
   const percent =
     progress.total === 0 ? 0 : Math.round((progress.done / progress.total) * 100);
+  // Un plan avec des tâches se VÉRIFIE ; du markdown sans tâche (de la prose
+  // seule) reste à écrire — même définition que `hasPlanTasks`, pour que les
+  // libellés collent aux prompts que les callbacks déclenchent.
+  const reviewing = progress.total > 0;
 
   const startEditing = () => {
     setDraft(plan ?? "");
@@ -168,6 +188,68 @@ export function IssuePlan({
           <Pencil />
         </Button>
       </div>
+
+      {/* Ce qu'on fait d'un plan écrit. L'implémenter est l'action attendue —
+          seul bouton plein ; en dessous, les deux façons de le reprendre avant.
+          Numo n'apparaît que là où il peut travailler (le panneau ne passe ses
+          deux callbacks que dans ce cas) ; les prompts copiables, eux, servent
+          les agents externes et restent toujours là. */}
+      {(onImplementWithAgent ||
+        onWriteWithAgent ||
+        onCopyPrompt ||
+        onCopyImplementPrompt) && (
+        <div className="mb-4 flex flex-col gap-2">
+          {onImplementWithAgent && (
+            <Button className="w-full" onClick={onImplementWithAgent}>
+              <NumoIcon animated={false} className="size-4" />
+              {t("implementWithNumo")}
+            </Button>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {onWriteWithAgent && (
+              <Button
+                variant="outline"
+                // `grow basis-*` plutôt que `flex-1` : les boutons partagent la
+                // ligne quand elle est assez large, sans jamais rogner leur
+                // libellé (le composant est `shrink-0`) — sinon ils passent à la
+                // ligne, chacun sur toute la largeur.
+                className="grow basis-40"
+                onClick={onWriteWithAgent}
+              >
+                <NumoIcon animated={false} className="size-4" />
+                {t(reviewing ? "reviewWithNumo" : "writeWithNumo")}
+              </Button>
+            )}
+            {(onCopyPrompt || onCopyImplementPrompt) && (
+              // Le libellé ne dit pas QUEL prompt : le menu le demande — les
+              // deux mêmes façons de travailler le ticket que le menu « ⋯ ».
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="grow basis-32">
+                    <ClipboardCopy className="size-4" />
+                    {t("copyPlanPrompt")}
+                    <ChevronDown className="size-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {onCopyImplementPrompt && (
+                    <DropdownMenuItem onSelect={onCopyImplementPrompt}>
+                      <Code2 className="size-4" />
+                      {tIssue("actionImplement")}
+                    </DropdownMenuItem>
+                  )}
+                  {onCopyPrompt && (
+                    <DropdownMenuItem onSelect={onCopyPrompt}>
+                      <ListChecks className="size-4" />
+                      {tIssue(reviewing ? "actionReviewPlan" : "actionWritePlan")}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         {segments.map((segment, i) =>
