@@ -32,8 +32,16 @@ export type IssueEffort = "xs" | "s" | "m" | "l" | "xl";
 // Labels are i18n'd — resolve via useTranslations("Status")(value).
 export interface StatusMeta {
   value: IssueStatus;
+  /**
+   * LEGACY — ne PAS afficher un statut avec ça. Le glyphe d'un statut est
+   * `<StatusIndicator status={…} />` (components/issue-indicators.tsx) : les
+   * anneaux/camemberts/disques du design Figma, utilisés par les cartes, les
+   * colonnes, tous les pickers et la command palette. Ces icônes lucide sont le
+   * jeu d'avant ce design ; elles ne survivent que parce que `StatusMeta` est
+   * aussi la forme des colonnes du kanban (où seul `value` compte).
+   */
   icon: LucideIcon;
-  /** Tailwind text-color class for the icon. */
+  /** LEGACY, comme `icon` — la couleur vit dans StatusIndicator. */
   color: string;
 }
 
@@ -74,7 +82,11 @@ export const isClosedStatus = (status: IssueStatus): boolean =>
 // Labels are i18n'd — resolve via useTranslations("Priority")(value).
 export interface PriorityMeta {
   value: IssuePriority;
+  /** LEGACY, comme `StatusMeta.icon` — afficher une priorité passe par
+   *  `<PriorityIndicator priority={…} />` (barres de signal remplies par le bas,
+   *  carré rouge « ! » pour urgent). */
   icon: LucideIcon;
+  /** LEGACY, comme `icon` — la couleur vit dans PriorityIndicator. */
   color: string;
 }
 

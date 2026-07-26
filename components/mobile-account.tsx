@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import packageJson from "@/package.json";
@@ -59,122 +60,127 @@ export function useAccountActions(): {
   const { theme, setTheme } = useTheme();
   const isAdmin = useIsAdmin();
 
-  const menuSections: AppNavSection[] = [
-    {
-      key: "account",
-      label: t("account"),
-      items: [
-        { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
-        { key: "m-billing", label: t("billing"), icon: CreditCard, href: "/billing" },
-        { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
-        ...(isAdmin
-          ? [{ key: "m-admin", label: t("adminDashboard"), icon: Shield, href: "/admin" }]
-          : []),
-        { key: "m-feedback", label: t("shareFeedback"), icon: Megaphone, onClick: openFeedbackBoard },
-      ],
-    },
-    {
-      key: "appearance",
-      label: t("appearance"),
-      items: THEME_CHOICES.map((c) => ({
-        key: `m-${c.value}`,
+  // Mémoïsé : le groupe « compte » est concaténé aux groupes de la palette, et
+  // une nouvelle identité à chaque rendu ferait reconstruire toutes les lignes
+  // de la palette (des milliers depuis MIN-91) à chaque rendu du shell.
+  return useMemo(() => {
+    const menuSections: AppNavSection[] = [
+      {
+        key: "account",
+        label: t("account"),
+        items: [
+          { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
+          { key: "m-billing", label: t("billing"), icon: CreditCard, href: "/billing" },
+          { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
+          ...(isAdmin
+            ? [{ key: "m-admin", label: t("adminDashboard"), icon: Shield, href: "/admin" }]
+            : []),
+          { key: "m-feedback", label: t("shareFeedback"), icon: Megaphone, onClick: openFeedbackBoard },
+        ],
+      },
+      {
+        key: "appearance",
+        label: t("appearance"),
+        items: THEME_CHOICES.map((c) => ({
+          key: `m-${c.value}`,
+          label: t(c.key as Parameters<typeof t>[0]),
+          icon: c.icon,
+          active: theme === c.value,
+          onClick: () => setTheme(c.value),
+        })),
+      },
+      {
+        key: "session",
+        items: [
+          { key: "m-signout", label: t("signOut"), icon: LogOut, onClick: () => void signOut() },
+        ],
+      },
+    ];
+
+    const commandItems: PaletteItem[] = [
+      {
+        key: "cmd-stats",
+        label: t("statistics"),
+        icon: BarChart3,
+        keywords: ["statistics", "stats", "statistiques"],
+        onSelect: () => router.push("/statistics"),
+      },
+      {
+        key: "cmd-billing",
+        label: t("billing"),
+        icon: CreditCard,
+        keywords: ["billing", "facturation", "plan", "abonnement", "subscription", "usage"],
+        onSelect: () => router.push("/billing"),
+      },
+      ...(isAdmin
+        ? [
+            {
+              key: "cmd-admin",
+              label: t("adminDashboard"),
+              icon: Shield,
+              keywords: ["admin", "administration", "models", "modèles", "modeles", "ia", "ai"],
+              onSelect: () => router.push("/admin"),
+            },
+          ]
+        : []),
+      {
+        key: "cmd-feedback",
+        label: t("shareFeedback"),
+        icon: Megaphone,
+        keywords: ["feedback", "support", "retour", "avis"],
+        onSelect: openFeedbackBoard,
+      },
+      // Copie dans le presse-papiers le prompt de synchronisation git (localisé
+      // FR/EN) prêt à coller dans un agent de code — pas de navigation, juste un
+      // writeText + toast, comme l'action « Copier le prompt » d'un ticket.
+      {
+        key: "cmd-git-sync-prompt",
+        label: t("syncPrompt"),
+        icon: ClipboardCopy,
+        keywords: [
+          "git",
+          "sync",
+          "synchroniser",
+          "synchronize",
+          "prompt",
+          "copier",
+          "copy",
+          "rebase",
+          "push",
+          "pull",
+          "dépôt",
+          "depot",
+          "repo",
+        ],
+        onSelect: () => {
+          void navigator.clipboard
+            .writeText(t("syncPromptText"))
+            .then(() => toast.success(t("syncPromptCopied")));
+        },
+      },
+      ...THEME_CHOICES.map((c) => ({
+        key: `cmd-${c.value}`,
         label: t(c.key as Parameters<typeof t>[0]),
         icon: c.icon,
-        active: theme === c.value,
-        onClick: () => setTheme(c.value),
+        keywords: ["theme", "thème", "appearance", "apparence", t(c.key as Parameters<typeof t>[0])],
+        meta:
+          theme === c.value ? <Check className="size-3.5 text-muted-foreground" /> : undefined,
+        onSelect: () => setTheme(c.value),
       })),
-    },
-    {
-      key: "session",
-      items: [
-        { key: "m-signout", label: t("signOut"), icon: LogOut, onClick: () => void signOut() },
-      ],
-    },
-  ];
-
-  const commandItems: PaletteItem[] = [
-    {
-      key: "cmd-stats",
-      label: t("statistics"),
-      icon: BarChart3,
-      keywords: ["statistics", "stats", "statistiques"],
-      onSelect: () => router.push("/statistics"),
-    },
-    {
-      key: "cmd-billing",
-      label: t("billing"),
-      icon: CreditCard,
-      keywords: ["billing", "facturation", "plan", "abonnement", "subscription", "usage"],
-      onSelect: () => router.push("/billing"),
-    },
-    ...(isAdmin
-      ? [
-          {
-            key: "cmd-admin",
-            label: t("adminDashboard"),
-            icon: Shield,
-            keywords: ["admin", "administration", "models", "modèles", "modeles", "ia", "ai"],
-            onSelect: () => router.push("/admin"),
-          },
-        ]
-      : []),
-    {
-      key: "cmd-feedback",
-      label: t("shareFeedback"),
-      icon: Megaphone,
-      keywords: ["feedback", "support", "retour", "avis"],
-      onSelect: openFeedbackBoard,
-    },
-    // Copie dans le presse-papiers le prompt de synchronisation git (localisé
-    // FR/EN) prêt à coller dans un agent de code — pas de navigation, juste un
-    // writeText + toast, comme l'action « Copier le prompt » d'un ticket.
-    {
-      key: "cmd-git-sync-prompt",
-      label: t("syncPrompt"),
-      icon: ClipboardCopy,
-      keywords: [
-        "git",
-        "sync",
-        "synchroniser",
-        "synchronize",
-        "prompt",
-        "copier",
-        "copy",
-        "rebase",
-        "push",
-        "pull",
-        "dépôt",
-        "depot",
-        "repo",
-      ],
-      onSelect: () => {
-        void navigator.clipboard
-          .writeText(t("syncPromptText"))
-          .then(() => toast.success(t("syncPromptCopied")));
+      {
+        key: "cmd-signout",
+        label: t("signOut"),
+        icon: LogOut,
+        keywords: ["logout", "sign out", "déconnexion", "deconnexion", "quitter"],
+        onSelect: () => void signOut(),
       },
-    },
-    ...THEME_CHOICES.map((c) => ({
-      key: `cmd-${c.value}`,
-      label: t(c.key as Parameters<typeof t>[0]),
-      icon: c.icon,
-      keywords: ["theme", "thème", "appearance", "apparence", t(c.key as Parameters<typeof t>[0])],
-      meta:
-        theme === c.value ? <Check className="size-3.5 text-muted-foreground" /> : undefined,
-      onSelect: () => setTheme(c.value),
-    })),
-    {
-      key: "cmd-signout",
-      label: t("signOut"),
-      icon: LogOut,
-      keywords: ["logout", "sign out", "déconnexion", "deconnexion", "quitter"],
-      onSelect: () => void signOut(),
-    },
-  ];
+    ];
 
-  return {
-    menuSections,
-    commandGroup: { key: "account", heading: t("account"), items: commandItems },
-  };
+    return {
+      menuSections,
+      commandGroup: { key: "account", heading: t("account"), items: commandItems },
+    };
+  }, [t, router, signOut, theme, setTheme, isAdmin]);
 }
 
 /** User identity block for the bottom of the mobile menu sheet (menuFooter). */

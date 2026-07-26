@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
-import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { buildMembersByProject } from "@/lib/server/project-members";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
@@ -11,7 +11,6 @@ import type {
   Category,
   IntegrationRef,
   IssueRelation,
-  Member,
   Objective,
 } from "@/lib/types";
 
@@ -103,20 +102,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Members: owner (from projects) + collaborators (from project_members), all
-  // resolved to display names/avatars via the auth admin API.
+  // resolved to display names/avatars via the auth admin API (shared helper —
+  // GET /api/me/search-index builds the same map for the command palette).
   const projectRows = (projectsRes.data ?? []) as {
     id: string;
     owner_id: string;
   }[];
-  const projectIds = projectRows.map((p) => p.id);
-
-  const { data: memberRows } = projectIds.length
-    ? await service
-        .from("project_members")
-        .select("project_id, user_id, role")
-        .in("project_id", projectIds)
-        .order("created_at", { ascending: true })
-    : { data: [] as { project_id: string; user_id: string }[] };
+  const { members, projectIds } = await buildMembersByProject(service, projectRows);
 
   // Integrations across my projects — feeds the cross-project integration
   // filter (issues carry integration_id). Read via the service client like
@@ -132,31 +124,6 @@ export async function GET(request: NextRequest) {
   const integrations: Record<string, IntegrationRef[]> = {};
   for (const row of (integrationRows ?? []) as IntegrationRef[]) {
     (integrations[row.project_id] ??= []).push(row);
-  }
-
-  const usersById = await fetchAuthUsersById(service, [
-    ...projectRows.map((p) => p.owner_id),
-    ...(memberRows ?? []).map((m) => m.user_id as string),
-  ]);
-
-  const members: Record<string, Member[]> = {};
-  for (const p of projectRows) {
-    members[p.id] = [
-      {
-        user_id: p.owner_id,
-        ...toNamed(usersById.get(p.owner_id)),
-        role: "owner",
-        is_owner: true,
-      },
-    ];
-  }
-  for (const m of (memberRows ?? []) as { project_id: string; user_id: string }[]) {
-    (members[m.project_id] ??= []).push({
-      user_id: m.user_id,
-      ...toNamed(usersById.get(m.user_id)),
-      role: "member",
-      is_owner: false,
-    });
   }
 
   const relations = (relationsRes.data ?? []) as IssueRelation[];

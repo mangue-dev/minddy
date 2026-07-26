@@ -14,15 +14,30 @@
 // status/priority/effort/assignee, delete) as plain rows in place of the normal
 // content — configurable fields open the same inline form as "Changer le thème".
 //
+// Cross-project (MIN-91): the rows now cover every project, so a ticket's ⌘;
+// actions can't assume it belongs to the project in the URL. Members and
+// categories come from the ticket's OWN project (via the search index), the
+// caches invalidated after a write are that project's, and « copier le prompt »
+// fetches the full ticket when the row is a light index row.
+//
 // Open state is owned by AppShellChrome (so the header pill and the shortcuts
 // share it); this component is controlled via `open` / `onOpenChange`.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type SVGProps } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+  type SVGProps,
+} from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast, useTheme } from "mangue-ui";
-import { Copy, UserRound, Gauge, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh } from "lucide-react";
+import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh } from "lucide-react";
 import {
   CommandPalette as CommandPaletteShell,
   type ActionProvider,
@@ -33,10 +48,13 @@ import {
   type PaletteItem as CpPaletteItem,
 } from "@/lib/command-palette";
 import { NumoIcon } from "@/components/numo-icon";
+import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
 import { useBulkActions } from "@/lib/bulk-actions-context";
 import { displayName } from "@/lib/display-name";
-import { updateIssueApi } from "@/lib/issues-api";
+import { fetchIssueApi, updateIssueApi } from "@/lib/issues-api";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { patchSearchIndexIssue } from "@/lib/use-search-index";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -53,8 +71,6 @@ import {
   ALL_STATUSES,
   PRIORITIES,
   EFFORTS,
-  STATUS_MAP,
-  PRIORITY_MAP,
   type IssueStatus,
   type IssuePriority,
   type IssueEffort,
@@ -63,7 +79,12 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { useAnalytics } from "@/lib/use-analytics";
-import type { Issue } from "@/lib/types";
+import type {
+  Issue,
+  Member,
+  SearchIndexIssue,
+  SearchIndexResponse,
+} from "@/lib/types";
 import type { PaletteGroup } from "@/components/header-search-pill";
 import "./command-palette.css";
 
@@ -79,11 +100,57 @@ const GROUP_BOOSTS: Record<string, number> = {
   objectives: 80,
 };
 
-/** Icône de statut d'un ticket (celle du board, avec sa couleur). */
+/** Icône de statut d'un ticket : le MÊME indicateur que les cartes du board et
+ *  le panneau latéral (anneau pointillé, camembert de progression, disque plein
+ *  au glyphe évidé — cf. components/issue-indicators.tsx). Les glyphes lucide de
+ *  `STATUS_MAP` / `PRIORITY_MAP` sont le jeu d'avant le design Figma : la palette
+ *  était la dernière surface à les afficher, ils ne sont plus lus nulle part. */
 function statusIcon(status: IssueStatus) {
-  const meta = STATUS_MAP[status];
-  const Icon = meta.icon;
-  return <Icon className={`size-4 ${meta.color}`} />;
+  return <StatusIndicator status={status} className="size-4" />;
+}
+
+/** Les mêmes indicateurs, en COMPOSANTS, pour les slots qui attendent un type
+ *  d'icône (`ContextualAction.icon`, rendu `<action.icon className=… />`).
+ *  Mis en cache par valeur pour garder une identité de composant stable d'un
+ *  rendu à l'autre — sinon la ligne d'action se remonte à chaque frappe. */
+type IconOf<T> = (value: T) => ComponentType<{ className?: string }>;
+
+function cachedIndicator<T>(
+  name: string,
+  render: (value: T, className?: string) => ReactNode
+): IconOf<T> {
+  const cache = new Map<T, ComponentType<{ className?: string }>>();
+  return (value: T) => {
+    const cached = cache.get(value);
+    if (cached) return cached;
+    const Icon = ({ className }: { className?: string }) => render(value, className);
+    Icon.displayName = `${name}(${String(value)})`;
+    cache.set(value, Icon);
+    return Icon;
+  };
+}
+
+const statusActionIcon = cachedIndicator<IssueStatus>(
+  "StatusActionIcon",
+  (status, className) => <StatusIndicator status={status} className={className} />
+);
+
+const priorityActionIcon = cachedIndicator<IssuePriority>(
+  "PriorityActionIcon",
+  (priority, className) => (
+    <PriorityIndicator priority={priority} className={className} />
+  )
+);
+
+/** Un ticket tel que la palette le reçoit : ligne complète du board (projet
+ *  courant) ou ligne légère de l'index cross-projet (MIN-91). */
+type PaletteIssue = Issue | SearchIndexIssue;
+
+/** Seules les lignes du board portent `category_ids` (ajouté par mapIssueRow) —
+ *  c'est ce qui distingue un ticket complet d'une ligne d'index, dépourvue de
+ *  description et de plan. */
+function isFullIssue(issue: PaletteIssue): issue is Issue {
+  return "category_ids" in issue;
 }
 
 /** Visage de Numo en icône d'action statique (pas de clignement dans la popover). */
@@ -97,9 +164,17 @@ export interface CommandPaletteProps {
   /** Controlled open state (owned by AppShellChrome). */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Cross-project index (MIN-91) — read here for the members and categories of
+   *  projects other than the one in the URL, which the ⌘; actions need. */
+  searchIndex?: SearchIndexResponse | null;
 }
 
-export function CommandPalette({ groups, open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({
+  groups,
+  open,
+  onOpenChange,
+  searchIndex,
+}: CommandPaletteProps) {
   const { track } = useAnalytics();
   const locale = useLocale();
   const tIssueUI = useTranslations("IssueUI");
@@ -158,9 +233,27 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
   const currentProjectId = projectIdFromPath(pathname);
   const { members } = useMembersQuery(currentProjectId, !!currentProjectId);
   const { categories: projectCategories } = useCategoriesQuery(currentProjectId);
-  const categoryNameById = useMemo(
-    () => new Map(projectCategories.map((c) => [c.id, c.name])),
-    [projectCategories]
+
+  // Catégories de TOUS mes projets (ids uuid → uniques globalement, donc une
+  // seule map suffit). Celles du projet courant écrasent l'index : mêmes
+  // données, mais tenues à jour par le realtime.
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const list of Object.values(searchIndex?.categories ?? {})) {
+      for (const c of list) map.set(c.id, c.name);
+    }
+    for (const c of projectCategories) map.set(c.id, c.name);
+    return map;
+  }, [searchIndex, projectCategories]);
+
+  // Membres du projet DU TICKET — la palette liste maintenant des tickets de
+  // tous les projets, donc l'assigné ne peut plus venir du projet de l'URL.
+  const membersForProject = useCallback(
+    (projectId: string): Member[] => {
+      if (projectId === currentProjectId && members.length > 0) return members;
+      return searchIndex?.members[projectId] ?? [];
+    },
+    [currentProjectId, members, searchIndex]
   );
 
   // Global open shortcuts. ⌘K / ⌘P toggle from anywhere (modifier combos are
@@ -247,7 +340,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
         .filter((it) => !HIDDEN_KEYS.has(it.key))
         .map((it): CpPaletteItem => {
           const Icon = it.icon;
-          const issue = it.entityType === "issue" ? (it.data as Issue) : null;
+          const issue = it.entityType === "issue" ? (it.data as PaletteIssue) : null;
           return {
             id: it.key,
             title: it.label,
@@ -260,6 +353,9 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
             contextLabel: it.metaText,
             filterCategory: cat,
             entityType: it.entityType,
+            // Projet de la ligne : le moteur boost celles du projet courant
+            // (SearchContext.currentContextId), sans exclure les autres.
+            contextId: it.contextId,
             data: it.data,
             execute: () => {
               // `it.key` est un identifiant stable (cmd-*, id de ticket) —
@@ -286,11 +382,12 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
 
   // === Actions contextuelles des tickets (⌘; / →) ===
   // Chaque action ouvre un formulaire inline à un champ : le select s'ouvre
-  // auto-focus, choisir une option auto-soumet → PATCH + invalidation du cache
-  // ["issues", projectId] (le board et la palette se rafraîchissent), toast.
+  // auto-focus, choisir une option auto-soumet → PATCH + invalidation des caches
+  // du projet DU TICKET (son board, le board agrégé) et patch de l'index
+  // cross-projet, toast.
   const issueProvider = useMemo<ActionProvider>(() => {
     const update = async (
-      issue: Issue,
+      issue: PaletteIssue,
       updates: Parameters<typeof updateIssueApi>[1],
       message: string
     ): Promise<ActionResult> => {
@@ -298,7 +395,11 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
         surface: "palette",
         previousStatus: issue.status,
       });
+      // L'index est la source de la ligne dès qu'on n'est pas dans le projet du
+      // ticket : sans ce patch, l'icône de statut resterait l'ancienne.
+      patchSearchIndexIssue(queryClient, issue.id, updates as Partial<SearchIndexIssue>);
       await queryClient.invalidateQueries({ queryKey: ["issues", issue.project_id] });
+      void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       toast.success(message);
       // closeMenu:false → retour à la recherche, l'icône de statut se met à jour
       return { success: true, closeMenu: false };
@@ -319,7 +420,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
       handles: ["issue"],
       priority: 50,
       getActions: (item): ContextualAction[] => {
-        const issue = item.data as Issue | undefined;
+        const issue = item.data as PaletteIssue | undefined;
         if (!issue) return [];
 
         const actions: ContextualAction[] = [];
@@ -328,7 +429,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
         actions.push({
           id: "issue.status",
           label: tIssueUI("changeStatusAria"),
-          icon: STATUS_MAP[issue.status].icon,
+          icon: statusActionIcon(issue.status),
           category: "secondary",
           priority: 40,
           requiresForm: {
@@ -338,7 +439,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
               ALL_STATUSES.map((s) => ({
                 value: s.value,
                 label: tStatus(s.value),
-                icon: <s.icon className={`size-4 ${s.color}`} />,
+                icon: <StatusIndicator status={s.value} className="size-4" />,
                 description: s.value === issue.status ? "•" : undefined,
               }))
             ),
@@ -355,7 +456,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
         actions.push({
           id: "issue.priority",
           label: tIssueUI("changePriorityAria"),
-          icon: PRIORITY_MAP[issue.priority].icon,
+          icon: priorityActionIcon(issue.priority),
           category: "secondary",
           priority: 30,
           requiresForm: {
@@ -365,7 +466,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
               PRIORITIES.map((p) => ({
                 value: p.value,
                 label: tPriority(p.value),
-                icon: <p.icon className={`size-4 ${p.color}`} />,
+                icon: <PriorityIndicator priority={p.value} className="size-4" />,
                 description: p.value === issue.priority ? "•" : undefined,
               }))
             ),
@@ -379,10 +480,14 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
         });
 
         // — Effort —
+        // Triangle : le glyphe d'effort du board (EffortIndicator = triangle +
+        // lettre). L'indicateur complet ne rentrerait pas dans ce slot de 16 px,
+        // et les options n'en portent pas non plus sur les cartes — la lettre
+        // (XS…XL) EST l'information.
         actions.push({
           id: "issue.effort",
           label: tIssueUI("changeEffortAria"),
-          icon: Gauge,
+          icon: Triangle,
           category: "secondary",
           priority: 20,
           requiresForm: {
@@ -414,9 +519,9 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
           requiresForm: {
             ...selectField("assignee", tIssueUI("changeAssigneeAria"), [
               { value: "__none__", label: tField("unassigned") },
-              ...members.map((m) => ({
+              ...membersForProject(issue.project_id).map((m) => ({
                 value: m.user_id,
-                label: m.full_name ?? m.email ?? m.user_id,
+                label: displayName(m),
                 description: m.user_id === issue.assignee_id ? "•" : undefined,
               })),
             ]),
@@ -443,34 +548,45 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
           priority: 5,
           execute: async (): Promise<ActionResult> => {
             const project = projects.find((p) => p.id === issue.project_id);
+            // Le prompt décrit le ticket ENTIER (description, échéance…) : une
+            // ligne d'index n'en porte pas, donc on va chercher le ticket.
+            let full: Issue;
+            try {
+              full = isFullIssue(issue) ? issue : await fetchIssueApi(issue.id);
+            } catch (err) {
+              toast.error((err as Error).message);
+              return { success: false, closeMenu: false };
+            }
             const autoStart =
               resolvePromptCopyAutoStart(user?.user_metadata) &&
-              shouldAutoStartOnPromptCopy(issue.status);
+              shouldAutoStartOnPromptCopy(full.status);
             // Le XML copié reflète l'état APRÈS auto-start (comme sur le board)
             const promptIssue = autoStart
-              ? { ...issue, status: "in_progress" as const }
-              : issue;
-            const promptCategories = issue.category_ids
+              ? { ...full, status: "in_progress" as const }
+              : full;
+            const promptCategories = full.category_ids
               .map((cid) => categoryNameById.get(cid))
               .filter((name): name is string => !!name);
             const prompt = buildIssuePrompt({
               issue: promptIssue,
-              projectId: issue.project_id,
+              projectId: full.project_id,
               projectKey: project?.key ?? "",
               categories: promptCategories,
               // Relations non résolues ici (données board) — bloc omis du prompt
-              attachmentCount: issue.attachment_count,
+              attachmentCount: full.attachment_count,
             });
             await navigator.clipboard.writeText(prompt);
             if (autoStart) {
               await updateIssueApi(
-                issue.id,
+                full.id,
                 { status: "in_progress" },
-                { surface: "palette", previousStatus: issue.status }
+                { surface: "palette", previousStatus: full.status }
               );
+              patchSearchIndexIssue(queryClient, full.id, { status: "in_progress" });
               await queryClient.invalidateQueries({
-                queryKey: ["issues", issue.project_id],
+                queryKey: ["issues", full.project_id],
               });
+              void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
               toast.success(tIssueUI("promptCopiedMoved"));
             } else {
               toast.success(tIssueUI("promptCopied"));
@@ -498,7 +614,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
         return actions;
       },
     };
-  }, [queryClient, members, projects, user, categoryNameById, tIssueUI, tStatus, tPriority, tField]);
+  }, [queryClient, membersForProject, projects, user, categoryNameById, tIssueUI, tStatus, tPriority, tField]);
 
   // === « Changer le thème » : un seul item, le select inline fait le sous-menu ===
   const themeProvider = useMemo<ActionProvider>(() => {
@@ -587,7 +703,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
       {
         id: "bulk-effort",
         title: tIssueUI("changeEffortAria"),
-        icon: <Gauge className="size-4" />,
+        icon: <Triangle className="size-4" />,
         keywords: ["effort", "estimation"],
         ...field("effort"),
       } as CpPaletteItem,
@@ -678,7 +794,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
                   ALL_STATUSES.map((s) => ({
                     value: s.value,
                     label: tStatus(s.value),
-                    icon: <s.icon className={`size-4 ${s.color}`} />,
+                    icon: <StatusIndicator status={s.value} className="size-4" />,
                   }))
                 ),
                 onSubmit: (values) =>
@@ -704,7 +820,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
                   PRIORITIES.map((p) => ({
                     value: p.value,
                     label: tPriority(p.value),
-                    icon: <p.icon className={`size-4 ${p.color}`} />,
+                    icon: <PriorityIndicator priority={p.value} className="size-4" />,
                   }))
                 ),
                 onSubmit: (values) =>
@@ -721,7 +837,7 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
             {
               id: "bulk.effort",
               label: tIssueUI("changeEffortAria"),
-              icon: Gauge,
+              icon: Triangle,
               category: "primary",
               requiresForm: {
                 ...selectField(
@@ -791,6 +907,9 @@ export function CommandPalette({ groups, open, onOpenChange }: CommandPalettePro
       categories={paletteCategories}
       providers={providers}
       locale={locale}
+      // Le projet de la page est un BOOST de pertinence, pas un filtre : ses
+      // tickets et objectifs remontent, ceux des autres projets restent là.
+      actionContext={currentProjectId ? { contextId: currentProjectId } : undefined}
       storagePrefix="minddy-cp"
       actionsShortcutKey=";"
       favorites={favorites}

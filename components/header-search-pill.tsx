@@ -25,6 +25,11 @@ export interface PaletteItem {
   metaText?: string;
   /** Entity type for the palette's contextual-action routing (e.g. "issue"). */
   entityType?: string;
+  /** Project this row belongs to. The desktop palette boosts rows whose
+   *  `contextId` matches the project the user is currently in, so "search
+   *  everywhere" (MIN-91) still ranks the project at hand first. Also what the
+   *  mobile cap keys on. Ignored by the mobile search. */
+  contextId?: string;
   /** Raw entity (e.g. the Issue) — lets the palette derive status icons and wire
    *  mutations (⌘; actions) without re-querying. Ignored by the mobile search. */
   data?: unknown;

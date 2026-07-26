@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ComponentType } from "react";
+import { useCallback, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,6 +28,8 @@ import { useCreate } from "@/lib/create-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { fetchIssuesApi } from "@/lib/issues-api";
+import { useSearchIndex } from "@/lib/use-search-index";
+import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
@@ -55,8 +57,42 @@ import {
   type AppNavSection,
 } from "@/components/app-sidebar";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
-import type { Project } from "@/lib/types";
+import type {
+  Project,
+  SearchIndexIssue,
+  SearchIndexObjective,
+} from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+
+/**
+ * How many rows from OTHER projects the mobile surfaces get, per data group.
+ *
+ * The desktop palette is virtualized (react-window mounts only visible rows),
+ * so it takes the whole list. mangue-ui's MobileNav is not: its cmdk search
+ * sheet and its "⋯" menu mount every item they're given, and cross-project
+ * search would hand them thousands.
+ */
+const MOBILE_CROSS_PROJECT_ROWS = 100;
+
+/** The project the user is in, complete (exactly what mobile had before
+ *  MIN-91), plus the most recently updated rows from the other projects.
+ *  `rows` arrives current-project-first, index order after (mergeByProject). */
+function capForMobile<T extends { project_id: string }>(
+  rows: T[],
+  currentProjectId: string | null
+): T[] {
+  const capped: T[] = [];
+  let others = 0;
+  for (const r of rows) {
+    if (currentProjectId && r.project_id === currentProjectId) {
+      capped.push(r);
+    } else if (others < MOBILE_CROSS_PROJECT_ROWS) {
+      others++;
+      capped.push(r);
+    }
+  }
+  return capped.length === rows.length ? rows : capped;
+}
 
 // The objective side panel is heavy (markdown editor + activity timeline), so
 // it's deferred like the create dialogs — the chunk loads the first time an
@@ -136,13 +172,19 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   const currentProjectId = projectIdFromPath(pathname);
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
+  const projectById = useMemo(
+    () => new Map(projects.map((p) => [p.id, p])),
+    [projects]
+  );
   const isInbox = pathname.startsWith("/inbox");
   // Cross-project (Home-level) boards (MIN-29).
   const isMyGlobal = pathname === "/my";
   const isAllGlobal = pathname === "/all";
 
   // Shares the ["issues", projectId] cache with the board (no extra realtime
-  // bridge) so search can list the current project's issues.
+  // bridge). Since MIN-91 the palette lists every project's tickets from the
+  // search index — this cache is what makes the CURRENT project's rows exact
+  // (realtime-fresh) rather than as-of-the-snapshot.
   const { data: projectIssues } = useQuery({
     queryKey: ["issues", currentProjectId ?? ""],
     queryFn: () => fetchIssuesApi(currentProjectId as string),
@@ -154,12 +196,42 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // realtime) and hands us the update/delete mutations the panel needs.
   const {
     objectives: projectObjectives,
+    loading: objectivesLoading,
     updateObjective,
     deleteObjective,
   } = useObjectivesQuery(currentProjectId);
   const { members: projectMembers } = useMembersQuery(
     currentProjectId,
     !!currentProjectId
+  );
+
+  // Cross-project search (MIN-91): every ticket and objective of every project,
+  // so ⌘K finds them from any page. Loaded once per tab on browser idle (or on
+  // the first palette open), then merged with the current project's fresher
+  // caches below.
+  const {
+    index: searchIndex,
+    armNow: armSearchIndex,
+    refreshIfStale: refreshSearchIndex,
+  } = useSearchIndex();
+
+  const paletteIssues = useMemo<SearchIndexIssue[]>(
+    () =>
+      mergeByProject(searchIndex?.issues ?? [], currentProjectId, projectIssues),
+    [searchIndex, currentProjectId, projectIssues]
+  );
+  const paletteObjectives = useMemo<SearchIndexObjective[]>(
+    () =>
+      mergeByProject(
+        searchIndex?.objectives ?? [],
+        currentProjectId,
+        // An empty array means "this project has none" — but it also means "not
+        // loaded yet", and replacing the index's rows with that would blink the
+        // current project's objectives out of the list. Keep the index until the
+        // real answer lands.
+        objectivesLoading ? null : projectObjectives
+      ),
+    [searchIndex, currentProjectId, projectObjectives, objectivesLoading]
   );
 
   // Objective whose side panel is open, driven by the palette. Opening it here
@@ -355,6 +427,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: p.name,
           icon: projectOrbIcon(p.id, p.icon_url),
           keywords: [p.key],
+          contextId: p.id,
           onSelect: () => router.push(`/projects/${p.id}`),
         })),
       });
@@ -366,6 +439,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         const chip = projectChip(p);
         const metaText = p.name;
         const kw = [p.name, p.key];
+        // contextId: with several projects the same five page names repeat, so
+        // the current project's copies are the ones that should rank first.
+        const contextId = p.id;
         pageItems.push(
           {
             key: `pg-tickets-${p.id}`,
@@ -374,6 +450,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            contextId,
             onSelect: () => router.push(base),
           },
           {
@@ -383,6 +460,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            contextId,
             onSelect: () => router.push(`${base}/objectives`),
           },
           {
@@ -392,6 +470,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            contextId,
             onSelect: () => router.push(`${base}/triage`),
           },
           {
@@ -401,6 +480,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            contextId,
             onSelect: () => router.push(`${base}/feedback`),
           },
           {
@@ -410,6 +490,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            contextId,
             onSelect: () => router.push(`${base}/settings`),
           },
         );
@@ -417,48 +498,109 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       groups.push({ key: "pages", heading: t("pages"), items: pageItems });
     }
 
-    // ── Issues (current project, tagged with identifier) ──────────────
-    if (currentProject && projectIssues && projectIssues.length > 0) {
-      groups.push({
-        key: "issues",
-        heading: ti("entityPlural"),
-        items: projectIssues.map((i) => {
-          const id = issueIdentifier(currentProject.key, i.number);
-          return {
-            key: `issue-${i.id}`,
-            label: i.title,
-            keywords: [id, String(i.number)],
-            meta: identifierBadge(id),
-            metaText: id,
-            entityType: "issue",
-            data: i,
-            onSelect: () => router.push(`/projects/${currentProject.id}?issue=${i.id}`),
-          };
-        }),
-      });
-    }
-
-    // ── Objectives (current project) ──────────────────────────────────
-    // Selecting one opens its side panel in place — no navigation, the user
-    // stays on the current page (see ObjectiveSidePanel mounted below).
-    if (currentProject && projectObjectives.length > 0) {
-      groups.push({
-        key: "objectives",
-        heading: t("objectives"),
-        items: projectObjectives.map((o) => ({
-          key: `objective-${o.id}`,
-          label: o.name,
-          icon: objectiveDotIcon(o.color),
-          onSelect: () => {
-            setPanelObjectiveId(o.id);
-            setPanelMounted(true);
-          },
-        })),
-      });
-    }
-
     return groups;
-  }, [projects, currentProject, projectIssues, projectObjectives, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, t, ti, tk, tScratch, setCheatsheetOpen]);
+  }, [projects, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, t, ti, tk, tScratch, setCheatsheetOpen]);
+
+  // ── Data groups: tickets + objectifs, tous projets confondus (MIN-91) ────
+  // Séparés des groupes de commandes ci-dessus parce qu'ils sont les seuls à
+  // peser : quelques milliers de lignes, chacune avec ses éléments React
+  // (badge d'identifiant, puce de projet). On les fabrique donc à la demande,
+  // avec deux budgets — liste complète pour la palette desktop (virtualisée,
+  // et qui ne rend rien tant qu'elle est fermée), liste plafonnée pour le nav
+  // mobile (qui monte tout ce qu'on lui donne).
+  const buildDataGroups = useCallback(
+    (
+      issues: SearchIndexIssue[],
+      objectives: SearchIndexObjective[]
+    ): PaletteGroup[] => {
+      const groups: PaletteGroup[] = [];
+
+      // L'identifiant porte la clé du projet (MIN-42 vs AKP-7), donc une ligne
+      // dit d'où elle vient ; `contextId` fait remonter le projet courant.
+      if (issues.length > 0) {
+        groups.push({
+          key: "issues",
+          heading: ti("entityPlural"),
+          items: issues.flatMap((i) => {
+            const project = projectById.get(i.project_id);
+            // Projet inconnu (supprimé, ou quitté) → rien pour étiqueter ni
+            // router le ticket : on l'écarte plutôt que d'afficher « -12 ».
+            if (!project) return [];
+            const id = issueIdentifier(project.key, i.number);
+            return [
+              {
+                key: `issue-${i.id}`,
+                label: i.title,
+                keywords: [id, String(i.number), project.name, project.key],
+                meta: identifierBadge(id),
+                metaText: id,
+                entityType: "issue",
+                contextId: i.project_id,
+                data: i,
+                onSelect: () => router.push(`/projects/${i.project_id}?issue=${i.id}`),
+              },
+            ];
+          }),
+        });
+      }
+
+      // Un objectif du projet courant ouvre son panneau latéral en place —
+      // l'utilisateur reste sur sa page (ObjectiveSidePanel est monté plus bas
+      // et ne porte que les données du projet courant). Un objectif d'ailleurs
+      // navigue vers la page objectifs de SON projet, sur le deep-link des
+      // notifications.
+      if (objectives.length > 0) {
+        groups.push({
+          key: "objectives",
+          heading: t("objectives"),
+          items: objectives.flatMap((o) => {
+            const project = projectById.get(o.project_id);
+            if (!project) return [];
+            return [
+              {
+                key: `objective-${o.id}`,
+                label: o.name,
+                icon: objectiveDotIcon(o.color),
+                keywords: [project.name, project.key],
+                meta: projectChip(project),
+                metaText: project.name,
+                contextId: o.project_id,
+                onSelect: () => {
+                  if (o.project_id === currentProjectId) {
+                    setPanelObjectiveId(o.id);
+                    setPanelMounted(true);
+                    return;
+                  }
+                  router.push(`/projects/${o.project_id}/objectives?open=${o.id}`);
+                },
+              },
+            ];
+          }),
+        });
+      }
+
+      return groups;
+    },
+    [projectById, currentProjectId, router, t, ti]
+  );
+
+  // Desktop: the full list, built only while the palette is open — closed, it
+  // renders nothing, so building thousands of rows on every shell re-render
+  // (notification polls, agent sessions…) would be pure waste.
+  const desktopDataGroups = useMemo(
+    () => (paletteOpen ? buildDataGroups(paletteIssues, paletteObjectives) : []),
+    [paletteOpen, buildDataGroups, paletteIssues, paletteObjectives]
+  );
+
+  // Mobile: bounded, always ready (MobileNav's search sheet opens on its own).
+  const mobileDataGroups = useMemo(
+    () =>
+      buildDataGroups(
+        capForMobile(paletteIssues, currentProjectId),
+        capForMobile(paletteObjectives, currentProjectId)
+      ),
+    [buildDataGroups, paletteIssues, paletteObjectives, currentProjectId]
+  );
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -654,15 +796,33 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { menuSections: accountSections, commandGroup: accountCommandGroup } =
     useAccountActions();
 
-  // Palette gains the account group (used by the desktop pill too). The mobile
-  // menu sheet gains the account sections so it fully replaces the sidebar.
+  // Palette = commandes + données + compte (used by the desktop pill too). The
+  // mobile menu sheet gains the account sections so it fully replaces the
+  // sidebar, and takes the capped data groups.
   const paletteGroups = useMemo(
-    () => [...commandGroups, accountCommandGroup],
-    [commandGroups, accountCommandGroup]
+    () => [...commandGroups, ...desktopDataGroups, accountCommandGroup],
+    [commandGroups, desktopDataGroups, accountCommandGroup]
   );
+  const mobilePaletteGroups = useMemo(
+    () => [...commandGroups, ...mobileDataGroups, accountCommandGroup],
+    [commandGroups, mobileDataGroups, accountCommandGroup]
+  );
+
   const mobileMenuSections = useMemo(
     () => [...sections, ...accountSections],
     [sections, accountSections]
+  );
+
+  // Opening the palette arms the cross-project index if idle hasn't yet, and
+  // revalidates it when the snapshot has aged (no-op while fresh).
+  const handlePaletteOpenChange = useCallback(
+    (next: boolean) => {
+      setPaletteOpen(next);
+      if (!next) return;
+      armSearchIndex();
+      refreshSearchIndex();
+    },
+    [armSearchIndex, refreshSearchIndex]
   );
 
   return (
@@ -679,7 +839,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             <div className="hidden items-center gap-2 desktop:flex">
               <UsageIndicator />
               <ScratchpadTrigger />
-              <HeaderSearchPill onOpen={() => setPaletteOpen(true)} />
+              <HeaderSearchPill onOpen={() => handlePaletteOpenChange(true)} />
               <NewMenu />
             </div>
           }
@@ -688,7 +848,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       mobileNav={
         <MobileNav
           sections={mobileMenuSections}
-          commandGroups={paletteGroups}
+          commandGroups={mobilePaletteGroups}
           actions={<MobileNavActions />}
           menuFooter={<MobileMenuFooter />}
           linkComponent={Link}
@@ -699,11 +859,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     >
       {children}
       {/* Command palette (⌘K / ⌘P / F, header search pill) — mêmes groupes que
-          la recherche du nav mobile, tickets enrichis d'actions (⌘;). */}
+          la recherche du nav mobile, tickets enrichis d'actions (⌘;). L'index
+          cross-projet sert aussi ces actions : membres et catégories du projet
+          DU TICKET, qui n'est pas forcément celui de la page (MIN-91). */}
       <CommandPalette
         groups={paletteGroups}
         open={paletteOpen}
-        onOpenChange={setPaletteOpen}
+        onOpenChange={handlePaletteOpenChange}
+        searchIndex={searchIndex}
       />
       {/* Objective side panel opened from the command palette — overlays the
           current page (Radix portals to body, so placement here is layout-safe). */}

@@ -337,6 +337,49 @@ export interface GlobalBoardResponse {
   cycles: BoardCycles;
 }
 
+/* ── Command-palette search index (MIN-91) ─────────────────────────────────
+   The palette searches every ticket and every objective of every project from
+   any page. Sending full rows for that would mean shipping every description
+   and every implementation plan (up to 64 Ko each) on a read nobody asked for,
+   so the index carries only what a *row* needs: what to display, what to match
+   on, and the few fields the ⌘; actions patch. Anything heavier (description,
+   plan) is fetched per issue, on demand. */
+
+/** One ticket as the palette lists it (GET /api/me/search-index). */
+export interface SearchIndexIssue {
+  id: string;
+  project_id: string;
+  number: number;
+  title: string;
+  status: IssueStatus;
+  priority: IssuePriority;
+  effort: IssueEffort | null;
+  assignee_id: string | null;
+  objective_id: string | null;
+  updated_at: string;
+}
+
+/** One objective as the palette lists it (GET /api/me/search-index). */
+export interface SearchIndexObjective {
+  id: string;
+  project_id: string;
+  name: string;
+  status: ObjectiveStatus;
+  color: string | null;
+}
+
+export interface SearchIndexResponse {
+  issues: SearchIndexIssue[];
+  objectives: SearchIndexObjective[];
+  /** Members by project id — the ⌘; « assigné » picker needs the members of the
+      *ticket's* project, which may not be the project the user is looking at. */
+  members: Record<string, Member[]>;
+  /** Categories by project id — « copier le prompt » lists category names. */
+  categories: Record<string, Category[]>;
+  /** True when the row cap kicked in (oldest-updated rows were dropped). */
+  truncated: boolean;
+}
+
 export interface Invitation {
   id: string;
   project_id: string;

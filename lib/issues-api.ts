@@ -26,6 +26,13 @@ export async function fetchIssuesApi(projectId: string): Promise<Issue[]> {
   return parseJson<Issue[]>(await fetch(`/api/projects/${projectId}/issues`));
 }
 
+/** One issue, in full. Used where only a light row is at hand — the command
+    palette's cross-project index (MIN-91) carries no description or plan, which
+    « copier le prompt » needs, so it fetches the ticket on demand. */
+export async function fetchIssueApi(issueId: string): Promise<Issue> {
+  return parseJson<Issue>(await fetch(`/api/issues/${issueId}`));
+}
+
 export async function createIssueApi(
   projectId: string,
   input: CreateIssueInput
