@@ -1,12 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import { useAuth } from "./auth-context";
 import { projectIdFromPath } from "./project-id-from-path";
+import { projectTopicIds } from "./realtime-topics";
+import type { Project } from "./types";
 
 /**
  * Single realtime bridge for the whole app. The DB broadcasts every relevant
@@ -14,13 +23,20 @@ import { projectIdFromPath } from "./project-id-from-path";
  * migration) on two private topics, and this provider is the only subscriber:
  *
  *   user:{userId}       — notifications, my project list, my invitations
- *   project:{projectId} — content of the project currently on screen
+ *   project:{projectId} — content of a project I'm a member of
  *
  * Events only invalidate React Query caches (reads stay on the REST routes);
  * per-key coalescing absorbs write bursts (Numo/MCP) into a single refetch.
  * Subscriptions are gated on the restored session: joining with the anon token
  * would be refused on private channels (and was how the old postgres_changes
  * bridges silently died).
+ *
+ * Project topics are opened for ALL my projects, not just the one in the URL
+ * (MIN-89). The cross-project surfaces — the dashboard, /all, /inbox, the
+ * palette index, the project cards' counters — read caches that no single
+ * project topic feeds, so scoping the subscription to the URL left every one of
+ * them frozen until its staleTime expired. The set is bounded (see
+ * MAX_PROJECT_CHANNELS) and reconciled, never torn down wholesale.
  */
 
 /** Payload emitted by realtime.broadcast_changes(). */
@@ -37,6 +53,39 @@ const BROADCAST_EVENTS = ["INSERT", "UPDATE", "DELETE"] as const;
 
 const INVALIDATE_COALESCE_MS = 200;
 
+// Caches that aggregate several projects. A project event has to reach them too
+// or /home, /all, /statistics and the palette stay stale (MIN-89). Kept as
+// literals like every other key in this file; the owning modules are named.
+const GLOBAL_BOARD_KEY: QueryKey = ["me", "board"]; // lib/use-global-board-query.ts
+const HOME_SUMMARY_KEY: QueryKey = ["me", "summary"]; // lib/use-home-summary-query.ts
+const SEARCH_INDEX_KEY: QueryKey = ["me", "search-index"]; // lib/use-search-index.ts
+const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
+
+/**
+ * Aggregates fed by any issue-shaped change, with the refetch policy each one
+ * wants. The palette index is marked stale but NOT refetched: it is a 4 000-row
+ * snapshot fetched once per tab on purpose, and it already revalidates itself
+ * on open when stale (lib/use-search-index.ts). Refetching it on every write
+ * would undo that design. The others are refetched only while mounted —
+ * `invalidateQueries` leaves observer-less queries stale without a request.
+ */
+const ISSUE_AGGREGATE_KEYS: { key: QueryKey; refetch: RefetchMode }[] = [
+  { key: GLOBAL_BOARD_KEY, refetch: "active" },
+  { key: HOME_SUMMARY_KEY, refetch: "active" },
+  { key: STATS_KEY, refetch: "active" },
+  { key: SEARCH_INDEX_KEY, refetch: "none" },
+];
+
+type RefetchMode = "active" | "none";
+
+/** A cache to invalidate, and whether a mounted observer should refetch it. */
+interface Invalidation {
+  key: QueryKey;
+  refetch: RefetchMode;
+}
+
+const active = (key: QueryKey): Invalidation => ({ key, refetch: "active" });
+
 function issueIdOf(change: BroadcastChange): string | null {
   const issueId = (change.record ?? change.old_record)?.issue_id;
   return typeof issueId === "string" ? issueId : null;
@@ -52,31 +101,29 @@ function feedbackPostIdOf(change: BroadcastChange): string | null {
   return typeof postId === "string" ? postId : null;
 }
 
-function keysForUserEvent(change: BroadcastChange): QueryKey[] {
+function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
     case "notifications":
-      return [["notifications"]];
+      return [active(["notifications"])];
     case "projects":
     case "project_members": // my membership changed → my project list
-      return [["projects"]];
+      return [active(["projects"])];
     case "project_invitations":
-      return [["my-invitations"], ["projects"]];
+      return [active(["my-invitations"]), active(["projects"])];
     case "views": // global (project-less) views broadcast on the user topic
-      return [["views", "global"]];
+      return [active(["views", "global"])];
     case "cycles": // my cycle timeline moved (fill, capture, rollover — MIN-32)
       return [
-        ["me", "board"],
-        ["me", "cycle"],
+        active(GLOBAL_BOARD_KEY),
+        active(HOME_SUMMARY_KEY),
+        active(["me", "cycle"]),
       ];
     case "user_scratchpad": // agent (MCP) or another tab edited my notes
-      return [["me", "scratchpad"]];
+      return [active(["me", "scratchpad"])];
     case "ai_usage": // une action IA vient d'être comptée → jauge du header (MIN-72)
-      return [["billing", "usage"]];
+      return [active(["billing", "usage"])];
     case "billing_accounts": // sync Stripe / override admin → plan effectif
-      return [
-        ["billing", "status"],
-        ["billing", "usage"],
-      ];
+      return [active(["billing", "status"]), active(["billing", "usage"])];
     default:
       return [];
   }
@@ -85,34 +132,52 @@ function keysForUserEvent(change: BroadcastChange): QueryKey[] {
 function keysForProjectEvent(
   change: BroadcastChange,
   projectId: string
-): QueryKey[] {
+): Invalidation[] {
   switch (change.table) {
+    // Issue-shaped changes also move every cross-project aggregate: the
+    // dashboard counters, the /all board, the statistics page and the palette
+    // index all derive from issues (MIN-89). Plan progress on the cards and in
+    // the side panel rides the same ["issues", projectId] cache.
     case "issues":
     case "issue_categories": // issues are cached hydrated with category_ids
-      return [["issues", projectId]];
+      return [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
     case "issue_relations":
-      return [["issue-relations", projectId]];
+      return [active(["issue-relations", projectId]), active(GLOBAL_BOARD_KEY)];
     case "objectives":
-      return [["objectives", projectId]];
+      return [
+        active(["objectives", projectId]),
+        { key: SEARCH_INDEX_KEY, refetch: "none" },
+      ];
     case "categories": // renames/deletes also affect chips on cached issues
       return [
-        ["categories", projectId],
-        ["issues", projectId],
+        active(["categories", projectId]),
+        active(["issues", projectId]),
+        { key: SEARCH_INDEX_KEY, refetch: "none" },
       ];
     case "views":
-      return [["views", projectId]];
+      return [active(["views", projectId])];
     case "project_members":
     case "project_invitations": // the members view lists both
-      return [["members", projectId]];
+      return [active(["members", projectId])];
+    // Feedback (MIN-89): the team board, the open-feedback badge in the sidebar
+    // and the home section all move when a post is created, voted or triaged.
+    case "feedback_posts":
+    case "feedback_votes":
+    case "feedback_post_categories":
+      return [
+        active(["feedback", projectId]),
+        active(["feedback-detail", projectId]),
+        active(["feedback-count", projectId]),
+      ];
     case "comments": {
       // A comment hangs off an issue OR an objective OR a feedback post — route
       // to the right cache. Feedback comment keys carry the project id.
       const issueId = issueIdOf(change);
-      if (issueId) return [["comments", issueId]];
+      if (issueId) return [active(["comments", issueId])];
       const objectiveId = objectiveIdOf(change);
-      if (objectiveId) return [["objective-comments", objectiveId]];
+      if (objectiveId) return [active(["objective-comments", objectiveId])];
       const postId = feedbackPostIdOf(change);
-      return postId ? [["feedback-comments", projectId, postId]] : [];
+      return postId ? [active(["feedback-comments", projectId, postId])] : [];
     }
     case "attachments": {
       // Comment attachments ride the comments cache; entity-level ones have
@@ -120,27 +185,27 @@ function keysForProjectEvent(
       const issueId = issueIdOf(change);
       if (issueId) {
         return [
-          ["comments", issueId],
-          ["issue-attachments", issueId],
+          active(["comments", issueId]),
+          active(["issue-attachments", issueId]),
         ];
       }
       const objectiveId = objectiveIdOf(change);
       if (objectiveId) {
         return [
-          ["objective-comments", objectiveId],
-          ["objective-attachments", objectiveId],
+          active(["objective-comments", objectiveId]),
+          active(["objective-attachments", objectiveId]),
         ];
       }
       const postId = feedbackPostIdOf(change);
-      return postId ? [["feedback-comments", projectId, postId]] : [];
+      return postId ? [active(["feedback-comments", projectId, postId])] : [];
     }
     case "issue_events": {
       const issueId = issueIdOf(change);
-      if (issueId) return [["events", issueId]];
+      if (issueId) return [active(["events", issueId])];
       const objectiveId = objectiveIdOf(change);
-      if (objectiveId) return [["objective-events", objectiveId]];
+      if (objectiveId) return [active(["objective-events", objectiveId])];
       const postId = feedbackPostIdOf(change);
-      return postId ? [["feedback-events", projectId, postId]] : [];
+      return postId ? [active(["feedback-events", projectId, postId])] : [];
     }
     default:
       return [];
@@ -173,8 +238,16 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["objective-comments"],
   ["objective-events"],
   ["objective-attachments"],
+  ["feedback", projectId],
+  ["feedback-detail", projectId],
+  ["feedback-count", projectId],
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
+  // The aggregates this project feeds — missed events while offline would
+  // otherwise leave the dashboard and /all stale until their staleTime.
+  GLOBAL_BOARD_KEY,
+  HOME_SUMMARY_KEY,
+  STATS_KEY,
 ];
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
@@ -183,8 +256,30 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   // refresh and would tear the channels down for nothing.
   const userId = user?.id ?? null;
   const pathname = usePathname();
-  const projectId = projectIdFromPath(pathname ?? "");
+  const activeProjectId = projectIdFromPath(pathname ?? "");
   const queryClient = useQueryClient();
+
+  // The project list drives which topics to join. ProjectsProvider owns that
+  // fetch and sits BELOW this provider, so its context isn't reachable here —
+  // and mounting a second `useQuery` on ["projects"] would register an observer
+  // whose options (queryFn included) fight the real one for the shared query.
+  // So: read the cache and subscribe to it, without ever becoming an observer.
+  const [projects, setProjects] = useState<Project[] | undefined>(undefined);
+  useEffect(() => {
+    const read = () => setProjects(queryClient.getQueryData<Project[]>(["projects"]));
+    read();
+    return queryClient.getQueryCache().subscribe((event) => {
+      if (event.query.queryKey[0] === "projects") read();
+    });
+  }, [queryClient]);
+
+  // Identity-stable while the ids don't change, so the reconciliation effect
+  // below doesn't re-run on every refetch of the project list.
+  const topicKey = projectTopicIds(projects, activeProjectId).join(",");
+  const topicIds = useMemo(
+    () => (topicKey ? topicKey.split(",") : []),
+    [topicKey]
+  );
 
   // Trailing per-key coalescing: the first event schedules the invalidation,
   // followers within the window ride along.
@@ -197,14 +292,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const invalidateCoalesced = useCallback(
-    (key: QueryKey) => {
-      const k = JSON.stringify(key);
+    ({ key, refetch }: Invalidation) => {
+      // The mode is part of the coalescing identity: a "none" event must never
+      // swallow a pending "active" one for the same key.
+      const k = `${refetch}:${JSON.stringify(key)}`;
       if (timers.current.has(k)) return;
       timers.current.set(
         k,
         setTimeout(() => {
           timers.current.delete(k);
-          void queryClient.invalidateQueries({ queryKey: key });
+          void queryClient.invalidateQueries({
+            queryKey: key,
+            refetchType: refetch,
+          });
         }, INVALIDATE_COALESCE_MS)
       );
     },
@@ -214,7 +314,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const openScope = useCallback(
     (
       topic: string,
-      keysFor: (change: BroadcastChange) => QueryKey[],
+      keysFor: (change: BroadcastChange) => Invalidation[],
       scopeKeys: QueryKey[]
     ) => {
       const supabase = getSupabase();
@@ -231,8 +331,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         channel = supabase.channel(topic, { config: { private: true } });
         for (const event of BROADCAST_EVENTS) {
           channel.on("broadcast", { event }, ({ payload }) => {
-            for (const key of keysFor(payload as BroadcastChange)) {
-              invalidateCoalesced(key);
+            for (const invalidation of keysFor(payload as BroadcastChange)) {
+              invalidateCoalesced(invalidation);
             }
           });
         }
@@ -267,14 +367,42 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     return openScope(`user:${userId}`, keysForUserEvent, USER_SCOPE_KEYS);
   }, [userId, openScope]);
 
+  // One channel per project, reconciled in place: joining a new project or
+  // leaving one only opens/closes that channel, so navigating between projects
+  // never re-joins the topics that were already live (and never drops the
+  // events that arrive during a re-join).
+  const projectChannels = useRef(new Map<string, () => void>());
+
   useEffect(() => {
-    if (!userId || !projectId) return;
-    return openScope(
-      `project:${projectId}`,
-      (change) => keysForProjectEvent(change, projectId),
-      projectScopeKeys(projectId)
-    );
-  }, [userId, projectId, openScope]);
+    const channels = projectChannels.current;
+    const wanted = userId ? new Set(topicIds) : new Set<string>();
+
+    for (const [id, close] of channels) {
+      if (wanted.has(id)) continue;
+      close();
+      channels.delete(id);
+    }
+    for (const id of wanted) {
+      if (channels.has(id)) continue;
+      channels.set(
+        id,
+        openScope(
+          `project:${id}`,
+          (change) => keysForProjectEvent(change, id),
+          projectScopeKeys(id)
+        )
+      );
+    }
+  }, [userId, topicIds, openScope]);
+
+  // Close everything on unmount (sign-out unmounts the whole app shell).
+  useEffect(() => {
+    const channels = projectChannels.current;
+    return () => {
+      for (const close of channels.values()) close();
+      channels.clear();
+    };
+  }, []);
 
   return <>{children}</>;
 }

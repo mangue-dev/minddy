@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "mangue-ui";
 import { useAuth } from "./auth-context";
 import { useProjects } from "./projects-context";
-import { useGlobalBoardQuery } from "./use-global-board-query";
+import { useHomeSummaryQuery } from "./use-home-summary-query";
 import { resolveCyclePrefs } from "./cycle-prefs";
 import { useAnalytics } from "./use-analytics";
 import {
@@ -37,7 +37,9 @@ export interface UseOnboardingResult extends OnboardingState {
 export function useOnboarding(): UseOnboardingResult {
   const { user, updateUserMetadata } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
-  const { issues, loading: boardLoading } = useGlobalBoardQuery();
+  // MIN-89 : seul le NOMBRE de tickets sert ici. Il vient du compteur SQL de
+  // /api/me/summary — la home n'a plus à télécharger le board agrégé complet.
+  const { counts, loading: summaryLoading } = useHomeSummaryQuery();
   const { track, setPersonProperties } = useAnalytics();
 
   const [pendingSteps, setPendingSteps] = useState<OnboardingStepId[]>([]);
@@ -64,16 +66,16 @@ export function useOnboarding(): UseOnboardingResult {
       resolveOnboardingState({
         meta: effectiveMeta,
         projectCount: projects.length,
-        issueCount: issues.length,
+        issueCount: counts.total,
         // Source de vérité des cycles : les métadonnées du compte, pas le board.
-        // `GET /api/me/board` ne fait que les refléter — s'appuyer sur lui
+        // `GET /api/me/summary` ne fait que les refléter — s'appuyer sur lui
         // ferait attendre un refetch avant que l'étape se coche.
         cyclesEnabled: resolveCyclePrefs(effectiveMeta).enabled,
       }),
-    [effectiveMeta, projects.length, issues.length],
+    [effectiveMeta, projects.length, counts.total],
   );
 
-  const loading = !user || projectsLoading || boardLoading;
+  const loading = !user || projectsLoading || summaryLoading;
 
   /**
    * Grave l'entrée en onboarding sur le compte, une seule fois, dès que la

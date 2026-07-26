@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ArrowRight, CalendarClock, CircleDashed } from "lucide-react";
 import { Skeleton } from "mangue-ui";
-import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
+import { useHomeSummaryQuery } from "@/lib/use-home-summary-query";
 import { useProjects } from "@/lib/projects-context";
 import {
   cycleCompletionPercent,
@@ -14,8 +14,12 @@ import {
 } from "@/lib/cycle";
 import { CycleControls, formatCycleRange } from "@/components/cycle/cycle-header";
 import { StatusIndicator } from "@/components/issue-indicators";
-import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
-import type { Issue } from "@/lib/types";
+import {
+  isClosedStatus,
+  issueIdentifier,
+  type IssueStatus,
+} from "@/lib/issue-constants";
+import type { HomeSummaryIssue } from "@/lib/types";
 
 /** Shared card chrome — heading + right slot, growing body, bottom footer. */
 function Shell({
@@ -63,7 +67,7 @@ function CycleIssueRow({
   issue,
   projectKey,
 }: {
-  issue: Issue;
+  issue: HomeSummaryIssue;
   projectKey: string;
 }) {
   return (
@@ -87,24 +91,27 @@ function CycleIssueRow({
 export function HomeCycleCard() {
   const t = useTranslations("Home");
   const format = useFormatter();
-  const { issues, relations, cycles, loading } = useGlobalBoardQuery();
+  // MIN-89 : la carte lisait le board agrégé complet pour n'en garder que les
+  // tickets du cycle. /api/me/summary ne renvoie qu'eux, plus les relations et
+  // les statuts bloquants nécessaires à l'ordre reco.
+  const { cycleIssues, relations, blockerStatuses, cycles, loading } =
+    useHomeSummaryQuery();
   const { projects } = useProjects();
 
   const current = cycles?.current ?? null;
 
-  const cycleIssues = useMemo(
-    () => (current ? issues.filter((i) => i.cycle_id === current.id) : []),
-    [issues, current],
-  );
-
   const topIssues = useMemo(() => {
-    if (!current) return [] as Issue[];
-    // Blockers may sit outside the cycle → the status map spans the whole board.
-    const statusById = new Map(issues.map((i) => [i.id, i.status]));
+    if (!current) return [] as HomeSummaryIssue[];
+    // Un bloqueur peut être HORS du cycle : la carte des statuts couvre les
+    // tickets du cycle plus ceux d'en face des relations remontées.
+    const statusById = new Map<string, IssueStatus>(
+      Object.entries(blockerStatuses),
+    );
+    for (const i of cycleIssues) statusById.set(i.id, i.status);
     // Preview what's left to do, not what's already finished (MIN-67).
     const openIssues = cycleIssues.filter((i) => !isClosedStatus(i.status));
     return [...openIssues].sort(recoComparator(relations, statusById)).slice(0, 3);
-  }, [cycleIssues, issues, relations, current]);
+  }, [cycleIssues, relations, blockerStatuses, current]);
 
   const projectKeyById = useMemo(
     () => new Map(projects.map((p) => [p.id, p.key])),

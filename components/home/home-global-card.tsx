@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -11,14 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Skeleton } from "mangue-ui";
-import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
-import { useAuth } from "@/lib/auth-context";
-import type { IssueStatus } from "@/lib/issue-constants";
-
-/** Statuses that keep an issue "in play" — mirrors ProjectCard's open bucket,
-    minus triage (triage sits before the board and is counted on its own). */
-const CLOSED: IssueStatus[] = ["done", "canceled", "duplicate"];
-const isOpen = (s: IssueStatus) => !CLOSED.includes(s) && s !== "triage";
+import { useHomeSummaryQuery } from "@/lib/use-home-summary-query";
 
 function StatRow({
   icon: Icon,
@@ -42,23 +34,10 @@ function StatRow({
 
 export function HomeGlobalCard() {
   const t = useTranslations("Home");
-  const { issues, loading } = useGlobalBoardQuery();
-  const { user } = useAuth();
-  const myId = user?.id ?? null;
-
-  const counts = useMemo(() => {
-    let open = 0;
-    let inProgress = 0;
-    let mine = 0;
-    for (const i of issues) {
-      if (i.status === "in_progress") inProgress += 1;
-      if (isOpen(i.status)) {
-        open += 1;
-        if (myId && i.assignee_id === myId) mine += 1;
-      }
-    }
-    return { open, inProgress, mine };
-  }, [issues, myId]);
+  // Les trois compteurs viennent de `count` SQL (MIN-89) : ils étaient dérivés
+  // du board agrégé, ce qui obligeait l'accueil à télécharger tous les tickets
+  // de tous les projets pour n'en afficher que trois nombres.
+  const { counts, loading } = useHomeSummaryQuery();
 
   return (
     <section className="flex h-full min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-5 text-card-foreground">

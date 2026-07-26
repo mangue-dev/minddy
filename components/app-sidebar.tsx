@@ -51,6 +51,8 @@ import {
 } from "@/lib/keyboard/keyboard-context";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
 import { transitions } from "@/lib/motion";
+import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { usePrefetchProject } from "@/lib/use-prefetch-project";
 
 const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 56;
@@ -135,6 +137,19 @@ function SidebarRow({
     </>
   );
 
+  // Préchauffage des caches du board au survol / focus clavier (MIN-89) : sur
+  // une entrée de projet uniquement — les autres routes n'ont pas d'éventail de
+  // requêtes à recouvrir. `projectIdFromPath` ne renvoie un id que pour
+  // /projects/<uuid>, donc les liens de section (…/objectives) le préchauffent
+  // aussi, ce qui est exactement voulu.
+  const prefetchProject = usePrefetchProject();
+  const warm = item.href
+    ? () => {
+        const projectId = projectIdFromPath(item.href as string);
+        if (projectId) prefetchProject(projectId);
+      }
+    : undefined;
+
   let row: ReactNode;
   if (item.href) {
     row = (
@@ -142,6 +157,8 @@ function SidebarRow({
         href={item.href}
         className={rowClass}
         aria-current={active ? "page" : undefined}
+        onMouseEnter={warm}
+        onFocus={warm}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}
       >

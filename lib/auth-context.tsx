@@ -11,6 +11,7 @@ import {
 } from "react";
 import { getSupabase } from "./supabase";
 import { sanitizeInternalRedirectPath } from "./auth-redirect";
+import { clearPersistedQueryCache } from "./query-provider";
 import { useAnalytics } from "./use-analytics";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -180,6 +181,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const { error } = await getSupabase().auth.signOut();
     if (error) throw error;
+    // Le cache React Query est persisté sur disque (MIN-89) : sans purge, le
+    // compte suivant sur cette machine réhydraterait les données de celui-ci
+    // avant que ses propres requêtes n'aboutissent.
+    clearPersistedQueryCache();
     window.location.href = "/login";
   }, []);
 

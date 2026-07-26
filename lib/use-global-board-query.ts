@@ -49,7 +49,10 @@ export function useGlobalBoardQuery() {
   const { data, isLoading } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
     queryFn: fetchGlobalBoardApi,
-    staleTime: 30_000,
+    // Pas de staleTime court : depuis MIN-89 le pont temps réel invalide cette
+    // clé sur tout changement de ticket de N'IMPORTE lequel de mes projets (il
+    // ne s'abonnait qu'au projet de l'URL, d'où ce rattrapage à l'horloge).
+    // On garde donc le défaut global de 5 min — l'événement porte la fraîcheur.
   });
 
   const patchCache = useCallback(

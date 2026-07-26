@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { fetchIssuesApi } from "@/lib/issues-api";
+import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
 
@@ -62,7 +63,9 @@ export function ProjectCard({ project }: { project: Project }) {
   const tIssue = useTranslations("Issue");
 
   // Reuse the ["issues", projectId] cache (shared with the board + header
-  // search); no realtime bridge here — a home overview count can be lazy.
+  // search). Since MIN-89 the realtime bridge subscribes to every one of my
+  // projects, not just the one in the URL, so these counters stay live on the
+  // dashboard without this card owning a subscription.
   const { data } = useQuery({
     queryKey: ["issues", project.id],
     queryFn: () => fetchIssuesApi(project.id),
@@ -79,12 +82,18 @@ export function ProjectCard({ project }: { project: Project }) {
   const doneCount = issues.filter((i) => !isOpen(i.status)).length;
 
   const open = () => router.push(`/projects/${project.id}`);
+  // Précharge les caches du board dès l'intention de navigation (MIN-89) : le
+  // temps que le clic arrive, les requêtes sont déjà parties.
+  const prefetch = usePrefetchProject();
+  const warm = () => prefetch(project.id);
 
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={open}
+      onMouseEnter={warm}
+      onFocus={warm}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();

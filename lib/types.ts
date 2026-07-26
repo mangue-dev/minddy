@@ -322,6 +322,41 @@ export interface IntegrationRef {
   project_id: string;
 }
 
+/**
+ * Un ticket du cycle courant tel que le tableau de bord en a besoin (MIN-89) —
+ * de quoi l'AFFICHER (identifiant, titre, statut) et l'ORDONNER (priorité,
+ * effort, catégories pour le score reco). Ni description ni plan : la home ne
+ * les rend jamais, et ce sont eux qui pèsent dans la charge utile du board.
+ */
+export interface HomeSummaryIssue {
+  id: string;
+  project_id: string;
+  number: number;
+  title: string;
+  status: IssueStatus;
+  priority: IssuePriority;
+  effort: IssueEffort | null;
+  cycle_id: string | null;
+  category_ids: string[];
+}
+
+/** Réponse de GET /api/me/summary — la charge utile du tableau de bord. */
+export interface HomeSummaryResponse {
+  /**
+   * Compteurs agrégés, calculés en SQL : aucune ligne ne traverse le réseau.
+   * `open` exclut triage ET les statuts clos ; `total` compte tout (l'onboarding
+   * demande « as-tu déjà créé un ticket ? », pas « en as-tu un ouvert ? »).
+   */
+  counts: { open: number; inProgress: number; mine: number; total: number };
+  cycles: BoardCycles;
+  /** Tickets du cycle courant (vide quand il n'y a pas de cycle en cours). */
+  cycleIssues: HomeSummaryIssue[];
+  /** Relations touchant un ticket du cycle — l'ordre reco tient compte des blocages. */
+  relations: IssueRelation[];
+  /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */
+  blockerStatuses: Record<string, IssueStatus>;
+}
+
 export interface GlobalBoardResponse {
   issues: Issue[];
   members: Record<string, Member[]>;

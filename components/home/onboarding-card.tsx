@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { HOME_SUMMARY_KEY } from "@/lib/use-home-summary-query";
 import { CYCLES_ENABLED_META_KEY, resolveCyclePrefs } from "@/lib/cycle-prefs";
 import type { OnboardingStepId } from "@/lib/onboarding";
 import type { UseOnboardingResult } from "@/lib/use-onboarding";
@@ -104,7 +105,9 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
     setBusy(true);
     try {
       await updateUserMetadata({ [CYCLES_ENABLED_META_KEY]: true });
-      // Le board possède le cycle de vie des cycles : il doit reconcilier.
+      // Les deux lectures réconcilient la timeline des cycles (ensureCycles) :
+      // le résumé, qui est ce que la home a sous les yeux, et le board agrégé.
+      void queryClient.invalidateQueries({ queryKey: HOME_SUMMARY_KEY });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       toast.success(t("doneToast"));
     } catch (e) {
