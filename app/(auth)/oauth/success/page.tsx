@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import {
   Card,
@@ -6,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "mangue-ui";
+import { appPageMetadata } from "@/lib/app-metadata";
 import { getClient } from "@/lib/server/oauth/clients";
 import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { OAuthSuccessCard } from "@/components/oauth/success-card";
@@ -19,6 +21,13 @@ import { OAuthSuccessCard } from "@/components/oauth/success-card";
  */
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...(await appPageMetadata("oauthSuccess")),
+    robots: { index: false, follow: false },
+  };
+}
 
 function continueMatchesClient(
   continueUrl: string,

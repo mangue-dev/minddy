@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { appPageMetadata } from "@/lib/app-metadata";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
@@ -21,9 +22,12 @@ import type { Locale } from "@/i18n/config";
  * Le chrome marketing plutôt qu'un écran nu : on tombe sur cette page depuis
  * l'extérieur, et une nav est ce qui rattrape le visiteur.
  */
-export const metadata: Metadata = {
-  robots: { index: false, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...(await appPageMetadata("notFound")),
+    robots: { index: false, follow: true },
+  };
+}
 
 export default async function NotFound() {
   const [t, locale] = await Promise.all([getTranslations("Common"), getLocale()]);

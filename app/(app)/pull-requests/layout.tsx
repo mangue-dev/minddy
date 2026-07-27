@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { appPageMetadata } from "@/lib/app-metadata";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Meta");
-  return { title: t("pullRequests") };
+// Layout porteur de métadonnées : la page est un composant CLIENT et ne peut
+// donc pas exporter les siennes. Titre et description viennent du namespace
+// `Meta` ; le `noindex` du segment est posé par `app/(app)/layout.tsx`.
+export function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata("pullRequests");
 }
 
 export default function PullRequestsLayout({

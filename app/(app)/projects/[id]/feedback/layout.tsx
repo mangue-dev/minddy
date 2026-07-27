@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { appPageMetadata } from "@/lib/app-metadata";
+import { projectName } from "@/lib/server/project-meta";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Meta");
-  return { title: t("feedback") };
+// « Feedback · Acme · minddy » : sans le nom du projet, deux onglets ouverts
+// sur deux projets portaient exactement le même titre. La lecture du nom est
+// mise en cache et partagée avec le `generateMetadata` du layout parent.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  return appPageMetadata("feedback", await projectName(id));
 }
 
 export default function FeedbackLayout({

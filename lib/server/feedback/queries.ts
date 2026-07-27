@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   sortFeedbackResolvedLast,
@@ -243,6 +244,41 @@ export async function getPublicPostDetail(params: {
     mergedFromTitles: (mergedFromRes.data ?? []).map((p) => p.title as string),
   };
 }
+
+/**
+ * Titre et corps d'un post, pour les métadonnées de sa page (MIN-95).
+ *
+ * Volontairement plus strict que `getPublicPostDetail` : celui-ci laisse son
+ * AUTEUR ouvrir un post privé ou en attente de revue, ce qui est juste pour la
+ * page — mais un `<title>` ou un `og:description` part dans l'aperçu de lien de
+ * qui reçoit l'URL, pas seulement dans l'onglet de l'auteur. Seuls les posts
+ * publiquement visibles nomment donc leur page ; les autres retombent sur le
+ * titre générique du board.
+ *
+ * `cache()` sur des arguments primitifs : deux appels dans la même requête
+ * (aucun aujourd'hui, mais la page en fera peut-être un) ne coûtent qu'une
+ * lecture.
+ */
+export const getPublicPostMeta = cache(
+  async (
+    projectId: string,
+    postId: string,
+  ): Promise<{ title: string; body: string } | null> => {
+    const service = getServiceClient();
+    const { data } = await service
+      .from("feedback_posts")
+      .select("title, body, is_public, review_state, merged_into_id")
+      .eq("id", postId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+    if (!data) return null;
+    if (!data.is_public || data.review_state !== "published") return null;
+    // Un doublon fusionné redirige en 308 vers son canonique : c'est ce
+    // dernier qui nomme la page.
+    if (data.merged_into_id !== null) return null;
+    return { title: data.title as string, body: (data.body as string) ?? "" };
+  },
+);
 
 export interface MyFeedbackEntry {
   /** Post à afficher (le canonique si le mien a été fusionné). */

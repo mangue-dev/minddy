@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ProjectOrb } from "@/components/project-orb";
 import { PublicPageShell } from "@/components/public-page-shell";
+import type { Locale } from "@/i18n/config";
+import { appPageMetadata } from "@/lib/app-metadata";
+import { publicTokenMetadata } from "@/lib/seo";
 import {
   feedbackBasePath,
   getRequestDomainTarget,
@@ -47,22 +50,30 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
-  const [ctx, domainTarget] = await Promise.all([
+  const [ctx, domainTarget, t, locale] = await Promise.all([
     getBoardContext(token),
     getRequestDomainTarget(),
+    getTranslations("PublicFeedback"),
+    getLocale(),
   ]);
-  return {
-    ...(ctx?.board.enabled ? { title: `${ctx.project.name} · Feedback` } : {}),
-    // Le même board répond sur www.minddy.app/f/<token> ET sur le domaine du
-    // client : le canonical dit laquelle des deux URLs fait foi (MIN-88).
-    alternates: {
-      canonical: await publicCanonicalUrl(
-        feedbackBasePath(token, domainTarget),
-        "",
-      ),
-    },
-    robots: { index: false, follow: false },
-  };
+  // Le même board répond sur www.minddy.app/f/<token> ET sur le domaine du
+  // client : le canonical dit laquelle des deux URLs fait foi (MIN-88).
+  const canonical = await publicCanonicalUrl(
+    feedbackBasePath(token, domainTarget),
+    "",
+  );
+  // Board absent ou désactivé → la page part en 404 : elle en porte le titre,
+  // et surtout pas un canonical vers une URL qui ne répond pas.
+  if (!ctx?.board.enabled) {
+    return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
+  }
+  const project = ctx.project.name;
+  return publicTokenMetadata({
+    title: `${t("title")} · ${project}`,
+    description: t("metaBoardDescription", { project }),
+    canonical,
+    locale: locale as Locale,
+  });
 }
 
 export default async function PublicFeedbackPage({ params, searchParams }: PageProps) {

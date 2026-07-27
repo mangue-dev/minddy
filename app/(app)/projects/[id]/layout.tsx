@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { appPageMetadata } from "@/lib/app-metadata";
+import { projectName } from "@/lib/server/project-meta";
 import { ProjectSetupResume } from "@/components/project-setup-resume";
 
 // Titles the project board (and any sub-page without its own layout) with the
@@ -13,18 +13,13 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const t = await getTranslations("Meta");
-  try {
-    const supabase = await createServerSupabase();
-    const { data } = await supabase
-      .from("projects")
-      .select("name")
-      .eq("id", id)
-      .maybeSingle();
-    return { title: data?.name || t("project") };
-  } catch {
-    return { title: t("project") };
-  }
+  const [meta, name] = await Promise.all([
+    appPageMetadata("project"),
+    projectName(id),
+  ]);
+  // Le tableau est LA page du projet : son nom suffit, sans le préfixer du
+  // libellé générique. Les sous-pages, elles, gardent « Triage · Acme ».
+  return name ? { ...meta, title: name } : meta;
 }
 
 export default function ProjectLayout({

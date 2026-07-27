@@ -2,9 +2,12 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ProjectOrb } from "@/components/project-orb";
 import { PublicPageShell } from "@/components/public-page-shell";
+import type { Locale } from "@/i18n/config";
+import { appPageMetadata } from "@/lib/app-metadata";
+import { metaExcerpt, publicTokenMetadata } from "@/lib/seo";
 import {
   feedbackBasePath,
   getRequestDomainTarget,
@@ -16,7 +19,10 @@ import {
   getFeedbackSession,
 } from "@/lib/server/feedback/identity";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
-import { getPublicPostDetail } from "@/lib/server/feedback/queries";
+import {
+  getPublicPostDetail,
+  getPublicPostMeta,
+} from "@/lib/server/feedback/queries";
 import { FeedbackPostClient } from "../../feedback-post-client";
 import { HeaderIdentity } from "../../header-identity";
 
@@ -34,22 +40,37 @@ const getBoardContext = cache(getBoardByToken);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token, postId } = await params;
-  const [ctx, domainTarget] = await Promise.all([
+  const [ctx, domainTarget, t, locale] = await Promise.all([
     getBoardContext(token),
     getRequestDomainTarget(),
+    getTranslations("PublicFeedback"),
+    getLocale(),
   ]);
-  return {
-    ...(ctx?.board.enabled ? { title: `${ctx.project.name} · Feedback` } : {}),
-    // Le même retour répond sur www.minddy.app/f/<token>/p/<id> ET sur le
-    // domaine du client : le canonical dit laquelle fait foi (MIN-88).
-    alternates: {
-      canonical: await publicCanonicalUrl(
-        feedbackBasePath(token, domainTarget),
-        `/p/${postId}`,
-      ),
-    },
-    robots: { index: false, follow: false },
-  };
+  // Le même retour répond sur www.minddy.app/f/<token>/p/<id> ET sur le
+  // domaine du client : le canonical dit laquelle fait foi (MIN-88).
+  const canonical = await publicCanonicalUrl(
+    feedbackBasePath(token, domainTarget),
+    `/p/${postId}`,
+  );
+  // Board absent ou désactivé → la page part en 404 : elle en porte le titre,
+  // et surtout pas un canonical vers une URL qui ne répond pas.
+  if (!ctx?.board.enabled) {
+    return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
+  }
+  const project = ctx.project.name;
+  // C'est LA page qu'on colle dans une conversation (« vote pour ça ») : elle
+  // porte le titre du retour, pas celui du board. Un post privé, en attente de
+  // revue ou fusionné ne se nomme pas — voir `getPublicPostMeta`.
+  const post = await getPublicPostMeta(ctx.project.id, postId);
+  return publicTokenMetadata({
+    title: post ? `${post.title} · ${project}` : `${t("title")} · ${project}`,
+    description:
+      post && post.body.trim()
+        ? metaExcerpt(post.body)
+        : t("metaPostDescription", { project }),
+    canonical,
+    locale: locale as Locale,
+  });
 }
 
 export default async function PublicFeedbackPostPage({ params }: PageProps) {

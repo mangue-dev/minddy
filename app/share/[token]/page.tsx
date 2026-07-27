@@ -2,9 +2,12 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { PublicBoard, type PublicCard } from "@/components/public-board";
 import { PublicPageShell } from "@/components/public-page-shell";
+import type { Locale } from "@/i18n/config";
+import { appPageMetadata } from "@/lib/app-metadata";
+import { publicTokenMetadata } from "@/lib/seo";
 import { getRequestDomainTarget } from "@/lib/server/custom-domains";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import type { ChipRelation } from "@/components/relation-chips";
@@ -56,14 +59,32 @@ async function isUnlocked(ctx: PublicShareContext): Promise<boolean> {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
-  const ctx = await getShareContext(token);
-  // Omit (don't set undefined — that drops the tag) the title while locked so
-  // the tab falls back to the root default and reveals nothing.
-  const unlocked = ctx ? await isUnlocked(ctx) : false;
-  return {
-    ...(ctx && unlocked ? { title: ctx.view.name } : {}),
-    robots: { index: false, follow: false },
-  };
+  const [ctx, t, locale] = await Promise.all([
+    getShareContext(token),
+    getTranslations("PublicShare"),
+    getLocale(),
+  ]);
+  // Token inconnu → la page part en 404 : elle en porte le titre, quel que
+  // soit celui des deux chemins (métadonnées de la route ou de la frontière
+  // not-found) que Next retient.
+  if (!ctx) {
+    return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
+  }
+  // Verrouillée, la page ne dit ni le nom de la vue ni celui du projet — elle
+  // dit seulement qu'elle est verrouillée, ce que le visiteur voit déjà.
+  if (!(await isUnlocked(ctx))) {
+    return publicTokenMetadata({
+      title: t("protectedTitle"),
+      description: t("metaProtectedDescription"),
+      locale: locale as Locale,
+    });
+  }
+  const project = ctx.project.name;
+  return publicTokenMetadata({
+    title: `${ctx.view.name} · ${project}`,
+    description: t("metaDescription", { project }),
+    locale: locale as Locale,
+  });
 }
 
 /** Everything the read-only board needs, filtered to what the view shows and

@@ -82,7 +82,9 @@ import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
+import { SITE_NAME } from "@/lib/site";
 import type {
   Category,
   CreateIssueInput,
@@ -504,6 +506,14 @@ export function IssueSidePanel({
 
   return (
     <>
+      {/* Le ticket ouvert nomme l'onglet — « MIN-42 · Corriger le redirect ».
+          Ni la page ni un layout ne peuvent le faire : le ticket vit dans un
+          paramètre de recherche, pas dans une route. */}
+      {open && (
+        <DocumentTitle
+          title={`${issueIdentifier(projectKey, issue.number)} · ${issue.title} · ${SITE_NAME}`}
+        />
+      )}
       <SidePanel open={open} onOpenChange={onOpenChange}>
         <SidePanelContent
           onInteractOutside={keepOverlayOpenForPopper}

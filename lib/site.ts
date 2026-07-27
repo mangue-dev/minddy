@@ -7,6 +7,14 @@
  */
 export const SITE_URL = "https://www.minddy.app";
 
+/**
+ * La marque, telle qu'elle apparaît dans un titre d'onglet. Le root layout en
+ * fait le template « %s · minddy » ; les rares titres posés côté client (le
+ * ticket ouvert en panneau) le recomposent à la main et lisent la même
+ * constante.
+ */
+export const SITE_NAME = "minddy";
+
 /** Point d'entrée du serveur MCP, tel qu'on le colle dans un agent. */
 export const MCP_ENDPOINT = `${SITE_URL}/api/mcp`;
 

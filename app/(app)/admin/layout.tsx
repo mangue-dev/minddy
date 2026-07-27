@@ -3,11 +3,16 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/server/admin";
+import { appPageMetadata } from "@/lib/app-metadata";
 
-// The admin dashboard must never be indexed, whatever the deploy environment.
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+// The admin dashboard must never be indexed, whatever the deploy environment —
+// it keeps its own `robots` rather than relying on `app/(app)/layout.tsx`.
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...(await appPageMetadata("admin")),
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Server gate for `/admin`. The middleware (`proxy.ts`) already bounces logged-out

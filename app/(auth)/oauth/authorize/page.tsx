@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -8,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "mangue-ui";
+import { appPageMetadata } from "@/lib/app-metadata";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   buildCallbackUrl,
@@ -28,6 +30,15 @@ import { OAuthConsentCard } from "@/components/oauth/consent-card";
  */
 
 export const dynamic = "force-dynamic";
+
+// Écran de consentement : rien à indexer, et surtout rien à suivre — les seuls
+// liens qu'il porte sont les `redirect_uri` du client OAuth.
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    ...(await appPageMetadata("oauthAuthorize")),
+    robots: { index: false, follow: false },
+  };
+}
 
 async function publicOrigin(): Promise<string> {
   const h = await headers();

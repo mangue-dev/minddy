@@ -11,7 +11,7 @@ import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
 import { publicClientMessages } from "@/lib/public-client-messages";
-import { SITE_URL, SITE_VERIFICATION } from "@/lib/site";
+import { SITE_NAME, SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(SITE_URL),
     // `default` applies to pages without their own title; `template` wraps
     // per-page titles set by nested (server) layouts, e.g. "Inbox · minddy".
-    title: { default: "minddy", template: "%s · minddy" },
+    title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
     description: t("description"),
     // Défauts de partage (MIN-88). Next DÉRIVE `twitter:*` d'`openGraph`, mais
     // il ne dérive rien de ce qui n'existe pas : sans ces défauts, une page qui
