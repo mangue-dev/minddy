@@ -5,9 +5,11 @@
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar) and
 // a short "G then…" toast appears (covers the collapsed-sidebar case).
 //
-//   Global:      G H home · G I inbox · G J agents · G A assistant (Numo) · G N notes
-//   In a project: G B all issues · G M my issues · G O objectives
-//                 G T triage · G S project settings
+//   Global:      G H home · G I inbox · G R pull requests · G J agents
+//                G A assistant (Numo) · G N notes
+//                G B all issues (every project) · G M my issues
+//   In a project: G P the project's own board · G O objectives · G T triage
+//                 G F feedback · G S project settings
 //
 // The listener runs in the capture phase and, once G is armed, consumes the
 // next key outright (preventDefault + stopImmediatePropagation) so it never
@@ -164,6 +166,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         case "i":
           go("/inbox");
           return true;
+        case "r":
+          go("/pull-requests");
+          return true;
         case "j":
           go("/agents");
           return true;
@@ -173,31 +178,26 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         case "n":
           openScratchpadRef.current();
           return true;
+        // B reaches the cross-project tickets board from anywhere, a project
+        // included — the project's own board is G P. M is that same /all board
+        // with the "Mes tickets" system view pre-selected (?view= one-shot).
+        case "b":
+          go("/all");
+          return true;
+        case "m":
+          go("/all?view=my");
+          return true;
         default:
           break;
       }
-      // B reaches the tickets board (cross-project on Home, the project's
-      // inside one); M is the same board with the "Mes tickets" system view
-      // pre-selected (the ?view= one-shot instruction).
-      if (!projectId) {
-        switch (key) {
-          case "m":
-            go("/all?view=my");
-            return true;
-          case "b":
-            go("/all");
-            return true;
-          default:
-            return false;
-        }
-      }
+      if (!projectId) return false;
       const base = `/projects/${projectId}`;
       switch (key) {
-        case "b":
+        case "p":
           go(base);
           return true;
-        case "m":
-          go(`${base}?view=my`);
+        case "f":
+          go(`${base}/feedback`);
           return true;
         case "o":
           go(`${base}/objectives`);

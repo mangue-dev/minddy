@@ -611,7 +611,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     shortcut: "I",
     badge:
       unreadCount > 0 ? (
-        <span className="flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+        <span className="text-xs tabular-nums text-muted-foreground">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       ) : undefined,
@@ -689,7 +689,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: LayoutGrid,
               href: base,
               active: pathname === base,
-              shortcut: "B",
+              // P (projet) — B est le board tous-projets, depuis un projet aussi.
+              shortcut: "P",
             },
             {
               key: "objectives",

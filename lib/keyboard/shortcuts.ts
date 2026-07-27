@@ -29,6 +29,11 @@ export const CHEATSHEET: CheatsheetSection[] = [
     shortcuts: [
       { id: "nav.home", labelKey: "navHome", keys: [["G"], ["H"]] },
       { id: "nav.inbox", labelKey: "navInbox", keys: [["G"], ["I"]] },
+      {
+        id: "nav.pullRequests",
+        labelKey: "navPullRequests",
+        keys: [["G"], ["R"]],
+      },
       { id: "nav.agents", labelKey: "navAgents", keys: [["G"], ["J"]] },
       { id: "nav.assistant", labelKey: "navAssistant", keys: [["G"], ["A"]] },
       { id: "nav.notes", labelKey: "navNotes", keys: [["G"], ["N"]] },
@@ -41,8 +46,14 @@ export const CHEATSHEET: CheatsheetSection[] = [
     id: "project",
     titleKey: "project",
     shortcuts: [
+      {
+        id: "nav.projectBoard",
+        labelKey: "navProjectBoard",
+        keys: [["G"], ["P"]],
+      },
       { id: "nav.objectives", labelKey: "navObjectives", keys: [["G"], ["O"]] },
       { id: "nav.triage", labelKey: "navTriage", keys: [["G"], ["T"]] },
+      { id: "nav.feedback", labelKey: "navFeedback", keys: [["G"], ["F"]] },
       {
         id: "nav.projectSettings",
         labelKey: "navProjectSettings",
