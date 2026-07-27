@@ -2,6 +2,14 @@ import "server-only";
 
 import { Sandbox } from "@vercel/sandbox";
 
+import {
+  backgroundProbeScript,
+  backgroundStartScript,
+  backgroundStopScript,
+  parseBackgroundProbe,
+  type BackgroundChunk,
+  type BackgroundPaths,
+} from "./background";
 import { grepPathspecs, globPathspec } from "./git-pathspec";
 import { isInvalidRegexError } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
@@ -421,6 +429,84 @@ export async function writeToolOutput(
   await sandbox.mkDir(TOOL_OUTPUT_DIR).catch(() => {});
   await sandbox.writeFiles([{ path: abs, content }]);
   return abs;
+}
+
+// ── Jobs de fond (MIN-114) ───────────────────────────────────────────────────
+
+/** Timeout du lancement d'un job (on n'attend que son PID, pas sa fin). */
+const BACKGROUND_START_TIMEOUT_MS = 20_000;
+/** Timeout d'une sonde / d'un arrêt. */
+const BACKGROUND_PROBE_TIMEOUT_MS = 30_000;
+
+/**
+ * Les trois fichiers d'un job, dans TOOL_OUTPUT_DIR — donc HORS du dépôt (le
+ * `git add -A` de fin de tour ne les voit jamais) et dans un dossier LISIBLE par
+ * `read_file`/`grep` : le log complet d'un serveur reste consultable même quand la
+ * sonde n'en a renvoyé que la queue (MIN-107).
+ */
+function backgroundPaths(jobId: string): BackgroundPaths {
+  const safe = jobId.replace(/[^A-Za-z0-9._-]/g, "-") || "job";
+  return {
+    log: `${TOOL_OUTPUT_DIR}/${safe}.log`,
+    pid: `${TOOL_OUTPUT_DIR}/${safe}.pid`,
+    exit: `${TOOL_OUTPUT_DIR}/${safe}.exit`,
+  };
+}
+
+/**
+ * Lance une commande EN FOND et renvoie son PID (le script lui-même, et pourquoi
+ * il est écrit ainsi, sont dans `background.ts` — module pur).
+ */
+export async function startBackground(
+  sandbox: Sandbox,
+  opts: { jobId: string; command: string; cwd?: string },
+): Promise<{ pid: number; logPath: string }> {
+  const p = backgroundPaths(opts.jobId);
+  const launcher = backgroundStartScript(p, opts.command, TOOL_OUTPUT_DIR);
+
+  const res = await runShell(sandbox, launcher, {
+    cwd: opts.cwd,
+    timeoutMs: BACKGROUND_START_TIMEOUT_MS,
+  });
+  const pid = Number.parseInt(res.stdout.trim(), 10);
+  if (!Number.isInteger(pid) || pid <= 0) {
+    const detail = (res.stderr || res.stdout).trim().slice(0, 300);
+    throw new Error(`Could not start the background job${detail ? `: ${detail}` : "."}`);
+  }
+  return { pid, logPath: p.log };
+}
+
+/**
+ * Sonde un job : ce qui a été écrit DEPUIS `offset`, plus son état. L'incrément est
+ * borné à `maxBytes` pris à la FIN (un watcher bavard ne doit pas ramener 40 Mo par
+ * sonde) ; l'offset avance quand même jusqu'à la taille réelle du log, et ce qui a
+ * été sauté reste dans le fichier, lisible avec `grep`/`read_file`.
+ */
+export async function readBackgroundSince(
+  sandbox: Sandbox,
+  opts: { jobId: string; pid: number; offset: number; maxBytes: number },
+): Promise<BackgroundChunk> {
+  const p = backgroundPaths(opts.jobId);
+  const offset = Math.max(0, Math.floor(opts.offset));
+  const maxBytes = Math.max(1, Math.floor(opts.maxBytes));
+  const res = await runShell(sandbox, backgroundProbeScript(p, opts.pid, offset, maxBytes), {
+    timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS,
+  });
+  try {
+    return parseBackgroundProbe(res.stdout, { offset, maxBytes });
+  } catch {
+    throw new Error(
+      `Could not read the background job: ${(res.stderr || res.stdout).trim().slice(0, 300)}`,
+    );
+  }
+}
+
+/**
+ * Arrête un job : SIGTERM, délai de grâce, puis SIGKILL (script dans
+ * `background.ts`). Ne lève jamais sur un processus déjà mort.
+ */
+export async function stopBackground(sandbox: Sandbox, pid: number): Promise<void> {
+  await runShell(sandbox, backgroundStopScript(pid), { timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS });
 }
 
 export interface ReadWindow {

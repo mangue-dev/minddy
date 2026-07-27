@@ -294,6 +294,14 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
         command: cap(String(args.command ?? ""), 100),
         ...(args.workdir ? { workdir: String(args.workdir) } : {}),
       };
+    case "run_background":
+      // L'action ET sa cible : « check bg-2 » et « start npm run dev » ne racontent
+      // pas la même chose dans la vue live ni dans `agent_run_events`.
+      return {
+        action: String(args.action ?? ""),
+        ...(args.command ? { command: cap(String(args.command), 100) } : {}),
+        ...(args.job_id ? { job_id: String(args.job_id) } : {}),
+      };
     case "create_pr":
       return { title: cap(String(args.title ?? ""), 200) };
     case "read_attachment":

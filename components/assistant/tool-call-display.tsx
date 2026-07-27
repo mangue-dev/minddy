@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import {
+  Activity,
   ChevronRight,
   FilePen,
   FilePlus2,
@@ -497,6 +498,18 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: Terminal,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentRunCommand", { command: (args.command as string) || "…" }),
+  },
+  run_background: {
+    icon: Activity,
+    // Une ligne par ACTION : « lance npm run dev » et « sonde bg-1 » ne racontent
+    // pas la même chose. `job_id` vient des arguments du modèle (start n'en a pas
+    // encore) ou du résultat, qui le porte pour les trois actions.
+    getLabel: (args, result, _s, _st, t) => {
+      const job = (args.job_id as string) || (result?.job_id as string) || "…";
+      if (args.action === "stop") return t("agentBackgroundStop", { job });
+      if (args.action === "check") return t("agentBackgroundCheck", { job });
+      return t("agentBackgroundStart", { command: (args.command as string) || "…" });
+    },
   },
 };
 

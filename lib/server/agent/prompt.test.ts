@@ -436,6 +436,36 @@ describe("buildAgentSystemPrompt — garde-fou git", () => {
 });
 
 /**
+ * MIN-114 : l'agent peut enfin lancer un serveur et voir tourner son travail. Le
+ * prompt doit porter la BOUCLE complète (lancer → attendre → curl → lire →
+ * arrêter) : un `run_background` qui démarre un serveur que personne ne sonde ni
+ * n'arrête coûte une microVM et ne vérifie rien.
+ */
+describe("buildAgentSystemPrompt — jobs de fond", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`décrit la boucle lancer → sonder → curl → arrêter (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toContain("`run_background`");
+      for (const action of ["`start`", "`check`", "`stop`"]) {
+        expect(prompt).toContain(action);
+      }
+      expect(prompt).toContain("curl");
+      // Ce que ça n'est pas : pas de stdin, pas une commande qui se termine seule.
+      expect(prompt).toMatch(/NO stdin/);
+      expect(prompt).toMatch(/killed when the turn ends/i);
+      // Et l'ordre de ne pas laisser tourner un job dont on n'a plus besoin.
+      expect(prompt).toMatch(/stop it yourself/i);
+    });
+
+    it(`fait de l'exécution réelle une étape de la vérification (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/only shows at RUNTIME/);
+      expect(prompt).toMatch(/start the dev server with `run_background`/);
+    });
+  }
+});
+
+/**
  * MIN-109 : trois frottements mesurés sur `agent_run_events`. Le prompt porte les
  * deux qui se disent (le troisième, `apply_edits`, est un drapeau côté harness) —
  * le modèle préfixait un `cd` dans 13 % des commandes, souvent vers le répertoire

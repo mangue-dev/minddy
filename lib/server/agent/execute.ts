@@ -28,10 +28,18 @@ import {
   globRepo,
   sandboxName,
   writeToolOutput,
+  startBackground,
+  readBackgroundSince,
+  stopBackground,
   REPO_DIR,
   type GrepOutputMode,
   type Sandbox,
 } from "./sandbox";
+import {
+  BackgroundJobs,
+  BACKGROUND_FETCH_BYTES,
+  type BackgroundJobRunner,
+} from "./background";
 import { resolveWithin } from "./repo-path";
 import { LITERAL_RETRY_NOTE } from "./grep-pattern";
 import {
@@ -174,9 +182,29 @@ type WebSearchHandler =
   | ((query: string) => Promise<{ result: unknown; success: boolean }>)
   | null;
 
-/** Les tools « métier » de l'agent : Sandbox (fichiers/commandes), git/PR
-    (`createPr`) et, selon l'ancrage du run, ticket minddy (`issue-tools.ts`) ou
-    carnet (`notebook-tools.ts`) — routés par nom. */
+/**
+ * Les mains de `run_background` (MIN-114) dans LA microVM de ce chunk : la
+ * politique (plafond, garde-fou git, offsets, mise en forme) vit dans le module
+ * pur `background.ts`, ce runner ne fait que la poser sur la sandbox. `workdir`
+ * passe par `resolveWithin` — un `../..` revient au modèle en erreur de tool.
+ */
+function sandboxBackgroundRunner(sandbox: Sandbox): BackgroundJobRunner {
+  return {
+    start: ({ jobId, command, workdir }) =>
+      startBackground(sandbox, {
+        jobId,
+        command,
+        cwd: workdir ? resolveWithin(REPO_DIR, workdir) : undefined,
+      }),
+    read: ({ jobId, pid, offset }) =>
+      readBackgroundSince(sandbox, { jobId, pid, offset, maxBytes: BACKGROUND_FETCH_BYTES }),
+    stop: ({ pid }) => stopBackground(sandbox, pid),
+  };
+}
+
+/** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
+    git/PR (`createPr`) et, selon l'ancrage du run, ticket minddy (`issue-tools.ts`)
+    ou carnet (`notebook-tools.ts`) — routés par nom. */
 function makeExecTool(
   sandbox: Sandbox,
   createPr: CreatePrHandler,
@@ -185,6 +213,9 @@ function makeExecTool(
   /** Base des seq de fichiers de sortie déposés (tranchée par continuation, comme
       les autres compteurs de run) : deux chunks n'écrasent pas leurs fichiers. */
   outputSeqBase: number,
+  /** Registre des jobs de fond du chunk (MIN-114). Tenu par l'appelant : c'est lui
+      qui les tue avant chaque push et en fin de chunk. */
+  background: BackgroundJobs,
 ): ExecuteAgentTool {
   let outputSeq = 0;
   return async (name, args) => {
@@ -409,6 +440,12 @@ function makeExecTool(
           success: r.exitCode === 0,
         };
       }
+      case "run_background": {
+        // Le garde-fou git, le plafond de jobs et les offsets sont dans
+        // `background.ts` — y compris le refus des commandes interdites (MIN-108),
+        // sans quoi ce tool serait une porte dérobée sur `git push`.
+        return await background.handle(args);
+      }
       default:
         return { result: `Unknown tool: ${name}`, success: false };
     }
@@ -614,6 +651,9 @@ export async function executeAgentRun(
   const emitLive: EmitAgentLive = (progress) =>
     broadcastRunStream(run.id, { ...progress, at: Date.now() });
   let sandbox: Sandbox | null = null;
+  // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
+  // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
+  let backgroundJobs: BackgroundJobs | null = null;
 
   try {
     await emit("status", { status: "running", continuation: run.continuations });
@@ -1007,6 +1047,17 @@ export async function executeAgentRun(
             },
           };
 
+    // Jobs de fond du chunk (MIN-114). Ils meurent AVANT chaque push (un watcher
+    // qui écrit pendant le `git add -A` commiterait n'importe quoi) et de toute
+    // façon en fin de chunk (`finally`) : un processus oublié mangerait la microVM
+    // jusqu'au reaper, et serait encore là au tour suivant sans que le modèle le
+    // sache. Le registre ne survit pas au chunk — c'est assumé, et le tool le dit.
+    const background = new BackgroundJobs(
+      sandboxBackgroundRunner(sandbox),
+      run.continuations * 1000,
+    );
+    backgroundJobs = background;
+
     const result = await runAgentLoop({
       messages,
       tools: agentToolsFor({
@@ -1028,6 +1079,7 @@ export async function executeAgentRun(
         toolAnchor,
         webSearch,
         run.continuations * 1000,
+        background,
       ),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
@@ -1107,6 +1159,10 @@ export async function executeAgentRun(
       const authUrl = freshTarget?.authUrl ?? target.authUrl;
       const token = freshTarget?.token ?? target.token;
 
+      // Les jobs de fond meurent AVANT de stager : un serveur de dev ou un watcher
+      // encore vivant réécrirait des fichiers pendant le `git add -A`.
+      await background.stopAll().catch(() => 0);
+
       // Pousse ce que le tour a changé (no-op propre sans changement). Si la session
       // suit une PR, GitHub la met à jour tout seul — aucune création ici : ouvrir
       // une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
@@ -1179,6 +1235,8 @@ export async function executeAgentRun(
     }
 
     // ── interrupted / erreur / suspended : push WIP + persiste le checkpoint ──
+    // Même règle qu'en fin de tour : rien ne tourne pendant qu'on stage.
+    await background.stopAll().catch(() => 0);
     const wipPushed = await commitAndPush(sandbox, {
       authUrl: target.authUrl,
       workBranch,
@@ -1310,6 +1368,11 @@ export async function executeAgentRun(
     if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
   } finally {
+    // Filet des jobs de fond (MIN-114) : les chemins de push les ont déjà tués, mais
+    // pas le chemin d'ERREUR mid-tour — et un serveur laissé vivant tiendrait la
+    // microVM éveillée jusqu'au reaper. Best-effort, jamais bloquant.
+    if (backgroundJobs) await backgroundJobs.stopAll().catch(() => 0);
+
     // Métrage du compute sandbox (MIN-72) : chaque tranche d'exécution où la
     // microVM a été réveillée est facturée en wall-clock — y compris les tours
     // en échec. Bande de seq dédiée pour ne pas croiser celle des appels LLM

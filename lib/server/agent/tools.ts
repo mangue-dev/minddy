@@ -1,5 +1,7 @@
 import "server-only";
 
+import { MAX_BACKGROUND_JOBS } from "./background";
+
 /**
  * Tools de l'agent de code (MIN-46), format function-calling OpenRouter (même
  * forme que lib/server/assistant/tools.ts). Ils opèrent sur le dépôt cloné dans
@@ -10,7 +12,8 @@ import "server-only";
  *  - exploration : read_file (numéroté, fenêtré), list_dir, glob, grep (git grep)
  *  - édition     : edit_file (remplacement de chaîne robuste — cascade opencode,
  *                  cf. edit.ts), write_file (création de fichiers neufs uniquement)
- *  - vérif       : run_command (install/lint/build/tests, git, etc.)
+ *  - vérif       : run_command (install/lint/build/tests, git, etc.), run_background
+ *                  (serveur de dev / watcher : démarrer, sonder, arrêter — MIN-114)
  *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
  *  - ticket      : read_issue (état VIVANT du ticket : champs, plan, commentaires,
  *                  pièces jointes), read_attachment, write_issue_plan (écrit le
@@ -302,6 +305,39 @@ const CORE_TOOLS: AgentToolDef[] = [
           },
         },
         required: ["command"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "run_background",
+      description:
+        `Run a long-lived command in the background — a dev server, a watcher, a build that keeps running — and keep working while it runs. This is how you SEE your work run: start the server, then use run_command to curl it ('curl -s --retry 5 --retry-connrefused http://localhost:3000/'), read what it answered, and stop the job. Three actions: 'start' (needs 'command'; returns a job_id, the pid and the path of its log file), 'check' (needs 'job_id'; returns whether it is still running and ONLY what it wrote since your previous check), 'stop' (needs 'job_id'; kills it). Give a server a moment to boot before the first check. NO stdin: a command that waits for input hangs forever — pass its non-interactive flags (--yes, --no-interactive, CI=1). Not for commands that finish on their own: use run_command for those, it gives you the exit code. Background jobs do NOT survive the end of a turn (all of them are killed then), so start what you need in the same turn you use it. At most ${MAX_BACKGROUND_JOBS} jobs run at a time.`,
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["start", "check", "stop"],
+            description: "'start' a job, 'check' its recent output, or 'stop' it.",
+          },
+          command: {
+            type: "string",
+            description:
+              "For 'start': the shell command to run in the background, e.g. 'npm run dev'. Ignored otherwise.",
+          },
+          workdir: {
+            type: "string",
+            description:
+              "For 'start': optional repo-relative directory to run it in. Defaults to the repository root.",
+          },
+          job_id: {
+            type: "string",
+            description: "For 'check' and 'stop': the job_id returned by 'start'.",
+          },
+        },
+        required: ["action"],
       },
     },
   },
