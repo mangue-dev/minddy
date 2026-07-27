@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { Check, Minus } from "lucide-react";
-import { cn } from "mangue-ui/lib/utils";
 import { PricingInfoHint } from "./pricing-info-hint";
+import { FeatureTable, type FeatureCell } from "./feature-table";
 import {
   BILLING_PLANS,
   usageMultiplierVsFree,
@@ -42,7 +41,7 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /** `true` = inclus, `false` = absent, une chaîne = la valeur chiffrée du plan. */
-type Cell = string | boolean;
+type Cell = FeatureCell;
 
 interface Row {
   /** Suffixe des clés i18n `row_<key>` et, si `hint`, `row_<key>_hint`. */
@@ -153,101 +152,30 @@ export async function PricingComparison() {
     getTranslations("Pricing"),
   ]);
 
+  // Le tableau lui-même vit dans `feature-table.tsx` : les comparatifs
+  // `/alternatives/<outil>` en rendent un second avec d'autres colonnes
+  // (MIN-93). Ici on ne fait plus que CALCULER — et c'est ce calcul, dérivé de
+  // `BILLING_PLANS` ligne par ligne, qui garde le tableau honnête.
   return (
-    <div className="overflow-x-auto">
-      {/* `border-separate` et non `border-collapse` : la colonne de gauche est
-          collée à gauche pour survivre au défilement horizontal du mobile, et
-          une cellule `sticky` sous `border-collapse` perd le filet de sa ligne
-          (le trait appartient alors au tableau, pas à la cellule). Chaque
-          cellule porte donc son propre `border-t`. */}
-      <table className="w-full min-w-[520px] border-separate border-spacing-0 text-sm">
-        <caption className="sr-only">{tp("comparisonTitle")}</caption>
-
-        {GROUPS.map((group, groupIndex) => (
-          <tbody key={group.key}>
-            {/* Trente lignes plus loin, « la colonne du milieu, c'était Go ? »
-                est la seule question qui compte. Un en-tête `sticky` y
-                répondrait, mais la navbar se rétracte au défilement : il
-                flotterait au-dessus d'une bande vide. Chaque groupe rappelle
-                donc les plans lui-même — et ça marche aussi sur le tableau
-                qui défile latéralement, où rien ne peut coller. */}
-            <tr>
-              <th
-                scope="col"
-                className={cn(
-                  "sticky left-0 z-10 w-[38%] bg-background pr-6 pb-3 text-left text-sm font-semibold text-foreground",
-                  groupIndex > 0 && "pt-12",
-                )}
-              >
-                {tp(`group_${group.key}`)}
-              </th>
-              {BILLING_PLANS.map((plan) => (
-                <th
-                  key={plan.id}
-                  scope="col"
-                  className={cn(
-                    "pb-3 text-center text-sm font-semibold",
-                    groupIndex > 0 && "pt-12",
-                    plan.highlighted ? "text-primary" : "text-muted-foreground",
-                  )}
-                >
-                  {t(PLAN_LABEL_KEYS[plan.id])}
-                </th>
-              ))}
-            </tr>
-
-            {group.rows.map((row) => (
-              <tr key={row.key}>
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 border-t border-border bg-background py-3.5 pr-6 text-left font-normal"
-                >
-                  <span className="inline-flex items-center gap-1.5 text-foreground">
-                    {tp(`row_${row.key}`)}
-                    {row.hint && <PricingInfoHint text={tp(`row_${row.key}_hint`)} />}
-                  </span>
-                </th>
-                {BILLING_PLANS.map((plan) => {
-                  const cell = row.value(plan, t);
-                  return (
-                    // `relative` : les libellés sr-only sont en position absolue.
-                    // Sans bloc conteneur local, ils se positionnent par rapport
-                    // au document et échappent au défilement horizontal du
-                    // tableau — la page entière déborderait sur mobile.
-                    <td
-                      key={plan.id}
-                      className="relative border-t border-border py-3.5 text-center"
-                    >
-                      {typeof cell === "boolean" ? (
-                        cell ? (
-                          <>
-                            <Check
-                              className="mx-auto h-4 w-4 text-primary"
-                              strokeWidth={3}
-                              aria-hidden
-                            />
-                            <span className="sr-only">{t("included")}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Minus
-                              className="mx-auto h-4 w-4 text-muted-foreground/50"
-                              aria-hidden
-                            />
-                            <span className="sr-only">{t("notIncluded")}</span>
-                          </>
-                        )
-                      ) : (
-                        <span className="text-foreground/90">{cell}</span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        ))}
-      </table>
-    </div>
+    <FeatureTable
+      caption={tp("comparisonTitle")}
+      includedLabel={t("included")}
+      notIncludedLabel={t("notIncluded")}
+      columns={BILLING_PLANS.map((plan) => ({
+        key: plan.id,
+        label: t(PLAN_LABEL_KEYS[plan.id]),
+        highlighted: plan.highlighted,
+      }))}
+      groups={GROUPS.map((group) => ({
+        key: group.key,
+        label: tp(`group_${group.key}`),
+        rows: group.rows.map((row) => ({
+          key: row.key,
+          label: tp(`row_${row.key}`),
+          hint: row.hint ? <PricingInfoHint text={tp(`row_${row.key}_hint`)} /> : undefined,
+          cells: BILLING_PLANS.map((plan) => row.value(plan, t)),
+        })),
+      }))}
+    />
   );
 }

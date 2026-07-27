@@ -570,6 +570,28 @@ nav[aria-label="Navigation"]
   }
 }
 
+/* ─── FAQ : replier une réponse que `forceMount` garde montée ────────────
+   Les réponses de la FAQ sont rendues avec `forceMount` pour exister dans le
+   HTML même repliées — sans quoi aucun crawler ne les lit (MIN-88, voir
+   `components/marketing/faq-accordion.tsx`).
+
+   Mais `forceMount` force aussi la PRÉSENCE au sens de Radix, donc Radix ne
+   pose plus son attribut `hidden` : plus rien ne repliait les réponses.
+   L'animation `accordion-up` joue une fois, sans `fill-mode`, et le contenu
+   revient à sa hauteur naturelle 0,25 s plus tard — les douze réponses
+   s'affichaient dépliées au chargement (MIN-93).
+
+   `display: none` ne retire rien du document : le texte reste exactement là où
+   les crawlers le lisent, il cesse seulement d'être peint. Écrit ici et non en
+   variante Tailwind arbitraire (`[[data-state=closed]_&]`) : celle-ci ne
+   produisait aucune règle, la classe partait dans le HTML sans rien derrière.
+
+   Portée à la FAQ seule : ailleurs dans l'app, l'accordéon n'est pas monté de
+   force et Radix gère le repli lui-même, animation de fermeture comprise. */
+.faq-accordion [data-slot="accordion-content"][data-state="closed"] {
+  display: none;
+}
+
 /* « Moins d'animation » : on ne raccourcit pas, on retire. Une durée quasi
    nulle laisserait quand même le remplissage `both` appliquer le flou pendant
    le délai de chaque mot — donc un titre flou tant qu'il n'a pas démarré. */

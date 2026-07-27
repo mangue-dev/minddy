@@ -12,6 +12,7 @@ import {
   Plug,
   Route,
   Tag,
+  Terminal,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -57,6 +58,11 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "numo", href: "/#numo", icon: null },
   { key: "feedback", href: "/#feedback", icon: MessagesSquare },
   { key: "more", href: "/#more", icon: Boxes },
+  // La seule entrée qui mène à une PAGE et non à une section de la landing
+  // (MIN-93). Elle est en dernier pour que le menu se lise toujours comme le
+  // plan de la landing, et sa description dit « documentation » sans le mot :
+  // c'est ce qui la distingue de l'entrée « Agents & MCP » juste au-dessus.
+  { key: "mcp", href: "/mcp", icon: Terminal },
 ];
 
 /**

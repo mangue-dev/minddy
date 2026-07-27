@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Plug } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { TrackedCta } from "./tracked-cta";
@@ -80,15 +79,11 @@ export async function Hero() {
     <section className="pt-10 pb-16 sm:pb-24">
       <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-3xl pt-10 text-center sm:pt-16">
-          <Link
-            href={href("/#agents")}
-            style={{ "--hero-d": 0.1 } as CSSProperties}
-            className="hero-reveal mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground"
-          >
-            <Plug className="h-3.5 w-3.5" />
-            {t("heroBadge")}
-          </Link>
-
+          {/* Le badge « Serveur MCP inclus dès le plan gratuit » a été retiré :
+              il annonçait un détail d'offre au-dessus d'un titre que le
+              visiteur n'a pas encore lu, et poussait le `<h1>` — l'élément LCP
+              — d'une ligne vers le bas. Le sujet est traité là où il se pose :
+              la section Agents, la page `/mcp` et le tableau des tarifs. */}
           <h1
             className="text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-6xl"
             aria-label={`${titleBefore} ${titleAccent}`}

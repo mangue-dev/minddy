@@ -1,4 +1,4 @@
-import { mcpToolCatalog } from "@/lib/server/mcp/catalog";
+import { firstSentence, mcpToolCatalog } from "@/lib/server/mcp/catalog";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
@@ -67,6 +67,7 @@ ${tools.map((tool) => `- \`${tool.name}\`${tool.readOnly ? " (read-only)" : ""} 
 ## More
 
 - Full tool reference, with every parameter: ${SITE_URL}/llms-full.txt
+- Setup guide, one ready-to-paste block per agent: ${SITE_URL}/mcp
 - Terms: ${SITE_URL}/terms
 - Privacy: ${SITE_URL}/privacy
 `;
@@ -97,10 +98,3 @@ const MCP_SERVER_MODEL = `- **Project** — the workspace. Everything else belon
 - **Scratchpad** — the key owner's personal notes doc, same checkbox markdown.
 - **Feedback** — user requests on a public board, separate from issues, with
   votes and a public status; can be promoted into an issue.`;
-
-/** Première phrase d'une description d'outil — de quoi tenir sur une ligne. */
-function firstSentence(description: string | undefined): string {
-  if (!description) return "(no description)";
-  const end = description.indexOf(". ");
-  return end === -1 ? description : description.slice(0, end + 1);
-}

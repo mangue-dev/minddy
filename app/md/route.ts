@@ -2,9 +2,21 @@ import type { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { BILLING_PLANS } from "@/lib/billing-plans";
+import { CHANGELOG_ENTRIES } from "@/lib/changelog";
+import {
+  COMPARISONS,
+  COMPARISON_POINTS,
+  COMPARISON_ROWS,
+  type Comparison,
+} from "@/lib/comparisons";
+import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
-import { SITE_URL } from "@/lib/site";
-import { FAQ_KEYS, PRICING_FAQ_KEYS } from "@/components/marketing/faq-keys";
+import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
+import {
+  FAQ_KEYS,
+  MCP_FAQ_KEYS,
+  PRICING_FAQ_KEYS,
+} from "@/components/marketing/faq-keys";
 
 /**
  * Version Markdown des pages publiques (MIN-88), servie sur négociation de
@@ -29,10 +41,38 @@ import { FAQ_KEYS, PRICING_FAQ_KEYS } from "@/components/marketing/faq-keys";
 
 const KEYS = new Set<string>(PUBLIC_ROUTES.map((route) => route.key));
 
-export async function GET(request: NextRequest): Promise<Response> {
+/** Les comparatifs, retrouvés par la clé de route que le proxy nous passe. */
+const COMPARISON_BY_ROUTE = new Map<string, Comparison>(
+  COMPARISONS.map((comparison) => [comparison.routeKey, comparison]),
+);
+
+/**
+ * Quelle page rendre, et dans quelle langue — lu dans les EN-TÊTES posés par le
+ * proxy, avec la query en secours.
+ *
+ * Le proxy passait l'information en query (`/md?route=pricing&locale=fr`).
+ * Elle n'arrivait pas : sur une réécriture de middleware, Next 16 donne au
+ * route handler l'URL D'ORIGINE (`request.nextUrl` et `request.url` valent
+ * `/pricing`), pas la cible. `route` était donc toujours absent, `/md` retombait
+ * sur son défaut, et TOUTES les pages du site servaient le Markdown de la
+ * landing — mesuré en construisant la version Markdown des pages de MIN-93.
+ *
+ * Les en-têtes de requête, eux, traversent la réécriture : c'est déjà par là
+ * que `x-minddy-locale` atteint `i18n/request.ts`.
+ *
+ * La query reste lue en second pour que `/md?route=…&locale=…` continue de
+ * fonctionner en appel direct — c'est ce qu'on tape pour vérifier une page.
+ */
+function requested(request: NextRequest): { rawKey: string; rawLocale: string } {
   const params = request.nextUrl.searchParams;
-  const rawKey = params.get("route") ?? "";
-  const rawLocale = params.get("locale") ?? "";
+  return {
+    rawKey: request.headers.get("x-minddy-route") ?? params.get("route") ?? "",
+    rawLocale: request.headers.get("x-minddy-locale") ?? params.get("locale") ?? "",
+  };
+}
+
+export async function GET(request: NextRequest): Promise<Response> {
+  const { rawKey, rawLocale } = requested(request);
 
   const key = (KEYS.has(rawKey) ? rawKey : "home") as PublicRouteKey;
   const locale = ((locales as readonly string[]).includes(rawLocale)
@@ -45,6 +85,10 @@ export async function GET(request: NextRequest): Promise<Response> {
   let body: string;
   if (key === "home") body = await renderLanding(locale, canonical);
   else if (key === "pricing") body = await renderPricing(locale, canonical);
+  else if (key === "mcp") body = await renderMcp(locale, canonical);
+  else if (key === "changelog") body = await renderChangelog(locale, canonical);
+  else if (COMPARISON_BY_ROUTE.has(key))
+    body = await renderComparison(COMPARISON_BY_ROUTE.get(key)!, locale, canonical);
   else body = await renderLegal(key, locale, canonical);
 
   return new Response(body, {
@@ -136,6 +180,158 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
   ].join("\n\n") + "\n";
 }
 
+/**
+ * `/mcp` en Markdown (MIN-93) — la seule page du site dont la version texte a
+ * une chance d'être VRAIMENT lue par une machine, puisque son sujet est de
+ * brancher une machine.
+ *
+ * Contrairement à `/llms.txt`, qui s'adresse à l'assistant en train d'écrire
+ * l'intégration, celle-ci rend la page telle qu'elle est lue : les blocs de
+ * configuration par agent, l'autorisation, les outils groupés, et surtout les
+ * trois phrases qu'on tape à son agent. Mêmes sources exactement — le registre
+ * `MCP_AGENTS` et le catalogue d'outils — donc aucune des deux ne peut décrire
+ * un serveur que minddy n'expose plus.
+ */
+async function renderMcp(locale: Locale, canonical: string): Promise<string> {
+  const [t, tl] = await Promise.all([
+    getTranslations({ locale, namespace: "Mcp" }),
+    getTranslations({ locale, namespace: "Landing" }),
+  ]);
+
+  return [
+    header(t("metaTitle"), t("metaDescription"), canonical),
+    `## ${t("heroTitle")}`,
+    t("heroSubtitle"),
+    t("heroNote"),
+    [
+      `- **${t("factEndpoint")}** — \`${MCP_ENDPOINT}\``,
+      `- **${t("factAuth")}** — ${t("factAuthValue")}`,
+    ].join("\n"),
+
+    `## ${t("connectTitle")}`,
+    t("connectSubtitle"),
+    // Le prompt d'abord : un lecteur qui EST une machine n'a pas besoin des
+    // sept blocs de configuration, il a besoin de la consigne.
+    `### ${t("assistantTitle")}`,
+    t("assistantBody"),
+    `> ${t("assistantPrompt", { endpoint: MCP_ENDPOINT, guide: `${SITE_URL}/llms.txt` })}`,
+    MCP_AGENTS.map((agent) =>
+      [
+        `### ${agent.label}`,
+        t(`kind_${agent.kind}`),
+        // Un bloc clôturé plutôt qu'un `code` en ligne : la configuration de
+        // Windsurf tient sur cinq lignes, et un agent qui relit ce fichier doit
+        // pouvoir la recopier telle quelle.
+        `\`\`\`\n${agent.build(MCP_ENDPOINT)}\n\`\`\``,
+      ].join("\n\n"),
+    ).join("\n\n"),
+
+    `## ${t("authTitle")}`,
+    t("authSubtitle"),
+    (["who", "consent", "revoke"] as const)
+      .map((key) => `- **${t(`auth_${key}_title`)}** — ${t(`auth_${key}_body`)}`)
+      .join("\n"),
+
+    `## ${t("toolsTitle")}`,
+    t("toolsSubtitle"),
+    // Les mêmes sept phrases que la page et que la landing. La référence
+    // complète des outils vit dans `/llms-full.txt`, qui s'adresse aux
+    // machines — la dupliquer ici ne servirait personne.
+    (["read", "plan", "track", "create", "comment", "review", "beyond"] as const)
+      .map((key) => `- ${tl(`agentsCapability_${key}`)}`)
+      .join("\n"),
+
+    `## ${t("flowsTitle")}`,
+    t("flowsSubtitle"),
+    (["plan", "track", "create"] as const)
+      .map((key) =>
+        [
+          `### ${t(`flow_${key}_title`)}`,
+          t(`flow_${key}_body`),
+          `> ${t(`flow_${key}_prompt`)}`,
+        ].join("\n\n"),
+      )
+      .join("\n\n"),
+
+    "## FAQ",
+    MCP_FAQ_KEYS.map((key) => `### ${t(`faq_${key}_q`)}\n\n${t(`faq_${key}_a`)}`).join("\n\n"),
+    links(locale),
+  ].join("\n\n") + "\n";
+}
+
+/**
+ * Le changelog en Markdown (MIN-93) — la version texte la plus simple du site,
+ * et probablement la plus utile : « qu'est-ce qui a changé dans minddy » est
+ * une question qu'on pose à un modèle, et il n'a besoin que de dates et de
+ * phrases.
+ */
+async function renderChangelog(locale: Locale, canonical: string): Promise<string> {
+  const t = await getTranslations({ locale, namespace: "Changelog" });
+
+  return [
+    header(t("metaTitle"), t("metaDescription"), canonical),
+    t("heroSubtitle"),
+    ...CHANGELOG_ENTRIES.map((entry) =>
+      [
+        `## ${t(`entry_${entry.id}_title`)}`,
+        `*${entry.date}*`,
+        t(`entry_${entry.id}_body`),
+      ].join("\n\n"),
+    ),
+    links(locale),
+  ].join("\n\n") + "\n";
+}
+
+/**
+ * Un comparatif en Markdown (MIN-93). Le tableau HTML devient un vrai tableau
+ * Markdown : c'est la forme qu'un modèle recopie sans se tromper de colonne, et
+ * la seule raison pour laquelle une version texte de cette page a un intérêt.
+ *
+ * L'ordre de la page est conservé — ce que l'autre outil fait mieux vient
+ * AVANT ce que minddy fait autrement. Une version texte qui inverserait les
+ * deux ne dirait pas la même chose que la page qu'elle prétend refléter.
+ */
+async function renderComparison(
+  comparison: Comparison,
+  locale: Locale,
+  canonical: string,
+): Promise<string> {
+  const [t, tc] = await Promise.all([
+    getTranslations({ locale, namespace: "Alternatives" }),
+    getTranslations({ locale, namespace: comparison.namespace }),
+  ]);
+  const cell = (row: (typeof COMPARISON_ROWS)[number]) => [
+    t(`minddy_${row}`),
+    tc(`them_${row}`),
+  ];
+
+  return [
+    header(tc("metaTitle"), tc("metaDescription"), canonical),
+    `## ${tc("heroTitle")}`,
+    tc("heroSubtitle"),
+
+    `## ${t("compareTitle")}`,
+    t("compareSubtitle"),
+    [
+      `| | ${t("columnUs")} | ${comparison.name} |`,
+      "| --- | --- | --- |",
+      ...COMPARISON_ROWS.map((row) => `| ${t(`row_${row}`)} | ${cell(row).join(" | ")} |`),
+    ].join("\n"),
+    `${t("checkedNote")} ${comparison.pricingUrl}`,
+
+    `## ${t("betterThemTitle", { name: comparison.name })}`,
+    COMPARISON_POINTS.map((point) => `- ${tc(`betterThem_${point}`)}`).join("\n"),
+
+    `## ${t("betterUsTitle")}`,
+    COMPARISON_POINTS.map((point) => `- ${tc(`betterUs_${point}`)}`).join("\n"),
+
+    `## ${t("verdictTitle")}`,
+    tc("verdictThem"),
+    tc("verdictUs"),
+    links(locale),
+  ].join("\n\n") + "\n";
+}
+
 async function renderLegal(
   key: PublicRouteKey,
   locale: Locale,
@@ -159,6 +355,8 @@ function links(locale: Locale): string {
     "## Links",
     `- Home: ${path("home")}`,
     `- Pricing: ${path("pricing")}`,
+    `- MCP server: ${path("mcp")}`,
+    `- Changelog: ${path("changelog")}`,
     `- MCP integration guide: ${SITE_URL}/llms.txt`,
     `- Terms: ${path("terms")}`,
     `- Privacy: ${path("privacy")}`,

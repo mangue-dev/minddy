@@ -32,6 +32,8 @@
  * fois, et Google apprend vite à ne plus y croire. **À mettre à jour quand le
  * contenu de la page change**, pas à chaque déploiement.
  */
+import { CHANGELOG_LAST_MODIFIED } from "@/lib/changelog";
+
 export interface PublicRoute {
   /** Clé stable, utilisée par `publicPageMetadata` et les liens. */
   key: string;
@@ -69,6 +71,53 @@ export const PUBLIC_ROUTES = [
     namespace: "Pricing",
     lastModified: "2026-07-27",
     priority: 0.8,
+  },
+  {
+    key: "mcp",
+    en: "/mcp",
+    fr: "/fr/mcp",
+    namespace: "Mcp",
+    lastModified: "2026-07-27",
+    priority: 0.9,
+  },
+  // Seule page dont le `lastModified` n'est PAS tenu à la main : ici,
+  // « le contenu a changé » et « une entrée a été ajoutée » sont le même
+  // événement, et la fraîcheur est ce que Perplexity regarde en premier.
+  {
+    key: "changelog",
+    en: "/changelog",
+    fr: "/fr/nouveautes",
+    namespace: "Changelog",
+    lastModified: CHANGELOG_LAST_MODIFIED,
+    priority: 0.6,
+  },
+  // Un comparatif = une entrée, comme n'importe quelle page (MIN-93). Les
+  // slugs sont les mêmes dans les deux langues : `alternatives` s'écrit
+  // pareil, et le nom du concurrent est un nom propre. Voir
+  // `lib/comparisons.ts` pour le choix de ces trois-là.
+  {
+    key: "alternativeLinear",
+    en: "/alternatives/linear",
+    fr: "/fr/alternatives/linear",
+    namespace: "AlternativeLinear",
+    lastModified: "2026-07-27",
+    priority: 0.7,
+  },
+  {
+    key: "alternativeJira",
+    en: "/alternatives/jira",
+    fr: "/fr/alternatives/jira",
+    namespace: "AlternativeJira",
+    lastModified: "2026-07-27",
+    priority: 0.7,
+  },
+  {
+    key: "alternativeNotion",
+    en: "/alternatives/notion",
+    fr: "/fr/alternatives/notion",
+    namespace: "AlternativeNotion",
+    lastModified: "2026-07-27",
+    priority: 0.7,
   },
   {
     key: "legal",

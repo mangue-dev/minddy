@@ -18,24 +18,36 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
  */
 export const FRENCH_SLUG_REDIRECTS = [
   { source: "/fr/pricing", destination: "/fr/tarifs" },
+  { source: "/fr/changelog", destination: "/fr/nouveautes" },
   { source: "/fr/legal", destination: "/fr/mentions-legales" },
   { source: "/fr/terms", destination: "/fr/cgu" },
   { source: "/fr/privacy", destination: "/fr/confidentialite" },
 ];
 
 /**
- * Les douze URLs publiques — même recopie, même test de non-divergence. Elles
- * servent ici à poser l'en-tête de cache CDN (voir `headers()`).
+ * Toutes les URLs publiques, EN et FR — même recopie, même test de
+ * non-divergence. Elles servent ici à poser l'en-tête de cache CDN (voir
+ * `headers()`).
  */
 export const PUBLIC_ROUTE_PATHS = [
   "/",
   "/pricing",
+  "/mcp",
+  "/changelog",
+  "/alternatives/linear",
+  "/alternatives/jira",
+  "/alternatives/notion",
   "/legal",
   "/terms",
   "/privacy",
   "/cookies",
   "/fr",
   "/fr/tarifs",
+  "/fr/mcp",
+  "/fr/nouveautes",
+  "/fr/alternatives/linear",
+  "/fr/alternatives/jira",
+  "/fr/alternatives/notion",
   "/fr/mentions-legales",
   "/fr/cgu",
   "/fr/confidentialite",
@@ -99,7 +111,7 @@ const nextConfig = {
   async headers() {
     const headers = [];
 
-    // Les six pages publiques, dans leurs deux langues. Recopiées de
+    // Les pages publiques, dans leurs deux langues. Recopiées de
     // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
     // `lib/public-routes.test.ts` vérifie qu'elles ne divergent pas.
     //

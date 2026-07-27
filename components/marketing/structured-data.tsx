@@ -1,9 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { BILLING_PLANS } from "@/lib/billing-plans";
-import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
-import { routeByKey } from "@/lib/public-routes";
+import { CONTACT_EMAIL, MCP_ENDPOINT, SITE_URL } from "@/lib/site";
+import { routeByKey, type PublicRouteKey } from "@/lib/public-routes";
 import type { Locale } from "@/i18n/config";
-import { FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
+import { FAQ_KEYS, MCP_FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
 
 /**
  * Données structurées du site public (schema.org, JSON-LD).
@@ -41,21 +41,36 @@ const FEATURE_KEYS = ["tracker", "speed", "agents", "numo", "feedback", "more"] 
 
 const LANG_TAG: Record<Locale, string> = { en: "en-US", fr: "fr-FR" };
 
+/** La page dont le graphe est rendu, par variante. */
+const VARIANT_ROUTE: Record<StructuredDataVariant, PublicRouteKey> = {
+  landing: "home",
+  pricing: "pricing",
+  mcp: "mcp",
+};
+
+type StructuredDataVariant = "landing" | "pricing" | "mcp";
+
 export async function StructuredData({
   variant = "landing",
 }: {
-  /** `pricing` remplace le graphe de la landing par celui de la page tarifs. */
-  variant?: "landing" | "pricing";
+  /**
+   * `pricing` et `mcp` remplacent le graphe de la landing par celui de leur
+   * propre page. `mcp` rend un `TechArticle` : c'est le type que Google attend
+   * d'une documentation d'intégration, et le seul qui dise qu'une page décrit
+   * une procédure technique plutôt qu'un argumentaire (MIN-93).
+   */
+  variant?: StructuredDataVariant;
 } = {}) {
   const locale = (await getLocale()) as Locale;
-  const [t, tb, tp] = await Promise.all([
+  const [t, tb, tp, tm] = await Promise.all([
     getTranslations("Landing"),
     getTranslations("Billing"),
     getTranslations("Pricing"),
+    getTranslations("Mcp"),
   ]);
 
   const inLanguage = LANG_TAG[locale] ?? LANG_TAG.en;
-  const route = routeByKey(variant === "pricing" ? "pricing" : "home");
+  const route = routeByKey(VARIANT_ROUTE[variant]);
   const pageUrl = `${SITE_URL}${locale === "fr" ? route.fr : route.en}`;
   const pricingUrl = `${SITE_URL}${
     locale === "fr" ? routeByKey("pricing").fr : routeByKey("pricing").en
@@ -89,17 +104,21 @@ export async function StructuredData({
     })),
   };
 
+  // Chaque variante a ses questions ET son namespace : une question déclarée
+  // ici mais absente de la page est une erreur du Rich Results Test.
+  const faqKeys: ReadonlyArray<string> =
+    variant === "pricing" ? PRICING_FAQ_KEYS : variant === "mcp" ? MCP_FAQ_KEYS : FAQ_KEYS;
+  const tFaq =
+    variant === "pricing" ? tp : variant === "mcp" ? tm : t;
+
   const faq = {
     "@type": "FAQPage",
     "@id": `${pageUrl}#faq`,
     inLanguage,
-    mainEntity: (variant === "pricing" ? PRICING_FAQ_KEYS : FAQ_KEYS).map((key) => ({
+    mainEntity: faqKeys.map((key) => ({
       "@type": "Question",
-      name: variant === "pricing" ? tp(`faq_${key}_q`) : t(`faq_${key}_q`),
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: variant === "pricing" ? tp(`faq_${key}_a`) : t(`faq_${key}_a`),
-      },
+      name: tFaq(`faq_${key}_q`),
+      acceptedAnswer: { "@type": "Answer", text: tFaq(`faq_${key}_a`) },
     })),
   };
 
@@ -112,8 +131,54 @@ export async function StructuredData({
     email: CONTACT_EMAIL,
   };
 
+  /**
+   * `/mcp` : un `TechArticle` qui a pour sujet le logiciel, et une
+   * `EntryPoint` qui donne l'URL du serveur MCP. C'est la seule page du site
+   * dont le contenu est une PROCÉDURE — la décrire comme une `WebPage`
+   * ordinaire reviendrait à la ranger avec les pages légales.
+   */
+  const mcpGraph = [
+    organization,
+    {
+      "@type": "TechArticle",
+      "@id": `${pageUrl}#article`,
+      url: pageUrl,
+      headline: tm("metaTitle"),
+      description: tm("metaDescription"),
+      inLanguage,
+      // Le `lastModified` de la table des routes fait foi partout ailleurs
+      // (sitemap compris) : deux dates différentes pour la même page sont un
+      // signal contradictoire, et c'est celle-là que Google recoupe.
+      dateModified: route.lastModified,
+      about: { "@id": `${SITE_URL}/#software` },
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      proficiencyLevel: "Beginner",
+      potentialAction: {
+        "@type": "ConsumeAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: MCP_ENDPOINT,
+          actionPlatform: "https://modelcontextprotocol.io",
+        },
+      },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${SITE_URL}/#software`,
+      name: "minddy",
+      url: `${SITE_URL}${routeByKey("home")[locale === "fr" ? "fr" : "en"]}`,
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      offers,
+    },
+    faq,
+  ];
+
   const graph =
-    variant === "pricing"
+    variant === "mcp"
+      ? mcpGraph
+      : variant === "pricing"
       ? [
           organization,
           {

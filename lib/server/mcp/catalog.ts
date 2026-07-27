@@ -65,3 +65,17 @@ export function mcpToolCatalog(): CatalogTool[] {
   cached = tools;
   return tools;
 }
+
+/**
+ * Première phrase d'une description d'outil — de quoi tenir sur une ligne.
+ *
+ * Les descriptions du registre font jusqu'à cinq cents caractères : c'est le
+ * bon format pour un modèle qui choisit un outil, pas pour une liste qu'on
+ * parcourt. `/llms.txt` et la page publique `/mcp` coupent donc au même
+ * endroit, et de la même façon.
+ */
+export function firstSentence(description: string | undefined): string {
+  if (!description) return "";
+  const end = description.indexOf(". ");
+  return end === -1 ? description : description.slice(0, end + 1);
+}

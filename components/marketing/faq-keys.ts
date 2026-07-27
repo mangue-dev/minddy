@@ -36,3 +36,13 @@ export const PRICING_FAQ_KEYS = [
   "mcp",
   "byok",
 ] as const;
+
+/**
+ * Les trois objections de `/mcp` (MIN-93), namespace `Mcp` : est-ce payant,
+ * quels agents, et où trouve-t-on la clé d'API — la dernière étant une question
+ * piège, puisqu'il n'y en a pas.
+ *
+ * Trois et pas six : la page vise une requête précise et le lecteur y arrive
+ * avec une question précise. Une FAQ qui répond à côté n'est pas citée.
+ */
+export const MCP_FAQ_KEYS = ["free", "agents", "key"] as const;

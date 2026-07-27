@@ -290,7 +290,21 @@ export interface AnalyticsEventProps {
 
   // ── Site public (MIN-73) ──
   landing_viewed: NoProps;
-  landing_cta_clicked: { location: "hero" | "nav" | "pricing_teaser" | "cta_section" | "footer" | "faq" };
+  // `mcp_page`, `comparison` et `changelog` : les pages de contenu ajoutées par
+  // MIN-93. Elles n'existent que pour être trouvées — savoir laquelle amène
+  // vraiment à l'inscription est la moitié de la mesure du lot.
+  landing_cta_clicked: {
+    location:
+      | "hero"
+      | "nav"
+      | "pricing_teaser"
+      | "cta_section"
+      | "footer"
+      | "faq"
+      | "mcp_page"
+      | "comparison"
+      | "changelog";
+  };
   landing_section_viewed: { section: string };
   landing_faq_opened: { question_index: number };
 

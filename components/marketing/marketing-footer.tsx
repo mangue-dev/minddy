@@ -46,6 +46,17 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColResources",
     links: [
+      // La doc du serveur MCP en tête de colonne (MIN-93) : c'est la seule
+      // ressource du site qui en est vraiment une, et le lien interne qui doit
+      // être vu depuis toutes les pages — un crawler compte les liens entrants.
+      { href: "/mcp", labelKey: "navMenu_mcp_title" },
+      { href: "/changelog", labelKey: "footerChangelog" },
+      // Les comparatifs (MIN-93). Ils ne sont NULLE PART ailleurs dans la
+      // navigation : sans ces trois liens, chaque page n'aurait que le sitemap
+      // pour être découverte, et un lien interne vaut plus qu'une ligne de XML.
+      { href: "/alternatives/linear", labelKey: "footerAltLinear" },
+      { href: "/alternatives/jira", labelKey: "footerAltJira" },
+      { href: "/alternatives/notion", labelKey: "footerAltNotion" },
       { href: "/#faq", labelKey: "navFaq" },
       { href: "/login", labelKey: "navSignIn" },
       { href: "/signup", labelKey: "navGetStarted" },

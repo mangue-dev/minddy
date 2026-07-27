@@ -81,6 +81,7 @@ const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.jso
 const PUBLIC_SITE_PREFIXES = ["/f/", "/share/"];
 const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
+const ROUTE_HEADER = "x-minddy-route";
 
 /**
  * Les six pages du site marketing, et elles seules (MIN-100). Le root layout
@@ -205,23 +206,30 @@ async function readSession(request: NextRequest, url: string, key: string) {
 function serveLocalizedPublicRoute(request: NextRequest, pathname: string): NextResponse {
   const englishPath = englishPathForFrench(pathname);
   const locale = englishPath ? "fr" : "en";
-  const headers = {
+  const route = routeByPath(pathname);
+  const headers: Record<string, string> = {
     [PUBLIC_THEME_HEADER]: "1",
     [MARKETING_HEADER]: "1",
     [LOCALE_HEADER]: locale,
+    ...(route ? { [ROUTE_HEADER]: route.key } : {}),
   };
 
-  const route = routeByPath(pathname);
   const markdownPath = route ? `/md?route=${route.key}&locale=${locale}` : null;
 
   // Négociation de contenu (MIN-88). Un agent qui demande explicitement du
   // Markdown reçoit le contenu de la page sans les 440 Ko de balisage dont il
   // n'a que faire. `app/md/route.ts` le rend depuis les mêmes clés i18n.
   if (markdownPath && prefersMarkdown(request.headers.get("accept"))) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/md";
-    url.search = `?route=${route!.key}&locale=${locale}`;
-    return NextResponse.rewrite(url, withRequestHeaders(request, headers));
+    // La page demandée voyage dans `ROUTE_HEADER`, pas dans la query de cette
+    // réécriture : sur une réécriture de middleware, Next 16 donne au route
+    // handler l'URL D'ORIGINE, donc `/md` ne voyait jamais `?route=…` et
+    // retombait sur son défaut — toutes les pages du site servaient le Markdown
+    // de la landing (MIN-93). La query reste dans l'URL réécrite pour que les
+    // journaux disent ce qui a été servi.
+    return NextResponse.rewrite(
+      new URL(markdownPath, request.url),
+      withRequestHeaders(request, headers),
+    );
   }
 
   const response = englishPath
