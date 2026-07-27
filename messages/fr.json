@@ -691,7 +691,18 @@
     "globalAssignedToMe": "à moi",
     "globalAllIssues": "Tous les tickets",
     "feedbackTitle": "Feedback",
-    "feedbackOpenCount": "{count, plural, one {# en attente} other {# en attente}}"
+    "feedbackOpenCount": "{count, plural, one {# en attente} other {# en attente}}",
+    "dueSoonTitle": "Échéances proches",
+    "dueSoonMore": "{count, plural, one {# autre ticket} other {# autres tickets}}",
+    "dueSoonOverdue": "Échéance dépassée",
+    "dueSoonToday": "aujourd'hui",
+    "dueSoonTomorrow": "demain",
+    "dueSoonYesterday": "hier",
+    "dueSoonDayAtTime": "{day} à {time}",
+    "dueSoonInDays": "dans {days, plural, one {# jour} other {# jours}}",
+    "dueSoonInDaysHours": "dans {days, plural, one {# jour} other {# jours}} et {hours, plural, one {# heure} other {# heures}}",
+    "dueSoonDaysAgo": "il y a {days, plural, one {# jour} other {# jours}}",
+    "dueSoonDaysHoursAgo": "il y a {days, plural, one {# jour} other {# jours}} et {hours, plural, one {# heure} other {# heures}}"
   },
   "GlobalBoard": {
     "allTitle": "Tous les tickets",

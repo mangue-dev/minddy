@@ -14,6 +14,7 @@ import { PendingInvitationsBanner } from "@/components/pending-invitations-banne
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { HomeCycleCard } from "@/components/home/home-cycle-card";
 import { HomeGlobalCard } from "@/components/home/home-global-card";
+import { HomeDueSoonSection } from "@/components/home/home-due-soon-section";
 import { HomeFeedbackSection } from "@/components/home/home-feedback-section";
 import { OnboardingCard } from "@/components/home/onboarding-card";
 
@@ -87,6 +88,16 @@ export default function HomePage() {
         </div>
       ) : (
         <>
+          {/* Échéances proches (MIN-96) — tout en haut du corps, juste sous le
+              composer : c'est du temps qui court, et c'est la seule chose de
+              cette page qui périme. Ne rend rien quand aucun ticket n'entre dans
+              la fenêtre de son effort — le cas courant, d'où l'absence de
+              squelette (le corps attend déjà /api/me/summary via useOnboarding,
+              donc rien n'apparaît après coup). */}
+          <div className="mt-6">
+            <HomeDueSoonSection />
+          </div>
+
           {/* Focus: the current cycle + a global pulse. Stacked full-width until
               lg — two narrow columns cram the cycle card's rings on
               tablet/mobile. Explicit grid-cols give minmax(0,1fr) tracks so a

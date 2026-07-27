@@ -49,6 +49,7 @@ export function useHomeSummaryQuery() {
     counts: data?.counts ?? { open: 0, inProgress: 0, mine: 0, total: 0 },
     cycles: data?.cycles ?? null,
     cycleIssues: data?.cycleIssues ?? [],
+    dueSoon: data?.dueSoon ?? [],
     relations: data?.relations ?? [],
     blockerStatuses: data?.blockerStatuses ?? {},
     loading: isLoading,

@@ -691,7 +691,18 @@
     "globalAssignedToMe": "to me",
     "globalAllIssues": "All issues",
     "feedbackTitle": "Feedback",
-    "feedbackOpenCount": "{count, plural, one {# pending} other {# pending}}"
+    "feedbackOpenCount": "{count, plural, one {# pending} other {# pending}}",
+    "dueSoonTitle": "Due soon",
+    "dueSoonMore": "{count, plural, one {# more issue} other {# more issues}}",
+    "dueSoonOverdue": "Past due",
+    "dueSoonToday": "today",
+    "dueSoonTomorrow": "tomorrow",
+    "dueSoonYesterday": "yesterday",
+    "dueSoonDayAtTime": "{day} at {time}",
+    "dueSoonInDays": "in {days, plural, one {# day} other {# days}}",
+    "dueSoonInDaysHours": "in {days, plural, one {# day} other {# days}} and {hours, plural, one {# hour} other {# hours}}",
+    "dueSoonDaysAgo": "{days, plural, one {# day} other {# days}} ago",
+    "dueSoonDaysHoursAgo": "{days, plural, one {# day} other {# days}} and {hours, plural, one {# hour} other {# hours}} ago"
   },
   "GlobalBoard": {
     "allTitle": "All issues",

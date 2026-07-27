@@ -4,6 +4,8 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
+import { CLOSED_STATUSES } from "@/lib/issue-constants";
+import { dueSoonUpperBound, isDueSoon } from "@/lib/due-soon";
 import type {
   BoardCycles,
   HomeSummaryIssue,
@@ -22,9 +24,26 @@ const PAST_CYCLES_SHOWN = 8;
  */
 const OPEN_STATUSES: IssueStatus[] = ["backlog", "todo", "in_progress", "in_review"];
 
-/** Colonnes d'un ticket de cycle : ce que la carte affiche ou ordonne, rien de plus. */
-const CYCLE_ISSUE_COLUMNS =
-  "id, project_id, number, title, status, priority, effort, cycle_id, issue_categories(category_id)";
+/** Colonnes d'un ticket du tableau de bord : ce que les cartes affichent ou
+    ordonnent, rien de plus. */
+const SUMMARY_ISSUE_COLUMNS =
+  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, issue_categories(category_id)";
+
+/**
+ * Combien d'échéances proches remontent au plus. La section n'en affiche qu'une
+ * poignée ; le plafond n'est là que pour qu'un compte très en retard ne fasse
+ * pas d'un tableau de bord une requête sans fond.
+ */
+const DUE_SOON_LIMIT = 50;
+
+type SummaryRow = Omit<HomeSummaryIssue, "category_ids"> & {
+  issue_categories?: { category_id: string }[] | null;
+};
+
+/** La jointure des catégories arrive en lignes ; la home veut des ids. */
+function toSummaryIssue({ issue_categories, ...rest }: SummaryRow): HomeSummaryIssue {
+  return { ...rest, category_ids: (issue_categories ?? []).map((c) => c.category_id) };
+}
 
 /**
  * GET /api/me/summary — le strict nécessaire du tableau de bord (MIN-89).
@@ -37,7 +56,8 @@ const CYCLE_ISSUE_COLUMNS =
  * la plus lourde de l'app pour en utiliser une fraction de pourcent.
  *
  * Ici : les compteurs sont des `count` SQL (aucune ligne ne remonte), et seuls
- * les tickets du cycle courant sont matérialisés, en colonnes réduites.
+ * les tickets du cycle courant — plus, depuis MIN-96, ceux dont l'échéance
+ * approche — sont matérialisés, en colonnes réduites.
  *
  * Comme /api/me/board, la lecture réconcilie d'abord la timeline des cycles
  * (création/clôture/rollover/auto-remplissage — lib/server/cycles.ts), car cette
@@ -50,6 +70,11 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
+  // Le fuseau du navigateur sert deux fois : à réconcilier la timeline des
+  // cycles, et à compter les jours qui restent avant une échéance (MIN-96).
+  const tz = request.nextUrl.searchParams.get("tz");
+  const today = todayInTz(tz);
+
   const prefs = resolveCyclePrefs(
     (auth.user.user_metadata ?? null) as Record<string, unknown> | null
   );
@@ -59,7 +84,7 @@ export async function GET(request: NextRequest) {
       service: getServiceClient(),
       userId: auth.user.id,
       prefs,
-      today: todayInTz(request.nextUrl.searchParams.get("tz")),
+      today,
     });
     cycles = {
       enabled: true,
@@ -77,41 +102,53 @@ export async function GET(request: NextRequest) {
   const countQuery = () =>
     auth.supabase.from("issues").select("id", { count: "exact", head: true });
 
-  const [openRes, inProgressRes, mineRes, totalRes, cycleIssuesRes] = await Promise.all([
-    countQuery().in("status", OPEN_STATUSES),
-    countQuery().eq("status", "in_progress"),
-    countQuery().in("status", OPEN_STATUSES).eq("assignee_id", auth.user.id),
-    // Tous statuts confondus : l'onboarding demande « as-tu déjà créé un
-    // ticket ? », auquel un ticket terminé répond oui (lib/use-onboarding.ts).
-    countQuery(),
-    currentCycleId
-      ? auth.supabase
-          .from("issues")
-          .select(CYCLE_ISSUE_COLUMNS)
-          .eq("cycle_id", currentCycleId)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
+  const [openRes, inProgressRes, mineRes, totalRes, cycleIssuesRes, dueSoonRes] =
+    await Promise.all([
+      countQuery().in("status", OPEN_STATUSES),
+      countQuery().eq("status", "in_progress"),
+      countQuery().in("status", OPEN_STATUSES).eq("assignee_id", auth.user.id),
+      // Tous statuts confondus : l'onboarding demande « as-tu déjà créé un
+      // ticket ? », auquel un ticket terminé répond oui (lib/use-onboarding.ts).
+      countQuery(),
+      currentCycleId
+        ? auth.supabase
+            .from("issues")
+            .select(SUMMARY_ISSUE_COLUMNS)
+            .eq("cycle_id", currentCycleId)
+        : Promise.resolve({ data: [], error: null }),
+      // Échéances proches (MIN-96) : SQL préfiltre sur la fenêtre la plus large
+      // (XL, 8 jours) sans borne basse — un ticket en retard reste en retard —
+      // puis isDueSoon resserre à la fenêtre propre à l'effort de chacun. Le tri
+      // est déjà celui de la section : la plus vieille échéance d'abord.
+      auth.supabase
+        .from("issues")
+        .select(SUMMARY_ISSUE_COLUMNS)
+        .not("due_date", "is", null)
+        .not("status", "in", `(${CLOSED_STATUSES.join(",")})`)
+        .lte("due_date", dueSoonUpperBound(today))
+        .order("due_date", { ascending: true })
+        .limit(DUE_SOON_LIMIT),
+    ]);
 
   const firstError =
     openRes.error ||
     inProgressRes.error ||
     mineRes.error ||
     totalRes.error ||
-    cycleIssuesRes.error;
+    cycleIssuesRes.error ||
+    dueSoonRes.error;
   if (firstError) {
     console.error("[api/me/summary] load failed:", firstError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  type CycleRow = Omit<HomeSummaryIssue, "category_ids"> & {
-    issue_categories?: { category_id: string }[] | null;
-  };
-  const cycleIssues: HomeSummaryIssue[] = ((cycleIssuesRes.data ?? []) as CycleRow[]).map(
-    ({ issue_categories, ...rest }) => ({
-      ...rest,
-      category_ids: (issue_categories ?? []).map((c) => c.category_id),
-    })
-  );
+  const cycleIssues: HomeSummaryIssue[] = (
+    (cycleIssuesRes.data ?? []) as SummaryRow[]
+  ).map(toSummaryIssue);
+
+  const dueSoon: HomeSummaryIssue[] = ((dueSoonRes.data ?? []) as SummaryRow[])
+    .map(toSummaryIssue)
+    .filter((issue) => isDueSoon(issue, today, tz));
 
   // Ordre « reco » de la carte : un ticket est bloqué par des tickets qui, eux,
   // peuvent être HORS du cycle. On ne remonte donc que les relations qui touchent
@@ -157,6 +194,7 @@ export async function GET(request: NextRequest) {
     },
     cycles,
     cycleIssues,
+    dueSoon,
     relations,
     blockerStatuses,
   };

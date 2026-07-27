@@ -338,6 +338,9 @@ export interface HomeSummaryIssue {
   status: IssueStatus;
   priority: IssuePriority;
   effort: IssueEffort | null;
+  /** Affichée par la section « Échéances proches » (MIN-96), qui s'en sert
+      aussi — avec `effort` — pour décider qui y entre. */
+  due_date: string | null;
   cycle_id: string | null;
   category_ids: string[];
 }
@@ -353,6 +356,13 @@ export interface HomeSummaryResponse {
   cycles: BoardCycles;
   /** Tickets du cycle courant (vide quand il n'y a pas de cycle en cours). */
   cycleIssues: HomeSummaryIssue[];
+  /**
+   * Tickets ouverts dont l'échéance approche (MIN-96), déjà triés du plus urgent
+   * au moins urgent. La fenêtre dépend de l'effort — lib/due-soon.ts — et le
+   * tri est fait ici parce que « jours restants » se compte dans le fuseau de
+   * l'utilisateur, que seul le serveur connaît (paramètre `tz`).
+   */
+  dueSoon: HomeSummaryIssue[];
   /** Relations touchant un ticket du cycle — l'ordre reco tient compte des blocages. */
   relations: IssueRelation[];
   /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */
