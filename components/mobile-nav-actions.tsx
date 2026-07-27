@@ -7,7 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   MobileNavItem,
-  cn,
 } from "mangue-ui";
 import { Plus } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
@@ -23,28 +22,16 @@ import { useCreateActions } from "@/components/new-menu";
 export function MobileNavActions() {
   const tk = useTranslations("Keyboard.shortcuts");
   const tn = useTranslations("Nav");
-  const { toggle, ambientContext } = useAssistantPanel();
+  const { toggle } = useAssistantPanel();
   const actions = useCreateActions();
 
   return (
     <>
-      {/* Numo — opens the full-bleed assistant panel. */}
-      <MobileNavItem
-        label={tk("navAssistant")}
-        onClick={() => toggle()}
-        className="relative"
-      >
+      {/* Numo — opens the full-bleed assistant panel. Pas de pastille de
+          contexte : le contexte de la page se lit dans le panneau (la puce
+          au-dessus du composer), pas sur le bouton qui l'ouvre. */}
+      <MobileNavItem label={tk("navAssistant")} onClick={() => toggle()}>
         <NumoIcon className="size-[22px] text-foreground" />
-        {/* Blue dot: the assistant has a current page context (a ticket…). */}
-        {ambientContext !== null ? (
-          <span
-            aria-hidden
-            className={cn(
-              "absolute top-2 right-2 size-2 rounded-full bg-primary",
-              "ring-2 ring-card",
-            )}
-          />
-        ) : null}
       </MobileNavItem>
 
       {/* Hairline divider (matches mangue-ui's internal PileDivider). */}

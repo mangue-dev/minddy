@@ -9,8 +9,7 @@ import {
   useState,
   forwardRef,
 } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { History, Maximize2, Minimize2, Plus, X } from "lucide-react";
 import {
   Button,
@@ -32,23 +31,23 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { useAssistantChat } from "@/lib/use-assistant-chat";
+import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import {
   ChatInput,
   type ChatInputHandle,
 } from "@/components/assistant/chat-input";
 import {
-  assistantCopyMessageIds,
   ChatMessage,
   StreamingMessage,
 } from "@/components/assistant/chat-message";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
-import { buildAssistantBlocks } from "@/lib/assistant-turns";
+import {
+  buildAssistantBlocks,
+  copyableMessageIds,
+} from "@/lib/assistant-turns";
 import { ConversationList } from "@/components/assistant/conversation-list";
-import { useAuth } from "@/lib/auth-context";
-import { setLocaleCookie } from "@/lib/set-locale";
 import type {
   AssistantMessage,
   AssistantPageContext,
@@ -89,10 +88,6 @@ export interface AssistantShellProps {
   onToggleDisplayMode?: () => void;
   /** When provided, renders a close (X) button in the compact header. */
   onClose?: () => void;
-  /** Skip the localStorage "restore last conversation" on mount. Use when
-   *  the host is about to dispatch a pending action (prompt/draft) that
-   *  would otherwise race with the async restore and lose state. */
-  skipRestore?: boolean;
   /** What the user is currently viewing — rides on every message sent from
    *  this shell so Numo can resolve "ce ticket". */
   pageContext?: AssistantPageContext | null;
@@ -111,7 +106,6 @@ export const AssistantShell = forwardRef<
     displayMode = "compact",
     onToggleDisplayMode,
     onClose,
-    skipRestore = false,
     pageContext = null,
   },
   ref
@@ -123,28 +117,12 @@ export const AssistantShell = forwardRef<
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
   const tToolCall = useTranslations("ToolCall");
-  const { refreshUser } = useAuth();
-  const currentLocale = useLocale();
-  const router = useRouter();
 
-  // Numo can edit the account settings server-side (via the admin API), which
-  // fires no client auth event — so pull the fresh account back in when it does,
-  // and if it changed the language (a cookie, not user_metadata) apply that too.
-  const handleToolResult = useCallback(
-    (name: string, success: boolean, result: unknown) => {
-      if (!success || name !== "update_account_settings") return;
-      void refreshUser();
-      const nextLocale = (result as { settings?: { locale?: string } })
-        ?.settings?.locale;
-      if (nextLocale && nextLocale !== currentLocale) {
-        void setLocaleCookie(nextLocale).then(() => router.refresh());
-      }
-    },
-    [refreshUser, currentLocale, router],
-  );
-
-  const { state, sendMessage, loadConversation, reset, abort } =
-    useAssistantChat({ onToolResult: handleToolResult });
+  // La conversation vit AU-DESSUS du panneau (AssistantChatProvider) : elle
+  // survit à la fermeture du Sheet, qui démonte cette coquille. Ici, on ne fait
+  // que la rendre.
+  const { state, sendMessage, loadConversation, reset, abort, restoring } =
+    useAssistantChatContext();
   const chatInputRef = useRef<ChatInputHandle>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -164,99 +142,6 @@ export const AssistantShell = forwardRef<
         : null
     );
   }, []);
-
-  // Persist the active conversation per scope (global vs per-project) so
-  // re-opening the panel reuses the last conversation the user was in.
-  const storageKey = useMemo(
-    () => `assistant-active-conv-${projectId ?? "global"}`,
-    [projectId],
-  );
-  const hasRestoredRef = useRef(false);
-  // Freeze the skipRestore decision at mount time. If the host clears the
-  // flag mid-flight (e.g. pendingOptions consumed) we still don't want the
-  // restore to fire and race with the just-dispatched action.
-  const initialSkipRestoreRef = useRef(skipRestore);
-
-  // True while a previously-active conversation is being restored from storage.
-  // Seeded synchronously from localStorage so the very first paint shows a quiet
-  // loader instead of the empty-state greeting — otherwise the greeting flashes
-  // and gets replaced ~one fetch later, which reads as a stutter on reopen.
-  const [restoring, setRestoring] = useState(() => {
-    if (typeof window === "undefined") return false;
-    // Lazy initializer runs once at mount, so the live prop is the mount-time
-    // value — no need to read initialSkipRestoreRef (and reading a ref here
-    // would be a render-phase access).
-    if (skipRestore) return false;
-    try {
-      return Boolean(window.localStorage.getItem(storageKey));
-    } catch {
-      return false;
-    }
-  });
-
-  // Restore on mount (and whenever the scope changes).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    hasRestoredRef.current = false;
-
-    if (initialSkipRestoreRef.current) {
-      // Host has a pending action — allow the persist effect to run later
-      // but don't read from storage. The lazy initializer already seeded
-      // `restoring` to false for this path.
-      hasRestoredRef.current = true;
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      let saved: string | null = null;
-      try {
-        saved = window.localStorage.getItem(storageKey);
-      } catch {
-        // localStorage unavailable — skip restore.
-      }
-      // Mirror the seeded loader for scope changes that reuse this instance.
-      if (!cancelled) setRestoring(Boolean(saved));
-      if (saved && !cancelled) {
-        try {
-          await loadConversation(saved);
-        } catch {
-          // Stale id (deleted, inaccessible, network failure) — clear it
-          // so we don't keep retrying a broken conversation.
-          if (!cancelled) {
-            try {
-              window.localStorage.removeItem(storageKey);
-            } catch {}
-          }
-        }
-      }
-      if (!cancelled) {
-        hasRestoredRef.current = true;
-        setRestoring(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [storageKey, loadConversation]);
-
-  // Mirror conversationId changes back to localStorage. Skip until the
-  // initial restore is done so we don't briefly wipe a saved value at mount.
-  useEffect(() => {
-    if (!hasRestoredRef.current) return;
-    if (typeof window === "undefined") return;
-    try {
-      if (state.conversationId) {
-        window.localStorage.setItem(storageKey, state.conversationId);
-      } else {
-        window.localStorage.removeItem(storageKey);
-      }
-    } catch {
-      // Quota / private mode — ignore.
-    }
-  }, [storageKey, state.conversationId]);
 
   // Latest page context (e.g. the issue being viewed), read by send handlers
   // without stale closures. The host may set it the same tick it dispatches a
@@ -299,12 +184,6 @@ export const AssistantShell = forwardRef<
       handleSend(text);
     },
     [handleSend]
-  );
-
-  // Only the last assistant message of each turn carries a Copy button.
-  const copyButtonIds = useMemo(
-    () => assistantCopyMessageIds(state.messages),
-    [state.messages]
   );
 
   const handleSelectConversation = useCallback(
@@ -400,6 +279,11 @@ export const AssistantShell = forwardRef<
       state.streamingContent.length,
     ]
   );
+
+  // Bouton « Copier » : uniquement sur la RÉPONSE du tour — celle qui reste
+  // seule sous l'accordéon replié en « A travaillé pendant X ». Ce qui est plié
+  // dedans est du travail intermédiaire, pas une réponse à emporter.
+  const copyButtonIds = useMemo(() => copyableMessageIds(blocks), [blocks]);
 
   // Le tour actif montre-t-il déjà du travail ? Son en-tête chronométré porte alors
   // le signal « Numo travaille » et l'indicateur de réflexion ferait doublon.

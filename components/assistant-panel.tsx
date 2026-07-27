@@ -14,6 +14,7 @@ import {
   type PanelDisplayMode,
 } from "@/components/assistant/panel-geometry";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { useProjects } from "@/lib/projects-context";
 
 type DisplayMode = PanelDisplayMode;
@@ -32,11 +33,13 @@ export function AssistantPanel() {
     activePageContext,
     ambientContext,
     clearPendingOptions,
-    routeProjectId,
   } = useAssistantPanel();
   // An explicit context from open() (e.g. a specific issue) wins; otherwise
   // fall back to the ambient context of the page the user is on.
   const effectivePageContext = activePageContext ?? ambientContext;
+  // Scope of the live conversation — resolved and owned by the chat provider,
+  // which keeps it (and the conversation) alive across open/close cycles.
+  const { scopeProjectId } = useAssistantChatContext();
   const { projects } = useProjects();
 
   // Display mode: session-local, defaults to compact. (No persisted user
@@ -62,19 +65,10 @@ export function AssistantPanel() {
   // dependencies (route project id) flip mid-dispatch.
   const dispatchedOptionsRef = useRef<OpenAssistantOptions | null>(null);
 
-  // Effective project id: explicit override on the options wins, otherwise
-  // follow whatever the current URL says.
-  const effectiveProjectId = useMemo<string | null>(() => {
-    if (pendingOptions && "projectId" in pendingOptions) {
-      return pendingOptions.projectId ?? null;
-    }
-    return routeProjectId;
-  }, [pendingOptions, routeProjectId]);
-
   const activeProject = useMemo(() => {
-    if (!effectiveProjectId) return null;
-    return projects.find((p) => p.id === effectiveProjectId) ?? null;
-  }, [effectiveProjectId, projects]);
+    if (!scopeProjectId) return null;
+    return projects.find((p) => p.id === scopeProjectId) ?? null;
+  }, [scopeProjectId, projects]);
 
   // Reset the dispatch guard when the panel closes so the next open is a
   // fresh one-shot. (activePageContext is cleared by the context's close().)
@@ -96,7 +90,7 @@ export function AssistantPanel() {
 
     const { prompt, draft, projectId, pageContext } = pendingOptions;
     const targetProjectId =
-      projectId === undefined ? effectiveProjectId : projectId;
+      projectId === undefined ? scopeProjectId : projectId;
 
     if (prompt) {
       // Pass the context explicitly: the state set above only reaches the shell
@@ -113,7 +107,7 @@ export function AssistantPanel() {
     isOpen,
     pendingOptions,
     shellReady,
-    effectiveProjectId,
+    scopeProjectId,
     clearPendingOptions,
   ]);
 
@@ -151,18 +145,19 @@ export function AssistantPanel() {
         <SheetTitle className="sr-only">{t("title")}</SheetTitle>
         <div className="h-full overflow-hidden">
           {/*
-            Keying on effectiveProjectId forces a fresh AssistantShell whenever
-            the scope changes (e.g. user navigates between projects while the
-            panel is open). Without this, the inner useAssistantChat keeps the
-            previous project's conversationId and the next send mismatches.
+            Keying on the scope repart d'une vue neuve quand la portée change
+            (navigation entre projets, panneau ouvert) : brouillon, popover
+            d'historique et scroll ne traînent pas d'un projet à l'autre. La
+            CONVERSATION, elle, vit dans AssistantChatProvider — ce remontage
+            ne la touche pas.
           */}
           <AssistantShell
-            key={effectiveProjectId ?? "__global__"}
+            key={scopeProjectId ?? "__global__"}
             ref={handleShellRef}
-            projectId={effectiveProjectId}
+            projectId={scopeProjectId}
             titleSuffix={activeProject?.name ?? null}
             descriptionKey={
-              effectiveProjectId ? "emptyDescription" : "globalPlaceholder"
+              scopeProjectId ? "emptyDescription" : "globalPlaceholder"
             }
             mobileSubtitle={activeProject?.name}
             compact
@@ -170,12 +165,6 @@ export function AssistantPanel() {
             onToggleDisplayMode={toggleDisplayMode}
             onClose={close}
             pageContext={effectivePageContext}
-            // Skip localStorage restore when the host is about to dispatch
-            // a one-shot action — otherwise the async restore would race
-            // with the dispatch and overwrite state.
-            skipRestore={Boolean(
-              pendingOptions?.prompt || pendingOptions?.draft,
-            )}
           />
         </div>
       </SheetContent>

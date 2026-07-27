@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { BorderBeam } from "border-beam";
+import { BorderBeam, type BorderBeamSize } from "border-beam";
 import { useTheme } from "mangue-ui";
 
 /**
@@ -22,11 +22,19 @@ import { useTheme } from "mangue-ui";
 export function AgentBeam({
   active,
   className,
+  size = "pulse-inner",
   keepMounted = false,
   children,
 }: {
   active: boolean;
   className?: string;
+  /**
+   * Préréglage de la source. `pulse-inner` (défaut) est la respiration contenue
+   * des grandes surfaces — carte d'issue, composer. Sur une petite pastille
+   * ronde (le FAB) elle inonde le disque au lieu d'en souligner le bord : `sm`,
+   * le préréglage taille bouton, y fait courir le liseré sur le contour.
+   */
+  size?: BorderBeamSize;
   /**
    * Garde le wrapper monté même inactif (le liseré s'allume/s'éteint alors via
    * `active`, avec son fondu). Indispensable dès que les enfants portent de
@@ -41,7 +49,7 @@ export function AgentBeam({
   return (
     <BorderBeam
       active={active}
-      size="pulse-inner"
+      size={size}
       duration={4}
       colorVariant="colorful"
       theme={resolvedTheme}

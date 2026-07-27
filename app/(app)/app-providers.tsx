@@ -7,6 +7,7 @@ import { RealtimeProvider } from "@/lib/realtime-provider";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { CreateProvider } from "@/lib/create-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
+import { AssistantChatProvider } from "@/lib/assistant-chat-context";
 import { ScratchpadProvider } from "@/lib/scratchpad-context";
 import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
@@ -38,22 +39,26 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <RealtimeProvider>
           <ProjectsProvider>
             <AssistantPanelProvider>
-              <ScratchpadProvider>
-                <KeyboardProvider>
-                  <UndoProvider>
-                    <CreateProvider>
-                      <BulkActionsProvider>
-                        <AppShellChrome>{children}</AppShellChrome>
-                      </BulkActionsProvider>
-                    </CreateProvider>
-                    <AssistantPanel />
-                    <AssistantFab />
-                    <ScratchpadModal />
-                    <KeyboardCheatsheet />
-                    <AnalyticsProjectGroup />
-                  </UndoProvider>
-                </KeyboardProvider>
-              </ScratchpadProvider>
+              {/* La conversation Numo vit ICI, au-dessus du panneau : fermer le
+                  panneau démonte sa coquille, pas le tour en cours. */}
+              <AssistantChatProvider>
+                <ScratchpadProvider>
+                  <KeyboardProvider>
+                    <UndoProvider>
+                      <CreateProvider>
+                        <BulkActionsProvider>
+                          <AppShellChrome>{children}</AppShellChrome>
+                        </BulkActionsProvider>
+                      </CreateProvider>
+                      <AssistantPanel />
+                      <AssistantFab />
+                      <ScratchpadModal />
+                      <KeyboardCheatsheet />
+                      <AnalyticsProjectGroup />
+                    </UndoProvider>
+                  </KeyboardProvider>
+                </ScratchpadProvider>
+              </AssistantChatProvider>
             </AssistantPanelProvider>
           </ProjectsProvider>
         </RealtimeProvider>

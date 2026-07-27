@@ -31,44 +31,13 @@ interface ChatMessageProps {
    */
   askUserAnswer?: string | null;
   /** Whether this assistant message renders a Copy button under its text.
-   *  Only the last assistant message of a turn should — mid-turn segments
-   *  (text that precedes a tool call / a later assistant reply) read as one
-   *  continuous answer, so they stay button-less and tighter. */
+   *  Only a turn's final answer should — everything folded into the work
+   *  accordion is intermediate narration, not an answer to take away. The host
+   *  decides via `copyableMessageIds` (lib/assistant-turns). */
   showCopyButton?: boolean;
   /** Ce message est-il la tête vivante de la conversation (aucun message plus
    *  récent, agent au travail) ? → son accordéon de tool-calls fermé shimmer. */
   isLatestMessage?: boolean;
-}
-
-// True for messages that ChatMessage renders nothing for, so they don't break
-// the "is this the last assistant message of the turn?" lookahead.
-function isHiddenMessage(m: AssistantMessage): boolean {
-  return m.role === "tool" || m.role === "system";
-}
-
-/**
- * Ids of assistant messages that should show a Copy button: the LAST assistant
- * message before the next visible user message (or end of conversation). A
- * multi-segment answer (text → tool call → text) thus shows a single Copy
- * button under its final segment, not one per segment.
- */
-export function assistantCopyMessageIds(
-  messages: AssistantMessage[],
-): Set<string> {
-  const ids = new Set<string>();
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i];
-    if (m.role !== "assistant" || !m.content) continue;
-    let isLastOfTurn = true;
-    for (let j = i + 1; j < messages.length; j++) {
-      if (isHiddenMessage(messages[j])) continue;
-      // The next visible message decides: another assistant → mid-turn.
-      isLastOfTurn = messages[j].role !== "assistant";
-      break;
-    }
-    if (isLastOfTurn) ids.add(m.id);
-  }
-  return ids;
 }
 
 // ── Copy button ───────────────────────────────────────────────────────

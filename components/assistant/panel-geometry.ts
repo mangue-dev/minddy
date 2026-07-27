@@ -21,13 +21,17 @@ const COMPACT_DESKTOP =
   "md:!h-[min(600px,calc(100dvh-32px))] " +
   "md:rounded-[30px] md:border md:border-l md:origin-bottom-right";
 
-// Étendu : centré, taille de modale de lecture.
+// Étendu : centré, GRAND format — exactement la géométrie des modales de
+// lecture de l'app (carnet de tâches, création de projet), qui se dimensionnent
+// toutes sur les tokens `--spacing-dialog-w/h` de mangue-ui. Même parti pris que
+// le panneau Numo d'AutoKap : une seule taille de « grande surface » pour tout
+// le produit, au lieu d'un demi-format propre à l'assistant.
 const EXPANDED_DESKTOP =
   "md:!inset-auto md:!top-auto md:!left-auto " +
-  "md:!right-[calc((100vw-min(56rem,100vw-4rem))/2)] " +
-  "md:!bottom-[calc((100dvh-min(44rem,100dvh-4rem))/2)] " +
-  "md:!w-[min(56rem,calc(100vw-4rem))] md:!max-w-none " +
-  "md:!h-[min(44rem,calc(100dvh-4rem))] " +
+  "md:!right-[calc((100vw-var(--spacing-dialog-w))/2)] " +
+  "md:!bottom-[calc((100dvh-var(--spacing-dialog-h))/2)] " +
+  "md:!w-[var(--spacing-dialog-w)] md:!max-w-none " +
+  "md:!h-[var(--spacing-dialog-h)] " +
   "md:rounded-2xl md:border md:origin-center";
 
 /** Classes du SheetContent du panneau, selon le mode d'affichage. */

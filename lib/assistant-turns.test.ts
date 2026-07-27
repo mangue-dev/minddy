@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildAssistantBlocks, type AssistantTurn } from "./assistant-turns";
+import {
+  buildAssistantBlocks,
+  copyableMessageIds,
+  type AssistantTurn,
+} from "./assistant-turns";
 import type { AssistantMessage, AssistantToolCall } from "./assistant-types";
 
 /**
@@ -198,5 +202,54 @@ describe("buildAssistantBlocks", () => {
 
   it("ne produit rien sur une conversation vide", () => {
     expect(buildAssistantBlocks([])).toEqual([]);
+  });
+});
+
+/**
+ * Le bouton « Copier » suit LA RÉPONSE, pas les messages. Ce qui est plié dans
+ * l'accordéon est du travail intermédiaire : on ne l'emporte pas.
+ */
+describe("copyableMessageIds", () => {
+  const ids = (messages: AssistantMessage[], active = false) =>
+    copyableMessageIds(
+      buildAssistantBlocks(messages, { active, pendingWork: active }),
+    );
+
+  it("ne marque que la réponse du tour, jamais le travail replié", () => {
+    const got = ids([
+      msg("u1", "user", "crée un ticket"),
+      msg("a1", "assistant", "Je m'en occupe.", {
+        tool_calls: [call("create_issue")],
+      }),
+      msg("t1", "tool", "{}", { tool_call_id: "create_issue" }),
+      msg("a2", "assistant", "C'est créé : MIN-42."),
+    ]);
+    expect([...got]).toEqual(["a2"]);
+  });
+
+  it("marque la réponse directe, qui n'a rien à replier", () => {
+    const got = ids([
+      msg("u1", "user", "salut"),
+      msg("a1", "assistant", "Bonjour !"),
+    ]);
+    expect([...got]).toEqual(["a1"]);
+  });
+
+  it("ne marque rien tant que le tour travaille", () => {
+    // Narration déjà écrite, mais un outil est reparti : ce texte est du travail
+    // en cours, pas une réponse — il ne porte pas de bouton copier.
+    const got = ids(
+      [
+        msg("u1", "user", "vas-y"),
+        msg("a1", "assistant", "Je regarde les tickets…"),
+      ],
+      true,
+    );
+    expect([...got]).toEqual([]);
+  });
+
+  it("ne marque jamais un message utilisateur", () => {
+    const got = ids([msg("u1", "user", "salut")]);
+    expect([...got]).toEqual([]);
   });
 });

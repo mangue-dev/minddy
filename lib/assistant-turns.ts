@@ -51,6 +51,26 @@ function closesTurn(m: AssistantMessage): boolean {
   return (m.tool_calls ?? []).some((tc) => tc.function.name === "ask_user");
 }
 
+/**
+ * Ids des messages qui portent un bouton « Copier » : la RÉPONSE du tour — celle
+ * qui reste seule sous l'accordéon une fois replié en « A travaillé pendant X » —
+ * et les réponses directes, qui n'ont rien à replier (même message final, sans
+ * accordéon au-dessus). Tout ce qui est PLIÉ dans le déroulé n'en a pas : c'est
+ * du travail intermédiaire, pas une réponse à emporter.
+ */
+export function copyableMessageIds(blocks: AssistantBlock[]): Set<string> {
+  const ids = new Set<string>();
+  for (const block of blocks) {
+    if (block.kind === "message") {
+      const m = block.message;
+      if (m.role === "assistant" && m.content) ids.add(m.id);
+    } else if (block.summary?.content) {
+      ids.add(block.summary.id);
+    }
+  }
+  return ids;
+}
+
 export function buildAssistantBlocks(
   messages: AssistantMessage[],
   options: {
