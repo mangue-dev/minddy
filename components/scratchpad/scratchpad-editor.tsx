@@ -342,8 +342,6 @@ export function ScratchpadEditor({
   }, [dictation.status, dictation.stop, dictation.cancel]);
 
   const dictating = dictation.status !== "idle";
-  const nearLimit =
-    dictation.status === "recording" && dictation.elapsedMs >= 80_000;
 
   // The bottom padding is room to scroll PAST the last line, so a note that
   // grows to the bottom isn't pinned against the edge. It sits on the editor
@@ -373,18 +371,12 @@ export function ScratchpadEditor({
               </div>
             ) : (
               <>
-                <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
-                  <span
-                    className={cn(
-                      "font-medium tabular-nums",
-                      nearLimit
-                        ? "text-destructive animate-pulse"
-                        : "text-foreground"
-                    )}
-                  >
+                {/* The timer alone, centred: dictation is no longer time-boxed,
+                    so there is no ceiling left to show opposite it. */}
+                <div className="flex w-full items-center justify-center text-xs">
+                  <span className="font-medium tabular-nums text-foreground">
                     {formatTime(dictation.elapsedMs)}
                   </span>
-                  <span>{tDictate("maxDuration")}</span>
                 </div>
                 <DictateWaveform stream={dictation.stream} />
                 <p className="text-xs text-muted-foreground">

@@ -19,8 +19,14 @@ import {
 import { DictateWaveform } from "./dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
 
-const MAX_DURATION_MS = 90_000;
-const NEAR_LIMIT_MS = 10_000;
+// Dictation isn't time-boxed: talk for as long as you need. The only ceiling
+// left is the payload one — /api/transcribe rejects over 10 MB — so the
+// recorder is pinned to a speech bitrate (see AUDIO_BITS_PER_SECOND) and a
+// safety stop fires well inside that budget. A user never meets either: they
+// exist so a tab left recording by accident still transcribes what it caught
+// instead of dying on a 413 and losing the whole take.
+const AUDIO_BITS_PER_SECOND = 48_000; // ~6 KB/s → 10 MB ≈ 28 min
+const SAFETY_STOP_MS = 20 * 60_000;
 // Peak deviation from the analyser's 128 midline that counts as speech —
 // ambient room noise stays well under this, actual speech peaks far above.
 const SPEECH_PEAK_THRESHOLD = 20;
@@ -217,9 +223,10 @@ export function DictateButton({
     const mimeType = pickRecorderMimeType();
     let recorder: MediaRecorder;
     try {
-      recorder = mimeType
-        ? new MediaRecorder(mediaStream, { mimeType })
-        : new MediaRecorder(mediaStream);
+      recorder = new MediaRecorder(mediaStream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+      });
     } catch (err) {
       console.error("[DictateButton] MediaRecorder init failed", err);
       mediaStream.getTracks().forEach((track) => track.stop());
@@ -309,7 +316,7 @@ export function DictateButton({
     autoStopRef.current = setTimeout(() => {
       toast.info(t("maxReached"));
       stopRecording();
-    }, MAX_DURATION_MS);
+    }, SAFETY_STOP_MS);
   }, [cleanupStream, sendForTranscription, status, stopRecording, t]);
 
   const handleClick = useCallback(() => {
@@ -355,8 +362,6 @@ export function DictateButton({
   const isRecording = status === "recording";
   const isStarting = status === "starting";
   const isPopoverOpen = isRecording || isStarting;
-  const remainingMs = Math.max(0, MAX_DURATION_MS - elapsedMs);
-  const isNearLimit = isRecording && remainingMs <= NEAR_LIMIT_MS;
 
   return (
     <TooltipProvider>
@@ -416,18 +421,12 @@ export function DictateButton({
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span
-                  className={cn(
-                    "font-medium tabular-nums",
-                    isNearLimit
-                      ? "text-destructive animate-pulse"
-                      : "text-foreground",
-                  )}
-                >
+              {/* Le chrono seul, centré : plus de compte à rebours à afficher
+                  en regard depuis que la dictée n'est plus limitée en durée. */}
+              <div className="flex items-center justify-center text-xs">
+                <span className="font-medium tabular-nums text-foreground">
                   {formatTime(elapsedMs)}
                 </span>
-                <span>{t("maxDuration")}</span>
               </div>
               <DictateWaveform stream={stream} />
               <p className="text-center text-xs text-muted-foreground">

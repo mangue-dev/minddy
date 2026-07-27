@@ -52,7 +52,12 @@ const DICTATE_DEFAULT_MODEL = "google/gemini-3.1-flash-lite";
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;
-const MAX_TRANSCRIPT_CHARS = 4000;
+// La dictée n'a plus de limite de durée : une prise peut valoir des milliers de
+// mots (~20 000 caractères ≈ une demi-heure de parole). Les tours d'historique
+// gardent le plafond serré d'origine — douze tours de 20 000 feraient un prompt
+// absurde, alors qu'un seul transcript long est le cas normal.
+const MAX_TRANSCRIPT_CHARS = 20_000;
+const MAX_HISTORY_CHARS = 4000;
 
 type HistoryTurn = { role: "user" | "assistant"; content: string };
 
@@ -374,7 +379,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .slice(-MAX_HISTORY_TURNS)
         .map((t) => ({
           role: t.role,
-          content: sanitizeAssistantMessageContent(t.content).slice(0, MAX_TRANSCRIPT_CHARS),
+          content: sanitizeAssistantMessageContent(t.content).slice(0, MAX_HISTORY_CHARS),
         }))
     : [];
 

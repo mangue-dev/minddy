@@ -57,7 +57,10 @@ export async function transcribeAudio(
       "X-Title": options?.title ?? "minddy",
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120_000),
+    // La dictée n'étant plus bornée en durée, une prise peut valoir plusieurs
+    // dizaines de minutes d'audio : 120 s ne suffisaient plus à l'envoyer et à
+    // la transcrire. On reste sous le maxDuration = 300 de /api/transcribe.
+    signal: AbortSignal.timeout(240_000),
   });
 
   if (!res.ok) {

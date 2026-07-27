@@ -21,8 +21,8 @@ import { UserAvatar } from "@/components/user-avatar";
  *
  * FIDÉLITÉ AU PRODUIT. Rien n'est redessiné :
  *   - la carte de prise reprend la géométrie du vrai popover (16 barres de 3 px,
- *     3 px de gouttière, hauteurs entre 4 et 32 px) et ses propres libellés,
- *     lus dans le namespace `Dictate` ;
+ *     3 px de gouttière, hauteurs entre 4 et 32 px) et son chrono seul — la
+ *     dictée n'est plus limitée en durée, il n'y a plus de plafond en regard ;
  *   - la priorité et l'assigné sont rendus par `PriorityIndicator` et
  *     `UserAvatar`, les composants du board ;
  *   - les noms de champs viennent de `Field`, la priorité de `Priority` ;
@@ -113,7 +113,6 @@ function Row({
 
 export async function VoiceDictationFigure() {
   const t = await getTranslations("Landing");
-  const tDictate = await getTranslations("Dictate");
   const tField = await getTranslations("Field");
   const tPriority = await getTranslations("Priority");
 
@@ -139,9 +138,8 @@ export async function VoiceDictationFigure() {
               <Mic className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-center text-xs">
                 <span className="font-medium tabular-nums text-foreground">0:07</span>
-                <span>{tDictate("maxDuration")}</span>
               </div>
               <div className="mt-1.5 flex h-8 items-center gap-[3px]" aria-hidden>
                 {WAVEFORM.map((height, i) => (

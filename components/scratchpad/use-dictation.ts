@@ -6,13 +6,18 @@ import { toast } from "mangue-ui";
 
 /**
  * Voice dictation for the task notebook — the same recording pipeline as the
- * shared <DictateButton> (getUserMedia + MediaRecorder, 90 s cap, silence gate,
- * POST /api/transcribe, `Dictate` i18n), but exposed as start/stop/cancel so the
- * caller can drive it from the `/` menu and stop on Enter. Raw transcript only
- * (no Numo post-processing).
+ * shared <DictateButton> (getUserMedia + MediaRecorder, no time limit, silence
+ * gate, POST /api/transcribe, `Dictate` i18n), but exposed as start/stop/cancel
+ * so the caller can drive it from the `/` menu and stop on Enter. Raw transcript
+ * only (no Numo post-processing).
  */
 
-const MAX_DURATION_MS = 90_000;
+// Same guards as <DictateButton>: no time limit, only /api/transcribe's 10 MB
+// payload ceiling. So the recorder is pinned to a speech bitrate and the safety
+// stop lands well inside that budget — it exists so a tab left recording by
+// accident still transcribes its take instead of losing it to a 413.
+const AUDIO_BITS_PER_SECOND = 48_000; // ~6 KB/s → 10 MB ≈ 28 min
+const SAFETY_STOP_MS = 20 * 60_000;
 // Peak deviation from the analyser's 128 midline that counts as speech.
 const SPEECH_PEAK_THRESHOLD = 20;
 
@@ -183,9 +188,10 @@ export function useDictation(onText: (text: string) => void): Dictation {
     const mimeType = pickRecorderMimeType();
     let recorder: MediaRecorder;
     try {
-      recorder = mimeType
-        ? new MediaRecorder(mediaStream, { mimeType })
-        : new MediaRecorder(mediaStream);
+      recorder = new MediaRecorder(mediaStream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+      });
     } catch {
       mediaStream.getTracks().forEach((track) => track.stop());
       toast.error(t("notSupported"));
@@ -267,7 +273,7 @@ export function useDictation(onText: (text: string) => void): Dictation {
     autoStopRef.current = setTimeout(() => {
       toast.info(t("maxReached"));
       stop();
-    }, MAX_DURATION_MS);
+    }, SAFETY_STOP_MS);
   }, [cleanup, sendForTranscription, status, stop, t]);
 
   return {

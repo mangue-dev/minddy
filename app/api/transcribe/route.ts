@@ -13,8 +13,15 @@ import {
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 
+// Une longue dictée met plus de temps à remonter qu'une courte : la route
+// prend le budget maximal de la plateforme, sous lequel le timeout de
+// transcribeAudio (240 s) tombe avec de la marge.
+export const maxDuration = 300;
+
+// La dictée n'a pas de limite de durée — seulement ce plafond de charge utile.
+// Au débit de parole épinglé côté client (48 kb/s), 10 Mo valent ~28 minutes de
+// prise ; au-delà, la réponse est un 413 et le client affiche `Dictate.tooLarge`.
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_AUDIO_SECONDS = 90;
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const FALLBACK_MODEL = "openai/whisper-large-v3";
 
@@ -119,12 +126,6 @@ export async function POST(request: NextRequest) {
       provider,
       title: "minddy Dictate",
     });
-
-    if (result.seconds > MAX_AUDIO_SECONDS) {
-      console.warn(
-        `[/api/transcribe] audio length ${result.seconds}s exceeds ${MAX_AUDIO_SECONDS}s limit (user ${user.id})`,
-      );
-    }
 
     // Suivi des coûts : appel unique (un run d'un seul appel). Best-effort.
     after(() =>
