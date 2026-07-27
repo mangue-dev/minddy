@@ -14,6 +14,8 @@
     "slashBullet": "Bullet list",
     "dictationHint": "Enter to stop · Esc to cancel",
     "dictationProcessing": "Transcribing…",
+    "dictationPolishing": "Numo is tidying it up…",
+    "dictationPolishFailed": "Numo couldn't tidy up the dictation: raw text inserted.",
     "saving": "Saving…",
     "saved": "Saved",
     "savedAgo": "Saved {time}",

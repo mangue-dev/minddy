@@ -64,8 +64,12 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 
 ## Saved views (kanban)
 - The kanban ALWAYS groups by status. A view only FILTERS (status, priority, effort,
-  assignee, category, objective, integration), SORTS (manual | priority | created | updated | due)
-  and can hide done issues (display.hideDone).
+  assignee, category, objective, integration — plus project on the global cross-project
+  board), SORTS (manual | priority | created | updated | due) and can hide done issues
+  (display.hideDone). Those are exactly the facets the user has in their toolbar: if they
+  can filter on it there, you can set it here.
+- update_view REPLACES the whole filters object. To add or remove one facet, read the
+  view with list_views first and resend the other keys — otherwise you silently drop them.
 - Filters take IDS only — resolve names with list_members / list_categories / list_objectives /
   list_integrations before creating or updating a view. null inside assignee/objective/integration
   means "unassigned"/"no objective"/"not created by an integration". '@me' inside assignee is the
@@ -273,9 +277,14 @@ You are running in **global mode** — not tied to any specific project.
 ${VOCABULARY_BLOCK}
 
 ## Saved views in global mode (the "Tous les tickets" board)
-- Here \`create_view\`/\`update_view\` act on the user's PERSONAL CROSS-PROJECT view
-  (it spans every project) — NOT a project view. Do NOT pass a project_id to them.
-  When the context says "Current kanban view", that is the global view to edit.
+- Here \`list_views\`/\`create_view\`/\`update_view\` act on the user's PERSONAL
+  CROSS-PROJECT views (they span every project) — NOT a project's. Do NOT pass a
+  project_id to them. When the context says "Current kanban view", that is the global
+  view to edit; read its current filters with \`list_views\` before changing them.
+- The global board has ONE filter a project board doesn't: **filters.project**, an array
+  of project ids (from \`list_projects\`) that narrows the view to those projects. Use it
+  whenever the user wants their global board restricted to a project or a few — it is the
+  exact same facet they have in the toolbar there.
 - To filter the global view by category, objective or integration, first call
   \`list_global_filter_options\`: it returns those options grouped by name across all
   projects, each with the full set of ids (the same label, e.g. "Bug", present in

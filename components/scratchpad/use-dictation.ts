@@ -8,8 +8,13 @@ import { toast } from "mangue-ui";
  * Voice dictation for the task notebook — the same recording pipeline as the
  * shared <DictateButton> (getUserMedia + MediaRecorder, no time limit, silence
  * gate, POST /api/transcribe, `Dictate` i18n), but exposed as start/stop/cancel
- * so the caller can drive it from the `/` menu and stop on Enter. Raw transcript
- * only (no Numo post-processing).
+ * so the caller can drive it from the `/` menu and stop on Enter.
+ *
+ * The transcript then goes through Numo (POST /api/me/scratchpad/dictate-task),
+ * as a dictated ticket does: Whisper writes down speech — hesitations, random
+ * punctuation, broken agreement — and the notebook wants a task one can re-read.
+ * A dictation can hold several to-dos, hence a LIST of entries. If that step
+ * fails the raw transcript is inserted anyway: a take is never lost.
  */
 
 // Same guards as <DictateButton>: no time limit, only /api/transcribe's 10 MB
@@ -20,8 +25,18 @@ const AUDIO_BITS_PER_SECOND = 48_000; // ~6 KB/s → 10 MB ≈ 28 min
 const SAFETY_STOP_MS = 20 * 60_000;
 // Peak deviation from the analyser's 128 midline that counts as speech.
 const SPEECH_PEAK_THRESHOLD = 20;
+// Fin du carnet envoyée à Numo comme échantillon d'orthographe (la route en
+// garde 3 000) — inutile de faire voyager une note de 64 ko à chaque prise.
+const NOTE_SAMPLE_CHARS = 4000;
 
-export type DictationStatus = "idle" | "starting" | "recording" | "processing";
+export type DictationStatus =
+  | "idle"
+  | "starting"
+  | "recording"
+  /** Audio → texte (/api/transcribe). */
+  | "processing"
+  /** Texte brut → tâches propres (Numo). */
+  | "polishing";
 
 function pickRecorderMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
@@ -46,16 +61,28 @@ export interface Dictation {
   cancel: () => void;
 }
 
-export function useDictation(onText: (text: string) => void): Dictation {
+export function useDictation({
+  onTasks,
+  getNote,
+}: {
+  /** One dictation → one or more notebook entries, already cleaned up. */
+  onTasks: (tasks: string[]) => void;
+  /** The note as it stands — joined to the prompt so Numo spells the user's
+      names, products and ticket ids the way they already write them. */
+  getNote?: () => string;
+}): Dictation {
   const t = useTranslations("Dictate");
+  const tScratch = useTranslations("Scratchpad");
   const locale = useLocale();
 
   const [status, setStatus] = useState<DictationStatus>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const onTextRef = useRef(onText);
-  onTextRef.current = onText;
+  const onTasksRef = useRef(onTasks);
+  onTasksRef.current = onTasks;
+  const getNoteRef = useRef(getNote);
+  getNoteRef.current = getNote;
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
@@ -93,6 +120,49 @@ export function useDictation(onText: (text: string) => void): Dictation {
     };
   }, [cleanup]);
 
+  /** Étape Numo : transcript brut → tâches propres. `tasks: null` = échec, et
+   *  l'appelant insère alors le brut ; `message` porte l'explication déjà
+   *  localisée du serveur quand il y en a une (budget d'usage épuisé). */
+  const polish = useCallback(
+    async (
+      transcript: string
+    ): Promise<{ tasks: string[] | null; message?: string }> => {
+      try {
+        const res = await fetch("/api/me/scratchpad/dictate-task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript,
+            note: (getNoteRef.current?.() ?? "").slice(-NOTE_SAMPLE_CHARS),
+          }),
+        });
+        if (!res.ok) {
+          // 403 = limite de plan (budget d'usage IA épuisé) : dire laquelle vaut
+          // mieux que « Numo n'a pas pu ».
+          if (res.status === 403) {
+            const data = (await res.json().catch(() => ({}))) as {
+              error?: unknown;
+            };
+            if (typeof data.error === "string" && data.error)
+              return { tasks: null, message: data.error };
+          }
+          return { tasks: null };
+        }
+        const data = (await res.json()) as { tasks?: unknown };
+        if (!Array.isArray(data.tasks)) return { tasks: null };
+        const tasks = data.tasks
+          .filter((v): v is string => typeof v === "string")
+          .map((v) => v.trim())
+          .filter(Boolean);
+        return { tasks: tasks.length > 0 ? tasks : null };
+      } catch (err) {
+        console.error("[useDictation] polish failed", err);
+        return { tasks: null };
+      }
+    },
+    []
+  );
+
   const sendForTranscription = useCallback(
     async (blob: Blob) => {
       const formData = new FormData();
@@ -118,6 +188,15 @@ export function useDictation(onText: (text: string) => void): Dictation {
             toast.error(t("rateLimitReached", { minutes }));
           } else if (res.status === 413) {
             toast.error(t("tooLarge"));
+          } else if (res.status === 403) {
+            // Limite de plan (budget d'usage IA épuisé) — message déjà localisé
+            // par le serveur, autrement plus parlant que « Échec ».
+            const data = (await res.json().catch(() => ({}))) as {
+              error?: unknown;
+            };
+            toast.error(
+              typeof data.error === "string" && data.error ? data.error : t("error")
+            );
           } else {
             toast.error(t("error"));
           }
@@ -127,8 +206,21 @@ export function useDictation(onText: (text: string) => void): Dictation {
         const text = (data.text ?? "").trim();
         if (!mountedRef.current) return;
         // A transcript with no letter or digit is Whisper's silence filler.
-        if (/[\p{L}\p{N}]/u.test(text)) onTextRef.current(text);
-        else toast.error(t("emptyResult"));
+        if (!/[\p{L}\p{N}]/u.test(text)) {
+          toast.error(t("emptyResult"));
+          return;
+        }
+        setStatus("polishing");
+        const { tasks, message } = await polish(text);
+        if (!mountedRef.current) return;
+        if (tasks) {
+          onTasksRef.current(tasks);
+        } else {
+          // La prise est bonne, seule la mise au propre a échoué : on insère le
+          // brut plutôt que de faire redire la phrase.
+          onTasksRef.current([text]);
+          toast.error(message ?? tScratch("dictationPolishFailed"));
+        }
       } catch (err) {
         if (!mountedRef.current) return;
         console.error("[useDictation] transcribe failed", err);
@@ -137,7 +229,7 @@ export function useDictation(onText: (text: string) => void): Dictation {
         if (mountedRef.current) setStatus("idle");
       }
     },
-    [locale, t]
+    [locale, polish, t, tScratch]
   );
 
   const stop = useCallback(() => {

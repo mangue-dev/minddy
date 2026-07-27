@@ -80,6 +80,56 @@ const ISSUE_FIELD_PROPERTIES = {
   },
 } as const;
 
+// The saved-view filter schema, shared by create_view and update_view so both
+// advertise exactly what sanitizeViewConfig accepts. `project` is absent here
+// on purpose: it only means something on the cross-project global view (a
+// project board is single-project), so buildGlobalTools adds it there.
+const VIEW_FILTER_PROPERTIES = {
+  status: {
+    type: "array",
+    items: { type: "string", enum: [...ISSUE_STATUSES] },
+  },
+  priority: {
+    type: "array",
+    items: { type: "string", enum: [...ISSUE_PRIORITIES] },
+  },
+  effort: {
+    type: "array",
+    items: { type: "string", enum: [...ISSUE_EFFORTS] },
+  },
+  assignee: {
+    type: "array",
+    items: { type: ["string", "null"] },
+    description:
+      "user_ids; null = unassigned; '@me' = assigned to the viewing user (dynamic).",
+  },
+  objective: {
+    type: "array",
+    items: { type: ["string", "null"] },
+    description: "objective ids; null = no objective.",
+  },
+  category: {
+    type: "array",
+    items: { type: "string" },
+    description: "category ids.",
+  },
+  integration: {
+    type: "array",
+    items: { type: ["string", "null"] },
+    description:
+      "integration ids (from list_integrations); null = not created by an integration.",
+  },
+} as const;
+
+// The one filter the global board has on top of a project board — same facet
+// the user gets in the toolbar there. Added to the view tools in global mode.
+const VIEW_PROJECT_FILTER_PROPERTY = {
+  type: "array",
+  items: { type: "string" },
+  description:
+    "project ids (from list_projects) — keep only the issues of those projects. Global (cross-project) view only.",
+} as const;
+
 export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   // ── Read tools ────────────────────────────────────────────────────────
   {
@@ -202,7 +252,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_views",
       description:
-        "List the saved kanban views: id, name, kind, shared, filters, sort, display. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
+        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it before update_view to read the filters currently set on a view. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -305,42 +355,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           name: { type: "string", description: "View name." },
           filters: {
             type: "object",
-            properties: {
-              status: {
-                type: "array",
-                items: { type: "string", enum: [...ISSUE_STATUSES] },
-              },
-              priority: {
-                type: "array",
-                items: { type: "string", enum: [...ISSUE_PRIORITIES] },
-              },
-              effort: {
-                type: "array",
-                items: { type: "string", enum: [...ISSUE_EFFORTS] },
-              },
-              assignee: {
-                type: "array",
-                items: { type: ["string", "null"] },
-                description:
-                  "user_ids; null = unassigned; '@me' = assigned to the viewing user (dynamic).",
-              },
-              objective: {
-                type: "array",
-                items: { type: ["string", "null"] },
-                description: "objective ids; null = no objective.",
-              },
-              category: {
-                type: "array",
-                items: { type: "string" },
-                description: "category ids.",
-              },
-              integration: {
-                type: "array",
-                items: { type: ["string", "null"] },
-                description:
-                  "integration ids (from list_integrations); null = not created by an integration.",
-              },
-            },
+            properties: { ...VIEW_FILTER_PROPERTIES },
             description: "Filter config. Omit a key to not filter on it.",
           },
           sort: {
@@ -363,13 +378,18 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_view",
       description:
-        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view. Get view ids via list_views. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
+        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view. Get view ids via list_views. `filters` REPLACES the whole filter config — read the view with list_views first and resend the keys you want to keep, otherwise you drop them. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
       parameters: {
         type: "object",
         properties: {
           view_id: { type: "string", description: "View id." },
           name: { type: "string" },
-          filters: { type: "object", description: "Same shape as create_view." },
+          filters: {
+            type: "object",
+            properties: { ...VIEW_FILTER_PROPERTIES },
+            description:
+              "The COMPLETE new filter config (replaces the current one). Omit a key to not filter on it.",
+          },
           sort: {
             type: "string",
             enum: ["manual", "priority", "created", "updated", "due"],
@@ -1261,9 +1281,45 @@ export const PROJECT_SCOPED_TOOLS = new Set(
 );
 
 // View tools that, in global mode, operate on the user's CROSS-PROJECT global
-// view (project_id null, personal) rather than a project's — so they take NO
+// views (project_id null, personal) rather than a project's — so they take NO
 // injected project_id there. In project mode they stay project-scoped as usual.
-export const GLOBAL_VIEW_TOOLS = new Set(["create_view", "update_view"]);
+// list_views is in here so the three view tools share one scope rule: without
+// it Numo could edit the global view but never read it back.
+export const GLOBAL_VIEW_TOOLS = new Set([
+  "list_views",
+  "create_view",
+  "update_view",
+]);
+
+/** Global mode adds the project facet to a view's filters — the same one the
+    user gets in the toolbar on the global board, and the only filter the
+    cross-project view has that a project view doesn't. */
+function withProjectFilter(tool: AssistantToolDef): AssistantToolDef {
+  const params = tool.function.parameters;
+  const filters = params.properties.filters as {
+    properties: Record<string, unknown>;
+  };
+  return {
+    ...tool,
+    function: {
+      ...tool.function,
+      description: `${tool.function.description} On the global view, filters.project (project ids from list_projects) narrows it to a subset of projects.`,
+      parameters: {
+        ...params,
+        properties: {
+          ...params.properties,
+          filters: {
+            ...filters,
+            properties: {
+              ...filters.properties,
+              project: VIEW_PROJECT_FILTER_PROPERTY,
+            },
+          },
+        },
+      },
+    },
+  };
+}
 
 export function buildGlobalTools(): AssistantToolDef[] {
   const listProjectsTool: AssistantToolDef = {
@@ -1284,17 +1340,20 @@ export function buildGlobalTools(): AssistantToolDef[] {
     function: {
       name: "list_global_filter_options",
       description:
-        "List the category, objective and integration filter options across ALL the user's projects, grouped by name. Each entry gives { name, ids } — the ids to drop into a GLOBAL view's filters.category / filters.objective / filters.integration. Use this before filtering the cross-project global view by category, objective or integration.",
+        "List the category, objective and integration filter options across ALL the user's projects, grouped by name. Each entry gives { name, ids } — the ids to drop into a GLOBAL view's filters.category / filters.objective / filters.integration. Use this before filtering the cross-project global view by category, objective or integration. For filters.project, take the ids from list_projects.",
       parameters: { type: "object", properties: {} },
     },
   };
 
   const augmented = ASSISTANT_TOOLS.map((tool) => {
-    // View tools edit the global view in global mode → no project_id injected.
-    if (
-      !PROJECT_SCOPED_TOOLS.has(tool.function.name) ||
-      GLOBAL_VIEW_TOOLS.has(tool.function.name)
-    ) {
+    // View tools act on the global view in global mode → no project_id
+    // injected, and the ones taking filters gain the project facet.
+    if (GLOBAL_VIEW_TOOLS.has(tool.function.name)) {
+      return tool.function.parameters.properties.filters
+        ? withProjectFilter(tool)
+        : tool;
+    }
+    if (!PROJECT_SCOPED_TOOLS.has(tool.function.name)) {
       return tool;
     }
 

@@ -14,6 +14,8 @@
     "slashBullet": "Liste à puces",
     "dictationHint": "Entrée pour arrêter · Échap pour annuler",
     "dictationProcessing": "Transcription…",
+    "dictationPolishing": "Numo met au propre…",
+    "dictationPolishFailed": "Numo n'a pas pu mettre la dictée au propre : texte brut inséré.",
     "saving": "Enregistrement…",
     "saved": "Enregistré",
     "savedAgo": "Enregistré {time}",

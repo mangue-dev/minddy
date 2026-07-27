@@ -118,10 +118,30 @@ export function ScratchpadEditor({
   const editorRef = useRef<Editor | null>(null);
   const startDictationRef = useRef<() => void>(() => {});
 
-  // Dictation → a checkbox task with the raw transcript (no Numo). Inserts at the
-  // caret, which sits on the empty line the `/` command left behind.
-  const dictation = useDictation((text) => {
-    editorRef.current?.chain().focus().toggleTaskList().insertContent(text).run();
+  // Dictation → one checkbox task per entry Numo cleaned up (a single take can
+  // hold several to-dos). They land at the caret, which sits on the empty line
+  // the `/` command left behind.
+  const insertTasks = (tasks: string[]) => {
+    const ed = editorRef.current;
+    if (!ed || ed.isDestroyed || tasks.length === 0) return;
+    let chain = ed.chain().focus();
+    // `/` fires from an empty paragraph → turn it into a task; when the caret is
+    // already inside a task, toggling would drop the list instead.
+    if (!ed.isActive("taskItem")) chain = chain.toggleTaskList();
+    chain.insertContent(tasks[0]).run();
+    // One line per entry — each split is its own transaction so it sees the text
+    // inserted just before it.
+    for (const task of tasks.slice(1)) {
+      ed.chain().focus().splitListItem("taskItem").insertContent(task).run();
+    }
+  };
+
+  const dictation = useDictation({
+    onTasks: insertTasks,
+    getNote: () => {
+      const ed = editorRef.current;
+      return ed && !ed.isDestroyed ? getMarkdown(ed) : "";
+    },
   });
   startDictationRef.current = dictation.start;
 
@@ -359,10 +379,13 @@ export function ScratchpadEditor({
       {dictating && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
           <div className="flex w-64 flex-col items-center gap-4 rounded-2xl border border-border bg-popover px-6 py-5 text-center shadow-xl">
-            {dictation.status === "processing" ? (
+            {dictation.status === "processing" ||
+            dictation.status === "polishing" ? (
               <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
                 <Spinner />
-                {t("dictationProcessing")}
+                {dictation.status === "polishing"
+                  ? t("dictationPolishing")
+                  : t("dictationProcessing")}
               </div>
             ) : dictation.status === "starting" ? (
               <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">

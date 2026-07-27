@@ -243,6 +243,33 @@ async function executeViewTool(
   return result.ok ? shape(result) : libError(result);
 }
 
+/** list_views for both scopes: the project's views in project mode, the user's
+    personal cross-project views in global mode (project_id null). RLS scopes
+    both — a global view is only ever visible to its owner. */
+async function listViews(
+  ctx: ToolContext,
+  projectId: string | null
+): Promise<ToolExecution> {
+  const base = ctx.supabase
+    .from("views")
+    .select("id, name, kind, user_id, filters, sort, display");
+  const { data, error } = await (projectId
+    ? base.eq("project_id", projectId)
+    : base.is("project_id", null)
+  ).order("position", { ascending: true });
+  if (error) return toolError(error.message);
+  const views = (data ?? []).map((v) => ({
+    id: v.id,
+    name: v.name,
+    kind: v.kind,
+    shared: v.user_id === null,
+    filters: v.filters,
+    sort: v.sort,
+    display: v.display,
+  }));
+  return { result: { views }, success: true };
+}
+
 /** Cross-project category/objective/integration options for global-mode view
     filters — grouped by name so the same label across projects collapses into
     one entry carrying every matching id. */
@@ -360,6 +387,9 @@ export async function executeTool(
     // Project mode → a project view; global mode (ctx.projectId null) → the
     // user's cross-project global view (project_id null, personal). create/
     // updateView enforce access themselves, so no project_id is required here.
+    if (toolName === "list_views") {
+      return listViews(ctx, ctx.projectId);
+    }
     if (toolName === "create_view" || toolName === "update_view") {
       return executeViewTool(toolName, args, ctx);
     }
@@ -497,24 +527,6 @@ export async function executeTool(
           .order("name", { ascending: true });
         if (error) return toolError(error.message);
         return { result: { integrations: data ?? [] }, success: true };
-      }
-      case "list_views": {
-        const { data, error } = await ctx.supabase
-          .from("views")
-          .select("id, name, kind, user_id, filters, sort, display")
-          .eq("project_id", projectId)
-          .order("position", { ascending: true });
-        if (error) return toolError(error.message);
-        const views = (data ?? []).map((v) => ({
-          id: v.id,
-          name: v.name,
-          kind: v.kind,
-          shared: v.user_id === null,
-          filters: v.filters,
-          sort: v.sort,
-          display: v.display,
-        }));
-        return { result: { views }, success: true };
       }
 
       // ── Write tools ───────────────────────────────────────────────────

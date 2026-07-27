@@ -136,6 +136,23 @@ export function splitScratchpadSections(content: string): ScratchpadSection[] {
   return sections.filter((s) => s.markdown.trim() !== "");
 }
 
+/**
+ * Normalize ONE line of task text coming from a model (the dictation step of
+ * the notebook, /api/me/scratchpad/dictate-task). The notebook draws the
+ * checkbox itself, so a marker, a bullet or a heading level the model wrote
+ * anyway is stripped rather than left to show up as literal text; newlines are
+ * flattened, since an entry is one line. `max` caps the result.
+ */
+export function cleanDictatedTaskLine(value: string, max = 1000): string {
+  return value
+    .replace(/^\s*(?:[-*+]\s*)?(?:\[[ x~\-]\]\s*)?/i, "")
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max)
+    .trim();
+}
+
 export interface NewTask {
   text: string;
   state: PlanTaskState;

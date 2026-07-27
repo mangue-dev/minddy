@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   appendScratchpadTasks,
+  cleanDictatedTaskLine,
   mergeScratchpad,
   removeCompletedTasks,
   splitScratchpadSections,
@@ -85,6 +86,37 @@ describe("appendScratchpadTasks", () => {
     expect(
       appendScratchpadTasks("## A\n- [ ] a", [{ text: "x", state: "pending" }], "Z")
     ).toBeNull();
+  });
+});
+
+describe("cleanDictatedTaskLine", () => {
+  it("leaves a plain dictated sentence untouched", () => {
+    expect(cleanDictatedTaskLine("Réparer le tri du board par priorité.")).toBe(
+      "Réparer le tri du board par priorité."
+    );
+  });
+
+  it("strips a checkbox marker, a bullet or both", () => {
+    expect(cleanDictatedTaskLine("- [ ] revoir les filtres")).toBe("revoir les filtres");
+    expect(cleanDictatedTaskLine("* revoir les filtres")).toBe("revoir les filtres");
+    expect(cleanDictatedTaskLine("[x] revoir les filtres")).toBe("revoir les filtres");
+  });
+
+  it("strips a heading level but keeps a hashtag word", () => {
+    expect(cleanDictatedTaskLine("## Revoir les filtres")).toBe("Revoir les filtres");
+    expect(cleanDictatedTaskLine("#urgent à revoir")).toBe("#urgent à revoir");
+  });
+
+  it("flattens newlines and collapses whitespace", () => {
+    expect(cleanDictatedTaskLine("ligne une\n  ligne deux")).toBe("ligne une ligne deux");
+  });
+
+  it("caps the length without leaving a trailing space", () => {
+    expect(cleanDictatedTaskLine("abcd efgh", 5)).toBe("abcd");
+  });
+
+  it("returns an empty string for a marker-only line", () => {
+    expect(cleanDictatedTaskLine("- [ ] ")).toBe("");
   });
 });
 
