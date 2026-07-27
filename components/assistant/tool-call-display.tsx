@@ -19,7 +19,6 @@ import {
   LayoutGrid,
   List,
   ListChecks,
-  Loader2,
   MailX,
   MessageCircleQuestion,
   MessageSquare,
@@ -63,12 +62,6 @@ interface ToolCallListProps {
    * user qui suit, masqué du fil) — affichée dans les détails de la ligne.
    */
   askUserAnswer?: string | null;
-  /**
-   * Ce groupe d'actions est-il la TÊTE VIVANTE de la conversation (aucun message
-   * plus récent) ? Alors l'accordéon fermé montre sa dernière action avec un effet
-   * shimmer. Retiré dès qu'un message plus récent apparaît (isLatest=false).
-   */
-  isLatest?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -596,18 +589,8 @@ function AskUserSummaryRow({
   );
 }
 
-function ToolCallRow({
-  item,
-  t,
-  shimmer = false,
-}: {
-  item: ToolCallItem;
-  t: TranslateFn;
-  /** Effet shimmer sur le label (action actuellement en cours, tête vivante). */
-  shimmer?: boolean;
-}) {
+function ToolCallRow({ item, t }: { item: ToolCallItem; t: TranslateFn }) {
   const { Icon, label } = getToolView(item, t);
-  const isRunning = item.status === "running";
   const isError = item.status === "complete" && item.success === false;
 
   return (
@@ -618,12 +601,12 @@ function ToolCallRow({
       )}
     >
       <Icon className="h-3 w-3 shrink-0" />
-      <span className={cn("flex-1 truncate", shimmer && "text-shimmer")}>{label}</span>
-      {isRunning ? (
-        <Loader2 className="h-3 w-3 shrink-0 animate-spin opacity-70" />
-      ) : isError ? (
-        <X className="h-3 w-3 shrink-0" />
-      ) : null}
+      {/* Action EN COURS → le label lui-même shimmer (pas de spinner : le texte
+          qui respire dit déjà « ça tourne », sans ajouter un objet qui tourne). */}
+      <span className={cn("flex-1 truncate", item.status === "running" && "text-shimmer")}>
+        {label}
+      </span>
+      {isError ? <X className="h-3 w-3 shrink-0" /> : null}
     </div>
   );
 }
@@ -632,7 +615,6 @@ export function ToolCallList({
   items,
   askUserHidden = false,
   askUserAnswer,
-  isLatest = false,
 }: ToolCallListProps) {
   const t = useTranslations("ToolCall");
   const [expanded, setExpanded] = useState(false);
@@ -649,16 +631,8 @@ export function ToolCallList({
   const renderRows = () => {
     if (rowItems.length === 0) return null;
 
-    if (rowItems.length === 1) {
-      // Action unique : shimmer si elle est en cours ET tête vivante.
-      return (
-        <ToolCallRow
-          item={rowItems[0]}
-          t={t}
-          shimmer={isLatest && rowItems[0].status === "running"}
-        />
-      );
-    }
+    // Action unique : la ligne shimmer d'elle-même tant qu'elle tourne.
+    if (rowItems.length === 1) return <ToolCallRow item={rowItems[0]} t={t} />;
 
     const anyRunning = rowItems.some((i) => i.status === "running");
 
@@ -675,12 +649,9 @@ export function ToolCallList({
             className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
           >
             <ChevronRight className="h-3 w-3 shrink-0 rotate-90 transition-transform" />
-            <span className="flex-1 truncate">
+            <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
               {t("toolCallSummary", { count: rowItems.length })}
             </span>
-            {anyRunning ? (
-              <Loader2 className="h-3 w-3 shrink-0 animate-spin opacity-70" />
-            ) : null}
           </Button>
           <div className="ml-5 flex flex-col">
             {rowItems.map((item) => (
@@ -693,7 +664,8 @@ export function ToolCallList({
 
     // Accordéon FERMÉ : on n'affiche que la DERNIÈRE action en date. Rouge UNIQUEMENT
     // si CETTE action a échoué (pas si une autre action du groupe a échoué). Shimmer
-    // tant que c'est la tête vivante de la conversation (isLatest, hors erreur).
+    // tant qu'une action du groupe tourne — c'est le groupe entier que la ligne
+    // repliée résume, pas seulement l'action affichée.
     const lastItem = rowItems[rowItems.length - 1];
     const lastLabel = getToolView(lastItem, t).label;
     const lastError = lastItem.status === "complete" && lastItem.success === false;
@@ -711,20 +683,10 @@ export function ToolCallList({
         )}
       >
         <ChevronRight className="h-3 w-3 shrink-0 transition-transform" />
-        <span
-          className={cn(
-            "flex-1 truncate",
-            // Shimmer si l'action affichée (la dernière) est actuellement en cours.
-            isLatest && lastItem.status === "running" && "text-shimmer"
-          )}
-        >
+        <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
           {lastLabel}
         </span>
-        {anyRunning ? (
-          <Loader2 className="h-3 w-3 shrink-0 animate-spin opacity-70" />
-        ) : lastError ? (
-          <X className="h-3 w-3 shrink-0" />
-        ) : null}
+        {!anyRunning && lastError ? <X className="h-3 w-3 shrink-0" /> : null}
       </Button>
     );
   };

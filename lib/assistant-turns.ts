@@ -57,6 +57,12 @@ function closesTurn(m: AssistantMessage): boolean {
  * et les réponses directes, qui n'ont rien à replier (même message final, sans
  * accordéon au-dessus). Tout ce qui est PLIÉ dans le déroulé n'en a pas : c'est
  * du travail intermédiaire, pas une réponse à emporter.
+ *
+ * Un tour ACTIF n'en porte AUCUN, pas même sous sa queue : entre deux rounds (le
+ * temps que les outils tournent) le dernier texte reçu se retrouve provisoirement
+ * en position de réponse, alors qu'il n'est que la narration du moment. Le bouton
+ * y clignotait de message en message pendant tout le travail de Numo, puis se
+ * posait sur la vraie réponse. Il n'apparaît donc qu'une fois le tour terminé.
  */
 export function copyableMessageIds(blocks: AssistantBlock[]): Set<string> {
   const ids = new Set<string>();
@@ -64,7 +70,7 @@ export function copyableMessageIds(blocks: AssistantBlock[]): Set<string> {
     if (block.kind === "message") {
       const m = block.message;
       if (m.role === "assistant" && m.content) ids.add(m.id);
-    } else if (block.summary?.content) {
+    } else if (!block.active && block.summary?.content) {
       ids.add(block.summary.id);
     }
   }

@@ -35,9 +35,6 @@ interface ChatMessageProps {
    *  accordion is intermediate narration, not an answer to take away. The host
    *  decides via `copyableMessageIds` (lib/assistant-turns). */
   showCopyButton?: boolean;
-  /** Ce message est-il la tête vivante de la conversation (aucun message plus
-   *  récent, agent au travail) ? → son accordéon de tool-calls fermé shimmer. */
-  isLatestMessage?: boolean;
 }
 
 // ── Copy button ───────────────────────────────────────────────────────
@@ -87,7 +84,6 @@ export function ChatMessage({
   askUserHidden = false,
   askUserAnswer,
   showCopyButton = true,
-  isLatestMessage = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
 
@@ -154,7 +150,6 @@ export function ChatMessage({
                 })}
                 askUserHidden={askUserHidden}
                 askUserAnswer={askUserAnswer}
-                isLatest={isLatestMessage}
               />
             )}
           </div>

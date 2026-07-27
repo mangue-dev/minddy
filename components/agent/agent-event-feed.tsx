@@ -420,7 +420,6 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
 interface RenderContext {
   results: Map<string, ToolResult>;
   copyableIds: Set<string>;
-  lastMessageId: string | null;
   /** Ouvre la vue diff de la session (dans la conversation) → lignes cliquables. */
   onOpenFile?: (path: string) => void;
   /** Event `question` ACTIF, rendu par la conversation à la place du composer →
@@ -459,7 +458,6 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
         toolCallResults={ctx.results}
         askUserAnswer={it.askUserAnswer}
         showCopyButton={ctx.copyableIds.has(it.message.id)}
-        isLatestMessage={it.message.id === ctx.lastMessageId}
       />
     );
   }
@@ -658,9 +656,10 @@ export function AgentEventFeed({
   // de ces réponses se copie. Les messages intermédiaires (déroulé du travail) n'en
   // ont pas — ils ne sont pas des réponses.
   //
-  // Ce n'est pas que du confort : le bouton occupe une ligne SOUS le message, donc
-  // son absence collait la réponse au message suivant. Le rendre systématique par
-  // tour rend l'espacement régulier d'un bout à l'autre du fil.
+  // Tant que l'agent TRAVAILLE, sa tête vivante n'en porte pas non plus : ce n'est
+  // que la narration du moment, et le bouton sautait de message en message au fil
+  // du travail. Le repli sur le dernier message ne sert qu'aux tours SANS résumé
+  // (run interrompu, erreur) : là, ce message EST la fin de la réponse.
   const copyableIds = useMemo(() => {
     const ids = new Set<string>();
     let lastAssistant: string | null = null;
@@ -669,11 +668,9 @@ export function AgentEventFeed({
       lastAssistant = it.message.id;
       if (it.isSummary) ids.add(it.message.id);
     }
-    // Tour EN COURS (pas encore de résumé) : sa tête reste copiable, sinon la
-    // réponse en direct serait la seule du fil sans bouton.
-    if (lastAssistant) ids.add(lastAssistant);
+    if (lastAssistant && !active) ids.add(lastAssistant);
     return ids;
-  }, [items]);
+  }, [items, active]);
 
   // Cale le flux en bas dès l'ouverture (même run terminé) puis à chaque nouvel
   // event tant qu'il est actif. useLayoutEffect → pas de flash « scroll depuis
@@ -697,24 +694,9 @@ export function AgentEventFeed({
     );
   }
 
-  // Tête vivante : le DERNIER item message, tant que l'agent travaille. Son
-  // accordéon de tool-calls fermé shimmer ; dès qu'un message plus récent arrive,
-  // il n'est plus le dernier → shimmer retiré.
-  let lastMessageId: string | null = null;
-  if (active) {
-    for (let i = items.length - 1; i >= 0; i--) {
-      const it = items[i];
-      if (it.kind === "message") {
-        lastMessageId = it.message.id;
-        break;
-      }
-    }
-  }
-
   const ctx: RenderContext = {
     results,
     copyableIds,
-    lastMessageId,
     onOpenFile,
     hiddenQuestionEventId,
   };

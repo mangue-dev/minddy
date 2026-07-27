@@ -248,6 +248,34 @@ describe("copyableMessageIds", () => {
     expect([...got]).toEqual([]);
   });
 
+  it("ne marque pas non plus la queue d'un tour actif entre deux rounds", () => {
+    // Round terminé, outils en cours d'exécution : plus rien n'est en vol, donc
+    // la narration se retrouve en position de réponse — provisoirement. Sans ce
+    // garde-fou, le bouton se posait tour à tour sous CHAQUE dernier message
+    // pendant tout le travail de Numo.
+    const got = copyableMessageIds(
+      buildAssistantBlocks(
+        [
+          msg("u1", "user", "vas-y"),
+          msg("a1", "assistant", "Je regarde les tickets…", {
+            tool_calls: [call("list_issues")],
+          }),
+        ],
+        { active: true, pendingWork: false },
+      ),
+    );
+    expect([...got]).toEqual([]);
+  });
+
+  it("marque la réponse une fois le tour terminé", () => {
+    const got = ids([
+      msg("u1", "user", "vas-y"),
+      msg("a1", "assistant", "Je regarde…", { tool_calls: [call("list_issues")] }),
+      msg("a2", "assistant", "Voilà."),
+    ]);
+    expect([...got]).toEqual(["a2"]);
+  });
+
   it("ne marque jamais un message utilisateur", () => {
     const got = ids([msg("u1", "user", "salut")]);
     expect([...got]).toEqual([]);
