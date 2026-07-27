@@ -735,6 +735,7 @@
   },
   "Inbox": {
     "title": "Inbox",
+    "settings": "Inbox settings",
     "markAllRead": "Mark all as read",
     "clearRead": "Delete read",
     "emptyMessage": "You're all caught up.",
@@ -1211,7 +1212,7 @@
     "mcpSectionTitle": "Connect an agent",
     "mcpSectionDesc": "Connect an AI agent to minddy's MCP server. No key to paste: your browser opens to authorize the agent on first use.",
     "cyclesTab": "Cycles",
-    "notificationsTab": "Notifications",
+    "inboxTab": "Inbox",
     "agentTab": "Numo agent",
     "agentModelTitle": "Default agent model",
     "agentModelDesc": "You can pick a different model at each launch.",

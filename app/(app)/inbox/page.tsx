@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter, useNow } from "next-intl";
 import { Button, IconButton, Skeleton, cn, toast } from "mangue-ui";
@@ -12,6 +13,7 @@ import {
   Megaphone,
   Mail,
   MailOpen,
+  Settings,
   Trash2,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
@@ -174,6 +176,13 @@ export default function InboxPage() {
               {t("markAllRead")}
             </Button>
           )}
+          {/* Raccourci vers l'onglet Inbox des réglages du compte — c'est là
+              qu'on choisit ce qui atterrit ici. */}
+          <IconButton size="sm" aria-label={t("settings")} title={t("settings")} asChild>
+            <Link href="/settings?tab=inbox">
+              <Settings className="size-4" />
+            </Link>
+          </IconButton>
         </div>
       </div>
 

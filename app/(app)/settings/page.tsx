@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Bell, Bot, GitBranch, IterationCw, Plug, SlidersHorizontal, User } from "lucide-react";
+import { Bot, GitBranch, Inbox, IterationCw, Plug, SlidersHorizontal, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   SettingsShell,
@@ -44,9 +44,9 @@ export default function AccountSettingsPage() {
       content: <AccountCyclesSection />,
     },
     {
-      value: "notifications",
-      label: t("notificationsTab"),
-      icon: Bell,
+      value: "inbox",
+      label: t("inboxTab"),
+      icon: Inbox,
       content: <AccountNotificationsSection />,
     },
     {

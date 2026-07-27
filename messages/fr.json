@@ -735,6 +735,7 @@
   },
   "Inbox": {
     "title": "Inbox",
+    "settings": "Paramètres de l'inbox",
     "markAllRead": "Tout marquer comme lu",
     "clearRead": "Supprimer les lues",
     "emptyMessage": "Vous êtes à jour.",
@@ -1211,7 +1212,7 @@
     "mcpSectionTitle": "Connecter un agent",
     "mcpSectionDesc": "Connectez un agent IA au serveur MCP de minddy. Aucune clé à coller : le navigateur s'ouvre pour autoriser l'agent à la première utilisation.",
     "cyclesTab": "Cycles",
-    "notificationsTab": "Notifications",
+    "inboxTab": "Inbox",
     "agentTab": "Agent Numo",
     "agentModelTitle": "Modèle par défaut de l'agent",
     "agentModelDesc": "Vous pouvez choisir un autre modèle à chaque lancement.",
