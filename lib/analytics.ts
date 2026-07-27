@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import type { PostHog } from "posthog-js";
 import {
   sanitizeAnalyticsEventName,
   sanitizeAnalyticsProps,
@@ -10,14 +10,39 @@ import {
 } from "./analytics-events";
 
 /**
+ * Le client PostHog, une fois chargé (MIN-94).
+ *
+ * `posthog-js` pèse 227 Ko non compressés : l'importer statiquement ici le
+ * mettait dans le bundle initial de TOUTES les pages publiques, via la chaîne
+ * `cookie-banner` → `use-analytics` → ce module. Il est désormais chargé par un
+ * `import()` dans `components/posthog-init.tsx`, qui dépose le client ici — ce
+ * fichier n'en garde qu'un type, effacé à la compilation.
+ *
+ * Tant que rien n'est déposé (pas de clé, hôte local, chunk pas encore
+ * téléchargé), la référence reste `null` et tous les appels sont inertes :
+ * exactement le contrat d'avant, où ils tapaient sur un singleton non
+ * initialisé.
+ */
+let client: PostHog | null = null;
+
+/** Appelé par `PostHogInit` juste avant `posthog.init()`. */
+export function setAnalyticsClient(instance: PostHog): void {
+  client = instance;
+}
+
+/** Le client chargé, ou `null` — à relire à chaque appel, jamais à mémoriser. */
+export function getAnalyticsClient(): PostHog | null {
+  return client;
+}
+
+/**
  * Émission d'un événement analytics HORS composant React (MIN-78).
  *
  * `useAnalytics()` couvre les composants ; beaucoup d'actions intéressantes
  * vivent en revanche dans la couche API (`lib/*-api.ts`) ou dans un store
- * zustand — du code sans hooks. `posthog-js` étant un singleton (c'est le même
- * client que celui passé au provider), on peut le viser directement, avec
- * exactement les mêmes garanties : catalogue typé, allowlist runtime,
- * sanitisation des props.
+ * zustand — du code sans hooks. Les deux visent le même client, avec exactement
+ * les mêmes garanties : catalogue typé, allowlist runtime, sanitisation des
+ * props.
  *
  * Sans effet si PostHog n'est pas initialisé (pas de clé, hôte local, refus
  * cookies) ou si l'appel vient du serveur — les routes serveur passent par
@@ -45,7 +70,7 @@ import {
 let analyticsReady = false;
 const readyWaiters = new Set<() => void>();
 
-/** Appelé par le provider une fois `posthog.init()` passé. */
+/** Appelé par `PostHogInit` une fois `posthog.init()` passé. */
 export function markAnalyticsReady(): void {
   if (analyticsReady) return;
   analyticsReady = true;
@@ -75,8 +100,9 @@ export function trackEvent<E extends AnalyticsEventName>(
 ): void {
   if (typeof window === "undefined") return;
   // `__loaded` évite d'empiler des événements dans un client jamais initialisé
-  // (l'init est différée : voir components/posthog-provider.tsx).
-  if (!posthog.__loaded) return;
+  // (l'init est différée : voir components/posthog-init.tsx).
+  const posthog = getAnalyticsClient();
+  if (!posthog?.__loaded) return;
   const safeEvent = sanitizeAnalyticsEventName(event);
   if (!safeEvent || !ALLOWED_ANALYTICS_EVENTS.has(safeEvent as AnalyticsEventName)) return;
   posthog.capture(

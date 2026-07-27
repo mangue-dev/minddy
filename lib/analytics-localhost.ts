@@ -1,7 +1,7 @@
 /**
  * Hôtes considérés comme « du développement » : PostHog n'est jamais initialisé
  * dessus, pour qu'un `next dev` (ou un test de domaine custom) ne pollue pas les
- * statistiques de production. Voir `components/posthog-provider.tsx`, qui laisse
+ * statistiques de production. Voir `components/posthog-init.tsx`, qui laisse
  * une porte de sortie (`NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`) pour vérifier le
  * câblage des événements en local avec une clé jetable.
  *

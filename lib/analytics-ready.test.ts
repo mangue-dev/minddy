@@ -59,7 +59,7 @@ describe("onAnalyticsReady", () => {
 
     onAnalyticsReady(cb);
     markAnalyticsReady();
-    markAnalyticsReady(); // second appel (remontage du provider)
+    markAnalyticsReady(); // second appel (remontage de PostHogInit)
 
     expect(cb).toHaveBeenCalledTimes(1);
   });

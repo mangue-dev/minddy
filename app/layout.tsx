@@ -7,7 +7,7 @@ import { ThemeProvider, Toaster } from "mangue-ui";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/cookie-banner";
-import { PostHogProvider } from "@/components/posthog-provider";
+import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
 import { SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import "./globals.css";
@@ -93,15 +93,17 @@ export default async function RootLayout({
       >
         <ThemeProvider defaultTheme={defaultTheme}>
           <NextIntlClientProvider messages={messages}>
-            {/* PostHog (MIN-78). Englobe TOUT — y compris les pages publiques
-                (landing, board de feedback, vues partagées) : c'est là que se
-                joue l'acquisition. L'init est différée et cookieless tant que le
+            {children}
+            <Toaster />
+            <CookieBanner />
+            {/* PostHog (MIN-78). Monté ici, donc actif PARTOUT — y compris sur
+                les pages publiques (landing, board de feedback, vues partagées),
+                c'est là que se joue l'acquisition. Ne rend rien et n'enveloppe
+                rien : il charge le client à l'idle et le dépose dans
+                `lib/analytics.ts`, ce qui garde `posthog-js` hors du bundle
+                initial (MIN-94). L'init est différée et cookieless tant que le
                 bandeau n'a pas été tranché — voir le composant. */}
-            <PostHogProvider>
-              {children}
-              <Toaster />
-              <CookieBanner />
-            </PostHogProvider>
+            <PostHogInit />
           </NextIntlClientProvider>
         </ThemeProvider>
         <Analytics />

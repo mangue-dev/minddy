@@ -5,10 +5,12 @@
  * une préférence d'appareil, pas une donnée de compte. Tant qu'aucun choix n'a
  * été fait, la valeur est `null` et AUCUN cookie analytique ne doit être posé.
  *
- * PostHog n'est pas encore branché : quand il le sera, son provider doit lire
+ * Ce contrat est honoré par `components/posthog-init.tsx` (MIN-78) : il lit
  * `readConsent()` à l'init (persistence "memory" tant que ce n'est pas
- * "accepted") et écouter CONSENT_CHANGED_EVENT pour réagir au clic du bandeau
- * sans rechargement.
+ * "accepted") et écoute CONSENT_CHANGED_EVENT pour réagir au clic du bandeau
+ * sans rechargement. L'écouteur est posé au montage, AVANT le chargement du
+ * client PostHog, et la relecture du consentement se fait après : un clic tombé
+ * pendant le téléchargement est donc rattrapé (MIN-94).
  */
 
 export const COOKIE_CONSENT_KEY = "cookie_consent";

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { usePostHog } from "posthog-js/react";
-import { onAnalyticsReady, trackEvent } from "./analytics";
+import { getAnalyticsClient, onAnalyticsReady, trackEvent } from "./analytics";
 import type { AnalyticsEventName, AnalyticsPropsFor } from "./analytics-events";
 
 /**
@@ -15,15 +14,17 @@ import type { AnalyticsEventName, AnalyticsPropsFor } from "./analytics-events";
  * aucun texte trop long ne parte.
  *
  * Toutes les méthodes sont sûres quand PostHog n'est pas initialisé (pas de
- * clé, hôte local, consentement refusé) : `usePostHog()` renvoie alors un client
- * inerte et les appels ne font rien.
+ * clé, hôte local, consentement refusé) : `getAnalyticsClient()` renvoie alors
+ * `null` et les appels ne font rien.
+ *
+ * Le client est LU au moment de l'appel, jamais capturé par un hook (MIN-94) :
+ * passer par `usePostHog()` obligeait à importer `posthog-js/react` ici, donc à
+ * embarquer les 227 Ko du client dans le bundle initial de chaque page publique
+ * — ce hook est monté jusque dans le bandeau cookies du root layout.
  */
 export function useAnalytics() {
-  const posthog = usePostHog();
-
   // Délègue à `trackEvent` : une seule implémentation (catalogue + allowlist +
-  // sanitisation) partagée avec le code hors React. Le client visé est le même
-  // singleton que celui fourni au provider.
+  // sanitisation) partagée avec le code hors React, sur le même client.
   const track = useCallback(
     <E extends AnalyticsEventName>(event: E, props?: AnalyticsPropsFor<E>) =>
       trackEvent(event, props),
@@ -39,15 +40,15 @@ export function useAnalytics() {
   /** Rattache les événements suivants à un compte (après connexion). */
   const identify = useCallback(
     (userId: string, traits?: Record<string, unknown>, traitsOnce?: Record<string, unknown>) => {
-      onAnalyticsReady(() => posthog?.identify(userId, traits, traitsOnce));
+      onAnalyticsReady(() => getAnalyticsClient()?.identify(userId, traits, traitsOnce));
     },
-    [posthog]
+    []
   );
 
   /** Déconnexion : repart d'une identité anonyme neuve. */
   const reset = useCallback(() => {
-    onAnalyticsReady(() => posthog?.reset());
-  }, [posthog]);
+    onAnalyticsReady(() => getAnalyticsClient()?.reset());
+  }, []);
 
   /**
    * Analytics de groupe — associe les événements suivants à un projet, pour
@@ -56,13 +57,13 @@ export function useAnalytics() {
    */
   const group = useCallback(
     (groupType: string, groupKey: string, props?: Record<string, unknown>) => {
-      onAnalyticsReady(() => posthog?.group(groupType, groupKey, props));
+      onAnalyticsReady(() => getAnalyticsClient()?.group(groupType, groupKey, props));
     },
-    [posthog]
+    []
   );
   const resetGroups = useCallback(() => {
-    onAnalyticsReady(() => posthog?.resetGroups());
-  }, [posthog]);
+    onAnalyticsReady(() => getAnalyticsClient()?.resetGroups());
+  }, []);
 
   /**
    * Projet courant attaché en PROPRIÉTÉ à tous les événements suivants.
@@ -79,11 +80,12 @@ export function useAnalytics() {
   const setProjectContext = useCallback(
     (projectId: string | null) => {
       onAnalyticsReady(() => {
+        const posthog = getAnalyticsClient();
         if (projectId) posthog?.register({ project_id: projectId });
         else posthog?.unregister("project_id");
       });
     },
-    [posthog]
+    []
   );
 
   /**
@@ -93,9 +95,9 @@ export function useAnalytics() {
    */
   const setPersonProperties = useCallback(
     (set?: Record<string, unknown>, setOnce?: Record<string, unknown>) => {
-      onAnalyticsReady(() => posthog?.setPersonProperties(set, setOnce));
+      onAnalyticsReady(() => getAnalyticsClient()?.setPersonProperties(set, setOnce));
     },
-    [posthog]
+    []
   );
 
   return useMemo(
