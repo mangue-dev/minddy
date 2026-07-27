@@ -152,6 +152,15 @@ if ! git push origin production; then
 fi
 
 git checkout "$CURRENT"
+
+# 6. IndexNow : prévenir Bing (et donc ChatGPT Search, qui lit son index) que
+# les pages publiques ont changé. Best-effort — le script n'échoue jamais, et
+# `|| true` couvre même le cas où node planterait : un recrawl différé ne
+# justifie pas de faire échouer un déploiement déjà poussé.
+echo ""
+echo "→ Pinging IndexNow..."
+node scripts/indexnow.mjs || true
+
 echo ""
 echo "✓ production updated with $CURRENT (now at $(git rev-parse --short production))"
 echo "  → Vercel is deploying production from the production branch."

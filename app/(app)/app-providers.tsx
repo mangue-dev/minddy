@@ -31,7 +31,7 @@ const ScratchpadModal = dynamic(
   { ssr: false }
 );
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AppQueryProvider>

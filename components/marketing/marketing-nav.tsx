@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Boxes,
   Equal,
@@ -18,9 +18,10 @@ import { Button, Sheet, SheetClose, SheetContent, SheetTitle, cn } from "mangue-
 import { MinddyLogo } from "@/components/minddy-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
-import { getSupabase } from "@/lib/supabase";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Barre de navigation du site public (MIN-73) — landing, tarifs, pages légales.
@@ -94,28 +95,53 @@ function NavLogo() {
  *
  * Le site public n'est pas enveloppé dans les providers de l'app : on a juste
  * besoin de savoir s'il existe une session pour remplacer le couple
- * connexion/inscription par un unique « ouvrir l'app ». Lecture côté client
- * plutôt que côté serveur pour que les pages restent cacheables ; on part de
- * `false` (le cas majoritaire) pour que le rendu serveur et le premier paint
- * coïncident, un visiteur déjà connecté voit la bascule après hydratation.
+ * connexion/inscription par un unique « ouvrir l'app ». Lecture côté CLIENT et
+ * non côté serveur pour que les pages publiques restent cacheables par le CDN —
+ * un `signedIn` calculé au rendu rendrait le HTML dépendant des cookies, ce qui
+ * annulerait le travail de mise en cache du même lot. On part de `false` (le
+ * cas majoritaire) pour que le rendu serveur et le premier paint coïncident.
+ *
+ * DEUX PARESSES (MIN-88), parce que `@supabase/supabase-js` pesait dans le
+ * bundle INITIAL de la landing pour un simple libellé de bouton :
+ *
+ * 1. Le module est importé dynamiquement — il devient un chunk séparé, chargé
+ *    après le premier rendu au lieu de le bloquer.
+ * 2. Il n'est même pas demandé si aucun cookie d'auth Supabase n'est présent.
+ *    Un visiteur anonyme — l'immense majorité sur une landing — ne télécharge
+ *    donc jamais une ligne du SDK.
  */
+function hasAuthCookie(): boolean {
+  // Supabase nomme ses cookies `sb-<ref>-auth-token[.n]`. On ne cherche qu'un
+  // indice, pas une preuve : le SDK reste seul juge de la validité.
+  return document.cookie.includes("-auth-token");
+}
+
 function useHasSession(): boolean {
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    const supabase = getSupabase();
+    if (!hasAuthCookie()) return;
+
     let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active) setHasSession(!!data.session);
+    let unsubscribe: (() => void) | undefined;
+
+    void import("@/lib/supabase").then(({ getSupabase }) => {
+      if (!active) return;
+      const supabase = getSupabase();
+      void supabase.auth.getSession().then(({ data }) => {
+        if (active) setHasSession(!!data.session);
+      });
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setHasSession(!!session);
+      });
+      unsubscribe = () => subscription.unsubscribe();
     });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setHasSession(!!session);
-    });
+
     return () => {
       active = false;
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
@@ -125,6 +151,10 @@ function useHasSession(): boolean {
 export function MarketingNav() {
   const { track } = useAnalytics();
   const t = useTranslations("Landing");
+  // Les liens sont écrits une fois en anglais canonique ; sur `/fr` ils doivent
+  // pointer vers les URLs françaises, sinon le premier clic ramène en anglais.
+  const locale = useLocale() as Locale;
+  const href = (path: string) => localizedHref(path, locale);
   const [mobileOpen, setMobileOpen] = useState(false);
   const hasSession = useHasSession();
 
@@ -158,7 +188,7 @@ export function MarketingNav() {
       >
         <div className="mx-auto grid h-14 w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-full border border-border bg-card/95 pr-3 pl-5 shadow-sm backdrop-blur-md">
           <Link
-            href="/"
+            href={href("/")}
             onClick={handleLogoClick}
             aria-label="minddy"
             className="justify-self-start rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -167,16 +197,16 @@ export function MarketingNav() {
           </Link>
 
           <nav className="hidden items-center gap-5 text-sm text-muted-foreground md:flex lg:gap-7">
-            <NavProductMenu entries={PRODUCT_ENTRIES} label={t("navProduct")} />
+            <NavProductMenu entries={PRODUCT_ENTRIES} label={t("navProduct")} locale={locale} />
             {LINKS.map((link) =>
               link.href.startsWith("/#") ? (
-                <a key={link.href} href={link.href} className="transition-colors hover:text-foreground">
+                <a key={link.href} href={href(link.href)} className="transition-colors hover:text-foreground">
                   {t(link.key)}
                 </a>
               ) : (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={href(link.href)}
                   className="transition-colors hover:text-foreground"
                 >
                   {t(link.key)}
@@ -226,7 +256,7 @@ export function MarketingNav() {
 
           <div className="flex h-16 shrink-0 items-center border-b border-border px-5">
             <Link
-              href="/"
+              href={href("/")}
               aria-label="minddy"
               onClick={(event) => {
                 setMobileOpen(false);
@@ -246,7 +276,7 @@ export function MarketingNav() {
             </p>
             {PRODUCT_ENTRIES.map((entry) => (
               <SheetClose key={entry.href} asChild>
-                <a href={entry.href} className={MOBILE_ROW}>
+                <a href={href(entry.href)} className={MOBILE_ROW}>
                   <span className={MOBILE_ICON}>
                     {entry.icon ? (
                       <entry.icon className="h-4 w-4" />
@@ -281,11 +311,11 @@ export function MarketingNav() {
               return (
                 <SheetClose key={link.href} asChild>
                   {link.href.startsWith("/#") ? (
-                    <a href={link.href} className={MOBILE_ROW}>
+                    <a href={href(link.href)} className={MOBILE_ROW}>
                       {content}
                     </a>
                   ) : (
-                    <Link href={link.href} className={MOBILE_ROW}>
+                    <Link href={href(link.href)} className={MOBILE_ROW}>
                       {content}
                     </Link>
                   )}

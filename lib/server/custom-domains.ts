@@ -9,6 +9,7 @@ import {
   type DomainTarget,
 } from "@/lib/custom-domain-lookup";
 import { customDomainAllowlist, isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
+import { SITE_URL } from "@/lib/site";
 import {
   addDomainToVercel,
   getVercelDomainState,
@@ -291,6 +292,26 @@ export function feedbackBasePath(token: string, target: DomainTarget | null): st
 
 export function shareBasePath(token: string, target: DomainTarget | null): string {
   return target?.kind === "share" && target.token === token ? "" : `/share/${token}`;
+}
+
+/**
+ * URL canonique absolue d'une page publique servie sous DEUX hosts (MIN-88).
+ *
+ * Un board de feedback répond à la fois sur `www.minddy.app/f/<token>` et sur
+ * le domaine du client — deux URLs, un seul contenu. Le `canonical` désigne
+ * celle qui fait foi : le domaine du client quand c'est lui qui sert la page
+ * (c'est son site, pas le nôtre), `www.minddy.app` sinon.
+ *
+ * `basePath` est ce que renvoie `feedbackBasePath` / `shareBasePath` : la
+ * chaîne vide signifie précisément « on est sur le domaine dédié ».
+ */
+export async function publicCanonicalUrl(basePath: string, subPath = ""): Promise<string> {
+  const path = `${basePath}${subPath}` || "/";
+  if (basePath === "") {
+    const host = await getRequestHost();
+    if (host) return `https://${host}${path}`;
+  }
+  return `${SITE_URL}${path}`;
 }
 
 /**

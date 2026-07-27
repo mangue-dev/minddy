@@ -1,17 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { FaqAccordion } from "./faq-accordion";
+import { FAQ_KEYS } from "./faq-keys";
 import { Reveal, RevealHeading } from "./reveal";
-
-/** Questions posées avant l'inscription (MIN-73) : ce que voit l'agent, où
-    vivent les données, comment marche la facturation à l'usage. */
-export const FAQ_KEYS = [
-  "agents",
-  "byok",
-  "usage",
-  "data",
-  "team",
-  "migrate",
-] as const;
 
 export async function SectionFaq() {
   const t = await getTranslations("Landing");

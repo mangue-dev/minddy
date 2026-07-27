@@ -597,7 +597,10 @@
     "back": "Back",
     "filters": "Filters",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "notFoundTitle": "This page does not exist",
+    "notFoundBody": "The link is wrong, or the page has moved. Everything else is still where you left it.",
+    "notFoundCta": "Back to home"
   },
   "DatePicker": {
     "placeholder": "Pick a date",
@@ -2058,6 +2061,8 @@
   },
   "Legal": {
     "title": "Legal notice",
+    "metaTitle": "Legal notice",
+    "metaDescription": "Publisher, host and contact details for minddy, the issue tracker built in France.",
     "lastUpdated": "Last updated: July 2026",
     "editorTitle": "Website publisher",
     "tradeName": "Trade name",
@@ -2082,6 +2087,8 @@
   },
   "Terms": {
     "title": "Terms of service",
+    "metaTitle": "Terms of service",
+    "metaDescription": "The rules for using minddy: account, plans, AI usage, your content, and termination.",
     "lastUpdated": "Last updated: July 2026",
     "serviceTitle": "1. Service description",
     "serviceP1": "minddy is an online issue tracking service provided by Clément Guérin, sole proprietor (SIRET: 10028571700011), 43 Quai Malakoff, 44000 Nantes, France (hereinafter \"minddy\").",
@@ -2141,6 +2148,8 @@
   },
   "Privacy": {
     "title": "Privacy policy",
+    "metaTitle": "Privacy policy",
+    "metaDescription": "What minddy collects, why, how long it is kept, and the rights you can exercise.",
     "lastUpdated": "Last updated: July 2026",
     "controllerTitle": "Data controller",
     "controllerText": "The controller of your personal data is <name>Clément Guérin</name>, sole proprietor (micro-enterprise), SIRET: 10028571700011, located at 43 Quai Malakoff, 44000 Nantes, France. For any data-related question: <email>hello@minddy.app</email>",
@@ -2222,6 +2231,8 @@
   },
   "Cookies": {
     "title": "Cookie policy",
+    "metaTitle": "Cookie policy",
+    "metaDescription": "The cookies minddy sets, what each one is for, and how to change your choice.",
     "lastUpdated": "Last updated: July 2026",
     "whatTitle": "What is a cookie?",
     "whatText": "A cookie is a small text file stored by your browser when you visit a website. It lets the site remember information about your visit, such as your preferences or your login session.",
@@ -2278,11 +2289,11 @@
     "description": "We measure product usage to improve it. No ads, no data resale.",
     "accept": "Accept",
     "decline": "Decline",
-    "learnMore": "Learn more"
+    "learnMore": "Cookie policy"
   },
   "Landing": {
     "metaTitle": "minddy, the issue tracker that stays simple",
-    "metaDescription": "Issues, objectives, cycles, user feedback and coding agents in one minimal tracker. Nothing to configure.",
+    "metaDescription": "Issues, objectives, cycles, user feedback and coding agents in one minimal tracker. A simple alternative to Linear or Jira, nothing to configure.",
     "navHowItWorks": "How it works",
     "navPricing": "Pricing",
     "navProduct": "Product",
@@ -2319,7 +2330,7 @@
     "workflow_run_body": "It explores the repo, writes its plan, then codes and runs your checks in an isolated machine.",
     "workflow_review_title": "You review",
     "workflow_review_body": "The pull request attaches to the issue: diff, comments, merge. Without leaving minddy.",
-    "agentsTitle": "Your agents keep the tracker up to date, not you",
+    "agentsTitle": "Your agents keep your issues up to date, not you",
     "agentsSubtitle": "minddy exposes an MCP server: your agents read and update the issues themselves.",
     "agentsCapability_read": "Read an issue with its full context.",
     "agentsCapability_plan": "Write its plan onto the issue, then tick it off.",
@@ -2443,10 +2454,20 @@
     "footerTerms": "Terms",
     "footerPrivacy": "Privacy",
     "footerCookies": "Cookies",
-    "footerMadeBy": "Made with ❤️ by <author>mangué</author>"
+    "footerMadeBy": "Made with ❤️ by <author>mangué</author>",
+    "shotAlt_heroBoard": "A minddy project board: issues grouped by status, with priorities, assignees and an agent badge.",
+    "shotAlt_workflowIssue": "The new issue dialog, with a title, a short description and three properties set.",
+    "shotAlt_workflowAgent": "An agent run in progress, showing its tool calls and the issue it is working on.",
+    "shotAlt_workflowPr": "The pull requests page, with the agent's changes shown file by file.",
+    "shotAlt_numoPanel": "The Numo panel open over a board, showing the issues it found and the ones it changed.",
+    "shotAlt_scratchpad": "The notes window, with sections of finished and pending tasks.",
+    "shotAlt_feedbackBoard": "A public feedback board sorted by votes, with status badges and categories.",
+    "shotAlt_feedbackInbox": "A user request seen from the team side, with its votes and the promote action.",
+    "shotAlt_featureCycle": "The current cycle, with issues from several projects in a single list.",
+    "shotAlt_featurePalette": "The command palette open on a search returning issues and actions."
   },
   "Pricing": {
-    "metaTitle": "Pricing",
+    "metaTitle": "Pricing and plans",
     "metaDescription": "Free to start, then a monthly or yearly subscription. Unlimited projects and issues, the Numo agent and more AI usage from the first paid plan.",
     "heroTitle": "Three plans, that's all",
     "heroSubtitle": "Free to start. A subscription when you want the tracker without limits and the Numo agent, one step up to work with other people.",

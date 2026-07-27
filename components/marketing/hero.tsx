@@ -1,10 +1,12 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, Plug } from "lucide-react";
 import { Button } from "mangue-ui";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { TrackedCta } from "./tracked-cta";
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Hero de la landing (MIN-73). Promesse en une phrase, deux actions, la capture
@@ -64,7 +66,8 @@ function wordCount(text: string) {
 }
 
 export async function Hero() {
-  const t = await getTranslations("Landing");
+  const [t, locale] = await Promise.all([getTranslations("Landing"), getLocale()]);
+  const href = (path: string) => localizedHref(path, locale as Locale);
 
   const titleBefore = t("heroTitleBefore");
   const titleAccent = t("heroTitleAccent");
@@ -78,7 +81,7 @@ export async function Hero() {
       <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-3xl pt-10 text-center sm:pt-16">
           <Link
-            href="/#agents"
+            href={href("/#agents")}
             style={{ "--hero-d": 0.1 } as CSSProperties}
             className="hero-reveal mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground"
           >
@@ -128,7 +131,7 @@ export async function Hero() {
                 dans la page. L'y laisser gonflerait « hero » avec des gens qui
                 voulaient seulement lire la suite. */}
             <Button asChild size="lg" variant="outline">
-              <a href="/#workflow">{t("heroCtaSecondary")}</a>
+              <a href={href("/#workflow")}>{t("heroCtaSecondary")}</a>
             </Button>
           </div>
 
@@ -140,10 +143,14 @@ export async function Hero() {
           </p>
         </div>
 
-        <div
-          style={{ "--hero-d": afterTitle + 0.3 } as CSSProperties}
-          className="hero-reveal hero-reveal-media mt-14 sm:mt-20"
-        >
+        {/* SANS DÉLAI, contrairement au reste de la cascade (MIN-88). La
+            capture est l'élément LCP : tout ce qui retarde son PREMIER PAINT
+            est compté dans la métrique, animation d'entrée comprise. Mesuré,
+            sa place en fin de cascade (≈ 0,95 s d'attente) pesait à elle seule
+            ~1,2 s de « render delay » sur le LCP. Elle garde son fondu — même
+            durée, même courbe, même plancher d'opacité que le titre — mais
+            elle le joue en même temps que lui au lieu d'attendre son tour. */}
+        <div className="hero-reveal hero-reveal-media mt-14 sm:mt-20">
           <ScreenshotSlot id="heroBoard" priority />
         </div>
       </div>

@@ -1,10 +1,8 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import { useLocale } from "next-intl";
+import { getImageProps } from "next/image";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ImageIcon } from "lucide-react";
-import { cn, useTheme } from "mangue-ui";
+import { cn } from "mangue-ui";
+import { ScreenshotPicture } from "./screenshot-picture";
 import {
   SCREENSHOT_SLOTS,
   screenshotSrc,
@@ -12,12 +10,12 @@ import {
 } from "./screenshot-slots";
 
 /**
- * Emplacement de capture (MIN-73).
+ * Emplacement de capture (MIN-73, refondu par MIN-88).
  *
  * Réserve la place exacte de l'image via `aspect-ratio` — la mise en page ne
  * bougera pas quand les vraies captures arriveront. Tant que l'entrée du
- * catalogue n'a pas de `src`, on rend la consigne de capture à l'écran : la
- * landing reste lisible et la commande de capture reste sous les yeux.
+ * catalogue n'a pas de capture publiée, on rend la consigne de capture à
+ * l'écran : la landing reste lisible et la commande reste sous les yeux.
  *
  * PAS D'ANGLES ARRONDIS SUR L'IMAGE. Le cadre les portait (`rounded-xl` sur le
  * conteneur qui rogne), et une capture d'application a du contenu jusque dans
@@ -26,20 +24,37 @@ import {
  * capture à l'autre selon ce qui traînait dans l'angle. Une capture se montre
  * entière ou pas du tout ; c'est le filet qui délimite l'image, pas une découpe.
  *
- * ENTRÉE À LA CHARGE, pas seulement au scroll. Les blocs de la landing entrent
- * via `<Reveal>` quand ils croisent le viewport — mais une capture est en
- * `loading="lazy"` : elle COMMENCE à se télécharger à peu près à ce
- * moment-là. L'apparition du conteneur jouait donc sur un cadre vide, et
- * l'image tombait dedans d'un coup, sans transition, une fois l'animation
- * finie. Le fondu ci-dessous est porté par l'image elle-même et part de son
- * `load` : c'est le seul instant qui corresponde à « l'image apparaît ». Même
- * courbe que le texte, pour que ça se lise comme la même page.
+ * ## Pourquoi un `<picture>` et plus `useTheme()` (MIN-88)
  *
- * La capture du hero en est exemptée (`priority`) : c'est le candidat LCP, et
- * la démarrer à opacité nulle repousserait la métrique d'autant. Elle garde la
- * cascade CSS du hero, qui part d'un plancher d'opacité non nul.
+ * Le composant était client et calculait son `src` depuis `resolvedTheme`. Or
+ * `resolvedTheme` vaut `"light"` au PREMIER rendu (le ThemeProvider de mangue-ui
+ * ne lit `localStorage` qu'en `useEffect`). Trois conséquences, toutes mesurées
+ * sur la prod : le HTML servi annonçait toujours la variante claire, l'en-tête
+ * `Link` préchargeait donc 222 Ko de capture claire, et un visiteur en thème
+ * sombre les téléchargeait pour rien avant de charger la sombre — en
+ * remplaçant au passage l'élément LCP après hydratation.
+ *
+ * Deux `<source media="(prefers-color-scheme: …)">` règlent les trois d'un coup,
+ * sans JavaScript ni cookie : le navigateur choisit UNE variante avant même que
+ * React ne s'exécute. Un cookie de thème aurait marché aussi, mais il aurait été
+ * faux à la première visite (personne n'a encore de cookie) et il aurait rendu
+ * le HTML dépendant des cookies — donc non cacheable par le CDN, ce qui
+ * annulait l'autre moitié du travail sur le LCP.
+ *
+ * Reste le cas d'un visiteur qui a choisi explicitement un thème différent de
+ * celui de son système : il verra la variante système. C'est un compromis
+ * assumé — le site public n'a pas de sélecteur de thème, ce choix ne peut venir
+ * que de l'app, et il ne coûte qu'une capture au mauvais fond.
+ *
+ * ## Et le `srcset`
+ *
+ * Les captures font 2208 px de large. Elles étaient servies en `unoptimized`,
+ * donc sans `srcset` : un téléphone de 390 px téléchargeait les 2208 px et les
+ * 222 Ko. `getImageProps` (le motif documenté par Next pour l'art direction)
+ * rend les mêmes variantes de largeur qu'un `<Image>` normal, dans un
+ * `<picture>` qui sait en plus choisir le thème.
  */
-export function ScreenshotSlot({
+export async function ScreenshotSlot({
   id,
   className,
   priority = false,
@@ -50,27 +65,16 @@ export function ScreenshotSlot({
   priority?: boolean;
 }) {
   const slot = SCREENSHOT_SLOTS[id];
-  const locale = useLocale();
-  const { resolvedTheme } = useTheme();
-  const src = screenshotSrc(slot, {
-    theme: resolvedTheme === "dark" ? "dark" : "light",
-    lang: locale,
-  });
+  const [locale, t] = await Promise.all([getLocale(), getTranslations("Landing")]);
 
-  const [mounted, setMounted] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const img = useRef<HTMLImageElement | null>(null);
-  // `mounted` : même garde que `<Reveal>`. Le rendu serveur ne masque RIEN, donc
-  // la landing reste lisible si le script ne part pas — on ne peut pas cacher
-  // une image derrière une animation qui a besoin de JavaScript pour finir.
-  // `complete` : une image déjà en cache peut être chargée AVANT que React
-  // n'ait branché son `onLoad`. Les deux états sont posés dans le même effet,
-  // donc dans le même rendu : une image déjà là n'a jamais l'occasion de
-  // disparaître pour réapparaître.
-  useEffect(() => {
-    setMounted(true);
-    if (img.current?.complete) setLoaded(true);
-  }, [src]);
+  const light = screenshotSrc(slot, { theme: "light", lang: locale });
+  const dark = screenshotSrc(slot, { theme: "dark", lang: locale });
+  // Une variante manquante ne se rabat PAS sur l'autre pour le `src` de base
+  // (voir `screenshotSrc`) — mais entre deux fonds et rien du tout, montrer la
+  // seule variante publiée vaut mieux qu'un cadre vide.
+  const fallback = light ?? dark;
+
+  const sizes = "(min-width: 1024px) 960px, 100vw";
 
   return (
     <div
@@ -80,24 +84,13 @@ export function ScreenshotSlot({
       )}
       style={{ aspectRatio: slot.ratio }}
     >
-      {src ? (
-        <Image
-          ref={img}
-          src={src}
-          alt={slot.shot}
-          fill
-          unoptimized
+      {fallback ? (
+        <Picture
+          alt={t(slot.altKey)}
+          light={light ?? fallback}
+          dark={dark ?? fallback}
+          sizes={sizes}
           priority={priority}
-          loading={priority ? undefined : "lazy"}
-          sizes="(min-width: 1024px) 960px, 100vw"
-          onLoad={() => setLoaded(true)}
-          className={cn(
-            "object-cover object-top",
-            !priority && [
-              "transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-              mounted && !loaded && "scale-[1.03] opacity-0 blur-md",
-            ],
-          )}
         />
       ) : (
         <div className="absolute inset-0 flex flex-col justify-between gap-4 bg-muted/40 p-5 [background-image:repeating-linear-gradient(135deg,transparent,transparent_10px,var(--color-border)_10px,var(--color-border)_11px)] [background-size:auto] opacity-90">
@@ -116,3 +109,63 @@ export function ScreenshotSlot({
     </div>
   );
 }
+
+function Picture({
+  alt,
+  light,
+  dark,
+  sizes,
+  priority,
+}: {
+  alt: string;
+  light: string;
+  dark: string;
+  sizes: string;
+  priority: boolean;
+}) {
+  const common = {
+    alt,
+    fill: true,
+    sizes,
+    priority,
+    loading: priority ? undefined : ("lazy" as const),
+    // `<Image priority>` pose `fetchpriority="high"` lui-même ; `getImageProps`
+    // ne le fait pas. Sans lui, la capture du hero — l'élément LCP, mesuré —
+    // partait à la priorité par défaut d'une image, c'est-à-dire derrière les
+    // scripts et les feuilles de style (MIN-88).
+    fetchPriority: priority ? ("high" as const) : undefined,
+  };
+
+  const {
+    props: { srcSet: darkSrcSet },
+  } = getImageProps({ ...common, src: dark });
+  const {
+    props: { srcSet: lightSrcSet, ...imgProps },
+  } = getImageProps({ ...common, src: light });
+
+  return (
+    <ScreenshotPicture
+      darkSrcSet={darkSrcSet}
+      lightSrcSet={lightSrcSet}
+      imgProps={imgProps}
+      priority={priority}
+    />
+  );
+}
+
+/*
+ * PAS DE `<link rel="preload">` MANUEL, et c'est délibéré (MIN-88).
+ *
+ * `getImageProps` ne génère pas le préchargement que `<Image priority>` pose,
+ * alors on l'a d'abord écrit à la main, en deux variantes filtrées par `media`.
+ * Mesuré sur le HTML servi, il atterrissait à l'octet 32 000 — bien APRÈS le
+ * `</head>` (octet 5 400) : React ne peut remonter dans l'en-tête que ce qu'il
+ * découvre avant de vider le shell, et le hero arrive longtemps après. Le
+ * scanner de préchargement du navigateur lit de toute façon en avance : il
+ * trouve le `<picture>` aux mêmes octets, au même instant. Deux balises pour
+ * rien, dans une page dont chaque kilo-octet retarde justement l'image.
+ *
+ * `ReactDOM.preload()`, lui, remonte bien dans l'en-tête — mais il n'accepte
+ * pas `media`, donc il faudrait précharger les DEUX thèmes et retélécharger ce
+ * que le `<picture>` sert précisément à éviter.
+ */

@@ -39,7 +39,15 @@ const PLAN_DESC_KEYS: Record<BillingPlanId, "planDescFree" | "planDescGo" | "pla
   pro: "planDescPro",
 };
 
-export function PricingPlans() {
+/**
+ * `headingLevel` : les cartes de plan sont des sous-sections de ce qui les
+ * précède, et ce qui les précède change de page. Sur la landing elles suivent
+ * le `<h2>` « Tarifs simples » — donc `h3`. Sur `/pricing` elles suivent
+ * directement le `<h1>` de la page : un `h3` y sautait le niveau `h2`, ce que
+ * l'audit `heading-order` relève à juste titre (MIN-88).
+ */
+export function PricingPlans({ headingLevel = 3 }: { headingLevel?: 2 | 3 } = {}) {
+  const PlanHeading = (headingLevel === 2 ? "h2" : "h3") as "h2" | "h3";
   const { track } = useAnalytics();
   // Marche intermédiaire de l'entonnoir : beaucoup de visiteurs passent par les
   // tarifs avant de s'inscrire, et c'est là que se perdent ceux que le prix
@@ -116,9 +124,9 @@ export function PricingPlans() {
               )}
 
               <div className="mb-5">
-                <h3 className="text-xl font-semibold tracking-tight">
+                <PlanHeading className="text-xl font-semibold tracking-tight">
                   {t(PLAN_LABEL_KEYS[plan.id])}
-                </h3>
+                </PlanHeading>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                   {t(PLAN_DESC_KEYS[plan.id])}
                 </p>

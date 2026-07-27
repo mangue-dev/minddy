@@ -26,7 +26,20 @@ export function FaqAccordion({
           <AccordionTrigger className="gap-6 py-6 text-left text-base font-medium">
             {item.question}
           </AccordionTrigger>
-          <AccordionContent animated className="pb-6 leading-relaxed text-muted-foreground">
+          {/* `forceMount` : les réponses sont dans le HTML même repliées
+              (Radix pose alors `hidden` au lieu de ne rien rendre). Sans lui,
+              elles n'existaient QUE dans la charge utile RSC sérialisée,
+              c'est-à-dire à l'intérieur d'une balise `<script>` : un crawler
+              qui extrait le texte de la page n'en voyait aucune — ni Google,
+              ni GPTBot, ClaudeBot ou PerplexityBot, qui n'exécutent pas de
+              JavaScript. Douze réponses invisibles, landing et tarifs compris.
+              Contrepartie assumée : la fermeture n'est plus animée, `hidden`
+              étant appliqué avant que l'animation ait le temps de jouer. */}
+          <AccordionContent
+            forceMount
+            animated
+            className="pb-6 leading-relaxed text-muted-foreground"
+          >
             {item.answer}
           </AccordionContent>
         </AccordionItem>

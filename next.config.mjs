@@ -6,6 +6,46 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
+/**
+ * Redirections de slugs français (MIN-88). Sous `/fr`, seuls les slugs traduits
+ * existent : `/fr/pricing` n'est pas une deuxième URL valide pour la page
+ * tarifs, c'est une erreur — et deux URLs pour une page, c'est exactement ce que
+ * `canonical` et `hreflang` passent leur temps à démêler.
+ *
+ * **Tenu en phase avec `lib/public-routes.ts` par `lib/public-routes.test.ts`** :
+ * un fichier `.mjs` ne peut pas importer la table TypeScript, donc la liste est
+ * recopiée ici et le test échoue si les deux divergent.
+ */
+export const FRENCH_SLUG_REDIRECTS = [
+  { source: "/fr/pricing", destination: "/fr/tarifs" },
+  { source: "/fr/legal", destination: "/fr/mentions-legales" },
+  { source: "/fr/terms", destination: "/fr/cgu" },
+  { source: "/fr/privacy", destination: "/fr/confidentialite" },
+];
+
+/**
+ * Les douze URLs publiques — même recopie, même test de non-divergence. Elles
+ * servent ici à poser l'en-tête de cache CDN (voir `headers()`).
+ */
+export const PUBLIC_ROUTE_PATHS = [
+  "/",
+  "/pricing",
+  "/legal",
+  "/terms",
+  "/privacy",
+  "/cookies",
+  "/fr",
+  "/fr/tarifs",
+  "/fr/mentions-legales",
+  "/fr/cgu",
+  "/fr/confidentialite",
+  "/fr/cookies",
+];
+
+/** Sur Vercel, hors production (preview, deploys de branche). Pas en local. */
+const isVercelNonProduction =
+  !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Pin the workspace root to this app so Turbopack doesn't walk up into the
@@ -23,18 +63,70 @@ const nextConfig = {
   // sur 127.0.0.1 — sans quoi `next dev` bloque les requêtes cross-origin
   // (server actions, assets) venant d'un host non-localhost.
   allowedDevOrigins: ["board.minddy.test", "view.minddy.test"],
-  // The "Mes tickets" tabs merged into the tickets board as a system view —
-  // old routes land there with it pre-selected (?view=my; extra query params
-  // like ?issue= are preserved). Temporary (307): don't let browsers cache it.
   async redirects() {
     return [
+      // The "Mes tickets" tabs merged into the tickets board as a system view —
+      // old routes land there with it pre-selected (?view=my; extra query params
+      // like ?issue= are preserved). Temporary (307): don't let browsers cache it.
       { source: "/my", destination: "/all?view=my", permanent: false },
       {
         source: "/projects/:id/my",
         destination: "/projects/:id?view=my",
         permanent: false,
       },
+      // `/signup` est une URL publique (le hero, la nav et le pied de page y
+      // envoient) mais pas une page : c'est `/login` avec un onglet
+      // pré-sélectionné. C'était une redirection D'EXÉCUTION dans
+      // `app/(auth)/signup/page.tsx`, donc un rendu complet suivi d'un 307 —
+      // une « page avec redirection » de plus dans Search Console. En 308, elle
+      // est traitée au routage et transmet son autorité à la cible (MIN-88).
+      { source: "/signup", destination: "/login?mode=signup", permanent: true },
+      ...FRENCH_SLUG_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
     ];
+  },
+  async headers() {
+    const headers = [];
+
+    // Les six pages publiques, dans leurs deux langues. Recopiées de
+    // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
+    // `lib/public-routes.test.ts` vérifie qu'elles ne divergent pas.
+    //
+    // Elles répondaient `cache-control: private, no-cache, no-store` avec
+    // `x-vercel-cache: MISS` à CHAQUE appel, parce que la landing appelait
+    // `auth.getUser()` au rendu. Ce rebond est passé dans le proxy (qui
+    // s'exécute avant le cache), plus rien dans ces pages ne dépend d'un
+    // cookie : le CDN peut enfin les servir.
+    //
+    // Pas de `Vary: Cookie` : sur le CDN de Vercel il ferait tomber le taux de
+    // hit à zéro (chaque combinaison de cookies devient une entrée), c'est-à-dire
+    // exactement l'inverse de ce qu'on cherche. La langue est portée par l'URL
+    // et non par un cookie depuis les URLs localisées, et la session est
+    // traitée par le middleware — il ne reste rien à faire varier.
+    headers.push(
+      ...PUBLIC_ROUTE_PATHS.map((source) => ({
+        source,
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+          },
+        ],
+      })),
+    );
+
+    // Preview et deploys de branche : un site complet, en double, qui répondait
+    // jusqu'ici `Allow: /` sur `preview.minddy.app/robots.txt` (MIN-88). Le
+    // robots.txt ne protège que la DÉCOUVERTE : une URL déjà connue d'un
+    // crawler est visitée quand même, et seule cette en-tête l'empêche
+    // d'atterrir dans l'index — où elle concurrencerait la vraie.
+    if (isVercelNonProduction) {
+      headers.push({
+        source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      });
+    }
+
+    return headers;
   },
 };
 

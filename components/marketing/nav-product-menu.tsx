@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Le menu « Produit » de la nav publique.
@@ -48,10 +50,13 @@ const CLOSE_DELAY_MS = 140;
 export function NavProductMenu({
   entries,
   label,
+  locale,
   className,
 }: {
   entries: ReadonlyArray<ProductEntry>;
   label: string;
+  /** Langue servie : les ancres pointent sur `/fr` quand la page est en français. */
+  locale: Locale;
   className?: string;
 }) {
   const t = useTranslations("Landing");
@@ -159,7 +164,7 @@ export function NavProductMenu({
               return (
                 <li key={entry.key}>
                   <a
-                    href={entry.href}
+                    href={localizedHref(entry.href, locale)}
                     onClick={() => setOpen(false)}
                     tabIndex={open ? undefined : -1}
                     className="group flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:bg-muted/70 focus-visible:outline-none"

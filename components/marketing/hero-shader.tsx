@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GrainGradient } from "@paper-design/shaders-react";
+import dynamic from "next/dynamic";
 import { cn, useTheme } from "mangue-ui";
 import { useShaderPalette } from "@/lib/use-shader-palette";
 
@@ -39,6 +39,18 @@ import { useShaderPalette } from "@/lib/use-shader-palette";
  * il faudrait le recréer à chaque retour en haut de page, ce qui coûte plus
  * cher que de laisser un canvas figé sur sa dernière image.
  */
+/**
+ * `@paper-design/shaders-react` est une librairie WebGL : chargée statiquement,
+ * elle entrait dans le bundle INITIAL de la landing — celui qui doit arriver
+ * avant que la page soit interactive — pour un fond décoratif qui n'est même
+ * pas monté sous 640 px. `ssr: false` parce que le shader ne rend rien
+ * d'utile côté serveur : c'est un canvas (MIN-88).
+ */
+const GrainGradient = dynamic(
+  () => import("@paper-design/shaders-react").then((m) => m.GrainGradient),
+  { ssr: false },
+);
+
 /** Dégradé de masquage : le shader ne s'arrête jamais net, il se fond dans la
     page. Le hero se dissout vers le bas ; le CTA, pris entre deux sections, se
     dissout des deux côtés. */

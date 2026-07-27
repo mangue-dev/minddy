@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo";
+import type { Locale } from "@/i18n/config";
 import {
   ExternalLink,
   Intro,
@@ -12,8 +14,7 @@ import {
 } from "@/components/legal/prose";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Privacy");
-  return { title: t("title") };
+  return publicPageMetadata({ routeKey: "privacy", locale: (await getLocale()) as Locale });
 }
 
 export default async function PrivacyPage() {

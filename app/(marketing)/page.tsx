@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { getLocale } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo";
+import type { Locale } from "@/i18n/config";
 import { HeroShader } from "@/components/marketing/hero-shader";
 import { Hero } from "@/components/marketing/hero";
 import { SectionTracker } from "@/components/marketing/section-tracker";
@@ -16,30 +16,19 @@ import { StructuredData } from "@/components/marketing/structured-data";
 import { LandingViewed } from "@/components/marketing/landing-viewed";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Landing");
-  return {
-    // `absolute` : le titre porte déjà la marque, le template « %s · minddy »
-    // du layout racine la répéterait.
-    title: { absolute: t("metaTitle") },
-    description: t("metaDescription"),
-    alternates: { canonical: "/" },
-    openGraph: {
-      title: t("metaTitle"),
-      description: t("metaDescription"),
-      url: "/",
-      type: "website",
-    },
-  };
+  return publicPageMetadata({ routeKey: "home", locale: (await getLocale()) as Locale });
 }
 
+/**
+ * Le rebond « déjà connecté → /home » a déménagé dans `proxy.ts` (MIN-88).
+ * Ici, il coûtait un `auth.getUser()` : un aller-retour RÉSEAU vers GoTrue
+ * avant le premier octet de la landing, et une page que le CDN ne pouvait pas
+ * mettre en cache (mesuré en prod : `cache-control: private, no-store`,
+ * `x-vercel-cache: MISS` à chaque appel). Le middleware fait la même chose en
+ * vérifiant la signature du JWT localement, et il s'exécute AVANT le cache :
+ * les connectés sont redirigés, les autres reçoivent la page mise en cache.
+ */
 export default async function LandingPage() {
-  // Un visiteur déjà connecté qui tape minddy.app veut son app, pas l'argumentaire.
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) redirect("/home");
-
   return (
     <>
       <StructuredData />

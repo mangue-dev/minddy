@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
 import { useAnalytics } from "@/lib/use-analytics";
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Bandeau de consentement aux cookies analytiques. Ne s'affiche que tant
@@ -15,6 +17,7 @@ import { useAnalytics } from "@/lib/use-analytics";
  */
 export function CookieBanner() {
   const t = useTranslations("CookieBanner");
+  const locale = useLocale() as Locale;
   const { track } = useAnalytics();
   const [visible, setVisible] = useState(false);
 
@@ -46,7 +49,7 @@ export function CookieBanner() {
         <p className="text-xs text-muted-foreground">
           {t("description")}{" "}
           <Link
-            href="/cookies"
+            href={localizedHref("/cookies", locale)}
             className="underline underline-offset-4 hover:text-foreground"
           >
             {t("learnMore")}

@@ -5,7 +5,11 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ProjectOrb } from "@/components/project-orb";
 import { PublicPageShell } from "@/components/public-page-shell";
-import { feedbackBasePath, getRequestDomainTarget } from "@/lib/server/custom-domains";
+import {
+  feedbackBasePath,
+  getRequestDomainTarget,
+  publicCanonicalUrl,
+} from "@/lib/server/custom-domains";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -24,9 +28,20 @@ const getBoardContext = cache(getBoardByToken);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
-  const ctx = await getBoardContext(token);
+  const [ctx, domainTarget] = await Promise.all([
+    getBoardContext(token),
+    getRequestDomainTarget(),
+  ]);
   return {
     ...(ctx?.board.enabled ? { title: `${ctx.project.name} · Feedback` } : {}),
+    // Le même board répond sur www.minddy.app/f/<token> ET sur le domaine du
+    // client : le canonical dit laquelle des deux URLs fait foi (MIN-88).
+    alternates: {
+      canonical: await publicCanonicalUrl(
+        feedbackBasePath(token, domainTarget),
+        "/me",
+      ),
+    },
     robots: { index: false, follow: false },
   };
 }

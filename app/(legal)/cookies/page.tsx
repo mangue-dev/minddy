@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo";
+import type { Locale } from "@/i18n/config";
 import {
   CookieTable,
   Intro,
@@ -11,8 +13,7 @@ import {
 } from "@/components/legal/prose";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Cookies");
-  return { title: t("title") };
+  return publicPageMetadata({ routeKey: "cookies", locale: (await getLocale()) as Locale });
 }
 
 export default async function CookiesPage() {

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Select,
@@ -14,6 +14,7 @@ import {
 } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { setLocaleCookie } from "@/lib/set-locale";
+import { localizedHref, switchLocaleHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 
@@ -71,15 +72,24 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
 
 export function MarketingFooter() {
   const t = useTranslations("Landing");
+  const tLang = useTranslations("Language");
   const locale = useLocale() as Locale;
   const [selected, setSelected] = useState<Locale>(locale);
   const [, startTransition] = useTransition();
   const router = useRouter();
+  const pathname = usePathname();
 
+  // Changer de langue CHANGE D'URL sur le site public (MIN-88) : `/pricing`
+  // devient `/fr/tarifs`. Le cookie seul ne suffisait pas — il rafraîchissait la
+  // page en français en laissant l'URL annoncer l'anglais, ce que le canonical
+  // et le hreflang contredisaient aussitôt. Sur l'app interne (aucune URL
+  // localisée), `switchLocaleHref` renvoie `null` et on se contente du cookie.
   const handleLocaleChange = async (value: string) => {
-    setSelected(value as Locale);
-    await setLocaleCookie(value as Locale);
-    startTransition(() => router.refresh());
+    const next = value as Locale;
+    setSelected(next);
+    await setLocaleCookie(next);
+    const target = switchLocaleHref(pathname, next);
+    startTransition(() => (target ? router.push(target) : router.refresh()));
   };
 
   return (
@@ -87,7 +97,11 @@ export function MarketingFooter() {
       <div className="mx-auto w-full max-w-6xl px-6 pt-16 pb-8 sm:px-8">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.5fr_repeat(3,1fr)] md:gap-x-8">
           <div className="col-span-2 flex flex-col gap-5 md:col-span-1">
-            <Link href="/" aria-label="minddy" className="flex w-fit items-center gap-2">
+            <Link
+              href={localizedHref("/", locale)}
+              aria-label="minddy"
+              className="flex w-fit items-center gap-2"
+            >
               <MinddyLogo
                 className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])}
               />
@@ -97,7 +111,14 @@ export function MarketingFooter() {
               {t("footerTagline")}
             </p>
             <Select value={selected} onValueChange={handleLocaleChange}>
-              <SelectTrigger className="h-8 w-auto self-start bg-transparent text-xs">
+              {/* `aria-label` : le déclencheur d'un Select ne rend que la valeur
+                  choisie (« Français »), donc un lecteur d'écran annonçait une
+                  liste déroulante sans savoir ce qu'elle règle — et l'audit
+                  `button-name` échouait sur toutes les pages publiques. */}
+              <SelectTrigger
+                aria-label={tLang("title")}
+                className="h-8 w-auto self-start bg-transparent text-xs"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -107,16 +128,29 @@ export function MarketingFooter() {
             </Select>
           </div>
 
+          {/* Colonnes en `<nav aria-labelledby>` et non en `<h2>` : trois titres
+              de section de plus dans le plan de CHAQUE page, entre « Questions
+              fréquentes » et rien du tout, alors que « Produit » ou « Légal »
+              ne sont pas des sections de la page — ce sont les étiquettes de
+              trois listes de liens. Le rôle `navigation` les nomme sans les
+              faire entrer dans la hiérarchie des titres. */}
           {COLUMNS.map((column) => (
-            <div key={column.titleKey} className="flex flex-col gap-3">
-              <h2 className="text-xs font-medium tracking-wide text-foreground/90">
+            <nav
+              key={column.titleKey}
+              aria-labelledby={`footer-col-${column.titleKey}`}
+              className="flex flex-col gap-3"
+            >
+              <p
+                id={`footer-col-${column.titleKey}`}
+                className="text-xs font-medium tracking-wide text-foreground/90"
+              >
                 {t(column.titleKey)}
-              </h2>
+              </p>
               <ul className="flex flex-col gap-2.5">
                 {column.links.map((link) => (
                   <li key={link.href}>
                     <Link
-                      href={link.href}
+                      href={localizedHref(link.href, locale)}
                       className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {t(link.labelKey)}
@@ -124,7 +158,7 @@ export function MarketingFooter() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 

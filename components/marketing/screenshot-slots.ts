@@ -37,6 +37,15 @@ export interface ScreenshotSlot {
   route: string;
   /** État attendu à l'écran : ce qui doit être visible, et avec quelles données. */
   shot: string;
+  /**
+   * Clé i18n du texte alternatif de l'image (namespace `Landing`).
+   *
+   * C'est `shot` qui servait d'`alt` : trois cents caractères de consigne de
+   * PRODUCTION (« Sidebar visible, pas de modale ouverte »), en français quelle
+   * que soit la langue de la page. Un `alt` décrit ce qu'on voit à quelqu'un
+   * qui ne le voit pas — pas ce qu'il fallait faire pour le photographier.
+   */
+  altKey: string;
   /** Rapport d'image du cadre, en notation CSS `aspect-ratio`. */
   ratio: string;
   /**
@@ -52,6 +61,7 @@ const SLOTS = {
     route: "/projects/<id>/board",
     shot:
       "Le board d'un projet, vue liste groupée par statut. Une dizaine d'issues aux titres crédibles, priorités et efforts variés, deux ou trois assignés avec avatar, une issue « in_progress » portant un badge d'agent. Sidebar visible, pas de modale ouverte.",
+    altKey: "shotAlt_heroBoard",
     ratio: "16/10",
     src: null,
   },
@@ -60,6 +70,7 @@ const SLOTS = {
     route: "/projects/<id>, modale de création ouverte (c)",
     shot:
       "La modale « Nouveau ticket » sur le board : un titre, une description de deux phrases, et trois propriétés posées — priorité haute, effort M, catégorie Feature. Le bouton de création est actif. C'est le geste de l'utilisateur, et rien d'autre : le premier temps de la section s'appelle « Vous décrivez ».",
+    altKey: "shotAlt_workflowIssue",
     ratio: "4/3",
     src: null,
   },
@@ -68,6 +79,7 @@ const SLOTS = {
     route: "/agents",
     shot:
       "Un run d'agent en cours : fil d'exécution avec appels d'outils (lecture de fichiers, édition), statut « en cours », et l'issue rattachée en en-tête.",
+    altKey: "shotAlt_workflowAgent",
     ratio: "4/3",
     src: null,
   },
@@ -76,6 +88,7 @@ const SLOTS = {
     route: "/pull-requests",
     shot:
       "La page Pull requests : à gauche la liste des PR de l'agent Numo, à droite le détail : en-tête ticket + badge d'état + lien « PR #n », barre d'actions (Accepter / Refuser / Demander des changements), onglet « Fichiers modifiés » ouvert sur un diff par fichier avec ajouts/suppressions colorés. L'onglet est à basculer à la main : le détail s'ouvre sur « Conversation ».",
+    altKey: "shotAlt_workflowPr",
     ratio: "4/3",
     src: null,
   },
@@ -84,6 +97,7 @@ const SLOTS = {
     route: "/projects/<id>, panneau Numo ouvert par G puis A, passé en mode étendu",
     shot:
       "Le panneau Numo ouvert en mode étendu par-dessus le board : l'instruction de l'utilisateur, les réponses de Numo, et entre elles les deux lignes d'action qu'il a menées (« 3 tickets trouvés », puis « 2 tickets modifiés »), ces lignes ne se déplient pas, c'est leur état complet. Le badge de contexte dans le composeur, qui porte le nom de la vue affichée.",
+    altKey: "shotAlt_numoPanel",
     ratio: "4/3",
     src: null,
   },
@@ -92,6 +106,7 @@ const SLOTS = {
     route: "n'importe quelle page de l'app, carnet ouvert (G puis N)",
     shot:
       "La modale du carnet de tâches : deux sections « ## », des tâches cochées et d'autres à faire, et une action de section visible au survol (« Copier la section en prompt » ou « Lancer un agent »).",
+    altKey: "shotAlt_scratchpad",
     ratio: "4/3",
     src: null,
   },
@@ -100,6 +115,7 @@ const SLOTS = {
     route: "/f/<token>, board public, visiteur déconnecté",
     shot:
       "Le board public trié par votes : une dizaine de retours avec leur compteur, des badges de statut (Prévu, En cours, Livré), une réponse d'équipe dépliée sur l'un d'eux, et les catégories en colonne latérale.",
+    altKey: "shotAlt_feedbackBoard",
     ratio: "16/10",
     src: null,
   },
@@ -108,6 +124,7 @@ const SLOTS = {
     route: "/projects/<id>/feedback, vue interne",
     shot:
       "Un retour vu côté équipe : le texte soumis, ses votes, la bannière de suggestion de fusion par l'IA, et les actions « Promouvoir en ticket » et « Réponse d'équipe ».",
+    altKey: "shotAlt_feedbackInbox",
     ratio: "16/10",
     src: null,
   },
@@ -116,6 +133,7 @@ const SLOTS = {
     route: "/home (bloc cycle) ou la page cycle",
     shot:
       "La quinzaine en cours : issues de plusieurs projets dans une même liste, progression visible. Montre l'aspect transverse du cycle.",
+    altKey: "shotAlt_featureCycle",
     ratio: "16/10",
     src: null,
   },
@@ -124,6 +142,7 @@ const SLOTS = {
     route: "n'importe quelle page de l'app, palette ouverte",
     shot:
       "La palette ⌘K ouverte, une recherche tapée qui remonte des issues et des actions, raccourcis clavier affichés à droite des lignes.",
+    altKey: "shotAlt_featurePalette",
     ratio: "16/10",
     src: null,
   },

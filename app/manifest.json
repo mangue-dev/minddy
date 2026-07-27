@@ -1,6 +1,11 @@
 {
+  "id": "/",
   "name": "minddy",
   "short_name": "minddy",
+  "description": "A minimal issue tracker. Issues, objectives, cycles, user feedback and coding agents in one place.",
+  "lang": "en",
+  "start_url": "/home",
+  "scope": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

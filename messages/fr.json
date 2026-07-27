@@ -597,7 +597,10 @@
     "back": "Retour",
     "filters": "Filtres",
     "copy": "Copier",
-    "copied": "Copié"
+    "copied": "Copié",
+    "notFoundTitle": "Cette page n'existe pas",
+    "notFoundBody": "Le lien est faux, ou la page a bougé. Tout le reste est resté à sa place.",
+    "notFoundCta": "Revenir à l'accueil"
   },
   "DatePicker": {
     "placeholder": "Choisir une date",
@@ -2058,6 +2061,8 @@
   },
   "Legal": {
     "title": "Mentions légales",
+    "metaTitle": "Mentions légales",
+    "metaDescription": "Éditeur, hébergeur et contacts de minddy, l'outil de suivi de tickets édité en France.",
     "lastUpdated": "Dernière mise à jour : juillet 2026",
     "editorTitle": "Éditeur du site",
     "tradeName": "Nom commercial",
@@ -2082,6 +2087,8 @@
   },
   "Terms": {
     "title": "Conditions générales d'utilisation",
+    "metaTitle": "Conditions générales d'utilisation",
+    "metaDescription": "Les règles d'usage de minddy : compte, abonnements, usage IA, vos contenus, résiliation.",
     "lastUpdated": "Dernière mise à jour : juillet 2026",
     "serviceTitle": "1. Présentation du service",
     "serviceP1": "minddy est un service en ligne de suivi de tickets, proposé par Clément Guérin, entrepreneur individuel (SIRET : 10028571700011), 43 Quai Malakoff, 44000 Nantes, France (ci-après « minddy »).",
@@ -2141,6 +2148,8 @@
   },
   "Privacy": {
     "title": "Politique de confidentialité",
+    "metaTitle": "Politique de confidentialité",
+    "metaDescription": "Ce que minddy collecte, pourquoi, combien de temps, et les droits que vous pouvez exercer.",
     "lastUpdated": "Dernière mise à jour : juillet 2026",
     "controllerTitle": "Responsable du traitement",
     "controllerText": "Le responsable du traitement de vos données personnelles est <name>Clément Guérin</name>, entrepreneur individuel (micro-entreprise), SIRET : 10028571700011, domicilié au 43 Quai Malakoff, 44000 Nantes, France. Pour toute question relative à vos données : <email>hello@minddy.app</email>",
@@ -2222,6 +2231,8 @@
   },
   "Cookies": {
     "title": "Politique de cookies",
+    "metaTitle": "Politique de cookies",
+    "metaDescription": "Les cookies déposés par minddy, à quoi sert chacun, et comment revenir sur votre choix.",
     "lastUpdated": "Dernière mise à jour : juillet 2026",
     "whatTitle": "Qu'est-ce qu'un cookie ?",
     "whatText": "Un cookie est un petit fichier texte déposé sur votre navigateur lors de la visite d'un site web. Il permet au site de mémoriser des informations sur votre visite, comme vos préférences ou votre session de connexion.",
@@ -2278,11 +2289,11 @@
     "description": "On mesure l'usage du produit pour l'améliorer. Pas de publicité, pas de revente de données.",
     "accept": "Accepter",
     "decline": "Refuser",
-    "learnMore": "En savoir plus"
+    "learnMore": "Politique de cookies"
   },
   "Landing": {
-    "metaTitle": "minddy, le tracker de tickets qui reste simple",
-    "metaDescription": "Tickets, objectifs, cycles, retours utilisateurs et agents de code dans un seul tracker minimal. Rien à configurer.",
+    "metaTitle": "minddy, le suivi de tickets qui reste simple",
+    "metaDescription": "Tickets, objectifs, cycles, retours et agents de code dans un seul outil de gestion de projet. Alternative simple à Linear ou Jira, rien à configurer.",
     "navHowItWorks": "Comment ça marche",
     "navPricing": "Tarifs",
     "navProduct": "Produit",
@@ -2319,7 +2330,7 @@
     "workflow_run_body": "Il explore le dépôt, écrit son plan, puis code et lance vos vérifications dans une machine isolée.",
     "workflow_review_title": "Vous relisez",
     "workflow_review_body": "La pull request s'attache au ticket : diff, commentaires, fusion. Sans quitter minddy.",
-    "agentsTitle": "Vos agents tiennent le tracker à jour, pas vous",
+    "agentsTitle": "Vos agents tiennent vos tickets à jour, pas vous",
     "agentsSubtitle": "minddy expose un serveur MCP : vos agents lisent et mettent à jour les tickets eux-mêmes.",
     "agentsCapability_read": "Lire un ticket avec tout son contexte.",
     "agentsCapability_plan": "Écrire son plan sur le ticket, puis le cocher.",
@@ -2443,10 +2454,20 @@
     "footerTerms": "CGU",
     "footerPrivacy": "Confidentialité",
     "footerCookies": "Cookies",
-    "footerMadeBy": "Fait avec ❤️ par <author>mangué</author>"
+    "footerMadeBy": "Fait avec ❤️ par <author>mangué</author>",
+    "shotAlt_heroBoard": "Le board d'un projet minddy : tickets groupés par statut, avec priorités, assignés et badge d'agent.",
+    "shotAlt_workflowIssue": "La fenêtre de création de ticket, avec un titre, une courte description et trois propriétés.",
+    "shotAlt_workflowAgent": "Un agent en cours d'exécution, ses appels d'outils et le ticket sur lequel il travaille.",
+    "shotAlt_workflowPr": "La page des pull requests, avec les modifications de l'agent présentées fichier par fichier.",
+    "shotAlt_numoPanel": "Le panneau Numo ouvert sur un board, avec les tickets qu'il a trouvés et ceux qu'il a modifiés.",
+    "shotAlt_scratchpad": "La fenêtre du carnet, avec ses sections de tâches faites et de tâches à faire.",
+    "shotAlt_feedbackBoard": "Un board public de retours trié par votes, avec badges de statut et catégories.",
+    "shotAlt_feedbackInbox": "Une demande vue côté équipe, avec ses votes et l'action de promotion en ticket.",
+    "shotAlt_featureCycle": "Le cycle en cours, avec des tickets de plusieurs projets dans une même liste.",
+    "shotAlt_featurePalette": "La palette de commandes ouverte sur une recherche qui remonte tickets et actions."
   },
   "Pricing": {
-    "metaTitle": "Tarifs",
+    "metaTitle": "Tarifs et plans",
     "metaDescription": "Gratuit pour démarrer, puis un abonnement mensuel ou annuel. Projets et tickets illimités, agent Numo et plus d'usage IA dès le premier plan payant.",
     "heroTitle": "Trois plans, c'est tout",
     "heroSubtitle": "Gratuit pour démarrer. Un abonnement quand vous voulez le tracker sans limites et l'agent Numo, un cran au-dessus pour travailler à plusieurs.",
