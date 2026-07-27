@@ -434,3 +434,34 @@ describe("buildAgentSystemPrompt — garde-fou git", () => {
     });
   }
 });
+
+/**
+ * MIN-109 : trois frottements mesurés sur `agent_run_events`. Le prompt porte les
+ * deux qui se disent (le troisième, `apply_edits`, est un drapeau côté harness) —
+ * le modèle préfixait un `cd` dans 13 % des commandes, souvent vers le répertoire
+ * courant PAR DÉFAUT, et cassait `grep` sur du JSX en croyant chercher du texte.
+ */
+describe("buildAgentSystemPrompt — workdir, grep littéral, batch partiel", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`détourne du \`cd\` vers \`workdir\` (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/AVOID `cd <dir> && <cmd>`/);
+      expect(prompt).toContain("`workdir`");
+      // Dire aussi OÙ l'on est déjà : la moitié des `cd` visaient la racine.
+      expect(prompt).toMatch(/already run at the repository ROOT/i);
+      expect(prompt).toContain("`timeout_ms`");
+    });
+
+    it(`dit comment chercher une chaîne littérale (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toContain("`fixed_strings`");
+      expect(prompt).toContain("onUpdateIssue={");
+    });
+
+    it(`annonce qu'un batch d'\`apply_edits\` peut réussir en PARTIE (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/succeed PARTLY/);
+      expect(prompt).toMatch(/retry only the changes that failed/i);
+    });
+  }
+});

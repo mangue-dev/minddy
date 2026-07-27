@@ -117,7 +117,7 @@ const CORE_TOOLS: AgentToolDef[] = [
     function: {
       name: "grep",
       description:
-        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'glob'/'path' and cap noisy searches with 'head_limit'.",
+        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'glob'/'path' and cap noisy searches with 'head_limit'. To search a literal snippet of code — anything containing { } ( ) [ ] * + ? | . \\ — set 'fixed_strings' rather than escaping it by hand.",
       parameters: {
         type: "object",
         properties: {
@@ -141,6 +141,11 @@ const CORE_TOOLS: AgentToolDef[] = [
               "'content' (default) → file:line:text rows; 'files_with_matches' → just file paths; 'count' → matches per file.",
           },
           ignore_case: { type: "boolean", description: "Case-insensitive search." },
+          fixed_strings: {
+            type: "boolean",
+            description:
+              "Treat 'pattern' as a literal string instead of a regex. Use it whenever you are searching for a verbatim snippet of code, e.g. 'onUpdateIssue={' or 'useState('.",
+          },
           context: {
             type: "number",
             description: "Lines of context around each match (content mode only, max 20).",
@@ -278,13 +283,22 @@ const CORE_TOOLS: AgentToolDef[] = [
     function: {
       name: "run_command",
       description:
-        "Run a shell command in the repository root (e.g. install dependencies, run the linter, build, or the test suite to verify your changes). Returns exitCode + stdout + stderr. Long output is truncated in the MIDDLE — you always get the beginning and the end — and the complete output is saved in the sandbox, at the returned 'full_output_path': search it with grep (pass that path as 'path') or read it with read_file (offset/limit). Never pipe to head/tail and never narrow a command just to shorten its output. Non-interactive only; it is killed after a timeout.",
+        "Run a shell command in the repository root (e.g. install dependencies, run the linter, build, or the test suite to verify your changes). Returns exitCode + stdout + stderr. Long output is truncated in the MIDDLE — you always get the beginning and the end — and the complete output is saved in the sandbox, at the returned 'full_output_path': search it with grep (pass that path as 'path') or read it with read_file (offset/limit). Never pipe to head/tail and never narrow a command just to shorten its output. AVOID using `cd <dir> && <cmd>` — pass 'workdir' instead. Non-interactive only; it is killed after a timeout.",
       parameters: {
         type: "object",
         properties: {
           command: {
             type: "string",
             description: "The shell command, e.g. 'npm test' or 'npm run build'.",
+          },
+          workdir: {
+            type: "string",
+            description:
+              "Optional repo-relative directory to run the command in, e.g. 'packages/api'. Defaults to the repository root — which is where you already are, so only pass it when you need ANOTHER directory. Use this instead of `cd <dir> && <cmd>`.",
+          },
+          timeout_ms: {
+            type: "number",
+            description: `Optional timeout in milliseconds, capped at ${RUN_COMMAND_TIMEOUT_MS} (also the default). Only lower it — for a command you expect to be quick and that would otherwise hang (a watcher, a prompt), so you get the turn back fast.`,
           },
         },
         required: ["command"],

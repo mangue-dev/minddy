@@ -280,10 +280,20 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       };
     }
     case "glob":
-    case "grep":
       return { pattern: String(args.pattern ?? "") };
+    case "grep":
+      return {
+        pattern: String(args.pattern ?? ""),
+        ...(args.fixed_strings === true ? { fixed_strings: true } : {}),
+      };
     case "run_command":
-      return { command: cap(String(args.command ?? ""), 100) };
+      // `workdir` fait partie de ce QU'EST la commande : sans lui, un `pnpm test`
+      // lancé dans un sous-dossier est indiscernable du même lancé à la racine —
+      // dans la vue live comme dans `agent_run_events` (MIN-109).
+      return {
+        command: cap(String(args.command ?? ""), 100),
+        ...(args.workdir ? { workdir: String(args.workdir) } : {}),
+      };
     case "create_pr":
       return { title: cap(String(args.title ?? ""), 200) };
     case "read_attachment":

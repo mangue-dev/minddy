@@ -3,6 +3,7 @@ import "server-only";
 import { Sandbox } from "@vercel/sandbox";
 
 import { grepPathspecs, globPathspec } from "./git-pathspec";
+import { isInvalidRegexError } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 
 /**
@@ -542,6 +543,8 @@ export interface GrepOptions {
   context?: number;
   /** Cap de lignes renvoyées. */
   headLimit?: number;
+  /** Cherche le motif comme une chaîne LITTÉRALE (`-F`), sans le lire comme une regex. */
+  fixedStrings?: boolean;
 }
 
 export interface GrepResult {
@@ -551,6 +554,8 @@ export interface GrepResult {
   ok: boolean;
   /** Message d'erreur si ok=false. */
   error?: string;
+  /** Le motif n'était pas une regex valide : relancé en littéral (MIN-109). */
+  retriedAsLiteral?: boolean;
 }
 
 /**
@@ -560,6 +565,8 @@ export interface GrepResult {
  * s'INTERSECTENT (glob dans path). Les erreurs git (regex invalide, option
  * invalide) NE sont PAS masquées : on lit l'exit code (≥2 = erreur) au lieu de
  * `|| true`/`| head` qui les avaleraient — le cap de lignes se fait en JS.
+ * Seule exception (MIN-109) : un motif refusé comme regex est relancé en littéral
+ * (`-F`), et le retour le DIT (`retriedAsLiteral`).
  */
 export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<GrepResult> {
   // Le `path` vise-t-il un dossier lisible HORS dépôt (une sortie de tool déposée,
@@ -567,17 +574,44 @@ export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<Gre
   const outside = opts.path ? readableOutsideRepo(opts.path) : null;
   if (outside) return grepOutside(sandbox, opts, outside);
 
-  const flags: string[] = ["--no-color", "-I", "-E", "--untracked", ...grepModeFlags(opts)];
   const specs = grepPathspecs(opts.path, opts.glob).map(sq);
   const pathspecPart = specs.length ? ` -- ${specs.join(" ")}` : "";
-  const cmd = `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}`;
-  const res = await runShell(sandbox, cmd);
+  const build = (literal: boolean) => {
+    const flags = [
+      "--no-color",
+      "-I",
+      literal ? "-F" : "-E",
+      "--untracked",
+      ...grepModeFlags(opts),
+    ];
+    return `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}`;
+  };
+  const { res, retriedAsLiteral } = await runGrepWithLiteralFallback(sandbox, build, opts);
 
   // git grep : 0 = matchs, 1 = aucun match, ≥2 = ERREUR (regex/option invalide…).
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
   }
-  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true };
+  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true, retriedAsLiteral };
+}
+
+/**
+ * Lance la recherche, et si le moteur a refusé le MOTIF (pas une regex valide),
+ * la relance en littéral (`-F`) — le cas de loin le plus courant (MIN-109) : le
+ * modèle colle un bout de code (`onUpdateIssue={`) en croyant chercher du texte.
+ * Toute autre erreur (option, pathspec) remonte telle quelle.
+ */
+async function runGrepWithLiteralFallback(
+  sandbox: Sandbox,
+  build: (literal: boolean) => string,
+  opts: GrepOptions,
+): Promise<{ res: ShellResult; retriedAsLiteral: boolean }> {
+  const literal = opts.fixedStrings === true;
+  const res = await runShell(sandbox, build(literal));
+  if (literal || res.exitCode < 2 || !isInvalidRegexError(res.stderr || res.stdout)) {
+    return { res, retriedAsLiteral: false };
+  }
+  return { res: await runShell(sandbox, build(true)), retriedAsLiteral: true };
 }
 
 /** Drapeaux partagés par les deux moteurs (casse, mode de sortie, contexte). */
@@ -619,14 +653,23 @@ async function grepOutside(
   opts: GrepOptions,
   absPath: string,
 ): Promise<GrepResult> {
-  const flags = ["--color=never", "-I", "-E", "-r", "-H", ...grepModeFlags(opts)];
-  if (opts.glob) flags.push(`--include=${sq(opts.glob)}`);
-  const cmd = `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
-  const res = await runShell(sandbox, cmd);
+  const build = (literal: boolean) => {
+    const flags = [
+      "--color=never",
+      "-I",
+      literal ? "-F" : "-E",
+      "-r",
+      "-H",
+      ...grepModeFlags(opts),
+    ];
+    if (opts.glob) flags.push(`--include=${sq(opts.glob)}`);
+    return `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
+  };
+  const { res, retriedAsLiteral } = await runGrepWithLiteralFallback(sandbox, build, opts);
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
   }
-  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true };
+  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true, retriedAsLiteral };
 }
 
 export interface GlobResult {

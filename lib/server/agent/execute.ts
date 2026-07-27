@@ -28,9 +28,12 @@ import {
   globRepo,
   sandboxName,
   writeToolOutput,
+  REPO_DIR,
   type GrepOutputMode,
   type Sandbox,
 } from "./sandbox";
+import { resolveWithin } from "./repo-path";
+import { LITERAL_RETRY_NOTE } from "./grep-pattern";
 import {
   formatRunCommandResult,
   fullOutputDocument,
@@ -238,13 +241,17 @@ function makeExecTool(
           glob: args.glob ? String(args.glob) : undefined,
           outputMode: (args.output_mode as GrepOutputMode) ?? undefined,
           ignoreCase: args.ignore_case === true,
+          fixedStrings: args.fixed_strings === true,
           context: toNum(args.context),
           headLimit: toNum(args.head_limit),
         });
         if (!r.ok) {
           return { result: { error: `grep failed: ${r.error || "invalid pattern or options"}` }, success: false };
         }
-        return { result: r.output || "(no matches)", success: true };
+        // Motif relancé en littéral : on le DIT, sinon le modèle ne saurait pas
+        // que ce qu'il croyait être une regex a été cherché tel quel (MIN-109).
+        const note = r.retriedAsLiteral ? `${LITERAL_RETRY_NOTE}\n` : "";
+        return { result: note + (r.output || "(no matches)"), success: true };
       }
       case "edit_file": {
         const path = String(args.path ?? "");
@@ -291,6 +298,9 @@ function makeExecTool(
       }
       case "apply_edits": {
         const changes = Array.isArray(args.changes) ? (args.changes as Array<Record<string, unknown>>) : [];
+        if (changes.length === 0) {
+          return { result: { error: "No changes provided." }, success: false };
+        }
         const applied: Array<Record<string, unknown>> = [];
         for (const ch of changes) {
           const path = String(ch.path ?? "");
@@ -333,7 +343,15 @@ function makeExecTool(
             applied.push({ path, op, ok: false, error: err instanceof Error ? err.message : String(err) });
           }
         }
-        return { result: { applied }, success: applied.every((r) => r.ok === true) };
+        // `success` = « au moins un changement est passé » (MIN-109). Avec `every`,
+        // un batch de 6 fichiers dont 5 réussissent était compté ÉCHEC — un taux
+        // d'échec de 42 % qui ne mesurait rien. Le détail par changement dit déjà
+        // quoi reprendre ; `counts` le rend lisible d'un coup d'œil.
+        const okCount = applied.filter((r) => r.ok === true).length;
+        return {
+          result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
+          success: okCount > 0,
+        };
       }
       case "run_command": {
         const command = String(args.command ?? "");
@@ -349,7 +367,29 @@ function makeExecTool(
             reason: FORBIDDEN_COMMAND_REASON,
           };
         }
-        const r = await runShell(sandbox, command, { timeoutMs: RUN_COMMAND_TIMEOUT_MS });
+        // `workdir` (MIN-109) : le modèle préfixait un `cd` dans 13 % des commandes,
+        // souvent vers le répertoire courant par défaut. Le chemin passe par
+        // resolveWithin — un `../..` sort du dépôt et revient en erreur de tool,
+        // pas en throw : le round continue et le modèle corrige.
+        let cwd: string | undefined;
+        if (args.workdir != null && String(args.workdir).trim() !== "") {
+          try {
+            cwd = resolveWithin(REPO_DIR, String(args.workdir));
+          } catch (err) {
+            return {
+              result: { error: err instanceof Error ? err.message : String(err) },
+              success: false,
+            };
+          }
+        }
+        // Le modèle peut RACCOURCIR le timeout, jamais l'allonger : au-delà, la
+        // commande mangerait la soft-deadline du chunk.
+        const asked = toNum(args.timeout_ms);
+        const timeoutMs =
+          asked != null && asked > 0
+            ? Math.min(Math.floor(asked), RUN_COMMAND_TIMEOUT_MS)
+            : RUN_COMMAND_TIMEOUT_MS;
+        const r = await runShell(sandbox, command, { cwd, timeoutMs });
         // Sortie longue → la version COMPLÈTE est déposée dans la sandbox (hors
         // dépôt) et reste relisible via read_file/grep. Best-effort : si l'écriture
         // échoue, le modèle reçoit quand même tête ET queue (MIN-107).
