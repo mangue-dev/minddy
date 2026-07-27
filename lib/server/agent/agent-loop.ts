@@ -106,6 +106,19 @@ export type ExecuteAgentTool = (
   args: Record<string, unknown>,
 ) => Promise<{ result: unknown; success: boolean }>;
 
+/** État du round EN COURS d'écriture, poussé au fil ouvert (jamais persisté). */
+export interface AgentLiveProgress {
+  /** Réponse du modèle telle qu'écrite jusqu'ici (texte COMPLET, pas un delta). */
+  text: string;
+  /** Trace de raisonnement streamée, quand le modèle en émet. */
+  reasoning: string;
+  /** Appels d'outils déjà amorcés dans ce round : >0 ⇒ le texte est de la
+   *  narration, le tour continue. 0 ⇒ c'est peut-être la réponse finale. */
+  tools: number;
+}
+
+export type EmitAgentLive = (progress: AgentLiveProgress) => void;
+
 
 export interface RunAgentLoopParams {
   /** Historique (system + user, ou rehydraté depuis le checkpoint). MUTÉ + renvoyé. */
@@ -142,6 +155,13 @@ export interface RunAgentLoopParams {
    */
   syncPlan?: (steps: PlanStep[]) => Promise<void>;
   emit: EmitAgentEvent;
+  /**
+   * Direct : texte du round pendant que le modèle l'écrit. Appelé ~4 fois par
+   * seconde, puis une dernière fois À VIDE quand les vrais events du round sont
+   * posés (ils prennent le relais à l'écran). Synchrone et best-effort — la
+   * boucle ne l'attend pas. Absent = pas de direct (le fil poll, comme avant).
+   */
+  emitLive?: EmitAgentLive;
   /** Index de départ des lignes ai_usage (ordre d'affichage). */
   usageSeqStart?: number;
   signal?: AbortSignal;
@@ -165,6 +185,13 @@ export class InterruptedError extends Error {
 
 /** Fréquence de poll du drapeau d'interruption pendant un stream. */
 const INTERRUPT_POLL_MS = 2000;
+
+/**
+ * Cadence de rediffusion du texte en cours d'écriture (`emitStream`). ~4 fois par
+ * seconde : assez pour que le texte pousse sous les yeux, assez espacé pour que
+ * chaque round coûte quelques dizaines de messages realtime, pas des milliers.
+ */
+const LIVE_FLUSH_MS = 250;
 
 export interface AgentLoopResult {
   status: "completed" | "suspended" | "interrupted" | "error";
@@ -296,6 +323,10 @@ interface StreamResult {
  * `requestProfile`. Deux timers d'annulation : un timeout DUR (`AGENT_RUN_TIMEOUT_MS`)
  * et un timeout d'INACTIVITÉ réarmé à chaque octet SSE (stream figé). Lève une
  * `StreamError` (retryable ou non) que le wrapper `streamCompletion` gère.
+ *
+ * `onProgress` reçoit l'état accumulé pendant l'écriture (throttlé à
+ * `LIVE_FLUSH_MS`) : c'est lui qui alimente le direct du fil. Il repart de zéro à
+ * chaque essai — une reprise réécrit donc le texte plutôt que de le compléter.
  */
 async function streamCompletionOnce(opts: {
   apiKey: string;
@@ -306,6 +337,7 @@ async function streamCompletionOnce(opts: {
   tools: AgentToolDef[];
   signal?: AbortSignal;
   checkInterrupt?: () => Promise<boolean>;
+  onProgress?: EmitAgentLive;
 }): Promise<StreamResult> {
   const profile = getAgentProvider(opts.provider)?.requestProfile ?? {};
 
@@ -405,6 +437,19 @@ async function streamCompletionOnce(opts: {
     let usageRaw: OpenRouterUsage | null = null;
     const acc = new Map<number, { id: string; name: string; arguments: string }>();
 
+    // Direct : on republie l'état accumulé au plus une fois par `LIVE_FLUSH_MS`,
+    // et seulement s'il a bougé depuis le dernier envoi.
+    let lastFlushAt = 0;
+    let lastFlushLen = -1;
+    const flushProgress = (force = false) => {
+      if (!opts.onProgress) return;
+      const len = content.length + reasoning.length + acc.size;
+      if (!force && (len === lastFlushLen || Date.now() - lastFlushAt < LIVE_FLUSH_MS)) return;
+      lastFlushAt = Date.now();
+      lastFlushLen = len;
+      opts.onProgress({ text: content, reasoning, tools: acc.size });
+    };
+
     for (;;) {
       let chunk: ReadableStreamReadResult<Uint8Array>;
       try {
@@ -451,7 +496,11 @@ async function streamCompletionOnce(opts: {
           }
         }
       }
+      flushProgress();
     }
+    // Dernier état de l'essai : sans ça, la fin du texte (écrite entre le dernier
+    // flush et la fermeture du flux) n'apparaîtrait qu'une fois l'event posé.
+    flushProgress(true);
 
     const toolCalls: AssistantToolCall[] = [...acc.values()].map((a) => ({
       id: a.id,
@@ -486,6 +535,7 @@ async function streamCompletion(opts: {
   tools: AgentToolDef[];
   signal?: AbortSignal;
   checkInterrupt?: () => Promise<boolean>;
+  onProgress?: EmitAgentLive;
   /** Deadline absolue (Date.now() ms) du chunk : au-delà, on ne dort pas, on relève. */
   deadlineAt?: number;
 }): Promise<StreamResult> {
@@ -523,6 +573,11 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   const provider = params.provider ?? DEFAULT_AGENT_PROVIDER;
   const startedAt = Date.now();
   const elapsed = () => Date.now() - startedAt;
+
+  // Direct : `emitLive` pendant l'écriture, puis À VIDE dès que les events du
+  // round sont posés — le fil bascule alors du texte provisoire aux vrais
+  // messages, sans que les deux se superposent une seconde.
+  const clearLive = () => params.emitLive?.({ text: "", reasoning: "", tools: 0 });
 
   let seq = params.usageSeqStart ?? 0;
   let costUsd = 0;
@@ -643,6 +698,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           tools,
           signal: params.signal,
           checkInterrupt: params.checkInterrupt,
+          onProgress: params.emitLive,
           deadlineAt: startedAt + params.softDeadlineMs,
         });
         break;
@@ -665,11 +721,13 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         // chunk suivant, fonction fraîche) plutôt qu'échouer. Une erreur fatale (4xx,
         // requête invalide) remonte et échoue le run.
         if (err instanceof StreamError && err.retryable) {
+          clearLive();
           await emit("status", { phase: "transient_error", message: cap(err.message, 300) });
           return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
         }
         // Interruption utilisateur pendant le stream → repos, round partiel jeté.
         if (err instanceof InterruptedError) {
+          clearLive();
           return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
         }
         // Erreur LLM FATALE (non reprenable : 402 crédits, 401/403, 400 non-contexte).
@@ -677,6 +735,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         // (aucun steering déjà injecté ce round n'est perdu). Pas de re-queue : ça
         // rebouclerait sur la même erreur.
         if (err instanceof StreamError) {
+          clearLive();
           await emit("error", { message: cap(err.message, 300) });
           return {
             status: "error",
@@ -726,6 +785,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       messages.push({ role: "assistant", content: stream.content || "" });
       const reply = stream.content.trim() || "Done.";
       await emit("summary", { text: cap(reply, 8000) });
+      clearLive();
       return {
         status: "completed",
         messages,
@@ -736,6 +796,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       };
     }
 
+    clearLive();
     messages.push({ role: "assistant", content: stream.content || null, tool_calls: stream.toolCalls });
 
     // Fast-path : si TOUS les tool-calls du round sont read-only (exploration), on

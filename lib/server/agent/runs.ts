@@ -7,6 +7,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
+import { broadcastRunEvent } from "./live";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 
@@ -700,6 +701,10 @@ export async function hasPendingRunMessages(runId: string): Promise<boolean> {
  * Ajoute un event au flux du live view (seq monotone par run). Best-effort : le
  * suivi ne doit jamais faire échouer le run. Un run n'a qu'UN écrivain à la fois
  * (le claimer), donc le max(seq)+1 est sûr.
+ *
+ * La ligne insérée est aussi DIFFUSÉE sur le topic du run (lib/server/agent/live)
+ * : le fil ouvert l'affiche à l'instant plutôt qu'au prochain poll. Le `returning`
+ * de l'insert la donne sans aller-retour supplémentaire.
  */
 export async function appendEvent(
   runId: string,
@@ -719,11 +724,17 @@ export async function appendEvent(
     // supabase-js ne LÈVE pas sur un insert refusé (contrainte CHECK, RLS…) — il
     // renvoie { error }. Sans ce log, un type d'event non déclaré dans le CHECK
     // de agent_run_events disparaît en silence total (vécu sur `question`, MIN-86).
-    const { error } = await service
+    const { data: row, error } = await service
       .from("agent_run_events")
-      .insert({ run_id: runId, seq: nextSeq, type, payload });
+      .insert({ run_id: runId, seq: nextSeq, type, payload })
+      .select("id, seq, type, payload, created_at")
+      .single();
     if (error) {
       console.error(`[agent-runs] appendEvent(${type}) rejected:`, error.message);
+      return;
+    }
+    if (row) {
+      broadcastRunEvent(runId, row as Parameters<typeof broadcastRunEvent>[1]);
     }
   } catch (err) {
     console.error("[agent-runs] appendEvent failed:", (err as Error).message);

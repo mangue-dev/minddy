@@ -25,6 +25,7 @@ import { ChangedFilesBlock } from "./changed-files-block";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { unechoedMessages } from "@/lib/agent-pending";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
+import { useAgentRunLive } from "@/lib/use-agent-run-live";
 import {
   isAgentRunWorking,
   parseFilesChangedPayload,
@@ -59,6 +60,10 @@ type MessageItem = {
   isSummary?: boolean;
   /** Pour un summary : created_at de l'event `summary` (fin de tour → durée). */
   endedAt?: string;
+  /** Texte EN COURS d'écriture qui pourrait être la réponse du tour (aucun outil
+      appelé dans ce round) : rendu SOUS l'accordéon, là où le message final
+      restera — sinon il sauterait du déroulé au dehors une fois l'event posé. */
+  isLiveAnswer?: boolean;
   /** Réponse de l'utilisateur aux questions ask_user de ce message (le
       user_message qui suit, absorbé — pas de bulle, détails de la ligne). */
   askUserAnswer?: string;
@@ -401,11 +406,15 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
   // Travail restant sans réponse finale : si l'agent TRAVAILLE → tour ACTIF
   // (accordéon ouvert, chrono live) ; sinon (interruption, erreur) → déplié tel quel.
   if (active && work.length > 0) {
+    // Réponse en train de s'écrire : elle prend la place du résumé, sous
+    // l'accordéon, exactement là où le message final se posera.
+    const tail = work[work.length - 1];
+    const liveAnswer = tail.kind === "message" && tail.isLiveAnswer ? tail : null;
     blocks.push({
       type: "turn",
       key: itemKey(work[0]),
-      work,
-      summary: null,
+      work: liveAnswer ? work.slice(0, -1) : work,
+      summary: liveAnswer,
       files: [],
       startedAt: work[0].createdAt,
       endedAt: null,
@@ -605,6 +614,9 @@ export function AgentEventFeed({
   // l'agent TRAVAILLE ; au repos le fil est figé jusqu'au prochain message.
   const active = isAgentRunWorking(status);
   const { events, loading } = useAgentRunEventsQuery(runId, active);
+  // Direct : le texte du round pendant que le modèle l'écrit, plus les events
+  // poussés dans le cache du fil dès leur insertion (lib/use-agent-run-live).
+  const live = useAgentRunLive(runId, active);
   const feedRef = useRef<HTMLDivElement>(null);
   // Fade doux en haut/bas du fil (même pattern que les colonnes Kanban) → on voit
   // qu'il reste du contenu au-dessus / en dessous. On fusionne son ref avec le nôtre.
@@ -646,9 +658,36 @@ export function AgentEventFeed({
     }
   }
 
+  // Queue VIVANTE du round en cours, ajoutée en fin de fil : le raisonnement et
+  // le texte tels qu'ils s'écrivent, dans l'ordre où leurs vrais events se
+  // poseront (raisonnement d'abord, réponse ensuite) — la bascule du provisoire
+  // au définitif ne déplace donc rien à l'écran.
+  const liveItems = useMemo((): FeedItem[] => {
+    if (!live) return [];
+    const out: FeedItem[] = [];
+    if (live.reasoning.trim()) {
+      out.push({
+        kind: "message",
+        message: makeMessage("live-reasoning", live.reasoning),
+        createdAt: live.startedAt,
+      });
+    }
+    if (live.text.trim()) {
+      out.push({
+        kind: "message",
+        message: makeMessage("live-text", live.text),
+        createdAt: live.startedAt,
+        // Un outil déjà amorcé dans ce round ⇒ ce texte est de la narration, il
+        // reste dans le déroulé. Sinon il vise la place de la réponse finale.
+        isLiveAnswer: live.tools === 0,
+      });
+    }
+    return out;
+  }, [live]);
+
   const blocks = useMemo(
-    () => buildBlocks(displayItems, active),
-    [displayItems, active],
+    () => buildBlocks(liveItems.length ? [...displayItems, ...liveItems] : displayItems, active),
+    [displayItems, liveItems, active],
   );
 
   // Bouton copy sous la RÉPONSE DE CHAQUE TOUR (le résumé qui le clôt), pas sous le
@@ -673,13 +712,15 @@ export function AgentEventFeed({
   }, [items, active]);
 
   // Cale le flux en bas dès l'ouverture (même run terminé) puis à chaque nouvel
-  // event tant qu'il est actif. useLayoutEffect → pas de flash « scroll depuis
-  // le haut » avant peinture.
+  // event tant qu'il est actif — et à chaque poussée du texte en direct, sinon la
+  // réponse s'écrirait sous la ligne de flottaison. useLayoutEffect → pas de flash
+  // « scroll depuis le haut » avant peinture.
+  const liveLength = (live?.text.length ?? 0) + (live?.reasoning.length ?? 0);
   useLayoutEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
-  }, [items.length]);
+  }, [items.length, liveLength]);
 
-  if (items.length === 0 && stillPending.length === 0) {
+  if (items.length === 0 && stillPending.length === 0 && liveItems.length === 0) {
     return (
       <div className={cn("flex items-center justify-center px-3 text-center", className)}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

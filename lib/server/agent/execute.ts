@@ -35,8 +35,10 @@ import {
   runAgentLoop,
   type AgentChatMessage,
   type EmitAgentEvent,
+  type EmitAgentLive,
   type ExecuteAgentTool,
 } from "./agent-loop";
+import { broadcastRunStream } from "./live";
 import { agentToolsFor, RUN_COMMAND_TIMEOUT_MS } from "./tools";
 import {
   isWebSearchEnabled,
@@ -534,6 +536,10 @@ export async function executeAgentRun(
 ): Promise<ExecuteOutcome> {
   const callStart = Date.now();
   const emit: EmitAgentEvent = (type, payload) => appendEvent(run.id, type, payload);
+  // Direct du fil : le texte du round pendant qu'il s'écrit, diffusé sur le topic
+  // du run. Rien en base — le fil ouvert l'affiche, les autres n'en savent rien.
+  const emitLive: EmitAgentLive = (progress) =>
+    broadcastRunStream(run.id, { ...progress, at: Date.now() });
   let sandbox: Sandbox | null = null;
 
   try {
@@ -953,6 +959,7 @@ export async function executeAgentRun(
       syncPlan: (steps) =>
         run.issue_id ? syncIssuePlanStates(run.issue_id, steps) : Promise.resolve(),
       emit,
+      emitLive,
       usageSeqStart,
     });
 
