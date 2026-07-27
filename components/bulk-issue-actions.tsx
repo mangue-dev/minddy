@@ -5,8 +5,11 @@ import { useTranslations } from "next-intl";
 import { Command as CommandIcon, X } from "lucide-react";
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
-import { useBulkActions } from "@/lib/bulk-actions-context";
-import type { IssueUpdateInput, Member } from "@/lib/types";
+import {
+  useBulkActions,
+  type BulkCycleActions,
+} from "@/lib/bulk-actions-context";
+import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 
 /**
  * Linear-style floating selection pill (MIN-75). It no longer carries its own
@@ -23,6 +26,9 @@ export function BulkIssueActions({
   onDelete,
   onClear,
   onAskNumo,
+  cycle,
+  objectives,
+  onLink,
 }: {
   count: number;
   members: Member[];
@@ -30,6 +36,9 @@ export function BulkIssueActions({
   onDelete?: () => void;
   onClear: () => void;
   onAskNumo: () => void;
+  cycle?: BulkCycleActions;
+  objectives?: Objective[];
+  onLink?: () => void;
 }) {
   const t = useTranslations("BulkActions");
   const { requestBulkActions } = useBulkActions();
@@ -53,6 +62,9 @@ export function BulkIssueActions({
       onUpdate,
       onDelete,
       onAskNumo,
+      cycle,
+      objectives,
+      onLink,
     });
 
   return (

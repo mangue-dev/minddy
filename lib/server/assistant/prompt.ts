@@ -597,6 +597,18 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
         `When the user says "cette PR", "this pull request", "la PR", "le diff", they mean this PR. To read or explain what it changes, call read_pull_request with the issue id above. To make changes to it, launch_code_agent on that same issue.`
       );
     }
+  } else if (ctx.issueIds?.length) {
+    // Sélection groupée d'un board : la liste EST la demande ("ces tickets"),
+    // donc chaque ticket arrive avec son id — aucune recherche à refaire.
+    lines.push(
+      `- Selected issues (${ctx.issueIds.length}):`,
+      ...ctx.issueIds.map((id, i) => {
+        const identifier = ctx.issueIdentifiers?.[i];
+        const title = ctx.issueTitles?.[i];
+        return `  - ${identifier ?? "(unknown identifier)"}${title ? ` — "${title}"` : ""} (id: ${id})`;
+      }),
+      `When the user says "ces tickets", "la sélection", "these issues", "tous", or gives an instruction with no explicit target, they mean exactly the issues above — use their ids directly, do not search for them.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`
+    );
   } else if (ctx.objectiveId) {
     lines.push(
       `- Objective board: "${ctx.objectiveName ?? "(unknown name)"}" (id: ${ctx.objectiveId}).`,

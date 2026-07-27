@@ -56,10 +56,23 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     typeof obj[key] === "string" && (obj[key] as string).length <= 500
       ? (obj[key] as string)
       : undefined;
+  // Bulk selection: a board hands over up to a few dozen tickets. Same string
+  // budget per entry, and a hard cap so a forged payload can't bloat the prompt.
+  const pickList = (key: string): string[] | undefined => {
+    const raw = obj[key];
+    if (!Array.isArray(raw)) return undefined;
+    const list = raw
+      .filter((v): v is string => typeof v === "string" && v.length <= 500)
+      .slice(0, 50);
+    return list.length > 0 ? list : undefined;
+  };
   const ctx: AssistantPageContext = {
     projectId: pick("projectId"),
     onglet: obj.onglet === "my" || obj.onglet === "all" ? obj.onglet : undefined,
     issueId: pick("issueId"),
+    issueIds: pickList("issueIds"),
+    issueIdentifiers: pickList("issueIdentifiers"),
+    issueTitles: pickList("issueTitles"),
     issueIdentifier: pick("issueIdentifier"),
     issueTitle: pick("issueTitle"),
     objectiveId: pick("objectiveId"),

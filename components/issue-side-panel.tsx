@@ -588,7 +588,7 @@ export function IssueSidePanel({
                 <DictateButton
                   onTranscription={onTranscript}
                   tooltipLabel={t("dictateEditTooltip")}
-                  shortcutKey="shift+v"
+                  shortcutKey="mod+shift+d"
                 />
               )}
             </div>

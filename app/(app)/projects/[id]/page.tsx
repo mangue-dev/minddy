@@ -463,6 +463,7 @@ function ProjectBoard() {
               sort={sort}
               buildMenuActions={buildCycleMenuActions}
               currentCycleId={currentCycle?.id ?? null}
+              onSetCycle={onSetIssueCycle}
               projectId={project.id}
               projectKey={project.key}
               members={members}

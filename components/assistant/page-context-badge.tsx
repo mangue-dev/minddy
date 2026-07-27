@@ -1,7 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { FileText, IterationCw, LayoutGrid, MessagesSquare, Target } from "lucide-react";
+import {
+  FileText,
+  IterationCw,
+  LayoutGrid,
+  Layers,
+  MessagesSquare,
+  Target,
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 
@@ -32,6 +39,14 @@ export function PageContextBadge({
         : context.issueIdentifier
       : (context.issueTitle ?? t("contextIssue"));
     tooltip = t("contextIssue");
+  } else if (context.issueIds && context.issueIds.length > 0) {
+    // Sélection groupée passée à Numo depuis un board : le compte suffit, la
+    // liste des identifiants tient dans l'infobulle.
+    icon = <Layers className="h-3 w-3" />;
+    label = t("contextIssuesSelected", { count: context.issueIds.length });
+    tooltip = context.issueIdentifiers?.length
+      ? context.issueIdentifiers.join(", ")
+      : label;
   } else if (context.objectiveId) {
     icon = <Target className="h-3 w-3" />;
     label = context.objectiveName ?? t("contextObjective");

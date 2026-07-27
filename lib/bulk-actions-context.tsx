@@ -21,8 +21,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { IssueUpdateInput, Member } from "@/lib/types";
+import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import { trackEvent } from "./analytics";
+
+/** Bulk moves in and out of the key owner's current cycle (MIN-32). */
+export interface BulkCycleActions {
+  /** Selected tickets that can still join the cycle (live status, not already in). */
+  addable: number;
+  /** Selected tickets currently in the cycle. */
+  removable: number;
+  /** Adds every addable ticket — the ineligible ones are left alone. */
+  onAdd: () => void;
+  /** Removes every ticket of the selection that sits in the cycle. */
+  onRemove: () => void;
+}
 
 export interface BulkActionsRequest {
   /** Number of selected tickets — drives the item title, plurals and confirms. */
@@ -35,6 +47,16 @@ export interface BulkActionsRequest {
   onDelete?: () => void;
   /** Hands the selection to Numo (opens the agent composer). */
   onAskNumo: () => void;
+  /** Cycle moves — absent when the user has no current cycle, or when nothing
+   *  in the selection can move either way. */
+  cycle?: BulkCycleActions;
+  /** Objectives the whole selection can join. Empty/absent when the selection
+   *  spans several projects (objectives are project-scoped) or the project has
+   *  none — the "Changer l'objectif" row is then not offered. */
+  objectives?: Objective[];
+  /** Marks the selection as related to each other (MIN-25). Only wired when
+   *  the selection is EXACTLY two tickets of the same project. */
+  onLink?: () => void;
 }
 
 interface BulkActionsContextValue {

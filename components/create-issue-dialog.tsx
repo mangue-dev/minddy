@@ -595,7 +595,7 @@ export function CreateIssueDialog({
                     onTranscript(text);
                   }}
                   disabled={submitting}
-                  shortcutKey="shift+v"
+                  shortcutKey="mod+shift+d"
                   className="-ml-2"
                 />
               )}

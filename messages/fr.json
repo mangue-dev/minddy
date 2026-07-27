@@ -328,6 +328,7 @@
       "s4": "Crée une vue des bugs urgents"
     },
     "contextIssue": "Ticket en contexte",
+    "contextIssuesSelected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
     "contextObjective": "Objectif en contexte",
     "contextFeedback": "Retour en contexte",
     "contextBoard": "Board en contexte",
@@ -368,6 +369,8 @@
     "selected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
     "actions": "Actions",
     "askNumo": "Demander à Numo",
+    "link": "Lier les deux tickets",
+    "linked": "Tickets liés",
     "clear": "Désélectionner",
     "delete": "{count, plural, one {Supprimer le ticket} other {Supprimer les tickets}}",
     "deleteConfirm": "{count, plural, one {Supprimer # ticket ?} other {Supprimer # tickets ?}}"
@@ -982,7 +985,8 @@
       "dueDate": "Changer l'échéance",
       "objective": "Changer l'objectif",
       "copyPrompt": "Copier le prompt",
-      "launchAgent": "Lancer l'agent Numo"
+      "launchAgent": "Lancer l'agent Numo",
+      "dictate": "Dicter (panneau ou nouveau ticket)"
     }
   },
   "Undo": {
@@ -1844,6 +1848,8 @@
     "completedTitle": "Cycle complété",
     "refill": "Remplir le cycle",
     "refillAdded": "{count, plural, one {# ticket ajouté au cycle} other {# tickets ajoutés au cycle}}",
+    "bulkAdded": "{count, plural, one {# ticket ajouté à mon cycle} other {# tickets ajoutés à mon cycle}}",
+    "bulkRemoved": "{count, plural, one {# ticket retiré de mon cycle} other {# tickets retirés de mon cycle}}",
     "refillEmpty": "Rien à ajouter pour l'instant."
   },
   "Admin": {

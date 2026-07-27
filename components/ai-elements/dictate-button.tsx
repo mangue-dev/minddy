@@ -2,8 +2,9 @@
 
 import { Mic, Square } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  KbdSequence,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -18,6 +19,7 @@ import {
 
 import { DictateWaveform } from "./dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
 
 // Dictation isn't time-boxed: talk for as long as you need. The only ceiling
 // left is the payload one — /api/transcribe rejects over 10 MB — so the
@@ -43,12 +45,15 @@ export interface DictateButtonProps {
   /** Optional tooltip override. Defaults to the localized "Voice dictation" label. */
   tooltipLabel?: string;
   /**
-   * When set, pressing this key toggles recording — same as clicking. Accepts a
-   * bare key ("v") or a Shift combo ("shift+v"), case-insensitive. A bare key
-   * only fires while focus isn't in a text field (it would type otherwise); a
-   * Shift combo fires everywhere, inputs included. The listener lives for as
-   * long as the button is mounted, so scope it by only rendering the button in
-   * the context where the shortcut should apply.
+   * When set, pressing this combo toggles recording — same as clicking. Accepts
+   * a bare key ("v") or a combo of modifiers + key, case-insensitive, joined by
+   * "+": "mod" (⌘ on macOS, Ctrl elsewhere), "shift", "alt". A bare key only
+   * fires while focus isn't in a text field (it would type otherwise); a combo
+   * carries its own modifiers, so it fires everywhere, inputs included — but it
+   * must include a NON-typographic modifier ("mod" or "alt"): a lone Shift
+   * combo is just how you type a capital letter, and would fire on it. The
+   * listener lives for as long as the button is mounted, so scope it by only
+   * rendering the button in the context where the shortcut should apply.
    */
   shortcutKey?: string;
   className?: string;
@@ -61,14 +66,42 @@ function formatTime(ms: number): string {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
-/** Parse a shortcut spec ("v" or "shift+v") into its parts, or null if unset. */
-function parseShortcut(
-  spec?: string,
-): { requireShift: boolean; key: string } | null {
+interface ParsedShortcut {
+  /** ⌘ on macOS, Ctrl elsewhere. */
+  mod: boolean;
+  shift: boolean;
+  alt: boolean;
+  /** The bare key, lowercase — compared against `eventKey(e)`. */
+  key: string;
+  /** Tokens for <KbdSequence>, in display order ("mod" resolved at render). */
+  tokens: string[];
+}
+
+/** Parse a shortcut spec ("v", "mod+shift+d"), or null if unset/malformed. */
+function parseShortcut(spec?: string): ParsedShortcut | null {
   if (!spec) return null;
-  const lower = spec.toLowerCase();
-  const requireShift = lower.startsWith("shift+");
-  return { requireShift, key: requireShift ? lower.slice("shift+".length) : lower };
+  const parts = spec
+    .toLowerCase()
+    .split("+")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const key = parts.pop();
+  if (!key) return null;
+  const mod = parts.includes("mod");
+  const shift = parts.includes("shift");
+  const alt = parts.includes("alt");
+  return {
+    mod,
+    shift,
+    alt,
+    key,
+    tokens: [
+      ...(mod ? ["mod"] : []),
+      ...(alt ? ["⌥"] : []),
+      ...(shift ? ["⇧"] : []),
+      key.toUpperCase(),
+    ],
+  };
 }
 
 function pickRecorderMimeType(): string | undefined {
@@ -328,20 +361,23 @@ export function DictateButton({
     }
   }, [disabled, startRecording, status, stopRecording]);
 
-  // Keyboard shortcut: toggle recording on `shortcutKey`. No Cmd/Ctrl/Alt, no
-  // key-repeat. A bare key stands down while the user is typing (so it still
-  // types normally in the title/description); a Shift combo carries its own
-  // modifier, so it fires everywhere — inputs included.
-  const shortcut = parseShortcut(shortcutKey);
-  const shortcutChar = shortcut?.key ?? null;
-  const shortcutRequireShift = shortcut?.requireShift ?? false;
+  // Keyboard shortcut: toggle recording on `shortcutKey`. Modifiers must match
+  // EXACTLY (so ⌘⇧D never fires on ⌘D), and no key-repeat. A bare key stands
+  // down while the user is typing — it would type instead; a combo carries its
+  // own modifiers, so it fires everywhere, inputs included. `preventDefault`
+  // also swallows the browser's own binding for the combo (⌘⇧D = "bookmark all
+  // tabs" in Chrome) while minddy has focus.
+  const shortcut = useMemo(() => parseShortcut(shortcutKey), [shortcutKey]);
   useEffect(() => {
-    if (!shortcutChar) return;
+    if (!shortcut) return;
+    const { mod, shift, alt, key } = shortcut;
+    const isCombo = mod || shift || alt;
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (shortcutRequireShift ? !e.shiftKey : e.shiftKey) return;
-      if (eventKey(e) !== shortcutChar) return;
-      if (!shortcutRequireShift) {
+      if (e.repeat) return;
+      if (e.metaKey || e.ctrlKey ? !mod : mod) return;
+      if (e.shiftKey !== shift || e.altKey !== alt) return;
+      if (eventKey(e) !== key) return;
+      if (!isCombo) {
         const el = e.target as HTMLElement | null;
         if (
           el &&
@@ -356,7 +392,7 @@ export function DictateButton({
     };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
-  }, [shortcutChar, shortcutRequireShift, handleClick]);
+  }, [shortcut, handleClick]);
 
   const isBusy = status !== "idle";
   const isRecording = status === "recording";
@@ -398,10 +434,10 @@ export function DictateButton({
             <TooltipContent side="top" className="flex items-center gap-1.5">
               {tooltipLabel ?? t("start")}
               {shortcut && (
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  {shortcut.requireShift ? "⇧" : ""}
-                  {shortcut.key.toUpperCase()}
-                </kbd>
+                <KbdSequence
+                  keys={[shortcut.tokens.map(resolveKeyToken)]}
+                  size="sm"
+                />
               )}
             </TooltipContent>
           )}

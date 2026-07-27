@@ -11,8 +11,11 @@
 //
 // Bulk mode (MIN-75): a board's selection pill opens the palette via
 // useBulkActions; the list then shows the selection's options (Numo, change
-// status/priority/effort/assignee, delete) as plain rows in place of the normal
-// content — configurable fields open the same inline form as "Changer le thème".
+// status/priority/effort/assignee/objectif, cycle in/out, lier deux tickets,
+// delete) as plain rows in place of the normal content — configurable fields
+// open the same inline form as "Changer le thème". The rows that depend on a
+// single project (objectif, lien) or on a cycle are wired by the board only
+// when the selection allows them, so an impossible action is never offered.
 //
 // Cross-project (MIN-91): the rows now cover every project, so a ticket's ⌘;
 // actions can't assume it belongs to the project in the URL. Members and
@@ -37,7 +40,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast, useTheme } from "mangue-ui";
-import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh } from "lucide-react";
+import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh, IterationCw, Link2, Target } from "lucide-react";
 import {
   CommandPalette as CommandPaletteShell,
   type ActionProvider,
@@ -182,6 +185,7 @@ export function CommandPalette({
   const tPriority = useTranslations("Priority");
   const tField = useTranslations("Field");
   const tBulk = useTranslations("BulkActions");
+  const tCycles = useTranslations("Cycles");
   const tNav = useTranslations("Nav");
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -666,7 +670,8 @@ export function CommandPalette({
   // `bulkFieldProvider`.
   const bulkItems = useMemo<CpPaletteItem[]>(() => {
     if (!bulkRequest) return [];
-    const { count, onDelete, onAskNumo } = bulkRequest;
+    const { count, onDelete, onAskNumo, cycle, objectives, onLink } =
+      bulkRequest;
     const field = (f: string): Partial<CpPaletteItem> => ({
       filterCategory: "bulk",
       entityType: "bulk-field",
@@ -716,6 +721,66 @@ export function CommandPalette({
       } as CpPaletteItem,
     ];
 
+    // L'objectif est propre à un projet : la ligne n'existe que si toute la
+    // sélection tient dans le même (le board la retire sinon).
+    if (objectives && objectives.length > 0) {
+      list.push({
+        id: "bulk-objective",
+        title: tIssueUI("changeObjectiveAria"),
+        icon: <Target className="size-4" />,
+        keywords: ["objectif", "objective", "goal"],
+        ...field("objective"),
+      } as CpPaletteItem);
+    }
+
+    // Cycle : les deux sens cohabitent sur une sélection mixte — chacun ne
+    // touche que les tickets qu'il concerne.
+    if (cycle && cycle.addable > 0) {
+      list.push({
+        id: "bulk-cycle-add",
+        title: tCycles("addToCycle"),
+        icon: <IterationCw className="size-4" />,
+        keywords: ["cycle", "semaine", "week", "sprint", "ajouter"],
+        filterCategory: "bulk",
+        favoritable: false,
+        execute: () => {
+          cycle.onAdd();
+          toast.success(tCycles("bulkAdded", { count: cycle.addable }));
+        },
+      });
+    }
+    if (cycle && cycle.removable > 0) {
+      list.push({
+        id: "bulk-cycle-remove",
+        title: tCycles("removeFromCycle"),
+        icon: <IterationCw className="size-4" />,
+        keywords: ["cycle", "semaine", "week", "sprint", "retirer"],
+        filterCategory: "bulk",
+        favoritable: false,
+        execute: () => {
+          cycle.onRemove();
+          toast.success(tCycles("bulkRemoved", { count: cycle.removable }));
+        },
+      });
+    }
+
+    // Lier : une relation a exactement deux bouts, donc la ligne n'apparaît
+    // qu'à deux tickets sélectionnés (et du même projet — cf. le board).
+    if (onLink) {
+      list.push({
+        id: "bulk-link",
+        title: tBulk("link"),
+        icon: <Link2 className="size-4" />,
+        keywords: ["lier", "link", "relation", "related", "liés"],
+        filterCategory: "bulk",
+        favoritable: false,
+        execute: () => {
+          onLink();
+          toast.success(tBulk("linked"));
+        },
+      });
+    }
+
     if (onDelete) {
       list.push({
         id: "bulk-delete",
@@ -739,7 +804,7 @@ export function CommandPalette({
     }
 
     return list;
-  }, [bulkRequest, tBulk, tIssueUI]);
+  }, [bulkRequest, tBulk, tCycles, tIssueUI]);
 
   // Un seul groupe, intitulé du nombre de tickets sélectionnés.
   const bulkCategories = useMemo<CategoryDefinition[]>(
@@ -849,6 +914,39 @@ export function CommandPalette({
                   update(
                     { effort: values.effort as IssueEffort },
                     `${tIssueUI("changeEffortAria")} → ${String(values.effort).toUpperCase()}`
+                  ),
+              },
+            },
+          ];
+        }
+        if (fieldKey === "objective") {
+          return [
+            {
+              id: "bulk.objective",
+              label: tIssueUI("changeObjectiveAria"),
+              icon: Target,
+              category: "primary",
+              requiresForm: {
+                ...selectField(
+                  "objective",
+                  tIssueUI("changeObjectiveAria"),
+                  [
+                    { value: "__none__", label: tField("noObjective") },
+                    ...(req.objectives ?? []).map((o) => ({
+                      value: o.id,
+                      label: o.name,
+                    })),
+                  ]
+                ),
+                onSubmit: (values) =>
+                  update(
+                    {
+                      objective_id:
+                        values.objective === "__none__"
+                          ? null
+                          : (values.objective as string),
+                    },
+                    tIssueUI("changeObjectiveAria")
                   ),
               },
             },

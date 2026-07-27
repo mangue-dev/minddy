@@ -32,6 +32,7 @@ import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
@@ -70,6 +71,7 @@ export function KanbanBoard({
   onMove,
   buildMenuActions,
   currentCycleId,
+  onSetCycle,
 }: {
   issues: Issue[];
   /** Every project issue (unfiltered) — resolves relation targets that a view
@@ -104,6 +106,9 @@ export function KanbanBoard({
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
   currentCycleId?: string | null;
+  /** Moves one issue in/out of the cycle — same handler as the right-click
+      action, reused by the selection's bulk cycle rows. */
+  onSetCycle?: (issue: Issue, cycleId: string | null) => void;
 }) {
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),
@@ -175,6 +180,31 @@ export function KanbanBoard({
     [onUpdateIssue, selectedIssues]
   );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  // Déplacements de cycle sur la sélection : un ticket déjà dedans peut en
+  // sortir, un ticket vivant peut y entrer — une sélection mixte offre les deux.
+  const bulkCycle = useMemo(() => {
+    if (!currentCycleId || !onSetCycle) return undefined;
+    const { addable, removable } = splitCycleSelection(
+      selectedIssues,
+      currentCycleId
+    );
+    if (addable.length === 0 && removable.length === 0) return undefined;
+    return {
+      addable: addable.length,
+      removable: removable.length,
+      onAdd: () => addable.forEach((issue) => onSetCycle(issue, currentCycleId)),
+      onRemove: () => removable.forEach((issue) => onSetCycle(issue, null)),
+    };
+  }, [currentCycleId, onSetCycle, selectedIssues]);
+  // Une relation a exactement deux bouts : l'action n'existe qu'à deux tickets.
+  const bulkLink = useMemo(() => {
+    if (selectedIssues.length !== 2) return undefined;
+    const [first, second] = selectedIssues;
+    return () => {
+      onAddRelation(first.id, "related", second.id);
+      clearSelection();
+    };
+  }, [selectedIssues, onAddRelation, clearSelection]);
   const activeIssue = activeId ? issues.find((i) => i.id === activeId) ?? null : null;
   const activeParent =
     activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
@@ -299,6 +329,11 @@ export function KanbanBoard({
             } : undefined}
             onClear={clearSelection}
             onAskNumo={() => onAskNumo(selectedIssues)}
+            cycle={bulkCycle}
+            // Board de projet : la sélection est mono-projet par construction,
+            // donc tous ses objectifs sont proposables.
+            objectives={objectives}
+            onLink={bulkLink}
           />
         )}
         <ColumnDots

@@ -558,6 +558,15 @@ function GlobalBoardInner() {
                 onAddRelation={
                   selectedPhase === "current" ? handleAddRelation : undefined
                 }
+                // Vue cycle : pas de pastille (tout y est), mais une sélection
+                // doit pouvoir sortir du cycle d'un coup — seulement sur le
+                // cycle en cours, sortir d'un cycle passé n'a pas de sens.
+                bulkCycleId={
+                  selectedPhase === "current" ? (selectedCycle?.id ?? null) : null
+                }
+                onSetCycle={
+                  selectedPhase === "current" ? onSetIssueCycle : undefined
+                }
                 projectMap={projectMap}
                 memberMapByProject={memberMapByProject}
                 categoryMapByProject={categoryMapByProject}
@@ -586,6 +595,7 @@ function GlobalBoardInner() {
             objectiveMapByProject={objectiveMapByProject}
             buildMenuActions={buildCycleMenuActions}
             currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
+            onSetCycle={onSetIssueCycle}
             onCreateIssue={(status) => openCreateIssue({ status })}
             onAddRelation={handleAddRelation}
             {...boardHandlers}

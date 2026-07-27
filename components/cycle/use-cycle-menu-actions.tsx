@@ -7,13 +7,34 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 import type { Issue } from "@/lib/types";
 
 // Adding is only offered for real, living work; removal is always offered for
-// an issue already in the current cycle (whatever its status became).
-const CYCLE_INELIGIBLE_STATUSES: readonly Issue["status"][] = [
+// an issue already in the current cycle (whatever its status became). Exported
+// for the bulk path, which applies the same rule to a whole selection.
+export const CYCLE_INELIGIBLE_STATUSES: readonly Issue["status"][] = [
   "done",
   "canceled",
   "duplicate",
   "triage",
 ];
+
+/**
+ * Split a selection into what can still JOIN the current cycle and what can
+ * LEAVE it, applying the same eligibility rule as the single-issue action. A
+ * mixed selection yields both buckets, so the bulk rows can offer both moves
+ * and each only touches the tickets it concerns.
+ */
+export function splitCycleSelection(
+  issues: Issue[],
+  currentCycleId: string | null
+): { addable: Issue[]; removable: Issue[] } {
+  const addable: Issue[] = [];
+  const removable: Issue[] = [];
+  if (!currentCycleId) return { addable, removable };
+  for (const issue of issues) {
+    if (issue.cycle_id === currentCycleId) removable.push(issue);
+    else if (!CYCLE_INELIGIBLE_STATUSES.includes(issue.status)) addable.push(issue);
+  }
+  return { addable, removable };
+}
 
 /**
  * The right-click "Add to / Remove from cycle" action (MIN-32), shared by the

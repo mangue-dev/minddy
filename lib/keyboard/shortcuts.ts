@@ -100,6 +100,10 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "card.objective", labelKey: "objective", keys: [["O"]] },
       { id: "card.copyPrompt", labelKey: "copyPrompt", keys: [["⇧", "P"]] },
       { id: "card.launchAgent", labelKey: "launchAgent", keys: [["⇧", "A"]] },
+      // Monté partout où DictateButton porte le raccourci : panneau du ticket
+      // et dialog « nouveau ticket ». Il lui faut ⌘ : un combo ⇧ seul se
+      // déclenchait sur une majuscule tapée dans le titre ou la description.
+      { id: "card.dictate", labelKey: "dictate", keys: [["mod", "⇧", "D"]] },
     ],
   },
 ];

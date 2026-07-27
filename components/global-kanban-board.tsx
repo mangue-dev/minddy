@@ -31,6 +31,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -80,6 +81,8 @@ export function GlobalKanbanBoard({
   comparator,
   buildMenuActions,
   currentCycleId,
+  bulkCycleId,
+  onSetCycle,
   readOnly = false,
 }: {
   issues: Issue[];
@@ -126,6 +129,13 @@ export function GlobalKanbanBoard({
   /** My current cycle's id — cards in it show the blue cycle icon. Unset in
       cycle view, where the icon would be pure noise. */
   currentCycleId?: string | null;
+  /** The cycle the SELECTION's bulk moves target. Same as `currentCycleId` on a
+      normal board; set on its own in cycle view, where the badge is suppressed
+      (every card is in the cycle) but bulk removal is exactly what's wanted. */
+  bulkCycleId?: string | null;
+  /** Moves one issue in/out of the cycle — same handler as the right-click
+      action, reused by the selection's bulk cycle rows. */
+  onSetCycle?: (issue: Issue, cycleId: string | null) => void;
   /** Past/future cycles are read-only: no drag at all. */
   readOnly?: boolean;
 }) {
@@ -191,6 +201,44 @@ export function GlobalKanbanBoard({
     selectedIssues.forEach((issue) => onUpdateIssue(issue.id, patch, issue.project_id));
   }, [onUpdateIssue, selectedIssues]);
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  // Objectifs et relations sont propres à un projet : les actions groupées qui
+  // en dépendent n'existent que si TOUTE la sélection tient dans le même.
+  const selectionProjectId = useMemo(() => {
+    if (selectedIssues.length === 0) return null;
+    const first = selectedIssues[0].project_id;
+    return selectedIssues.every((i) => i.project_id === first) ? first : null;
+  }, [selectedIssues]);
+  const bulkObjectives = useMemo(() => {
+    if (!selectionProjectId) return undefined;
+    const map = objectiveMapByProject.get(selectionProjectId);
+    return map ? Array.from(map.values()) : undefined;
+  }, [selectionProjectId, objectiveMapByProject]);
+  const cycleTargetId = bulkCycleId ?? currentCycleId ?? null;
+  const bulkCycle = useMemo(() => {
+    if (!cycleTargetId || !onSetCycle) return undefined;
+    const { addable, removable } = splitCycleSelection(
+      selectedIssues,
+      cycleTargetId
+    );
+    if (addable.length === 0 && removable.length === 0) return undefined;
+    return {
+      addable: addable.length,
+      removable: removable.length,
+      onAdd: () => addable.forEach((issue) => onSetCycle(issue, cycleTargetId)),
+      onRemove: () => removable.forEach((issue) => onSetCycle(issue, null)),
+    };
+  }, [cycleTargetId, onSetCycle, selectedIssues]);
+  // Une relation a exactement deux bouts : l'action n'existe qu'à deux tickets.
+  const bulkLink = useMemo(() => {
+    if (selectedIssues.length !== 2 || !selectionProjectId || !onAddRelation) {
+      return undefined;
+    }
+    const [first, second] = selectedIssues;
+    return () => {
+      onAddRelation(first.id, "related", second.id, selectionProjectId);
+      clearSelection();
+    };
+  }, [selectedIssues, selectionProjectId, onAddRelation, clearSelection]);
   const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
   const activeProject = activeIssue
     ? projectMap.get(activeIssue.project_id)
@@ -282,6 +330,9 @@ export function GlobalKanbanBoard({
           }}
           onClear={clearSelection}
           onAskNumo={() => onAskNumo(selectedIssues)}
+          cycle={bulkCycle}
+          objectives={bulkObjectives}
+          onLink={bulkLink}
         />
       )}
       <div

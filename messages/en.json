@@ -328,6 +328,7 @@
       "s4": "Create a view of urgent bugs"
     },
     "contextIssue": "Issue in context",
+    "contextIssuesSelected": "{count, plural, one {# issue selected} other {# issues selected}}",
     "contextObjective": "Objective in context",
     "contextFeedback": "Feedback in context",
     "contextBoard": "Board in context",
@@ -368,6 +369,8 @@
     "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
     "actions": "Actions",
     "askNumo": "Ask Numo",
+    "link": "Link the two issues",
+    "linked": "Issues linked",
     "clear": "Clear selection",
     "delete": "{count, plural, one {Delete issue} other {Delete issues}}",
     "deleteConfirm": "{count, plural, one {Delete # issue?} other {Delete # issues?}}"
@@ -982,7 +985,8 @@
       "dueDate": "Change due date",
       "objective": "Change objective",
       "copyPrompt": "Copy as prompt",
-      "launchAgent": "Launch the Numo agent"
+      "launchAgent": "Launch the Numo agent",
+      "dictate": "Dictate (issue panel or new issue)"
     }
   },
   "Undo": {
@@ -1844,6 +1848,8 @@
     "completedTitle": "Cycle completed",
     "refill": "Refill cycle",
     "refillAdded": "{count, plural, one {# issue added to the cycle} other {# issues added to the cycle}}",
+    "bulkAdded": "{count, plural, one {# issue added to my cycle} other {# issues added to my cycle}}",
+    "bulkRemoved": "{count, plural, one {# issue removed from my cycle} other {# issues removed from my cycle}}",
     "refillEmpty": "Nothing to add right now."
   },
   "Admin": {
