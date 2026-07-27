@@ -1,5 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { ArrowDown, ArrowRight, Mic } from "lucide-react";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";

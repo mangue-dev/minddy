@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { avatarDataUri } from "@/lib/avatar";
 
 /**

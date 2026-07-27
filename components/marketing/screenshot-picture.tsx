@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 
 /**
  * Le `<picture>` d'une capture, et son fondu à la charge (MIN-73, MIN-88).

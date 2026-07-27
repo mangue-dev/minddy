@@ -3,12 +3,14 @@ import { headers } from "next/headers";
 import { Inter, Instrument_Serif } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { ThemeProvider, Toaster } from "mangue-ui";
+import { ThemeProvider } from "mangue-ui/components/theme-provider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/cookie-banner";
+import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
+import { publicClientMessages } from "@/lib/public-client-messages";
 import { SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import "./globals.css";
 
@@ -79,6 +81,13 @@ export default async function RootLayout({
   // en dark comme l'app interne (MIN-60).
   const defaultTheme = headerList.get("x-minddy-public") === "1" ? "system" : "dark";
 
+  // Les six pages marketing n'envoient au navigateur que les quatre namespaces
+  // dont leurs composants clients se servent, au lieu des 67 du catalogue : les
+  // messages sont une PROP de composant client, donc du flux RSC inline, donc
+  // 39 Ko gzippés de plus à télécharger avant l'image du LCP (MIN-100).
+  const marketing = headerList.get("x-minddy-marketing") === "1";
+  const clientMessages = marketing ? publicClientMessages(messages) : messages;
+
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
@@ -92,9 +101,9 @@ export default async function RootLayout({
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
         <ThemeProvider defaultTheme={defaultTheme}>
-          <NextIntlClientProvider messages={messages}>
+          <NextIntlClientProvider messages={clientMessages}>
             {children}
-            <Toaster />
+            <LazyToaster />
             <CookieBanner />
             {/* PostHog (MIN-78). Monté ici, donc actif PARTOUT — y compris sur
                 les pages publiques (landing, board de feedback, vues partagées),

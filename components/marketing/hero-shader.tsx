@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { cn, useTheme } from "mangue-ui";
-import { useShaderPalette } from "@/lib/use-shader-palette";
+import { useTheme } from "mangue-ui/components/theme-provider";
+import { cn } from "mangue-ui/lib/utils";
 
 /**
  * Le fond animé de la landing (MIN-73), monté deux fois : sous le hero et sous
@@ -45,11 +45,15 @@ import { useShaderPalette } from "@/lib/use-shader-palette";
  * avant que la page soit interactive — pour un fond décoratif qui n'est même
  * pas monté sous 640 px. `ssr: false` parce que le shader ne rend rien
  * d'utile côté serveur : c'est un canvas (MIN-88).
+ *
+ * La cible du `dynamic()` est `grain-canvas.tsx`, PAS la librairie (MIN-100).
+ * Next précharge dans le document le chunk d'un `dynamic()` dès que le composant
+ * qui le rend passe par le rendu serveur : `GrainBackdrop` rendant toujours son
+ * conteneur, le WebGL était téléchargé même sur mobile, où `enabled` reste faux
+ * et où rien ne s'affiche jamais. En le montant sous une condition d'état — donc
+ * jamais côté serveur — le chunk n'est demandé que là où il sert.
  */
-const GrainGradient = dynamic(
-  () => import("@paper-design/shaders-react").then((m) => m.GrainGradient),
-  { ssr: false },
-);
+const GrainCanvas = dynamic(() => import("./grain-canvas"), { ssr: false });
 
 /** Dégradé de masquage : le shader ne s'arrête jamais net, il se fond dans la
     page. Le hero se dissout vers le bas ; le CTA, pris entre deux sections, se
@@ -68,7 +72,6 @@ function GrainBackdrop({
   mask: string;
 }) {
   const { resolvedTheme } = useTheme();
-  const colors = useShaderPalette();
   const [enabled, setEnabled] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
@@ -119,20 +122,7 @@ function GrainBackdrop({
         WebkitMaskImage: mask,
       }}
     >
-      {enabled && (
-        <GrainGradient
-          style={{ width: "100%", height: "100%" }}
-          colors={colors}
-          colorBack={isDark ? "#0d0e10" : "#f3f4f6"}
-          softness={0.72}
-          intensity={0.16}
-          noise={0.08}
-          shape="wave"
-          speed={reduced || !onScreen ? 0 : 0.7}
-          scale={2.6}
-          rotation={100}
-        />
-      )}
+      {enabled && <GrainCanvas isDark={isDark} speed={reduced || !onScreen ? 0 : 0.7} />}
     </div>
   );
 }

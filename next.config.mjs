@@ -53,6 +53,18 @@ const nextConfig = {
   turbopack: { root: dir },
   // mangue-ui ships TS/TSX source (no build) — Next must transpile it.
   transpilePackages: ["mangue-ui"],
+  // `radix-ui` est un baril sur toutes les primitives Radix, et c'est par lui que
+  // les composants de mangue-ui les importent (`import { Dialog } from
+  // "radix-ui"`). Next réécrit ces imports nommés vers le module qui les exporte
+  // vraiment, au lieu d'évaluer le baril entier (MIN-100).
+  //
+  // Le même réglage ne peut RIEN pour le baril de mangue-ui : la réécriture a
+  // besoin de sous-chemins, et le champ `exports` du paquet n'en publie aucun.
+  // C'est l'alias `mangue-ui/*` de `tsconfig.json` qui s'en charge — voir le
+  // commentaire là-bas, il porte la mesure.
+  experimental: {
+    optimizePackageImports: ["radix-ui"],
+  },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client
   // components (e.g. the sidebar env badge) can tell prod/preview/local apart.
   // Unset locally → "development". Inlined at build time.

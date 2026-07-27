@@ -4,7 +4,8 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Check } from "lucide-react";
-import { Button, cn } from "mangue-ui";
+import { Button } from "mangue-ui/components/ui/button";
+import { cn } from "mangue-ui/lib/utils";
 import {
   BILLING_PLANS,
   annualMonthlyEquivalentEur,

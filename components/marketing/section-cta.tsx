@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
-import { Button } from "mangue-ui";
+import { Button } from "mangue-ui/components/ui/button";
 import { CtaShader } from "./hero-shader";
 import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";

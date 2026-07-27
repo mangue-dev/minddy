@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, Plug } from "lucide-react";
-import { Button } from "mangue-ui";
+import { Button } from "mangue-ui/components/ui/button";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { TrackedCta } from "./tracked-cta";
 import { localizedHref } from "@/lib/locale-href";

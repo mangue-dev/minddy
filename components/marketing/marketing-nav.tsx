@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -14,9 +15,11 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { Button, Sheet, SheetClose, SheetContent, SheetTitle, cn } from "mangue-ui";
+import { Button } from "mangue-ui/components/ui/button";
+import { Sheet, SheetClose, SheetContent, SheetTitle } from "mangue-ui/components/ui/sheet";
+import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { NumoIcon } from "@/components/numo-icon";
+import { NumoFace } from "@/components/numo-face";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -101,51 +104,36 @@ function NavLogo() {
  * annulerait le travail de mise en cache du même lot. On part de `false` (le
  * cas majoritaire) pour que le rendu serveur et le premier paint coïncident.
  *
- * DEUX PARESSES (MIN-88), parce que `@supabase/supabase-js` pesait dans le
- * bundle INITIAL de la landing pour un simple libellé de bouton :
+ * DEUX PARESSES (MIN-88, revues par MIN-100), parce que
+ * `@supabase/supabase-js` pesait dans le bundle INITIAL de la landing pour un
+ * simple libellé de bouton :
  *
- * 1. Le module est importé dynamiquement — il devient un chunk séparé, chargé
- *    après le premier rendu au lieu de le bloquer.
- * 2. Il n'est même pas demandé si aucun cookie d'auth Supabase n'est présent.
- *    Un visiteur anonyme — l'immense majorité sur une landing — ne télécharge
- *    donc jamais une ligne du SDK.
+ * 1. Le SDK vit derrière un `next/dynamic` (`session-probe.tsx`) — donc dans un
+ *    vrai chunk paresseux. Un `import()` nu ne suffisait PAS : Turbopack en place
+ *    la cible dans le groupe de chunks initial du composant, et les 18 Ko
+ *    gzippés partaient quand même avec le bundle de départ (mesuré).
+ * 2. La sonde n'est même pas montée si aucun cookie d'auth Supabase n'est
+ *    présent. Un visiteur anonyme — l'immense majorité sur une landing — ne
+ *    demande donc jamais ce chunk.
  */
+const SessionProbe = dynamic(
+  () => import("./session-probe").then((m) => m.SessionProbe),
+  { ssr: false },
+);
+
 function hasAuthCookie(): boolean {
   // Supabase nomme ses cookies `sb-<ref>-auth-token[.n]`. On ne cherche qu'un
   // indice, pas une preuve : le SDK reste seul juge de la validité.
   return document.cookie.includes("-auth-token");
 }
 
-function useHasSession(): boolean {
+/** `[a-t-on une session, faut-il la demander]`. On part de `false` : le rendu
+    serveur et le premier paint coïncident donc pour le cas majoritaire. */
+function useSession(): [boolean, boolean, (v: boolean) => void] {
   const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    if (!hasAuthCookie()) return;
-
-    let active = true;
-    let unsubscribe: (() => void) | undefined;
-
-    void import("@/lib/supabase").then(({ getSupabase }) => {
-      if (!active) return;
-      const supabase = getSupabase();
-      void supabase.auth.getSession().then(({ data }) => {
-        if (active) setHasSession(!!data.session);
-      });
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        setHasSession(!!session);
-      });
-      unsubscribe = () => subscription.unsubscribe();
-    });
-
-    return () => {
-      active = false;
-      unsubscribe?.();
-    };
-  }, []);
-
-  return hasSession;
+  const [probe, setProbe] = useState(false);
+  useEffect(() => setProbe(hasAuthCookie()), []);
+  return [hasSession, probe, setHasSession];
 }
 
 export function MarketingNav() {
@@ -156,7 +144,7 @@ export function MarketingNav() {
   const locale = useLocale() as Locale;
   const href = (path: string) => localizedHref(path, locale);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const hasSession = useHasSession();
+  const [hasSession, probeSession, setHasSession] = useSession();
 
   const [pinned, setPinned] = useState(true);
   useEffect(() => {
@@ -180,6 +168,7 @@ export function MarketingNav() {
 
   return (
     <>
+      {probeSession && <SessionProbe onChange={setHasSession} />}
       <header
         className={cn(
           "sticky top-0 z-50 px-3 pt-3 pb-2 transition-transform duration-300 ease-out sm:px-4 sm:pt-4",
@@ -281,7 +270,7 @@ export function MarketingNav() {
                     {entry.icon ? (
                       <entry.icon className="h-4 w-4" />
                     ) : (
-                      <NumoIcon animated={false} className="h-3.5 w-auto" />
+                      <NumoFace className="h-3.5 w-auto" />
                     )}
                   </span>
                   <span className="min-w-0">

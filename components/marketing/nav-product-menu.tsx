@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, type LucideIcon } from "lucide-react";
-import { cn } from "mangue-ui";
-import { NumoIcon } from "@/components/numo-icon";
+import { cn } from "mangue-ui/lib/utils";
+import { NumoFace } from "@/components/numo-face";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
@@ -177,7 +177,7 @@ export function NavProductMenu({
                       {Icon ? (
                         <Icon className="h-4 w-4" />
                       ) : (
-                        <NumoIcon animated={false} className="h-3.5 w-auto" />
+                        <NumoFace className="h-3.5 w-auto" />
                       )}
                     </span>
                     <span className="min-w-0">

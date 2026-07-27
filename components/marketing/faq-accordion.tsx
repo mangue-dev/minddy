@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "mangue-ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "mangue-ui/components/ui/accordion";
 
 /**
  * Rendu client de la FAQ (l'accordéon de mangue-ui est interactif) ; les

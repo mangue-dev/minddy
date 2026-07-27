@@ -1,7 +1,7 @@
 import { getImageProps } from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ImageIcon } from "lucide-react";
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { ScreenshotPicture } from "./screenshot-picture";
 import {
   SCREENSHOT_SLOTS,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, type CSSProperties, type ReactNode, type Ref } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 
 /**
  * Apparitions au scroll de la landing (MIN-73).
@@ -20,6 +20,19 @@ import { cn } from "mangue-ui";
  * Sans JS, rien n'est masqué : `reveal-ready` — la classe qui met l'opacité à 0
  * — n'est ajoutée qu'au montage. Le rendu serveur est donc la page complète, et
  * `prefers-reduced-motion` désactive tout côté CSS.
+ *
+ * ## Ces frontières clientes ne coûtent presque rien (MIN-100, mesuré)
+ *
+ * On les soupçonnait de porter les 264 Ko de charge RSC inline de la landing —
+ * 48 instances, chacune une référence de module client dans le flux. Décompte
+ * réel des rangées du flux : **13,9 Ko bruts pour toutes**, soit 6 % de la
+ * charge, ~2 Ko gzippés. Les enfants, eux, sont sérialisés de toute façon : ils
+ * font partie de l'arbre que RSC décrit, frontière ou pas.
+ *
+ * Les 264 Ko venaient d'ailleurs (le catalogue i18n entier, cf.
+ * `lib/public-client-messages.ts`). Donc : rien à sacrifier ici, et surtout pas
+ * la peine de tout réécrire en `animation-timeline: view()` ou de remplacer les
+ * 48 observers par un seul — le gain serait de l'ordre du kilo-octet.
  */
 
 /** Éléments qu'on peut vouloir animer. Volontairement restreint : `Reveal`

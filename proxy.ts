@@ -82,6 +82,18 @@ const PUBLIC_SITE_PREFIXES = ["/f/", "/share/"];
 const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
 
+/**
+ * Les six pages du site marketing, et elles seules (MIN-100). Le root layout
+ * s'en sert pour ne PAS sérialiser les 67 namespaces du catalogue i18n dans le
+ * document — 39 Ko gzippés en travers de la file de téléchargement de l'image
+ * du LCP. Voir `lib/public-client-messages.ts`.
+ *
+ * Distinct de `PUBLIC_THEME_HEADER`, qui couvre aussi les boards de feedback et
+ * les vues partagées : ces pages-là sont de vraies applications clientes et ont
+ * besoin de leurs propres namespaces.
+ */
+const MARKETING_HEADER = "x-minddy-marketing";
+
 /** Réécrit les en-têtes de la REQUÊTE (ce que lisent le layout et next-intl). */
 function withRequestHeaders(
   request: NextRequest,
@@ -195,6 +207,7 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
   const locale = englishPath ? "fr" : "en";
   const headers = {
     [PUBLIC_THEME_HEADER]: "1",
+    [MARKETING_HEADER]: "1",
     [LOCALE_HEADER]: locale,
   };
 
@@ -295,7 +308,15 @@ export async function proxy(request: NextRequest) {
           cookieLocale ??
           detectFromAcceptLanguage(request.headers.get("accept-language"));
         if (preferred === "fr") {
-          return NextResponse.redirect(new URL("/fr", request.url), 307);
+          // `nextUrl.clone()`, et surtout PAS `new URL("/fr", request.url)` :
+          // une URL relative repart de la racine et efface la query. Un
+          // francophone arrivant sur `/?utm_source=…` était renvoyé vers un
+          // `/fr` nu — l'attribution de la visite partait avec, et la landing
+          // s'enregistrait en `$direct`. C'est exactement le trafic (campagne,
+          // lancement, newsletter) qu'on cherche à mesurer.
+          const target = request.nextUrl.clone();
+          target.pathname = "/fr";
+          return NextResponse.redirect(target, 307);
         }
       }
     }

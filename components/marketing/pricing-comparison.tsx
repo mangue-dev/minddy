@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Check, Minus } from "lucide-react";
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { PricingInfoHint } from "./pricing-info-hint";
 import {
   BILLING_PLANS,

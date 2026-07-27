@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { Check, Crosshair, PencilLine, Search, type LucideIcon } from "lucide-react";
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { AgentLogo } from "@/components/settings/agent-logo";
-import { NumoIcon } from "@/components/numo-icon";
+import { NumoFace } from "@/components/numo-face";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 import type { ScreenshotSlotId } from "./screenshot-slots";
@@ -182,7 +182,7 @@ export async function SectionAgents() {
                   ici a sauté — il était en dur, non traduit, et redisait un
                   titre qui commence déjà par le mot. */}
               <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-primary">
-                <NumoIcon animated={false} className="h-4 w-auto" />
+                <NumoFace className="h-4 w-auto" />
               </span>
 
               <RevealHeading

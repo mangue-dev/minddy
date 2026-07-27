@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  cn,
-} from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { setLocaleCookie } from "@/lib/set-locale";
-import { localizedHref, switchLocaleHref } from "@/lib/locale-href";
+import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 
@@ -70,27 +62,52 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   },
 ];
 
+/**
+ * Le sélecteur de langue n'est chargé QUE quand on arrive au pied de page
+ * (MIN-100).
+ *
+ * Son `Select` Radix tire le positionneur flottant : 46 Ko gzippés, deuxième
+ * poste du bundle des six pages publiques derrière le framework, pour une liste
+ * de deux langues qui ne s'ouvre qu'au clic. `ssr: false` seul ne suffisait pas —
+ * le composant étant rendu sans condition, React résolvait le `dynamic` dès
+ * l'hydratation et les 46 Ko partaient quand même dans la fenêtre du LCP, juste
+ * un peu plus tard. L'observer ci-dessous les repousse à l'instant où le pied de
+ * page approche, c'est-à-dire jamais pour un visiteur qui ne descend pas.
+ *
+ * La place est réservée en dur (`h-8`) : rien ne bouge quand il apparaît.
+ */
+const LanguageSwitcher = dynamic(
+  () => import("./language-switcher").then((m) => m.LanguageSwitcher),
+  { ssr: false },
+);
+
 export function MarketingFooter() {
   const t = useTranslations("Landing");
-  const tLang = useTranslations("Language");
   const locale = useLocale() as Locale;
-  const [selected, setSelected] = useState<Locale>(locale);
-  const [, startTransition] = useTransition();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [reached, setReached] = useState(false);
+  const slot = useRef<HTMLDivElement | null>(null);
 
-  // Changer de langue CHANGE D'URL sur le site public (MIN-88) : `/pricing`
-  // devient `/fr/tarifs`. Le cookie seul ne suffisait pas — il rafraîchissait la
-  // page en français en laissant l'URL annoncer l'anglais, ce que le canonical
-  // et le hreflang contredisaient aussitôt. Sur l'app interne (aucune URL
-  // localisée), `switchLocaleHref` renvoie `null` et on se contente du cookie.
-  const handleLocaleChange = async (value: string) => {
-    const next = value as Locale;
-    setSelected(next);
-    await setLocaleCookie(next);
-    const target = switchLocaleHref(pathname, next);
-    startTransition(() => (target ? router.push(target) : router.refresh()));
-  };
+  useEffect(() => {
+    const el = slot.current;
+    // Sans IntersectionObserver, on monte tout de suite : mieux vaut le poids
+    // qu'un sélecteur de langue absent.
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setReached(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setReached(true);
+        io.disconnect();
+      },
+      // Une marge confortable : le chargement démarre avant qu'on n'y soit, donc
+      // le sélecteur est déjà là quand le pied de page entre vraiment.
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   return (
     <footer className="relative overflow-hidden border-t border-border">
@@ -110,22 +127,9 @@ export function MarketingFooter() {
             <p className="max-w-[18rem] text-sm leading-relaxed text-muted-foreground">
               {t("footerTagline")}
             </p>
-            <Select value={selected} onValueChange={handleLocaleChange}>
-              {/* `aria-label` : le déclencheur d'un Select ne rend que la valeur
-                  choisie (« Français »), donc un lecteur d'écran annonçait une
-                  liste déroulante sans savoir ce qu'elle règle — et l'audit
-                  `button-name` échouait sur toutes les pages publiques. */}
-              <SelectTrigger
-                aria-label={tLang("title")}
-                className="h-8 w-auto self-start bg-transparent text-xs"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fr">Français</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-              </SelectContent>
-            </Select>
+            <div ref={slot} className="h-8 self-start">
+              {reached && <LanguageSwitcher />}
+            </div>
           </div>
 
           {/* Colonnes en `<nav aria-labelledby>` et non en `<h2>` : trois titres

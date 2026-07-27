@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Info } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui/components/ui/popover";
 
 /**
  * Le petit « i » des lignes du tableau tarifs : le détail d'une ligne se lit

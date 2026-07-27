@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "mangue-ui/lib/utils";
 import { Triangle } from "lucide-react";
 import {
   EFFORT_MAP,

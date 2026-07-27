@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "mangue-ui/components/ui/button";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
