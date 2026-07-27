@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildIssuePlanPrompt, buildIssuePrompt } from "@/lib/issue-prompt";
+import {
+  buildIssuePlanPrompt,
+  buildIssuePrompt,
+  buildIssueVerifyPrompt,
+} from "@/lib/issue-prompt";
 import type { Issue } from "@/lib/types";
 
 const issue = {
@@ -90,5 +94,46 @@ describe("buildIssuePlanPrompt", () => {
       issue: { ...issue, plan: "Quelques notes en vrac." } as Issue,
     });
     expect(prompt).toContain("Write the implementation plan");
+  });
+});
+
+describe("buildIssueVerifyPrompt", () => {
+  const planned = {
+    ...input,
+    issue: { ...issue, plan: "## Approche\n\n- [x] a\n- [x] b\n- [ ] c" } as Issue,
+  };
+
+  it("demande de confronter le code au plan ET aux commentaires, puis de corriger", () => {
+    const prompt = buildIssueVerifyPrompt(planned);
+    expect(prompt).toContain("Verify the implementation of this minddy issue");
+    expect(prompt).toContain("<identifier>MIN-42</identifier>");
+    expect(prompt).toContain("(2/3 tasks done)");
+    expect(prompt).toContain("its comments");
+    expect(prompt).toContain("minddy_get_issue");
+    expect(prompt).toContain("minddy_update_plan_task");
+    expect(prompt).toContain("minddy_add_comment");
+    // Le plan n'est jamais inliné : l'agent le lit via le MCP.
+    expect(prompt).not.toContain("- [x] a");
+  });
+
+  it("exige des bugs PROUVÉS : ce qui est soupçonné se signale, pas se « corrige »", () => {
+    const prompt = buildIssueVerifyPrompt(planned);
+    expect(prompt).toContain("Fix each bug you can actually prove");
+    expect(prompt).toContain('report it instead of "fixing" it');
+    expect(prompt).toContain("Don't refactor what works");
+  });
+
+  it("sans MCP, réclame le plan et les commentaires plutôt que de les deviner", () => {
+    const prompt = buildIssueVerifyPrompt(planned);
+    expect(prompt).toContain("ask me to paste the plan and the comments");
+  });
+
+  it("ticket sans plan : le ticket et ses commentaires SONT la spécification", () => {
+    const prompt = buildIssueVerifyPrompt(input);
+    expect(prompt).toContain("This issue has no implementation plan");
+    expect(prompt).toContain("its comments are the whole specification");
+    // Rien à recaler : pas d'état de tâche à corriger sans plan.
+    expect(prompt).not.toContain("minddy_update_plan_task");
+    expect(prompt).toContain("ask me for its comments");
   });
 });

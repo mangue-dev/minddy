@@ -814,7 +814,9 @@
     "actionWritePlan": "Generate a plan",
     "actionReviewPlan": "Review the plan",
     "actionImplement": "Implement the issue",
+    "actionVerifyImplementation": "Verify the implementation",
     "promptCopied": "Prompt copied. Paste it into your coding agent.",
+    "verifyPromptCopied": "Prompt copied. Paste it into your coding agent to have it verify the implementation.",
     "promptCopiedMoved": "Prompt copied. The issue moved to “In Progress”.",
     "moreActionsAriaLabel": "Issue actions"
   },
@@ -1111,6 +1113,7 @@
     "copyPlanPromptHint": "Copies a prompt asking your coding agent to write this issue's plan.",
     "planPromptCopied": "Prompt copied. Paste it into your coding agent to have it write the plan.",
     "implementWithNumo": "Implement with Numo",
+    "verifyWithNumo": "Verify the implementation with Numo",
     "reviewWithNumo": "Review the plan with Numo",
     "reviewPromptCopied": "Prompt copied. Paste it into your coding agent to have it review the plan.",
     "editAriaLabel": "Edit the plan",
@@ -1281,7 +1284,8 @@
       "xl": "This is a large task (XL). Start by writing a thorough implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Then STOP and ask whether to start implementing now; don't begin coding until I confirm.",
       "default": "Start by writing a clear implementation plan on the issue — a short context (goal, approach), ordered checkbox tasks naming the exact files/functions to touch, and a verification step. Once the plan is in place, implement it and verify your work.",
       "writePlan": "Your only job here is to write this issue's implementation plan. Explore the code, then write a short context (goal, approach), ordered checkbox tasks naming the exact files and functions to touch, and a verification step. Save the plan on the issue, then STOP: don't implement anything until I ask.",
-      "reviewPlan": "This issue already has an implementation plan: your only job here is to REVIEW it — not to write a new one, and not to implement it. Read it, then go through it task by task against the real code — is each one still accurate (right files, right approach), still needed, and in the right order? Is a step missing? Correct what has drifted, drop what the code no longer calls for, add what's missing, and leave completed tasks and their progress alone. Save the corrected plan on the issue, then STOP and tell me what you changed."
+      "reviewPlan": "This issue already has an implementation plan: your only job here is to REVIEW it — not to write a new one, and not to implement it. Read it, then go through it task by task against the real code — is each one still accurate (right files, right approach), still needed, and in the right order? Is a step missing? Correct what has drifted, drop what the code no longer calls for, add what's missing, and leave completed tasks and their progress alone. Save the corrected plan on the issue, then STOP and tell me what you changed.",
+      "verifyImplementation": "The work on this issue has already been done, at least in part: your only job here is to VERIFY that implementation, not to write a new one. Start with what was asked — the issue, its plan and its comments, where any departure from the plan was argued — then compare them against the real code: is every task marked done really done, and done the way it was specified? Call out the gaps, and tell me which of the two is right (the code is sometimes the better answer, the plan isn't sacred). Then hunt for bugs: broken edge cases, wrong or missing states, call sites the change forgot to update, something the plan asked for that was silently skipped. Fix the ones you can prove by reading the code, and check every fix (the repo's tests, typecheck and lint); what you merely suspect, report it instead of “fixing” it — a speculative change to working code costs more than the bug you imagined. Don't refactor what works, stay inside the issue's scope, and finish by telling me what you verified, what you fixed and what you left alone."
     },
     "openAgent": "Open the Numo agent",
     "newSession": "New session",

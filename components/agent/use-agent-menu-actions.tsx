@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { ClipboardCopy, Code2, ListChecks, Plus } from "lucide-react";
+import { ClipboardCopy, Code2, ListChecks, Plus, SearchCheck } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
@@ -11,14 +11,18 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
  * prompt, lancer l'agent Numo — partagées par les cartes du board et le panneau
  * latéral, pour qu'elles ne divergent pas.
  *
- * Chacune est un SOUS-MENU avec les deux façons de travailler un ticket : le
- * plan (cadrer, sans coder) et « Implémenter le ticket ». Les raccourcis
- * clavier ne bougent pas — ⇧P copie le prompt d'implémentation, ⇧A lance
- * l'agent dessus — et s'affichent donc sur cette feuille-là.
+ * Chacune est un SOUS-MENU avec les trois façons de travailler un ticket, dans
+ * l'ordre où on les traverse : le plan (cadrer, sans coder), « Implémenter le
+ * ticket », puis « Vérifier l'implémentation » (relire le travail fait face au
+ * plan et aux commentaires, corriger les vrais bugs). Les raccourcis clavier ne
+ * bougent pas — ⇧P copie le prompt d'implémentation, ⇧A lance l'agent dessus —
+ * et s'affichent donc sur cette feuille-là.
  *
  * La feuille « plan » suit l'état du ticket : « Générer un plan » quand il n'en
  * a pas, « Vérifier le plan » quand il en a un — en redemander un n'aurait pas
- * de sens, et le prompt sous-jacent bascule de la même façon.
+ * de sens, et le prompt sous-jacent bascule de la même façon. La feuille
+ * « vérifier », elle, ne dépend d'aucun état : le menu garde la même forme quel
+ * que soit le ticket (le prompt, lui, s'adapte au plan qui existe ou non).
  *
  * Session existante : « Ouvrir l'agent » reste une entrée simple (elle rouvre la
  * conversation, elle ne lance rien) et c'est « Nouvelle session » qui porte le
@@ -30,8 +34,10 @@ export function useAgentMenuActions({
   hasPlan,
   onCopyPrompt,
   onCopyPlanPrompt,
+  onCopyVerifyPrompt,
   onImplementWithAgent,
   onWritePlanWithAgent,
+  onVerifyWithAgent,
   onOpenSession,
 }: {
   /** Agents disponibles (plan payant + dépôt lié) — sinon, pas d'entrée agent. */
@@ -42,8 +48,12 @@ export function useAgentMenuActions({
   hasPlan: boolean;
   onCopyPrompt: () => void;
   onCopyPlanPrompt: () => void;
+  /** Copie le prompt « vérifie l'implémentation » pour un agent externe. */
+  onCopyVerifyPrompt: () => void;
   onImplementWithAgent: () => void;
   onWritePlanWithAgent: () => void;
+  /** Lance Numo sur la vérification du travail déjà fait. */
+  onVerifyWithAgent: () => void;
   /** Rouvre la conversation existante (modal côté panneau, page côté carte). */
   onOpenSession: () => void;
 }): ContextMenuAction[] {
@@ -66,6 +76,27 @@ export function useAgentMenuActions({
     ];
     const planLabel = hasPlan ? t("actionReviewPlan") : t("actionWritePlan");
     const implementKeywords = ["implement", "implémenter", "code", "coder", "build"];
+    // « Vérifier » est aussi le mot de la feuille plan : les mots qui séparent
+    // les deux (bug, relire, implémentation) sont donc ceux qui comptent ici.
+    const verifyKeywords = [
+      "verify",
+      "vérifier",
+      "check",
+      "relire",
+      "review",
+      "bug",
+      "bugs",
+      "implémentation",
+      "implementation",
+    ];
+
+    const verifyAction = (id: string, onSelect: () => void): ContextMenuAction => ({
+      id,
+      label: t("actionVerifyImplementation"),
+      keywords: verifyKeywords,
+      icon: <SearchCheck className="size-4" />,
+      onSelect,
+    });
 
     const copyPrompt: ContextMenuAction = {
       id: "copy-prompt",
@@ -88,6 +119,7 @@ export function useAgentMenuActions({
           shortcut: "⇧P",
           onSelect: onCopyPrompt,
         },
+        verifyAction("copy-prompt-verify", onCopyVerifyPrompt),
       ],
     };
 
@@ -112,6 +144,7 @@ export function useAgentMenuActions({
         ...(hasSession ? {} : { shortcut: "⇧A" }),
         onSelect: onImplementWithAgent,
       },
+      verifyAction("agent-verify", onVerifyWithAgent),
     ];
 
     return hasSession
@@ -149,8 +182,10 @@ export function useAgentMenuActions({
     hasPlan,
     onCopyPrompt,
     onCopyPlanPrompt,
+    onCopyVerifyPrompt,
     onImplementWithAgent,
     onWritePlanWithAgent,
+    onVerifyWithAgent,
     onOpenSession,
     t,
     tAgent,

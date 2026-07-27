@@ -124,6 +124,55 @@ If the minddy MCP tools are not available, that's fine — just work on the issu
 }
 
 /**
+ * Variante « vérifier l'implémentation » : le travail a déjà été fait (au moins
+ * en partie), on demande à l'agent de le CONFRONTER à ce qui avait été demandé
+ * — le plan ET les commentaires du ticket, puisque c'est là que les écarts se
+ * discutent — puis de corriger les bugs qu'il trouve.
+ *
+ * « Dont il est sûr » est la consigne centrale : une correction spéculative sur
+ * du code qui marche coûte plus cher que le bug imaginé, donc ce qui n'est pas
+ * prouvé se signale au lieu de se « réparer ».
+ *
+ * Le plan n'est JAMAIS inliné (potentiellement 64 Ko) : l'agent le lit via le
+ * MCP — et sans MCP il le demande plutôt que de deviner ce qui avait été prévu.
+ */
+export function buildIssueVerifyPrompt(input: IssuePromptInput): string {
+  const { issue, projectId, projectKey } = input;
+  const identifier = issueIdentifier(projectKey, issue.number);
+
+  const plan = issue.plan ? parsePlan(issue.plan) : null;
+  const hasPlan = !!plan && plan.tasks.length > 0;
+
+  const planLine = hasPlan
+    ? `An implementation plan exists on this issue (${plan.progress.done}/${plan.progress.total} tasks done); it is intentionally not inlined here, so read it before judging anything.`
+    : "This issue has no implementation plan: the issue above and its comments are the whole specification.";
+
+  const planMcpStep = hasPlan
+    ? "\n- Correct the plan's task states with `minddy_update_plan_task` when they lie: a task marked done that the code doesn't actually implement goes back to '- [ ]'."
+    : "";
+
+  const noMcpLine = hasPlan
+    ? "If the minddy MCP tools are not available, ask me to paste the plan and the comments of this issue before verifying anything — don't guess at what was asked."
+    : "If the minddy MCP tools are not available, that's fine — verify against the issue as described above, and ask me for its comments rather than assuming nothing was discussed.";
+
+  return `Verify the implementation of this minddy issue, then fix what is actually broken.
+
+${issueBlock(input)}
+
+${planLine}
+
+Start with what was asked: the issue above, its implementation plan and its comments — the thread is where the work was specified and where any departure from the plan was argued, so read it too. Then read the code that implements it and compare the two: is every task marked done really done, and done the way it was specified? Where the code departs from the plan, say so and tell me which of the two is right — the code is sometimes the better answer, the plan isn't sacred.
+
+Then hunt for bugs in that code: broken edge cases, wrong or missing states, call sites the change forgot to update, something the plan asked for that was silently skipped. Fix each bug you can actually prove by reading the surrounding code, and check every fix (run the tests, typecheck and lint the repo already has). Anything you merely suspect, report it instead of "fixing" it: a speculative change to working code costs more than the bug you imagined. Don't refactor what works, and stay inside this issue's scope.
+
+Optionally, if minddy MCP tools are available in your environment (parameters for this issue: project_id "${projectId}", issue "${identifier}"):
+- Read the full issue, its plan and its comments with \`minddy_get_issue\` — the comments are part of the spec, not a side channel.${planMcpStep}
+- Report what you verified, what you fixed and what you left alone with \`minddy_add_comment\`.
+
+${noMcpLine}`;
+}
+
+/**
  * Variante « cadrer le ticket » du prompt : l'agent travaille le PLAN et rien
  * de plus — il explore le code, écrit le plan sur le ticket (via le MCP quand
  * il l'a, sinon en markdown dans sa réponse) et s'arrête avant d'implémenter.

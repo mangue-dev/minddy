@@ -13,7 +13,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "mangue-ui";
-import { ChevronDown, ClipboardCopy, Code2, ListChecks, Pencil } from "lucide-react";
+import {
+  ChevronDown,
+  ClipboardCopy,
+  Code2,
+  ListChecks,
+  Pencil,
+  SearchCheck,
+} from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { TaskRow } from "@/components/plan-task-row";
@@ -41,6 +48,12 @@ import { trackEvent } from "@/lib/analytics";
  * bouton principal, en tête de l'onglet. En dessous, les deux façons de le
  * reprendre d'abord : le faire vérifier point par point par Numo, ou copier un
  * prompt pour un agent externe (au choix : implémenter, ou vérifier le plan).
+ *
+ * Travail commencé (au moins une tâche cochée) : le bouton principal devient
+ * « Vérifier l'implémentation » — relire ce qui a été fait face au plan et aux
+ * commentaires, corriger les vrais bugs. Le menu des prompts, lui, ne remplace
+ * rien : il gagne une entrée, pour qu'un plan à moitié fait laisse encore copier
+ * le prompt d'implémentation.
  */
 export function IssuePlan({
   plan,
@@ -49,6 +62,8 @@ export function IssuePlan({
   onCopyPrompt,
   onImplementWithAgent,
   onCopyImplementPrompt,
+  onVerifyWithAgent,
+  onCopyVerifyPrompt,
 }: {
   plan: string | null;
   onCommit: (plan: string | null) => void;
@@ -60,6 +75,10 @@ export function IssuePlan({
   onImplementWithAgent?: () => void;
   /** Copie le prompt « implémente le ticket » pour un agent externe. */
   onCopyImplementPrompt?: () => void;
+  /** Ouvre le composer d'agent avec le prompt « vérifie l'implémentation ». */
+  onVerifyWithAgent?: () => void;
+  /** Copie le prompt « vérifie l'implémentation » pour un agent externe. */
+  onCopyVerifyPrompt?: () => void;
 }) {
   const t = useTranslations("Plan");
   const tIssue = useTranslations("IssueUI");
@@ -74,6 +93,10 @@ export function IssuePlan({
   // seule) reste à écrire — même définition que `hasPlanTasks`, pour que les
   // libellés collent aux prompts que les callbacks déclenchent.
   const reviewing = progress.total > 0;
+  // Au moins une tâche cochée = du travail a été fait, donc il y a quelque chose
+  // à vérifier. Les tâches annulées et les questions ne comptent pas (parsePlan
+  // les exclut déjà de `done`) : elles ne sont pas du code écrit.
+  const started = progress.done > 0;
 
   const startEditing = () => {
     setDraft(plan ?? "");
@@ -190,20 +213,31 @@ export function IssuePlan({
       </div>
 
       {/* Ce qu'on fait d'un plan écrit. L'implémenter est l'action attendue —
-          seul bouton plein ; en dessous, les deux façons de le reprendre avant.
+          seul bouton plein, remplacé par « Vérifier l'implémentation » dès qu'une
+          tâche est cochée : le travail a commencé, ce qu'on veut alors est de le
+          relire ; en dessous, les deux façons de reprendre le plan lui-même.
           Numo n'apparaît que là où il peut travailler (le panneau ne passe ses
-          deux callbacks que dans ce cas) ; les prompts copiables, eux, servent
+          callbacks que dans ce cas) ; les prompts copiables, eux, servent
           les agents externes et restent toujours là. */}
       {(onImplementWithAgent ||
+        onVerifyWithAgent ||
         onWriteWithAgent ||
         onCopyPrompt ||
-        onCopyImplementPrompt) && (
+        onCopyImplementPrompt ||
+        onCopyVerifyPrompt) && (
         <div className="mb-4 flex flex-col gap-2">
-          {onImplementWithAgent && (
-            <Button className="w-full" onClick={onImplementWithAgent}>
+          {started && onVerifyWithAgent ? (
+            <Button className="w-full" onClick={onVerifyWithAgent}>
               <NumoIcon animated={false} className="size-4" />
-              {t("implementWithNumo")}
+              {t("verifyWithNumo")}
             </Button>
+          ) : (
+            onImplementWithAgent && (
+              <Button className="w-full" onClick={onImplementWithAgent}>
+                <NumoIcon animated={false} className="size-4" />
+                {t("implementWithNumo")}
+              </Button>
+            )
           )}
           <div className="flex flex-wrap gap-2">
             {onWriteWithAgent && (
@@ -220,9 +254,11 @@ export function IssuePlan({
                 {t(reviewing ? "reviewWithNumo" : "writeWithNumo")}
               </Button>
             )}
-            {(onCopyPrompt || onCopyImplementPrompt) && (
+            {(onCopyPrompt ||
+              onCopyImplementPrompt ||
+              (started && onCopyVerifyPrompt)) && (
               // Le libellé ne dit pas QUEL prompt : le menu le demande — les
-              // deux mêmes façons de travailler le ticket que le menu « ⋯ ».
+              // mêmes façons de travailler le ticket que le menu « ⋯ ».
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="grow basis-32">
@@ -236,6 +272,12 @@ export function IssuePlan({
                     <DropdownMenuItem onSelect={onCopyImplementPrompt}>
                       <Code2 className="size-4" />
                       {tIssue("actionImplement")}
+                    </DropdownMenuItem>
+                  )}
+                  {started && onCopyVerifyPrompt && (
+                    <DropdownMenuItem onSelect={onCopyVerifyPrompt}>
+                      <SearchCheck className="size-4" />
+                      {tIssue("actionVerifyImplementation")}
                     </DropdownMenuItem>
                   )}
                   {onCopyPrompt && (

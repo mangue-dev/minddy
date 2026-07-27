@@ -89,7 +89,11 @@ import {
   KEY_FOR_FIELD,
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
-import { buildIssuePlanPrompt, buildIssuePrompt } from "@/lib/issue-prompt";
+import {
+  buildIssuePlanPrompt,
+  buildIssuePrompt,
+  buildIssueVerifyPrompt,
+} from "@/lib/issue-prompt";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/attachments";
@@ -895,6 +899,15 @@ export function IssueCard({
       "plan"
     );
   };
+  // « Vérifier l'implémentation » : session neuve qui relit le travail DÉJÀ fait
+  // face au plan et aux commentaires du ticket, puis corrige les bugs prouvés.
+  // Intent `implement` (le défaut) : ce run-là écrit du code, il fait donc bien
+  // travailler le ticket — contrairement au cadrage.
+  const verifyWithAgent = () => {
+    composeAgentSession(
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`
+    );
+  };
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
   // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
   const launchAgent = () => {
@@ -980,14 +993,32 @@ export function IssueCard({
     );
   };
 
+  // « Vérifier l'implémentation » côté prompt copié. Pas de démarrage
+  // automatique : on relit du travail déjà fait, on ne le commence pas — et un
+  // ticket resté en amont ne doit pas avancer parce qu'on demande un contrôle.
+  const copyVerifyPrompt = async () => {
+    await navigator.clipboard.writeText(
+      buildIssueVerifyPrompt({
+        issue,
+        projectId,
+        projectKey,
+        attachmentCount: issue.attachment_count,
+        ...promptContext(),
+      })
+    );
+    toast.success(t("verifyPromptCopied"));
+  };
+
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: agentHasSession,
     hasPlan: issueHasPlan,
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
+    onCopyVerifyPrompt: () => void copyVerifyPrompt(),
     onImplementWithAgent: startNewAgentSession,
     onWritePlanWithAgent: writePlanWithAgent,
+    onVerifyWithAgent: verifyWithAgent,
     onOpenSession: openAgentSession,
   });
 

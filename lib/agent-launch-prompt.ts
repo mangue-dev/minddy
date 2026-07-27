@@ -6,7 +6,10 @@ import { hasPlanTasks } from "@/lib/plan";
  *  `agentLaunchPromptVariant` : elles répondent à une demande EXPLICITE de
  *  l'utilisateur (entrée « Générer un plan » / « Vérifier le plan », bouton de
  *  l'onglet Plan) — cadrer le ticket, sans l'implémenter. Voir
- *  `agentPlanPromptVariant`. */
+ *  `agentPlanPromptVariant`.
+ *  `verifyImplementation` non plus : c'est l'autre demande explicite — relire le
+ *  travail DÉJÀ fait face au plan et aux commentaires, et corriger les vrais
+ *  bugs (entrée « Vérifier l'implémentation »). */
 export type AgentLaunchPromptVariant =
   | "planExists"
   | "planExistsXl"
@@ -15,7 +18,8 @@ export type AgentLaunchPromptVariant =
   | "xl"
   | "default"
   | "writePlan"
-  | "reviewPlan";
+  | "reviewPlan"
+  | "verifyImplementation";
 
 /**
  * Choisit la variante du prompt pré-écrit du composer de lancement selon l'issue.

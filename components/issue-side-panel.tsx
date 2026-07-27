@@ -57,7 +57,11 @@ import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
-import { buildIssuePlanPrompt, buildIssuePrompt } from "@/lib/issue-prompt";
+import {
+  buildIssuePlanPrompt,
+  buildIssuePrompt,
+  buildIssueVerifyPrompt,
+} from "@/lib/issue-prompt";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import {
   resolvePromptCopyAutoStart,
@@ -282,6 +286,18 @@ export function IssueSidePanel({
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
+  // « Vérifier l'implémentation » : session neuve qui relit le travail DÉJÀ fait
+  // face au plan et aux commentaires du ticket, puis corrige les bugs prouvés.
+  // Intent `implement` (le défaut) : ce run-là écrit du code, il fait donc bien
+  // travailler le ticket — contrairement au cadrage.
+  const verifyWithAgent = useCallback(() => {
+    if (!issue) return;
+    const identifier = issueIdentifier(projectKey, issue.number);
+    composeAgentSession(
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`
+    );
+  }, [issue, projectKey, composeAgentSession, tAgent]);
+
   // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
   // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
   const launchAgent = useCallback(() => {
@@ -367,6 +383,25 @@ export function IssueSidePanel({
     );
   }, [issue, promptContext, projectKey, issueHasPlan, tPlan]);
 
+  // « Vérifier l'implémentation » côté prompt copié : la consigne de CONTRÔLE
+  // (relire le travail fait face au plan et aux commentaires, corriger les vrais
+  // bugs) pour un agent externe. Pas de démarrage automatique : on relit du
+  // travail déjà fait, on ne le commence pas.
+  const copyVerifyPrompt = useCallback(async () => {
+    if (!issue || !promptContext) return;
+    await navigator.clipboard.writeText(
+      buildIssueVerifyPrompt({
+        issue,
+        projectId: issue.project_id,
+        projectKey,
+        categories: promptContext.categories,
+        relations: promptContext.relations,
+        attachmentCount: issue.attachment_count,
+      })
+    );
+    toast.success(t("verifyPromptCopied"));
+  }, [issue, promptContext, projectKey, t]);
+
   // « Copier le prompt » et « Lancer l'agent Numo » : deux sous-menus, chacun
   // avec la feuille « plan » (générer ou vérifier, selon le ticket) et
   // « Implémenter le ticket » (hook partagé avec les cartes du board).
@@ -376,8 +411,10 @@ export function IssueSidePanel({
     hasPlan: issueHasPlan,
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
+    onCopyVerifyPrompt: () => void copyVerifyPrompt(),
     onImplementWithAgent: startNewAgentSession,
     onWritePlanWithAgent: writePlanWithAgent,
+    onVerifyWithAgent: verifyWithAgent,
     onOpenSession: () => setChatOpen(true),
   });
 
@@ -668,6 +705,8 @@ export function IssueSidePanel({
                     agentsEnabled ? startNewAgentSession : undefined
                   }
                   onCopyImplementPrompt={() => void copyPrompt()}
+                  onVerifyWithAgent={agentsEnabled ? verifyWithAgent : undefined}
+                  onCopyVerifyPrompt={() => void copyVerifyPrompt()}
                 />
               </TabsContent>
 
