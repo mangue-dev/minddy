@@ -288,6 +288,71 @@ export async function listBranches(opts: {
   return names;
 }
 
+/** Même esprit que MAX_BRANCH_PAGES : 500 PR suffisent à un ménage de branches,
+    et l'ordre `updated desc` met les plus récentes — les seules encore vivantes
+    dans la tête de l'utilisateur — sur la première page. */
+const MAX_PR_PAGES = 5;
+
+/**
+ * TOUTES les PR du dépôt, tous états confondus (MIN-102, ménage des branches
+ * d'agent). `state=all` est indispensable : `state=closed` de GitHub couvre les
+ * refusées ET les fusionnées, mais on veut aussi voir les PR OUVERTES pour ne
+ * jamais proposer la suppression d'une branche qui en porte une.
+ *
+ * `truncated` prévient l'appelant qu'au-delà de MAX_PR_PAGES × 100 la liste est
+ * coupée — l'aperçu le dit alors à l'écran plutôt que de mentir par omission.
+ */
+export async function listPullRequests(opts: {
+  token: string;
+  repoFullName: string;
+}): Promise<{ pulls: PullRequestRef[]; truncated: boolean }> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const pulls: PullRequestRef[] = [];
+  let truncated = false;
+  for (let page = 1; page <= MAX_PR_PAGES; page++) {
+    const batch = await ghJson<RawPull[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls` +
+        `?state=all&sort=updated&direction=desc&per_page=100&page=${page}`,
+      opts.token,
+    );
+    // L'endpoint *list* ne renvoie pas `merged` : `toRef` retombe sur
+    // `merged_at`, seul signal disponible ici pour distinguer fusionnée/refusée.
+    pulls.push(...batch.map(toRef));
+    if (batch.length < 100) break;
+    if (page === MAX_PR_PAGES) truncated = true;
+  }
+  return { pulls, truncated };
+}
+
+/**
+ * Supprime une branche distante (MIN-102). Renvoie `"deleted"`, ou
+ * `"already-gone"` si la référence n'existe plus — un ménage rejoué ne doit pas
+ * ressembler à une panne. GitHub répond 422 « Reference does not exist » (et
+ * non 404) quand le ref a déjà disparu.
+ */
+export async function deleteBranch(opts: {
+  token: string;
+  repoFullName: string;
+  branch: string;
+}): Promise<"deleted" | "already-gone"> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  // Ref laissé tel quel — mêmes raisons que getMergeBaseSha : nos branches
+  // portent des `/` (`minddy/agent/…`) et les %2F casseraient la route.
+  try {
+    await ghJson<unknown>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/refs/heads/${opts.branch}`,
+      opts.token,
+      { method: "DELETE" },
+    );
+    return "deleted";
+  } catch (err) {
+    if (err instanceof GithubApiError && (err.status === 422 || err.status === 404)) {
+      return "already-gone";
+    }
+    throw err;
+  }
+}
+
 /**
  * SHA du **merge base** de la PR — le point de référence des patches GitHub.
  *

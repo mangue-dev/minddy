@@ -364,6 +364,57 @@ export async function listBranches(opts: {
   return branches.map((b) => b.name);
 }
 
+/** Même plafond que `pr.ts` (MAX_PR_PAGES) pour le ménage des branches. */
+const MAX_MR_PAGES = 5;
+
+/**
+ * TOUTES les MR du dépôt, tous états confondus (MIN-102) — miroir de `pr.ts`.
+ * `state=all` est ici doublement nécessaire : GitLab compte `merged` et `closed`
+ * comme deux états DISTINCTS (`state=closed` ne ramène PAS les fusionnées), et
+ * on veut de toute façon voir les MR ouvertes pour protéger leurs branches.
+ */
+export async function listPullRequests(opts: {
+  token: string;
+  repoFullName: string;
+}): Promise<{ pulls: PullRequestRef[]; truncated: boolean }> {
+  const raw = await glPaged<RawMr>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests` +
+      `?state=all&order_by=updated_at&sort=desc`,
+    opts.token,
+    MAX_MR_PAGES,
+  );
+  return {
+    pulls: raw.map(toRef),
+    // glPaged s'arrête sur `maxPages` sans le dire : une moisson pleine à ras
+    // bord est le seul indice qu'il restait des pages.
+    truncated: raw.length >= MAX_MR_PAGES * 100,
+  };
+}
+
+/**
+ * Supprime une branche distante (MIN-102) — miroir de `deleteBranch` de `pr.ts`.
+ * Contrairement à GitHub, le nom de branche est ENTIÈREMENT URL-encodé ici
+ * (l'API GitLab attend un segment, pas un chemin). 404 → `"already-gone"`.
+ */
+export async function deleteBranch(opts: {
+  token: string;
+  repoFullName: string;
+  branch: string;
+}): Promise<"deleted" | "already-gone"> {
+  try {
+    await glJson<unknown>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/branches/` +
+        encodeURIComponent(opts.branch),
+      opts.token,
+      { method: "DELETE" },
+    );
+    return "deleted";
+  } catch (err) {
+    if (err instanceof GitlabApiError && err.status === 404) return "already-gone";
+    throw err;
+  }
+}
+
 /**
  * SHA de la BASE du diff servi par GitLab pour cette MR : `diff_refs.base_sha`.
  *

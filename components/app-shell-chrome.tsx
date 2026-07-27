@@ -22,6 +22,7 @@ import {
   GitPullRequest,
   NotebookPen,
   IterationCw,
+  Brush,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -57,7 +58,10 @@ import {
   type AppNavSection,
 } from "@/components/app-sidebar";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
+import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
+import { BranchCleanupDialog } from "@/components/settings/git-branch-cleanup";
 import type {
+  BranchCleanupTarget,
   Project,
   SearchIndexIssue,
   SearchIndexObjective,
@@ -156,6 +160,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
+  const tSettings = useTranslations("Settings");
   const tBilling = useTranslations("Billing");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
@@ -176,6 +181,20 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () => new Map(projects.map((p) => [p.id, p])),
     [projects]
   );
+  // Ménage des branches d'agent (MIN-102), offert dans la palette DEPUIS
+  // N'IMPORTE OÙ : une ligne par projet éligible (owner + dépôt lié + des
+  // branches poussées par l'agent), pas seulement pour le projet de la page.
+  // Une seule requête couvre tous mes projets — cf. use-branch-cleanup-targets.
+  const branchCleanupTargets = useBranchCleanupTargets();
+  // La cible SURVIT à la fermeture (le dialogue joue son animation de sortie) ;
+  // c'est `branchCleanupOpen` qui ouvre et ferme.
+  const [branchCleanup, setBranchCleanup] = useState<BranchCleanupTarget | null>(null);
+  const [branchCleanupOpen, setBranchCleanupOpen] = useState(false);
+  const openBranchCleanup = useCallback((target: BranchCleanupTarget) => {
+    setBranchCleanup(target);
+    setBranchCleanupOpen(true);
+  }, []);
+
   const isInbox = pathname.startsWith("/inbox");
   // Cross-project (Home-level) boards (MIN-29).
   const isMyGlobal = pathname === "/my";
@@ -495,11 +514,43 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           },
         );
       }
+
+      // Ménage des branches d'agent (MIN-102) — une action, pas une page, mais
+      // par projet comme le reste du groupe, et joignable de n'importe où : une
+      // ligne par projet éligible, avec sa puce, parce qu'une suppression de
+      // branches doit dire sur quel dépôt elle porte.
+      for (const target of branchCleanupTargets) {
+        const p = projectById.get(target.project_id);
+        if (!p) continue;
+        pageItems.push({
+          key: `pg-clean-branches-${p.id}`,
+          label: tSettings("gitCleanBranches"),
+          icon: Brush,
+          keywords: [
+            p.name,
+            p.key,
+            "git",
+            "branches",
+            "github",
+            "gitlab",
+            "nettoyer",
+            "clean",
+            "cleanup",
+            "pull request",
+            ...(target.repo_full_name ? [target.repo_full_name] : []),
+          ],
+          meta: projectChip(p),
+          metaText: target.repo_full_name ?? p.name,
+          contextId: p.id,
+          onSelect: () => openBranchCleanup(target),
+        });
+      }
+
       groups.push({ key: "pages", heading: t("pages"), items: pageItems });
     }
 
     return groups;
-  }, [projects, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, t, ti, tk, tScratch, setCheatsheetOpen]);
+  }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, t, ti, tk, tScratch, tSettings, setCheatsheetOpen]);
 
   // ── Data groups: tickets + objectifs, tous projets confondus (MIN-91) ────
   // Séparés des groupes de commandes ci-dessus parce qu'ils sont les seuls à
@@ -869,6 +920,19 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         onOpenChange={handlePaletteOpenChange}
         searchIndex={searchIndex}
       />
+      {/* Ménage des branches ouvert depuis la palette (MIN-102) — le MÊME
+          dialogue que le bouton des paramètres, monté ici pour être joignable
+          de n'importe quelle page, sur n'importe lequel de mes projets. La clé
+          remonte le dialogue d'un projet à l'autre, donc son aperçu se recharge. */}
+      {branchCleanup && (
+        <BranchCleanupDialog
+          key={branchCleanup.project_id}
+          projectId={branchCleanup.project_id}
+          provider={branchCleanup.provider}
+          open={branchCleanupOpen}
+          onOpenChange={setBranchCleanupOpen}
+        />
+      )}
       {/* Objective side panel opened from the command palette — overlays the
           current page (Radix portals to body, so placement here is layout-safe). */}
       {currentProject && panelMounted && (

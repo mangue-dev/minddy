@@ -43,6 +43,20 @@ export interface Forge {
   provider: RepoProviderId;
   /** Noms des branches du dépôt (picker de branche de base au lancement). */
   listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
+  /** TOUTES les PR/MR du dépôt, tous états — le ménage des branches d'agent
+      (MIN-102) a besoin des fermées pour choisir ET des ouvertes pour protéger.
+      `truncated` : la pagination a été coupée, la liste n'est pas exhaustive. */
+  listPullRequests(opts: {
+    token: string;
+    repoFullName: string;
+  }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }>;
+  /** Supprime une branche distante. `"already-gone"` (et non une erreur) quand
+      la référence n'existe déjà plus : rejouer un ménage n'est pas une panne. */
+  deleteBranch(opts: {
+    token: string;
+    repoFullName: string;
+    branch: string;
+  }): Promise<"deleted" | "already-gone">;
   ensurePullRequest(opts: {
     token: string;
     repoFullName: string;
@@ -148,6 +162,8 @@ export interface Forge {
 const githubForge: Forge = {
   provider: "github",
   listBranches: github.listBranches,
+  listPullRequests: github.listPullRequests,
+  deleteBranch: github.deleteBranch,
   ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
   listPullRequestFiles: github.listPullRequestFiles,
@@ -182,6 +198,8 @@ const githubForge: Forge = {
 const gitlabForge: Forge = {
   provider: "gitlab",
   listBranches: gitlab.listBranches,
+  listPullRequests: gitlab.listPullRequests,
+  deleteBranch: gitlab.deleteBranch,
   ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
   listPullRequestFiles: gitlab.listMergeRequestChanges,

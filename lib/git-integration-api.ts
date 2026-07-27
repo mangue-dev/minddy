@@ -2,9 +2,11 @@
 
 import type { RepoProviderId } from "./repo-providers";
 import type {
+  BranchDeletionResult,
   CandidateRepo,
   GitConnection,
   ProjectGitLink,
+  StaleBranchesResponse,
 } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -113,6 +115,38 @@ export async function setGitIssueSyncApi(
       body: JSON.stringify({ action: "issue_sync", enabled }),
     }),
   );
+}
+
+/**
+ * Aperçu des branches d'agent dont la PR/MR est fermée (MIN-102). Le serveur
+ * recalcule cette liste au moment de supprimer : ce qu'on affiche ici n'est
+ * qu'une proposition, pas une autorisation.
+ */
+export async function fetchStaleBranchesApi(
+  projectId: string,
+): Promise<StaleBranchesResponse> {
+  return parseJson(await fetch(`/api/projects/${projectId}/git-link/stale-branches`));
+}
+
+export async function deleteStaleBranchesApi(
+  projectId: string,
+  branches: string[],
+  provider: RepoProviderId,
+): Promise<{ results: BranchDeletionResult[] }> {
+  const res = await parseJson<{ results: BranchDeletionResult[] }>(
+    await fetch(`/api/projects/${projectId}/git-link/stale-branches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ branches }),
+    }),
+  );
+  const deleted = res.results.filter((r) => r.ok).length;
+  trackEvent("project_git_branches_cleaned", {
+    provider,
+    deleted,
+    failed: res.results.length - deleted,
+  });
+  return res;
 }
 
 export async function unlinkGitRepoApi(projectId: string): Promise<void> {

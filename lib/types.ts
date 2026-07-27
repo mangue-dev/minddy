@@ -761,6 +761,48 @@ export interface ProjectGitLink {
   created_at: string;
 }
 
+/**
+ * Une branche d'agent proposée au ménage (MIN-102) : sa PR/MR est fermée, et
+ * `agent_runs` atteste que minddy l'a poussée. `issue` est null pour un run
+ * carnet, qui n'est rattaché à aucun ticket.
+ */
+export interface StaleBranch {
+  branch: string;
+  prNumber: number;
+  prUrl: string;
+  /** `merged` : le travail est livré. `closed` : la PR a été refusée. */
+  prState: "merged" | "closed";
+  prCreatedAt: string | null;
+  issue: { issueId: string; identifier: string; title: string } | null;
+}
+
+export interface StaleBranchesResponse {
+  provider: RepoProviderId;
+  repoFullName: string;
+  branches: StaleBranch[];
+  /** La liste des PR a été tronquée : l'aperçu n'est pas exhaustif. */
+  truncated: boolean;
+}
+
+/**
+ * Un projet où le ménage des branches a un sens : j'en suis owner, un dépôt y
+ * est lié, et des runs d'agent y ont poussé des branches. Sert la command
+ * palette, qui offre l'action depuis n'importe quelle page.
+ */
+export interface BranchCleanupTarget {
+  project_id: string;
+  provider: RepoProviderId;
+  repo_full_name: string | null;
+}
+
+/** Sort de la suppression d'UNE branche (`alreadyGone` = elle avait disparu). */
+export interface BranchDeletionResult {
+  branch: string;
+  ok: boolean;
+  alreadyGone?: boolean;
+  error?: string;
+}
+
 /** Un dépôt candidat proposé dans le sélecteur (neutre GitHub/GitLab). */
 export interface CandidateRepo {
   external_repo_id: string;

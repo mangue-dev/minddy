@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, Spinner, Switch, toast } from "mangue-ui";
 import { Github, Gitlab, Link2Off } from "lucide-react";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
+import { GitBranchCleanup } from "@/components/settings/git-branch-cleanup";
 import { SearchSelect } from "@/components/search-select";
 import {
   bindGitRepoApi,
@@ -291,6 +292,12 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
             </p>
           )}
         </div>
+
+        {/* Ménage des branches d'agent des PR fermées (MIN-102) — owner seul :
+            supprimer des branches distantes engage le dépôt, comme le déliement. */}
+        {isOwner && (
+          <GitBranchCleanup projectId={projectId} provider={link.provider} />
+        )}
 
         <ConfirmDeleteDialog
           open={confirmUnlink}
