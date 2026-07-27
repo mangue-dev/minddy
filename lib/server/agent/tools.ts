@@ -57,7 +57,8 @@ const CORE_TOOLS: AgentToolDef[] = [
         properties: {
           path: {
             type: "string",
-            description: "Repo-relative path, e.g. 'src/app/page.tsx'.",
+            description:
+              "Repo-relative path, e.g. 'src/app/page.tsx'. Also accepts the absolute 'full_output_path' returned by run_command, to re-read a long command output in full.",
           },
           offset: {
             type: "number",
@@ -126,7 +127,8 @@ const CORE_TOOLS: AgentToolDef[] = [
           },
           path: {
             type: "string",
-            description: "Optional subtree (repo-relative) to limit the search to.",
+            description:
+              "Optional subtree (repo-relative) to limit the search to. Also accepts the absolute 'full_output_path' returned by run_command, to search a long command output.",
           },
           glob: {
             type: "string",
@@ -276,7 +278,7 @@ const CORE_TOOLS: AgentToolDef[] = [
     function: {
       name: "run_command",
       description:
-        "Run a shell command in the repository root (e.g. install dependencies, run the linter, build, or the test suite to verify your changes). Returns exitCode + stdout + stderr (truncated). Non-interactive only; it is killed after a timeout.",
+        "Run a shell command in the repository root (e.g. install dependencies, run the linter, build, or the test suite to verify your changes). Returns exitCode + stdout + stderr. Long output is truncated in the MIDDLE — you always get the beginning and the end — and the complete output is saved in the sandbox, at the returned 'full_output_path': search it with grep (pass that path as 'path') or read it with read_file (offset/limit). Never pipe to head/tail and never narrow a command just to shorten its output. Non-interactive only; it is killed after a timeout.",
       parameters: {
         type: "object",
         properties: {

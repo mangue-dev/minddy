@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAgentContextMessage,
+  buildAgentSystemPrompt,
   buildInheritedBranchMessage,
   buildInheritedPrMessage,
   toPrLineThreads,
@@ -391,4 +392,21 @@ describe("buildInheritedBranchMessage", () => {
     expect(capped).not.toContain("s".repeat(4100));
     expect(capped).toContain("[truncated]");
   });
+});
+
+/**
+ * MIN-107 : le modèle avait appris à se défendre du harness (10 % des
+ * `run_command` de l'histoire du produit pipaient vers `head`/`tail`). Maintenant
+ * que la queue survit et que la sortie complète est déposée dans la sandbox, le
+ * prompt doit le dire — et l'interdire.
+ */
+describe("buildAgentSystemPrompt — sorties longues de run_command", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`dit où retrouver la sortie complète (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toContain("full_output_path");
+      expect(prompt).toMatch(/never pipe to `head`\/`tail`/i);
+      expect(prompt).toMatch(/truncated in the MIDDLE/);
+    });
+  }
 });

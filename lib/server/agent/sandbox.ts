@@ -3,7 +3,7 @@ import "server-only";
 import { Sandbox } from "@vercel/sandbox";
 
 import { grepPathspecs, globPathspec } from "./git-pathspec";
-import { resolveWithin, assertNotGit } from "./repo-path";
+import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 
 /**
  * Couche Vercel Sandbox de l'agent de code (MIN-46) — les « mains » de l'agent.
@@ -35,6 +35,15 @@ const SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 * 24 * 60 * 60_000;
 export const REPO_DIR = "/vercel/sandbox/repo";
 /** Home par défaut du Sandbox (parent de REPO_DIR). */
 const SANDBOX_HOME = "/vercel/sandbox";
+/**
+ * Où le harness dépose les sorties de tools trop longues pour le modèle (MIN-107).
+ * DÉLIBÉRÉMENT hors de REPO_DIR : le `git add -A` de fin de tour ne le voit pas,
+ * donc rien de tout ça n'atterrit jamais dans un commit ou une PR. Le nettoyage
+ * est celui de la microVM (snapshot expiré) — rien à gérer.
+ */
+export const TOOL_OUTPUT_DIR = "/vercel/sandbox/tool-output";
+/** Dossiers LISIBLES hors dépôt (read_file / grep / list_dir). Jamais writables. */
+const READABLE_DIRS = [TOOL_OUTPUT_DIR];
 
 export type { Sandbox };
 
@@ -360,6 +369,20 @@ function repoPath(relPath: string): string {
 }
 
 /**
+ * Chemin de LECTURE : le dépôt, plus les dossiers nommés de READABLE_DIRS (sorties
+ * de tools déposées, MIN-107). Réservé aux tools qui LISENT — les écritures
+ * passent par `writablePath` et restent enfermées dans le dépôt.
+ */
+function readablePath(path: string): string {
+  return resolveReadable(REPO_DIR, READABLE_DIRS, path);
+}
+
+/** Le chemin résolu vise-t-il un dossier hors dépôt (donc hors de portée de git) ? */
+function isOutsideRepo(absPath: string): boolean {
+  return READABLE_DIRS.some((dir) => absPath === dir || absPath.startsWith(`${dir}/`));
+}
+
+/**
  * Comme repoPath mais pour les ÉCRITURES : refuse en plus `.git/` (écrire un hook
  * ou config = escalade possible — exfiltration du token d'installation, backdoor).
  */
@@ -369,11 +392,34 @@ function writablePath(relPath: string): string {
   return abs;
 }
 
+/** Lit le contenu BRUT d'un fichier (utf8), ou null s'il n'existe pas. */
+async function readFileAt(sandbox: Sandbox, absPath: string): Promise<string | null> {
+  const buf = await sandbox.readFileToBuffer({ path: absPath });
+  return buf ? buf.toString("utf8") : null;
+}
+
 /** Lit le contenu BRUT d'un fichier du dépôt (utf8), ou null s'il n'existe pas.
     Sert à l'édition (`edit_file`), qui a besoin du contenu exact non annoté. */
 export async function readWorkFile(sandbox: Sandbox, relPath: string): Promise<string | null> {
-  const buf = await sandbox.readFileToBuffer({ path: repoPath(relPath) });
-  return buf ? buf.toString("utf8") : null;
+  return readFileAt(sandbox, repoPath(relPath));
+}
+
+/**
+ * Dépose une sortie de tool trop longue dans TOOL_OUTPUT_DIR et renvoie son chemin
+ * ABSOLU (celui que le modèle repassera à `read_file`/`grep`). Ne passe PAS par
+ * `writablePath` : on écrit volontairement hors du dépôt, et `name` est un simple
+ * nom de fichier (tout séparateur est neutralisé ici).
+ */
+export async function writeToolOutput(
+  sandbox: Sandbox,
+  name: string,
+  content: string,
+): Promise<string> {
+  const safe = name.replace(/[^A-Za-z0-9._-]/g, "-").replace(/^\.+$/, "output") || "output";
+  const abs = `${TOOL_OUTPUT_DIR}/${safe}`;
+  await sandbox.mkDir(TOOL_OUTPUT_DIR).catch(() => {});
+  await sandbox.writeFiles([{ path: abs, content }]);
+  return abs;
 }
 
 export interface ReadWindow {
@@ -394,13 +440,17 @@ export interface ReadWindow {
  * ce qui rend les éditions ciblables et borne le contexte. `offset` (1-based) et
  * `limit` fenêtrent ; par défaut les `READ_MAX_LINES` premières lignes. Les
  * lignes très longues sont tronquées. Renvoie null si le fichier n'existe pas.
+ *
+ * Accepte, en plus des chemins du dépôt, les sorties de tools déposées dans
+ * TOOL_OUTPUT_DIR (MIN-107) : c'est ainsi que le modèle relit la sortie complète
+ * d'un `run_command` trop long.
  */
 export async function readWorkFileWindow(
   sandbox: Sandbox,
   relPath: string,
   opts?: { offset?: number; limit?: number },
 ): Promise<ReadWindow | null> {
-  const raw = await readWorkFile(sandbox, relPath);
+  const raw = await readFileAt(sandbox, readablePath(relPath));
   if (raw === null) return null;
 
   const lines = raw.split("\n");
@@ -469,9 +519,10 @@ export async function deleteWorkFile(sandbox: Sandbox, relPath: string): Promise
   if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "delete failed");
 }
 
-/** Liste le contenu d'un dossier du dépôt (noms, dossiers suffixés `/`). */
+/** Liste le contenu d'un dossier du dépôt — ou de TOOL_OUTPUT_DIR, pour retrouver
+    les sorties déposées (noms, dossiers suffixés `/`). */
 export async function listDir(sandbox: Sandbox, relPath = "."): Promise<string> {
-  const res = await runShell(sandbox, `ls -1Ap ${sq(repoPath(relPath))}`);
+  const res = await runShell(sandbox, `ls -1Ap ${sq(readablePath(relPath))}`);
   return res.stdout;
 }
 
@@ -511,17 +562,12 @@ export interface GrepResult {
  * `|| true`/`| head` qui les avaleraient — le cap de lignes se fait en JS.
  */
 export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<GrepResult> {
-  const flags: string[] = ["--no-color", "-I", "-E", "--untracked"];
-  if (opts.ignoreCase) flags.push("-i");
-  const mode = opts.outputMode ?? "content";
-  if (mode === "files_with_matches") flags.push("-l");
-  else if (mode === "count") flags.push("-c");
-  else {
-    flags.push("-n");
-    const ctx = opts.context != null ? Math.floor(opts.context) : 0;
-    if (ctx > 0) flags.push(`-C ${Math.min(ctx, 20)}`);
-  }
+  // Le `path` vise-t-il un dossier lisible HORS dépôt (une sortie de tool déposée,
+  // MIN-107) ? git grep n'y voit rien — on passe au grep du système.
+  const outside = opts.path ? readableOutsideRepo(opts.path) : null;
+  if (outside) return grepOutside(sandbox, opts, outside);
 
+  const flags: string[] = ["--no-color", "-I", "-E", "--untracked", ...grepModeFlags(opts)];
   const specs = grepPathspecs(opts.path, opts.glob).map(sq);
   const pathspecPart = specs.length ? ` -- ${specs.join(" ")}` : "";
   const cmd = `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}`;
@@ -531,11 +577,56 @@ export async function grepRepo(sandbox: Sandbox, opts: GrepOptions): Promise<Gre
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
   }
-  let output = res.stdout;
-  if (opts.headLimit != null && opts.headLimit > 0) {
-    output = output.split("\n").slice(0, Math.floor(opts.headLimit)).join("\n");
+  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true };
+}
+
+/** Drapeaux partagés par les deux moteurs (casse, mode de sortie, contexte). */
+function grepModeFlags(opts: GrepOptions): string[] {
+  const flags: string[] = [];
+  if (opts.ignoreCase) flags.push("-i");
+  const mode = opts.outputMode ?? "content";
+  if (mode === "files_with_matches") flags.push("-l");
+  else if (mode === "count") flags.push("-c");
+  else {
+    flags.push("-n");
+    const ctx = opts.context != null ? Math.floor(opts.context) : 0;
+    if (ctx > 0) flags.push(`-C ${Math.min(ctx, 20)}`);
   }
-  return { output, ok: true };
+  return flags;
+}
+
+/** Cap de lignes appliqué en JS (jamais `| head`, qui masquerait l'exit code). */
+function capGrepLines(output: string, headLimit?: number): string {
+  if (headLimit == null || headLimit <= 0) return output;
+  return output.split("\n").slice(0, Math.floor(headLimit)).join("\n");
+}
+
+/** Chemin absolu validé s'il vise un dossier lisible hors dépôt, sinon null.
+    Lève si un `..` tentait d'en sortir. */
+function readableOutsideRepo(path: string): string | null {
+  if (!READABLE_DIRS.some((dir) => path === dir || path.startsWith(`${dir}/`))) return null;
+  return readablePath(path);
+}
+
+/**
+ * Recherche dans un dossier lisible hors dépôt (sorties de tools déposées) avec le
+ * grep du système : `-r` pour un dossier, `-H` pour toujours préfixer le chemin
+ * (le modèle doit pouvoir le repasser à `read_file`). Mêmes codes de sortie que
+ * git grep (0 match, 1 rien, ≥2 erreur), donc même contrat de retour.
+ */
+async function grepOutside(
+  sandbox: Sandbox,
+  opts: GrepOptions,
+  absPath: string,
+): Promise<GrepResult> {
+  const flags = ["--color=never", "-I", "-E", "-r", "-H", ...grepModeFlags(opts)];
+  if (opts.glob) flags.push(`--include=${sq(opts.glob)}`);
+  const cmd = `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
+  const res = await runShell(sandbox, cmd);
+  if (res.exitCode >= 2) {
+    return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
+  }
+  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true };
 }
 
 export interface GlobResult {

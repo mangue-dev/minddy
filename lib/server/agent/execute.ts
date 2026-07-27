@@ -27,9 +27,16 @@ import {
   grepRepo,
   globRepo,
   sandboxName,
+  writeToolOutput,
   type GrepOutputMode,
   type Sandbox,
 } from "./sandbox";
+import {
+  formatRunCommandResult,
+  fullOutputDocument,
+  spillsToDisk,
+  toolOutputFileName,
+} from "./command-output";
 import { applyEdit } from "./edit";
 import {
   runAgentLoop,
@@ -171,7 +178,11 @@ function makeExecTool(
   createPr: CreatePrHandler,
   anchor: ExecToolAnchor,
   webSearch: WebSearchHandler,
+  /** Base des seq de fichiers de sortie déposés (tranchée par continuation, comme
+      les autres compteurs de run) : deux chunks n'écrasent pas leurs fichiers. */
+  outputSeqBase: number,
 ): ExecuteAgentTool {
+  let outputSeq = 0;
   return async (name, args) => {
     if (anchor.kind === "issue" && ISSUE_TOOL_NAMES.has(name)) {
       return await executeIssueTool(anchor.ctx, name, args);
@@ -324,15 +335,24 @@ function makeExecTool(
         return { result: { applied }, success: applied.every((r) => r.ok === true) };
       }
       case "run_command": {
-        const r = await runShell(sandbox, String(args.command ?? ""), {
-          timeoutMs: RUN_COMMAND_TIMEOUT_MS,
-        });
+        const command = String(args.command ?? "");
+        const r = await runShell(sandbox, command, { timeoutMs: RUN_COMMAND_TIMEOUT_MS });
+        // Sortie longue → la version COMPLÈTE est déposée dans la sandbox (hors
+        // dépôt) et reste relisible via read_file/grep. Best-effort : si l'écriture
+        // échoue, le modèle reçoit quand même tête ET queue (MIN-107).
+        let fullOutputPath: string | null = null;
+        if (spillsToDisk(r)) {
+          fullOutputPath = await writeToolOutput(
+            sandbox,
+            toolOutputFileName(command, outputSeqBase + outputSeq++),
+            fullOutputDocument(command, r),
+          ).catch((err) => {
+            console.error("[agent-execute] tool output spill failed:", (err as Error).message);
+            return null;
+          });
+        }
         return {
-          result: {
-            exitCode: r.exitCode,
-            stdout: cap(r.stdout, 4000),
-            stderr: cap(r.stderr, 2000),
-          },
+          result: formatRunCommandResult(r, fullOutputPath),
           success: r.exitCode === 0,
         };
       }
@@ -949,7 +969,13 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       contextWindow,
-      execTool: makeExecTool(sandbox, createPr, toolAnchor, webSearch),
+      execTool: makeExecTool(
+        sandbox,
+        createPr,
+        toolAnchor,
+        webSearch,
+        run.continuations * 1000,
+      ),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).

@@ -16,6 +16,14 @@
  * messages de l'agent, de l'utilisateur et les tool-calls ne sont jamais touchés.
  */
 
+/**
+ * Enveloppe d'UN résultat de tool dans l'historique : la boucle sérialise le
+ * résultat en JSON et le passe à `headTail`. Un tool qui compose sa sortie doit
+ * tenir DEDANS — sinon c'est cette coupe-ci qui décide, et elle élide le milieu
+ * du JSON (donc, pour une commande, la queue de stdout : le verdict, MIN-107).
+ */
+export const TOOL_RESULT_MAX_CHARS = 6000;
+
 /** Octets de sortie de tools (les plus récents) protégés de l'élagage. */
 export const PRUNE_PROTECT_BYTES = 40_000;
 /** On n'élague que si l'on récupère au moins autant (évite le churn). */

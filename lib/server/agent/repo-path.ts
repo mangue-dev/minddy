@@ -18,6 +18,31 @@ export function resolveWithin(baseDir: string, relPath: string): string {
   return resolved;
 }
 
+/**
+ * Résout un chemin de LECTURE (MIN-107) : soit dans le dépôt (`resolveWithin`),
+ * soit sous l'un des `readableDirs` — des dossiers de la microVM hors dépôt où le
+ * harness dépose des choses à relire (les sorties longues de `run_command`).
+ * Le chemin doit être donné ABSOLU pour viser un `readableDir` : tout le reste
+ * reste relatif au dépôt, comme avant. Un `..` qui sortirait du dossier visé LÈVE
+ * — on n'ouvre jamais le filesystem, on nomme des exceptions.
+ * Les ÉCRITURES ne passent jamais par ici (cf. `assertNotGit` / `writablePath`).
+ */
+export function resolveReadable(
+  baseDir: string,
+  readableDirs: string[],
+  path: string,
+): string {
+  for (const dir of readableDirs) {
+    if (path !== dir && !path.startsWith(`${dir}/`)) continue;
+    const resolved = posixPath.normalize(path);
+    if (resolved !== dir && !resolved.startsWith(`${dir}/`)) {
+      throw new Error(`Path escapes the readable directory: ${path}`);
+    }
+    return resolved;
+  }
+  return resolveWithin(baseDir, path);
+}
+
 /** Lève si `absPath` (déjà résolu sous `baseDir`) vise `.git/` (écritures interdites). */
 export function assertNotGit(baseDir: string, absPath: string, relPath: string): void {
   if (absPath === `${baseDir}/.git` || absPath.startsWith(`${baseDir}/.git/`)) {

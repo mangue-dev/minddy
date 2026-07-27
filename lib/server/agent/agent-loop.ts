@@ -16,7 +16,7 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import type { AgentToolDef } from "./tools";
-import { pruneToolOutputs, headTail } from "./prune";
+import { pruneToolOutputs, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
 import { markSystemPromptCache } from "./caching";
 import {
   estimateTokens,
@@ -822,7 +822,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         }),
       );
       for (const o of outcomes) {
-        messages.push({ role: "tool", tool_call_id: o.tc.id, content: headTail(JSON.stringify(o.result), 6000) });
+        messages.push({ role: "tool", tool_call_id: o.tc.id, content: headTail(JSON.stringify(o.result), TOOL_RESULT_MAX_CHARS) });
         await emit("tool_result", {
           id: o.tc.id,
           name: o.tc.function.name,
@@ -906,7 +906,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
       }
-      messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), 6000) });
+      messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), TOOL_RESULT_MAX_CHARS) });
       await emit("tool_result", { id: tc.id, name, success, preview: previewResult(result) });
     }
 
