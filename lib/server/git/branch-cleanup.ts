@@ -5,13 +5,14 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
-import { selectStaleBranches, type StaleBranch } from "./branch-cleanup-core";
+import { selectAgentBranches, type AgentBranch } from "./branch-cleanup-core";
 
 /**
- * Ménage des branches d'agent (MIN-102) : lister les branches poussées par les
- * runs du projet dont la PR/MR est fermée, puis les supprimer chez la forge.
+ * Gestion des branches d'agent (MIN-102) : lister TOUTES les branches que les
+ * runs du projet ont poussées et qui vivent encore sur le dépôt — PR fusionnée,
+ * refusée, ouverte, ou aucune PR — puis supprimer celles qu'on désigne.
  *
- * Le client n'est JAMAIS cru : `deleteStaleBranches` recalcule l'aperçu et
+ * Le client n'est JAMAIS cru : `deleteAgentBranches` recalcule l'aperçu et
  * n'accepte que son intersection. Envoyer `main` dans le POST ne supprime donc
  * rien, même avec les droits owner — la liste servie est la seule autorité.
  *
@@ -28,15 +29,16 @@ export interface BranchIssueRef {
 }
 
 /** Une branche de l'aperçu : la sélection pure + le ticket qui l'a produite. */
-export interface StaleBranchInfo extends StaleBranch {
+export interface AgentBranchInfo extends AgentBranch {
   issue: BranchIssueRef | null;
 }
 
-export interface StaleBranchesPreview {
+export interface AgentBranchesPreview {
   provider: RepoProviderId;
   repoFullName: string;
-  branches: StaleBranchInfo[];
-  /** La liste des PR a été tronquée : l'aperçu n'est pas exhaustif. */
+  branches: AgentBranchInfo[];
+  /** Une des deux listes paginées de la forge (PR, branches) a été coupée :
+      l'aperçu n'est pas exhaustif, et l'UI le dit. */
   truncated: boolean;
 }
 
@@ -60,6 +62,10 @@ interface RunRow {
  * produites (null pour un run carnet, qui n'a pas d'issue). C'est la liste des
  * branches que minddy s'autorise à toucher : tout ce qui n'y est pas appartient
  * à quelqu'un d'autre.
+ *
+ * L'ordre d'insertion est celui des runs, du plus récent au plus ancien : la
+ * sélection s'en sert pour ranger les branches SANS PR, qui n'ont pas de date
+ * de PR à comparer.
  */
 export async function listAgentBranchesForProject(
   projectId: string,
@@ -98,23 +104,35 @@ export async function listAgentBranchesForProject(
 
 type CloneTarget = NonNullable<Awaited<ReturnType<typeof resolveRepoCloneTarget>>>;
 
+/** Au-delà, `listBranches` a rendu la main sur son propre plafond de pagination
+    (MAX_BRANCH_PAGES × 100) : des branches d'agent ont pu passer à la trappe. */
+const BRANCH_PAGE_LIMIT = 500;
+
 /** L'aperçu à partir d'une cible DÉJÀ résolue — la suppression réutilise la
     sienne plutôt que de minter un second token pour le même ménage. */
 async function previewFor(
   projectId: string,
   target: CloneTarget,
-): Promise<StaleBranchesPreview> {
-  const [known, { pulls, truncated }] = await Promise.all([
+): Promise<AgentBranchesPreview> {
+  const forge = forgeFor(target.provider);
+  const [known, { pulls, truncated }, remote] = await Promise.all([
     listAgentBranchesForProject(projectId),
-    forgeFor(target.provider).listPullRequests({
+    forge.listPullRequests({
+      token: target.token,
+      repoFullName: target.repoFullName,
+    }),
+    // Ce qui existe VRAIMENT côté dépôt : sans ça, une branche supprimée depuis
+    // longtemps réapparaîtrait dans la liste dès qu'elle n'a pas de PR.
+    forge.listBranches({
       token: target.token,
       repoFullName: target.repoFullName,
     }),
   ]);
 
-  const branches = selectStaleBranches({
+  const branches = selectAgentBranches({
     pulls,
-    knownBranches: new Set(known.keys()),
+    knownBranches: known.keys(),
+    remoteBranches: new Set(remote),
     defaultBranch: target.defaultBranch,
   }).map((b) => ({ ...b, issue: known.get(b.branch) ?? null }));
 
@@ -122,17 +140,17 @@ async function previewFor(
     provider: target.provider,
     repoFullName: target.repoFullName,
     branches,
-    truncated,
+    truncated: truncated || remote.length >= BRANCH_PAGE_LIMIT,
   };
 }
 
 /**
- * Aperçu des branches nettoyables du projet, ou null s'il n'a aucun dépôt lié.
+ * Aperçu des branches d'agent du projet, ou null s'il n'a aucun dépôt lié.
  * Lève les erreurs de la forge (la route les traduit en 502).
  */
-export async function previewStaleBranches(
+export async function previewAgentBranches(
   projectId: string,
-): Promise<StaleBranchesPreview | null> {
+): Promise<AgentBranchesPreview | null> {
   const target = await resolveRepoCloneTarget(projectId);
   if (!target) return null;
   return previewFor(projectId, target);
@@ -146,7 +164,7 @@ export async function previewStaleBranches(
  * la liste servie ressort en échec explicite plutôt que d'être supprimée sur
  * parole. Renvoie null si le projet n'a pas (ou plus) de dépôt lié.
  */
-export async function deleteStaleBranches(
+export async function deleteAgentBranches(
   projectId: string,
   branches: string[],
 ): Promise<BranchDeletionResult[] | null> {

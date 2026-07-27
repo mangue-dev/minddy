@@ -2,11 +2,11 @@
 
 import type { RepoProviderId } from "./repo-providers";
 import type {
+  AgentBranchesResponse,
   BranchDeletionResult,
   CandidateRepo,
   GitConnection,
   ProjectGitLink,
-  StaleBranchesResponse,
 } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -118,23 +118,24 @@ export async function setGitIssueSyncApi(
 }
 
 /**
- * Aperçu des branches d'agent dont la PR/MR est fermée (MIN-102). Le serveur
- * recalcule cette liste au moment de supprimer : ce qu'on affiche ici n'est
- * qu'une proposition, pas une autorisation.
+ * Toutes les branches que minddy a poussées sur le dépôt lié et qui existent
+ * encore (MIN-102), avec leur état. Le serveur recalcule cette liste au moment
+ * de supprimer : ce qu'on affiche ici n'est qu'une proposition, pas une
+ * autorisation.
  */
-export async function fetchStaleBranchesApi(
+export async function fetchAgentBranchesApi(
   projectId: string,
-): Promise<StaleBranchesResponse> {
-  return parseJson(await fetch(`/api/projects/${projectId}/git-link/stale-branches`));
+): Promise<AgentBranchesResponse> {
+  return parseJson(await fetch(`/api/projects/${projectId}/git-link/agent-branches`));
 }
 
-export async function deleteStaleBranchesApi(
+export async function deleteAgentBranchesApi(
   projectId: string,
   branches: string[],
   provider: RepoProviderId,
 ): Promise<{ results: BranchDeletionResult[] }> {
   const res = await parseJson<{ results: BranchDeletionResult[] }>(
-    await fetch(`/api/projects/${projectId}/git-link/stale-branches`, {
+    await fetch(`/api/projects/${projectId}/git-link/agent-branches`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ branches }),

@@ -762,25 +762,31 @@ export interface ProjectGitLink {
 }
 
 /**
- * Une branche d'agent proposée au ménage (MIN-102) : sa PR/MR est fermée, et
- * `agent_runs` atteste que minddy l'a poussée. `issue` est null pour un run
- * carnet, qui n'est rattaché à aucun ticket.
+ * État d'une branche d'agent, de la plus sûre à supprimer à la plus risquée :
+ * PR fusionnée (travail livré), PR refusée (travail nulle part ailleurs), PR
+ * ouverte, aucune PR (branche fraîche ou session au repos).
  */
-export interface StaleBranch {
+export type AgentBranchState = "merged" | "closed" | "open" | "none";
+
+/**
+ * Une branche que minddy a poussée et qui vit encore sur le dépôt (MIN-102) :
+ * `agent_runs` atteste de son origine. `issue` est null pour un run carnet, qui
+ * n'est rattaché à aucun ticket ; `prNumber`/`prUrl` sont null sans PR.
+ */
+export interface AgentBranch {
   branch: string;
-  prNumber: number;
-  prUrl: string;
-  /** `merged` : le travail est livré. `closed` : la PR a été refusée. */
-  prState: "merged" | "closed";
+  state: AgentBranchState;
+  prNumber: number | null;
+  prUrl: string | null;
   prCreatedAt: string | null;
   issue: { issueId: string; identifier: string; title: string } | null;
 }
 
-export interface StaleBranchesResponse {
+export interface AgentBranchesResponse {
   provider: RepoProviderId;
   repoFullName: string;
-  branches: StaleBranch[];
-  /** La liste des PR a été tronquée : l'aperçu n'est pas exhaustif. */
+  branches: AgentBranch[];
+  /** Une liste paginée de la forge a été coupée : l'aperçu n'est pas exhaustif. */
   truncated: boolean;
 }
 

@@ -18,27 +18,46 @@ import {
 import { AlertTriangle, Brush, ExternalLink } from "lucide-react";
 
 import {
-  deleteStaleBranchesApi,
-  fetchStaleBranchesApi,
+  deleteAgentBranchesApi,
+  fetchAgentBranchesApi,
 } from "@/lib/git-integration-api";
 import type { RepoProviderId } from "@/lib/repo-providers";
-import type { StaleBranch } from "@/lib/types";
+import type { AgentBranch, AgentBranchState } from "@/lib/types";
 
 /**
- * Ménage des branches d'agent (MIN-102) : les branches poussées par un run dont
- * la pull request est fermée.
+ * Gestion des branches d'agent (MIN-102) : TOUTES les branches que minddy a
+ * poussées et qui vivent encore sur le dépôt, quel que soit l'état de leur PR —
+ * y compris celles qui n'en ont aucune (branche fraîche, session au repos). On
+ * ne peut pas gérer ce qu'on ne voit pas ; ce qui protège n'est pas l'absence de
+ * la ligne mais son état.
  *
  * Deux portes d'entrée, un seul dialogue : le bouton de la section Git des
  * paramètres du projet (`GitBranchCleanup`), et la command palette, qui monte
  * `BranchCleanupDialog` directement depuis l'app shell. D'où le dialogue
  * CONTRÔLÉ, qui charge son aperçu à l'ouverture au lieu de le recevoir.
  *
- * Pré-cochage : les branches de PR FUSIONNÉES seulement. Une PR refusée porte du
- * travail qui n'existe nulle part ailleurs, et l'agent sait repartir de sa
- * branche pour rouvrir la PR — supprimer celle-là est une décision, pas un
- * défaut. Rien ne part au premier clic : le pied du dialogue demande une
- * confirmation explicite.
+ * Pré-cochage : les branches de PR FUSIONNÉES seulement. Les trois autres états
+ * demandent un geste, et deux avertissements distincts se déclenchent à la
+ * sélection : les PR refusées portent du travail qui n'existe nulle part
+ * ailleurs, et les branches sans PR ou à PR ouverte servent encore à une
+ * session. Rien ne part au premier clic : le pied demande une confirmation.
  */
+
+/** Libellé et allure du badge d'état — l'ordre du tri va de haut en bas. */
+const STATE_BADGE: Record<
+  AgentBranchState,
+  { key: string; variant: "secondary" | "outline" }
+> = {
+  merged: { key: "gitCleanBranchesMerged", variant: "secondary" },
+  closed: { key: "gitCleanBranchesRejected", variant: "outline" },
+  open: { key: "gitCleanBranchesOpenPr", variant: "outline" },
+  none: { key: "gitCleanBranchesNoPr", variant: "outline" },
+};
+
+/** `open` et `none` : une session d'agent peut encore travailler cette branche. */
+function isInUse(state: AgentBranchState): boolean {
+  return state === "open" || state === "none";
+}
 export function BranchCleanupDialog({
   projectId,
   provider,
@@ -54,7 +73,7 @@ export function BranchCleanupDialog({
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [branches, setBranches] = useState<StaleBranch[]>([]);
+  const [branches, setBranches] = useState<AgentBranch[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [truncated, setTruncated] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -71,14 +90,15 @@ export function BranchCleanupDialog({
     setLoadError(null);
     setFailures({});
     setConfirming(false);
-    fetchStaleBranchesApi(projectId)
+    fetchAgentBranchesApi(projectId)
       .then((res) => {
         if (cancelled) return;
         setBranches(res.branches);
         setTruncated(res.truncated);
+        // Seules les fusionnées arrivent cochées : leur travail est livré.
         setSelected(
           new Set(
-            res.branches.filter((b) => b.prState === "merged").map((b) => b.branch),
+            res.branches.filter((b) => b.state === "merged").map((b) => b.branch),
           ),
         );
       })
@@ -109,7 +129,7 @@ export function BranchCleanupDialog({
     }
     setDeleting(true);
     try {
-      const { results } = await deleteStaleBranchesApi(
+      const { results } = await deleteAgentBranchesApi(
         projectId,
         [...selected],
         provider,
@@ -143,8 +163,11 @@ export function BranchCleanupDialog({
   };
 
   const hasRejectedSelected = branches.some(
-    (b) => b.prState === "closed" && selected.has(b.branch),
+    (b) => b.state === "closed" && selected.has(b.branch),
   );
+  const inUseSelected = branches.filter(
+    (b) => isInUse(b.state) && selected.has(b.branch),
+  ).length;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !deleting && onOpenChange(v)}>
@@ -181,27 +204,22 @@ export function BranchCleanupDialog({
                         {b.branch}
                       </span>
                       <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        <Badge
-                          variant={b.prState === "merged" ? "secondary" : "outline"}
-                          className="h-5"
-                        >
-                          {t(
-                            b.prState === "merged"
-                              ? "gitCleanBranchesMerged"
-                              : "gitCleanBranchesRejected",
-                          )}
+                        <Badge variant={STATE_BADGE[b.state].variant} className="h-5">
+                          {t(STATE_BADGE[b.state].key)}
                         </Badge>
                         {b.issue ? <span>{b.issue.identifier}</span> : null}
-                        <a
-                          href={b.prUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 hover:text-foreground hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          #{b.prNumber}
-                          <ExternalLink className="size-3" />
-                        </a>
+                        {b.prUrl && b.prNumber != null && (
+                          <a
+                            href={b.prUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 hover:text-foreground hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            #{b.prNumber}
+                            <ExternalLink className="size-3" />
+                          </a>
+                        )}
                       </span>
                     </span>
                   </label>
@@ -226,6 +244,15 @@ export function BranchCleanupDialog({
           <p className="flex items-start gap-2 rounded-md border border-border bg-muted/50 p-2.5 text-xs text-muted-foreground">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
             {t("gitCleanBranchesRejectedWarning")}
+          </p>
+        )}
+
+        {/* Rouge, et pas gris comme l'avertissement des PR refusées : là, une
+            session d'agent peut encore pousser sur la branche qu'on efface. */}
+        {inUseSelected > 0 && (
+          <p className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
+            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            {t("gitCleanBranchesInUseWarning", { count: inUseSelected })}
           </p>
         )}
 

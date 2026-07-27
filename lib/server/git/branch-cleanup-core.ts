@@ -1,28 +1,46 @@
-// Sélection PURE des branches d'agent à nettoyer (MIN-102), sans DB ni import
-// server-only : testable en node/vitest, comme issue-sync-core.ts. La partie qui
-// interroge la base et la forge vit dans branch-cleanup.ts.
+// Sélection PURE des branches d'agent (MIN-102), sans DB ni import server-only :
+// testable en node/vitest, comme issue-sync-core.ts. La partie qui interroge la
+// base et la forge vit dans branch-cleanup.ts.
 //
-// Le ménage vise UNE chose : les branches poussées par un run de l'agent dont la
-// PR/MR est fermée (fusionnée ou refusée). Deux verrous indépendants, et il faut
-// les deux : la branche doit être connue de `agent_runs` (c'est la preuve que
-// minddy l'a créée) ET porter le préfixe d'agent (defense in depth, au cas où
-// une ligne de `agent_runs` pointerait une branche saisie à la main).
+// La liste montre TOUTES les branches que minddy a poussées et qui existent
+// encore sur le dépôt — pas seulement celles dont la PR est fermée. Une session
+// d'agent en attente, ou qui a poussé sans jamais ouvrir de PR, a elle aussi une
+// branche, et on ne peut pas la gérer sans la voir. Ce qui protège n'est donc
+// plus l'absence de la ligne mais son ÉTAT : seules les branches fusionnées
+// arrivent cochées, le reste demande un geste et un avertissement.
+//
+// Deux verrous d'appartenance, et il faut les deux : la branche doit être connue
+// de `agent_runs` (preuve que minddy l'a créée) ET porter le préfixe d'agent
+// (defense in depth, au cas où une ligne de `agent_runs` pointerait une branche
+// saisie à la main).
 
 import type { PullRequestRef } from "@/lib/server/agent/pr";
 
 /** Préfixe des branches poussées par l'agent (cf. `execute.ts`, `workBranch`). */
 export const AGENT_BRANCH_PREFIX = "minddy/agent/";
 
-/** État de la PR d'une branche candidate — le seul axe qui change la décision. */
-export type StalePrState = "merged" | "closed";
+/**
+ * État d'une branche d'agent, par ordre de sûreté décroissante :
+ *   • `merged` — sa PR est fusionnée : le travail est livré, rien à perdre ;
+ *   • `closed` — sa PR a été refusée : le travail n'existe QUE là ;
+ *   • `open`   — sa PR est ouverte ou en brouillon : une session travaille ;
+ *   • `none`   — aucune PR : branche fraîchement créée, ou session au repos.
+ */
+export type AgentBranchState = "merged" | "closed" | "open" | "none";
 
-/** Une branche proposée au ménage, avec la PR qui justifie sa candidature. */
-export interface StaleBranch {
+/** `open` et `none` = une session d'agent peut encore s'en servir. */
+export function isBranchInUse(state: AgentBranchState): boolean {
+  return state === "open" || state === "none";
+}
+
+/** Une branche d'agent du dépôt, avec la PR qui la qualifie s'il y en a une. */
+export interface AgentBranch {
   branch: string;
-  prNumber: number;
-  prUrl: string;
-  prState: StalePrState;
-  /** Date de la PR la plus récente sur cette branche (ISO), pour le tri. */
+  state: AgentBranchState;
+  /** Null quand `state` vaut `none` : il n'y a aucune PR à référencer. */
+  prNumber: number | null;
+  prUrl: string | null;
+  /** Date de la PR retenue (ISO), pour le tri. Null sans PR. */
   prCreatedAt: string | null;
 }
 
@@ -40,15 +58,9 @@ export function isDeletableAgentBranch(branch: string, defaultBranch: string): b
   return true;
 }
 
-/** Une PR est-elle encore vivante (donc sa branche intouchable) ? */
+/** Une PR est-elle encore vivante (ouverte ou brouillon) ? */
 function isLive(pr: PullRequestRef): boolean {
   return pr.state === "open" || pr.draft === true;
-}
-
-/** PR fermée → l'état qu'on montre ; une PR ouverte n'est pas une candidate. */
-function staleStateOf(pr: PullRequestRef): StalePrState | null {
-  if (isLive(pr)) return null;
-  return pr.merged ? "merged" : "closed";
 }
 
 /** Comparateur de fraîcheur : la PR la plus récemment ouverte gagne. */
@@ -58,57 +70,85 @@ function newerThan(a: string | null, b: string | null): boolean {
   return a > b;
 }
 
+/** Ordre d'affichage : du plus sûr à supprimer au plus risqué. */
+const STATE_ORDER: Record<AgentBranchState, number> = {
+  merged: 0,
+  closed: 1,
+  open: 2,
+  none: 3,
+};
+
 /**
- * Croise les PR de la forge avec les branches réellement enregistrées par les
- * runs d'agent du projet, et rend les branches supprimables.
+ * Croise trois sources et rend les branches d'agent gérables :
+ *   • `knownBranches` — ce que les runs du projet ont enregistré (appartenance),
+ *     dans l'ordre d'itération de l'appelant (run le plus récent d'abord), qui
+ *     départage les branches sans PR, faute de date à comparer ;
+ *   • `remoteBranches` — ce qui existe VRAIMENT sur le dépôt. Sans ce filtre, la
+ *     liste ressusciterait toutes les branches jamais créées, dont l'immense
+ *     majorité a déjà été supprimée ;
+ *   • `pulls` — ce qui donne son état à chaque branche.
  *
- * Une branche est écartée si :
- *   • elle porte AUSSI une PR ouverte ou draft — le cas d'une PR rouverte, ou
- *     d'une seconde PR sur la même branche : la fermée ne dit alors plus rien ;
- *   • `isDeletableAgentBranch` la refuse (hors préfixe, branche par défaut…) ;
- *   • `agent_runs` ne la connaît pas — minddy ne touche pas au travail des
- *     humains, même s'il ressemble à celui de l'agent.
- * Une seule ligne par branche : la PR la plus récente porte l'état affiché.
+ * Une PR vivante l'emporte toujours sur une PR fermée de la même branche (cas
+ * d'une PR rouverte) : la branche est alors `open`, jamais proposée cochée.
  */
-export function selectStaleBranches(opts: {
+export function selectAgentBranches(opts: {
   pulls: PullRequestRef[];
-  knownBranches: Set<string> | ReadonlySet<string>;
+  knownBranches: Iterable<string>;
+  remoteBranches: Set<string> | ReadonlySet<string>;
   defaultBranch: string;
-}): StaleBranch[] {
-  const { pulls, knownBranches, defaultBranch } = opts;
+}): AgentBranch[] {
+  const { pulls, knownBranches, remoteBranches, defaultBranch } = opts;
 
-  // Passe 1 : les branches qu'une PR vivante protège, quoi qu'il arrive ensuite.
-  const live = new Set<string>();
-  for (const pr of pulls) {
-    if (pr.head && isLive(pr)) live.add(pr.head);
-  }
-
-  // Passe 2 : la meilleure PR fermée de chaque branche restante.
-  const byBranch = new Map<string, StaleBranch>();
+  // Meilleure PR vivante et meilleure PR fermée de chaque branche, en une passe.
+  const live = new Map<string, PullRequestRef>();
+  const dead = new Map<string, PullRequestRef>();
   for (const pr of pulls) {
     const branch = pr.head;
-    if (!branch || live.has(branch)) continue;
-    if (!knownBranches.has(branch)) continue;
-    if (!isDeletableAgentBranch(branch, defaultBranch)) continue;
-    const prState = staleStateOf(pr);
-    if (!prState) continue;
-
-    const candidate: StaleBranch = {
-      branch,
-      prNumber: pr.number,
-      prUrl: pr.url,
-      prState,
-      prCreatedAt: pr.createdAt ?? null,
-    };
-    const current = byBranch.get(branch);
-    if (!current || newerThan(candidate.prCreatedAt, current.prCreatedAt)) {
-      byBranch.set(branch, candidate);
+    if (!branch) continue;
+    const bucket = isLive(pr) ? live : dead;
+    const current = bucket.get(branch);
+    if (!current || newerThan(pr.createdAt ?? null, current.createdAt ?? null)) {
+      bucket.set(branch, pr);
     }
   }
 
-  // Les fusionnées d'abord (elles seront pré-cochées), puis les plus récentes.
-  return [...byBranch.values()].sort((a, b) => {
-    if (a.prState !== b.prState) return a.prState === "merged" ? -1 : 1;
-    return (b.prCreatedAt ?? "").localeCompare(a.prCreatedAt ?? "");
-  });
+  const seen = new Set<string>();
+  const branches: AgentBranch[] = [];
+  for (const branch of knownBranches) {
+    if (seen.has(branch)) continue;
+    seen.add(branch);
+    if (!remoteBranches.has(branch)) continue;
+    if (!isDeletableAgentBranch(branch, defaultBranch)) continue;
+
+    const livePr = live.get(branch);
+    const deadPr = livePr ? undefined : dead.get(branch);
+    const pr = livePr ?? deadPr ?? null;
+    const state: AgentBranchState = livePr
+      ? "open"
+      : deadPr
+        ? deadPr.merged
+          ? "merged"
+          : "closed"
+        : "none";
+
+    branches.push({
+      branch,
+      state,
+      prNumber: pr?.number ?? null,
+      prUrl: pr?.url ?? null,
+      prCreatedAt: pr?.createdAt ?? null,
+    });
+  }
+
+  // Tri stable : par état (les fusionnées d'abord, elles seront pré-cochées),
+  // puis par PR la plus récente. Les branches sans PR gardent l'ordre reçu.
+  return branches
+    .map((b, index) => ({ b, index }))
+    .sort((x, y) => {
+      const byState = STATE_ORDER[x.b.state] - STATE_ORDER[y.b.state];
+      if (byState !== 0) return byState;
+      const byDate = (y.b.prCreatedAt ?? "").localeCompare(x.b.prCreatedAt ?? "");
+      return byDate !== 0 ? byDate : x.index - y.index;
+    })
+    .map(({ b }) => b);
 }

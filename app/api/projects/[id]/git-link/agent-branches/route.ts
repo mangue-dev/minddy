@@ -5,13 +5,14 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { isForgeApiError } from "@/lib/server/agent/forge";
 import {
-  deleteStaleBranches,
-  previewStaleBranches,
+  deleteAgentBranches,
+  previewAgentBranches,
 } from "@/lib/server/git/branch-cleanup";
 
 /**
- * Ménage des branches d'agent du dépôt lié (MIN-102) : GET rend l'aperçu des
- * branches dont la PR/MR est fermée, POST supprime celles qu'on lui désigne.
+ * Branches d'agent du dépôt lié (MIN-102) : GET rend TOUTES celles que minddy a
+ * poussées et qui existent encore (avec leur état — PR fusionnée, refusée,
+ * ouverte, ou aucune), POST supprime celles qu'on lui désigne.
  *
  * Owner uniquement — supprimer des branches distantes est du même ordre que
  * délier le dépôt. Le POST ne fait pas confiance à sa liste : le module serveur
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (denied) return denied;
 
   try {
-    const preview = await previewStaleBranches(id);
+    const preview = await previewAgentBranches(id);
     if (!preview) {
       return NextResponse.json({ error: "noRepo", code: "noRepo" }, { status: 409 });
     }
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const results = await deleteStaleBranches(id, branches as string[]);
+    const results = await deleteAgentBranches(id, branches as string[]);
     if (!results) {
       return NextResponse.json({ error: "noRepo", code: "noRepo" }, { status: 409 });
     }
