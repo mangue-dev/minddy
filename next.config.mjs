@@ -102,6 +102,26 @@ const nextConfig = {
     // exactement l'inverse de ce qu'on cherche. La langue est portée par l'URL
     // et non par un cookie depuis les URLs localisées, et la session est
     // traitée par le middleware — il ne reste rien à faire varier.
+    //
+    // ⚠ POURQUOI DEUX EN-TÊTES, et pas seulement `Cache-Control`.
+    //
+    // Ces pages sont rendues dynamiquement (elles lisent `headers()` pour
+    // résoudre la locale), et Next pose LUI-MÊME `Cache-Control: private,
+    // no-cache, no-store` sur la réponse d'un rendu dynamique. Sur Vercel, les
+    // en-têtes de ce fichier sont appliqués par le routeur AVANT l'invocation de
+    // la fonction : celle-ci écrase ensuite `Cache-Control`. Mesuré sur la prod
+    // au premier déploiement — `private, no-store` et `x-vercel-cache: MISS`,
+    // alors que `next start` en local donnait bien la valeur d'ici. (Le
+    // `X-Robots-Tag` plus bas, lui, fonctionne : Next ne le pose jamais, donc
+    // personne ne l'écrase.)
+    //
+    // `Vercel-CDN-Cache-Control` est l'en-tête prévu pour ce cas : il ne pilote
+    // QUE le cache de l'Edge Network de Vercel, Next n'y touche pas, et il est
+    // retiré de la réponse avant qu'elle n'atteigne le navigateur. On garde
+    // `Cache-Control` à côté : il reste juste hors de Vercel (et en local), et
+    // le navigateur, lui, continuera de recevoir le `private, no-store` de Next
+    // — ce qui est très bien, on veut un cache CDN partagé, pas un cache
+    // navigateur qui figerait la page d'un visiteur qui vient de se connecter.
     headers.push(
       ...PUBLIC_ROUTE_PATHS.map((source) => ({
         source,
@@ -109,6 +129,10 @@ const nextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+          },
+          {
+            key: "Vercel-CDN-Cache-Control",
+            value: "max-age=300, stale-while-revalidate=86400",
           },
         ],
       })),
