@@ -39,7 +39,7 @@ product itself, see ${SITE_URL}.
 ## Connecting
 
 - Endpoint: \`${MCP_ENDPOINT}\`
-- Transport: Streamable HTTP (stateless, tools only — no SSE, no server
+- Transport: Streamable HTTP (stateless, tools only: no SSE, no server
   notifications)
 - Auth: **OAuth 2.1 only**. There are no static API keys. On a request without a
   valid bearer, the server answers \`401\` with \`WWW-Authenticate\` and
@@ -62,7 +62,7 @@ ${MCP_SERVER_MODEL}
 
 ## Tools
 
-${tools.map((tool) => `- \`${tool.name}\`${tool.readOnly ? " (read-only)" : ""} — ${firstSentence(tool.description)}`).join("\n")}
+${tools.map((tool) => `- \`${tool.name}\`${tool.readOnly ? " (read-only)" : ""}: ${firstSentence(tool.description)}`).join("\n")}
 
 ## More
 
@@ -86,15 +86,15 @@ ${tools.map((tool) => `- \`${tool.name}\`${tool.readOnly ? " (read-only)" : ""} 
  * est le bon format pour un modèle en cours de session mais illisible en tête
  * d'un fichier d'intégration. `/llms-full.txt` sert la version intégrale.
  */
-const MCP_SERVER_MODEL = `- **Project** — the workspace. Everything else belongs to one.
-- **Objective** — groups a project's issues around a goal.
-- **Issue** — \`<PROJECT KEY>-<number>\`, e.g. \`MIND-42\`. Statuses: triage,
+const MCP_SERVER_MODEL = `- **Project**: the workspace. Everything else belongs to one.
+- **Objective**: groups a project's issues around a goal.
+- **Issue**: \`<PROJECT KEY>-<number>\`, e.g. \`MIND-42\`. Statuses: triage,
   backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities:
   none, urgent, high, medium, low. Efforts: xs, s, m, l, xl.
-- **Plan** — markdown on an issue. \`- [ ]\` pending, \`- [~]\` in progress,
+- **Plan**: markdown on an issue. \`- [ ]\` pending, \`- [~]\` in progress,
   \`- [x]\` done, \`- [-]\` cancelled. Checkboxes under a \`## Questions\`
   heading are open questions, not work, and never count towards progress.
-- **Cycle** — the key owner's personal, cross-project fortnight.
-- **Scratchpad** — the key owner's personal notes doc, same checkbox markdown.
-- **Feedback** — user requests on a public board, separate from issues, with
+- **Cycle**: the key owner's personal, cross-project fortnight.
+- **Scratchpad**: the key owner's personal notes doc, same checkbox markdown.
+- **Feedback**: user requests on a public board, separate from issues, with
   votes and a public status; can be promoted into an issue.`;

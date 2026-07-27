@@ -13,8 +13,22 @@ import { defaultLocale, type Locale } from "@/i18n/config";
  */
 export const CHANGELOG_FEED_PATH = "/changelog/rss.xml";
 
+/**
+ * L'habillage du flux, servi à côté de lui. Déclaré ici et non fabriqué par un
+ * `replace(".xml", ".css")` sur le chemin du flux : deux routes distinctes, deux
+ * constantes, et renommer l'une ne casse pas silencieusement l'autre.
+ */
+export const CHANGELOG_FEED_STYLE_PATH = "/changelog/rss.css";
+
 export function changelogFeedPath(locale: Locale): string {
-  return locale === defaultLocale
-    ? CHANGELOG_FEED_PATH
-    : `${CHANGELOG_FEED_PATH}?locale=${locale}`;
+  return withLocale(CHANGELOG_FEED_PATH, locale);
+}
+
+export function changelogFeedStylePath(locale: Locale): string {
+  return withLocale(CHANGELOG_FEED_STYLE_PATH, locale);
+}
+
+/** La langue voyage en paramètre : ces deux routes sont hors du site localisé. */
+function withLocale(path: string, locale: Locale): string {
+  return locale === defaultLocale ? path : `${path}?locale=${locale}`;
 }

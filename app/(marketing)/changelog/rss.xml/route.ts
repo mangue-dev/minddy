@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
-import { CHANGELOG_FEED_PATH } from "@/lib/changelog-feed";
+import { CHANGELOG_FEED_PATH, changelogFeedStylePath } from "@/lib/changelog-feed";
 import { routeByKey } from "@/lib/public-routes";
 import { SITE_URL } from "@/lib/site";
 
@@ -46,10 +46,15 @@ export async function GET(request: NextRequest): Promise<Response> {
     ].join("\n"),
   ).join("\n");
 
+  // L'instruction de style, juste après la déclaration XML : c'est elle qui
+  // fait qu'un navigateur affiche une page lisible au lieu d'un arbre XML brut.
+  // Les lecteurs de flux l'ignorent — voir `rss.css/route.ts` pour le choix du
+  // CSS plutôt que du XSLT.
   const body = `<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/css" href="${escapeXml(changelogFeedStylePath(locale))}"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>minddy — ${escapeXml(t("metaTitle"))}</title>
+    <title>minddy · ${escapeXml(t("metaTitle"))}</title>
     <link>${escapeXml(pageUrl)}</link>
     <description>${escapeXml(t("metaDescription"))}</description>
     <language>${locale === "fr" ? "fr-fr" : "en-us"}</language>
@@ -62,7 +67,21 @@ ${items}
 
   return new Response(body, {
     headers: {
-      "Content-Type": "application/rss+xml; charset=utf-8",
+      // `text/xml` et non `application/rss+xml`, qui est pourtant le type
+      // canonique d'un flux RSS. Mesuré dans Chromium : sur
+      // `application/rss+xml`, le navigateur ne lance PAS son parseur XML — il
+      // enveloppe la réponse dans une page HTML et l'affiche telle quelle
+      // (`document.documentElement` vaut `HTML`, zéro feuille de style
+      // chargée). L'instruction de style ci-dessus n'est donc jamais lue, et le
+      // visiteur voit du balisage brut. Sur `text/xml` comme sur
+      // `application/xml`, le document est parsé en XML et la feuille
+      // s'applique.
+      //
+      // Aucune perte côté lecteurs de flux : ils reconnaissent un flux à son
+      // contenu, `text/xml` est répandu, et la découverte automatique se fait
+      // par le `<link rel="alternate" type="application/rss+xml">` du `<head>`
+      // de la page, qui lui garde le type canonique.
+      "Content-Type": "text/xml; charset=utf-8",
       "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
     },
   });

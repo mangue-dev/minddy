@@ -74,14 +74,16 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
  * page, on y arrive en lisant, pas en la cherchant, et elle occupait une place
  * de nav pour une objection qu'on n'a pas encore.
  *
- * « Tarifs » vise la section de la landing et non `/pricing` : le comparatif
- * complet reste à un clic, par le lien « Comparer les plans en détail » sous les
- * cartes. Le préfixe `/#` garantit le retour vers la landing depuis /pricing ou
- * une page légale.
+ * « Tarifs » vise la PAGE `/pricing`, et non plus la section de la landing :
+ * quelqu'un qui clique « Tarifs » dans une barre de navigation demande la
+ * grille complète, pas un défilement vers trois cartes suivies d'un second lien
+ * à trouver. C'est aussi la seule entrée de la nav qui menait à une ancre alors
+ * qu'une vraie page existait — et un lien interne de plus vers une page
+ * indexable ne se refuse pas.
  */
 const LINKS: ReadonlyArray<NavLink> = [
   { href: "/#workflow", key: "navHowItWorks", icon: Route },
-  { href: "/#pricing", key: "navPricing", icon: Tag },
+  { href: "/pricing", key: "navPricing", icon: Tag },
 ];
 
 /** Ligne et pastille d'icône du tiroir mobile, partagées par ses deux blocs. */

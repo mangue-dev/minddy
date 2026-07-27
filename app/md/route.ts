@@ -147,7 +147,7 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
       `## ${title}`,
       subtitle,
       ...(items.length
-        ? [items.map(([name, body]) => (name ? `- **${name}** — ${body}` : `- ${body}`)).join("\n")]
+        ? [items.map(([name, body]) => (name ? `- **${name}**: ${body}` : `- ${body}`)).join("\n")]
         : []),
     ]),
     `## ${t("faqTitle")}`,
@@ -170,7 +170,7 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
     // Les prix viennent de BILLING_PLANS, jamais d'une copie — même règle que
     // les données structurées.
     BILLING_PLANS.map(
-      (plan) => `- **${tb(planNameKey[plan.id])}** — ${plan.priceEurMonthly} EUR / month`,
+      (plan) => `- **${tb(planNameKey[plan.id])}**: ${plan.priceEurMonthly} EUR / month`,
     ).join("\n"),
     `## ${t("comparisonTitle")}`,
     t("comparisonSubtitle"),
@@ -204,8 +204,8 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
     t("heroSubtitle"),
     t("heroNote"),
     [
-      `- **${t("factEndpoint")}** — \`${MCP_ENDPOINT}\``,
-      `- **${t("factAuth")}** — ${t("factAuthValue")}`,
+      `- **${t("factEndpoint")}**: \`${MCP_ENDPOINT}\``,
+      `- **${t("factAuth")}**: ${t("factAuthValue")}`,
     ].join("\n"),
 
     `## ${t("connectTitle")}`,
@@ -229,7 +229,7 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
     `## ${t("authTitle")}`,
     t("authSubtitle"),
     (["who", "consent", "revoke"] as const)
-      .map((key) => `- **${t(`auth_${key}_title`)}** — ${t(`auth_${key}_body`)}`)
+      .map((key) => `- **${t(`auth_${key}_title`)}**: ${t(`auth_${key}_body`)}`)
       .join("\n"),
 
     `## ${t("toolsTitle")}`,
@@ -269,8 +269,9 @@ async function renderChangelog(locale: Locale, canonical: string): Promise<strin
   const t = await getTranslations({ locale, namespace: "Changelog" });
 
   return [
+    // Pas de sous-titre : la page n'en a plus, et l'en-tête porte déjà la
+    // description. Une phrase de plus avant la liste ne dirait rien de neuf.
     header(t("metaTitle"), t("metaDescription"), canonical),
-    t("heroSubtitle"),
     ...CHANGELOG_ENTRIES.map((entry) =>
       [
         `## ${t(`entry_${entry.id}_title`)}`,

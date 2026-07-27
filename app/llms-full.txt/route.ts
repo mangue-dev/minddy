@@ -17,11 +17,11 @@ import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 export function GET(): Response {
   const tools = mcpToolCatalog();
 
-  const body = `# minddy — MCP tool reference
+  const body = `# minddy MCP tool reference
 
 Endpoint: \`${MCP_ENDPOINT}\` · Streamable HTTP, stateless, tools only.
 Auth: OAuth 2.1 only (see ${SITE_URL}/llms.txt for the discovery flow).
-Generated from the server's own tool registrations — it cannot describe an API
+Generated from the server's own tool registrations, so it cannot describe an API
 minddy no longer exposes.
 
 ## Server instructions
@@ -42,7 +42,7 @@ ${tools.map(renderTool).join("\n\n")}
 }
 
 function renderTool(tool: ReturnType<typeof mcpToolCatalog>[number]): string {
-  const lines = [`### \`${tool.name}\`${tool.readOnly ? " — read-only" : ""}`];
+  const lines = [`### \`${tool.name}\`${tool.readOnly ? " (read-only)" : ""}`];
   if (tool.title) lines.push(`**${tool.title}**`);
   if (tool.description) lines.push(tool.description);
 
@@ -52,7 +52,7 @@ function renderTool(tool: ReturnType<typeof mcpToolCatalog>[number]): string {
     lines.push("Parameters:");
     for (const param of tool.params) {
       const flag = param.required ? "required" : "optional";
-      const description = param.description ? ` — ${param.description}` : "";
+      const description = param.description ? `: ${param.description}` : "";
       lines.push(`- \`${param.name}\` (${flag})${description}`);
     }
   }

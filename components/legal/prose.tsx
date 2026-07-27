@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { getLocale } from "next-intl/server";
 
 /**
  * Primitives de mise en page des pages légales (mentions, CGU, confidentialité,
@@ -48,17 +49,35 @@ export function List({ children }: { children: ReactNode }) {
 }
 
 /** Liste à puces « terme — description », utilisée pour les données et durées. */
-export function TermList({
+/**
+ * Liste « terme : définition » des pages légales.
+ *
+ * Le séparateur suit la typographie de la langue servie : deux-points collé en
+ * anglais, précédé d'une espace en français. Il était écrit en dur (`— `), ce
+ * qui posait un tiret cadratin sur les trente-six entrées de la page
+ * confidentialité, dans les deux langues.
+ *
+ * `async` plutôt qu'une prop `separator` passée par l'appelant : le composant
+ * est server-safe par construction (voir l'en-tête du fichier), et la langue
+ * n'est pas une décision de mise en page qui remonte à la page.
+ */
+export async function TermList({
   items,
 }: {
   items: { term: string; desc: string }[];
 }) {
+  const locale = await getLocale();
+  const separator = locale === "fr" ? " : " : ": ";
+
   return (
     <ul className="list-outside list-disc space-y-2 pl-5 text-sm">
       {items.map((item) => (
         <li key={item.term}>
-          <span className="font-medium text-foreground">{item.term}</span>{" "}
-          <span className="text-muted-foreground">— {item.desc}</span>
+          <span className="font-medium text-foreground">{item.term}</span>
+          <span className="text-muted-foreground">
+            {separator}
+            {item.desc}
+          </span>
         </li>
       ))}
     </ul>

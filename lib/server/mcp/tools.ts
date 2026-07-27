@@ -135,18 +135,18 @@ const PLAN_FIELD = z
   .string()
   .max(MAX_PLAN_LENGTH)
   .describe(
-    "Implementation plan — FULL markdown document, and a REAL engineering plan " +
+    "Implementation plan: FULL markdown document, and a REAL engineering plan " +
       "(the kind a coding agent's plan mode produces), not a vague todo list. " +
       "Structure: a short context section (goal, approach, constraints), then " +
-      "ordered checkbox tasks where EACH task names the actual code to touch — " +
-      "exact file paths, components, functions, migrations, routes — and a final " +
+      "ordered checkbox tasks where EACH task names the actual code to touch (" +
+      "exact file paths, components, functions, migrations, routes), and a final " +
       "verification step (how to test end-to-end). 'Add POST handler in " +
       "app/api/foo/route.ts with zod validation' is a good task; 'do the backend' " +
       "is not. Checkbox states: '- [ ]' pending, '- [~]' in progress, '- [x]' " +
       "completed, '- [-]' cancelled. Prose between task blocks is allowed. " +
       "DECIDE rather than ask: on an unresolved detail, pick the most reasonable " +
       "option and state the assumption in the context section. Park a question " +
-      "only when being wrong is expensive, under a '## Questions' heading — " +
+      "only when being wrong is expensive, under a '## Questions' heading. " +
       "checkboxes there are open questions, not work, and stay out of the " +
       "progress count (tick one to mark it answered). To " +
       "flip ONE task's state while executing, prefer minddy_update_plan_task " +
@@ -156,7 +156,7 @@ const PLAN_FIELD = z
 const PROJECT_ID = z
   .string()
   .uuid()
-  .describe("Project UUID — use minddy_list_projects to discover ids.");
+  .describe("Project UUID. Use minddy_list_projects to discover ids.");
 
 const ISSUE_REF = z
   .string()
@@ -199,7 +199,7 @@ async function resolveFeedbackPost(
     return {
       error: fail(
         "invalid_params",
-        "feedback_post_id is required — a feedback post UUID (from minddy_list_feedback)."
+        "feedback_post_id is required: a feedback post UUID (from minddy_list_feedback)."
       ),
     };
   }
@@ -516,9 +516,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "(raw markdown plus parsed plan_tasks with stable task_index for " +
         "minddy_update_plan_task, and plan_progress), comments with author names, " +
         "attachment metadata (id + file name/type/size, on the issue and on each " +
-        "comment — add files with minddy_add_attachment, download them with " +
+        "comment; add files with minddy_add_attachment, download them with " +
         "minddy_get_attachment), sub-issues, and the last " +
-        "activity events (status changes, reassignments…) with resolved actors — " +
+        "activity events (status changes, reassignments…) with resolved actors: " +
         "'what happened on this issue?'.",
       inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
       annotations: READ_ONLY,
@@ -680,7 +680,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "List members",
       description:
         "List a project's members (owner included) with their user_id, display name " +
-        "and role — use user_id for assignee_id in create/update tools.",
+        "and role. Use user_id for assignee_id in create/update tools.",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
     },
@@ -701,7 +701,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "List categories",
       description:
-        "List a project's categories (labels). Read-only — assign them to issues " +
+        "List a project's categories (labels). Read-only: assign them to issues " +
         "via category_ids in minddy_create_issue / minddy_update_issues.",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
@@ -726,8 +726,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "List a project's objectives (issue groups with a shared goal): id, name, " +
         "status (planned/in_progress/done/canceled), lead, target date, " +
-        "progress — { done, total, percent } computed from linked issues " +
-        "(status 'done' / all linked), same as the UI's progress bar — and, when " +
+        "progress: { done, total, percent } computed from linked issues " +
+        "(status 'done' / all linked), same as the UI's progress bar. Plus, when " +
         "present, the objective's own attachments (file name/type/size + id; " +
         "download the bytes with minddy_get_attachment).",
       inputSchema: { project_id: PROJECT_ID },
@@ -838,10 +838,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Create issue",
       description:
         "Create an issue in a project. Only title is required; status defaults to " +
-        "'backlog' (the issue lands directly on the board — the human is driving " +
+        "'backlog' (the issue lands directly on the board; the human is driving " +
         "you). Set parent to make a sub-issue (one level max; it inherits the " +
         "parent's objective unless objective_id is set). description = WHAT/WHY " +
-        "(the problem or feature); plan = HOW (the full implementation plan — see " +
+        "(the problem or feature); plan = HOW (the full implementation plan; see " +
         "the plan field spec). Pass sub_issues to split the work into sub-tickets " +
         "in the same call (the 'plan a feature and break it down' workflow). " +
         "Returns the created issue (and sub-issues) with identifiers.",
@@ -856,7 +856,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         assignee_id: z
           .string()
           .optional()
-          .describe("Member user_id — see minddy_list_members."),
+          .describe("Member user_id. See minddy_list_members."),
         objective_id: z.string().uuid().optional(),
         parent: ISSUE_REF.optional().describe("Parent issue → creates a sub-issue."),
         due_date: z.string().optional().describe("ISO 8601 date or datetime."),
@@ -894,7 +894,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         if (args.sub_issues?.length) {
           return fail(
             "invalid_params",
-            "sub_issues can't be combined with parent — nesting is limited to one level."
+            "sub_issues can't be combined with parent: nesting is limited to one level."
           );
         }
         const parent = await resolveIssueRef(scope.access, args.parent);
@@ -962,7 +962,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Apply the same field changes to 1–50 issues of a project (single edits: " +
         "pass one issue). Only the fields you send change; null clears a nullable " +
         "field. category_ids REPLACES the issue's full category set. plan replaces " +
-        "the whole plan markdown — for one checkbox, use minddy_update_plan_task. " +
+        "the whole plan markdown. For one checkbox, use minddy_update_plan_task. " +
         "Returns per-issue failures, so check `failed` in the result.",
       inputSchema: {
         project_id: PROJECT_ID,
@@ -1065,10 +1065,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Update plan tasks",
       description:
         "Flip one or several tasks of an issue's implementation plan to new states " +
-        "without resending the plan markdown — e.g. mark the finished tasks '- [x]' " +
+        "without resending the plan markdown, e.g. mark the finished tasks '- [x]' " +
         "and the next one '- [~]' in a single call at the end of a work session. " +
         "task_index comes from minddy_get_issue's plan_tasks (0-based, in document " +
-        "order; indexes are stable — state flips don't renumber). States: pending " +
+        "order; indexes are stable, state flips don't renumber). States: pending " +
         "('- [ ]'), in_progress ('- [~]'), completed ('- [x]'), cancelled ('- [-]'). " +
         "All-or-nothing: an invalid index rejects the whole batch. Returns the " +
         "refreshed plan_tasks and plan_progress.",
@@ -1109,7 +1109,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       if (invalid.length > 0) {
         return fail(
           "plan_task_not_found",
-          `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — ` +
+          `No plan task at index(es) ${[...new Set(invalid)].join(", ")}: ` +
             `${ref.issue.identifier} has ${parsed.tasks.length} task(s). ` +
             "Fetch minddy_get_issue for plan_tasks."
         );
@@ -1148,7 +1148,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Add comment",
       description:
-        "Post a markdown comment on an issue — e.g. to report progress or leave a " +
+        "Post a markdown comment on an issue, e.g. to report progress or leave a " +
         "note for the team. The timeline shows the agent as the author (this API " +
         "key's name with an '(mcp)' marker), not the key's owner. To attach a file " +
         "to the comment, call minddy_add_attachment with the returned comment id.",
@@ -1181,7 +1181,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Add attachment",
       description:
-        "Attach a file to an issue, or to one of its comments (pass comment_id — " +
+        "Attach a file to an issue, or to one of its comments (pass comment_id, " +
         "e.g. the id minddy_add_comment returned). Content is sent inline as " +
         "base64, 10 MB max after decoding. The file lands in minddy's private " +
         "storage and shows as a pill in the app; minddy_get_issue lists the " +
@@ -1273,14 +1273,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Get attachment",
       description:
-        "Download one attachment — of an issue, an objective, or a comment. Pass the " +
+        "Download one attachment of an issue, an objective, or a comment. Pass the " +
         "attachment_id you got from minddy_get_issue (issue and comment attachments) " +
         "or minddy_list_objectives (objective attachments). By default returns the " +
-        "file metadata and a short-lived signed download_url (~10 min) — fetch that " +
+        "file metadata and a short-lived signed download_url (~10 min). Fetch that " +
         "URL to grab the bytes without loading them into context, whatever the size. " +
         "Set include_content=true to also embed the file inline (base64): images come " +
         "back viewable, text-ish files as readable text, anything else as a resource " +
-        "blob. Inline content is capped at 10 MB — larger files stay URL-only.",
+        "blob. Inline content is capped at 10 MB; larger files stay URL-only.",
       inputSchema: {
         project_id: PROJECT_ID,
         attachment_id: z
@@ -1342,7 +1342,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           ...meta,
           content_omitted: `File is larger than the ${
             MAX_INLINE_ATTACHMENT_BYTES / (1024 * 1024)
-          } MB inline cap — fetch download_url instead.`,
+          } MB inline cap. Fetch download_url instead.`,
         });
       }
 
@@ -1387,7 +1387,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Create or remove a relation between two issues (MIN-25). From `issue`'s " +
         "point of view: 'blocks' (issue blocks target), 'blocked_by' (issue is " +
         "blocked by target), or 'related' (a soft link). Pass remove=true to delete " +
-        "that relation instead. Idempotent — adding an existing relation, or " +
+        "that relation instead. Idempotent: adding an existing relation, or " +
         "removing an absent one, is a no-op.",
       inputSchema: {
         project_id: PROJECT_ID,
@@ -1543,14 +1543,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Get scratchpad",
       description:
         "Read the key owner's SCRATCHPAD: their single personal, cross-project " +
-        "notes doc ('quick things to do right now') — the in-app replacement for " +
+        "notes doc ('quick things to do right now'), the in-app replacement for " +
         "a problems.md file. Markdown with the same checkbox tasks as plans " +
         "('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped) " +
         "and '##' section headings. Returns the raw markdown, task progress, and " +
-        "the flat list of tasks with their 0-based index (document order) — pass " +
+        "the flat list of tasks with their 0-based index (document order). Pass " +
         "those indices to minddy_update_scratchpad_task to tick items off without " +
         "rewriting the doc. There is exactly one scratchpad per account; it is " +
-        "not tied to a project. Also returns `rev`, the version — pass it back to " +
+        "not tied to a project. Also returns `rev`, the version: pass it back to " +
         "minddy_set_scratchpad / minddy_update_scratchpad_task so a concurrent " +
         "edit by the user is never overwritten.",
       inputSchema: {},
@@ -1583,7 +1583,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Set scratchpad",
       description:
-        "Replace the ENTIRE scratchpad markdown for the key owner — this " +
+        "Replace the ENTIRE scratchpad markdown for the key owner. This " +
         "overwrites the whole notes doc. So call minddy_get_scratchpad FIRST and " +
         "preserve the parts you are not changing (keep other sections; only tick " +
         "off the items you actually finished). Checkbox convention: '- [ ]' to " +
@@ -1605,7 +1605,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .optional()
           .describe(
             "The `rev` from the minddy_get_scratchpad you based this on. If it no " +
-              "longer matches (the user edited meanwhile) the write is rejected — " +
+              "longer matches (the user edited meanwhile) the write is rejected; " +
               "re-read and reapply. Omit only for an unconditional overwrite."
           ),
       },
@@ -1629,7 +1629,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           if (write.conflicted) {
             return fail(
               "conflict",
-              `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${write.rev}) — the user likely edited it in the app. Call minddy_get_scratchpad again, reapply your change onto the fresh content, and set it with the new rev.`
+              `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${write.rev}). The user likely edited it in the app. Call minddy_get_scratchpad again, reapply your change onto the fresh content, and set it with the new rev.`
             );
           }
           return ok({
@@ -1668,7 +1668,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Update scratchpad task",
       description:
         "Flip the state of ONE or more existing scratchpad tasks WITHOUT " +
-        "rewriting the whole doc — the precise way to tick items off. Tasks are " +
+        "rewriting the whole doc: the precise way to tick items off. Tasks are " +
         "0-indexed in document order (the `tasks` array of minddy_get_scratchpad); " +
         "each task keeps its text, only its checkbox marker changes. States: " +
         "pending, in_progress, completed, cancelled. To add/remove tasks or edit " +
@@ -1699,7 +1699,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .describe(
             "The `rev` from the minddy_get_scratchpad whose task indices you are " +
               "using. If the note changed since, the indices may point elsewhere, " +
-              "so the call is rejected — re-read for fresh indices and retry."
+              "so the call is rejected; re-read for fresh indices and retry."
           ),
       },
       annotations: WRITE_IDEMPOTENT,
@@ -1725,7 +1725,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         if (result.status === "out_of_range") {
           return fail(
             "invalid_params",
-            `task_index ${result.index} is out of range — the scratchpad has ${result.total} task(s) (valid indices 0..${Math.max(0, result.total - 1)}).`
+            `task_index ${result.index} is out of range: the scratchpad has ${result.total} task(s) (valid indices 0..${Math.max(0, result.total - 1)}).`
           );
         }
         if (result.status === "conflict") {
@@ -1758,7 +1758,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Append one or more NEW tasks to the scratchpad without rewriting the " +
         "whole doc. Each task defaults to 'pending' (unchecked). By default tasks " +
         "go at the END of the note; pass `section` (a '##' heading's exact text) " +
-        "to add them at the end of that section instead — an unknown section is " +
+        "to add them at the end of that section instead; an unknown section is " +
         "rejected (create it with minddy_set_scratchpad first). To change an " +
         "existing task's state use minddy_update_scratchpad_task; to edit task " +
         "text or remove tasks use minddy_set_scratchpad.",
@@ -1873,7 +1873,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "cycle (dates, intensity, capacity target and filled points, completion %), " +
         "the issues in it (with identifiers, across all projects), and the best " +
         "next candidates from their assigned pool (reco-scored, `blocks` relations " +
-        "respected). Points are an internal capacity unit — talk to humans in " +
+        "respected). Points are an internal capacity unit: talk to humans in " +
         "effort sizes or percentages, never raw points. Reading also reconciles " +
         "the timeline (cycle creation, rollover, one-shot auto-fill).",
       inputSchema: {
@@ -1907,7 +1907,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "picks from the issues assigned to them (no cycle yet, open status), by " +
         "priority + unblocked (`blocks` relations respected) + smallest first, " +
         "until the capacity target is reached. The optional weights steer the " +
-        "scoring ('prioritize UI fixes' → keyword/category boosts) — they bias " +
+        "scoring ('prioritize UI fixes' → keyword/category boosts): they bias " +
         "the same deterministic engine, they NEVER force a pick. Weights default " +
         "to 1; boosts are additive score points (10–100 = mild–strong).",
       inputSchema: {
@@ -1992,7 +1992,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "ASSIGNS each issue to the owner as a side-effect; it NEVER changes the " +
         "status (the cycle is orthogonal to status). Reassigning an issue to " +
         "someone else later silently drops it from the cycle. The cycle is " +
-        "cross-project — call once per project to add issues from several.",
+        "cross-project: call once per project to add issues from several.",
       inputSchema: {
         project_id: PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
@@ -2043,7 +2043,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Remove from cycle",
       description:
         "Remove issues (1–50) of a project from the key owner's CURRENT cycle. " +
-        "Assignment and status are untouched — the issues simply leave the cycle. " +
+        "Assignment and status are untouched; the issues simply leave the cycle. " +
         "Issues that aren't in the owner's current cycle are reported in `failed`.",
       inputSchema: {
         project_id: PROJECT_ID,
@@ -2111,7 +2111,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "List feedback",
       description:
         "List a project's feedback posts (user requests from the feedback board, its " +
-        "API, or internal entry) — id (the feedback_post_id other feedback tools " +
+        "API, or internal entry): id (the feedback_post_id other feedback tools " +
         "take), title, public status (open/planned/in_progress/shipped/declined), " +
         "vote_count, whether it's public, source, and the linked tracking issue if " +
         "any. Sorted by votes; merged duplicates are excluded.",
@@ -2219,7 +2219,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Add feedback comment",
       description:
         "Post an internal, team-only comment on a feedback post (never shown on the " +
-        "public board) — e.g. to leave triage notes. The timeline shows the agent as " +
+        "public board), e.g. to leave triage notes. The timeline shows the agent as " +
         "the author (this API key's name with an '(mcp)' marker), not the key's owner.",
       inputSchema: {
         project_id: PROJECT_ID,
@@ -2348,7 +2348,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Respond to feedback",
       description:
-        "Publish (or update) the official TEAM RESPONSE on a feedback post — the " +
+        "Publish (or update) the official TEAM RESPONSE on a feedback post: the " +
         "single reply shown PUBLICLY to everyone who submitted it, signed on behalf " +
         "of the team. This is PUBLIC-facing. Pass an empty string to remove it.",
       inputSchema: {

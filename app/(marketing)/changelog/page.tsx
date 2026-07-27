@@ -60,17 +60,14 @@ export default async function ChangelogPage() {
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
           <RevealHeading
             as="h1"
-            className="mb-4 text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-5xl"
+            className="mb-6 text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-5xl"
             text={t("heroTitle")}
           />
-          <Reveal
-            as="p"
-            delay={0.15}
-            className="mb-6 text-lg leading-relaxed text-pretty text-muted-foreground"
-          >
-            {t("heroSubtitle")}
-          </Reveal>
-          <Reveal delay={0.2}>
+          {/* Pas de sous-titre : « une entrée par livraison, la plus récente en
+              haut » décrivait à voix haute une liste datée qui se lit toute
+              seule, dix pixels plus bas. Le titre, le lien du flux, les
+              entrées. */}
+          <Reveal delay={0.15}>
             <a
               href={changelogFeedPath(locale)}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
