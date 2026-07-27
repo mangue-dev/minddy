@@ -1,10 +1,11 @@
 // minddy — MIN-74 : onboarding du nouveau compte.
 //
-// Quatre étapes, franchies sur `/home` : créer son premier projet, son premier
-// ticket, connecter un agent au serveur MCP, activer les cycles. Deux d'entre
-// elles se cochent SEULES à partir d'une donnée réelle (le projet existe, le
-// ticket existe) ; les deux autres sont acquittées explicitement par
-// l'utilisateur — connecter un agent est une proposition, pas une obligation.
+// Cinq étapes, franchies sur `/home` : créer son premier projet, son premier
+// ticket, importer un backlog existant (MIN-98), connecter un agent au serveur
+// MCP, activer les cycles. Deux d'entre elles se cochent SEULES à partir d'une
+// donnée réelle (le projet existe, le ticket existe) ; les autres sont
+// acquittées explicitement par l'utilisateur — importer son backlog et
+// connecter un agent sont des propositions, pas des obligations.
 //
 // RIEN NE BLOQUE. C'est la leçon d'AutoKap, dont l'onboarding exigeait une
 // connexion GitHub dès l'étape 1 : un seul onboarding complété en 120 jours.
@@ -14,7 +15,13 @@
 // cycles : pas de table, pas de migration. Server-safe (aucun import React) —
 // le résolveur est partageable avec un route handler si le besoin vient.
 
-export const ONBOARDING_STEPS = ["project", "issue", "mcp", "cycles"] as const;
+export const ONBOARDING_STEPS = [
+  "project",
+  "issue",
+  "import",
+  "mcp",
+  "cycles",
+] as const;
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 
@@ -41,7 +48,7 @@ export interface OnboardingState {
   steps: OnboardingStep[];
   /** Première étape non franchie, ou null si tout est fait. */
   currentStepId: OnboardingStepId | null;
-  /** Rang 1-basé de l'étape courante, pour « Étape 2 sur 4 ». */
+  /** Rang 1-basé de l'étape courante, pour « Étape 2 sur 5 ». */
   currentStepNumber: number;
   completedCount: number;
   totalCount: number;
@@ -93,7 +100,7 @@ export function withAcknowledgedStep(
  * demandée. Le compte est éligible s'il est vide au premier regard — et le
  * reste ensuite grâce à `onboarding_started`, sans quoi créer son projet et son
  * ticket le ferait basculer « installé » et le ferait sortir de l'onboarding
- * juste avant l'étape 3.
+ * juste après avoir coché ses deux premières étapes.
  */
 export function resolveOnboardingState({
   meta,
@@ -112,6 +119,17 @@ export function resolveOnboardingState({
         return projectCount > 0;
       case "issue":
         return issueCount > 0;
+      // REPRISE DES COMPTES DÉJÀ INSTALLÉS (MIN-98). Passer de 4 à 5 étapes
+      // rendrait `allComplete` faux pour tous ceux qui avaient terminé, et leur
+      // home se ferait reconfisquer par la carte d'onboarding. L'étape import
+      // compte donc pour franchie dès que `mcp` est acquitté : comme elle
+      // PRÉCÈDE `mcp` et qu'on ne peut acquitter que l'étape courante, aucun
+      // compte postérieur ne peut satisfaire cette condition sans être passé
+      // par l'étape import. Un compte plus vieux mais encore avant l'étape MCP
+      // la verra — c'est voulu. (L'acquittement direct, lui, est déjà couvert
+      // par le `acknowledged.has(id)` en tête.)
+      case "import":
+        return acknowledged.has("mcp");
       // Connecter un agent ne laisse pas de trace exploitable côté client : cette
       // étape est informative et se valide sur « Continuer » (acquittement).
       case "mcp":

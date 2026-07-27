@@ -11,6 +11,7 @@ import {
   type ImportSource,
 } from "@/lib/import/types";
 import {
+  GENERIC_TITLE_HEADERS,
   hasHeader,
   normalizeToken,
   Warnings,
@@ -39,9 +40,6 @@ export function parseCsvTable(csvText: string): CsvTable | null {
 
   return { headerIndex, rows: data.slice(1) };
 }
-
-/** Headers accepted as the title column of a generic CSV (EN + FR). */
-export const GENERIC_TITLE_HEADERS = ["title", "titre", "summary", "name", "nom"];
 
 export function detectSource(table: CsvTable): ImportSource | null {
   if (

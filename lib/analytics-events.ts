@@ -55,6 +55,9 @@ export interface AnalyticsEventProps {
   onboarding_viewed: { current_step: string; completed_count: number };
   onboarding_step_viewed: { step: string; step_number: number };
   onboarding_step_acknowledged: { step: string };
+  /** Étape « importer mes tickets » (MIN-98) : de quel outil vient le compte.
+   *  `import_started` / `import_completed` couvrent déjà l'import lui-même. */
+  onboarding_import_provider_selected: { provider: string };
   onboarding_dismissed: { last_step: string; completed_count: number };
   onboarding_completed: { steps_acknowledged: number };
 
@@ -353,6 +356,7 @@ const EVENT_NAMES = [
   "onboarding_viewed",
   "onboarding_step_viewed",
   "onboarding_step_acknowledged",
+  "onboarding_import_provider_selected",
   "onboarding_dismissed",
   "onboarding_completed",
   // Projets

@@ -15,16 +15,18 @@ import { CYCLES_ENABLED_META_KEY, resolveCyclePrefs } from "@/lib/cycle-prefs";
 import type { OnboardingStepId } from "@/lib/onboarding";
 import type { UseOnboardingResult } from "@/lib/use-onboarding";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
+import { OnboardingImportStep } from "@/components/home/onboarding-import-step";
 
 /**
  * Onboarding du nouveau compte (MIN-74). Il prend la place du corps de la home
  * tant qu'il n'est pas terminé : pour un compte neuf, les cartes cycle/global,
  * le feedback et la grille de projets n'ont de toute façon rien à montrer.
  *
- * À gauche les quatre étapes et leur état, à droite l'étape courante. Deux
- * étapes se cochent seules quand la donnée existe (projet, ticket) ; les deux
- * autres sont acquittées à la main — connecter un agent est une proposition,
- * jamais un prérequis. « Passer l'onboarding » reste visible en permanence.
+ * À gauche les cinq étapes et leur état, à droite l'étape courante. Deux
+ * étapes se cochent seules quand la donnée existe (projet, ticket) ; les
+ * autres sont acquittées à la main — importer son backlog et connecter un
+ * agent sont des propositions, jamais des prérequis. « Passer l'onboarding »
+ * reste visible en permanence.
  */
 
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
@@ -78,12 +80,14 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
   const title: Record<OnboardingStepId, string> = {
     project: t("projectTitle"),
     issue: t("issueTitle"),
+    import: t("importTitle"),
     mcp: t("mcpTitle"),
     cycles: t("cyclesTitle"),
   };
   const description: Record<OnboardingStepId, string> = {
     project: t("projectDesc"),
     issue: t("issueDesc"),
+    import: t("importDesc"),
     mcp: t("mcpDesc"),
     cycles: t("cyclesDesc"),
   };
@@ -185,6 +189,18 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                       <ArrowRight data-icon="inline-end" />
                     </Button>
                   </div>
+                )}
+
+                {/* Les deux chemins acquittent la même étape — importer son
+                    backlog n'est pas obligatoire. Ils restent distincts pour
+                    l'analytics : « importé » et « passé » ne disent pas la
+                    même chose de l'activation. */}
+                {currentStepId === "import" && (
+                  <OnboardingImportStep
+                    onDone={() => void acknowledge("import")}
+                    onSkip={() => void acknowledge("import")}
+                    busy={busy}
+                  />
                 )}
 
                 {currentStepId === "mcp" && (

@@ -54,6 +54,19 @@ export const hasHeader = (table: CsvTable, ...names: string[]): boolean =>
 /** Cap titles defensively — exports can carry pathological rows. */
 export const MAX_TITLE_LENGTH = 500;
 
+/** Headers accepted as the title column of a generic CSV (EN + FR + Trello's
+ *  "Card Name"). Lives here, not in parse.ts, so the generic mapper can read
+ *  the same list as `detectSource` without importing the entry point back:
+ *  a file detected on one of these names must map on the same one. */
+export const GENERIC_TITLE_HEADERS = [
+  "title",
+  "titre",
+  "summary",
+  "name",
+  "nom",
+  "card name",
+];
+
 // ── Warnings ─────────────────────────────────────────────────────────────────
 
 /** Aggregates repeated warnings ("unknown status Blocked" ×12 → one entry). */

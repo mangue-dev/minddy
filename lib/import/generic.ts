@@ -3,10 +3,17 @@
 // optional: description, status/statut, priority/priorité, effort (t-shirt or
 // points), labels/étiquettes (comma- or semicolon-separated), due date/
 // échéance, created, id/key/réf and parent for sub-issues.
+//
+// It is also what catches the tools without a mapper of their own (MIN-98):
+// a Trello board export ("Card Name", "Card Description", "List Name") and the
+// CSV a `gh issue list` command writes ("id,title,description,status,labels").
+// Both stay source "csv" — they are generic CSVs whose column names we happen
+// to know, not a format worth a dedicated mapper.
 
 import type { ImportedIssue } from "@/lib/import/types";
 import {
   cell,
+  GENERIC_TITLE_HEADERS,
   mapEffort,
   mapPriority,
   mapStatus,
@@ -21,7 +28,7 @@ export function mapGenericRows(table: CsvTable, warnings: Warnings): ImportedIss
   const issues: ImportedIssue[] = [];
 
   for (const row of table.rows) {
-    const title = cell(table, row, "title", "titre", "summary", "name", "nom").slice(
+    const title = cell(table, row, ...GENERIC_TITLE_HEADERS).slice(
       0,
       MAX_TITLE_LENGTH
     );
@@ -30,15 +37,19 @@ export function mapGenericRows(table: CsvTable, warnings: Warnings): ImportedIss
       continue;
     }
 
+    // "list name" is Trello's column, "state" GitHub's — an unknown list name
+    // falls back to backlog with a warning, which is the honest outcome for a
+    // board whose columns don't map onto minddy's statuses.
     const status = mapStatus(
-      cell(table, row, "status", "statut", "etat"),
+      cell(table, row, "status", "statut", "etat", "list name", "list", "state"),
       warnings
     );
-    const key = cell(table, row, "id", "key", "cle", "ref");
+    const key = cell(table, row, "id", "key", "cle", "ref", "card id", "number");
 
     issues.push({
       title,
-      description: cell(table, row, "description", "desc") || null,
+      description:
+        cell(table, row, "description", "desc", "card description", "body") || null,
       status,
       priority: mapPriority(cell(table, row, "priority", "priorite")),
       effort: mapEffort(
@@ -50,8 +61,14 @@ export function mapGenericRows(table: CsvTable, warnings: Warnings): ImportedIss
       dueDate: parseDateValue(
         cell(table, row, "due date", "due", "echeance", "deadline")
       ),
-      createdAt: parseDateValue(cell(table, row, "created", "creation", "cree le")),
-      completedAt: null,
+      createdAt: parseDateValue(
+        cell(table, row, "created", "creation", "cree le", "created at", "date created")
+      ),
+      // Only read back for `done` issues on insert (lib/server/import-issues.ts),
+      // so a closing date on a still-open row is harmless.
+      completedAt: parseDateValue(
+        cell(table, row, "closed at", "completed at", "resolved at")
+      ),
       externalKeys: key ? [key] : [],
       parentExternalKey: cell(table, row, "parent") || null,
     });

@@ -18,7 +18,7 @@ const FRESH = {
 };
 
 /** Compte neuf déjà entré en onboarding (la marque est posée au 1er affichage) —
-    l'état dans lequel se déroulent les étapes 2 à 4. */
+    l'état dans lequel se déroulent les étapes 2 à 5. */
 const STARTED = { [ONBOARDING_STARTED_META_KEY]: true };
 
 const completedIds = (state: { steps: { id: OnboardingStepId; completed: boolean }[] }) =>
@@ -30,7 +30,7 @@ describe("resolveOnboardingState", () => {
     expect(state.currentStepId).toBe("project");
     expect(state.currentStepNumber).toBe(1);
     expect(state.completedCount).toBe(0);
-    expect(state.totalCount).toBe(4);
+    expect(state.totalCount).toBe(5);
     expect(state.allComplete).toBe(false);
     expect(state.eligible).toBe(true);
     expect(state.visible).toBe(true);
@@ -58,27 +58,49 @@ describe("resolveOnboardingState", () => {
       projectCount: 1,
       issueCount: 3,
     });
-    expect(state.currentStepId).toBe("mcp");
+    expect(state.currentStepId).toBe("import");
     expect(state.currentStepNumber).toBe(3);
     // Le nerf de la marque d'entrée : le compte n'est plus vierge, l'onboarding
     // en cours doit quand même continuer.
     expect(state.visible).toBe(true);
   });
 
-  it("only ticks the MCP step on an explicit acknowledgement", () => {
+  it("only ticks the import step on an explicit acknowledgement", () => {
+    // Importer un backlog est facultatif : rien côté données ne dit qu'on l'a
+    // fait (un projet peut avoir des tickets sans avoir jamais vu un CSV).
     const withProjectAndIssue = {
       ...FRESH,
       meta: STARTED,
       projectCount: 1,
       issueCount: 1,
     };
-    expect(resolveOnboardingState(withProjectAndIssue).currentStepId).toBe("mcp");
+    const state = resolveOnboardingState(withProjectAndIssue);
+    expect(state.currentStepId).toBe("import");
+    expect(state.currentStepNumber).toBe(3);
 
     const acknowledged = resolveOnboardingState({
       ...withProjectAndIssue,
-      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["import"] },
+    });
+    expect(acknowledged.currentStepId).toBe("mcp");
+    expect(acknowledged.currentStepNumber).toBe(4);
+  });
+
+  it("only ticks the MCP step on an explicit acknowledgement", () => {
+    const withImportDone = {
+      ...FRESH,
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["import"] },
+      projectCount: 1,
+      issueCount: 1,
+    };
+    expect(resolveOnboardingState(withImportDone).currentStepId).toBe("mcp");
+
+    const acknowledged = resolveOnboardingState({
+      ...withImportDone,
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["import", "mcp"] },
     });
     expect(acknowledged.currentStepId).toBe("cycles");
+    expect(acknowledged.currentStepNumber).toBe(5);
   });
 
   it("ticks the cycles step when cycles are enabled, with no acknowledgement", () => {
@@ -90,14 +112,35 @@ describe("resolveOnboardingState", () => {
 
   it("hides the onboarding once every step is done", () => {
     const state = resolveOnboardingState({
-      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["import", "mcp"] },
       projectCount: 1,
       issueCount: 1,
       cyclesEnabled: true,
     });
     expect(state.allComplete).toBe(true);
     expect(state.currentStepId).toBeNull();
-    expect(state.currentStepNumber).toBe(4);
+    expect(state.currentStepNumber).toBe(5);
+    expect(state.visible).toBe(false);
+  });
+
+  it("does not reopen the onboarding of an account that finished it in four steps", () => {
+    // LE test de non-régression de MIN-98. Ces comptes-là ont acquitté `mcp`
+    // du temps où l'étape import n'existait pas : leur home ne doit pas se
+    // faire reconfisquer par une étape ajoutée après coup.
+    const state = resolveOnboardingState({
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
+      projectCount: 2,
+      issueCount: 40,
+      cyclesEnabled: true,
+    });
+    expect(completedIds(state)).toEqual([
+      "project",
+      "issue",
+      "import",
+      "mcp",
+      "cycles",
+    ]);
+    expect(state.allComplete).toBe(true);
     expect(state.visible).toBe(false);
   });
 
@@ -114,8 +157,8 @@ describe("resolveOnboardingState", () => {
 
   it("never shows it to an account that already has projects and tickets", () => {
     // Le cas qui compte : un compte installé qui n'a JAMAIS vu l'onboarding.
-    // Deux étapes lui manquent (MCP jamais acquitté, cycles éteints), mais son
-    // home ne doit pas se faire confisquer pour autant.
+    // Trois étapes lui manquent (import et MCP jamais acquittés, cycles
+    // éteints), mais son home ne doit pas se faire confisquer pour autant.
     const state = resolveOnboardingState({
       meta: null,
       projectCount: 4,
@@ -123,7 +166,7 @@ describe("resolveOnboardingState", () => {
       cyclesEnabled: false,
     });
     expect(state.allComplete).toBe(false);
-    expect(state.currentStepId).toBe("mcp");
+    expect(state.currentStepId).toBe("import");
     expect(state.eligible).toBe(false);
     expect(state.visible).toBe(false);
     expect(state.needsStartStamp).toBe(false);
@@ -163,7 +206,7 @@ describe("resolveOnboardingState", () => {
       { [ONBOARDING_DISMISSED_META_KEY]: "true" },
     ]) {
       const state = resolveOnboardingState({ ...FRESH, meta });
-      expect(state.totalCount).toBe(4);
+      expect(state.totalCount).toBe(5);
       expect(state.dismissed).toBe(false);
       expect(state.visible).toBe(true);
     }
@@ -185,6 +228,10 @@ describe("withAcknowledgedStep", () => {
     expect(
       withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["mcp"] }, "mcp")
     ).toEqual(["mcp"]);
+    // L'ordre canonique, pas l'ordre d'arrivée : import précède mcp.
+    expect(
+      withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["mcp"] }, "import")
+    ).toEqual(["import", "mcp"]);
   });
 
   it("drops unknown ids already stored rather than propagating them", () => {

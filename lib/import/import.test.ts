@@ -145,6 +145,69 @@ describe("generic CSV import (FR)", () => {
   });
 });
 
+// MIN-98 — les deux outils que l'onboarding documente sans leur donner de
+// mapper : Trello (export natif du tableau) et GitHub (CSV écrit par `gh`).
+// Tous deux passent par le mapper générique ; ces tests sont là pour que la
+// marche à suivre de l'étape d'import reste vraie.
+
+const TRELLO_CSV = `Card ID,Card Name,Card Description,List Name,Labels,Due Date
+6a1,Refonte de la page d'accueil,"Maquette Figma prête",Doing,"design, marketing",2026-09-30
+6a2,Corriger le lien du pied de page,,Done,bug,
+6a3,Écrire les CGU,"À relire",To Do,,
+6a4,Étudier la concurrence,,Idées,,
+`;
+
+const GITHUB_CSV = `id,title,description,status,labels,closed at
+41,Crash on empty query,"Stack trace attached",OPEN,"bug;p1",
+42,Document the CSV import,,CLOSED,docs,2026-05-04T09:12:00.000Z
+`;
+
+describe("Trello / GitHub exports", () => {
+  it("reads a Trello board export as a generic CSV", () => {
+    const result = mapCsvToIssues(TRELLO_CSV);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.source).toBe("csv");
+    expect(result.issues).toHaveLength(4);
+
+    const [first, second, third, fourth] = result.issues;
+    expect(first.title).toBe("Refonte de la page d'accueil");
+    expect(first.description).toBe("Maquette Figma prête");
+    // Les noms de listes Trello courants sont déjà des alias de statut.
+    expect(first.status).toBe("in_progress");
+    expect(first.labels).toEqual(["design", "marketing"]);
+    expect(first.dueDate).toBe("2026-09-30");
+    expect(first.externalKeys).toEqual(["6a1"]);
+    expect(second.status).toBe("done");
+    expect(third.status).toBe("todo");
+
+    // Une liste maison retombe sur backlog, avec l'avertissement qui le dit.
+    expect(fourth.status).toBe("backlog");
+    expect(result.warnings).toContainEqual({
+      key: "unknownStatus",
+      value: "Idées",
+      count: 1,
+    });
+  });
+
+  it("reads the CSV a `gh issue list` command writes", () => {
+    const result = mapCsvToIssues(GITHUB_CSV);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.source).toBe("csv");
+    const [open, closed] = result.issues;
+    expect(open.status).toBe("todo");
+    expect(open.labels).toEqual(["bug", "p1"]);
+    expect(open.completedAt).toBeNull();
+    expect(closed.status).toBe("done");
+    expect(closed.completedAt).toBe("2026-05-04T09:12:00.000Z");
+    expect(closed.externalKeys).toEqual(["42"]);
+    expect(result.warnings).toEqual([]);
+  });
+});
+
 describe("edge cases", () => {
   it("rejects empty or header-only files", () => {
     expect(mapCsvToIssues("")).toEqual({ ok: false, error: "empty" });
