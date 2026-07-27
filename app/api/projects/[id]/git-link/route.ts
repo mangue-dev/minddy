@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -10,12 +10,20 @@ import {
 import { signGitLinkState } from "@/lib/server/git/link-state";
 import {
   getGithubAppSlug,
+  hasIssuesPermission,
   isGithubAppConfigured,
 } from "@/lib/server/git/github-app";
 import {
+  ensureGitlabIssuesHook,
+  getGitlabAccessToken,
   getGitlabAuthorizeUrl,
   isGitlabConfigured,
 } from "@/lib/server/git/gitlab-app";
+import {
+  backfillRemoteIssues,
+  getIssueSyncLink,
+  setIssueSyncEnabled,
+} from "@/lib/server/git/issue-sync";
 import {
   findReusableConnection,
   getUserConnection,
@@ -28,6 +36,10 @@ import {
 } from "@/lib/server/git/repo-links";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+// Le backfill d'activation enchaîne une RPC de numérotation par ticket (jusqu'à
+// 500) après la réponse — même budget que la route d'import CSV.
+export const maxDuration = 120;
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
   return provider === "github" ? isGithubAppConfigured() : isGitlabConfigured();
@@ -94,6 +106,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
  * POST /api/projects/[id]/git-link — owner uniquement.
  *  - { action:'start', provider } → { mode:'reuse'|'install'|'oauth', url?, connectionId? }
  *  - { action:'bind', connection_id, external_repo_id } → { link }
+ *  - { action:'issue_sync', enabled } → { link } (synchro issues dépôt → minddy)
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -178,6 +191,79 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 502 });
     }
+  }
+
+  // Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). Le toggle
+  // ne touche PAS aux tickets déjà importés : le couper arrête l'arrivée des
+  // nouveaux, il ne supprime rien.
+  if (action === "issue_sync") {
+    const enabled = (body as { enabled?: unknown }).enabled;
+    if (typeof enabled !== "boolean") {
+      return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+    }
+    const link = await getIssueSyncLink(id);
+    if (!link) {
+      return NextResponse.json({ error: t("gitRepoNotFound") }, { status: 404 });
+    }
+
+    let hookId: string | null | undefined;
+    if (link.provider === "github") {
+      // Une App qui gagne une permission ne l'obtient pas rétroactivement :
+      // l'installation doit accepter `Issues (Read)`. Sans ça, aucun event
+      // `issues` ne serait livré — on le dit AVANT d'activer.
+      if (enabled) {
+        const granted =
+          link.installationId != null &&
+          (await hasIssuesPermission(link.installationId));
+        if (!granted) {
+          return NextResponse.json(
+            {
+              error: t("gitIssuesPermissionMissing"),
+              url:
+                link.installationId != null
+                  ? `https://github.com/settings/installations/${link.installationId}/permissions/update`
+                  : null,
+            },
+            { status: 400 },
+          );
+        }
+      }
+    } else {
+      // GitLab : le hook vit sur le dépôt, on le provisionne/bascule ici.
+      try {
+        const token = await getGitlabAccessToken(link.connectionId);
+        hookId = await ensureGitlabIssuesHook(token, link.externalRepoId, {
+          enabled,
+        });
+      } catch (err) {
+        console.error("[git-link] gitlab hook failed:", (err as Error).message);
+        // À la désactivation on continue quand même : couper la synchro ne doit
+        // pas dépendre d'un appel GitLab. Le flag à false suffit — le récepteur
+        // ne trouvera plus de cible.
+        if (enabled) {
+          return NextResponse.json({ error: t("gitHookFailed") }, { status: 502 });
+        }
+      }
+    }
+
+    try {
+      await setIssueSyncEnabled({ linkId: link.linkId, enabled, hookId });
+    } catch (err) {
+      console.error("[git-link] issue_sync toggle failed:", (err as Error).message);
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+
+    // Backfill des issues ouvertes hors du chemin critique : la réponse part
+    // tout de suite, les tickets arrivent ensuite par le realtime.
+    if (enabled) {
+      after(() =>
+        backfillRemoteIssues(link).catch((err) =>
+          console.error("[git-link] backfill failed:", (err as Error).message),
+        ),
+      );
+    }
+
+    return NextResponse.json({ link: await getProjectLink(id) });
   }
 
   return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

@@ -8,7 +8,9 @@ import type {
   IssueStatusValue,
 } from "@/lib/issue-validation";
 
-export type ImportSource = "linear" | "jira" | "csv";
+/** D'où vient le lot importé : un CSV téléversé, ou le backfill d'un dépôt lié
+ *  à l'activation de la synchro d'issues (MIN-97). */
+export type ImportSource = "linear" | "jira" | "csv" | "github" | "gitlab";
 
 /** Hard cap per import — bounds the route's runtime (number reservation is
  *  one RPC per issue) and keeps a botched export from flooding a project. */
@@ -36,6 +38,14 @@ export interface ImportedIssue {
   externalKeys: string[];
   /** Parent reference (matched against other rows' externalKeys, 1 level max). */
   parentExternalKey: string | null;
+  /** Identité de l'issue distante que ce ticket reflète (backfill d'un dépôt
+   *  lié, MIN-97). Absent pour un import CSV. */
+  remote?: {
+    provider: string;
+    repoId: string;
+    number: number;
+    url: string | null;
+  };
 }
 
 /** Warning kinds surfaced in the preview (and echoed by the commit response). */

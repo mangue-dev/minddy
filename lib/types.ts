@@ -229,6 +229,10 @@ export interface IssueEvent {
   /** True when the assignment was made by Smart Assign — the timeline shows
       "Smart Assign" as the actor. */
   via_smart_assign?: boolean;
+  /** Provider ('github' | 'gitlab') quand l'événement vient de la synchro des
+      issues du dépôt lié (MIN-97) — la timeline affiche la forge comme acteur,
+      pas le membre dont l'id sert techniquement d'auteur de l'écriture. */
+  forge_sync?: string | null;
   created_at: string;
 }
 
@@ -491,6 +495,13 @@ export interface Issue {
   created_by: string | null;
   /** Set when the issue was created through a project integration (Feedback API). */
   integration_id?: string | null;
+  /** Issue distante dont ce ticket est le miroir (MIN-97) — posés ensemble à
+      l'import depuis le dépôt lié, tous null pour un ticket né dans minddy.
+      `remote_number` = `number` GitHub / `iid` GitLab. */
+  remote_provider?: RepoProviderId | null;
+  remote_repo_id?: string | null;
+  remote_number?: number | null;
+  remote_url?: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -743,6 +754,10 @@ export interface ProjectGitLink {
   repo_full_name: string | null;
   default_branch: string | null;
   account_login: string | null;
+  /** Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */
+  issue_sync_enabled: boolean;
+  /** Dernier backfill réussi des issues ouvertes (null = jamais). */
+  issue_sync_backfilled_at: string | null;
   created_at: string;
 }
 

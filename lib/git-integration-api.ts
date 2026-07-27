@@ -95,6 +95,26 @@ export async function bindGitRepoApi(
   );
 }
 
+/**
+ * Bascule la synchro unidirectionnelle des issues du dépôt lié (MIN-97).
+ * Renvoie la liaison rafraîchie — le backfill, lui, tourne côté serveur après
+ * la réponse et arrive par le realtime.
+ */
+export async function setGitIssueSyncApi(
+  projectId: string,
+  enabled: boolean,
+  provider: RepoProviderId,
+): Promise<{ link: ProjectGitLink | null }> {
+  trackEvent("project_git_issue_sync_toggled", { provider, enabled });
+  return parseJson(
+    await fetch(`/api/projects/${projectId}/git-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "issue_sync", enabled }),
+    }),
+  );
+}
+
 export async function unlinkGitRepoApi(projectId: string): Promise<void> {
   trackEvent("project_git_unlinked", { provider: "unknown" });
   await parseJson(

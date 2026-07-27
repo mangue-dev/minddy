@@ -262,6 +262,8 @@ export interface AnalyticsEventProps {
   git_connection_removed: { provider: string };
   project_git_linked: { provider: string };
   project_git_unlinked: { provider: string };
+  /** Synchro unidirectionnelle des issues du dépôt lié (MIN-97). */
+  project_git_issue_sync_toggled: { provider: string; enabled: boolean };
   oauth_grant_revoked: NoProps;
   connected_app_viewed: NoProps;
   integration_added: { kind: string };
@@ -518,6 +520,7 @@ const EVENT_NAMES = [
   "git_connection_removed",
   "project_git_linked",
   "project_git_unlinked",
+  "project_git_issue_sync_toggled",
   "oauth_grant_revoked",
   "connected_app_viewed",
   "integration_added",

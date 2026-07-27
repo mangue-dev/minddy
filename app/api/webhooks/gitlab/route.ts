@@ -3,6 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { recordForgePrActionEvents } from "@/lib/server/agent/pr-activity";
+import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
+import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { PrActionEventType } from "@/lib/pr-events";
 import type { AgentRun } from "@/lib/server/agent/runs";
@@ -22,7 +24,10 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *    l'action in-app. `unapproved`/`unapproval` sont IGNORÉS (aucun événement
  *    minddy correspondant — retirer une approbation n'est pas une action tracée,
  *    GitHub n'a d'ailleurs pas d'équivalent).
- * Les `Note Hook` (commentaires) et tout autre object_kind sont acquittés sans
+ * Le hook `Issue Hook` (object_kind `issue`) porte la synchronisation
+ * unidirectionnelle des issues du dépôt vers les projets qui l'ont activée
+ * (MIN-97) — sens unique : minddy n'écrit jamais chez GitLab. Les
+ * `Note Hook` (commentaires) et tout autre object_kind sont acquittés sans
  * traitement : un commentaire n'est pas une activité (choix produit).
  *
  * Anti-doublon : les actions minddy in-app (merge/close) sont faites avec le token
@@ -168,6 +173,16 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   });
 }
 
+/** Actions `issue` synchronisées (MIN-97) — les éditions (`update`) et les
+    suppressions ne le sont pas (v1 : ouverture / fermeture / réouverture). */
+const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen"]);
+
+async function handleIssue(payload: unknown): Promise<void> {
+  const remote = normalizeGitlabIssueEvent(payload);
+  if (!remote || !SYNCED_ISSUE_ACTIONS.has(remote.action)) return;
+  await syncRemoteIssueEvent(remote);
+}
+
 /** Comparaison à temps constant du X-Gitlab-Token (secret partagé verbatim). */
 function tokenMatches(provided: string | null, secret: string): boolean {
   if (!provided) return false;
@@ -195,10 +210,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const payload = JSON.parse(rawBody) as MergeRequestEvent;
-    // Seules les Merge Requests nous intéressent — les Note Hook (commentaires)
-    // et autres object_kind sont acquittés sans traitement (pas une activité).
+    // Merge Requests (agent) et Issues (synchro du dépôt lié) — les Note Hook
+    // (commentaires) et autres object_kind sont acquittés sans traitement.
     if (payload.object_kind === "merge_request") {
       await handleMergeRequest(payload);
+    } else if (payload.object_kind === "issue") {
+      await handleIssue(payload);
     }
   } catch (err) {
     // Best-effort : on acquitte quand même pour que GitLab ne re-livre pas.

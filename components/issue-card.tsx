@@ -38,6 +38,7 @@ import {
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { IntegrationIndicator } from "@/components/integration-indicator";
+import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -643,6 +644,7 @@ export function IssueCardBody({
             </Tooltip>
           )}
           <IntegrationIndicator issue={issue} iconClassName="size-3" />
+          <RemoteIssueIndicator issue={issue} iconClassName="size-3" />
           {parentNumber != null &&
             (onOpenParent ? (
               <>

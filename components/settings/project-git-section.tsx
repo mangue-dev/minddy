@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, Spinner, toast } from "mangue-ui";
+import { Button, ConfirmDeleteDialog, Spinner, Switch, toast } from "mangue-ui";
 import { Github, Gitlab, Link2Off } from "lucide-react";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { SearchSelect } from "@/components/search-select";
 import {
   bindGitRepoApi,
   fetchGitCandidatesApi,
+  setGitIssueSyncApi,
   startGitConnectApi,
   unlinkGitRepoApi,
 } from "@/lib/git-integration-api";
@@ -26,11 +27,13 @@ const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 /**
  * Section « Git » des paramètres du projet (MIN-47) : connecter un compte
  * GitHub/GitLab (au niveau compte, réutilisable) et lier un dépôt au projet.
- * INERTE : rien ne consomme encore la liaison. Owner uniquement pour muter ;
- * les membres voient l'état en lecture seule.
+ * La liaison alimente l'agent de code (MIN-46/MIN-69) et, quand le toggle est
+ * activé, la synchro unidirectionnelle des issues du dépôt (MIN-97). Owner
+ * uniquement pour muter ; les membres voient l'état en lecture seule.
  */
 export function ProjectGitSection({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
+  const format = useFormatter();
   const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
@@ -44,6 +47,14 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [binding, setBinding] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+
+  // Miroir local du toggle de synchro : il bascule tout de suite, puis se
+  // réconcilie sur la liaison refetchée (pattern smart-assign-section).
+  const [issueSync, setIssueSync] = useState(false);
+  const [savingIssueSync, setSavingIssueSync] = useState(false);
+  useEffect(() => {
+    setIssueSync(link?.issue_sync_enabled === true);
+  }, [link?.issue_sync_enabled]);
 
   // Retour de callback OAuth : ?git=connected&connection=<id> (ou git=error).
   const handledCallback = useRef(false);
@@ -128,6 +139,27 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
       toast.error((err as Error).message);
     } finally {
       setBinding(false);
+    }
+  };
+
+  const handleIssueSync = async (next: boolean) => {
+    if (!link || !isOwner || savingIssueSync) return;
+    setIssueSync(next); // optimiste — annulé en cas d'échec
+    setSavingIssueSync(true);
+    try {
+      await setGitIssueSyncApi(projectId, next, link.provider);
+      toast.success(
+        t(next ? "gitIssueSyncEnabledToast" : "gitIssueSyncDisabledToast"),
+      );
+      // Le backfill tourne côté serveur après la réponse : on relit un peu plus
+      // tard pour afficher sa date, en plus du refetch immédiat.
+      invalidate();
+      if (next) setTimeout(invalidate, 4000);
+    } catch (err) {
+      setIssueSync(!next);
+      toast.error((err as Error).message);
+    } finally {
+      setSavingIssueSync(false);
     }
   };
 
@@ -221,6 +253,45 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
             </Button>
           )}
         </div>
+
+        {/* Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="git-issue-sync"
+              checked={issueSync}
+              onCheckedChange={(v) => void handleIssueSync(v)}
+              disabled={savingIssueSync || !isOwner}
+            />
+            <label
+              htmlFor="git-issue-sync"
+              className="cursor-pointer text-sm text-foreground"
+            >
+              {t("gitIssueSyncLabel", {
+                provider: getRepoProvider(link.provider).displayName,
+              })}
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {isOwner ? t("gitIssueSyncHint") : t("gitIssueSyncOwnerOnlyHint")}
+          </p>
+          {issueSync && (
+            <p className="text-xs text-muted-foreground">
+              {t("gitIssueSyncOneWayHint")}
+            </p>
+          )}
+          {issueSync && link.issue_sync_backfilled_at && (
+            <p className="text-xs text-muted-foreground">
+              {t("gitIssueSyncBackfilled", {
+                date: format.dateTime(new Date(link.issue_sync_backfilled_at), {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }),
+              })}
+            </p>
+          )}
+        </div>
+
         <ConfirmDeleteDialog
           open={confirmUnlink}
           onOpenChange={setConfirmUnlink}

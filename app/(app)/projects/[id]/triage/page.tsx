@@ -19,6 +19,7 @@ import {
 import { Check, ChevronLeft, Copy, Filter, X } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { IntegrationIndicator } from "@/components/integration-indicator";
+import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import {
   AssigneeValue,
   CategoryValue,
@@ -285,6 +286,7 @@ export default function TriagePage() {
                     {issueIdentifier(project.key, issue.number)}
                   </span>
                   <IntegrationIndicator issue={issue} />
+                  <RemoteIssueIndicator issue={issue} />
 
                   <span className="ml-auto flex shrink-0 items-center gap-1.5">
                     {issue.priority !== "none" && (

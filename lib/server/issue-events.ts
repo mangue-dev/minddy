@@ -31,6 +31,10 @@ export interface EventRow {
   /** True when the assignment was made by Smart Assign (actor_id null); the
       timeline then shows "Smart Assign" as the actor. */
   via_smart_assign?: boolean;
+  /** Provider ('github' | 'gitlab') when the write came from the linked repo's
+      issue sync (MIN-97); the timeline then shows the forge as the actor. The
+      actor_id stays set — the write needs a project member behind it. */
+  forge_sync?: string | null;
 }
 
 /** Stamp a batch of events as assistant-triggered (no-op when false). */
@@ -56,6 +60,16 @@ export function stampIntegration(
 ): EventRow[] {
   if (!integrationId) return rows;
   return rows.map((r) => ({ ...r, integration_id: integrationId }));
+}
+
+/** Stamp a batch of events as produced by the linked repo's issue sync,
+    attributed to the forge (no-op when falsy). */
+export function stampForgeSync(
+  rows: EventRow[],
+  provider: string | null | undefined
+): EventRow[] {
+  if (!provider) return rows;
+  return rows.map((r) => ({ ...r, forge_sync: provider }));
 }
 
 const s = (v: unknown): string | null =>

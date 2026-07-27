@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/attachments";
 import {
   insertEvents,
+  stampForgeSync,
   stampIntegration,
   stampViaAssistant,
   stampMcpKey,
@@ -49,12 +50,24 @@ export type CreateIssueResult =
         | "planTooLong"
         | "databaseError"
         | "attachmentInvalid"
-        | "issueLimitReached";
+        | "issueLimitReached"
+        | "remoteIssueAlreadyImported";
       /** ICU values the message needs (ex. `limit` pour `issueLimitReached`). */
       params?: Record<string, string | number>;
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
     };
+
+/**
+ * Identité de l'issue distante qu'un ticket importé reflète (MIN-97) — posée
+ * telle quelle sur la ligne, l'index UNIQUE partiel faisant le dédoublonnage.
+ */
+export interface RemoteIssueRef {
+  provider: string;
+  repoId: string;
+  number: number;
+  url: string | null;
+}
 
 /**
  * D'où vient ce ticket ? Dérivé des marqueurs de provenance que les appelants
@@ -65,8 +78,11 @@ export function resolveIssueSource(params: {
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
   integrationId?: string | null;
+  /** Provider derrière l'écriture quand elle vient de la synchro d'un dépôt lié. */
+  forge?: string | null;
   actorId?: string | null;
 }): string {
+  if (params.forge) return "forge";
   if (params.integrationId) return "integration";
   if (params.viaAssistant) return "numo";
   if (params.mcpKeyId) return "mcp";
@@ -82,6 +98,7 @@ export async function createIssueForProject({
   viaAssistant = false,
   mcpKeyId = null,
   integrationId = null,
+  remote = null,
 }: {
   projectId: string;
   /** Project name snapshot for the stats ledger (survives project deletion). */
@@ -95,6 +112,9 @@ export async function createIssueForProject({
   mcpKeyId?: string | null;
   /** Attributes the issue and its events to a project integration. */
   integrationId?: string | null;
+  /** Issue distante que ce ticket reflète (MIN-97) : pose l'identité `remote_*`
+      et estampille les événements au nom de la forge. */
+  remote?: RemoteIssueRef | null;
 }): Promise<CreateIssueResult> {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
@@ -145,6 +165,12 @@ export async function createIssueForProject({
     position: Date.now(),
   };
   if (integrationId) row.integration_id = integrationId;
+  if (remote) {
+    row.remote_provider = remote.provider;
+    row.remote_repo_id = remote.repoId;
+    row.remote_number = remote.number;
+    row.remote_url = remote.url;
+  }
   if (typeof input.description === "string") row.description = input.description;
   if (typeof input.plan === "string" && input.plan.trim()) {
     if (input.plan.length > MAX_PLAN_LENGTH) {
@@ -213,6 +239,12 @@ export async function createIssueForProject({
   if (error) {
     if (error.code === "P0001") {
       return { ok: false, status: 400, rawMessage: error.message };
+    }
+    // 23505 sur l'index d'identité distante = cette issue est DÉJÀ importée.
+    // C'est le chemin normal d'une redélivrance de webhook, pas une panne : on
+    // le distingue pour que l'appelant l'avale sans bruit (MIN-97).
+    if (error.code === "23505" && remote) {
+      return { ok: false, status: 409, errorKey: "remoteIssueAlreadyImported" };
     }
     console.error("[create-issue] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
@@ -295,16 +327,22 @@ export async function createIssueForProject({
     }
     await insertEvents(
       service,
-      stampIntegration(
-        stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
-        integrationId
+      stampForgeSync(
+        stampIntegration(
+          stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
+          integrationId
+        ),
+        remote?.provider
       )
     );
 
     // Ledger de stats : une contribution "créée" (et "terminée" si créée
     // directement en done) au nom de l'acteur. Skip pour les issues d'intégration
-    // (actorId null) — elles n'appartiennent à aucun utilisateur.
-    if (actorId) {
+    // (actorId null) — elles n'appartiennent à aucun utilisateur. Skip aussi pour
+    // un ticket importé du dépôt lié : l'acteur technique est le owner qui a lié
+    // le dépôt, il n'a rien écrit (même raison que l'import CSV, qui ne touche
+    // pas au ledger).
+    if (actorId && !remote) {
       const snapshot = {
         project_id: projectId,
         project_name: projectName,
@@ -372,7 +410,13 @@ export async function createIssueForProject({
     distinctId: actorId ?? `integration:${integrationId ?? "unknown"}`,
     event: "issue_created_server",
     properties: {
-      source: resolveIssueSource({ viaAssistant, mcpKeyId, integrationId, actorId }),
+      source: resolveIssueSource({
+        viaAssistant,
+        mcpKeyId,
+        integrationId,
+        forge: remote?.provider,
+        actorId,
+      }),
       status: data.status,
       priority: data.priority,
       effort: data.effort ?? "none",

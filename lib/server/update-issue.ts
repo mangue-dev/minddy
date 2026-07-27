@@ -8,6 +8,7 @@ import {
   buildFieldChangeEvents,
   buildPlanChangeEvents,
   insertEvents,
+  stampForgeSync,
   stampViaAssistant,
   stampMcpKey,
   type EventRow,
@@ -23,6 +24,7 @@ import { scheduleCycleCapture } from "@/lib/server/cycles";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { captureServerEvent } from "./posthog";
 import { resolveIssueSource } from "./create-issue";
+import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Shared issue-update core: validates an untrusted field payload, applies it
@@ -61,6 +63,7 @@ export async function updateIssueFields({
   input,
   viaAssistant = false,
   mcpKeyId = null,
+  forgeSync = null,
 }: {
   issueId: string;
   actorId: string;
@@ -69,6 +72,10 @@ export async function updateIssueFields({
   viaAssistant?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
+  /** Attribue les événements à la forge ('github' | 'gitlab') quand l'écriture
+      vient de la synchro des issues du dépôt lié (MIN-97) : l'`actorId` reste
+      le membre qui porte techniquement l'écriture, la timeline affiche GitHub. */
+  forgeSync?: RepoProviderId | null;
 }): Promise<UpdateIssueResult> {
   const updates: Record<string, unknown> = {};
 
@@ -269,7 +276,10 @@ export async function updateIssueFields({
     }
     await insertEvents(
       service,
-      stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId)
+      stampForgeSync(
+        stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId),
+        forgeSync
+      )
     );
 
     // Cycle membership changed → touch the affected cycle row(s). Issue writes
@@ -292,7 +302,9 @@ export async function updateIssueFields({
     // dédupliquer : canceled/duplicate ne matchent pas, done->done non plus. Un
     // re-passage done->todo->done rajoute volontairement une contribution (compté
     // brut dans la heatmap ; le total, lui, déduplique par issue au read).
-    if (updates.status === "done" && before.status !== "done") {
+    // La synchro d'un dépôt lié (MIN-97) est exclue : l'acteur technique est le
+    // owner qui a lié le dépôt, ce n'est pas lui qui a fermé l'issue distante.
+    if (updates.status === "done" && before.status !== "done" && !forgeSync) {
       const projectName =
         (before.projects as { name?: string | null } | null)?.name ?? null;
       const statRow: StatEventRow = {
@@ -388,7 +400,7 @@ export async function updateIssueFields({
     distinctId: actorId,
     event: "issue_updated_server",
     properties: {
-      source: resolveIssueSource({ viaAssistant, mcpKeyId, actorId }),
+      source: resolveIssueSource({ viaAssistant, mcpKeyId, forge: forgeSync, actorId }),
       fields: Object.keys(updates).sort().join(","),
       field_count: Object.keys(updates).length,
       ...(typeof updates.status === "string" ? { status: updates.status } : {}),

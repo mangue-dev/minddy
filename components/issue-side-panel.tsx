@@ -84,6 +84,7 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
+import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import { SITE_NAME } from "@/lib/site";
 import type {
   Category,
@@ -528,6 +529,7 @@ export function IssueSidePanel({
               <SidePanelTitle asChild>
                 <span className="flex items-center gap-1.5 text-lg font-semibold tracking-tight">
                   <IntegrationIndicator issue={issue} iconClassName="size-4" />
+                  <RemoteIssueIndicator issue={issue} iconClassName="size-4" />
                   {parent && (
                     <>
                       <button

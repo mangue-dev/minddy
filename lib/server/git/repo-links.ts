@@ -22,6 +22,8 @@ interface LinkRow {
   repo_name: string | null;
   repo_full_name: string | null;
   default_branch: string | null;
+  issue_sync_enabled: boolean | null;
+  issue_sync_backfilled_at: string | null;
   created_at: string;
 }
 
@@ -33,7 +35,7 @@ export async function getProjectLink(
   const { data } = await supabase
     .from("project_git_links")
     .select(
-      "id, provider, connection_id, external_repo_id, repo_owner, repo_name, repo_full_name, default_branch, created_at, git_connections(account_login)",
+      "id, provider, connection_id, external_repo_id, repo_owner, repo_name, repo_full_name, default_branch, issue_sync_enabled, issue_sync_backfilled_at, created_at, git_connections(account_login)",
     )
     .eq("project_id", projectId)
     .maybeSingle();
@@ -52,6 +54,8 @@ export async function getProjectLink(
     repo_full_name: row.repo_full_name,
     default_branch: row.default_branch,
     account_login: row.git_connections?.account_login ?? null,
+    issue_sync_enabled: row.issue_sync_enabled === true,
+    issue_sync_backfilled_at: row.issue_sync_backfilled_at,
     created_at: row.created_at,
   };
 }

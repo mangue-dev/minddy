@@ -69,6 +69,9 @@ const IMPORT_SOURCE_LABELS: Record<string, string> = {
   linear: "Linear",
   jira: "Jira",
   csv: "CSV",
+  // Backfill du dépôt lié à l'activation de la synchro d'issues (MIN-97).
+  github: "GitHub",
+  gitlab: "GitLab",
 };
 
 const emptyDash = "—";
@@ -139,6 +142,12 @@ export function describeEvent(
       case "plan":
         return t("planChanged");
       case "status":
+        // Synchro du dépôt lié (MIN-97) : la ligne d'acteur dit déjà « GitHub »,
+        // la phrase dit donc d'où vient le changement plutôt que le seul diff.
+        if (e.forge_sync)
+          return t("forgeStatusSynced", {
+            to: e.to_value ? tStatus(e.to_value) : emptyDash,
+          });
         return t("statusChanged", {
           from: e.from_value ? tStatus(e.from_value) : emptyDash,
           to: e.to_value ? tStatus(e.to_value) : emptyDash,

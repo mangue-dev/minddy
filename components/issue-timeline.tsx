@@ -312,6 +312,11 @@ function EventRow({
   const viaMcp = !viaSmartAssign && !viaNumo && !!item.event.via_mcp;
   const viaIntegration =
     !viaSmartAssign && !viaNumo && !viaMcp && !!item.event.integration_id;
+  // Synchro des issues du dépôt lié (MIN-97) : l'écriture porte techniquement
+  // l'id du owner, mais c'est la forge qui a agi — elle tient lieu d'acteur.
+  const forgeSync = item.event.forge_sync
+    ? getRepoProvider(item.event.forge_sync)
+    : null;
   // Action PR/MR faite directement sur le provider (webhook GitHub/GitLab) :
   // pas d'utilisateur minddy, le login provider (from_value, préfixé `gitlab:`
   // le cas échéant) tient lieu d'acteur, avec le logo du provider.
@@ -326,7 +331,9 @@ function EventRow({
   // via_mcp : l'acteur affiché est l'AGENT (nom canonique + logo), pas
   // l'utilisateur — l'action peut venir d'un workflow automatisé.
   const actor = actorName(ctx.members, item.event.actor_id, t);
-  const name = viaSmartAssign
+  const name = forgeSync
+    ? forgeSync.displayName
+    : viaSmartAssign
     ? "Smart Assign"
     : viaNumo
       ? "Numo"
@@ -349,7 +356,9 @@ function EventRow({
         : describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
-      {viaSmartAssign ? (
+      {forgeSync ? (
+        <ForgeAvatar provider={forgeSync.id} />
+      ) : viaSmartAssign ? (
         <SmartAssignAvatar />
       ) : viaNumo ? (
         <NumoAvatar />

@@ -254,6 +254,85 @@ export async function getGithubBotCommitIdentity(
   return cachedBotIdentity;
 }
 
+export interface RemoteRepoIssue {
+  number: number;
+  title: string;
+  body: string | null;
+  htmlUrl: string | null;
+}
+
+const REPO_ISSUES_PER_PAGE = 100;
+
+/**
+ * Liste les issues OUVERTES d'un dépôt (backfill de la synchro, MIN-97), paginé
+ * via l'en-tête Link. `/issues` renvoie AUSSI les pull requests — toute entrée
+ * portant un champ `pull_request` est écartée. Lève sur une réponse non-OK.
+ */
+export async function listRepoOpenIssues(
+  installationId: number | string,
+  repoFullName: string,
+  /** Plafond dur : on s'arrête dès qu'il est atteint (backfill borné). */
+  limit = Number.POSITIVE_INFINITY,
+): Promise<RemoteRepoIssue[]> {
+  const { token } = await getInstallationToken(installationId);
+  const issues: RemoteRepoIssue[] = [];
+  let url: string | null =
+    `${GITHUB_API_BASE}/repos/${repoFullName}/issues?state=open&per_page=${REPO_ISSUES_PER_PAGE}`;
+  while (url && issues.length < limit) {
+    const response = await fetch(url, { headers: githubHeaders(token) });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { message?: string };
+      throw new Error(
+        data.message || `listRepoOpenIssues failed (${response.status})`,
+      );
+    }
+    const rows = (await response.json()) as Array<{
+      number?: number;
+      title?: string;
+      body?: string | null;
+      html_url?: string | null;
+      pull_request?: unknown;
+    }>;
+    for (const row of rows) {
+      if (row.pull_request || typeof row.number !== "number") continue;
+      issues.push({
+        number: row.number,
+        title: row.title ?? "",
+        body: row.body ?? null,
+        htmlUrl: row.html_url ?? null,
+      });
+      if (issues.length >= limit) break;
+    }
+    url = parseNextLink(response.headers.get("link"));
+  }
+  return issues;
+}
+
+/**
+ * L'installation a-t-elle accepté la permission `Issues` (lecture) ? Une App
+ * qui gagne une permission ne l'obtient PAS rétroactivement : chaque
+ * installation existante doit l'accepter. Renvoie false si l'appel échoue —
+ * l'activation de la synchro doit alors guider l'utilisateur, pas planter.
+ */
+export async function hasIssuesPermission(
+  installationId: number | string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${GITHUB_API_BASE}/app/installations/${installationId}`,
+      { headers: githubHeaders(mintAppJwt()) },
+    );
+    if (!response.ok) return false;
+    const data = (await response.json()) as {
+      permissions?: Record<string, string> | null;
+    };
+    const issues = data.permissions?.issues;
+    return issues === "read" || issues === "write";
+  } catch {
+    return false;
+  }
+}
+
 export interface InstallationAccount {
   login: string | null;
   type: string | null;

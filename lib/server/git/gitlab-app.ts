@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { decryptGitlabToken, encryptGitlabToken } from "./gitlab-credentials";
+import { SITE_URL } from "@/lib/site";
 import {
   GITLAB_API_BASE,
   GITLAB_HOST,
@@ -16,7 +17,9 @@ import {
  * Les access tokens expirent (~2h) et sont rafraîchis paresseusement au moment
  * du mint. gitlab.com SaaS uniquement. L'agent de code (MIN-69) consomme ces
  * tokens via `getGitlabAccessToken` (clone + module MR `lib/server/agent/mr.ts`) ;
- * le webhook `/api/webhooks/gitlab` se crée À LA MAIN sur le dépôt (cf. .env.example).
+ * le webhook `/api/webhooks/gitlab` est provisionné sur le dépôt par
+ * `ensureGitlabIssuesHook` à l'activation de la synchro d'issues (MIN-97), et
+ * reste à créer à la main pour les dépôts qui n'utilisent que l'agent.
  */
 
 // `api` est le seul scope nécessaire — et le seul qui marche. Il donne l'accès
@@ -304,4 +307,148 @@ export async function listGitlabProjects(
     page = gitlabNextPage(response);
   }
   return projects;
+}
+
+// --- Issues + webhook du dépôt (synchro unidirectionnelle, MIN-97) ---------
+
+export interface GitlabIssue {
+  /** Numéro visible dans l'URL (propre au projet), à ne pas confondre avec `id`. */
+  iid: number;
+  title: string;
+  description: string | null;
+  webUrl: string | null;
+}
+
+const ISSUES_PER_PAGE = 100;
+
+/**
+ * Liste les issues OUVERTES d'un projet GitLab (backfill de la synchro), paginé
+ * via X-Next-Page. Contrairement à GitHub, `/issues` ne mélange pas les merge
+ * requests — rien à filtrer. Lève sur une réponse non-OK.
+ */
+export async function listGitlabOpenIssues(
+  accessToken: string,
+  projectId: string,
+  /** Plafond dur : on s'arrête dès qu'il est atteint (backfill borné). */
+  limit = Number.POSITIVE_INFINITY,
+): Promise<GitlabIssue[]> {
+  const issues: GitlabIssue[] = [];
+  let page: number | null = 1;
+  while (page && issues.length < limit) {
+    const url =
+      `${GITLAB_API_BASE}/projects/${encodeURIComponent(projectId)}/issues` +
+      `?state=opened&per_page=${ISSUES_PER_PAGE}&page=${page}`;
+    const response: Response = await fetch(url, {
+      headers: gitlabHeaders(accessToken),
+    });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { message?: string };
+      throw new Error(
+        data.message || `listGitlabOpenIssues failed (${response.status})`,
+      );
+    }
+    const rows = (await response.json()) as Array<{
+      iid?: number;
+      title?: string;
+      description?: string | null;
+      web_url?: string | null;
+    }>;
+    for (const r of rows) {
+      if (typeof r.iid !== "number") continue;
+      issues.push({
+        iid: r.iid,
+        title: r.title ?? "",
+        description: r.description ?? null,
+        webUrl: r.web_url ?? null,
+      });
+      if (issues.length >= limit) break;
+    }
+    page = gitlabNextPage(response);
+  }
+  return issues;
+}
+
+interface GitlabHook {
+  id: number;
+  url?: string;
+  issues_events?: boolean;
+  merge_requests_events?: boolean;
+}
+
+/**
+ * Aligne le webhook minddy du projet GitLab sur l'état voulu de la synchro
+ * d'issues. GitLab n'a pas d'endpoint global comme la GitHub App : le hook vit
+ * SUR LE DÉPÔT, donc on le provisionne à l'activation.
+ *
+ * Absent → création (issues + merge requests, jamais les pushs). Présent →
+ * un PUT qui ne bascule QUE `issues_events`. Jamais de DELETE : le même hook
+ * porte la synchro des MR de l'agent (MIN-69) — le désactiver, c'est remettre
+ * `issues_events: false`, pas supprimer la ligne.
+ *
+ * Renvoie l'id du hook (stocké en `issue_sync_hook_id`), ou null si aucun
+ * secret n'est déployé — sans secret le récepteur est fail-closed, un hook
+ * serait ignoré de toute façon. Lève sur échec d'appel API.
+ */
+export async function ensureGitlabIssuesHook(
+  accessToken: string,
+  projectId: string,
+  opts: { enabled: boolean },
+): Promise<string | null> {
+  const webhookUrl = `${SITE_URL}/api/webhooks/gitlab`;
+  const secret = process.env.GITLAB_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn(
+      "[gitlab-app] GITLAB_WEBHOOK_SECRET is not set — hook not provisioned",
+    );
+    return null;
+  }
+
+  const base = `${GITLAB_API_BASE}/projects/${encodeURIComponent(projectId)}/hooks`;
+  const listResponse = await fetch(base, { headers: gitlabHeaders(accessToken) });
+  if (!listResponse.ok) {
+    const data = (await listResponse.json().catch(() => ({}))) as { message?: string };
+    throw new Error(data.message || `list hooks failed (${listResponse.status})`);
+  }
+  const hooks = (await listResponse.json()) as GitlabHook[];
+  const existing = hooks.find((h) => h.url === webhookUrl);
+
+  const write = async (url: string, method: "POST" | "PUT", body: object) => {
+    const response = await fetch(url, {
+      method,
+      headers: { ...gitlabHeaders(accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      id?: number;
+      message?: string;
+    };
+    if (!response.ok) {
+      throw new Error(data.message || `${method} hook failed (${response.status})`);
+    }
+    return data.id != null ? String(data.id) : null;
+  };
+
+  if (!existing) {
+    // Rien à créer pour une simple désactivation.
+    if (!opts.enabled) return null;
+    return write(base, "POST", {
+      url: webhookUrl,
+      token: secret,
+      issues_events: true,
+      merge_requests_events: true,
+      push_events: false,
+      enable_ssl_verification: true,
+    });
+  }
+
+  await write(`${base}/${existing.id}`, "PUT", {
+    url: webhookUrl,
+    token: secret,
+    issues_events: opts.enabled,
+    // Le hook est partagé avec la synchro des MR : on le préserve tel quel.
+    merge_requests_events: existing.merge_requests_events ?? true,
+    push_events: false,
+    enable_ssl_verification: true,
+  });
+  return String(existing.id);
 }

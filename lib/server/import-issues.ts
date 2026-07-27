@@ -2,7 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
-import { insertEvents, type EventRow } from "@/lib/server/issue-events";
+import { insertEvents, stampForgeSync, type EventRow } from "@/lib/server/issue-events";
 import { normalizeToken } from "@/lib/import/normalize";
 import type { ImportedIssue, ImportSource } from "@/lib/import/types";
 
@@ -130,6 +130,14 @@ export async function importIssuesIntoProject({
       position: positionBase + i,
     };
     if (issue.createdAt) row.created_at = issue.createdAt;
+    // Backfill d'un dépôt lié (MIN-97) : l'identité distante voyage avec la
+    // ligne, l'index UNIQUE partiel garantit qu'on ne l'importe qu'une fois.
+    if (issue.remote) {
+      row.remote_provider = issue.remote.provider;
+      row.remote_repo_id = issue.remote.repoId;
+      row.remote_number = issue.remote.number;
+      row.remote_url = issue.remote.url;
+    }
     if (issue.status === "done") {
       row.completed_at =
         issue.completedAt ?? issue.createdAt ?? new Date().toISOString();
@@ -205,12 +213,15 @@ export async function importIssuesIntoProject({
   }
 
   // ── Timeline: one `imported` event per issue (to_value = source) ──
+  // Backfill d'un dépôt lié (MIN-97) : l'événement est estampillé forge pour que
+  // la timeline crédite GitHub/GitLab, pas le owner qui a activé la synchro.
+  const forge = source === "github" || source === "gitlab" ? source : null;
   const events: EventRow[] = [];
   for (const id of idByNumber.values()) {
     events.push({ issue_id: id, actor_id: actorId, type: "imported", to_value: source });
   }
   for (let i = 0; i < events.length; i += 500) {
-    await insertEvents(service, events.slice(i, i + 500));
+    await insertEvents(service, stampForgeSync(events.slice(i, i + 500), forge));
   }
 
   return {
