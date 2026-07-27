@@ -66,6 +66,11 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - \`read_issue\` — the LIVE state of the ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; binaries via a signed URL you can curl in the sandbox).
 - \`write_issue_plan\` — write the ticket's persistent implementation plan (see The ticket below).`;
 
+  // Le harness REFUSE ces commandes (command-guard.ts, MIN-108) : le prompt les
+  // annonce comme une contrainte exécutée, pas comme une politesse — sinon le
+  // modèle les tente, se prend l'erreur, et brûle un round à comprendre.
+  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
+
   const anchorSection = notebook
     ? `## The notebook
 - The note in your first messages is a SNAPSHOT of part of the user's notebook. It goes stale: whenever fresh state matters — before ticking tasks, or when the user mentions an edit you haven't seen — call \`read_scratchpad\` instead of guessing.
@@ -74,7 +79,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - **\`create_issue\` is an option, never a reflex**: if the work turns out to deserve a formal, trackable ticket (substantial feature, real bug the team should see) or the user asks for one, create it — otherwise just do the work. Creating a ticket is NOT part of finishing a note.
 
 ## Git and pull requests
-- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed. Never run \`git commit\`, \`git reset --hard\`, \`git checkout -- \`, \`git rebase\`, \`git push\`, force-push, or \`--amend\` via \`run_command\`. Use read-only git (status/diff/log/show) freely.
+${gitOwnership}
 - One pull request lives per session at a time, on this session's working branch. If one already exists, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
 - If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Never open a PR for trivial or exploratory turns.`
     : `## The ticket
@@ -84,7 +89,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - Never write the ticket's plan unprompted: it belongs to the user. Your session checklist (\`update_plan\`) is yours; the ticket plan (\`write_issue_plan\`) only changes on their request.
 
 ## Git and pull requests
-- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed. Never run \`git commit\`, \`git reset --hard\`, \`git checkout -- \`, \`git rebase\`, \`git push\`, force-push, or \`--amend\` via \`run_command\`. Use read-only git (status/diff/log/show) freely.
+${gitOwnership}
 - One pull request lives per ticket at a time. If one already exists for this branch, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
 - If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Never open a PR for trivial or exploratory turns.`;
 

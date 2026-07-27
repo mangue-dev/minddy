@@ -410,3 +410,27 @@ describe("buildAgentSystemPrompt — sorties longues de run_command", () => {
     });
   }
 });
+
+/**
+ * MIN-108 : les interdits git sont désormais EXÉCUTÉS par le harness
+ * (command-guard.ts). Le prompt doit l'annoncer comme une contrainte — « never
+ * run » se négocie, « the harness refuses » non — et rester d'accord avec le
+ * garde-fou : chaque commande citée ici est réellement refusée là-bas.
+ */
+describe("buildAgentSystemPrompt — garde-fou git", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`annonce le refus plutôt que l'interdiction (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toContain("The harness owns git.");
+      expect(prompt).toMatch(/`run_command` REFUSES/);
+      for (const cmd of ["git commit", "git push", "git reset", "git restore", "git checkout -- <file>"]) {
+        expect(prompt).toContain(cmd);
+      }
+      // Ce qui reste libre doit être dit aussi, sinon le modèle s'auto-censure
+      // sur `git diff` et cesse de relire son propre travail.
+      expect(prompt).toMatch(/status\/diff\/log\/show\/branch/);
+      expect(prompt).toContain("`git add`");
+      expect(prompt).not.toMatch(/Never run `git commit`/);
+    });
+  }
+});

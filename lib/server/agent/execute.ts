@@ -37,6 +37,7 @@ import {
   spillsToDisk,
   toolOutputFileName,
 } from "./command-output";
+import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
 import { applyEdit } from "./edit";
 import {
   runAgentLoop,
@@ -336,6 +337,18 @@ function makeExecTool(
       }
       case "run_command": {
         const command = String(args.command ?? "");
+        // Garde-fou git (MIN-108) : la règle « le harness possède git » est
+        // EXÉCUTÉE ici, plus seulement dite dans le prompt. Refus = erreur de
+        // tool, sans toucher au Sandbox — le round continue et le modèle lit
+        // pourquoi. `reason` rend le refus mesurable sur agent_run_events.
+        const verdict = checkCommand(command);
+        if (!verdict.allowed) {
+          return {
+            result: { error: verdict.reason },
+            success: false,
+            reason: FORBIDDEN_COMMAND_REASON,
+          };
+        }
         const r = await runShell(sandbox, command, { timeoutMs: RUN_COMMAND_TIMEOUT_MS });
         // Sortie longue → la version COMPLÈTE est déposée dans la sandbox (hors
         // dépôt) et reste relisible via read_file/grep. Best-effort : si l'écriture

@@ -104,7 +104,14 @@ export type EmitAgentEvent = (
 export type ExecuteAgentTool = (
   name: string,
   args: Record<string, unknown>,
-) => Promise<{ result: unknown; success: boolean }>;
+) => Promise<{
+  result: unknown;
+  success: boolean;
+  /** Étiquette d'échec, reportée telle quelle sur l'event `tool_result` : un refus
+   *  du harness doit être COMPTABLE en base, pas seulement lisible dans le preview
+   *  (cf. `forbidden_command` du garde-fou git, MIN-108). */
+  reason?: string;
+}>;
 
 /** État du round EN COURS d'écriture, poussé au fil ouvert (jamais persisté). */
 export interface AgentLiveProgress {
@@ -814,10 +821,15 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         stream.toolCalls.map(async (tc) => {
           const args = safeParse(tc.function.arguments);
           try {
-            const { result, success } = await execTool(tc.function.name, args);
-            return { tc, result, success };
+            const { result, success, reason } = await execTool(tc.function.name, args);
+            return { tc, result, success, reason };
           } catch (err) {
-            return { tc, result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+            return {
+              tc,
+              result: { error: err instanceof Error ? err.message : String(err) },
+              success: false,
+              reason: undefined,
+            };
           }
         }),
       );
@@ -828,6 +840,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           name: o.tc.function.name,
           success: o.success,
           preview: previewResult(o.result),
+          ...(o.reason ? { reason: o.reason } : {}),
         });
       }
       continue;
@@ -900,14 +913,21 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
 
       let result: unknown;
       let success: boolean;
+      let reason: string | undefined;
       try {
-        ({ result, success } = await execTool(name, args));
+        ({ result, success, reason } = await execTool(name, args));
       } catch (err) {
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
       }
       messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), TOOL_RESULT_MAX_CHARS) });
-      await emit("tool_result", { id: tc.id, name, success, preview: previewResult(result) });
+      await emit("tool_result", {
+        id: tc.id,
+        name,
+        success,
+        preview: previewResult(result),
+        ...(reason ? { reason } : {}),
+      });
     }
 
     // ask_user → FIN DE TOUR : les questions sont posées (event `question` émis),
