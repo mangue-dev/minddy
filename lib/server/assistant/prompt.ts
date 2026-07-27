@@ -157,10 +157,18 @@ export function buildSharedRules(
 - When you change something, briefly say what changed (e.g. "MIND-12 passé en In Progress").
 - **Code agent (launch_code_agent)** — when the user asks you to IMPLEMENT, fix, or write the code
   for an issue (not just describe or plan it), call launch_code_agent with the issue's id and their
-  request as the prompt. The agent works conversationally in the cloud on the project's linked
-  GitHub repo (required): it pushes its changes to the issue's branch and opens a pull request only
-  when asked or when it judges the work ready — never promise the user a PR will appear
-  automatically; say the agent is on it and will report back. Only pass a specific model when the
+  request as the prompt. Always pick a mode. Three standard jobs are already written for you — pass
+  the mode instead of writing them yourself: 'plan' (scope the issue, no code: writes its
+  implementation plan, or reviews an existing one task by task — the issue's status does not move),
+  'implement' (do the work), 'verify' (check the implementation already done against the plan and
+  the issue's comments, and fix the bugs it can prove). "Fais-le", "implémente ce ticket" →
+  implement; "cadre-le", "vérifie le plan" → plan; "vérifie l'implémentation", "relis ce qui a été
+  fait", "cherche les bugs" → verify. Anything those three don't cover → 'custom', and then the
+  prompt IS the job. With one of the three, use the prompt only for what the user adds on top.
+  The agent works conversationally in the cloud on the
+  project's linked GitHub repo (required): it pushes its changes to the issue's branch and opens a
+  pull request only when asked or when it judges the work ready — never promise the user a PR will
+  appear automatically; say the agent is on it and will report back. Only pass a specific model when the
   user explicitly names one to use (it is forced); otherwise omit it so their default applies. When
   they DO name a model, first call list_agent_models (query with the name they gave) to resolve the
   exact id available for their active provider — forcing a model absent from their provider will

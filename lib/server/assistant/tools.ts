@@ -1178,7 +1178,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Send a message to the minddy cloud code agent on an issue. The agent works CONVERSATIONALLY in a sandbox on the project's linked GitHub repository, anchored to the issue: it does what the message asks (implement, fix, explore, explain, review), pushes its code changes to the issue's working branch, and opens a pull request only when asked or when it judges the work ready for review — a PR is NOT automatic, so never promise one. If an agent is already working on the issue, the message reaches it as steering; otherwise a new session starts (inheriting the issue's existing branch/PR). Requires a linked GitHub repo. Pass `model` ONLY when the user explicitly names a model to use — resolve the exact id with list_agent_models first so it matches their active provider (a model absent from that provider will fail); otherwise omit `model` and their default applies.",
+        "Send a message to the minddy cloud code agent on an issue. The agent works CONVERSATIONALLY in a sandbox on the project's linked GitHub repository, anchored to the issue: it does what the message asks (implement, fix, explore, explain, review), pushes its code changes to the issue's working branch, and opens a pull request only when asked or when it judges the work ready for review — a PR is NOT automatic, so never promise one. If an agent is already working on the issue, the message reaches it as steering; otherwise a new session starts (inheriting the issue's existing branch/PR). Requires a linked GitHub repo. `mode` is required: plan / implement / verify send the SAME instructions as the app's own buttons (nothing to write), 'custom' sends your own `prompt`. Pass `model` ONLY when the user explicitly names a model to use — resolve the exact id with list_agent_models first so it matches their active provider (a model absent from that provider will fail); otherwise omit `model` and their default applies.",
       parameters: {
         type: "object",
         properties: {
@@ -1186,16 +1186,26 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             description: "id of the issue to work on (resolve it via list_issues/search_issues first).",
           },
+          mode: {
+            type: "string",
+            enum: ["plan", "implement", "verify", "custom"],
+            description:
+              "Which job to send. The first three are written for you, word for word like the app's own buttons: 'plan' scopes the issue WITHOUT coding (writes the implementation plan, or reviews it task by task when one already exists) and leaves the issue's status alone; 'implement' does the work (the instructions adapt to the issue's plan and effort); 'verify' checks the implementation already done against the plan and the issue's comments, then fixes the bugs it can prove. 'custom' for anything else — then `prompt` IS the job, so write it.",
+          },
           prompt: {
             type: "string",
-            description: "Optional extra instructions for the agent, beyond the issue itself.",
+            description:
+              "The request for the agent, in the user's language. With a written mode (plan/implement/verify) it is appended as extra precision and can be omitted; with 'custom' it IS the job — say what to do.",
           },
           model: {
             type: "string",
             description: "Optional exact model id to force (only when the user explicitly requests a specific model).",
           },
         },
-        required: ["issue_id"],
+        // `mode` est REQUIS : sur un petit modèle, un champ optionnel n'est
+        // simplement pas rempli — le choix du job serait alors toujours 'custom'
+        // par défaut, et les trois consignes natives ne serviraient jamais.
+        required: ["issue_id", "mode"],
       },
     },
   },

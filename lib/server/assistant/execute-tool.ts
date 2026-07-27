@@ -71,6 +71,12 @@ import {
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import {
+  buildAgentLaunchMessage,
+  intentForLaunchMode,
+  isAgentLaunchMode,
+  type LaunchMessageIssue,
+} from "@/lib/server/agent/launch-message";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
@@ -623,6 +629,31 @@ export async function executeTool(
           typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
         const prompt =
           typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
+
+        // Trois modes NATIFS (cadrer / implémenter / vérifier l'implémentation) :
+        // le message envoyé est exactement celui des boutons de l'app, construit
+        // depuis les mêmes textes i18n — l'assistant n'a pas à réécrire la
+        // consigne, et son `prompt` éventuel vient la préciser à la fin. Le
+        // quatrième choix (`custom`, ou tout mode inconnu) retombe sur le
+        // comportement d'origine : le prompt de l'assistant EST la demande.
+        const mode = isAgentLaunchMode(args.mode) ? args.mode : null;
+        let message = prompt;
+        if (mode) {
+          const { data: row } = await ctx.supabase
+            .from("issues")
+            .select("number, title, plan, effort")
+            .eq("id", issueId)
+            .maybeSingle();
+          if (!row) return toolError("Issue not found in this project.");
+          message = await buildAgentLaunchMessage({
+            mode,
+            issue: row as LaunchMessageIssue,
+            projectKey: access.project.key,
+            locale: ctx.locale,
+            extra: prompt,
+          });
+        }
+
         // Si une run TRAVAILLE sur l'issue (queued/running), le prompt lui parvient
         // en STEERING au lieu d'échouer avec « alreadyRunning ». Sinon (aucune run,
         // ou la dernière est au repos) on lance une run FROIDE, qui hérite de la
@@ -633,14 +664,17 @@ export async function executeTool(
           issueId,
           userId: ctx.userId,
           triggeredBy: ctx.triggerSource ?? "chat",
-          prompt,
+          prompt: message,
           model,
           forced: !!model,
+          // Cadrer ne fait pas démarrer le ticket ; implémenter et vérifier, si.
+          ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
         if (!result.ok) return toolError(launchErrorMessage(result));
         return {
           result: {
             [result.continued ? "continued" : "launched"]: true,
+            ...(mode ? { mode } : {}),
             run_id: result.run.id,
             status: result.run.status,
             model: result.run.model,

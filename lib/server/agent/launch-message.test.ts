@@ -1,0 +1,102 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildAgentLaunchMessage,
+  intentForLaunchMode,
+  isAgentLaunchMode,
+  launchPromptVariantForMode,
+  type LaunchMessageIssue,
+} from "@/lib/server/agent/launch-message";
+import en from "../../../messages/en.json";
+import fr from "../../../messages/fr.json";
+
+const issue: LaunchMessageIssue = {
+  number: 42,
+  title: "Rendre la palette navigable au clavier",
+  plan: null,
+  effort: "m",
+};
+
+const planned: LaunchMessageIssue = {
+  ...issue,
+  plan: "## Approche\n\n- [x] a\n- [ ] b",
+};
+
+describe("launchPromptVariantForMode", () => {
+  it("cadrage : écrire le plan quand il manque, le vérifier quand il existe", () => {
+    expect(launchPromptVariantForMode("plan", issue)).toBe("writePlan");
+    expect(launchPromptVariantForMode("plan", planned)).toBe("reviewPlan");
+  });
+
+  it("implémentation : suit le plan puis l'effort, comme les boutons", () => {
+    expect(launchPromptVariantForMode("implement", issue)).toBe("default");
+    expect(launchPromptVariantForMode("implement", { ...issue, effort: "xs" })).toBe("xs");
+    expect(launchPromptVariantForMode("implement", planned)).toBe("planExists");
+  });
+
+  it("vérification : une seule consigne, quel que soit l'état du ticket", () => {
+    expect(launchPromptVariantForMode("verify", issue)).toBe("verifyImplementation");
+    expect(launchPromptVariantForMode("verify", planned)).toBe("verifyImplementation");
+  });
+});
+
+describe("intentForLaunchMode", () => {
+  it("cadrer ne démarre pas le ticket ; implémenter et vérifier, si", () => {
+    expect(intentForLaunchMode("plan")).toBe("plan");
+    expect(intentForLaunchMode("implement")).toBe("implement");
+    expect(intentForLaunchMode("verify")).toBe("implement");
+  });
+});
+
+describe("isAgentLaunchMode", () => {
+  it("ne laisse passer que les trois modes natifs", () => {
+    expect(isAgentLaunchMode("verify")).toBe(true);
+    expect(isAgentLaunchMode("review")).toBe(false);
+    expect(isAgentLaunchMode(undefined)).toBe(false);
+  });
+});
+
+describe("buildAgentLaunchMessage", () => {
+  it("reprend TELS QUELS les textes des boutons, en-tête compris", async () => {
+    const message = await buildAgentLaunchMessage({
+      mode: "verify",
+      issue: planned,
+      projectKey: "MIN",
+      locale: "en",
+    });
+    expect(message).toContain("Work on MIN-42: Rendre la palette navigable au clavier.");
+    expect(message).toContain(en.Agent.launchPrompt.verifyImplementation);
+  });
+
+  it("suit la langue du demandeur", async () => {
+    const message = await buildAgentLaunchMessage({
+      mode: "plan",
+      issue: issue,
+      projectKey: "MIN",
+      locale: "fr",
+    });
+    expect(message).toContain("Travaille sur MIN-42");
+    expect(message).toContain(fr.Agent.launchPrompt.writePlan);
+  });
+
+  it("langue inconnue ou absente → anglais (locale par défaut)", async () => {
+    const message = await buildAgentLaunchMessage({
+      mode: "implement",
+      issue,
+      projectKey: "MIN",
+      locale: "de",
+    });
+    expect(message).toContain(en.Agent.launchPrompt.default);
+  });
+
+  it("les précisions de l'utilisateur s'ajoutent à la consigne, elles ne la remplacent pas", async () => {
+    const message = await buildAgentLaunchMessage({
+      mode: "verify",
+      issue: planned,
+      projectKey: "MIN",
+      locale: "en",
+      extra: "  Focus on the keyboard shortcuts.  ",
+    });
+    expect(message).toContain(en.Agent.launchPrompt.verifyImplementation);
+    expect(message.endsWith("Focus on the keyboard shortcuts.")).toBe(true);
+  });
+});
