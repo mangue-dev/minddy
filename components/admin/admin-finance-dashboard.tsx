@@ -55,6 +55,9 @@ const FEATURES = [
   // Temps machine de la sandbox, pas un appel LLM : la colonne Tokens reste
   // vide pour ces lignes.
   "sandbox_compute",
+  // Recherche web (plugin OpenRouter) : le coût inclut le forfait de recherche
+  // en plus des tokens du sous-appel.
+  "web_search",
 ] as const;
 type Feature = (typeof FEATURES)[number];
 

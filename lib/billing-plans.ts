@@ -122,7 +122,8 @@ export type BillableFeature =
   | "feedback_analyze"
   | "embedding"
   | "agent_code"
-  | "sandbox_compute";
+  | "sandbox_compute"
+  | "web_search";
 
 export type UsageSegmentId = "agents" | "numo" | "dictation" | "feedback";
 
@@ -145,7 +146,14 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
     features: ["agent_code", "sandbox_compute"],
     barClass: "bg-violet-500",
   },
-  { id: "numo", features: ["numo_chat", "numo_comment"], barClass: "bg-blue-500" },
+  // La recherche web est un tool de Numo (chat, commentaires) ET des agents,
+  // mais elle reste anecdotique face au reste : on la range avec Numo plutôt que
+  // d'ajouter une 5e couleur à la barre pour quelques centimes.
+  {
+    id: "numo",
+    features: ["numo_chat", "numo_comment", "web_search"],
+    barClass: "bg-blue-500",
+  },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },
   {
     id: "feedback",

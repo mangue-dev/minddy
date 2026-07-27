@@ -31,6 +31,10 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
+  // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
+  { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
+  { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Agent de code cloud (MIN-46) — défaut racine, surchargé par user puis par run
   { key: "agent_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "agent" },
   // Voix (dictée → ticket)

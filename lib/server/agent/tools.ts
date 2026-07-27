@@ -292,6 +292,25 @@ const CORE_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "web_search",
+      description:
+        "Search the web and get back a short factual answer with its sources (url, title, excerpt). The sandbox has no browser and no general internet access — this is your only way to look something up outside the repository. Use it when the code you are writing depends on something you cannot read in the repo and do not know reliably: a library's current API or migration guide, a breaking change, an error message coming from a dependency, a version number, a spec. Read the repo FIRST (package.json, lockfile, the dependency's own files under node_modules, the docs in the repo) — the answer is often there and free. One focused query per call, and never search twice for the same thing: each search costs real money.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "The search query, in natural language (max 400 characters). Include the library and version that narrow it, e.g. 'next.js 16 middleware matcher config breaking change'.",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "update_plan",
       description:
         "Maintain a short ordered checklist of the steps for this task, so the work stays legible in the live view. Call it once early with a few concrete steps, then again whenever a step's status changes. Always send the FULL current plan. Keep exactly one step 'in_progress' at a time and mark steps 'completed' as you finish them. Skip planning for trivial one-step tasks — never make a single-step plan.",
@@ -576,6 +595,26 @@ export const AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...ISSUE_ANCHOR_TOOLS
 
 /** Jeu complet d'un run CARNET (MIN-84). */
 export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...NOTEBOOK_ANCHOR_TOOLS];
+
+/**
+ * Jeu de tools d'un run, selon son ancrage et l'accès au web.
+ *
+ * `web_search` passe par le plugin d'OpenRouter : il n'est offert que sur un run
+ * qui parle à OpenRouter (quota minddy ou BYOK OpenRouter). Un BYOK OpenAI /
+ * Anthropic / Google / générique n'a pas d'équivalent utilisable — leurs couches
+ * de compatibilité OpenAI n'exposent pas de recherche native (Anthropic ignore
+ * les server tools, OpenAI la réserve à ses modèles `*-search*` qui cherchent
+ * TOUJOURS, Gemini ne la documente que hors chat) — et faire tourner la
+ * recherche sur la clé de minddy reviendrait à payer le web d'un usage par
+ * ailleurs illimité. Le tool disparaît alors purement et simplement.
+ */
+export function agentToolsFor(opts: {
+  anchor: "issue" | "notebook";
+  webSearch: boolean;
+}): AgentToolDef[] {
+  const tools = opts.anchor === "issue" ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS;
+  return opts.webSearch ? tools : tools.filter((t) => t.function.name !== "web_search");
+}
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
 export const CONTROL_TOOLS = new Set(["update_plan", "ask_user"]);

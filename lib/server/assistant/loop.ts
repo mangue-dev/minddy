@@ -119,6 +119,10 @@ function getToolResultCharLimit(toolName: string): number {
     case "search_issues":
     case "get_issue":
       return 12000;
+    // Une recherche web est payée : la tronquer à 4 000 caractères jetterait la
+    // moitié des extraits qu'on vient d'acheter.
+    case "web_search":
+      return 10000;
     default:
       return 4000;
   }

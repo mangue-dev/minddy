@@ -26,7 +26,8 @@ export type AiFeature =
   | "feedback_analyze"
   | "embedding"
   | "agent_code"
-  | "sandbox_compute";
+  | "sandbox_compute"
+  | "web_search";
 
 /** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

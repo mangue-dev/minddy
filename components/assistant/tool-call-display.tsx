@@ -14,6 +14,7 @@ import {
   FileX,
   Filter,
   FolderTree,
+  Globe,
   IterationCw,
   LayoutGrid,
   List,
@@ -416,6 +417,18 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingScratchpad");
       return success ? t("scratchpadUpdated") : t("updateScratchpadFailed");
+    },
+  },
+  web_search: {
+    icon: Globe,
+    getLabel: (args, result, success, status, t) => {
+      const query = queryLabel(args);
+      if (status === "running") return t("searchingWeb", { query });
+      if (!success) return t("webSearchFailed");
+      return t("webSearched", {
+        query,
+        count: resultCount(result, "sources"),
+      });
     },
   },
   ask_user: {

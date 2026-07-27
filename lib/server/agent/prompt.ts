@@ -43,6 +43,9 @@ export type AgentAnchor = "issue" | "notebook";
 export function buildAgentSystemPrompt(input: {
   locale?: string | null;
   anchor?: AgentAnchor;
+  /** Le run a-t-il le tool `web_search` ? (runs OpenRouter uniquement — cf.
+   *  agentToolsFor). Le prompt ne doit décrire que les tools réellement offerts. */
+  webSearch?: boolean;
 }): string {
   const replyLanguage = input.locale === "fr" ? "French" : "English";
   const notebook = input.anchor === "notebook";
@@ -93,7 +96,12 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - \`edit_file\` — the primary way to change code: replace an exact snippet (\`old_string\` → \`new_string\`). \`old_string\` must be copied VERBATIM from what \`read_file\` showed (same indentation and whitespace, without the line-number prefix) and must be unique — add surrounding lines for uniqueness, or set \`replace_all\`.
 - \`apply_edits\` — apply several edits across one or more files in a SINGLE call (each change is update / add / delete / move). Use it when your change touches multiple files or multiple spots; it reports per-edit success/failure.
 - \`write_file\` — only to create a NEW file. \`move_file\` / \`delete_file\` — rename or remove a file (they go through git so the pull request captures them). Never use \`run_command\` for these.
-- \`run_command\` — install deps, lint, type-check, build, run tests.
+- \`run_command\` — install deps, lint, type-check, build, run tests.${
+    input.webSearch
+      ? `
+- \`web_search\` — look something up on the web (the sandbox has no other internet access). For a dependency's current API, a breaking change, an unfamiliar error from a library, a version, a spec. Read the repo first — package.json, the lockfile, the dependency's files, the repo's own docs — and search only when the answer isn't there and you don't know it reliably. Each search costs money: one focused query, never the same one twice.`
+      : ""
+  }
 - \`update_plan\` — maintain a short ordered checklist of your steps for multi-step work (keep exactly one step \`in_progress\`; skip it for trivial or conversational turns).
 - \`ask_user\` — pose structured clarifying questions and end your turn (see Asking below).
 ${anchorTools}

@@ -37,7 +37,13 @@ import {
   type EmitAgentEvent,
   type ExecuteAgentTool,
 } from "./agent-loop";
-import { AGENT_TOOLS, NOTEBOOK_AGENT_TOOLS, RUN_COMMAND_TIMEOUT_MS } from "./tools";
+import { agentToolsFor, RUN_COMMAND_TIMEOUT_MS } from "./tools";
+import {
+  isWebSearchEnabled,
+  runWebSearchTool,
+  MAX_WEB_SEARCHES_PER_TURN,
+  WEB_SEARCH_SEQ_BASE,
+} from "@/lib/server/web-search";
 import {
   buildAgentSystemPrompt,
   buildAgentContextMessage,
@@ -150,6 +156,11 @@ type ExecToolAnchor =
   | { kind: "issue"; ctx: IssueToolContext }
   | { kind: "notebook"; ctx: NotebookToolContext };
 
+/** Exécuteur du tool `web_search` (null quand le run n'a pas accès au web). */
+type WebSearchHandler =
+  | ((query: string) => Promise<{ result: unknown; success: boolean }>)
+  | null;
+
 /** Les tools « métier » de l'agent : Sandbox (fichiers/commandes), git/PR
     (`createPr`) et, selon l'ancrage du run, ticket minddy (`issue-tools.ts`) ou
     carnet (`notebook-tools.ts`) — routés par nom. */
@@ -157,6 +168,7 @@ function makeExecTool(
   sandbox: Sandbox,
   createPr: CreatePrHandler,
   anchor: ExecToolAnchor,
+  webSearch: WebSearchHandler,
 ): ExecuteAgentTool {
   return async (name, args) => {
     if (anchor.kind === "issue" && ISSUE_TOOL_NAMES.has(name)) {
@@ -166,6 +178,14 @@ function makeExecTool(
       return await executeNotebookTool(anchor.ctx, name, args);
     }
     switch (name) {
+      case "web_search": {
+        const query = String(args.query ?? "").trim();
+        if (!query) return { result: { error: "query is required" }, success: false };
+        if (!webSearch) {
+          return { result: { error: "Web search is not available on this run." }, success: false };
+        }
+        return await webSearch(query);
+      }
       case "create_pr": {
         return await createPr({
           title: String(args.title ?? "").trim(),
@@ -595,6 +615,45 @@ export async function executeAgentRun(
     const baselineHead = await revParseHead(sandbox);
     const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
 
+    // Endpoint du run (BYOK de l'utilisateur, ou clé plateforme OpenRouter).
+    // Résolu AVANT l'amorce de l'historique : le prompt système ne décrit que les
+    // tools réellement offerts, et web_search en dépend.
+    const { apiKey, baseUrl, provider } = await resolveAgentApiKey(run.created_by);
+
+    // Recherche web : réservée aux runs qui parlent à OpenRouter (quota minddy ou
+    // BYOK OpenRouter — la recherche part alors sur la MÊME clé que le run, donc
+    // sur la même facture). Ailleurs le tool n'est pas offert (cf. agentToolsFor).
+    // Plafond par chunk, et une ligne `web_search` au ledger par recherche.
+    const webSearchAllowed = provider === "openrouter" && (await isWebSearchEnabled());
+    let webSearchesUsed = 0;
+    const webSearch: WebSearchHandler = webSearchAllowed
+      ? async (query: string) => {
+          if (webSearchesUsed >= MAX_WEB_SEARCHES_PER_TURN) {
+            return {
+              result: {
+                error: `Web search limit reached for this turn (${MAX_WEB_SEARCHES_PER_TURN} searches). Work with what you already found.`,
+              },
+              success: false,
+            };
+          }
+          // `seq` unique dans le run : le compteur repart à zéro à chaque chunk,
+          // d'où la tranche par continuation (même règle que sandbox_compute).
+          const seq =
+            WEB_SEARCH_SEQ_BASE +
+            run.continuations * MAX_WEB_SEARCHES_PER_TURN +
+            webSearchesUsed;
+          webSearchesUsed++;
+          return await runWebSearchTool({
+            query,
+            apiKey,
+            runId: run.run_id ?? run.id,
+            seq,
+            userId: run.created_by,
+            projectId: run.project_id,
+          });
+        }
+      : null;
+
     // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
     // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
@@ -606,6 +665,7 @@ export async function executeAgentRun(
       const system = buildAgentSystemPrompt({
         locale: commentLocale,
         anchor: issue ? "issue" : "notebook",
+        webSearch: webSearchAllowed,
       });
       const contextMsg = issue
         ? buildAgentContextMessage({
@@ -837,7 +897,6 @@ export async function executeAgentRun(
       if (reopened && !reopened.merged) await registerPr(reopened, "reopened");
     };
 
-    const { apiKey, baseUrl, provider } = await resolveAgentApiKey(run.created_by);
     // Fenêtre de contexte du modèle (OpenRouter) → seuil de compaction adapté.
     const contextWindow = await getModelContextWindow(run.model, provider, apiKey).catch(() => null);
 
@@ -871,7 +930,10 @@ export async function executeAgentRun(
 
     const result = await runAgentLoop({
       messages,
-      tools: issue ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS,
+      tools: agentToolsFor({
+        anchor: issue ? "issue" : "notebook",
+        webSearch: webSearchAllowed,
+      }),
       model: run.model,
       apiKey,
       baseUrl,
@@ -881,7 +943,7 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       contextWindow,
-      execTool: makeExecTool(sandbox, createPr, toolAnchor),
+      execTool: makeExecTool(sandbox, createPr, toolAnchor, webSearch),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).

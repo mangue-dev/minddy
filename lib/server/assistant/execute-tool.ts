@@ -75,6 +75,11 @@ import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
+import {
+  runWebSearchTool,
+  MAX_WEB_SEARCHES_PER_TURN,
+  WEB_SEARCH_SEQ_BASE,
+} from "@/lib/server/web-search";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -99,6 +104,21 @@ export interface ToolContext {
   numoDefaultStatus?: IssueStatusValue;
   /** Where a launch_code_agent call comes from (chat vs @numo comment). */
   triggerSource?: "chat" | "mention";
+  /**
+   * Recherche web du tour courant : le run du ledger auquel rattacher ses lignes
+   * `web_search`, et le compteur (MUTÉ) qui plafonne les recherches d'un même
+   * tour. Absent = la surface n'ouvre pas la recherche web.
+   */
+  webSearch?: WebSearchTurn;
+  /** Conversation du tour (drill-down du ledger). Null hors chat. */
+  conversationId?: string | null;
+}
+
+/** État de la recherche web pour UN tour (une réponse Numo, un @Numo). */
+export interface WebSearchTurn {
+  runId: string;
+  /** Recherches déjà faites ce tour — sert de plafond ET de `seq` de ledger. */
+  used: number;
 }
 
 export interface ToolExecution {
@@ -268,6 +288,43 @@ async function listGlobalFilterOptions(
   };
 }
 
+/**
+ * Recherche web (hors minddy) — un sous-appel OpenRouter facturé, d'où le
+ * plafond par tour : au-delà, on refuse et on invite le modèle à répondre avec ce
+ * qu'il a plutôt que de rechercher en boucle. La ligne de ledger `web_search`
+ * est écrite par runWebSearchTool, sur le run du tour.
+ */
+async function executeWebSearch(
+  args: Record<string, unknown>,
+  ctx: ToolContext
+): Promise<ToolExecution> {
+  const query = typeof args.query === "string" ? args.query.trim() : "";
+  if (!query) return toolError("query is required");
+
+  const turn = ctx.webSearch;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!turn || !apiKey) {
+    return toolError("Web search is not available here.");
+  }
+  if (turn.used >= MAX_WEB_SEARCHES_PER_TURN) {
+    return toolError(
+      `Web search limit reached for this turn (${MAX_WEB_SEARCHES_PER_TURN} searches). Answer with what you already found.`
+    );
+  }
+
+  const seq = WEB_SEARCH_SEQ_BASE + turn.used;
+  turn.used++;
+  return await runWebSearchTool({
+    query,
+    apiKey,
+    runId: turn.runId,
+    seq,
+    userId: ctx.userId,
+    projectId: ctx.projectId,
+    conversationId: ctx.conversationId ?? null,
+  });
+}
+
 export async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
@@ -286,6 +343,11 @@ export async function executeTool(
     }
     if (toolName === "list_global_filter_options") {
       return listGlobalFilterOptions(ctx);
+    }
+
+    // ── Web (outside minddy) ────────────────────────────────────────────
+    if (toolName === "web_search") {
+      return executeWebSearch(args, ctx);
     }
 
     // ── View tools (scope = the conversation's) ─────────────────────────

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AssistantToolCall } from "@/lib/assistant-types";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { hasUsageBudget } from "@/lib/server/usage";
+import { isWebSearchEnabled, withoutWebSearch } from "@/lib/server/web-search";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -885,6 +886,12 @@ async function runLoop(
   // Suivi des coûts : un run = ce @numo ; chaque round est un appel.
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
+  // Recherche web du tour : même run que les appels ci-dessus, plafonnée sur la
+  // durée du @numo (ses lignes de ledger, elles, sont écrites au fil de l'eau).
+  // Coupée côté admin, le tool n'est pas proposé du tout.
+  const webSearchEnabled = await isWebSearchEnabled();
+  const webSearch = webSearchEnabled ? { runId, used: 0 } : undefined;
+  const tools = webSearchEnabled ? COMMENT_TOOLS : withoutWebSearch(COMMENT_TOOLS);
 
   while (continueLoop) {
     continueLoop = false;
@@ -907,7 +914,7 @@ async function runLoop(
         stream_options: { include_usage: true },
         usage: { include: true },
         max_tokens: 4096,
-        ...(lastRound ? {} : { tools: COMMENT_TOOLS }),
+        ...(lastRound ? {} : { tools }),
       }),
     });
     if (!response.ok) {
@@ -1029,6 +1036,7 @@ async function runLoop(
           locale: ctx.locale,
           numoDefaultStatus: ctx.numoDefaultStatus,
           triggerSource: "mention",
+          webSearch,
         });
         messages.push({
           role: "tool",

@@ -27,6 +27,7 @@ import {
 } from "@/lib/server/assistant/prompt";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
+import { isWebSearchEnabled, withoutWebSearch } from "@/lib/server/web-search";
 import {
   getModelInputModalities,
   modelSupportsCaching,
@@ -290,6 +291,11 @@ export async function POST(request: NextRequest) {
     activeTools = GLOBAL_ASSISTANT_TOOLS;
   }
 
+  // Recherche web : coupable d'un drapeau admin. Coupée, le tool n'est même pas
+  // proposé (sinon le modèle brûle un round pour se faire refuser).
+  const webSearchEnabled = await isWebSearchEnabled();
+  if (!webSearchEnabled) activeTools = withoutWebSearch(activeTools);
+
   // What the user is currently viewing. In project mode that's the open issue/
   // objective/view; in global mode it's the cross-project view or cycle. The
   // block renders only the lines that apply, so it's safe in both modes.
@@ -370,6 +376,10 @@ export async function POST(request: NextRequest) {
   // Capture convId in a const for the closure (always defined at this point)
   const finalConvId = convId!;
 
+  // Un run de ledger pour CETTE réponse : les appels du loop et les éventuelles
+  // recherches web (écrites pendant le tour, pas à la fin) le partagent.
+  const runId = newRunId();
+
   // Stream response with server-side resilience
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -400,6 +410,7 @@ export async function POST(request: NextRequest) {
           numoDefaultStatus,
           model,
           conversationId: finalConvId,
+          webSearch: webSearchEnabled ? { runId, used: 0 } : undefined,
         });
 
         clearTimeout(timeout);
@@ -407,7 +418,6 @@ export async function POST(request: NextRequest) {
         // Suivi des coûts : chaque round du loop est un appel LLM ; ils partagent
         // le même runId (cette réponse Numo = un run). Best-effort, ne bloque rien.
         if (result.generations.length > 0) {
-          const runId = newRunId();
           await recordAiUsage(
             result.generations.map((g, i) => ({
               runId,

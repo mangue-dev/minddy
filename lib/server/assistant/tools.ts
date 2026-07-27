@@ -1073,6 +1073,26 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
+  // ── Web ───────────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "web_search",
+      description:
+        "Search the web and get back a short factual answer with its sources (url, title, excerpt). Use it ONLY when the answer must come from OUTSIDE minddy and outside what you already know reliably: current events, a product's or library's up-to-date documentation, a release or version number, a price, a link the user asks you to look up, or anything they explicitly ask you to check online. NEVER use it for this workspace — issues, members, categories, views, objectives, settings, the notebook, the feedback board all have their own tools, and those are the only source of truth about minddy. One focused query per call: name the product, version or date that narrows it. Each search costs real money, so never search twice for the same thing, and never search to confirm something you already know.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "The search query, in natural language (max 400 characters). Write it in the language the answer is most likely published in — usually English for technical topics.",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
   // ── Interaction ──────────────────────────────────────────────────────
   {
     type: "function",
@@ -1218,8 +1238,9 @@ export const ACCOUNT_TOOLS = new Set([
   "set_scratchpad",
 ]);
 
-// Tools that never take a project (ask_user + the account-level tools).
-const NON_PROJECT_TOOLS = new Set(["ask_user", ...ACCOUNT_TOOLS]);
+// Tools that never take a project (ask_user, the web, and the account-level
+// tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
+const NON_PROJECT_TOOLS = new Set(["ask_user", "web_search", ...ACCOUNT_TOOLS]);
 
 // Every tool that operates on a project. In global mode these get a required
 // `project_id` parameter injected (see buildGlobalTools).
