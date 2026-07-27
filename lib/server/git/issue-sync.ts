@@ -164,16 +164,18 @@ export async function applyRemoteIssue(
   const mappedStatus = statusForRemoteAction(remote.action);
 
   if (!existing) {
-    // Jamais importée. Normalement une ouverture — mais une fermeture peut
-    // aussi tomber ici (issue au-delà du plafond de backfill, par exemple) :
-    // on la crée alors DIRECTEMENT dans l'état distant plutôt qu'en triage.
+    // Jamais importée : elle entre TOUJOURS par le triage, quelle que soit
+    // l'action distante. Une fermeture peut tomber ici (issue au-delà du
+    // plafond de backfill) — la créer directement en `done` la ferait entrer
+    // dans le projet sans que personne ne l'ait jamais vue. Le mapping
+    // fermé → done / rouvert → backlog ne vaut que pour un ticket DÉJÀ importé.
     const result = await createIssueForProject({
       projectId: target.projectId,
       actorId: target.createdBy,
       input: {
         title: remote.title || `#${remote.number}`,
         description: remote.body ?? undefined,
-        status: mappedStatus ?? REMOTE_LANDING_STATUS,
+        status: REMOTE_LANDING_STATUS,
       },
       remote: {
         provider: remote.provider,

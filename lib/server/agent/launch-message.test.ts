@@ -40,10 +40,10 @@ describe("launchPromptVariantForMode", () => {
 });
 
 describe("intentForLaunchMode", () => {
-  it("cadrer ne démarre pas le ticket ; implémenter et vérifier, si", () => {
+  it("seul « implémenter » démarre le ticket : cadrer vient avant, vérifier après", () => {
     expect(intentForLaunchMode("plan")).toBe("plan");
     expect(intentForLaunchMode("implement")).toBe("implement");
-    expect(intentForLaunchMode("verify")).toBe("implement");
+    expect(intentForLaunchMode("verify")).toBe("verify");
   });
 });
 

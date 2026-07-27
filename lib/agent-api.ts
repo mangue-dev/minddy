@@ -123,8 +123,9 @@ export async function launchAgentRunApi(
     prompt?: string;
     model?: string;
     baseBranch?: string;
-    /** `plan` = cadrer sans commencer : le serveur ne passe pas l'issue « en cours ». */
-    intent?: "implement" | "plan";
+    /** `plan` (cadrer) et `verify` (contrôler du travail fait) laissent l'issue
+     *  où elle est : seul `implement` la passe « en cours » côté serveur. */
+    intent?: "implement" | "plan" | "verify";
   },
 ): Promise<{ run: AgentRunSummary }> {
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.

@@ -60,6 +60,10 @@ const GLOBAL_BOARD_KEY: QueryKey = ["me", "board"]; // lib/use-global-board-quer
 const HOME_SUMMARY_KEY: QueryKey = ["me", "summary"]; // lib/use-home-summary-query.ts
 const SEARCH_INDEX_KEY: QueryKey = ["me", "search-index"]; // lib/use-search-index.ts
 const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
+// Listes GLOBALES de l'agent de code : la barre latérale les lit sur toutes les
+// pages, un run de n'importe quel projet les bouge. lib/use-agent-runs.ts.
+const ALL_AGENT_SESSIONS_KEY: QueryKey = ["agent-sessions", "all"];
+const ALL_PULL_REQUESTS_KEY: QueryKey = ["pull-requests", "all"];
 
 /**
  * Aggregates fed by any issue-shaped change, with the refetch policy each one
@@ -199,6 +203,20 @@ function keysForProjectEvent(
       const postId = feedbackPostIdOf(change);
       return postId ? [active(["feedback-comments", projectId, postId])] : [];
     }
+    // Runs de l'agent de code : le spinner « Numo travaille » de la barre
+    // latérale, la liste de la page Agents et le compteur de PR. Ces caches ne
+    // POLLENT que si une session travaille DÉJÀ — sans cet événement, un run
+    // lancé hors du composer (assistant Numo, @numo, coéquipier, autre onglet)
+    // n'apparaissait qu'au rechargement de la page. Le trigger ne diffuse que
+    // les transitions visibles (voir 20260907090000_agent_runs_broadcast).
+    case "agent_runs": {
+      const issueId = issueIdOf(change);
+      return [
+        active(ALL_AGENT_SESSIONS_KEY),
+        active(ALL_PULL_REQUESTS_KEY),
+        ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
+      ];
+    }
     case "issue_events": {
       const issueId = issueIdOf(change);
       if (issueId) return [active(["events", issueId])];
@@ -243,11 +261,14 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-count", projectId],
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
+  ["agent-runs"],
   // The aggregates this project feeds — missed events while offline would
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,
   HOME_SUMMARY_KEY,
   STATS_KEY,
+  ALL_AGENT_SESSIONS_KEY,
+  ALL_PULL_REQUESTS_KEY,
 ];
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {

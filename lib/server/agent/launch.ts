@@ -75,11 +75,25 @@ export interface LaunchAgentInput {
    */
   baseBranch?: string | null;
   /**
-   * Ce qu'on demande à l'agent, du point de vue du TICKET. `plan` (« Générer un
-   * plan » / « Vérifier le plan ») CADRE le ticket sans le commencer : le statut
-   * n'avance pas. Défaut : `implement` — le ticket passe « en cours ».
+   * Ce qu'on demande à l'agent, du point de vue du TICKET. Seul `implement`
+   * (le défaut) fait passer le ticket « en cours » ; `plan` (« Générer un
+   * plan » / « Vérifier le plan ») le CADRE sans le commencer, et `verify`
+   * (« Vérifier l'implémentation ») CONTRÔLE du travail déjà fait — un ticket
+   * en revue doit y rester, pas régresser « en cours ».
    */
-  intent?: "implement" | "plan";
+  intent?: AgentLaunchIntent;
+}
+
+/** Ce que le lancement fait au statut du ticket : cf. `intentStartsWork`. */
+export type AgentLaunchIntent = "implement" | "plan" | "verify";
+
+/**
+ * Le lancement fait-il DÉMARRER le ticket ? Seul « implémenter » est du travail
+ * neuf ; cadrer vient avant, vérifier vient après — ni l'un ni l'autre ne doit
+ * déplacer le ticket. `undefined` (appelant historique) vaut « implémenter ».
+ */
+export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean {
+  return intent !== "plan" && intent !== "verify";
 }
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
@@ -183,13 +197,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     ]);
 
     // Agent lancé → l'issue passe « en cours » (MIN-46). Deux exceptions :
-    //  • run de CADRAGE (`intent: "plan"` — écrire ou vérifier le plan) : on ne
-    //    commence pas le ticket, on le prépare ; son statut ne bouge pas ;
+    //  • run qui n'est pas du travail neuf (`intent` `plan` ou `verify` — cadrer
+    //    avant, contrôler après) : le ticket garde son statut, quel qu'il soit ;
     //  • la run hérite d'une PR encore en revue (open/draft) — c'est SON état qui
     //    gouverne le statut (in_review), on ne le fait pas régresser le temps d'une
     //    itération. Une PR refusée (closed → issue `todo`) repasse bien « en cours ».
     if (
-      input.intent !== "plan" &&
+      intentStartsWork(input.intent) &&
       inherited?.prState !== "open" &&
       inherited?.prState !== "draft"
     ) {

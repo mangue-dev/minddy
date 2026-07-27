@@ -13,6 +13,7 @@
 
 import { createTranslator } from "next-intl";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
+import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -65,12 +66,15 @@ export function launchPromptVariantForMode(
 }
 
 /**
- * Ce que le lancement fait au STATUT du ticket : cadrer n'est pas commencer
- * (`plan` laisse le ticket où il est), implémenter et vérifier écrivent du code
- * et font donc travailler le ticket. Même règle que les boutons de l'UI.
+ * Ce que le lancement fait au STATUT du ticket. Les trois modes portent les
+ * mêmes noms que les trois intentions — le mode dit ce qu'on DEMANDE, l'intention
+ * ce que ça fait au ticket — donc la conversion est l'identité, et elle existe
+ * pour que ça reste vrai par écrit : seul « implémenter » est du travail neuf,
+ * cadrer vient avant et vérifier vient après, tous deux laissant le ticket
+ * exactement où il est (un ticket en revue qu'on fait contrôler doit y rester).
  */
-export function intentForLaunchMode(mode: AgentLaunchMode): "implement" | "plan" {
-  return mode === "plan" ? "plan" : "implement";
+export function intentForLaunchMode(mode: AgentLaunchMode): AgentLaunchIntent {
+  return mode;
 }
 
 function resolveLocale(raw: string | null | undefined): Locale {

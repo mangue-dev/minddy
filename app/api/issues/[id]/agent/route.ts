@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import {
+  launchAgentRun,
+  type AgentLaunchIntent,
+  type LaunchResult,
+} from "@/lib/server/agent/launch";
 
 /**
  * Runs de l'agent de code d'une issue (MIN-46).
@@ -70,7 +74,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     prompt?: string;
     model?: string;
     baseBranch?: string;
-    intent?: "implement" | "plan";
+    intent?: AgentLaunchIntent;
   };
   let body: LaunchBody = {};
   try {
@@ -93,9 +97,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     model,
     forced: !!model,
     baseBranch,
-    // Cadrage (« Générer un plan » / « Vérifier le plan ») : le lancement ne fait
-    // pas démarrer le ticket. Tout le reste vaut « implémenter ».
-    intent: body.intent === "plan" ? "plan" : "implement",
+    // Cadrage (« Générer un plan » / « Vérifier le plan ») et contrôle
+    // (« Vérifier l'implémentation ») : le lancement ne déplace pas le ticket.
+    // Tout le reste vaut « implémenter ».
+    intent:
+      body.intent === "plan" || body.intent === "verify" ? body.intent : "implement",
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

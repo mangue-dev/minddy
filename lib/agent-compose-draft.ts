@@ -20,12 +20,16 @@ import { useSyncExternalStore } from "react";
  */
 /**
  * Ce qu'on demande à l'agent, du point de vue du TICKET — pas du prompt, que
- * l'utilisateur peut réécrire. `plan` = cadrer (écrire ou vérifier le plan) :
- * le ticket ne DÉMARRE pas pour autant, le serveur ne le passe donc pas
- * « en cours » (planifier n'est pas commencer le travail — même règle que le
- * prompt copié, qui n'auto-démarre que sur la branche « implémenter »).
+ * l'utilisateur peut réécrire. Seul `implement` fait DÉMARRER le ticket ; les
+ * deux autres le laissent exactement où il est :
+ *  • `plan`   — cadrer (écrire ou vérifier le plan) : planifier n'est pas
+ *    commencer le travail (même règle que le prompt copié, qui n'auto-démarre
+ *    que sur la branche « implémenter ») ;
+ *  • `verify` — relire une implémentation déjà faite : le ticket est au-delà du
+ *    travail, pas avant. Le repasser « en cours » ferait REGRESSER un ticket en
+ *    revue — or on ne fait que le contrôler.
  */
-export type AgentComposeIntent = "implement" | "plan";
+export type AgentComposeIntent = "implement" | "plan" | "verify";
 
 export interface AgentIssueComposeDraft {
   kind: "issue";

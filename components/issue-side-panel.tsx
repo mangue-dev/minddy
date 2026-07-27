@@ -288,13 +288,14 @@ export function IssueSidePanel({
 
   // « Vérifier l'implémentation » : session neuve qui relit le travail DÉJÀ fait
   // face au plan et aux commentaires du ticket, puis corrige les bugs prouvés.
-  // Intent `implement` (le défaut) : ce run-là écrit du code, il fait donc bien
-  // travailler le ticket — contrairement au cadrage.
+  // `intent: "verify"` : le ticket ne bouge pas — contrôler du travail fait
+  // n'est pas le commencer, et un ticket en revue doit y rester.
   const verifyWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
+      "verify"
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
