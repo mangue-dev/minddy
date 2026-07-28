@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import packageJson from "@/package.json";
 import { usePathname, useRouter } from "next/navigation";
@@ -37,6 +37,7 @@ import {
   Settings,
   ArrowUpRight,
   Shield,
+  Newspaper,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
@@ -44,6 +45,8 @@ import { useIsAdmin } from "@/lib/use-is-admin";
 import { useMyAvatarSeed } from "@/lib/use-my-avatar";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { UserAvatar } from "@/components/user-avatar";
+import { WhatsNewDialog } from "@/components/whats-new-dialog";
+import { hasRecentChangelog } from "@/lib/changelog";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import {
@@ -267,61 +270,84 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const seed = useMyAvatarSeed();
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+
+  // Après le montage seulement : la fraîcheur se lit sur l'horloge du visiteur,
+  // et un rendu serveur qui trancherait à sa place ferait diverger l'hydratation
+  // à la frontière des cinq jours.
+  const [recentChangelog, setRecentChangelog] = useState(false);
+  useEffect(() => setRecentChangelog(hasRecentChangelog()), []);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          "flex h-10 items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
-          collapsed ? "w-9 justify-center" : "w-full gap-3 px-3.5 text-left",
-        )}
-      >
-        <UserAvatar seed={seed} className="size-[22px]" />
-        {!collapsed && (
-          <>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {name}
-            </span>
-            <MoreHorizontal className="size-4 shrink-0 text-muted-foreground" />
-          </>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-56">
-        <DropdownMenuItem asChild>
-          <Link href="/settings">
-            <Settings />
-            {t("accountSettings")}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/billing">
-            <CreditCard />
-            {t("billing")}
-          </Link>
-        </DropdownMenuItem>
-        {isAdmin && (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            "flex h-10 items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
+            collapsed ? "w-9 justify-center" : "w-full gap-3 px-3.5 text-left",
+          )}
+        >
+          <UserAvatar seed={seed} className="size-[22px]" />
+          {!collapsed && (
+            <>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {name}
+              </span>
+              <MoreHorizontal className="size-4 shrink-0 text-muted-foreground" />
+            </>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" className="w-56">
           <DropdownMenuItem asChild>
-            <Link href="/admin">
-              <Shield />
-              {t("adminDashboard")}
+            <Link href="/settings">
+              <Settings />
+              {t("accountSettings")}
             </Link>
           </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <ThemeItem value="light" icon={Sun} label={t("themeLight")} />
-        <ThemeItem value="dark" icon={Moon} label={t("themeDark")} />
-        <ThemeItem value="system" icon={Monitor} label={t("themeSystem")} />
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
-          <LogOut />
-          {t("signOut")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <div className="px-2 py-1 text-center text-xs text-muted-foreground">
-          {packageJson.version}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuItem asChild>
+            <Link href="/billing">
+              <CreditCard />
+              {t("billing")}
+            </Link>
+          </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link href="/admin">
+                <Shield />
+                {t("adminDashboard")}
+              </Link>
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <ThemeItem value="light" icon={Sun} label={t("themeLight")} />
+          <ThemeItem value="dark" icon={Moon} label={t("themeDark")} />
+          <ThemeItem value="system" icon={Monitor} label={t("themeSystem")} />
+          <DropdownMenuSeparator />
+          {/* Le changelog public, dans un modal : on lit ce qui vient de sortir
+              sans quitter l'app. Pastille bleue tant que la dernière livraison a
+              moins de cinq jours. */}
+          <DropdownMenuItem onSelect={() => setWhatsNewOpen(true)}>
+            <Newspaper />
+            {t("whatsNew")}
+            {recentChangelog && (
+              <span
+                aria-hidden
+                className="ml-auto size-2 shrink-0 rounded-full bg-blue-500"
+              />
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
+            <LogOut />
+            {t("signOut")}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <div className="px-2 py-1 text-center text-xs text-muted-foreground">
+            {packageJson.version}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
+    </>
   );
 }
 
