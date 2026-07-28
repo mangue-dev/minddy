@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { AuthProvider } from "@/lib/auth-context";
 import { AppQueryProvider } from "@/lib/query-provider";
@@ -16,6 +17,7 @@ import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
+import { ProjectDraftResume } from "@/components/project-draft-resume";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -38,6 +40,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <AppQueryProvider>
         <RealtimeProvider>
           <ProjectsProvider>
+            {/* Rouvre le wizard de création au retour d'un redirect git
+                (?setup=git) : le projet n'existe pas encore, la reprise ne peut
+                donc pas vivre dans le layout d'un projet. */}
+            <Suspense fallback={null}>
+              <ProjectDraftResume />
+            </Suspense>
             <AssistantPanelProvider>
               {/* La conversation Numo vit ICI, au-dessus du panneau : fermer le
                   panneau démonte sa coquille, pas le tour en cours. */}

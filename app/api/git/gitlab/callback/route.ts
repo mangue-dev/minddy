@@ -24,12 +24,15 @@ export async function GET(request: NextRequest) {
   }
 
   const isAccount = state.projectId === ACCOUNT_CONNECT_PROJECT;
-  // Une autorisation initiée depuis le wizard de création (MIN-62) reprend le
-  // wizard sur la page du projet ; sinon, retour aux paramètres git du projet.
-  const base = isAccount
-    ? "/settings?tab=git"
-    : state.origin === "wizard"
-      ? `/projects/${state.projectId}?setup=git`
+  // Une autorisation initiée depuis le wizard de création (MIN-62) revient sur
+  // /home : à ce stade le projet n'existe pas encore, c'est le brouillon en
+  // session qui rouvre le wizard là où il en était. Sinon, retour aux
+  // paramètres git du projet (ou du compte).
+  const isWizard = isAccount && state.origin === "wizard";
+  const base = isWizard
+    ? "/home?setup=git"
+    : isAccount
+      ? "/settings?tab=git"
       : `/projects/${state.projectId}/settings?tab=git`;
 
   if (!code) {
@@ -48,9 +51,12 @@ export async function GET(request: NextRequest) {
       accountLogin: user.username || null,
       tokens,
     });
-    const suffix = isAccount
-      ? "&git=connected"
-      : `&git=connected&connection=${encodeURIComponent(connectionId)}`;
+    // Le wizard a besoin de l'id de connexion pour ouvrir le sélecteur de dépôt
+    // au retour ; les paramètres du compte, eux, n'en font rien.
+    const suffix =
+      isAccount && !isWizard
+        ? "&git=connected"
+        : `&git=connected&connection=${encodeURIComponent(connectionId)}`;
     return NextResponse.redirect(new URL(`${base}${suffix}`, origin));
   } catch (err) {
     console.error("[git/gitlab/callback] failed:", err);

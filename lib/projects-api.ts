@@ -63,6 +63,23 @@ export async function importProjectIconApi(
   );
 }
 
+/**
+ * Aperçu du favicon d'un site, sans projet et sans rien stocker : le wizard de
+ * création montre l'icône avant que le projet existe, l'import réel
+ * ({@link importProjectIconApi}) suit à la création.
+ */
+export async function previewProjectIconApi(
+  siteUrl: string
+): Promise<{ icon_url: string }> {
+  return parseJson<{ icon_url: string }>(
+    await fetch("/api/account/project-icon", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ site_url: siteUrl }),
+    })
+  );
+}
+
 /** Retire l'icône du projet — retour à l'orbe générée (owner). */
 export async function clearProjectIconApi(id: string): Promise<void> {
   trackEvent("project_icon_changed", { kind: "orb" });

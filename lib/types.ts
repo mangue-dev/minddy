@@ -285,6 +285,8 @@ export interface Project {
 }
 
 export interface CreateProjectInput {
+  /** Id imposé par le client (wizard de création) — voir POST /api/projects. */
+  id?: string;
   name: string;
   key: string;
   color?: string | null;

@@ -180,6 +180,7 @@ export default function ProjectSettingsPage() {
             <span className="text-sm font-medium">{t("iconLabel")}</span>
             <ProjectIconPicker
               projectId={project.id}
+              seed={project.id}
               iconUrl={project.icon_url}
               onChanged={() => {}}
             />

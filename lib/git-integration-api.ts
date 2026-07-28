@@ -66,15 +66,12 @@ export async function fetchGitCandidatesApi(
 export async function startGitConnectApi(
   projectId: string,
   provider: RepoProviderId,
-  /** "wizard" : le callback provider reprend le wizard (`?setup=git`) au lieu
-      de renvoyer vers les paramètres du projet. */
-  origin?: "wizard",
 ): Promise<StartConnectResponse> {
   return parseJson(
     await fetch(`/api/projects/${projectId}/git-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "start", provider, ...(origin ? { origin } : {}) }),
+      body: JSON.stringify({ action: "start", provider }),
     }),
   );
 }
@@ -166,6 +163,35 @@ export interface GitConnectionsResponse {
 
 export async function fetchGitConnectionsApi(): Promise<GitConnectionsResponse> {
   return parseJson(await fetch("/api/account/git-connections"));
+}
+
+/**
+ * Démarre une connexion git au niveau COMPTE — le wizard de création (MIN-62)
+ * choisit un dépôt avant que le projet existe. `mode: "reuse"` = aucune sortie
+ * de page ; les deux autres modes quittent l'app, l'appelant sauve son
+ * brouillon avant de suivre `url`.
+ */
+export async function startAccountGitConnectApi(
+  provider: RepoProviderId,
+): Promise<StartConnectResponse> {
+  return parseJson(
+    await fetch("/api/account/git-connections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "start", provider }),
+    }),
+  );
+}
+
+/** Dépôts candidats d'une connexion du compte (même liste, sans projet). */
+export async function fetchAccountGitCandidatesApi(
+  connectionId: string,
+): Promise<{ candidates: CandidateRepo[] }> {
+  return parseJson(
+    await fetch(
+      `/api/account/git-connections?candidates=${encodeURIComponent(connectionId)}`,
+    ),
+  );
 }
 
 export async function disconnectGitConnectionApi(id: string): Promise<void> {

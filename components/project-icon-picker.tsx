@@ -5,7 +5,11 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Spinner, cn, toast } from "mangue-ui";
 import { ProjectOrb } from "@/components/project-orb";
-import { clearProjectIconApi, importProjectIconApi } from "@/lib/projects-api";
+import {
+  clearProjectIconApi,
+  importProjectIconApi,
+  previewProjectIconApi,
+} from "@/lib/projects-api";
 
 /**
  * Icône du projet (MIN-62) : import du favicon du site live via une URL, ou
@@ -13,16 +17,24 @@ import { clearProjectIconApi, importProjectIconApi } from "@/lib/projects-api";
  * création (`centered`, grande vignette au-dessus du champ) et l'onglet général
  * des paramètres (rangée compacte). Contrôlé : le parent fournit `iconUrl` et
  * reçoit la nouvelle valeur via `onChanged`.
+ *
+ * `projectId: null` = mode BROUILLON (wizard) : le projet n'existe pas encore,
+ * donc rien n'est stocké — on ne fait que résoudre le favicon pour l'aperçu, et
+ * `onChanged` rend aussi le site d'origine, que le wizard rejouera en import
+ * réel une fois le projet créé.
  */
 export function ProjectIconPicker({
   projectId,
+  seed,
   iconUrl,
   onChanged,
   centered = false,
 }: {
-  projectId: string;
+  projectId: string | null;
+  /** Graine de l'orbe générée — l'id du projet, existant ou à venir. */
+  seed: string;
   iconUrl: string | null;
-  onChanged: (iconUrl: string | null) => void;
+  onChanged: (iconUrl: string | null, siteUrl: string | null) => void;
   centered?: boolean;
 }) {
   const t = useTranslations("Projects");
@@ -40,10 +52,15 @@ export function ProjectIconPicker({
     if (!url || importing) return;
     setImporting(true);
     try {
-      const { icon_url } = await importProjectIconApi(projectId, url);
-      toast.success(t("iconImportedToast"));
-      onChanged(icon_url);
-      refresh();
+      if (projectId === null) {
+        const { icon_url } = await previewProjectIconApi(url);
+        onChanged(icon_url, url);
+      } else {
+        const { icon_url } = await importProjectIconApi(projectId, url);
+        toast.success(t("iconImportedToast"));
+        onChanged(icon_url, url);
+        refresh();
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -53,11 +70,16 @@ export function ProjectIconPicker({
 
   const handleRemove = async () => {
     if (removing) return;
+    // Brouillon : rien n'a été stocké, retirer c'est oublier.
+    if (projectId === null) {
+      onChanged(null, null);
+      return;
+    }
     setRemoving(true);
     try {
       await clearProjectIconApi(projectId);
       toast.success(t("iconRemovedToast"));
-      onChanged(null);
+      onChanged(null, null);
       refresh();
     } catch (err) {
       toast.error((err as Error).message);
@@ -117,7 +139,7 @@ export function ProjectIconPicker({
     return (
       <div className="flex w-full flex-col items-center gap-5">
         <ProjectOrb
-          seed={projectId}
+          seed={seed}
           iconUrl={iconUrl}
           className="size-16 rounded-2xl ring-1 ring-border"
         />
@@ -135,7 +157,7 @@ export function ProjectIconPicker({
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
         <ProjectOrb
-          seed={projectId}
+          seed={seed}
           iconUrl={iconUrl}
           className="size-9 rounded-[10px]"
         />

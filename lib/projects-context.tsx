@@ -1,19 +1,19 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { useProjectsQuery, type UseProjectsResult } from "./use-projects-query";
 import {
   CreateProjectWizard,
   type ProjectSetupResumeState,
 } from "@/components/create-project-wizard";
-import type { Project } from "./types";
+import type { ProjectDraft } from "./project-draft";
 
 interface ProjectsContextValue extends UseProjectsResult {
   /** Opens the shared "new project" wizard (mounted once here). */
   openCreateProject: () => void;
-  /** Reopens the wizard at the git step for an existing project — used when a
+  /** Reopens the wizard at the git step from a saved draft — used when a
       provider install/OAuth redirect comes back (`?setup=git`, MIN-62). */
-  openProjectSetup: (project: Project, connectionId: string | null) => void;
+  resumeProjectDraft: (draft: ProjectDraft, connectionId: string | null) => void;
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
@@ -28,6 +28,15 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     if (!open) setResume(null);
   };
 
+  // Stable : `ProjectDraftResume` l'a en dépendance d'effet.
+  const resumeProjectDraft = useCallback(
+    (draft: ProjectDraft, connectionId: string | null) => {
+      setResume({ draft, connectionId });
+      setCreateOpen(true);
+    },
+    []
+  );
+
   return (
     <ProjectsContext.Provider
       value={{
@@ -36,10 +45,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
           setResume(null);
           setCreateOpen(true);
         },
-        openProjectSetup: (project, connectionId) => {
-          setResume({ project, connectionId });
-          setCreateOpen(true);
-        },
+        resumeProjectDraft,
       }}
     >
       {children}

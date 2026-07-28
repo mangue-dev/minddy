@@ -52,6 +52,15 @@ export async function POST(request: NextRequest) {
   const color = typeof input.color === "string" ? input.color : null;
   const smartAssignEnabled = input.smart_assign_enabled === true;
   const autoAssignEnabled = input.auto_assign_enabled === true;
+  // Id fourni par le client (wizard de création, MIN-62) : la graine de l'orbe
+  // générée est l'id du projet, et le wizard la montre AVANT de créer. Sans ça
+  // l'aperçu afficherait un dégradé, le projet créé un autre. Un uuid v4 tiré au
+  // hasard n'entre en collision avec rien ; tout le reste est refusé.
+  const id =
+    typeof input.id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.id)
+      ? input.id
+      : null;
 
   if (!name) {
     return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
@@ -76,6 +85,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("projects")
     .insert({
+      ...(id ? { id } : {}),
       owner_id: auth.user.id,
       name,
       key,

@@ -14,20 +14,28 @@ import {
   Input,
   Spinner,
   Switch,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   toast,
 } from "mangue-ui";
-import { ArrowLeft, ArrowRight, Github, Gitlab, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Github, Gitlab, Info, X } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { isValidKey, normalizeKey, suggestKeyFromName } from "@/lib/project-key";
 import {
   bindGitRepoApi,
-  fetchGitCandidatesApi,
-  startGitConnectApi,
+  fetchAccountGitCandidatesApi,
+  startAccountGitConnectApi,
 } from "@/lib/git-integration-api";
+import { useGitConnectionsQuery } from "@/lib/use-git-connections-query";
+import { importProjectIconApi } from "@/lib/projects-api";
 import {
-  projectGitLinkQueryKey,
-  useProjectGitLinkQuery,
-} from "@/lib/use-project-git-link-query";
+  clearProjectDraft,
+  saveProjectDraft,
+  type DraftRepo,
+  type ProjectDraft,
+} from "@/lib/project-draft";
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { SearchSelect } from "@/components/search-select";
@@ -36,7 +44,7 @@ import { ProjectIconPicker } from "@/components/project-icon-picker";
 import { WizardStepper } from "@/components/wizard-stepper";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
-import type { CandidateRepo, Project } from "@/lib/types";
+import type { CandidateRepo } from "@/lib/types";
 
 /**
  * Wizard de création de projet (MIN-62) : Projet → Icône → Dépôt git →
@@ -46,13 +54,21 @@ import type { CandidateRepo, Project } from "@/lib/types";
  * largeur « Continuer » (« Terminer » en dernière étape) et retour en lien
  * discret.
  *
- * Contrairement à AutoKap (brouillon + finalize), le projet est créé dès la
- * validation de l'étape 1 : les étapes suivantes enrichissent un projet déjà
- * valide, donc fermer le wizard en cours de route ne laisse rien d'orphelin.
- * C'est aussi ce qui permet à l'étape git de réutiliser les endpoints projet de
- * MIN-47 tels quels — et à l'installation GitHub/GitLab (redirect plein écran)
- * de reprendre le wizard : le callback renvoie vers `/projects/{id}?setup=git`,
- * que le layout projet transforme en `openProjectSetup` (project-setup-resume).
+ * Le projet n'est créé qu'à la DERNIÈRE étape : tout ce qui précède est un
+ * brouillon en mémoire (nom, clé, favicon résolu mais pas stocké, dépôt choisi
+ * mais pas lié). Fermer le wizard en route ne laisse donc rien derrière — pas
+ * de projet vide à moitié configuré. En contrepartie, chaque étape doit savoir
+ * travailler sans projet :
+ *  - l'icône ne fait que résoudre le favicon (`/api/account/project-icon`),
+ *    l'import réel suit la création ;
+ *  - le dépôt se choisit au niveau COMPTE (`/api/account/git-connections`), la
+ *    liaison suit la création ;
+ *  - l'id du projet est tiré ici, pour que l'orbe montrée dans le wizard soit
+ *    bien celle du projet créé.
+ *
+ * L'installation GitHub / l'OAuth GitLab quittent la page en plein écran : le
+ * brouillon est sérialisé avant de partir (lib/project-draft.ts) et le callback
+ * revient sur `/home?setup=git`, où `ProjectDraftResume` rouvre le wizard.
  */
 
 const STEPS = ["project", "icon", "git", "finish"] as const;
@@ -60,9 +76,9 @@ type StepId = (typeof STEPS)[number];
 
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
-/** Reprise du wizard sur un projet existant (retour de redirect provider). */
+/** Reprise du wizard après le redirect d'un provider git. */
 export interface ProjectSetupResumeState {
-  project: Project;
+  draft: ProjectDraft;
   /** Connexion fraîchement créée par le callback — ouvre le sélecteur de dépôt. */
   connectionId: string | null;
 }
@@ -85,26 +101,32 @@ export function CreateProjectWizard({
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
   const queryClient = useQueryClient();
-  const { createProject, updateProject } = useProjects();
+  const { user } = useAuth();
+  const { projects, createProject, updateProject } = useProjects();
   const { track } = useAnalytics();
 
   const [stepIndex, setStepIndex] = useState(0);
-  const [project, setProject] = useState<Project | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Étape « Projet »
+  // Étape « Projet ». `draftId` est l'id du futur projet : la graine de l'orbe
+  // doit être connue avant la création, sinon l'aperçu ment.
+  const [draftId, setDraftId] = useState<string>(() => crypto.randomUUID());
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [keyTouched, setKeyTouched] = useState(false);
 
-  // Étape « Dépôt git »
-  const { link, providers } = useProjectGitLinkQuery(open ? project?.id ?? null : null);
+  // Étape « Icône » : favicon résolu pour l'aperçu, site à ré-importer après.
+  const [iconPreviewUrl, setIconPreviewUrl] = useState<string | null>(null);
+  const [iconSiteUrl, setIconSiteUrl] = useState<string | null>(null);
+
+  // Étape « Dépôt git » — tout au niveau compte, aucun projet en jeu.
+  const { connections, providers } = useGitConnectionsQuery(open);
   const [connecting, setConnecting] = useState<RepoProviderId | null>(null);
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateRepo[] | null>(null);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
-  const [binding, setBinding] = useState(false);
+  const [repo, setRepo] = useState<DraftRepo | null>(null);
 
   // Étape « Finitions »
   const [feedbackEnabled, setFeedbackEnabled] = useState(false);
@@ -116,29 +138,38 @@ export function CreateProjectWizard({
 
   const reset = useCallback(() => {
     setStepIndex(0);
-    setProject(null);
     setSubmitting(false);
     setError(null);
+    setDraftId(crypto.randomUUID());
     setName("");
     setKey("");
     setKeyTouched(false);
+    setIconPreviewUrl(null);
+    setIconSiteUrl(null);
     setConnecting(null);
     setActiveConnectionId(null);
     setCandidates(null);
-    setBinding(false);
+    setRepo(null);
     setFeedbackEnabled(false);
     setSmartAssignEnabled(false);
     setAutoAssignEnabled(false);
   }, []);
 
-  // Reprise après le redirect provider : projet existant, directement à l'étape
-  // git, sélecteur de dépôt ouvert si le callback a transmis la connexion.
+  // Reprise après le redirect provider : le brouillon reprend sa place, on
+  // repart à l'étape git, sélecteur de dépôt ouvert si la connexion a été créée.
   useEffect(() => {
     if (!resume) return;
-    setProject(resume.project);
-    setName(resume.project.name);
-    setKey(resume.project.key);
-    setKeyTouched(true);
+    const { draft } = resume;
+    setDraftId(draft.id);
+    setName(draft.name);
+    setKey(draft.key);
+    setKeyTouched(draft.keyTouched);
+    setIconPreviewUrl(draft.iconPreviewUrl);
+    setIconSiteUrl(draft.iconSiteUrl);
+    setRepo(draft.repo);
+    setFeedbackEnabled(draft.feedbackEnabled);
+    setSmartAssignEnabled(draft.smartAssignEnabled);
+    setAutoAssignEnabled(draft.autoAssignEnabled);
     setStepIndex(STEPS.indexOf("git"));
     setActiveConnectionId(resume.connectionId);
   }, [resume]);
@@ -159,7 +190,12 @@ export function CreateProjectWizard({
     if (!next && step !== "finish") {
       track("project_wizard_abandoned", { last_step: step });
     }
-    if (!next) reset();
+    if (!next) {
+      // Un brouillon abandonné ne doit pas ressurgir à la prochaine ouverture :
+      // il n'existe que pour survivre à l'aller-retour chez le provider.
+      clearProjectDraft();
+      reset();
+    }
     onOpenChange(next);
   };
 
@@ -175,11 +211,10 @@ export function CreateProjectWizard({
     if (!keyTouched) setKey(suggestKeyFromName(value));
   };
 
-  const submitProjectStep = async () => {
+  const submitProjectStep = () => {
     setError(null);
-    const trimmedName = name.trim();
     const finalKey = normalizeKey(key);
-    if (!trimmedName) {
+    if (!name.trim()) {
       setError(t("nameRequired"));
       return;
     }
@@ -187,42 +222,27 @@ export function CreateProjectWizard({
       setError(t("keyInvalid"));
       return;
     }
-
-    setSubmitting(true);
-    try {
-      if (!project) {
-        const created = await createProject({ name: trimmedName, key: finalKey });
-        setProject(created);
-        track("project_created", { has_icon: false, has_git_link: false });
-        toast.success(t("projectCreated", { name: created.name }));
-        // Le wizard vit hors de l'arbre des pages : la navigation se fait sous
-        // la modale, le projet est déjà « chez lui » si le wizard est fermé.
-        router.push(`/projects/${created.id}`);
-      } else if (trimmedName !== project.name || finalKey !== project.key) {
-        const updated = await updateProject(project.id, {
-          name: trimmedName,
-          key: finalKey,
-        });
-        setProject(updated);
-      }
-      setStepIndex((i) => i + 1);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSubmitting(false);
+    // La clé est unique par propriétaire : la vérifier ici évite de découvrir le
+    // conflit trois étapes plus loin, au moment de créer. Le serveur reste juge
+    // (un autre onglet, un autre appareil) — ce n'est qu'un garde-fou avancé.
+    if (projects.some((p) => p.owner_id === user?.id && p.key === finalKey)) {
+      setError(t("keyTaken", { key: finalKey }));
+      return;
     }
+    setKey(finalKey);
+    setStepIndex((i) => i + 1);
   };
 
   // ── Étape « Dépôt git » ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!activeConnectionId || !project) {
+    if (!activeConnectionId) {
       setCandidates(null);
       return;
     }
     let cancelled = false;
     setCandidatesLoading(true);
     setCandidates(null);
-    fetchGitCandidatesApi(project.id, activeConnectionId)
+    fetchAccountGitCandidatesApi(activeConnectionId)
       .then((res) => {
         if (!cancelled) setCandidates(res.candidates);
       })
@@ -238,18 +258,34 @@ export function CreateProjectWizard({
     return () => {
       cancelled = true;
     };
-  }, [activeConnectionId, project]);
+  }, [activeConnectionId]);
+
+  /** L'état complet du wizard, tel qu'il doit survivre à un redirect provider. */
+  const snapshot = () => ({
+    id: draftId,
+    name,
+    key,
+    keyTouched,
+    iconSiteUrl,
+    iconPreviewUrl,
+    repo,
+    feedbackEnabled,
+    smartAssignEnabled,
+    autoAssignEnabled,
+  });
 
   const handleConnect = async (provider: RepoProviderId) => {
-    if (!project) return;
     setConnecting(provider);
     track("git_connection_started", { provider });
     try {
-      const res = await startGitConnectApi(project.id, provider, "wizard");
+      const res = await startAccountGitConnectApi(provider);
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
       } else {
-        window.location.href = res.url; // redirect provider ; reprise via ?setup=git
+        // On quitte l'app : le brouillon part en session, le callback revient
+        // sur /home?setup=git et ProjectDraftResume rouvre le wizard ici.
+        saveProjectDraft(snapshot());
+        window.location.href = res.url;
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -258,41 +294,86 @@ export function CreateProjectWizard({
     }
   };
 
-  const handleBind = async (externalRepoId: string) => {
-    if (!project || !activeConnectionId) return;
-    setBinding(true);
-    try {
-      await bindGitRepoApi(project.id, activeConnectionId, externalRepoId);
-      track("project_git_linked", { provider: link?.provider ?? "unknown" });
-      toast.success(tSettings("gitRepoLinkedToast"));
-      setActiveConnectionId(null);
-      void queryClient.invalidateQueries({
-        queryKey: projectGitLinkQueryKey(project.id),
-      });
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBinding(false);
-    }
+  const handlePickRepo = (externalRepoId: string) => {
+    const candidate = (candidates ?? []).find(
+      (c) => c.external_repo_id === externalRepoId
+    );
+    const connection = connections.find((c) => c.id === activeConnectionId);
+    if (!candidate || !connection) return;
+    // Choisi, pas encore lié : la liaison a besoin d'un projet, elle attend la
+    // création.
+    setRepo({
+      connectionId: connection.id,
+      provider: connection.provider,
+      externalRepoId: candidate.external_repo_id,
+      fullName: candidate.full_name,
+    });
+    setActiveConnectionId(null);
   };
 
-  // ── Étape « Finitions » ───────────────────────────────────────────────────
+  // ── Création (dernière étape) ─────────────────────────────────────────────
   const finish = async () => {
-    if (!project) return;
     setSubmitting(true);
-    try {
-      const updated = await updateProject(project.id, {
-        smart_assign_enabled: smartAssignEnabled,
-        auto_assign_enabled: autoAssignEnabled,
-      });
-      setProject(updated);
+    setError(null);
 
-      if (feedbackEnabled) {
-        const response = await fetch(`/api/projects/${project.id}/feedback/settings`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled: true }),
-        });
+    let created;
+    try {
+      created = await createProject({ id: draftId, name: name.trim(), key });
+    } catch (err) {
+      // Nom, clé déjà prise, limite de plan : tout se règle à la première étape,
+      // et le brouillon reste intact — on n'a rien perdu.
+      setStepIndex(0);
+      setError((err as Error).message);
+      setSubmitting(false);
+      return;
+    }
+
+    clearProjectDraft();
+    track("project_created", {
+      has_icon: !!iconSiteUrl,
+      has_git_link: !!repo,
+    });
+
+    // À partir d'ici le projet EXISTE : chacune des finitions peut échouer sans
+    // remettre la création en cause. On le dit, on continue, on n'annule rien.
+    const enrich = async (label: string, run: () => Promise<unknown>) => {
+      try {
+        await run();
+        return true;
+      } catch (err) {
+        console.error(`[create-project-wizard] ${label} failed:`, err);
+        toast.error((err as Error).message);
+        return false;
+      }
+    };
+
+    if (iconSiteUrl) {
+      await enrich("icon", () => importProjectIconApi(created.id, iconSiteUrl));
+    }
+    if (repo) {
+      const linked = await enrich("git bind", () =>
+        bindGitRepoApi(created.id, repo.connectionId, repo.externalRepoId)
+      );
+      if (linked) track("project_git_linked", { provider: repo.provider });
+    }
+    if (smartAssignEnabled || autoAssignEnabled) {
+      await enrich("assign settings", () =>
+        updateProject(created.id, {
+          smart_assign_enabled: smartAssignEnabled,
+          auto_assign_enabled: autoAssignEnabled,
+        })
+      );
+    }
+    if (feedbackEnabled) {
+      await enrich("feedback board", async () => {
+        const response = await fetch(
+          `/api/projects/${created.id}/feedback/settings`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: true }),
+          }
+        );
         if (!response.ok) {
           const data = (await response.json().catch(() => null)) as {
             error?: string;
@@ -300,29 +381,29 @@ export function CreateProjectWizard({
           throw new Error(data?.error || "Error");
         }
         void queryClient.invalidateQueries({
-          queryKey: ["feedback-settings", project.id],
+          queryKey: ["feedback-settings", created.id],
         });
-      }
-      // Le wizard est allé au bout : on connaît enfin sa configuration réelle
-      // (dépôt lié, board de feedback, attribution automatique).
-      track("project_wizard_completed", {
-        has_git_link: !!link,
-        feedback_enabled: feedbackEnabled,
-        smart_assign_enabled: smartAssignEnabled,
-        auto_assign_enabled: autoAssignEnabled,
       });
-      toast.success(t("wizardDoneToast", { name: project.name }));
-      handleOpenChange(false);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSubmitting(false);
     }
+
+    // L'icône et les réglages sont posés après la création : la liste en cache
+    // date déjà d'avant.
+    void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    track("project_wizard_completed", {
+      has_git_link: !!repo,
+      feedback_enabled: feedbackEnabled,
+      smart_assign_enabled: smartAssignEnabled,
+      auto_assign_enabled: autoAssignEnabled,
+    });
+    toast.success(t("wizardDoneToast", { name: created.name }));
+    setSubmitting(false);
+    handleOpenChange(false);
+    router.push(`/projects/${created.id}`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === "project") void submitProjectStep();
+    if (step === "project") submitProjectStep();
     else if (step === "finish") void finish();
     else setStepIndex((i) => i + 1);
   };
@@ -336,7 +417,6 @@ export function CreateProjectWizard({
   const stepSubtitle: Record<StepId, string> = {
     project: t("dialogDescription", {
       entityPlural: tIssue("entityPlural").toLowerCase(),
-      key: key || "MIND",
     }),
     icon: t("wizardIconDesc"),
     git: t("wizardGitDesc"),
@@ -344,7 +424,7 @@ export function CreateProjectWizard({
   };
 
   const configuredProviderIds = providers.filter((p) => p.configured).map((p) => p.id);
-  const LinkedIcon = link ? PROVIDER_ICON[link.provider] : null;
+  const RepoIcon = repo ? PROVIDER_ICON[repo.provider] : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -400,81 +480,109 @@ export function CreateProjectWizard({
                   className="w-full"
                 >
                   {step === "project" && (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-end gap-3">
-                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                          <label
-                            htmlFor="project-name"
-                            className="text-sm font-medium"
-                          >
-                            {t("nameLabel")}
-                          </label>
-                          <Input
-                            id="project-name"
-                            autoFocus
-                            required
-                            value={name}
-                            onChange={(e) => handleNameChange(e.target.value)}
-                            placeholder={t("namePlaceholder")}
-                          />
-                        </div>
-                        <div className="flex w-28 shrink-0 flex-col gap-1.5">
+                    <div className="flex items-end gap-3">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <label
+                          htmlFor="project-name"
+                          className="text-sm font-medium"
+                        >
+                          {t("nameLabel")}
+                        </label>
+                        <Input
+                          id="project-name"
+                          autoFocus
+                          required
+                          value={name}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          placeholder={t("namePlaceholder")}
+                        />
+                      </div>
+                      <div className="flex w-28 shrink-0 flex-col gap-1.5">
+                        {/* La clé demande une explication, pas un hint permanent
+                            sous le champ : elle tient dans un tooltip au survol
+                            du « i », et le sous-titre de l'étape parle du
+                            projet. */}
+                        <div className="flex items-center gap-1">
                           <label
                             htmlFor="project-key"
                             className="text-sm font-medium"
                           >
                             {t("keyLabel")}
                           </label>
-                          <Input
-                            id="project-key"
-                            required
-                            value={key}
-                            onChange={(e) => {
-                              setKeyTouched(true);
-                              setKey(normalizeKey(e.target.value));
-                            }}
-                            placeholder="MIND"
-                            className="font-mono uppercase tracking-wide"
-                            maxLength={5}
-                          />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label={t("keyTooltipLabel")}
+                                className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-left">
+                              {t("keyTooltip", {
+                                entityPlural: tIssue("entityPlural").toLowerCase(),
+                                key: key || "MIND",
+                              })}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
+                        <Input
+                          id="project-key"
+                          required
+                          value={key}
+                          onChange={(e) => {
+                            setKeyTouched(true);
+                            setKey(normalizeKey(e.target.value));
+                          }}
+                          placeholder="MIND"
+                          className="font-mono uppercase tracking-wide"
+                          maxLength={5}
+                        />
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t("keyHint")}
-                      </p>
                     </div>
                   )}
 
-                  {step === "icon" && project && (
+                  {step === "icon" && (
                     <ProjectIconPicker
                       centered
-                      projectId={project.id}
-                      iconUrl={project.icon_url}
-                      onChanged={(iconUrl) =>
-                        setProject((p) => (p ? { ...p, icon_url: iconUrl } : p))
-                      }
+                      projectId={null}
+                      seed={draftId}
+                      iconUrl={iconPreviewUrl}
+                      onChanged={(previewUrl, site) => {
+                        setIconPreviewUrl(previewUrl);
+                        setIconSiteUrl(site);
+                      }}
                     />
                   )}
 
-                  {step === "git" && project && (
+                  {step === "git" && (
                     <div className="flex flex-col gap-3">
-                      {link && LinkedIcon ? (
-                        <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                            <LinkedIcon className="size-5" strokeWidth={1.5} />
-                          </span>
-                          <div className="min-w-0 flex-1 text-left">
-                            <p className="truncate text-sm font-medium">
-                              {link.repo_full_name ?? link.external_repo_id}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {getRepoProvider(link.provider).displayName}
-                              {link.default_branch
-                                ? ` · ${link.default_branch}`
-                                : ""}
-                            </p>
+                      {repo && RepoIcon ? (
+                        <>
+                          <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                              <RepoIcon className="size-5" strokeWidth={1.5} />
+                            </span>
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="truncate text-sm font-medium">
+                                {repo.fullName}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {getRepoProvider(repo.provider).displayName}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                            onClick={() => setRepo(null)}
+                          >
+                            {tCommon("remove")}
+                          </Button>
+                        </>
                       ) : activeConnectionId ? (
                         <div className="flex flex-col items-center gap-3">
                           <p className="text-sm text-muted-foreground">
@@ -491,7 +599,7 @@ export function CreateProjectWizard({
                           ) : (
                             <SearchSelect
                               value={null}
-                              onChange={(v) => v && void handleBind(v)}
+                              onChange={(v) => v && handlePickRepo(v)}
                               options={(candidates ?? []).map((c) => ({
                                 value: c.external_repo_id,
                                 label: c.full_name,
@@ -500,12 +608,7 @@ export function CreateProjectWizard({
                               emptyText={tSettings("gitNoRepos")}
                               align="center"
                               trigger={
-                                <Button
-                                  variant="outline"
-                                  disabled={binding}
-                                  className="justify-center"
-                                >
-                                  {binding ? <Spinner /> : null}
+                                <Button variant="outline" className="justify-center">
                                   {tSettings("gitChooseRepo")}
                                 </Button>
                               }
@@ -517,7 +620,6 @@ export function CreateProjectWizard({
                             size="sm"
                             className="bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
                             onClick={() => setActiveConnectionId(null)}
-                            disabled={binding}
                           >
                             {tCommon("back")}
                           </Button>
@@ -536,26 +638,22 @@ export function CreateProjectWizard({
                     </div>
                   )}
 
-                  {step === "finish" && project && (
+                  {step === "finish" && (
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
                         {/* Carré arrondi au ratio des cartes projet (≈ 0,28 —
                             11px @ 40px), bordé pour rester lisible quand le
                             favicon importé est rond ou transparent. */}
                         <ProjectOrb
-                          seed={project.id}
-                          iconUrl={project.icon_url}
+                          seed={draftId}
+                          iconUrl={iconPreviewUrl}
                           className="size-10 rounded-[11px] border border-border"
                         />
                         <div className="min-w-0 flex-1 text-left">
-                          <p className="truncate text-sm font-medium">
-                            {project.name}
-                          </p>
+                          <p className="truncate text-sm font-medium">{name}</p>
                           <p className="truncate text-xs text-muted-foreground">
-                            <span className="font-mono">{project.key}</span>
-                            {link
-                              ? ` · ${link.repo_full_name ?? link.external_repo_id}`
-                              : ` · ${t("wizardNoRepo")}`}
+                            <span className="font-mono">{key}</span>
+                            {repo ? ` · ${repo.fullName}` : ` · ${t("wizardNoRepo")}`}
                           </p>
                         </div>
                       </div>
