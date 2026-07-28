@@ -28,6 +28,7 @@ import {
 } from "./compact";
 import {
   AGENT_COMPACT_TOKEN_THRESHOLD,
+  AGENT_COMPACT_ABSOLUTE_MAX_TOKENS,
   AGENT_COMPACT_KEEP_RECENT_BYTES,
   AGENT_COMPACT_MIN_BUDGET_MS,
   AGENT_RUN_TIMEOUT_MS,
@@ -73,6 +74,20 @@ const MAX_TURN_END_REENTRIES = 1;
 const MAX_COMPACTIONS_PER_CHUNK = 3;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
 const MAX_CONTEXT_TRIMS = 4;
+/** Fraction du seuil de compaction à partir de laquelle on PRÉVIENT le modèle (MIN-113). */
+const CONTEXT_WARNING_RATIO = 0.7;
+/**
+ * Préavis injecté avant l'appel quand le contexte approche du seuil. Le modèle ne
+ * savait pas qu'on le compactait : il recevait un résumé préfixé au milieu de son
+ * propre raisonnement, sans préavis. Là il peut conclure proprement.
+ *
+ * On ne lui donne PAS de tool `get_context_remaining` (le choix inverse de Codex,
+ * et il est délibéré) : le harness connaît déjà `lastPromptTokens` à chaque round,
+ * donc lui faire dépenser un tour pour demander un chiffre qu'on peut pousser est
+ * un mauvais échange. Ne pas « corriger » ça en ajoutant le tool.
+ */
+const CONTEXT_WARNING_MESSAGE =
+  "You are approaching the context limit for this session. Finish the step you are on and reply — do not start new exploration.";
 /** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
 const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep", "read_issue", "read_attachment"]);
 
@@ -635,13 +650,23 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // corriger, le check suivant vérifie le correctif — puis le tour se termine,
   // erreurs restantes ou non. Compté par CHUNK, comme les compactions.
   let turnEndReentries = 0;
-  // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut.
-  const compactThreshold = params.contextWindow
-    ? Math.floor(params.contextWindow * 0.75)
-    : AGENT_COMPACT_TOKEN_THRESHOLD;
+  // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut —
+  // mais TOUJOURS borné par le plafond absolu. Une fenêtre de 1 M donnerait sinon
+  // un seuil de ~787 000 tokens, que nos runs n'atteignent jamais : c'est ce qui
+  // a fait que la compaction n'a jamais tourné (MIN-113). Ce qui plafonne une
+  // session longue est le coût par round, pas la fenêtre.
+  const compactThreshold = Math.min(
+    params.contextWindow
+      ? Math.floor(params.contextWindow * 0.75)
+      : AGENT_COMPACT_TOKEN_THRESHOLD,
+    AGENT_COMPACT_ABSOLUTE_MAX_TOKENS,
+  );
   // Taille de contexte réelle du dernier appel (prompt_tokens rapportés) — plus
   // fiable que l'estimation caractères/4 pour décider de compacter.
   let lastPromptTokens: number | null = null;
+  // Préavis de fin de contexte déjà donné sur ce chunk ? Une seule fois — répéter
+  // le message à chaque round harcèlerait le modèle sans rien lui apprendre.
+  let contextWarned = false;
 
   for (;;) {
     // Interruption demandée entre deux rounds → repos, SANS round partiel (le
@@ -735,6 +760,22 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           // sans compacter ce round (la tentative est déjà comptée → pas de boucle).
         }
       }
+    }
+
+    // Préavis de fin de contexte (MIN-113) : le modèle doit savoir qu'il approche
+    // du seuil AVANT qu'on le coupe, pour conclure son étape plutôt que d'ouvrir
+    // une exploration qu'un résumé va trancher au milieu. Placé APRÈS la
+    // compaction : si elle vient de tourner, le contexte est retombé et il n'y a
+    // plus rien à annoncer.
+    const contextNow = lastPromptTokens ?? estimateTokens(messages);
+    if (!contextWarned && contextNow >= compactThreshold * CONTEXT_WARNING_RATIO) {
+      contextWarned = true;
+      messages.push({ role: "user", content: CONTEXT_WARNING_MESSAGE });
+      await emit("status", {
+        phase: "context_warning",
+        tokens: contextNow,
+        threshold: compactThreshold,
+      });
     }
 
     let stream: StreamResult;

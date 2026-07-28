@@ -148,8 +148,9 @@ Sandbox par run, nommée `agent-<run.id>` :
 - **Troncature par résultat** : chaque message `role:"tool"` passe par
   `headTail(JSON.stringify(result), 6000)` — début + fin gardés, milieu élidé.
 - **Compaction** ([compact.ts](../lib/server/agent/compact.ts)) : au-delà de
-  `AGENT_COMPACT_TOKEN_THRESHOLD = 70_000` (ou 75 % de la fenêtre du modèle si
-  connue), un sous-appel LLM résume le milieu périmé
+  `min(fenêtre × 0,75, AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000)` — ou de
+  `AGENT_COMPACT_TOKEN_THRESHOLD = 70_000` quand la fenêtre est inconnue —, un
+  sous-appel LLM résume le milieu périmé
   (`SUMMARIZE_INSTRUCTION`, 5 points), en préservant le préfixe de seed verbatim et
   `AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000` de queue. Point de rupture sûr : la
   queue ne commence jamais sur un message `tool`. Plafonné à
@@ -423,6 +424,122 @@ silencieux.
 > sur la mauvaise variable — avec une fenêtre de 1 M, ce qui plafonne une session
 > longue est le **coût par round**, pas la fenêtre — et un filet jamais tendu est un
 > filet troué jusqu'à preuve du contraire. → MIN-113.
+
+#### Ce que coûte un gros contexte (mesuré le 2026-07-28, MIN-113)
+
+Le seuil devait être recalibré « sur le coût », encore fallait-il connaître le
+coût. Mesure sur les **814 appels** `ai_usage` de `feature = 'agent_code'` depuis
+la mise en service, en croisant `prompt_tokens` et `cost` réel.
+
+**Le contexte réellement atteint.** p50 = 29 851 · p75 = 44 757 · p90 = 86 815 ·
+p95 = 135 115 · p99 = 153 808 · **max = 158 301**. Un seul run dépasse 60 k : 171
+rounds sur `anthropic/claude-sonnet-5`, contexte final 158 301 tokens, **13,9 M de
+prompt tokens cumulés pour 27,85 $**. Les 14 autres runs réunis coûtent 4,03 $.
+
+**Le coût marginal du contexte**, ajusté par moindres carrés sur
+`cost = a·prompt_tokens + b·completion_tokens` :
+
+| Modèle | Rounds | $ / 1 M prompt tokens | $ / 1 M completion |
+| --- | ---: | ---: | ---: |
+| `openai/gpt-5.6-luna` | 590 | 0,18 | 6,69 |
+| `anthropic/claude-sonnet-5` | 171 | **2,00** | 8,37 |
+| `deepseek/deepseek-v4-flash` | 53 | 0,06 | 0,39 |
+
+**Le prompt caching n'amortit rien — hypothèse falsifiée.** 2,00 $/M est *exactement*
+le tarif input plein de Sonnet 5 (tarif d'introduction, 2 $/M jusqu'au 2026-08-31).
+En modélisant chaque round à `prompt × 2 $/M + completion × 10 $/M`, c.-à-d. **sans
+aucun cache**, on retrouve 28,35 $ contre 27,85 $ observés — **ratio 0,982**, et
+**121 des 171 rounds collent au modèle « aucun cache » à ±2 %**. Les rounds 1 et 2
+montrent bien un cache read (ratio 0,15 et 0,19) ; à partir du round ~60 le ratio
+est 1,000 à la quatrième décimale. La raison est dans le code :
+[caching.ts](../lib/server/agent/caching.ts) pose ses deux breakpoints sur le
+message système et la fin du préfixe de seed — **tous deux en TÊTE**. Le bloc caché
+reste donc figé à quelques milliers de tokens pendant que l'historique en atteint
+150 000, et sa part devient négligeable. On paie plein tarif l'intégralité de la
+conversation, à chaque round.
+
+> Si l'historique entier était lu depuis le cache, ce run aurait coûté **3,35 $ au
+> lieu de 27,85 $** (−88 %). C'est un levier bien plus gros que la compaction, et
+> c'est un autre sujet : déplacer le breakpoint en QUEUE d'historique à chaque round.
+> Hors périmètre de MIN-113, qui calibre le filet existant. → à ouvrir séparément.
+
+**À partir de quand résumer est-il rentable ?** Une compaction coûte un sous-appel
+sur tout sauf la queue (~12 k tokens), puis fait retomber le contexte à ~25 k. À
+150 k sur Sonnet 5 : le round coûte 0,300 $, le sous-appel 0,288 $, le round
+suivant 0,050 $ — **amorti en 1,2 round**. Le rapport est le même sur les trois
+modèles et à tous les seuils testés entre 60 k et 200 k (1,1 à 1,6 round), parce
+que le coût du résumé et l'économie par round sont tous deux linéaires en `T`. La
+rentabilité ne discrimine donc pas : **la compaction est rentable dès ~60 k**. Ce
+qui fixe le seuil par le bas, c'est la qualité — ne pas harceler les sessions
+normales — pas le coût.
+
+**Seuil retenu : `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000`.**
+
+| T | Rounds ≥ T (sur 814) | Runs concernés | Coût simulé du gros run |
+| ---: | ---: | ---: | ---: |
+| 100 k | 61 (7,5 %) | 1 | 19,75 $ (−29 %) |
+| **120 k** | **48 (5,9 %)** | **1** | **20,77 $ (−25 %)** |
+| 150 k | 16 (2,0 %) | 1 | 23,37 $ (−16 %) |
+| 160 k et au-delà | **0** | **0** | inchangé |
+
+Les 180 000 tokens proposés au cadrage sont **écartés par la mesure** : aucun des
+814 rounds observés n'atteint 160 000, donc un plafond à 180 k ne se déclencherait
+jamais — ce serait reproduire le bug du ticket avec un plus petit nombre. 120 000
+se place au-dessus du p90 (86 815) : les sessions normales ne le voient pas, seuls
+les ~6 % de rounds du run réellement long le franchissent, et il aurait économisé
+un quart du coût de ce run.
+
+#### Le chemin complet, exercé pour de vrai
+
+« Du code de secours jamais exécuté est du code cassé jusqu'à preuve du contraire »
+appelle une preuve, pas un test unitaire de plus. Deux niveaux :
+
+**1. Test d'intégration** — [compact-path.test.ts](../lib/server/agent/compact-path.test.ts)
+fait tourner `runAgentLoop` en ne moquant QUE `fetch` : le streaming SSE, le
+sous-appel de résumé, la reconstruction et le round suivant sont le vrai code. Ce
+qui est vérifié n'est pas la valeur de retour mais **le corps réellement envoyé au
+provider au round suivant** — appariement `tool_call` ↔ `tool`, absence de `tool`
+orphelin, préfixe de seed verbatim, résumé présent une seule fois. Même chose pour
+`dropOldestRound` sur un 400 « contexte trop long » : convergence en ≤ 4 essais,
+appariement intact à chaque tentative, et un 400 qui n'est PAS un dépassement de
+contexte échoue le run sans rien élaguer. Les deux garde-fous ont été vérifiés en
+les cassant : sans le `Math.min`, le test de recalibrage tombe.
+
+**2. Contre le vrai provider, sur un vrai checkpoint** (2026-07-28). Le checkpoint
+de production le plus long en messages (run `1d08300a`, **569 messages, 40 266
+tokens**) passé dans la chaîne réelle `pruneToolOutputs` → `planCompaction` →
+sous-appel de résumé → reconstruction :
+
+| Étape | Résultat |
+| --- | --- |
+| Plan de compaction | seed 3 msg · à résumer 480 msg · queue 86 msg |
+| Sous-appel de résumé (`deepseek-v4-flash`) | note de 3 488 caractères, 0,0033 $ |
+| Historique reconstruit | **90 messages, 15 006 tokens** (−63 %), appariement valide |
+| Round suivant sur `openai/gpt-5.6-luna` | **200 OK**, 18 225 tokens de prompt |
+| Round suivant sur `anthropic/claude-sonnet-5` | **200 OK**, 30 719 tokens de prompt |
+
+Les deux modèles reprennent le fil correctement — la réponse enchaîne sur le
+travail réel du run (sélection multiple et actions groupées, MIN-75), pas sur une
+généralité. Le 400 d'appariement redouté ne se produit sur aucun des deux. Coût
+total de la vérification : **0,08 $**.
+
+Ce qui reste non couvert, et ne peut l'être qu'après déploiement : que l'event
+`compacted` atterrisse bien dans `agent_run_events` via le harness déployé, et que
+la sandbox poursuive après compaction.
+
+#### Le modèle est prévenu avant d'être coupé
+
+Troisième grief levé : le modèle recevait un résumé préfixé au milieu de son propre
+raisonnement, sans préavis. `runAgentLoop` injecte désormais, **une seule fois par
+chunk**, un message `user` court dès que le contexte franchit **70 % du seuil** —
+« finish the step you are on and reply, do not start new exploration » — et émet un
+event `status` de phase `context_warning`, qui donne au passage un précurseur
+mesurable de la compaction.
+
+**Pas de tool `get_context_remaining`**, et c'est délibéré : c'est le choix inverse
+de Codex. Le harness connaît déjà `lastPromptTokens` à chaque round ; faire dépenser
+un tour au modèle pour demander un chiffre qu'on peut lui pousser est un mauvais
+échange. Le commentaire est dans le code pour qu'on ne le « corrige » pas.
 
 ### 3.5 Self-correction et réessai
 
@@ -831,6 +948,15 @@ pèse ~140 000 tokens (558 Ko de JSON, 569 messages).
 
 **Mesurable.** Les events de phase `compacted` doivent devenir non nuls après
 recalibrage — et si `compacted` monte sans que la qualité tombe, le seuil est bon.
+
+> **Fait le 2026-07-28 (MIN-113).** Seuil borné par
+> `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000`, chemin complet exercé (test
+> d'intégration + vrai checkpoint contre le vrai provider), préavis
+> `context_warning` injecté à 70 % du seuil. Chiffres, calibrage et validation :
+> §3.4. **Découverte au passage** : le prompt caching n'amortit rien — les
+> breakpoints de `caching.ts` sont en tête d'historique, on paie donc plein tarif
+> l'intégralité de la conversation à chaque round. Levier estimé −88 % sur un run
+> long, soit bien plus que la compaction ; c'est un autre chantier.
 
 ---
 

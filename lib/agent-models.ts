@@ -55,6 +55,28 @@ export const AGENT_MAX_CONTINUATIONS = 20;
     Conservateur (proxy caractères/4 qui sous-estime le code) : sûr sur les modèles
     à large fenêtre (DeepSeek, Claude…). */
 export const AGENT_COMPACT_TOKEN_THRESHOLD = 70_000;
+/**
+ * PLAFOND ABSOLU du seuil de compaction, quelle que soit la fenêtre du modèle.
+ *
+ * Fenêtre ≠ budget. Le seuil valait 75 % de la fenêtre, et les modèles qu'on
+ * utilise ont des fenêtres de 1 M à 1,05 M → seuil effectif ~787 000 tokens, soit
+ * 5× notre plus gros checkpoint. Résultat : la compaction n'a jamais tourné une
+ * seule fois en production (MIN-113). Ce qui plafonne une session longue n'est pas
+ * la fenêtre, c'est le COÛT PAR ROUND : on renvoie tout l'historique à chaque appel
+ * et — mesuré, pas supposé — le prompt caching ne l'amortit pas (les breakpoints de
+ * `caching.ts` sont en tête d'historique, donc le bloc caché reste figé pendant que
+ * l'historique grossit ; le coût observé colle au tarif input plein à 2 % près).
+ *
+ * 120 000 vient de la mesure sur les 814 appels `ai_usage` de l'agent
+ * (docs/agent-harness-comparison.md §3.4) :
+ *   • p90 du contexte réel = 86 815 tokens → une session normale ne le voit jamais ;
+ *   • max observé = 158 301 → un plafond à 180 k ne se déclencherait JAMAIS, ce qui
+ *     reproduirait le bug qu'on corrige ici ;
+ *   • résumer est amorti en ~1,2 round dès 60 k, donc c'est la qualité (ne pas
+ *     harceler les sessions courtes) qui fixe le plancher, pas la rentabilité.
+ * À revoir si la distribution des contextes bouge — pas à l'aveugle.
+ */
+export const AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000;
 /** Taille (octets) de la queue récente préservée verbatim lors d'une compaction. */
 export const AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000;
 /** On ne lance pas de compaction (appel LLM en plus) s'il reste moins que ça de budget. */
