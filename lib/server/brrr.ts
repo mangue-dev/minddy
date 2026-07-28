@@ -1,6 +1,4 @@
 import "server-only";
-import { after } from "next/server";
-import type { User } from "@supabase/supabase-js";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { getAppEnv, type AppEnv } from "@/lib/env";
 import { SITE_URL } from "@/lib/site";
@@ -77,22 +75,6 @@ export async function sendBrrr(push: BrrrPush): Promise<void> {
   clearTimeout(timeout);
 }
 
-/**
- * Programme l'envoi hors du chemin de réponse : l'utilisateur qui vient de
- * s'inscrire ne doit pas attendre le push pour être redirigé. `after()` maintient
- * l'invocation en vie le temps de la requête sortante — sans lui, la lambda gèle
- * après la redirection et le push part une fois sur deux. Même motif que
- * lib/server/posthog.ts ; hors contexte de requête, on retombe sur un envoi
- * détaché.
- */
-function schedulePush(push: BrrrPush): void {
-  try {
-    after(() => sendBrrr(push));
-  } catch {
-    void sendBrrr(push);
-  }
-}
-
 /** Suffixe d'environnement : une inscription de test ne doit pas se faire passer
     pour un vrai utilisateur. Rien en production. */
 function envSuffix(env: AppEnv): string {
@@ -102,19 +84,37 @@ function envSuffix(env: AppEnv): string {
 /**
  * « Quelqu'un vient de créer un compte. »
  *
+ * Déclenchée quand l'adresse est CONFIRMÉE (MIN-117), par le webhook de base
+ * `app/api/webhooks/supabase/new-user` posé sur `auth.users` — c'est lui qui
+ * porte la logique de transition, cette fonction ne fait qu'envoyer. Un compte
+ * créé et jamais confirmé n'est pas un utilisateur : il ne déclenche rien.
+ *
+ * Elle partait auparavant de `app/auth/callback`. Le déplacement n'est pas
+ * cosmétique : une inscription par email appelle `signUp()` depuis le
+ * NAVIGATEUR, et le callback ne tournait qu'à l'ouverture du lien — lien qui
+ * était précisément cassé, d'où les inscriptions silencieuses.
+ *
+ * ATTENDUE, pas programmée via `after()` : l'appelant est un webhook, il n'y a
+ * aucune réponse utilisateur à ne pas retarder — même raisonnement que
+ * `notifySpendGuard`.
+ *
  * L'email est volontairement dans le message : c'est une alerte d'exploitation
  * pour l'équipe, pas un affichage produit — la règle « jamais l'email brut »
  * (lib/display-name.ts) vaut pour l'UI. Le nom, lui, suit bien la résolution
  * maison ; sans repli sur l'email il est vide quand le compte n'en porte pas.
  */
-export function notifyNewUser(user: User): void {
-  const email = user.email ?? "(sans email)";
-  const name = authDisplayName(user.user_metadata as AuthNameMeta, null, "");
-  const provider = user.app_metadata?.provider ?? "email";
+export async function notifyNewUser(params: {
+  email: string | null;
+  /** `raw_user_meta_data` de la ligne `auth.users` (= `user_metadata`). */
+  metadata: AuthNameMeta | null;
+  provider: string;
+}): Promise<void> {
+  const email = params.email ?? "(sans email)";
+  const name = authDisplayName(params.metadata, null, "");
 
-  schedulePush({
+  await sendBrrr({
     title: `🎉 Nouvel utilisateur minddy${envSuffix(getAppEnv())}`,
-    message: `${name ? `${name} (${email})` : email} vient de s'inscrire via ${provider}.`,
+    message: `${name ? `${name} (${email})` : email} vient de s'inscrire via ${params.provider}.`,
     threadId: "new-user",
     sound: "cha_ching",
   });

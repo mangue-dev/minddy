@@ -3,7 +3,6 @@ import type { EmailOtpType, User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
-import { notifyNewUser } from "@/lib/server/brrr";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
 
 const EMAIL_OTP_TYPES: ReadonlySet<EmailOtpType> = new Set([
@@ -46,9 +45,11 @@ function buildFailureRedirect(
  * n'est posé de ce fait, et le `distinctId` est l'id du compte, que
  * l'utilisateur nous confie déjà en créant ce compte.
  *
- * C'est aussi d'ici que part l'alerte push « nouvel utilisateur » (MIN-92) :
- * même signal, deux destinations — PostHog pour le compte, le téléphone pour
- * l'événement.
+ * L'alerte push « nouvel utilisateur » (MIN-92), elle, ne part PLUS d'ici : ce
+ * callback ne voit que les comptes dont quelqu'un a ouvert le lien, et une
+ * inscription par email ne le traverse jamais avant. Elle part désormais du
+ * webhook `auth.users` (MIN-117). Les événements PostHog restent, eux : ils
+ * datent la première SESSION, pas la création du compte.
  */
 function onAuthArrival(
   user: User | null,
@@ -78,14 +79,6 @@ function onAuthArrival(
     event: isFirstSignIn ? "user_signed_up" : "user_signed_in",
     properties: { method: provider, channel },
   });
-
-  // Le compte vient d'être créé → vibration. Attention, ce n'est pas exactement
-  // `isFirstSignIn` : un lien de confirmation cliqué dix minutes après le
-  // formulaire sort de la fenêtre de 10 s, et reste pourtant une inscription —
-  // c'est même le chemin normal, l'instance Supabase exige la confirmation.
-  if (isFirstSignIn || channel === "email_confirmation") {
-    notifyNewUser(user);
-  }
 }
 
 /**
@@ -152,7 +145,15 @@ export async function GET(request: NextRequest) {
       });
       if (error) {
         console.error("[auth/callback] verifyOtp failed:", error.message);
-        return buildFailureRedirect(origin, "verify_failed");
+        // Un lien de confirmation d'inscription mérite mieux que « ce lien de
+        // connexion n'est plus valide » : il est à usage unique et peut avoir
+        // été consommé par l'antivirus de messagerie du destinataire, qui
+        // pré-visite les liens. Le message dédié dit quoi faire (MIN-117).
+        return buildFailureRedirect(
+          origin,
+          "verify_failed",
+          otpType === "signup" ? "confirmation_failed" : "auth_callback_failed"
+        );
       }
       onAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
     }

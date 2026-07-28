@@ -39,7 +39,8 @@ export type MetaPageKey =
   | "feedback"
   | "notFound"
   | "oauthAuthorize"
-  | "oauthSuccess";
+  | "oauthSuccess"
+  | "emailConfirmed";
 
 /**
  * @param scope Contexte dynamique accolé au titre — le nom du projet sur les

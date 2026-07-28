@@ -346,6 +346,7 @@
   },
   "Auth": {
     "callbackFailed": "This sign-in link is no longer valid. Try signing in again.",
+    "confirmationFailed": "This confirmation link has expired or has already been used. Create an account again with the same address to receive a new one.",
     "oauthDenied": "Sign-in cancelled. Try again or use your email.",
     "oauthFailed": "Signing in with that service failed. Try again or use your email.",
     "passwordMismatch": "Passwords don't match.",
@@ -369,7 +370,10 @@
     "signIn": "Sign in",
     "alreadyHaveAccount": "Already have an account?",
     "noAccountYet": "Don't have an account yet?",
-    "createAccountLink": "Create an account"
+    "createAccountLink": "Create an account",
+    "emailConfirmedTitle": "Your email is confirmed",
+    "emailConfirmedBody": "Your account is active. Sign in to get started.",
+    "emailConfirmedCta": "Sign me in"
   },
   "BulkActions": {
     "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
@@ -880,6 +884,8 @@
     "oauthAuthorizeDescription": "An app is asking to connect to your minddy account through the MCP server.",
     "oauthSuccess": "Connected",
     "oauthSuccessDescription": "The app is connected to your minddy account.",
+    "emailConfirmed": "Email confirmed",
+    "emailConfirmedDescription": "Your email address is confirmed. You can now sign in to minddy.",
     "signIn": "Sign in"
   },
   "Stats": {

@@ -23,10 +23,7 @@ interface AuthContextValue {
   signUpWithPassword: (
     email: string,
     password: string,
-    options?: {
-      fullName?: string;
-      redirectAfter?: string;
-    }
+    options?: { fullName?: string }
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
   /** Wired for later — OAuth buttons aren't shown in the v1 foundations UI. */
   signInWithOAuth: (
@@ -134,25 +131,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUpWithPassword = useCallback(
-    async (
-      email: string,
-      password: string,
-      options?: {
-        fullName?: string;
-        redirectAfter?: string;
-      }
-    ) => {
-      const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
-      const redirectAfter = sanitizeInternalRedirectPath(options?.redirectAfter);
-      if (redirectAfter !== "/home") {
-        callbackUrl.searchParams.set("next", redirectAfter);
-      }
-
+    async (email: string, password: string, options?: { fullName?: string }) => {
       const { data, error } = await getSupabase().auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: callbackUrl.toString(),
+          // Pas de `?next=` ici (MIN-117) : c'est le TEMPLATE d'email GoTrue qui
+          // pose la destination finale (/auth/confirmed). Ce qui se joue dans
+          // cette URL, c'est l'ORIGINE — dev et previews doivent recevoir un lien
+          // vers la leur, pas vers la prod. GoTrue ne la retient que si elle
+          // figure dans l'allowlist « Redirect URLs » ; sinon il retombe sur le
+          // Site URL, et le lien de confirmation part vers le mauvais domaine.
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           ...(options?.fullName ? { data: { full_name: options.fullName } } : {}),
         },
       });

@@ -1,0 +1,226 @@
+<!--
+  Template GoTrue « Confirm signup » (MIN-117).
+
+  COPIE VERSIONNÉE. Le template qui SERT vit dans le dashboard Supabase
+  (Authentication → Emails → Templates → « Confirm signup »), qui n'est pas
+  versionné : ce fichier existe pour qu'une relecture, un diff ou une
+  restauration soient possibles. Toute modification ici doit être recollée
+  là-bas, et l'inverse.
+
+  Sujet à poser au-dessus du corps :
+      Confirmez votre adresse e-mail · Confirm your email
+
+  Le lien est à JETON, pas à `{{ .ConfirmationURL }}` : celui-ci renvoie sur
+  `?code=…`, dont l'échange exige le `code_verifier` du localStorage du
+  navigateur d'ORIGINE (flux PKCE de @supabase/ssr). Inscription sur PC +
+  confirmation sur mobile échouait pour cette seule raison. `verifyOtp()`, que
+  déclenche `token_hash`, ne dépend d'aucun appareil.
+
+  `{{ .RedirectTo }}` vaut l'`emailRedirectTo` VALIDÉ — donc l'origine du
+  navigateur qui s'est inscrit (dev, preview ou prod), à condition qu'elle
+  figure dans Authentication → URL Configuration → Redirect URLs. Hors
+  allowlist, GoTrue retombe sur le Site URL. S'il ressort vide sur un envoi
+  réel, le remplacer par `{{ .SiteURL }}/auth/callback`.
+
+  Tout le style critique est EN LIGNE : le bloc <style> n'ajoute que le mode
+  sombre, que la plupart des clients ignorent. L'e-mail reste juste sans lui.
+  Pas de logo en image, volontairement : les images sont bloquées par défaut
+  dans une bonne part des clients, et un PNG sombre disparaîtrait en thème
+  sombre. Le wordmark est du texte, il s'adapte et s'affiche toujours.
+
+  Couleurs = les tokens de mangue-ui convertis d'oklch en hex (oklch n'est
+  pas supporté en e-mail) :
+    #f5f7fb --background   #ffffff --card       #0a0a0a --foreground
+    #606369 --muted-fg     #d9dce5 --border     #000000 --brand
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>Confirm your email</title>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .m-bg    { background-color: #070809 !important; }
+        .m-card  { background-color: #0e0f11 !important; border-color: #24262b !important; }
+        .m-word,
+        .m-title { color: #fafafa !important; }
+        .m-text,
+        .m-foot  { color: #858688 !important; }
+        .m-hr    { border-color: #24262b !important; }
+        .m-url   { color: #000000 !important; }
+      }
+      /* Outlook.com applique son propre mode sombre via cet attribut. */
+      [data-ogsc] .m-bg    { background-color: #070809 !important; }
+      [data-ogsc] .m-card  { background-color: #0e0f11 !important; border-color: #24262b !important; }
+      [data-ogsc] .m-word,
+      [data-ogsc] .m-title { color: #fafafa !important; }
+      [data-ogsc] .m-text,
+      [data-ogsc] .m-foot  { color: #858688 !important; }
+      [data-ogsc] .m-hr    { border-color: #24262b !important; }
+      [data-ogsc] .m-url   { color: #000000 !important; }
+    </style>
+  </head>
+
+  <body
+    class="m-bg"
+    style="margin:0;padding:0;width:100%;background-color:#f5f7fb;-webkit-font-smoothing:antialiased;"
+  >
+    <!-- Texte de prévisualisation (la ligne grise à côté de l'objet), masqué dans le corps -->
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+      One click and your minddy account is active. Un clic et votre compte minddy est actif.
+    </div>
+
+    <table
+      role="presentation"
+      width="100%"
+      border="0"
+      cellpadding="0"
+      cellspacing="0"
+      class="m-bg"
+      style="background-color:#f5f7fb;"
+    >
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <table
+            role="presentation"
+            width="600"
+            border="0"
+            cellpadding="0"
+            cellspacing="0"
+            style="width:100%;max-width:600px;"
+          >
+            <!-- Carte -->
+            <tr>
+              <td
+                class="m-card"
+                style="background-color:#ffffff;border:1px solid #d9dce5;border-radius:16px;padding:40px;"
+              >
+                <!-- Wordmark -->
+                <p
+                  class="m-word"
+                  style="margin:0 0 32px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:600;letter-spacing:-0.03em;line-height:24px;color:#0a0a0a;"
+                >
+                  minddy
+                </p>
+
+                <!-- ─────────── English ─────────── -->
+                <h1
+                  class="m-title"
+                  style="margin:0 0 10px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:30px;color:#0a0a0a;"
+                >
+                  Confirm your email
+                </h1>
+                <p
+                  class="m-text"
+                  style="margin:0 0 24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#606369;"
+                >
+                  One click and your minddy account is active. This link works from any
+                  device — open it on your phone if that is easier.
+                </p>
+
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" bgcolor="#000000" style="border-radius:12px;">
+                      <a
+                        href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed"
+                        style="display:inline-block;padding:13px 26px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;border-radius:12px;"
+                        >Confirm my email</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Filet -->
+                <div
+                  class="m-hr"
+                  style="border-top:1px solid #d9dce5;font-size:0;line-height:0;margin:36px 0;"
+                >
+                  &nbsp;
+                </div>
+
+                <!-- ─────────── Français ─────────── -->
+                <h1
+                  class="m-title"
+                  style="margin:0 0 10px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:30px;color:#0a0a0a;"
+                >
+                  Confirmez votre e-mail
+                </h1>
+                <p
+                  class="m-text"
+                  style="margin:0 0 24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#606369;"
+                >
+                  Un clic et votre compte minddy est actif. Ce lien fonctionne depuis
+                  n'importe quel appareil — ouvrez-le sur votre téléphone si c'est plus
+                  simple.
+                </p>
+
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" bgcolor="#000000" style="border-radius:12px;">
+                      <a
+                        href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed"
+                        style="display:inline-block;padding:13px 26px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;border-radius:12px;"
+                        >Confirmer mon e-mail</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Repli : le lien en clair, pour les clients qui mangent les boutons -->
+                <div
+                  class="m-hr"
+                  style="border-top:1px solid #d9dce5;font-size:0;line-height:0;margin:36px 0 24px;"
+                >
+                  &nbsp;
+                </div>
+                <p
+                  class="m-foot"
+                  style="margin:0 0 8px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
+                >
+                  Button not working? Copy this link into your browser.<br />
+                  Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur.
+                </p>
+                <p
+                  style="margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;word-break:break-all;"
+                >
+                  <a
+                    class="m-url"
+                    href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed"
+                    style="color:#000000;text-decoration:none;"
+                    >{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed</a
+                  >
+                </p>
+              </td>
+            </tr>
+
+            <!-- Pied, hors carte -->
+            <tr>
+              <td style="padding:24px 8px 0;text-align:center;">
+                <p
+                  class="m-foot"
+                  style="margin:0 0 6px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
+                >
+                  Didn't create a minddy account? You can ignore this email.<br />
+                  Vous n'êtes pas à l'origine de cette demande ? Ignorez cet e-mail.
+                </p>
+                <p
+                  class="m-foot"
+                  style="margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
+                >
+                  <a
+                    href="https://www.minddy.app"
+                    style="color:#606369;text-decoration:none;"
+                    >minddy.app</a
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

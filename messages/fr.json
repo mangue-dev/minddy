@@ -346,6 +346,7 @@
   },
   "Auth": {
     "callbackFailed": "Ce lien de connexion n'est plus valide. Réessayez de vous connecter.",
+    "confirmationFailed": "Ce lien de confirmation a expiré ou a déjà été utilisé. Recréez un compte avec la même adresse pour en recevoir un nouveau.",
     "oauthDenied": "Connexion annulée. Réessayez ou utilisez votre e-mail.",
     "oauthFailed": "La connexion avec ce service a échoué. Réessayez ou utilisez votre e-mail.",
     "passwordMismatch": "Les mots de passe ne correspondent pas.",
@@ -369,7 +370,10 @@
     "signIn": "Se connecter",
     "alreadyHaveAccount": "Déjà un compte ?",
     "noAccountYet": "Pas encore de compte ?",
-    "createAccountLink": "Créer un compte"
+    "createAccountLink": "Créer un compte",
+    "emailConfirmedTitle": "Votre e-mail a été validé",
+    "emailConfirmedBody": "Votre compte est actif. Connectez-vous pour commencer.",
+    "emailConfirmedCta": "Me connecter"
   },
   "BulkActions": {
     "selected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
@@ -880,6 +884,8 @@
     "oauthAuthorizeDescription": "Une application demande à se connecter à votre compte minddy via le serveur MCP.",
     "oauthSuccess": "Connecté",
     "oauthSuccessDescription": "L'application est connectée à votre compte minddy.",
+    "emailConfirmed": "E-mail confirmé",
+    "emailConfirmedDescription": "Votre adresse e-mail est confirmée. Vous pouvez vous connecter à minddy.",
     "signIn": "Connexion"
   },
   "Stats": {

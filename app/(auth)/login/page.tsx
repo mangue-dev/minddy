@@ -60,6 +60,7 @@ function LoginForm() {
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
   const authErrorMessages: Record<string, string> = {
     auth_callback_failed: t("callbackFailed"),
+    confirmation_failed: t("confirmationFailed"),
     oauth_denied: t("oauthDenied"),
     oauth_failed: t("oauthFailed"),
   };
@@ -93,7 +94,7 @@ function LoginForm() {
         const { requiresEmailConfirmation } = await signUpWithPassword(
           email,
           password,
-          { fullName: fullName.trim() || undefined, redirectAfter: redirectTo }
+          { fullName: fullName.trim() || undefined }
         );
         track("signup_succeeded", {
           requires_email_confirmation: requiresEmailConfirmation,
