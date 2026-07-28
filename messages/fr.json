@@ -1735,6 +1735,7 @@
     "agentGrep": "Recherche de {pattern}",
     "agentEditFile": "Édition de {path}",
     "agentApplyEdits": "{count, plural, one {Édition de # fichier} other {Édition de # fichiers}}",
+    "agentApplyPatch": "{count, plural, one {Patch de # fichier} other {Patch de # fichiers}}",
     "agentWriteFile": "Création de {path}",
     "agentMoveFile": "Renommage {from} → {to}",
     "agentDeleteFile": "Suppression de {path}",

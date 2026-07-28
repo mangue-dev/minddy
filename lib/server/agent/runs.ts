@@ -49,6 +49,13 @@ export interface AgentCheckpoint {
    * chunk. Amorcé au HEAD du premier chunk (« rien de changé encore » pour ce run).
    */
   lastFilesSha?: string;
+  /**
+   * Instructions repo déjà servies au modèle (MIN-115) : chemins vus (racine à
+   * l'amorce, sous-dossiers à la première édition dedans) et octets consommés sur
+   * le cap global. Persisté pour qu'un tour éclaté sur plusieurs chunks ne
+   * re-serve jamais un `AGENTS.md` que le modèle a déjà lu.
+   */
+  instructions?: { paths: string[]; bytes: number };
 }
 
 export interface AgentRun {

@@ -495,3 +495,44 @@ describe("buildAgentSystemPrompt — workdir, grep littéral, batch partiel", ()
     });
   }
 });
+
+/**
+ * MIN-115 : les modèles `gpt-*` reçoivent `apply_patch` À LA PLACE d'`edit_file` /
+ * `apply_edits` / `write_file` (cf. `agentToolsFor`). Le prompt doit décrire le jeu
+ * RÉELLEMENT servi : décrire un tool absent, c'est un round brûlé sur un
+ * « Unknown tool », et le décrire deux fois, c'est un modèle qui hésite.
+ */
+describe("buildAgentSystemPrompt — interface d'édition selon le modèle", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`décrit le format de patch et RIEN d'autre (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor, applyPatch: true });
+      expect(prompt).toContain("`apply_patch`");
+      expect(prompt).toContain("*** Begin Patch");
+      expect(prompt).toContain("*** Update File:");
+      expect(prompt).toContain("*** Move to:");
+      expect(prompt).toContain("@@");
+      for (const absent of ["`edit_file`", "`apply_edits`", "`write_file`", "old_string"]) {
+        expect(prompt).not.toContain(absent);
+      }
+      // Et la reprise après échec parle de hunks, pas d'`old_string`.
+      expect(prompt).toMatch(/rebuild that hunk/);
+    });
+
+    it(`garde l'édition par chaîne pour tous les autres modèles (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toContain("`edit_file`");
+      expect(prompt).toContain("`apply_edits`");
+      expect(prompt).toContain("`write_file`");
+      expect(prompt).not.toContain("apply_patch");
+      expect(prompt).not.toContain("*** Begin Patch");
+    });
+
+    it(`garde \`move_file\` / \`delete_file\` dans les deux branches (ancrage ${anchor})`, () => {
+      for (const applyPatch of [true, false]) {
+        const prompt = buildAgentSystemPrompt({ anchor, applyPatch });
+        expect(prompt).toContain("`move_file`");
+        expect(prompt).toContain("`delete_file`");
+      }
+    });
+  }
+});

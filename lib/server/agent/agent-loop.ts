@@ -279,6 +279,16 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
           .slice(0, 50),
       };
     }
+    case "apply_patch": {
+      // Un patch est UNE grosse chaîne : on n'en garde que les en-têtes de section,
+      // pour la même raison que les chemins d'`apply_edits` — sans eux, la vue live
+      // « fichiers changés » est aveugle sur les runs `gpt-*` (MIN-115). Lecture
+      // par regex, jamais un parse : un patch malformé ne doit pas casser l'event.
+      const paths = [...String(args.patch ?? "").matchAll(/^\*\*\* (?:Add|Update|Delete) File:(.*)$/gm)]
+        .map((m) => m[1].trim())
+        .filter(Boolean);
+      return { count: paths.length, paths: paths.slice(0, 50) };
+    }
     case "glob":
       return { pattern: String(args.pattern ?? "") };
     case "grep":

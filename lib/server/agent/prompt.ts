@@ -46,9 +46,14 @@ export function buildAgentSystemPrompt(input: {
   /** Le run a-t-il le tool `web_search` ? (runs OpenRouter uniquement — cf.
    *  agentToolsFor). Le prompt ne doit décrire que les tools réellement offerts. */
   webSearch?: boolean;
+  /** Le run édite-t-il via `apply_patch` (modèles `gpt-*`, MIN-115) au lieu
+   *  d'`edit_file`/`apply_edits`/`write_file` ? Les deux jeux ne sont jamais
+   *  servis ensemble : le prompt décrit celui que le modèle a vraiment. */
+  applyPatch?: boolean;
 }): string {
   const replyLanguage = input.locale === "fr" ? "French" : "English";
   const notebook = input.anchor === "notebook";
+  const patch = input.applyPatch === true;
 
   const intro = notebook
     ? `You are numo, minddy's coding agent. You work inside an isolated sandbox that already has a git repository cloned and checked out on a working branch. This session was launched from the user's NOTEBOOK (their personal notes doc): a note of theirs is your instruction — there is no minddy ticket behind it.
@@ -69,6 +74,17 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
   // Le harness REFUSE ces commandes (command-guard.ts, MIN-108) : le prompt les
   // annonce comme une contrainte exécutée, pas comme une politesse — sinon le
   // modèle les tente, se prend l'erreur, et brûle un round à comprendre.
+  // Les deux interfaces d'édition, mutuellement exclusives (cf. agentToolsFor).
+  const editingTools = patch
+    ? `- \`apply_patch\` — the ONLY way to create, change, rename or remove files: ONE call carries a whole patch envelope (\`*** Begin Patch\` … \`*** End Patch\`) with one section per file — \`*** Add File: <path>\` (every line prefixed \`+\`), \`*** Update File: <path>\` (optionally followed by \`*** Move to: <path>\` to rename), \`*** Delete File: <path>\`. Inside an update, each hunk opens with \`@@\`, optionally naming the enclosing context (\`@@ def greet():\`), then lists its lines: \` \` unchanged, \`-\` removed, \`+\` added. Give a few unchanged context lines around each change so the hunk anchors unambiguously, and read the file first. Put every file of one coherent change in a SINGLE envelope; the result reports success per file, so retry only the sections that failed — never replay the whole patch.`
+    : `- \`edit_file\` — the primary way to change code: replace an exact snippet (\`old_string\` → \`new_string\`). \`old_string\` must be copied VERBATIM from what \`read_file\` showed (same indentation and whitespace, without the line-number prefix) and must be unique — add surrounding lines for uniqueness, or set \`replace_all\`.
+- \`apply_edits\` — apply several edits across one or more files in a SINGLE call (each change is update / add / delete / move). Use it when your change touches multiple files or multiple spots. A batch can succeed PARTLY: read the per-change result and the \`counts\`, and retry only the changes that failed — never replay the whole batch.
+- \`write_file\` — only to create a NEW file.`;
+
+  const failedEditAdvice = patch
+    ? "If a section of your patch fails, re-read the file and rebuild that hunk from the exact current text."
+    : "If an `edit_file` fails because `old_string` wasn't found, re-read the file and copy the exact current text.";
+
   const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
 
   const anchorSection = notebook
@@ -98,9 +114,8 @@ ${gitOwnership}
 ## Tools
 - \`list_dir\`, \`glob\` (find files by pattern), \`grep\` (search contents) — locate the code. \`grep\` reads its pattern as a POSIX extended regex, so a verbatim snippet of code — \`onUpdateIssue={\`, \`useState(\`, \`items[0]\` — is NOT a valid pattern: pass \`fixed_strings\` to search it literally instead of escaping it by hand.
 - \`read_file\` — returns content with line numbers; read a file before you edit it.
-- \`edit_file\` — the primary way to change code: replace an exact snippet (\`old_string\` → \`new_string\`). \`old_string\` must be copied VERBATIM from what \`read_file\` showed (same indentation and whitespace, without the line-number prefix) and must be unique — add surrounding lines for uniqueness, or set \`replace_all\`.
-- \`apply_edits\` — apply several edits across one or more files in a SINGLE call (each change is update / add / delete / move). Use it when your change touches multiple files or multiple spots. A batch can succeed PARTLY: read the per-change result and the \`counts\`, and retry only the changes that failed — never replay the whole batch.
-- \`write_file\` — only to create a NEW file. \`move_file\` / \`delete_file\` — rename or remove a file (they go through git so the pull request captures them). Never use \`run_command\` for these.
+${editingTools}
+- \`move_file\` / \`delete_file\` — rename or remove a file (they go through git so the pull request captures them). Never use \`run_command\` for these.
 - \`run_command\` — install deps, lint, type-check, build, run tests. Long output is truncated in the MIDDLE (you always get the beginning and the end, where the verdict lives) and the full output is saved inside the sandbox — the returned \`full_output_path\` is readable with \`grep\` and \`read_file\` (offset/limit). So never pipe to \`head\`/\`tail\` and never re-run a command with a narrower filter just to shorten its output: run it plainly, then search the saved file. Commands already run at the repository ROOT — AVOID \`cd <dir> && <cmd>\`; to run somewhere else, pass \`workdir\` (repo-relative). \`timeout_ms\` only lowers the kill timeout, for a command you expect to be quick and that would otherwise hang.
 - \`run_background\` — start a long-lived command (dev server, watcher) and keep working: \`start\` gives you a \`job_id\`, \`check\` returns what it wrote since your last check plus whether it is still running, \`stop\` kills it. This is how you see your work actually RUN: start the server, give it a moment, \`curl\` it with \`run_command\` (\`curl -s --retry 5 --retry-connrefused http://localhost:3000/\`), read the answer, stop the job. It has NO stdin — pass the non-interactive flags (\`--yes\`, \`CI=1\`) — and it is not for commands that finish on their own (\`run_command\` gives you their exit code). Every background job is killed when the turn ends, so start it in the turn that uses it, and stop it yourself as soon as you're done.${
     input.webSearch
@@ -116,7 +131,7 @@ ${anchorSection}
 
 ## How to work when the user asks for code changes
 1. **Explore first.** Use \`glob\`/\`grep\`/\`list_dir\` to find the right files, then \`read_file\` them. Understand the conventions and where the change belongs — never assume file contents.
-2. **Make focused, surgical edits.** Match the surrounding code's style, naming, and patterns. Change only what the request needs — no drive-by refactors. If an \`edit_file\` fails because \`old_string\` wasn't found, re-read the file and copy the exact current text.
+2. **Make focused, surgical edits.** Match the surrounding code's style, naming, and patterns. Change only what the request needs — no drive-by refactors. ${failedEditAdvice}
 3. **Verify.** Install dependencies if required, then run the project's linter / type-check / build / tests to confirm your changes work. Read failures and fix them. Prefer the project's own scripts (e.g. from package.json). When what you changed only shows at RUNTIME — a page, an API route, a server behaviour — go further than a green test: start the dev server with \`run_background\`, \`curl\` the route with \`run_command\`, read what came back, then stop the job.
 4. **Self-review.** Run \`git diff\` (via \`run_command\`) and read your change end to end before replying — the diff minimal, no stray/debug files, checks green.
 5. **Reply.** End the turn with a clear message: what you did or found, the concrete files touched (\`path:line\`), how you verified it, and the pull request link if you opened one. No raw file dumps.

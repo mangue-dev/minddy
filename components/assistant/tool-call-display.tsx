@@ -484,6 +484,20 @@ const TOOL_META: Record<string, ToolMeta> = {
               : 0,
       }),
   },
+  apply_patch: {
+    icon: FileStack,
+    // Même repli que `apply_edits` : `patch` est la chaîne brute du modèle, et ce
+    // que le fil relit est le résumé à plat de `toolArgSummary` — `{ count, paths }`.
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentApplyPatch", {
+        count:
+          typeof args.count === "number"
+            ? args.count
+            : Array.isArray(args.paths)
+              ? args.paths.length
+              : 0,
+      }),
+  },
   move_file: {
     icon: FileSymlink,
     getLabel: (args, _r, _s, _st, t) =>

@@ -50,6 +50,14 @@ import {
 } from "./command-output";
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
 import { applyEdit } from "./edit";
+import { applyPatchEdits, parsePatch, usesApplyPatch, type PatchOp } from "./patch";
+import {
+  REPO_INSTRUCTION_FILES,
+  collectTouchedInstructions,
+  formatBootInstructions,
+  type InstructionsState,
+  type RepoInstructionFile,
+} from "./repo-instructions";
 import {
   runAgentLoop,
   type AgentChatMessage,
@@ -216,8 +224,44 @@ function makeExecTool(
   /** Registre des jobs de fond du chunk (MIN-114). Tenu par l'appelant : c'est lui
       qui les tue avant chaque push et en fin de chunk. */
   background: BackgroundJobs,
+  /** Instructions repo déjà servies (MIN-115) — muté ici, persisté par l'appelant. */
+  instructions: InstructionsState,
 ): ExecuteAgentTool {
   let outputSeq = 0;
+
+  /**
+   * Colle au résultat d'un tool d'édition réussi les instructions des SOUS-DOSSIERS
+   * qu'il vient de toucher (MIN-115). Codex concatène tout l'arbre à l'amorce ; nous
+   * chargeons PARESSEUSEMENT, à la première édition sous un dossier — un monorepo
+   * remplirait sinon le budget de conventions de paquets jamais ouverts, au détriment
+   * de celles de la racine. Le bloc part dans le RÉSULTAT du tool : l'historique
+   * d'amorce, lui, est figé par le checkpoint. La règle (une lecture par chemin et
+   * par run, budget global) vit dans `repo-instructions.ts` ; ici il n'y a que la
+   * sandbox. Best-effort — un `AGENTS.md` illisible ne casse pas l'édition.
+   *
+   * Le bloc passe EN TÊTE de l'objet : le résultat entier traverse `headTail`, qui
+   * élide le MILIEU — la tête survit, et un gros diff en queue aussi.
+   */
+  const withTouchedInstructions = async (
+    res: { result: unknown; success: boolean },
+    paths: string[],
+  ): Promise<{ result: unknown; success: boolean }> => {
+    if (!res.success) return res;
+    const block = await collectTouchedInstructions(
+      paths.filter(Boolean),
+      instructions,
+      (path) => readWorkFile(sandbox, path).catch(() => null),
+    ).catch((err) => {
+      console.error("[agent-execute] subdir instructions failed:", (err as Error).message);
+      return null;
+    });
+    if (!block) return res;
+    if (typeof res.result === "string") {
+      return { ...res, result: `${block}\n\n${res.result}` };
+    }
+    return { ...res, result: { repo_instructions: block, ...(res.result as object) } };
+  };
+
   return async (name, args) => {
     if (anchor.kind === "issue" && ISSUE_TOOL_NAMES.has(name)) {
       return await executeIssueTool(anchor.ctx, name, args);
@@ -302,26 +346,34 @@ function makeExecTool(
             args.replace_all === true,
           );
           await writeWorkFile(sandbox, path, edit.content);
-          return {
-            result: {
-              path,
-              additions: edit.additions,
-              deletions: edit.deletions,
-              diff: cap(edit.diff, EDIT_DIFF_CAP),
+          return await withTouchedInstructions(
+            {
+              result: {
+                path,
+                additions: edit.additions,
+                deletions: edit.deletions,
+                diff: cap(edit.diff, EDIT_DIFF_CAP),
+              },
+              success: true,
             },
-            success: true,
-          };
+            [path],
+          );
         } catch (err) {
           return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
         }
       }
       case "write_file": {
-        await writeWorkFile(sandbox, String(args.path ?? ""), String(args.content ?? ""));
-        return { result: `Wrote ${args.path}`, success: true };
+        const path = String(args.path ?? "");
+        await writeWorkFile(sandbox, path, String(args.content ?? ""));
+        return await withTouchedInstructions({ result: `Wrote ${path}`, success: true }, [path]);
       }
       case "move_file": {
-        await moveWorkFile(sandbox, String(args.from ?? ""), String(args.to ?? ""));
-        return { result: `Moved ${args.from} → ${args.to}`, success: true };
+        const to = String(args.to ?? "");
+        await moveWorkFile(sandbox, String(args.from ?? ""), to);
+        return await withTouchedInstructions(
+          { result: `Moved ${args.from} → ${to}`, success: true },
+          [to],
+        );
       }
       case "delete_file": {
         await deleteWorkFile(sandbox, String(args.path ?? ""));
@@ -379,10 +431,94 @@ function makeExecTool(
         // d'échec de 42 % qui ne mesurait rien. Le détail par changement dit déjà
         // quoi reprendre ; `counts` le rend lisible d'un coup d'œil.
         const okCount = applied.filter((r) => r.ok === true).length;
-        return {
-          result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
-          success: okCount > 0,
-        };
+        return await withTouchedInstructions(
+          {
+            result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
+            success: okCount > 0,
+          },
+          applied.filter((r) => r.ok === true).map((r) => String(r.move_to ?? r.path ?? "")),
+        );
+      }
+      case "apply_patch": {
+        // Le format `apply_patch` de Codex/OpenCode (MIN-115), servi aux modèles
+        // `gpt-*` à la PLACE d'edit_file/apply_edits/write_file. `patch.ts` parse
+        // et traduit en substitutions ; l'application reste la cascade d'edit.ts.
+        // Un patch illisible revient en erreur de tool : le modèle lit pourquoi et
+        // corrige au round suivant, sans qu'aucun fichier n'ait été touché.
+        let ops: PatchOp[];
+        try {
+          ops = parsePatch(String(args.patch ?? args.patchText ?? ""));
+        } catch (err) {
+          return {
+            result: { error: err instanceof Error ? err.message : String(err) },
+            success: false,
+          };
+        }
+        const applied: Array<Record<string, unknown>> = [];
+        for (const op of ops) {
+          try {
+            if (op.op === "delete") {
+              await deleteWorkFile(sandbox, op.path);
+              applied.push({ path: op.path, op: "delete", ok: true });
+            } else if (op.op === "add") {
+              const existing = await readWorkFile(sandbox, op.path);
+              if (existing !== null) {
+                throw new Error(
+                  `File already exists: ${op.path}. Use '*** Update File: ${op.path}' to change it.`,
+                );
+              }
+              await writeWorkFile(sandbox, op.path, op.content);
+              applied.push({ path: op.path, op: "add", ok: true });
+            } else {
+              const original = await readWorkFile(sandbox, op.path);
+              if (original === null) {
+                throw new Error(
+                  `File not found: ${op.path}. Use '*** Add File: ${op.path}' to create it.`,
+                );
+              }
+              const edited = applyPatchEdits(op.path, original, op.edits);
+              if (op.moveTo) {
+                // Renommage d'abord (git mv, pour que la PR le capture), contenu ensuite.
+                await moveWorkFile(sandbox, op.path, op.moveTo);
+                await writeWorkFile(sandbox, op.moveTo, edited.content);
+                applied.push({
+                  path: op.path,
+                  op: "move",
+                  ok: true,
+                  move_to: op.moveTo,
+                  additions: edited.additions,
+                  deletions: edited.deletions,
+                });
+              } else {
+                await writeWorkFile(sandbox, op.path, edited.content);
+                applied.push({
+                  path: op.path,
+                  op: "update",
+                  ok: true,
+                  additions: edited.additions,
+                  deletions: edited.deletions,
+                });
+              }
+            }
+          } catch (err) {
+            applied.push({
+              path: op.path,
+              op: op.op,
+              ok: false,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+        // Même règle que `apply_edits` (MIN-109) : `success` = « au moins une
+        // section est passée ». Le détail par fichier dit quoi reprendre.
+        const okCount = applied.filter((r) => r.ok === true).length;
+        return await withTouchedInstructions(
+          {
+            result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
+            success: okCount > 0,
+          },
+          applied.filter((r) => r.ok === true).map((r) => String(r.move_to ?? r.path ?? "")),
+        );
       }
       case "run_command": {
         const command = String(args.command ?? "");
@@ -452,33 +588,36 @@ function makeExecTool(
   };
 }
 
-/** Fichiers d'instructions repo lus à la racine du clone (ordre = priorité d'affichage). */
-const REPO_INSTRUCTION_FILES = ["AGENTS.md", "CLAUDE.md"];
-/** Cap des instructions repo injectées (miroir du project_doc_max_bytes de Codex). */
-const REPO_INSTRUCTIONS_MAX_BYTES = 32_000;
+/** Lit un fichier d'instructions du dépôt, ou null (absent / illisible). */
+async function readInstructionFile(
+  sandbox: Sandbox,
+  path: string,
+): Promise<RepoInstructionFile | null> {
+  try {
+    const content = await readWorkFile(sandbox, path);
+    return content?.trim() ? { path, content } : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Lit les instructions du dépôt (AGENTS.md / CLAUDE.md à la racine) et les emballe
  * en un message délimité, ou null s'il n'y en a pas. Lu UNE fois à l'amorce (le
  * checkpoint le transporte ensuite). C'est là qu'un repo déclare ses commandes de
  * build/test, ses conventions et ses interdits — le carburant d'un diff correct.
+ * Celles des SOUS-DOSSIERS arrivent plus tard, à la première édition dedans
+ * (MIN-115) — cf. `makeExecTool`.
  */
-async function readRepoInstructions(sandbox: Sandbox): Promise<string | null> {
-  const parts: string[] = [];
+async function readRepoInstructions(
+  sandbox: Sandbox,
+): Promise<{ message: string; bytes: number } | null> {
+  const files: RepoInstructionFile[] = [];
   for (const name of REPO_INSTRUCTION_FILES) {
-    try {
-      const content = await readWorkFile(sandbox, name);
-      if (content?.trim()) parts.push(`## ${name}\n${content.trim()}`);
-    } catch {
-      // fichier absent / illisible → on ignore
-    }
+    const file = await readInstructionFile(sandbox, name);
+    if (file) files.push(file);
   }
-  if (parts.length === 0) return null;
-  let body = parts.join("\n\n");
-  if (body.length > REPO_INSTRUCTIONS_MAX_BYTES) {
-    body = `${body.slice(0, REPO_INSTRUCTIONS_MAX_BYTES)}… [truncated]`;
-  }
-  return `# Repository instructions\nThe repository ships these instructions. Follow them; they override the general conventions on project-specific matters (build/test commands, structure, forbidden areas).\n\n<REPO_INSTRUCTIONS>\n${body}\n</REPO_INSTRUCTIONS>`;
+  return formatBootInstructions(files);
 }
 
 interface IssueContext {
@@ -778,6 +917,12 @@ export async function executeAgentRun(
     // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
     let messages: AgentChatMessage[];
     let usageSeqStart = run.checkpoint?.usageSeq ?? run.continuations * 1000;
+    // Instructions repo déjà servies : reprises du checkpoint sur un tour éclaté en
+    // plusieurs chunks, sinon vides — l'amorce les remplit juste en dessous (MIN-115).
+    const instructions: InstructionsState = {
+      paths: [...(run.checkpoint?.instructions?.paths ?? [])],
+      bytes: run.checkpoint?.instructions?.bytes ?? 0,
+    };
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
     } else {
@@ -785,6 +930,7 @@ export async function executeAgentRun(
         locale: commentLocale,
         anchor: issue ? "issue" : "notebook",
         webSearch: webSearchAllowed,
+        applyPatch: usesApplyPatch(run.model),
       });
       const contextMsg = issue
         ? buildAgentContextMessage({
@@ -818,8 +964,14 @@ export async function executeAgentRun(
       });
       if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
       // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après le contexte.
+      // La racine est TOUJOURS marquée vue, trouvée ou non : ce qui suit ne recharge
+      // que les sous-dossiers, à la première édition dedans (MIN-115).
       const repoInstructions = await readRepoInstructions(sandbox);
-      if (repoInstructions) messages.push({ role: "user", content: repoInstructions });
+      instructions.paths.push(...REPO_INSTRUCTION_FILES);
+      if (repoInstructions) {
+        messages.push({ role: "user", content: repoInstructions.message });
+        instructions.bytes += repoInstructions.bytes;
+      }
       // La demande du lanceur, en dernier : c'est À ELLE que l'agent répond.
       // Run CARNET : la note part emballée dans la MÊME structure que « copier
       // le prompt » du carnet (balises <notes>, sémantique des cases, « ce sont
@@ -1063,6 +1215,7 @@ export async function executeAgentRun(
       tools: agentToolsFor({
         anchor: issue ? "issue" : "notebook",
         webSearch: webSearchAllowed,
+        model: run.model,
       }),
       model: run.model,
       apiKey,
@@ -1080,6 +1233,7 @@ export async function executeAgentRun(
         webSearch,
         run.continuations * 1000,
         background,
+        instructions,
       ),
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
@@ -1103,6 +1257,7 @@ export async function executeAgentRun(
       messages: result.messages,
       usageSeq: result.usageSeqEnd,
       lastFilesSha: run.checkpoint?.lastFilesSha ?? baselineHead,
+      instructions,
     };
     const nowIso = new Date().toISOString();
 

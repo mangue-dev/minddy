@@ -494,6 +494,20 @@ export interface EditResult {
   deletions: number;
 }
 
+/** Lignes ajoutées / supprimées entre deux contenus (fins de ligne neutralisées). */
+export function countLineChanges(
+  before: string,
+  after: string,
+): { additions: number; deletions: number } {
+  let additions = 0;
+  let deletions = 0;
+  for (const change of diffLines(normalizeLineEndings(before), normalizeLineEndings(after))) {
+    if (change.added) additions += change.count || 0;
+    if (change.removed) deletions += change.count || 0;
+  }
+  return { additions, deletions };
+}
+
 /**
  * Applique une édition et renvoie le nouveau contenu + un diff unifié compté.
  * Gère les fins de ligne du fichier d'origine (CRLF préservé). Lève comme
@@ -514,11 +528,5 @@ export function applyEdit(
   const diff = trimDiff(
     createTwoFilesPatch(path, path, normalizeLineEndings(original), normalizeLineEndings(content)),
   );
-  let additions = 0;
-  let deletions = 0;
-  for (const change of diffLines(normalizeLineEndings(original), normalizeLineEndings(content))) {
-    if (change.added) additions += change.count || 0;
-    if (change.removed) deletions += change.count || 0;
-  }
-  return { content, diff, additions, deletions };
+  return { content, diff, ...countLineChanges(original, content) };
 }

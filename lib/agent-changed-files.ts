@@ -69,6 +69,10 @@ function statusForEditTool(name: string): AgentFileChangeStatus | null {
       return "renamed";
     case "edit_file":
     case "apply_edits":
+    // `apply_patch` (MIN-115) crée et supprime aussi, mais son résumé d'event ne
+    // porte que les chemins : « modifié » est l'approximation honnête, corrigée
+    // par l'event `files_changed` de fin de tour.
+    case "apply_patch":
       return "modified";
     default:
       return null;
@@ -118,7 +122,7 @@ export function liveTurnFiles(events: AgentRunEvent[]): AgentFileChange[] {
     if (!status) continue;
     if (name === "move_file") {
       put(str(p.to), "renamed", str(p.from) || undefined);
-    } else if (name === "apply_edits") {
+    } else if (name === "apply_edits" || name === "apply_patch") {
       const paths = Array.isArray(p.paths) ? p.paths : [];
       for (const raw of paths) put(str(raw), "modified");
     } else {

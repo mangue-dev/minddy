@@ -1,6 +1,7 @@
 import "server-only";
 
 import { MAX_BACKGROUND_JOBS } from "./background";
+import { usesApplyPatch } from "./patch";
 
 /**
  * Tools de l'agent de code (MIN-46), format function-calling OpenRouter (même
@@ -12,6 +13,8 @@ import { MAX_BACKGROUND_JOBS } from "./background";
  *  - exploration : read_file (numéroté, fenêtré), list_dir, glob, grep (git grep)
  *  - édition     : edit_file (remplacement de chaîne robuste — cascade opencode,
  *                  cf. edit.ts), write_file (création de fichiers neufs uniquement)
+ *                  — REMPLACÉS par apply_patch sur les modèles `gpt-*` (MIN-115,
+ *                  cf. `usesApplyPatch` dans patch.ts)
  *  - vérif       : run_command (install/lint/build/tests, git, etc.), run_background
  *                  (serveur de dev / watcher : démarrer, sonder, arrêter — MIN-114)
  *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
@@ -247,6 +250,28 @@ const CORE_TOOLS: AgentToolDef[] = [
           content: { type: "string", description: "The complete file content." },
         },
         required: ["path", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "apply_patch",
+      // Description reprise de `packages/opencode/src/tool/apply_patch.txt` (MIT) :
+      // c'est le texte sur lequel la famille GPT est rodée, on ne le réécrit pas.
+      // Seule la queue est à nous — chemins relatifs au dépôt, résultat par fichier.
+      description:
+        "Use the `apply_patch` tool to edit files. Your patch language is a stripped-down, file-oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high-level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n\nPaths are repo-relative. Inside an Update section, each hunk starts with `@@` (optionally naming the enclosing context, e.g. `@@ def greet():`) and then lists its lines: ` ` for unchanged context, `-` for removed, `+` for added. Include a few unchanged context lines around each change so the hunk anchors unambiguously, and read the file first. One envelope can carry as many files as your change needs; the result reports success per file, so retry only the sections that failed.",
+      parameters: {
+        type: "object",
+        properties: {
+          patch: {
+            type: "string",
+            description:
+              "The full patch text, from '*** Begin Patch' to '*** End Patch'.",
+          },
+        },
+        required: ["patch"],
       },
     },
   },
@@ -648,8 +673,11 @@ export const AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...ISSUE_ANCHOR_TOOLS
 /** Jeu complet d'un run CARNET (MIN-84). */
 export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...NOTEBOOK_ANCHOR_TOOLS];
 
+/** Les deux interfaces d'édition, mutuellement EXCLUSIVES (MIN-115). */
+const STRING_EDIT_TOOLS = new Set(["edit_file", "apply_edits", "write_file"]);
+
 /**
- * Jeu de tools d'un run, selon son ancrage et l'accès au web.
+ * Jeu de tools d'un run, selon son ancrage, son modèle et l'accès au web.
  *
  * `web_search` passe par le plugin d'OpenRouter : il n'est offert que sur un run
  * qui parle à OpenRouter (quota minddy ou BYOK OpenRouter). Un BYOK OpenAI /
@@ -659,13 +687,27 @@ export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...NOTEBOOK_
  * TOUJOURS, Gemini ne la documente que hors chat) — et faire tourner la
  * recherche sur la clé de minddy reviendrait à payer le web d'un usage par
  * ailleurs illimité. Le tool disparaît alors purement et simplement.
+ *
+ * `apply_patch` (MIN-115) obéit à la même logique du tout ou rien : les modèles
+ * `gpt-*` le reçoivent À LA PLACE d'`edit_file`/`apply_edits`/`write_file`, les
+ * autres ne le voient pas. Servir les deux jeux ensemble ferait hésiter le modèle
+ * entre deux façons de faire exactement la même chose.
  */
 export function agentToolsFor(opts: {
   anchor: "issue" | "notebook";
   webSearch: boolean;
+  /** Modèle du run — décide de l'interface d'édition servie. */
+  model?: string | null;
 }): AgentToolDef[] {
+  const patch = usesApplyPatch(opts.model);
   const tools = opts.anchor === "issue" ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS;
-  return opts.webSearch ? tools : tools.filter((t) => t.function.name !== "web_search");
+  return tools.filter((t) => {
+    const name = t.function.name;
+    if (name === "web_search") return opts.webSearch;
+    if (name === "apply_patch") return patch;
+    if (STRING_EDIT_TOOLS.has(name)) return !patch;
+    return true;
+  });
 }
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
