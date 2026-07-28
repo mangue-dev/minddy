@@ -65,8 +65,15 @@ function groupOf(at: string): DateGroup {
   return "earlier";
 }
 
-function TypeIcon({ type }: { type: NotificationType }) {
-  if (AGENT_TYPES.includes(type)) {
+function TypeIcon({
+  type,
+  fromNumo,
+}: {
+  type: NotificationType;
+  /** The comment behind the row is Numo's reply — same icon as the agent rows. */
+  fromNumo?: boolean;
+}) {
+  if (fromNumo || AGENT_TYPES.includes(type)) {
     return <NumoIcon className="size-5" animated={false} />;
   }
   const Icon =
@@ -269,7 +276,7 @@ export default function InboxPage() {
                             : "bg-muted/60 text-muted-foreground"
                         )}
                       >
-                        <TypeIcon type={n.type} />
+                        <TypeIcon type={n.type} fromNumo={n.from_numo} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline gap-2">

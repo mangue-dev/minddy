@@ -105,6 +105,9 @@ export interface MyNotification {
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;
+  /** The comment behind this row was written by Numo — the inbox shows its
+      icon and names Numo as the actor, not the user the row is stored under. */
+  from_numo: boolean;
   /** First characters of the comment that triggered a mention/comment row. */
   comment_excerpt: string | null;
 }

@@ -68,15 +68,20 @@ export async function GET(request: NextRequest) {
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
     fetchAuthUsersById(service, actorIds),
     commentIds.length
-      ? service.from("comments").select("id, body").in("id", commentIds)
-      : Promise.resolve({ data: [] as { id: string; body: string }[] }),
+      ? service
+          .from("comments")
+          .select("id, body, via_assistant")
+          .in("id", commentIds)
+      : Promise.resolve({
+          data: [] as { id: string; body: string; via_assistant: boolean }[],
+        }),
   ]);
 
   const issueMap = new Map((issues ?? []).map((i) => [i.id, i]));
   const objectiveMap = new Map((objectives ?? []).map((o) => [o.id, o]));
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
-  const commentMap = new Map((comments ?? []).map((c) => [c.id, c.body as string]));
+  const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));
 
   const result: MyNotification[] = notifs.map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
@@ -84,7 +89,11 @@ export async function GET(request: NextRequest) {
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
     const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
-    const commentBody = n.comment_id ? commentMap.get(n.comment_id) : undefined;
+    const comment = n.comment_id ? commentMap.get(n.comment_id) : undefined;
+    // A Numo comment is stored under the triggering user's author_id (the row
+    // belongs to them, the words don't) — the inbox names Numo, like the
+    // timeline does, otherwise the requester reads "you commented".
+    const fromNumo = !!comment?.via_assistant;
     return {
       id: n.id,
       type: n.type,
@@ -99,8 +108,13 @@ export async function GET(request: NextRequest) {
       feedback_title: feedback?.title ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
-      actor_name: actor ? displayName(toNamed(actor)) : null,
-      comment_excerpt: commentBody ? excerptOf(commentBody) : null,
+      actor_name: fromNumo
+        ? "Numo"
+        : actor
+          ? displayName(toNamed(actor))
+          : null,
+      from_numo: fromNumo,
+      comment_excerpt: comment ? excerptOf(comment.body as string) : null,
     };
   });
 

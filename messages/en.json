@@ -772,7 +772,7 @@
     "mentionLabel": "Mentions",
     "mentionDesc": "Someone @mentions you in a comment.",
     "commentLabel": "Comments",
-    "commentDesc": "Someone comments on one of your issues, or replies in a thread you posted in.",
+    "commentDesc": "Someone comments on one of your issues, replies in a thread you posted in, or Numo answers you.",
     "agentLabel": "Numo agent",
     "agentDesc": "The agent finishes its work, asks you a question or stops on an error.",
     "feedbackLabel": "Feedback",

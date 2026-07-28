@@ -341,7 +341,10 @@ export async function runCommentMention({
     );
 
     // Notifications, like a regular comment: issue owner/assignee + thread
-    // root author — never the requester themself, members only.
+    // root author, members only — PLUS the requester. A human comment never
+    // notifies its own author, but this one is Numo's: the person it just
+    // answered is precisely who has something new to read. The 'comment'
+    // category of the account settings gates the whole thing, as usual.
     const valid = await projectMemberIds(service, issue.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
@@ -350,11 +353,12 @@ export async function runCommentMention({
       .maybeSingle();
     const targets = new Set<string>();
     for (const uid of [
+      actorId,
       rootComment?.author_id,
       issue.created_by,
       issue.assignee_id,
     ] as (string | null | undefined)[]) {
-      if (uid && uid !== actorId && valid.has(uid)) targets.add(uid);
+      if (uid && valid.has(uid)) targets.add(uid);
     }
     const rows: NotificationRow[] = [...targets].map((uid) => ({
       user_id: uid,
@@ -571,8 +575,8 @@ export async function runObjectiveCommentMention({
       finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
     );
 
-    // Notifications: the objective's lead + the thread root author — never the
-    // requester themself, members only.
+    // Notifications: the objective's lead + the thread root author, members
+    // only — plus the requester, whom Numo just answered (see the issue twin).
     const valid = await projectMemberIds(service, objective.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
@@ -581,10 +585,11 @@ export async function runObjectiveCommentMention({
       .maybeSingle();
     const targets = new Set<string>();
     for (const uid of [
+      actorId,
       rootComment?.author_id,
       objective.lead_user_id,
     ] as (string | null | undefined)[]) {
-      if (uid && uid !== actorId && valid.has(uid)) targets.add(uid);
+      if (uid && valid.has(uid)) targets.add(uid);
     }
     const rows: NotificationRow[] = [...targets].map((uid) => ({
       user_id: uid,
@@ -812,8 +817,9 @@ export async function runFeedbackCommentMention({
       finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
     );
 
-    // Notifications: the thread root author — never the requester themself,
-    // members only. (A feedback post has no owner/assignee/lead.)
+    // Notifications: the thread root author, members only — plus the
+    // requester, whom Numo just answered (see the issue twin). (A feedback
+    // post has no owner/assignee/lead.)
     const valid = await projectMemberIds(service, post.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
@@ -821,9 +827,12 @@ export async function runFeedbackCommentMention({
       .eq("id", rootId)
       .maybeSingle();
     const targets = new Set<string>();
-    const rootAuthor = rootComment?.author_id as string | null | undefined;
-    if (rootAuthor && rootAuthor !== actorId && valid.has(rootAuthor)) {
-      targets.add(rootAuthor);
+    for (const uid of [actorId, rootComment?.author_id] as (
+      | string
+      | null
+      | undefined
+    )[]) {
+      if (uid && valid.has(uid)) targets.add(uid);
     }
     const rows: NotificationRow[] = [...targets].map((uid) => ({
       user_id: uid,

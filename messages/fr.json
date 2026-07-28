@@ -772,7 +772,7 @@
     "mentionLabel": "Mentions",
     "mentionDesc": "Quelqu'un vous @mentionne dans un commentaire.",
     "commentLabel": "Commentaires",
-    "commentDesc": "Quelqu'un commente un de vos tickets, ou répond dans un fil où vous avez écrit.",
+    "commentDesc": "Quelqu'un commente un de vos tickets, répond dans un fil où vous avez écrit, ou Numo vous répond.",
     "agentLabel": "Agent Numo",
     "agentDesc": "L'agent finit son travail, vous pose une question ou s'arrête sur une erreur.",
     "feedbackLabel": "Feedback",
