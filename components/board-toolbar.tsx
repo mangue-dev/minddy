@@ -23,6 +23,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -661,6 +662,7 @@ export function BoardToolbar({
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
   const [shareTarget, setShareTarget] = useState<View | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<View | null>(null);
   const t = useTranslations("Board");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
@@ -912,7 +914,7 @@ export function BoardToolbar({
                   <DropdownMenuItem
                     variant="destructive"
                     disabled={customCount <= 1}
-                    onSelect={() => activeView && void onDeleteView(activeView)}
+                    onSelect={() => activeView && setDeleteTarget(activeView)}
                   >
                     <Trash2 />
                     {t("deleteView")}
@@ -953,6 +955,41 @@ export function BoardToolbar({
           renameTarget ? onRenameView(renameTarget, name) : Promise.resolve()
         }
       />
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("deleteViewTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("deleteViewDescription", { name: deleteTarget?.name ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              {tc("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                const target = deleteTarget;
+                try {
+                  await onDeleteView(target);
+                  setDeleteTarget(null);
+                } catch {
+                  // The handler owns the error toast and keeps the dialog open.
+                }
+              }}
+            >
+              {tc("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ShareViewDialog
         view={shareTarget}
         open={shareTarget !== null}

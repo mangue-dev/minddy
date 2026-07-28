@@ -398,6 +398,8 @@
     "saveAsNewView": "Save as new view",
     "saveOptions": "Save options",
     "renameViewTitle": "Rename view",
+    "deleteViewTitle": "Delete “{name}”?",
+    "deleteViewDescription": "This view will be permanently deleted.",
     "viewNamePlaceholder": "View name",
     "viewDescriptionPlaceholder": "e.g. my urgent unfinished issues, sorted by priority",
     "askNumo": "Ask Numo",

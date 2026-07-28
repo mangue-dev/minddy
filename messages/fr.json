@@ -398,6 +398,8 @@
     "saveAsNewView": "Enregistrer comme nouvelle vue",
     "saveOptions": "Options d'enregistrement",
     "renameViewTitle": "Renommer la vue",
+    "deleteViewTitle": "Supprimer « {name} » ?",
+    "deleteViewDescription": "Cette vue sera définitivement supprimée.",
     "viewNamePlaceholder": "Nom de la vue",
     "viewDescriptionPlaceholder": "Ex. mes tickets urgents non terminés, triés par priorité",
     "askNumo": "Demander à Numo",
