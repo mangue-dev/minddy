@@ -56,6 +56,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { useCommentLive } from "@/lib/use-comment-live";
 import type { AttachmentInput, Comment, Member } from "@/lib/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
@@ -422,13 +423,21 @@ function CommentBlock({
       ? mcpActorName(comment.api_key_agent, comment.api_key_name, t)
       : author;
   // Live @Numo reply: 'working' comments update in place (current tool, then
-  // streaming text) via Realtime until only the final message remains. A
-  // 'working' row older than 5 minutes is an orphan (server died) → error.
+  // streaming text) until only the final message remains. A 'working' row older
+  // than 5 minutes is an orphan (server died) → error; the timeline polls while
+  // one is live, so this is re-evaluated instead of freezing on a spinner.
   const stale =
     comment.assistant_status === "working" &&
     Date.now() - new Date(comment.created_at).getTime() > 5 * 60_000;
   const working = comment.assistant_status === "working" && !stale;
   const failed = comment.assistant_status === "error" || stale;
+  // Le texte en train de s'écrire arrive par le topic du commentaire, pas par la
+  // base : ~4 fois par seconde, sans refetch du fil. La ligne en base reste le
+  // repli — c'est elle que voit l'onglet ouvert en cours de route, ou celui qui
+  // a manqué une diffusion.
+  const live = useCommentLive(comment.id, working);
+  const liveTool = live ? live.tool : comment.assistant_tool;
+  const liveBody = live ? live.text : comment.body;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -506,17 +515,17 @@ function CommentBlock({
       {working ? (
         // One live line at a time: the current tool, else the text being
         // written, else a plain "Working…" — each update replaces the previous.
-        comment.assistant_tool ? (
+        liveTool ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate italic">
-              {toolRunningLabel(comment.assistant_tool, tToolCall)}
+              {toolRunningLabel(liveTool, tToolCall)}
             </span>
           </div>
-        ) : comment.body ? (
+        ) : liveBody ? (
           <div className="flex flex-col gap-1.5">
             <Markdown className="text-foreground" members={ctx.members}>
-              {comment.body}
+              {liveBody}
             </Markdown>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Spinner className="size-3 shrink-0" />

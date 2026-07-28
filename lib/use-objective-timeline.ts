@@ -10,7 +10,7 @@ import {
   fetchObjectiveEventsApi,
   updateCommentApi,
 } from "./comments-api";
-import type { AttachmentInput } from "./types";
+import type { AttachmentInput, Comment } from "./types";
 import type { TimelineItem } from "./use-issue-timeline";
 
 const commentsKey = (objectiveId: string) => ["objective-comments", objectiveId] as const;
@@ -29,6 +29,14 @@ export function useObjectiveTimeline(objectiveId: string | null) {
     queryKey: commentsKey(objectiveId ?? ""),
     queryFn: () => fetchObjectiveCommentsApi(objectiveId as string),
     enabled: !!objectiveId,
+    // Same safety net as the issue and feedback timelines: while a @Numo reply
+    // is 'working', poll for the state transitions the realtime push may miss.
+    refetchInterval: (query) =>
+      (query.state.data as Comment[] | undefined)?.some(
+        (c) => c.assistant_status === "working"
+      )
+        ? 1500
+        : false,
   });
   const { data: events } = useQuery({
     queryKey: eventsKey(objectiveId ?? ""),

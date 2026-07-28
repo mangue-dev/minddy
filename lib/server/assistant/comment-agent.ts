@@ -26,6 +26,7 @@ import {
   buildFeedbackCommentSystemPrompt,
   type CommentPromptThreadEntry,
 } from "./prompt";
+import { commentDisplay, type CommentDisplay } from "./comment-live";
 import { gatherProjectPromptContext } from "./prompt-context";
 import { buildAttachmentParts, type PromptAttachment } from "./attachment-parts";
 import { recordAiUsage, newRunId, type AiUsageInput } from "@/lib/server/ai-usage";
@@ -39,15 +40,15 @@ import {
 // ── @Numo in comments (fire and forget, Linear-style) ───────────────────
 // A comment mentioning @numo spawns this agent AFTER the HTTP response (via
 // next/server's after()). It posts a threaded reply immediately as a live
-// placeholder (assistant_status='working'), streams its progress into that
-// row (assistant_tool = current step, body = current text — Realtime pushes
-// each update to viewers), and finishes with only the final message visible.
-// No conversation is stored: the reply comment IS the whole artifact.
+// placeholder (assistant_status='working'), then streams: the text goes out on
+// the reply's own Realtime topic (lib/server/assistant/comment-live.ts —
+// ephemeral, nothing written), while the row keeps only the state that has to
+// survive a missed message (current tool, then the final body). It finishes with
+// only the final message visible. No conversation is stored: the reply comment
+// IS the whole artifact.
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_TOOL_ROUNDS = 6;
-/** Min interval between live body updates while text streams (Realtime spam guard). */
-const BODY_UPDATE_INTERVAL_MS = 900;
 
 /** Detects an @numo / @Numo mention in a comment body (word-boundary, not mid-email). */
 export function mentionsNumo(body: string): boolean {
@@ -146,6 +147,10 @@ export async function runCommentMention({
   trigger?: "mention" | "reply";
 }): Promise<void> {
   let replyId: string | null = null;
+  // Hissé hors du try : le catch écrit l'échec par le MÊME afficheur, donc dans
+  // la même file d'écritures — sa mise à jour passe forcément après celles qui
+  // seraient encore en vol.
+  let display: CommentDisplay | null = null;
   try {
     // ── Resolve the trigger comment, its thread root, and the issue ─────
     const { data: triggerRow } = await service
@@ -189,10 +194,8 @@ export async function runCommentMention({
     }
     replyId = reply.id as string;
 
-    // Live display updates (best-effort; each one reaches viewers via Realtime).
-    const setDisplay = async (fields: Record<string, unknown>) => {
-      await service.from("comments").update(fields).eq("id", replyId);
-    };
+    // Live display: text on the reply's Realtime topic, state in the row.
+    display = commentDisplay(service, replyId);
 
     // ── Gather prompt context ────────────────────────────────────────────
     const [promptProject, { data: threadRows }, { data: attachmentRows }] =
@@ -328,17 +331,14 @@ export async function runCommentMention({
       numoDefaultStatus: resolveNumoDefaultStatus(
         users.get(actorId)?.user_metadata
       ),
-      onTool: (name) => void setDisplay({ assistant_tool: name }),
-      onText: (partial) =>
-        void setDisplay({ assistant_tool: null, body: partial }),
+      onTool: (name) => display?.tool(name),
+      onText: (partial) => display?.stream(partial),
     });
 
     // ── Finalize: only the final message remains ─────────────────────────
-    await setDisplay({
-      body: finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en,
-      assistant_status: "done",
-      assistant_tool: null,
-    });
+    await display.finish(
+      finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
+    );
 
     // Notifications, like a regular comment: issue owner/assignee + thread
     // root author — never the requester themself, members only.
@@ -367,14 +367,9 @@ export async function runCommentMention({
     await insertNotifications(service, rows);
   } catch (err) {
     console.error("[numo-comment] failed:", err);
-    if (replyId) {
-      // Empty body + status 'error' → the timeline renders a localized
-      // "Numo couldn't complete this" line per viewer.
-      await service
-        .from("comments")
-        .update({ body: "", assistant_status: "error", assistant_tool: null })
-        .eq("id", replyId);
-    }
+    // Empty body + status 'error' → the timeline renders a localized
+    // "Numo couldn't complete this" line per viewer.
+    await display?.fail();
   }
 }
 
@@ -396,6 +391,10 @@ export async function runObjectiveCommentMention({
   trigger?: "mention" | "reply";
 }): Promise<void> {
   let replyId: string | null = null;
+  // Hissé hors du try : le catch écrit l'échec par le MÊME afficheur, donc dans
+  // la même file d'écritures — sa mise à jour passe forcément après celles qui
+  // seraient encore en vol.
+  let display: CommentDisplay | null = null;
   try {
     // ── Resolve the trigger comment, its thread root, and the objective ──
     const { data: triggerRow } = await service
@@ -439,9 +438,7 @@ export async function runObjectiveCommentMention({
     }
     replyId = reply.id as string;
 
-    const setDisplay = async (fields: Record<string, unknown>) => {
-      await service.from("comments").update(fields).eq("id", replyId);
-    };
+    display = commentDisplay(service, replyId);
 
     // ── Gather prompt context (project, thread, attachments, linked issues) ─
     const [promptProject, { data: threadRows }, { data: attachmentRows }, { data: linkedIssues }] =
@@ -566,16 +563,13 @@ export async function runObjectiveCommentMention({
       numoDefaultStatus: resolveNumoDefaultStatus(
         users.get(actorId)?.user_metadata
       ),
-      onTool: (name) => void setDisplay({ assistant_tool: name }),
-      onText: (partial) =>
-        void setDisplay({ assistant_tool: null, body: partial }),
+      onTool: (name) => display?.tool(name),
+      onText: (partial) => display?.stream(partial),
     });
 
-    await setDisplay({
-      body: finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en,
-      assistant_status: "done",
-      assistant_tool: null,
-    });
+    await display.finish(
+      finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
+    );
 
     // Notifications: the objective's lead + the thread root author — never the
     // requester themself, members only.
@@ -604,12 +598,7 @@ export async function runObjectiveCommentMention({
     await insertNotifications(service, rows);
   } catch (err) {
     console.error("[numo-comment] objective failed:", err);
-    if (replyId) {
-      await service
-        .from("comments")
-        .update({ body: "", assistant_status: "error", assistant_tool: null })
-        .eq("id", replyId);
-    }
+    await display?.fail();
   }
 }
 
@@ -631,6 +620,10 @@ export async function runFeedbackCommentMention({
   trigger?: "mention" | "reply";
 }): Promise<void> {
   let replyId: string | null = null;
+  // Hissé hors du try : le catch écrit l'échec par le MÊME afficheur, donc dans
+  // la même file d'écritures — sa mise à jour passe forcément après celles qui
+  // seraient encore en vol.
+  let display: CommentDisplay | null = null;
   try {
     // ── Resolve the trigger comment, its thread root, and the post ───────
     const { data: triggerRow } = await service
@@ -674,9 +667,7 @@ export async function runFeedbackCommentMention({
     }
     replyId = reply.id as string;
 
-    const setDisplay = async (fields: Record<string, unknown>) => {
-      await service.from("comments").update(fields).eq("id", replyId);
-    };
+    display = commentDisplay(service, replyId);
 
     // ── Gather prompt context (project, thread, attachments, linked issue) ─
     const [promptProject, { data: threadRows }, { data: attachmentRows }, { data: linkedIssue }] =
@@ -813,16 +804,13 @@ export async function runFeedbackCommentMention({
       numoDefaultStatus: resolveNumoDefaultStatus(
         users.get(actorId)?.user_metadata
       ),
-      onTool: (name) => void setDisplay({ assistant_tool: name }),
-      onText: (partial) =>
-        void setDisplay({ assistant_tool: null, body: partial }),
+      onTool: (name) => display?.tool(name),
+      onText: (partial) => display?.stream(partial),
     });
 
-    await setDisplay({
-      body: finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en,
-      assistant_status: "done",
-      assistant_tool: null,
-    });
+    await display.finish(
+      finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
+    );
 
     // Notifications: the thread root author — never the requester themself,
     // members only. (A feedback post has no owner/assignee/lead.)
@@ -849,12 +837,7 @@ export async function runFeedbackCommentMention({
     await insertNotifications(service, rows);
   } catch (err) {
     console.error("[numo-comment] feedback failed:", err);
-    if (replyId) {
-      await service
-        .from("comments")
-        .update({ body: "", assistant_status: "error", assistant_tool: null })
-        .eq("id", replyId);
-    }
+    await display?.fail();
   }
 }
 
@@ -927,7 +910,6 @@ async function runLoop(
     const decoder = new TextDecoder();
     let buffer = "";
     let fullContent = "";
-    let lastTextUpdate = 0;
     let generationId: string | null = null;
     let modelUsed: string | null = null;
     let usageInfo:
@@ -964,13 +946,10 @@ async function runLoop(
 
         if (delta.content) {
           fullContent += delta.content;
-          // Live "he's writing" display, throttled: each update replaces the
-          // previous tool/message shown under the Working state.
-          const now = Date.now();
-          if (now - lastTextUpdate > BODY_UPDATE_INTERVAL_MS) {
-            lastTextUpdate = now;
-            ctx.onText(fullContent);
-          }
+          // Live "he's writing" display: the round's text as written so far,
+          // never a delta. The cadence is the transport's business (see
+          // comment-live.ts) — the loop just says what it has.
+          ctx.onText(fullContent);
         }
         if (delta.tool_calls) {
           for (const tc of delta.tool_calls) {

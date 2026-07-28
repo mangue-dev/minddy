@@ -31,6 +31,16 @@ export function useIssueTimeline(issueId: string | null) {
     queryKey: commentsKey(issueId ?? ""),
     queryFn: () => fetchCommentsApi(issueId as string),
     enabled: !!issueId,
+    // While a @Numo reply streams (assistant_status 'working'), poll as a
+    // safety net for the realtime push. Its TEXT rides the comment's own topic
+    // (lib/use-comment-live.ts); this catches the state transitions — the tool
+    // it moved to, the final message, an error — if a broadcast is missed.
+    refetchInterval: (query) =>
+      (query.state.data as Comment[] | undefined)?.some(
+        (c) => c.assistant_status === "working"
+      )
+        ? 1500
+        : false,
   });
   const { data: events } = useQuery({
     queryKey: eventsKey(issueId ?? ""),
