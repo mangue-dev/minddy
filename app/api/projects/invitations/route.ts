@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { displayName } from "@/lib/display-name";
 import type { MyInvitation } from "@/lib/types";
 
@@ -33,9 +34,12 @@ export async function GET(request: NextRequest) {
   const projectIds = [...new Set(invites.map((i) => i.project_id as string))];
   const inviterIds = [...new Set(invites.map((i) => i.invited_by as string))];
 
-  const [{ data: projects }, invitersById] = await Promise.all([
+  const [{ data: projects }, invitersById, seeds] = await Promise.all([
     service.from("projects").select("id, name, key").in("id", projectIds),
     fetchAuthUsersById(service, inviterIds),
+    // L'inbox montre le portrait de qui invite : un nom seul ne dit pas
+    // grand-chose de quelqu'un qu'on n'a pas encore rejoint.
+    fetchAvatarSeeds(service, inviterIds),
   ]);
 
   const projectMap = new Map((projects ?? []).map((p) => [p.id as string, p]));
@@ -51,6 +55,7 @@ export async function GET(request: NextRequest) {
       project_key: (project?.key as string) ?? "",
       inviter_email: named.email,
       inviter_name: inviter ? displayName(named) : null,
+      inviter_avatar_seed: seeds.get(i.invited_by as string) ?? null,
       created_at: i.created_at as string,
     };
   });

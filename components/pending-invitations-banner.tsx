@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Button, Spinner } from "mangue-ui";
-import { Mail } from "lucide-react";
+import { UserAvatar } from "@/components/user-avatar";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 
 export function PendingInvitationsBanner() {
@@ -21,7 +21,13 @@ export function PendingInvitationsBanner() {
             key={inv.id}
             className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
           >
-            <Mail className="size-5 shrink-0 text-muted-foreground" />
+            {/* Le portrait de qui invite plutôt qu'une enveloppe : une
+                invitation vient de quelqu'un, pas d'un système. */}
+            <UserAvatar
+              seed={inv.inviter_avatar_seed}
+              className="size-8"
+              title={inviter}
+            />
             {/* Le nom du projet, et rien d'autre : sa clé ne dit rien à qui ne
                 connaît pas encore le projet. */}
             <p className="min-w-0 flex-1 text-sm">

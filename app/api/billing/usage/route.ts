@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getUserUsage, segmentizeUsage } from "@/lib/server/usage";
-import { countOwnedProjects } from "@/lib/server/entitlements";
+import { countAccessibleProjects } from "@/lib/server/entitlements";
 import type { UsageSummaryResponse } from "@/lib/billing-types";
 
 /**
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const [usage, projectsUsed] = await Promise.all([
     getUserUsage(auth.user.id),
-    countOwnedProjects(auth.user.id),
+    countAccessibleProjects(auth.user.id),
   ]);
   const { plan } = usage.billing;
 

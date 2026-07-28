@@ -294,6 +294,9 @@
     "agentsGateTitle": "L'agent Numo n'est pas dans votre plan",
     "agentsGateDescription": "Passez à Go ou Pro pour laisser l'agent Numo travailler sur vos tickets et ouvrir des pull requests.",
     "agentsGateCta": "Voir les plans",
+    "membersGateTitle": "Les membres ne sont pas dans votre plan",
+    "membersGateDescription": "Passez à Pro pour inviter des collègues sur vos projets et travailler à plusieurs.",
+    "membersGateCta": "Voir les plans",
     "projectLimitTooltip": "Limite de projets atteinte. Passez à un plan supérieur.",
     "checkoutSuccess": "Abonnement actif. Merci !",
     "checkoutCancelled": "Paiement annulé."
@@ -671,7 +674,7 @@
     "stepIndicatorDone": "Terminé",
     "skip": "Passer l'onboarding",
     "skipConfirmTitle": "Passer l'onboarding ?",
-    "skipConfirmDesc": "Il ne reviendra pas. Tout ce qu'il propose reste accessible : les projets depuis la home, l'import et l'agent depuis les réglages, les cycles depuis votre compte.",
+    "skipConfirmDesc": "Il ne reviendra pas. Tout ce qu'il propose reste accessible : les projets depuis l'accueil, l'import et l'agent depuis les réglages, les cycles depuis votre compte.",
     "skipConfirmCancel": "Continuer l'onboarding",
     "skipConfirmCta": "Passer l'onboarding",
     "projectTitle": "Votre premier projet",
@@ -723,7 +726,7 @@
     "cyclesCta": "Terminer",
     "finalTitle": "Tout est prêt.",
     "finalHint": "Une remarque, une envie ? « Partager un retour », en bas de la barre latérale, arrive directement chez nous.",
-    "finalCta": "Aller à ma home"
+    "finalCta": "Aller à l'accueil"
   },
   "Home": {
     "title": "Mes projets",

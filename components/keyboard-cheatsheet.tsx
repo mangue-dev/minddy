@@ -32,7 +32,7 @@ export function KeyboardCheatsheet() {
         <div className="-mr-2 flex max-h-[65vh] flex-col gap-5 overflow-y-auto pr-2">
           {CHEATSHEET.map((section) => (
             <section key={section.id}>
-              <h3 className="mb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+              <h3 className="mb-1 text-xs font-medium text-muted-foreground">
                 {tSection(section.titleKey)}
               </h3>
               <ul className="flex flex-col">

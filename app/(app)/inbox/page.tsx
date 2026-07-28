@@ -15,13 +15,13 @@ import {
   MailOpen,
   Settings,
   Trash2,
-  Users,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { NumoIcon } from "@/components/numo-icon";
+import { UserAvatar } from "@/components/user-avatar";
 import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
-import type { MyNotification, NotificationType } from "@/lib/types";
+import type { MyInvitation, MyNotification, NotificationType } from "@/lib/types";
 
 const AGENT_TYPES: readonly NotificationType[] = [
   "agent_done",
@@ -174,6 +174,10 @@ export default function InboxPage() {
     );
   };
 
+  /** Qui invite : son nom, à défaut son adresse, à défaut « Quelqu'un ». */
+  const inviterOf = (inv: MyInvitation): string =>
+    inv.inviter_name || inv.inviter_email || t("someone");
+
   /** Ligne 2 : qui a fait quoi — complétée par l'extrait du commentaire. */
   const sentenceOf = (n: MyNotification): string => {
     const sentence = t(LINE_KEYS[n.type] as Parameters<typeof t>[0], {
@@ -235,7 +239,7 @@ export default function InboxPage() {
 
       {showInvitations && (
         <section className="mt-6">
-          <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">
             {t("groupInvitations")}
           </h2>
           <ul
@@ -247,9 +251,13 @@ export default function InboxPage() {
               return (
                 <li key={inv.id} className="flex items-center gap-3 px-4 py-3">
                   <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-hidden />
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                    <Users className="size-4" />
-                  </span>
+                  {/* Le portrait de qui invite, à la place de l'icône de type :
+                      une invitation vient de quelqu'un, pas d'un système. */}
+                  <UserAvatar
+                    seed={inv.inviter_avatar_seed}
+                    className="size-8"
+                    title={inviterOf(inv)}
+                  />
                   {/* Le nom du projet suffit — sa clé ne dit rien à qui n'y est
                       pas encore entré. */}
                   <span className="min-w-0 flex-1">
@@ -257,10 +265,7 @@ export default function InboxPage() {
                       {inv.project_name}
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                      {t("lineInvitation", {
-                        actor:
-                          inv.inviter_name || inv.inviter_email || t("someone"),
-                      })}
+                      {t("lineInvitation", { actor: inviterOf(inv) })}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
@@ -313,7 +318,7 @@ export default function InboxPage() {
       ) : (
         groups.map(([group, items]) => (
           <section key={group} className="mt-6">
-            <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">
               {t(GROUP_KEYS[group] as Parameters<typeof t>[0])}
             </h2>
             <ul

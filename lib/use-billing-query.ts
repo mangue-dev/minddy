@@ -77,15 +77,17 @@ export function roundRemainingPercent(remainingPercent: number): number {
 }
 
 /**
- * Les deux verrous de plan consommés par l'UI (MIN-72, retours) : accès agents
- * et plafond de projets. Par défaut PERMISSIF tant que le billing charge (pas
- * de flash « désactivé » pour les plans payants — le serveur reste le juge).
+ * Les verrous de plan consommés par l'UI (MIN-72, retours) : accès agents,
+ * travail en équipe et plafond de projets. Par défaut PERMISSIF tant que le
+ * billing charge (pas de flash « désactivé » pour les plans payants — le
+ * serveur reste le juge).
  */
 export function usePlanGates() {
   const { loading, usage } = useBillingSummary();
   return {
     loading,
     agentsAllowed: usage?.limits.allowAgents ?? true,
+    membersAllowed: usage?.limits.allowMembers ?? true,
     projectLimitReached:
       usage != null &&
       usage.limits.maxProjects != null &&

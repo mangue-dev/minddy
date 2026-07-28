@@ -19,14 +19,36 @@ export async function getEntitlements(userId: string): Promise<ResolvedBilling> 
   return getResolvedBilling(userId);
 }
 
-/** Nombre de projets (non supprimés) dont l'utilisateur est owner. */
-export async function countOwnedProjects(ownerId: string): Promise<number> {
+/**
+ * Nombre de projets (non supprimés) AUXQUELS l'utilisateur a accès : ceux dont
+ * il est owner ∪ ceux où il est membre — le même périmètre que sa liste de
+ * projets (RLS `projects_select`). Compter les seuls projets créés laisserait
+ * un compte Free travailler sur autant de projets qu'il veut du moment qu'un
+ * autre les a créés ; la limite porte sur ce qu'on voit, pas sur qui a cliqué.
+ */
+export async function countAccessibleProjects(userId: string): Promise<number> {
   const service = getServiceClient();
-  const { count, error } = await service
+
+  const { data: memberships, error: membershipError } = await service
+    .from("project_members")
+    .select("project_id")
+    .eq("user_id", userId);
+  if (membershipError) throw new Error(membershipError.message);
+
+  const memberIds = [
+    ...new Set((memberships ?? []).map((m) => m.project_id as string)),
+  ];
+
+  const base = service
     .from("projects")
     .select("id", { count: "exact", head: true })
-    .eq("owner_id", ownerId)
     .is("deleted_at", null);
+
+  // `or()` dédoublonne d'office (union de lignes) : un owner qui aurait aussi
+  // une ligne `project_members` ne serait pas compté deux fois.
+  const { count, error } = await (memberIds.length > 0
+    ? base.or(`owner_id.eq.${userId},id.in.(${memberIds.join(",")})`)
+    : base.eq("owner_id", userId));
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
@@ -35,8 +57,8 @@ export async function countOwnedProjects(ownerId: string): Promise<number> {
 export async function ensureProjectLimit(ownerId: string): Promise<void> {
   const { plan } = await getResolvedBilling(ownerId);
   if (plan.maxProjects == null) return;
-  const owned = await countOwnedProjects(ownerId);
-  if (owned >= plan.maxProjects) {
+  const accessible = await countAccessibleProjects(ownerId);
+  if (accessible >= plan.maxProjects) {
     throw new PlanLimitError("project_limit_reached", {
       limit: plan.maxProjects,
     });

@@ -269,7 +269,7 @@ export function MarketingNav() {
               déplie ce que le menu « Produit » regroupe, sous son intitulé, et
               les deux liens directs suivent. Mêmes cibles, même ordre. */}
           <div className="flex-1 overflow-y-auto p-3">
-            <p className="px-2.5 pt-1 pb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <p className="px-2.5 pt-1 pb-2 text-xs font-medium text-muted-foreground">
               {t("navProduct")}
             </p>
             {PRODUCT_ENTRIES.map((entry) => (

@@ -294,6 +294,9 @@
     "agentsGateTitle": "The Numo agent is not in your plan",
     "agentsGateDescription": "Upgrade to Go or Pro to let the Numo agent work on your issues and open pull requests.",
     "agentsGateCta": "View plans",
+    "membersGateTitle": "Members are not in your plan",
+    "membersGateDescription": "Upgrade to Pro to invite teammates to your projects and work together.",
+    "membersGateCta": "View plans",
     "projectLimitTooltip": "Project limit reached. Upgrade for more.",
     "checkoutSuccess": "Subscription active. Welcome aboard!",
     "checkoutCancelled": "Checkout cancelled."

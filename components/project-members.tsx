@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Input, Spinner, toast } from "mangue-ui";
-import { UserPlus, X } from "lucide-react";
+import { UserPlus, Users, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { usePlanGates } from "@/lib/use-billing-query";
+import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
 import type { Member } from "@/lib/types";
@@ -22,8 +25,15 @@ export function ProjectMembers({
 }) {
   const t = useTranslations("Members");
   const tc = useTranslations("Common");
+  const tb = useTranslations("Billing");
   const { members, invitations, isOwner, loading, invite, cancelInvitation, removeMember } =
     useMembersQuery(projectId, enabled);
+  // Le travail en équipe est un verrou de plan (Pro) : côté serveur
+  // `inviteMember` refuse déjà en 403 `membersProOnly` — l'UI ne doit pas
+  // proposer un formulaire dont l'envoi ne peut que échouer. La LISTE reste
+  // visible : un projet peut garder des membres d'un abonnement expiré, et
+  // son propriétaire doit pouvoir les voir et les retirer.
+  const { membersAllowed } = usePlanGates();
 
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
@@ -58,31 +68,44 @@ export function ProjectMembers({
 
   return (
     <div className="flex flex-col gap-4">
-      {isOwner && (
-        <form onSubmit={handleInvite} className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label htmlFor="invite-email" className="text-sm font-medium">
-              {t("inviteByEmail")}
-            </label>
-            <Input
-              id="invite-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("invitePlaceholder")}
-            />
-          </div>
-          <Button type="submit" disabled={inviting}>
-            {inviting ? <Spinner /> : <UserPlus />}
-            {t("invite")}
-          </Button>
-        </form>
-      )}
-      {isOwner && (
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t("inviteHint")}
-        </p>
-      )}
+      {isOwner &&
+        (membersAllowed ? (
+          <>
+            <form onSubmit={handleInvite} className="flex items-end gap-2">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <label htmlFor="invite-email" className="text-sm font-medium">
+                  {t("inviteByEmail")}
+                </label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("invitePlaceholder")}
+                />
+              </div>
+              <Button type="submit" disabled={inviting}>
+                {inviting ? <Spinner /> : <UserPlus />}
+                {t("invite")}
+              </Button>
+            </form>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              {t("inviteHint")}
+            </p>
+          </>
+        ) : (
+          <EmptyState
+            className="px-6 py-8"
+            icon={<Users className="size-6" />}
+            title={tb("membersGateTitle")}
+            description={tb("membersGateDescription")}
+            action={
+              <Button asChild size="sm">
+                <Link href="/billing">{tb("membersGateCta")}</Link>
+              </Button>
+            }
+          />
+        ))}
 
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">{t("membersLabel")}</p>

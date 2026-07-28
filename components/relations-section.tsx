@@ -205,7 +205,7 @@ export function RelationsSection({
                           {other?.title ?? id}
                         </span>
                         {r.resolved && (
-                          <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                             {t("resolved")}
                           </span>
                         )}

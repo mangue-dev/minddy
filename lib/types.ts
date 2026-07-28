@@ -459,6 +459,8 @@ export interface MyInvitation {
   project_key: string;
   inviter_email: string | null;
   inviter_name: string | null;
+  /** Graine de l'avatar généré de l'invitant (public.user_avatars). */
+  inviter_avatar_seed: string | null;
   created_at: string;
 }
 
