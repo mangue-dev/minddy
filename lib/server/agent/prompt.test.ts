@@ -536,3 +536,17 @@ describe("buildAgentSystemPrompt — interface d'édition selon le modèle", () 
     });
   }
 });
+
+describe("buildAgentSystemPrompt — erreurs de typage rendues par le harness", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`annonce le type-check de fin de tour et sa portée (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      // La formulation exacte que le harness injecte (diagnostics.ts) : le modèle
+      // doit reconnaître le bloc quand il arrive.
+      expect(prompt).toContain("Type errors detected after your changes");
+      expect(prompt).toMatch(/fix them before replying/i);
+      // Et la porte de sortie : un dépôt déjà cassé ne devient pas son sujet.
+      expect(prompt).toMatch(/already broken before you touched anything/i);
+    });
+  }
+});

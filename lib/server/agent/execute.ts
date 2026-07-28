@@ -41,6 +41,7 @@ import {
   type BackgroundJobRunner,
 } from "./background";
 import { resolveWithin } from "./repo-path";
+import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "./diagnostics";
 import { LITERAL_RETRY_NOTE } from "./grep-pattern";
 import {
   formatRunCommandResult,
@@ -226,6 +227,9 @@ function makeExecTool(
   background: BackgroundJobs,
   /** Instructions repo déjà servies (MIN-115) — muté ici, persisté par l'appelant. */
   instructions: InstructionsState,
+  /** Fichiers du dépôt édités depuis le dernier type-check (MIN-110). Muté ici,
+      lu et vidé par le hook de fin de tour de l'appelant. */
+  editedPaths: Set<string>,
 ): ExecuteAgentTool {
   let outputSeq = 0;
 
@@ -247,6 +251,10 @@ function makeExecTool(
     paths: string[],
   ): Promise<{ result: unknown; success: boolean }> => {
     if (!res.success) return res;
+    // Entonnoir unique de TOUTE édition réussie (edit_file, write_file, move_file,
+    // apply_edits, apply_patch) : c'est ici qu'on note ce que le tour a touché,
+    // pour le type-check de fin de tour (MIN-110).
+    for (const path of paths) if (path) editedPaths.add(path);
     const block = await collectTouchedInstructions(
       paths.filter(Boolean),
       instructions,
@@ -376,7 +384,12 @@ function makeExecTool(
         );
       }
       case "delete_file": {
-        await deleteWorkFile(sandbox, String(args.path ?? ""));
+        const path = String(args.path ?? "");
+        await deleteWorkFile(sandbox, path);
+        // Supprimer un fichier casse des types tout aussi bien qu'en éditer un ;
+        // il ne passe pas par `withTouchedInstructions` (rien à charger pour un
+        // fichier qui n'est plus là), d'où la note ici.
+        if (path) editedPaths.add(path);
         return { result: `Deleted ${args.path}`, success: true };
       }
       case "apply_edits": {
@@ -1210,6 +1223,41 @@ export async function executeAgentRun(
     );
     backgroundJobs = background;
 
+    // Fichiers édités depuis le dernier type-check (MIN-110). Vidé à chaque check :
+    // un tour qui ne touche à rien après coup n'en relance pas un second.
+    const editedPaths = new Set<string>();
+    /**
+     * Type-check de fin de tour. Se tait — et coûte alors un aller-retour shell de
+     * ~1 ms — dès que l'une des conditions manque : rien d'édité, pas de
+     * `tsconfig.json`, pas de `node_modules/.bin/tsc`, ou pas assez de budget mural
+     * pour absorber un check à froid (mesuré 22 s, cf. §3.3 du comparatif). Sinon,
+     * les erreurs partent au modèle et le tour repart (une fois — plafond tenu par
+     * la boucle). Best-effort de bout en bout : une panne du checker ne doit jamais
+     * empêcher un tour de se terminer.
+     */
+    const onTurnEnd = async ({ budgetMs }: { budgetMs: number }): Promise<string | null> => {
+      if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
+      const touched = [...editedPaths];
+      editedPaths.clear();
+      const startedAt = Date.now();
+      const block = await typeErrorsForTurn(sb, touched).catch((err) => {
+        console.error("[agent-execute] turn-end typecheck failed:", (err as Error).message);
+        return null;
+      });
+      // Event `status` (neutre : invisible dans le fil, comptable en base) — c'est
+      // lui qui répond à « combien de tours se terminent avec des erreurs de typage
+      // introduites par l'agent ? », la mesure que R4 réclamait. `errorsShown` est
+      // le compte des erreurs SERVIES (le bloc est capé) : ce que le modèle a lu,
+      // pas ce que tsc a trouvé.
+      await emit("status", {
+        phase: "type_check",
+        durationMs: Date.now() - startedAt,
+        files: touched.length,
+        errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
+      });
+      return block;
+    };
+
     const result = await runAgentLoop({
       messages,
       tools: agentToolsFor({
@@ -1234,7 +1282,9 @@ export async function executeAgentRun(
         run.continuations * 1000,
         background,
         instructions,
+        editedPaths,
       ),
+      onTurnEnd,
       pullSteering: () => pullPendingMessages(run.id),
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).

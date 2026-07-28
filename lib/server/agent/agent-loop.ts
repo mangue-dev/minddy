@@ -66,6 +66,9 @@ import {
  */
 
 const MAX_ROUNDS_PER_CHUNK = 60;
+/** Garde-fou : relances du tour par le hook de fin de tour (MIN-110). Une seule —
+ *  le check qui suit la correction vérifie, il ne relance pas une troisième fois. */
+const MAX_TURN_END_REENTRIES = 1;
 /** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
 const MAX_COMPACTIONS_PER_CHUNK = 3;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
@@ -179,6 +182,16 @@ export interface RunAgentLoopParams {
    * round complet). L'exécuteur repasse alors la session au repos.
    */
   checkInterrupt?: () => Promise<boolean>;
+  /**
+   * Dernier mot du harness avant que le tour ne se termine (MIN-110). Appelé quand
+   * le modèle répond SANS tool-call, avec le budget mural qui reste sur le chunk.
+   * Renvoie un texte → il est injecté comme message `user` et le tour REPART ;
+   * renvoie null → le tour se termine normalement. Sert au type-check de fin de
+   * tour (`typeErrorsForTurn`) : une édition qui casse un type le dit avant que
+   * l'agent ne dise « c'est fait ». Plafonné à `MAX_TURN_END_REENTRIES` relances
+   * par chunk — un dépôt inréparable ne doit pas retenir le tour indéfiniment.
+   */
+  onTurnEnd?: (opts: { budgetMs: number }) => Promise<string | null>;
 }
 
 /** Interruption utilisateur de la réponse en cours — distincte d'une StreamError
@@ -618,6 +631,10 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   let costUsd = 0;
   let round = 0;
   let compactions = 0;
+  // Relances de fin de tour déjà consommées (MIN-110) : la première sert à faire
+  // corriger, le check suivant vérifie le correctif — puis le tour se termine,
+  // erreurs restantes ou non. Compté par CHUNK, comme les compactions.
+  let turnEndReentries = 0;
   // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut.
   const compactThreshold = params.contextWindow
     ? Math.floor(params.contextWindow * 0.75)
@@ -819,6 +836,27 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     if (stream.toolCalls.length === 0) {
       messages.push({ role: "assistant", content: stream.content || "" });
       const reply = stream.content.trim() || "Done.";
+
+      // Dernier mot du harness (MIN-110) : le type-check de fin de tour. S'il a
+      // quelque chose à dire, ce n'était pas la fin du tour — on injecte et on
+      // reboucle. La réponse écrite part en `thinking` (même convention qu'un
+      // round texte + tool-calls) : elle reste dans le fil comme étape, sans
+      // clore le tour à l'écran.
+      if (params.onTurnEnd && turnEndReentries < MAX_TURN_END_REENTRIES) {
+        const followUp = await params
+          .onTurnEnd({ budgetMs: params.softDeadlineMs - elapsed() })
+          .catch(() => null);
+        if (followUp?.trim()) {
+          turnEndReentries++;
+          // `reply` porte un « Done. » de repli quand le modèle n'a rien écrit :
+          // seul un vrai texte mérite de rester dans le fil comme étape.
+          if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
+          messages.push({ role: "user", content: followUp });
+          clearLive();
+          continue;
+        }
+      }
+
       await emit("summary", { text: cap(reply, 8000) });
       clearLive();
       return {

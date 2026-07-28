@@ -330,6 +330,72 @@ l'histoire du produit) :
 > `update_plan` → plan du ticket n'a d'équivalent nulle part : **c'est nous qui
 > sommes devant**.
 
+#### Coût d'un type-check dans la sandbox (mesuré le 2026-07-28, MIN-110)
+
+R4 disait « ne pas implémenter avant d'avoir ce chiffre ». Le voici. Mesures
+faites dans une **vraie microVM Vercel Sandbox** (`node24`, 2 vCPU, 4,2 Go de
+RAM — les paramètres exacts de `getOrCreateAgentSandbox`), sur un clone frais du
+dépôt minddy (~1 100 fichiers TS/TSX), dépendances installées par
+`pnpm install --frozen-lockfile` (21 s, une seule fois par microVM). Colonne Mac
+donnée pour l'échelle : un M-series est ~2,4× plus rapide, l'écart est stable.
+
+| Régime | microVM | Mac |
+| --- | ---: | ---: |
+| `tsc --noEmit`, **à froid** (aucun `.tsbuildinfo`) | **22,6 s** | 9,4 s |
+| `tsc --noEmit`, à chaud, aucun changement | **4,9 s** | 2,5 s |
+| `tsc --noEmit`, à chaud, après édition d'un fichier feuille | **10,7 s** | 4,5 s |
+| `tsc --noEmit`, à chaud, après édition de `lib/types.ts` (104 importateurs) | **14,4 s** | — |
+| `tsc --watch` : démarrage + check initial | 22,2 s | — |
+| `tsc --watch` : recheck après édition | 0,6 – 11,3 s | — |
+| `tsc --watch` : mémoire résidente **permanente** | **1,7 → 1,9 Go** sur 4,2 | — |
+| `tsc --noEmit <un seul fichier>` (hors `tsconfig.json`) | 0,5 – 0,9 s | 0,8 s |
+| Sonde `test -f tsconfig.json && test -x node_modules/.bin/tsc` | 1 ms | — |
+
+Forcer `--incremental --tsBuildInfoFile` **hors du dépôt** ne coûte rien (20,8 /
+4,5 / 10,9 / 14,5 s) et garde `git status` propre — c'est la forme retenue, elle
+marche même si le `tsconfig.json` du dépôt n'active pas `incremental`.
+
+**Combien d'éditions y a-t-il à couvrir ?** Sur toute l'histoire du produit :
+44 éditions réussies sur 15 runs, groupées en **30 rafales** d'éditions
+consécutives (médiane 1, moyenne 1,5, max 4). Un run à lui seul en compte 26.
+
+**Verdict : voie B — un check par TOUR, pas par édition.** Trois raisons, dans
+l'ordre où elles pèsent.
+
+1. **Le prix.** Un check coûte 4,9 s au plancher, ~11 s en régime normal, 14,4 s
+   quand le fichier touché est un carrefour. Par édition, le run à 26 éditions
+   paierait 110 s (dédupliqué par rafale) à 290 s (brut) — soit, dans le second
+   cas, **plus que la soft-deadline entière d'un chunk (250 s)**. Par tour, la
+   même session paie 11 s. Le rapport est de 1 à 25.
+2. **La justesse — l'argument qui aurait suffi seul.** Un changement cohérent
+   s'étale sur plusieurs fichiers (rafales de 1 à 4 éditions, mesurées).
+   Type-checker *entre* deux moitiés d'un même changement remonte des erreurs que
+   l'édition suivante efface : renommer une prop, puis recâbler ses trois
+   appelants, ferait crier le harness trois fois pour rien. Le coût n'est pas que
+   du temps mural, c'est un round de LLM gâché et un modèle poussé à « réparer »
+   un état transitoire. OpenCode s'en tire parce que ses diagnostics sont
+   **par fichier et instantanés** (serveur LSP déjà chaud), et parce qu'un humain
+   regarde. Nous n'avons ni l'un ni l'autre.
+3. **`tsc --watch` (voie non prévue au plan) est un piège.** Ses rechecks sont
+   parfois excellents (0,6 s) mais il immobilise **1,9 Go des 4,2 Go de la
+   microVM**, celle-là même qui doit faire tourner `next build` et les tests ; il
+   ne survit pas à l'arrêt de la microVM entre deux chunks (22 s de redémarrage à
+   chaque reprise) ; et rien ne relie proprement un recheck à *l'édition qui l'a
+   déclenché*. Écarté.
+
+Et la « vérification ciblée sur un seul fichier » du plan initial est **fausse**,
+pas seulement rapide : `tsc --noEmit <fichier>` ignore le `tsconfig.json` —
+mesuré sur un `.tsx` parfaitement sain du dépôt, **37 erreurs fantômes** (JSX non
+configuré, alias `@/…` non résolus). Un type-check qui ment est pire que pas de
+type-check.
+
+**Ce qui n'est pas garanti et qu'on assume.** Le check ne peut tourner que si
+`node_modules` existe — or §2 montre 7 `tsc: command not found`, le modèle lançant
+`npm run typecheck` avant d'installer. Le tool **se tait** dans ce cas : sonde à
+1 ms, aucune tentative d'installer quoi que ce soit à sa place. Un harness qui
+transformerait un environnement pas installé en mur d'erreurs serait pire que
+silencieux.
+
 ### 3.4 Persistance entre les tours
 
 | | minddy | Codex | OpenCode |
@@ -577,19 +643,27 @@ status`/`log`/`diff`/`show` sûrs, le reste au cas par cas.
 `reason: "forbidden_command"` par tentative → la requête de §2 devient un compteur
 de suivi, et une valeur non nulle signale un modèle qui se bat contre le harness.
 
-### R4 — Diagnostics de type après édition *(rang 2)*
+### R4 — Diagnostics de type en fin de tour *(rang 2)* — **mesuré, voie B retenue**
 
-**Quoi.** Après un `edit_file` / `apply_edits` / `write_file` réussi, si le dépôt a
-un type-checker déclaré (`package.json` → `scripts.typecheck`, ou `tsconfig.json`
-présent), lancer une vérification **ciblée sur le fichier édité** et ajouter au
-résultat du tool un bloc `Type errors detected in this file, please fix:` — la
-formulation exacte d'OpenCode, dont on sait qu'elle fonctionne.
+**Quoi.** Un `tsc --noEmit` incrémental **une fois par tour**, au moment où le
+modèle s'apprête à rendre la main, si et seulement si le tour a touché des
+fichiers et que le dépôt a un type-checker *utilisable* (`tsconfig.json` **et**
+`node_modules/.bin/tsc`). Erreurs non vides → injectées comme message `user` et le
+tour **repart** au lieu de se terminer : `Type errors detected after your changes,
+please fix:`, les fichiers touchés par le tour listés en premier. Une seule
+relance par tour (le second check vérifie le correctif, puis le tour se termine
+quoi qu'il arrive).
 
-**Risque — le vrai sujet.** Un `tsc --noEmit` complet coûte des dizaines de secondes
-et mangerait la soft-deadline. Ce ticket doit donc **commencer par mesurer** le coût
-sur un dépôt réel avant de décider : soit un serveur `tsc --watch` maintenu vivant
-dans la VM, soit une vérification différée (un seul type-check en fin de tour plutôt
-qu'un par édition), soit l'abandon. **Ne pas implémenter avant d'avoir ce chiffre.**
+**Ce que la mesure a tranché** (§3.3, « Coût d'un type-check dans la sandbox ») :
+par édition, 4,9 à 14,4 s × 44 éditions — jusqu'à 290 s sur un seul run, plus
+qu'un chunk entier. Par tour, 11 s. Et surtout, checker entre deux moitiés d'un
+même changement remonte des erreurs que l'édition suivante efface. `tsc --watch`
+(1,9 Go résidents) et la vérification fichier par fichier (37 erreurs fantômes sur
+un fichier sain) sont écartés sur mesure, pas sur intuition.
+
+**Risque.** Un dépôt déjà cassé ferait tourner le modèle en rond : d'où la relance
+unique, et une consigne de prompt explicite — une erreur étrangère à son
+changement se signale dans la réponse, elle ne se corrige pas.
 
 **Mesurable.** Nombre de tours qui se terminent avec des erreurs de typage
 introduites par l'agent — aujourd'hui inconnu, ce qui est déjà un problème.
