@@ -9,7 +9,7 @@ import { revokeOAuthGrantApi, type OAuthGrant } from "@/lib/oauth-grants-api";
 import { oauthGrantsQueryKey, useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import { SettingsSection } from "@/components/settings-shell";
-import { AgentLogo } from "@/components/settings/agent-logo";
+import { BrandLogo } from "@/components/brand-logo";
 
 /** « Applications connectées » : les grants OAuth actifs (agents connectés
     via le consentement navigateur, sans clé). Révoquer coupe l'accès
@@ -59,7 +59,7 @@ export function AccountConnectedAppsSection() {
             <li key={grant.id} className="flex items-center gap-3 py-2">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
                 {isMcpAgentId(grant.agent) ? (
-                  <AgentLogo agent={getMcpAgent(grant.agent)} className="size-4" />
+                  <BrandLogo brand={getMcpAgent(grant.agent)} className="size-4" />
                 ) : (
                   <Globe className="size-4" />
                 )}

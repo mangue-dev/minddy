@@ -15,7 +15,7 @@ import {
 } from "mangue-ui";
 import { Copy, ExternalLink } from "lucide-react";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
-import { AgentLogo } from "@/components/settings/agent-logo";
+import { BrandLogo } from "@/components/brand-logo";
 
 /** « Connecter un agent » — OAuth uniquement : la commande d'installation ne
     contient AUCUN secret (l'agent ouvre le navigateur pour autoriser à la
@@ -61,7 +61,7 @@ export function McpConnectPanel({
             onClick={() => select(item)}
             className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/8 focus-visible:border-ring focus-visible:outline-none"
           >
-            <AgentLogo agent={item} className="size-4 shrink-0" />
+            <BrandLogo brand={item} className="size-4 shrink-0" />
             <span className="min-w-0 truncate">{item.label}</span>
           </button>
         ))}

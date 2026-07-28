@@ -9,7 +9,7 @@ import type { Locale } from "@/i18n/config";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { localizedHref } from "@/lib/locale-href";
-import { AgentLogo } from "@/components/settings/agent-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { MCP_FAQ_KEYS } from "@/components/marketing/faq-keys";
@@ -389,7 +389,7 @@ function AgentCard({
   return (
     <li className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-2.5">
-        <AgentLogo agent={agent} className="h-5 w-5" />
+        <BrandLogo brand={agent} className="h-5 w-5" />
         <span className="text-sm font-medium">{agent.label}</span>
       </div>
 

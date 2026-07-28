@@ -1,11 +1,21 @@
 import { cn } from "mangue-ui/lib/utils";
-import type { McpAgent } from "@/lib/mcp-agents";
 
-/** Logo d'un agent du registry, avec bascule light/dark quand une variante
-    existe. Volontairement SANS "use client" : utilisé aussi bien dans des
-    server components (pages OAuth) que dans des client components (settings) —
-    et l'objet McpAgent porte une fonction build() non sérialisable à la
-    frontière RSC.
+/** Une marque tierce porte son logo et, quand il est monochrome, sa variante
+    pour fond sombre. Les deux registres qui en ont un — les agents MCP
+    (`lib/mcp-agents.ts`) et les outils dont on importe un backlog
+    (`lib/import-guides.ts`) — satisfont cette forme. */
+export interface BrandMark {
+  /** Logo pour thème clair (public/). */
+  logo: string;
+  /** Variante thème sombre, pour les marques monochromes. */
+  logoDark?: string;
+}
+
+/** Logo d'une marque tierce, avec bascule light/dark quand une variante existe.
+    Volontairement SANS "use client" : utilisé aussi bien dans des server
+    components (pages OAuth) que dans des client components (réglages) — et
+    l'objet McpAgent porte une fonction build() non sérialisable à la frontière
+    RSC, donc seul le strict nécessaire traverse.
 
     `loading="lazy"`, et ce n'est pas un détail de confort (MIN-100). React 19
     PRÉCHARGE depuis l'en-tête toute `<img>` rencontrée au rendu serveur qui n'est
@@ -15,16 +25,16 @@ import type { McpAgent } from "@/lib/mcp-agents";
     hero, qui est l'élément LCP. Aucun de ces logos n'est au premier écran ; un
     logo dans le viewport (page OAuth, réglages) se charge de toute façon
     immédiatement, `lazy` ou pas. */
-export function AgentLogo({ agent, className }: { agent: McpAgent; className?: string }) {
-  if (!agent.logoDark) {
+export function BrandLogo({ brand, className }: { brand: BrandMark; className?: string }) {
+  if (!brand.logoDark) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={agent.logo} alt="" aria-hidden loading="lazy" className={className} />;
+    return <img src={brand.logo} alt="" aria-hidden loading="lazy" className={className} />;
   }
   return (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={agent.logo}
+        src={brand.logo}
         alt=""
         aria-hidden
         loading="lazy"
@@ -32,7 +42,7 @@ export function AgentLogo({ agent, className }: { agent: McpAgent; className?: s
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={agent.logoDark}
+        src={brand.logoDark}
         alt=""
         aria-hidden
         loading="lazy"

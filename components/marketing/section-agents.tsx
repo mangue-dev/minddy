@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Check, Crosshair, PencilLine, Search, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
-import { AgentLogo } from "@/components/settings/agent-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { NumoFace } from "@/components/numo-face";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
@@ -114,7 +114,7 @@ export async function SectionAgents() {
                   key={agent.id}
                   className="flex flex-col items-center justify-center gap-2.5 rounded-xl border border-border bg-card px-2 py-5 text-center text-xs font-medium text-foreground/90 shadow-sm"
                 >
-                  <AgentLogo agent={agent} className="h-6 w-6" />
+                  <BrandLogo brand={agent} className="h-6 w-6" />
                   {agent.label}
                 </li>
               ))}

@@ -18,6 +18,11 @@ export interface ImportGuide {
   id: ImportGuideId;
   /** Nom du produit — jamais traduit. */
   label: string;
+  /** Logo pour thème clair (public/) ; logoDark = variante thème sombre.
+      Satisfait `BrandMark` (`components/brand-logo.tsx`) sans en dépendre —
+      `lib/` ne remonte pas vers les composants, comme `lib/mcp-agents.ts`. */
+  logo: string;
+  logoDark?: string;
   /** Documentation officielle de l'export, ouverte dans un nouvel onglet. */
   docUrl: string;
   /** Outils sans export CSV natif : la commande qui en fabrique un. */
@@ -35,23 +40,30 @@ export const IMPORT_GUIDES: ImportGuide[] = [
   {
     id: "linear",
     label: "Linear",
+    logo: "/import/linear.svg",
     docUrl: "https://linear.app/docs/import-issues",
   },
   {
     id: "jira",
     label: "Jira",
+    logo: "/import/jira.svg",
     docUrl:
       "https://support.atlassian.com/jira-cloud-administration/docs/export-issues/",
   },
   {
     id: "github",
     label: "GitHub",
+    // Marque monochrome, comme Codex ou Windsurf : elle disparaîtrait sur l'un
+    // des deux fonds sans sa variante.
+    logo: "/import/github-light.svg",
+    logoDark: "/import/github-dark.svg",
     docUrl: "https://cli.github.com/manual/gh_issue_list",
     command: GH_EXPORT_COMMAND,
   },
   {
     id: "trello",
     label: "Trello",
+    logo: "/import/trello.svg",
     docUrl:
       "https://support.atlassian.com/trello/docs/exporting-data-from-trello/",
   },

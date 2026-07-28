@@ -6,6 +6,7 @@ import { Button, cn, toast } from "mangue-ui";
 import { Copy, ExternalLink } from "lucide-react";
 import { IMPORT_GUIDES, type ImportGuide } from "@/lib/import-guides";
 import type { ImportCommitResponse } from "@/lib/import-api";
+import { BrandLogo } from "@/components/brand-logo";
 import { CsvImportPanel } from "@/components/settings/csv-import-panel";
 
 /**
@@ -71,12 +72,13 @@ export function ImportPanel({
                 onClick={() => selectGuide(item)}
                 aria-pressed={active}
                 className={cn(
-                  "rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors",
                   active
                     ? "border-brand/40 bg-brand/10 text-foreground"
                     : "border-border bg-background text-muted-foreground hover:text-foreground"
                 )}
               >
+                <BrandLogo brand={item} className="size-4 shrink-0" />
                 {item.label}
               </button>
             );

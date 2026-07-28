@@ -1,7 +1,7 @@
 import { Bot, Check } from "lucide-react";
 import { cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { AgentLogo } from "@/components/settings/agent-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 
 /**
@@ -38,7 +38,7 @@ export function OAuthLogoPair({
       )}
 
       {agent ? (
-        <AgentLogo agent={agent} className="size-11 shrink-0" />
+        <BrandLogo brand={agent} className="size-11 shrink-0" />
       ) : (
         <Bot className="size-11 shrink-0 text-muted-foreground" />
       )}
