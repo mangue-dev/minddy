@@ -346,11 +346,19 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
         .filter(Boolean);
       return { count: paths.length, paths: paths.slice(0, 50) };
     }
+    // `path` et `glob` font partie de ce QU'EST la recherche : sans eux, un
+    // « (no matches) » dû à une portée trop étroite est indiscernable d'une vraie
+    // absence — c'est ce qui a caché le bug d'accolades des pathspecs (MIN-116).
     case "glob":
-      return { pattern: String(args.pattern ?? "") };
+      return {
+        pattern: String(args.pattern ?? ""),
+        ...(args.path ? { path: String(args.path) } : {}),
+      };
     case "grep":
       return {
         pattern: String(args.pattern ?? ""),
+        ...(args.path ? { path: String(args.path) } : {}),
+        ...(args.glob ? { glob: String(args.glob) } : {}),
         ...(args.fixed_strings === true ? { fixed_strings: true } : {}),
       };
     case "run_command":

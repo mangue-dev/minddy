@@ -10,7 +10,7 @@ import {
   type BackgroundChunk,
   type BackgroundPaths,
 } from "./background";
-import { grepPathspecs, globPathspec } from "./git-pathspec";
+import { grepPathspecs, globPathspecs, expandBraces } from "./git-pathspec";
 import { isInvalidRegexError } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 
@@ -748,7 +748,11 @@ async function grepOutside(
       "-H",
       ...grepModeFlags(opts),
     ];
-    if (opts.glob) flags.push(`--include=${sq(opts.glob)}`);
+    // `--include` de GNU grep ne développe pas les accolades non plus : une
+    // alternative = un `--include` (ils s'unissent), comme les pathspecs git.
+    if (opts.glob) {
+      for (const alt of expandBraces(opts.glob)) flags.push(`--include=${sq(alt)}`);
+    }
     return `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
   };
   const { res, retriedAsLiteral } = await runGrepWithLiteralFallback(sandbox, build, opts);
@@ -774,8 +778,8 @@ export async function globRepo(
   pattern: string,
   path?: string,
 ): Promise<GlobResult> {
-  const spec = sq(globPathspec(pattern, path));
-  const cmd = `git ls-files --cached --others --exclude-standard -- ${spec}`;
+  const specs = globPathspecs(pattern, path).map(sq).join(" ");
+  const cmd = `git ls-files --cached --others --exclude-standard -- ${specs}`;
   const res = await runShell(sandbox, cmd);
   if (res.exitCode !== 0) return { files: [], truncated: false }; // pathspec invalide, etc.
 

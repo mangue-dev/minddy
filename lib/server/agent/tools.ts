@@ -107,7 +107,8 @@ const CORE_TOOLS: AgentToolDef[] = [
         properties: {
           pattern: {
             type: "string",
-            description: "Glob pattern, e.g. '**/*.ts' or 'app/**/route.ts'.",
+            description:
+              "Glob pattern, e.g. '**/*.ts', 'app/**/route.ts' or '**/*.{ts,tsx}'.",
           },
           path: {
             type: "string",
@@ -138,7 +139,8 @@ const CORE_TOOLS: AgentToolDef[] = [
           },
           glob: {
             type: "string",
-            description: "Optional file glob to limit the search, e.g. '**/*.ts'.",
+            description:
+              "Optional file glob to limit the search, e.g. '**/*.ts' or '**/*.{ts,tsx}'.",
           },
           output_mode: {
             type: "string",
