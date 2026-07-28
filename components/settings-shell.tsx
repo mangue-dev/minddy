@@ -17,6 +17,10 @@ export type SettingsTab = {
   label: string;
   icon?: LucideIcon;
   hidden?: boolean;
+  /** Pastille d'attention sur l'onglet — un réglage y est incomplet. La chaîne
+      est ce que dit le survol et ce que lit un lecteur d'écran : le point seul
+      n'apprendrait rien à qui ne le voit pas. */
+  indicator?: string;
   content: ReactNode;
 };
 
@@ -134,6 +138,15 @@ function SettingsTabs({
               >
                 {Icon && <Icon className="h-4 w-4" />}
                 <span>{tab.label}</span>
+                {tab.indicator && (
+                  <span className="ml-auto flex items-center" title={tab.indicator}>
+                    <span
+                      className="size-1.5 rounded-full bg-amber-500"
+                      aria-hidden
+                    />
+                    <span className="sr-only">{tab.indicator}</span>
+                  </span>
+                )}
               </TabsTrigger>
             );
           })}

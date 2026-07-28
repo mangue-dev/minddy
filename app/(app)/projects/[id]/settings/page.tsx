@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { userIdsWithoutRule } from "@/lib/smart-assign-config";
 import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectIconPicker } from "@/components/project-icon-picker";
@@ -59,6 +61,17 @@ export default function ProjectSettingsPage() {
     refetch,
   } = useProjects();
   const project = projects.find((p) => p.id === id);
+
+  // Même clé de cache que la section Smart Assign et l'onglet Membres : la
+  // liste est lue ici uniquement pour savoir si un onglet mérite sa pastille,
+  // et seulement quand Smart Assign est actif — sinon rien à signaler.
+  const { members } = useMembersQuery(id, project?.smart_assign_enabled === true);
+  const smartAssignIncomplete =
+    members.length > 1 &&
+    userIdsWithoutRule(
+      members.map((m) => m.user_id),
+      project?.smart_assign_rules
+    ).length > 0;
 
   const [name, setName] = useState(project?.name ?? "");
   const [key, setKey] = useState(project?.key ?? "");
@@ -299,6 +312,9 @@ export default function ProjectSettingsPage() {
       value: "smart-assign",
       label: t("smartAssignTab"),
       icon: WandSparkles,
+      indicator: smartAssignIncomplete
+        ? t("smartAssignIncompleteTab")
+        : undefined,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
     },
     {

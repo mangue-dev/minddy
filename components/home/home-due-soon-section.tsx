@@ -117,7 +117,7 @@ function DueSoonRow({
  * `dueSoon` — parce que « jours restants » se compte dans le fuseau de
  * l'utilisateur ; voir lib/due-soon.ts.
  *
- * Rien à montrer → rien du tout, comme HomeFeedbackSection : un tableau de bord
+ * Rien à montrer → rien du tout, comme HomeTriageSection : un tableau de bord
  * ne garde pas de place pour un état vide.
  */
 export function HomeDueSoonSection() {

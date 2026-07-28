@@ -11,11 +11,12 @@ import { useOnboarding } from "@/lib/use-onboarding";
 import { displayName } from "@/lib/display-name";
 import { ProjectCard, NewProjectCard } from "@/components/project-card";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
+import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { HomeCycleCard } from "@/components/home/home-cycle-card";
 import { HomeGlobalCard } from "@/components/home/home-global-card";
 import { HomeDueSoonSection } from "@/components/home/home-due-soon-section";
-import { HomeFeedbackSection } from "@/components/home/home-feedback-section";
+import { HomeTriageSection } from "@/components/home/home-triage-section";
 import { OnboardingCard } from "@/components/home/onboarding-card";
 
 // auto-fit + 1fr: empty trailing tracks collapse and the remaining cards share
@@ -55,6 +56,9 @@ export default function HomePage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <PendingInvitationsBanner />
+      {/* Smart Assign actif mais sans règles : le tri silencieux ne trie rien.
+          Ne rend rien quand tout est réglé — le cas courant. */}
+      <HomeSmartAssignWarning />
 
       {/* Greeting + a clearly-accessible "new ticket" button (MIN-38). During
           onboarding the button is hidden: with no project it would only render
@@ -121,9 +125,11 @@ export default function HomePage() {
             <HomeGlobalCard />
           </div>
 
-          {/* Feedback — renders nothing when no project has open feedback. */}
+          {/* À trier (MIN-104) — tickets en triage et retours non tranchés, le
+              projet nommé sur chaque ligne. Remplace l'ancienne section Feedback,
+              qui ne disait qu'un compte par projet. Rien à trier → rien du tout. */}
           <div className="mt-6">
-            <HomeFeedbackSection />
+            <HomeTriageSection />
           </div>
 
           {/* Projects grid — still the launcher. */}

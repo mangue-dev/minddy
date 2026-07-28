@@ -111,7 +111,12 @@ function keysForUserEvent(change: BroadcastChange): Invalidation[] {
       return [active(["notifications"])];
     case "projects":
     case "project_members": // my membership changed → my project list
-      return [active(["projects"])];
+      // Le tableau de bord y lit aussi l'avertissement Smart Assign, qui dépend
+      // du réglage du projet et de sa liste de membres. Marqué périmé sans
+      // refetch : un simple renommage ne vaut pas de relancer la requête du
+      // tableau de bord ; elle se rafraîchit au prochain passage sur l'accueil,
+      // c'est-à-dire dès qu'on revient des réglages qu'on vient de corriger.
+      return [active(["projects"]), { key: HOME_SUMMARY_KEY, refetch: "none" }];
     case "project_invitations":
       return [active(["my-invitations"]), active(["projects"])];
     case "views": // global (project-less) views broadcast on the user topic
@@ -165,6 +170,9 @@ function keysForProjectEvent(
       return [active(["members", projectId])];
     // Feedback (MIN-89): the team board, the open-feedback badge in the sidebar
     // and the home section all move when a post is created, voted or triaged.
+    // The dashboard summary is in that list since MIN-104 — the home "to triage"
+    // section reads its undecided posts from ["me","summary"], which until then
+    // only moved on issue and cycle events.
     case "feedback_posts":
     case "feedback_votes":
     case "feedback_post_categories":
@@ -172,6 +180,7 @@ function keysForProjectEvent(
         active(["feedback", projectId]),
         active(["feedback-detail", projectId]),
         active(["feedback-count", projectId]),
+        active(HOME_SUMMARY_KEY),
       ];
     case "comments": {
       // A comment hangs off an issue OR an objective OR a feedback post — route

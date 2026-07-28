@@ -16,6 +16,8 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { isStatus } from "@/lib/issue-validation";
+import { hasAnyRule, userIdsWithoutRule } from "@/lib/smart-assign-config";
+import type { SmartAssignConfigWarning } from "@/lib/types";
 
 /**
  * Smart Assign (MIN-31) — guarantees no active issue stays unassigned on
@@ -23,7 +25,9 @@ import { isStatus } from "@/lib/issue-validation";
  * without an assignee, or when an unassigned issue leaves triage.
  *
  * - Single-member project (owner only): deterministic, no AI.
- * - Multi-member: one forced tool call to the model configured in app_config
+ * - Multi-member with no rule written for anyone: deterministic too, the owner —
+ *   with no rule the model has nothing but names to compare.
+ * - Multi-member with rules: one forced tool call to the model in app_config
  *   (`smart_assign_model`), fed the issue and the per-member rules; any
  *   failure falls back to the owner so the run always assigns someone.
  *
@@ -102,9 +106,14 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
       .filter((id) => id !== ownerId),
   ];
 
+  const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;
+  // Une règle écrite pour QUELQU'UN de l'équipe est ce qui rend le choix
+  // possible : sans aucune, le modèle n'a que des noms à comparer, et le prompt
+  // lui dit déjà de retomber sur le owner dans ce cas. Autant ne pas payer
+  // l'appel — le résultat est le même, en moins cher et sans latence.
   let chosen: string;
-  if (memberIds.length === 1) {
-    // Single-member project: no ambiguity, no AI.
+  if (memberIds.length === 1 || !hasAnyRule(memberIds, rules)) {
+    // Seul membre, ou aucune règle : pas d'ambiguïté à lever, pas d'IA.
     chosen = ownerId;
   } else {
     chosen =
@@ -115,7 +124,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
         issue,
         memberIds,
         ownerId,
-        rules: (project.smart_assign_rules ?? {}) as Record<string, string>,
+        rules,
       })) ?? ownerId; // the contract is "always assign" — owner on any failure
   }
 
@@ -155,6 +164,67 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
         via_smart_assign: true,
       },
     ]);
+  }
+}
+
+/**
+ * Les projets DONT JE SUIS OWNER où Smart Assign est actif alors qu'un membre
+ * au moins n'a pas de règle (MIN-31). Lu par le tableau de bord, qui affiche
+ * l'avertissement : seul le owner peut écrire ces règles, donc lui seul est
+ * averti.
+ *
+ * L'équipe et la notion de « règle écrite » se lisent exactement comme dans
+ * runSmartAssign : owner (sans ligne project_members) + membres, et une règle
+ * vide de blancs ne compte pas. Un projet solo n'est jamais signalé — il
+ * n'a rien à régler, l'affectation y est déterministe.
+ *
+ * Ne rejette jamais : c'est un avertissement, il ne doit pas pouvoir faire
+ * tomber la lecture du tableau de bord qui le transporte.
+ */
+export async function loadSmartAssignConfigWarnings(
+  userId: string
+): Promise<SmartAssignConfigWarning[]> {
+  try {
+    const service = getServiceClient();
+
+    const { data: projects, error } = await service
+      .from("projects")
+      .select("id, name, smart_assign_rules")
+      .eq("owner_id", userId)
+      .eq("smart_assign_enabled", true)
+      .is("deleted_at", null);
+    if (error || !projects?.length) return [];
+
+    const projectIds = projects.map((p) => p.id as string);
+    const { data: memberRows } = await service
+      .from("project_members")
+      .select("project_id, user_id")
+      .in("project_id", projectIds);
+
+    const teamByProject = new Map<string, Set<string>>();
+    for (const id of projectIds) teamByProject.set(id, new Set([userId]));
+    for (const row of memberRows ?? []) {
+      teamByProject.get(row.project_id as string)?.add(row.user_id as string);
+    }
+
+    const warnings: SmartAssignConfigWarning[] = [];
+    for (const project of projects) {
+      const team = teamByProject.get(project.id as string) ?? new Set([userId]);
+      if (team.size <= 1) continue;
+      const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;
+      const missing = userIdsWithoutRule([...team], rules).length;
+      if (missing === 0) continue;
+      warnings.push({
+        projectId: project.id as string,
+        projectName: (project.name as string) ?? "",
+        missingCount: missing,
+        memberCount: team.size,
+      });
+    }
+    return warnings;
+  } catch (err) {
+    console.error("[smart-assign] warnings failed:", (err as Error).message);
+    return [];
   }
 }
 

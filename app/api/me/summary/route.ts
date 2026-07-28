@@ -3,11 +3,13 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
+import { loadSmartAssignConfigWarnings } from "@/lib/server/smart-assign";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
 import { CLOSED_STATUSES } from "@/lib/issue-constants";
 import { dueSoonUpperBound, isDueSoon } from "@/lib/due-soon";
 import type {
   BoardCycles,
+  HomeSummaryFeedback,
   HomeSummaryIssue,
   HomeSummaryResponse,
   IssueRelation,
@@ -27,7 +29,7 @@ const OPEN_STATUSES: IssueStatus[] = ["backlog", "todo", "in_progress", "in_revi
 /** Colonnes d'un ticket du tableau de bord : ce que les cartes affichent ou
     ordonnent, rien de plus. */
 const SUMMARY_ISSUE_COLUMNS =
-  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, issue_categories(category_id)";
+  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, created_at, issue_categories(category_id)";
 
 /**
  * Combien d'échéances proches remontent au plus. La section n'en affiche qu'une
@@ -36,6 +38,21 @@ const SUMMARY_ISSUE_COLUMNS =
  */
 const DUE_SOON_LIMIT = 50;
 
+/**
+ * Plafonds de la file « À trier » (MIN-104) : jamais la file entière — un projet
+ * qui a laissé filer son triage ne doit pas alourdir le tableau de bord. La
+ * section en affiche dix au plus, sur deux projets au plus ; la marge sert
+ * justement à ce qu'après ce second filtre il reste de quoi remplir les dix
+ * lignes. Le « +N autres » qu'elle annonce, lui, reste EXACT : `count: "exact"`
+ * compte tout l'ensemble filtré, `limit` ne borne que les lignes rapatriées
+ * (même requête, même prix).
+ */
+const TRIAGE_LIMIT = 30;
+const NEW_FEEDBACK_LIMIT = 30;
+
+/** Colonnes d'un retour de la file « À trier » — cf. HomeSummaryFeedback. */
+const SUMMARY_FEEDBACK_COLUMNS = "id, project_id, title, vote_count, created_at";
+
 type SummaryRow = Omit<HomeSummaryIssue, "category_ids"> & {
   issue_categories?: { category_id: string }[] | null;
 };
@@ -43,6 +60,38 @@ type SummaryRow = Omit<HomeSummaryIssue, "category_ids"> & {
 /** La jointure des catégories arrive en lignes ; la home veut des ids. */
 function toSummaryIssue({ issue_categories, ...rest }: SummaryRow): HomeSummaryIssue {
   return { ...rest, category_ids: (issue_categories ?? []).map((c) => c.category_id) };
+}
+
+/**
+ * Retours qui attendent encore une décision d'équipe (MIN-104) : `status = 'open'`
+ * — la promotion en ticket, elle, passe le post à `planned`
+ * (lib/server/feedback/promote.ts) — et jamais un tombstone de merge.
+ *
+ * Passe par le client service : toutes les tables `feedback_*` sont RLS deny-all
+ * (cf. supabase/migrations/…_feedback.sql), donc la portée « mes projets » est
+ * explicite ici, à partir des ids lus, eux, sous RLS.
+ *
+ * Une panne de cette lecture ne rend pas 500 : le reste du tableau de bord est
+ * légitime, la section se contente d'omettre les retours.
+ */
+async function loadNewFeedback(
+  projectIds: string[]
+): Promise<{ posts: HomeSummaryFeedback[]; total: number }> {
+  if (projectIds.length === 0) return { posts: [], total: 0 };
+  const { data, count, error } = await getServiceClient()
+    .from("feedback_posts")
+    .select(SUMMARY_FEEDBACK_COLUMNS, { count: "exact" })
+    .in("project_id", projectIds)
+    .eq("status", "open")
+    .is("merged_into_id", null)
+    .order("created_at", { ascending: true })
+    .limit(NEW_FEEDBACK_LIMIT);
+  if (error) {
+    console.error("[api/me/summary] feedback load failed:", error.message);
+    return { posts: [], total: 0 };
+  }
+  const posts = (data ?? []) as HomeSummaryFeedback[];
+  return { posts, total: count ?? posts.length };
 }
 
 /**
@@ -102,8 +151,17 @@ export async function GET(request: NextRequest) {
   const countQuery = () =>
     auth.supabase.from("issues").select("id", { count: "exact", head: true });
 
-  const [openRes, inProgressRes, mineRes, totalRes, cycleIssuesRes, dueSoonRes] =
-    await Promise.all([
+  const [
+    openRes,
+    inProgressRes,
+    mineRes,
+    totalRes,
+    cycleIssuesRes,
+    dueSoonRes,
+    triageRes,
+    myProjectsRes,
+    smartAssignWarnings,
+  ] = await Promise.all([
       countQuery().in("status", OPEN_STATUSES),
       countQuery().eq("status", "in_progress"),
       countQuery().in("status", OPEN_STATUSES).eq("assignee_id", auth.user.id),
@@ -128,6 +186,22 @@ export async function GET(request: NextRequest) {
         .lte("due_date", dueSoonUpperBound(today))
         .order("due_date", { ascending: true })
         .limit(DUE_SOON_LIMIT),
+      // File « À trier » (MIN-104) : les tickets en triage, le plus ANCIEN
+      // d'abord — sur une file d'attente, ce qui a le plus patienté est ce qui
+      // pourrit, et c'est donc ce que la section montre en premier.
+      auth.supabase
+        .from("issues")
+        .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
+        .eq("status", "triage")
+        .order("created_at", { ascending: true })
+        .limit(TRIAGE_LIMIT),
+      // Mes projets, à seule fin de borner la lecture service-role du feedback
+      // (loadNewFeedback) : RLS `projects_select` = owner ∪ membre.
+      auth.supabase.from("projects").select("id").is("deleted_at", null),
+      // Smart Assign mal réglé sur un de MES projets (règles manquantes) : deux
+      // petites lectures, et le plus souvent zéro projet concerné. Ne peut pas
+      // rejeter — la fonction avale ses erreurs et rend une liste vide.
+      loadSmartAssignConfigWarnings(auth.user.id),
     ]);
 
   const firstError =
@@ -136,15 +210,28 @@ export async function GET(request: NextRequest) {
     mineRes.error ||
     totalRes.error ||
     cycleIssuesRes.error ||
-    dueSoonRes.error;
+    dueSoonRes.error ||
+    triageRes.error ||
+    myProjectsRes.error;
   if (firstError) {
     console.error("[api/me/summary] load failed:", firstError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
+  // Part maintenant (l'appel démarre la requête) et s'attend tout en bas : elle
+  // recouvre ainsi la passe séquentielle des relations du cycle.
+  const newFeedbackPromise = loadNewFeedback(
+    ((myProjectsRes.data ?? []) as { id: string }[]).map((p) => p.id)
+  );
+
   const cycleIssues: HomeSummaryIssue[] = (
     (cycleIssuesRes.data ?? []) as SummaryRow[]
   ).map(toSummaryIssue);
+
+  const triage: HomeSummaryIssue[] = ((triageRes.data ?? []) as SummaryRow[]).map(
+    toSummaryIssue
+  );
+  const triageTotal = triageRes.count ?? triage.length;
 
   const dueSoon: HomeSummaryIssue[] = ((dueSoonRes.data ?? []) as SummaryRow[])
     .map(toSummaryIssue)
@@ -185,6 +272,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const newFeedback = await newFeedbackPromise;
+
   const body: HomeSummaryResponse = {
     counts: {
       open: openRes.count ?? 0,
@@ -195,8 +284,13 @@ export async function GET(request: NextRequest) {
     cycles,
     cycleIssues,
     dueSoon,
+    triage,
+    triageTotal,
+    newFeedback: newFeedback.posts,
+    newFeedbackTotal: newFeedback.total,
     relations,
     blockerStatuses,
+    smartAssignWarnings,
   };
   return NextResponse.json(body);
 }

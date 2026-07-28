@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Spinner, Switch, toast } from "mangue-ui";
+import { TriangleAlert } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
+import { userIdsWithoutRule } from "@/lib/smart-assign-config";
 import { SettingsSection } from "@/components/settings-shell";
 import { AutoTextarea } from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
@@ -65,6 +67,18 @@ export function SmartAssignSection({
     (m) => (rules[m.user_id] ?? "").trim() !== (savedRules[m.user_id] ?? "")
   );
 
+  // Ce qui manque, lu sur les règles ENREGISTRÉES et non sur le brouillon : c'est
+  // l'état dont Smart Assign se sert, et c'est celui que le tableau de bord
+  // signale. Un texte tapé mais pas encore enregistré ne fait donc pas
+  // disparaître la marque — l'enregistrement, si.
+  const missingRuleIds = new Set(
+    userIdsWithoutRule(
+      members.map((m) => m.user_id),
+      savedRules
+    )
+  );
+  const incomplete = enabled && members.length > 1 && missingRuleIds.size > 0;
+
   const saveRules = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingRules(true);
@@ -121,6 +135,19 @@ export function SmartAssignSection({
                 {t("smartAssignRulesDesc")}
               </p>
             </div>
+
+            {/* Ce qui manque, dit en clair : sans quoi un champ vide ressemble à
+                un champ facultatif, et Smart Assign a l'air de trier alors qu'il
+                renvoie tout au propriétaire. */}
+            {incomplete && (
+              <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                {t("smartAssignIncompleteWarning", {
+                  count: missingRuleIds.size,
+                  total: members.length,
+                })}
+              </p>
+            )}
             <ul className="flex flex-col gap-3">
               {members.map((m) => (
                 <li key={m.user_id} className="flex flex-col gap-1.5">
@@ -135,6 +162,12 @@ export function SmartAssignSection({
                     <span className="truncate">{displayName(m)}</span>
                     {m.is_owner && (
                       <Badge variant="secondary">{tm("owner")}</Badge>
+                    )}
+                    {missingRuleIds.has(m.user_id) && (
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-500">
+                        <TriangleAlert className="size-3" aria-hidden />
+                        {t("smartAssignNoRule")}
+                      </span>
                     )}
                   </label>
                   <AutoTextarea

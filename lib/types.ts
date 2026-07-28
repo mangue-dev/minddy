@@ -364,6 +364,37 @@ export interface HomeSummaryIssue {
   due_date: string | null;
   cycle_id: string | null;
   category_ids: string[];
+  /** Depuis combien de temps le ticket attend — affiché et trié par la section
+      « À trier » (MIN-104), qui met en haut ce qui a le plus patienté. */
+  created_at: string;
+}
+
+/**
+ * Un retour non encore tranché par l'équipe, tel que la section « À trier » de
+ * l'accueil en a besoin (MIN-104) : de quoi le nommer, le peser (les voix) et le
+ * dater. Ni le texte soumis ni les facettes — ça, c'est la page feedback.
+ */
+export interface HomeSummaryFeedback {
+  id: string;
+  project_id: string;
+  title: string;
+  vote_count: number;
+  created_at: string;
+}
+
+/**
+ * Un projet où Smart Assign tourne sans être vraiment réglé : il est actif, il
+ * a plusieurs membres, et au moins l'un d'eux (le owner compris) n'a pas de
+ * règle d'affectation. Sans règle, le modèle n'a rien à faire correspondre —
+ * lib/server/smart-assign.ts retombe alors sur le owner.
+ */
+export interface SmartAssignConfigWarning {
+  projectId: string;
+  projectName: string;
+  /** Membres sans règle écrite. */
+  missingCount: number;
+  /** Taille de l'équipe, owner compris — toujours > 1 ici. */
+  memberCount: number;
 }
 
 /** Réponse de GET /api/me/summary — la charge utile du tableau de bord. */
@@ -384,10 +415,27 @@ export interface HomeSummaryResponse {
    * l'utilisateur, que seul le serveur connaît (paramètre `tz`).
    */
   dueSoon: HomeSummaryIssue[];
+  /**
+   * File « À trier » (MIN-104), première moitié : les tickets en statut triage,
+   * tous projets confondus, le plus ancien d'abord. Tronquée — `triageTotal`
+   * donne le compte réel, d'où le « +N autres » de la section.
+   */
+  triage: HomeSummaryIssue[];
+  triageTotal: number;
+  /**
+   * File « À trier », seconde moitié : les retours que l'équipe n'a pas encore
+   * tranchés (`status = 'open'`), le plus ancien d'abord. Deux listes plutôt
+   * qu'une seule mêlée : la section réserve un plancher de lignes aux retours,
+   * sans quoi un triage en retard — toujours plus vieux — les enterrerait tous.
+   */
+  newFeedback: HomeSummaryFeedback[];
+  newFeedbackTotal: number;
   /** Relations touchant un ticket du cycle — l'ordre reco tient compte des blocages. */
   relations: IssueRelation[];
   /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */
   blockerStatuses: Record<string, IssueStatus>;
+  /** Mes projets où Smart Assign est actif mais mal réglé (vide le plus souvent). */
+  smartAssignWarnings: SmartAssignConfigWarning[];
 }
 
 export interface GlobalBoardResponse {

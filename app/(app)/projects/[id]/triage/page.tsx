@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import {
@@ -59,6 +59,9 @@ export default function TriagePage() {
   const format = useFormatter();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const router = useRouter();
+  const pathname = usePathname();
+  const issueParam = useSearchParams().get("issue");
   const { user } = useAuth();
 
   const { projects, loading: projectsLoading } = useProjects();
@@ -126,6 +129,21 @@ export default function TriagePage() {
       setSelectedId(triageIssues[0].id);
     }
   }, [triageIssues, selectedId]);
+
+  // Lien profond depuis la section « À trier » de l'accueil (MIN-104) :
+  // ?issue=<id> sélectionne CE ticket plutôt que le premier de la liste, puis
+  // purge le paramètre pour qu'un refetch de fond ne ramène pas la sélection
+  // ici (même idiome que le ?post= du feedback et le ?open= des objectifs).
+  useEffect(() => {
+    if (!issueParam) return;
+    // On attend que le ticket soit vraiment dans la liste : purger le paramètre
+    // avant l'arrivée des tickets laisserait l'effet ci-dessus retomber sur le
+    // premier de la file, et le lien profond serait perdu à froid.
+    if (!triageIssues.some((i) => i.id === issueParam)) return;
+    setSelectedId(issueParam);
+    setMobileDetail(true);
+    router.replace(pathname);
+  }, [issueParam, triageIssues, pathname, router]);
 
   useEffect(() => {
     if (selected) setTitle(selected.title);

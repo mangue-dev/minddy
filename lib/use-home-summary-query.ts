@@ -50,8 +50,13 @@ export function useHomeSummaryQuery() {
     cycles: data?.cycles ?? null,
     cycleIssues: data?.cycleIssues ?? [],
     dueSoon: data?.dueSoon ?? [],
+    triage: data?.triage ?? [],
+    triageTotal: data?.triageTotal ?? 0,
+    newFeedback: data?.newFeedback ?? [],
+    newFeedbackTotal: data?.newFeedbackTotal ?? 0,
     relations: data?.relations ?? [],
     blockerStatuses: data?.blockerStatuses ?? {},
+    smartAssignWarnings: data?.smartAssignWarnings ?? [],
     loading: isLoading,
   };
 }
