@@ -649,6 +649,24 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / remove_issues_from_cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`
     );
   }
+  // Contexte ÉPINGLÉ : l'utilisateur l'a désigné lui-même (bouton @ du
+  // composer), il prime donc sur ce que la page affichait par hasard.
+  if (ctx.pinned?.length) {
+    lines.push(
+      `- Pinned by the user for this message (chosen explicitly, not derived from the page):`,
+      ...ctx.pinned.map((item) => {
+        if (item.kind === "issue") {
+          return `  - Issue ${item.label}${item.detail ? ` — "${item.detail}"` : ""} (id: ${item.id})`;
+        }
+        if (item.kind === "project") {
+          return `  - Project "${item.label}" (id: ${item.id})`;
+        }
+        return `  - Team member ${item.label}${item.detail ? ` (${item.detail})` : ""} (user id: ${item.id}) — that id is what assignee fields take`;
+      }),
+      `When the request has no other explicit target, it is about these — use their ids directly, do not search for them.`
+    );
+  }
+
   if (lines.length === 0) return "";
   return `
 ## What the user is looking at right now

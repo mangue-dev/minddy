@@ -48,9 +48,21 @@ import {
   copyableMessageIds,
 } from "@/lib/assistant-turns";
 import { ConversationList } from "@/components/assistant/conversation-list";
+import { AssistantContextBar } from "@/components/assistant/assistant-context-bar";
+import {
+  applyContextSelection,
+  contextChips,
+  withPinnedContext,
+} from "@/lib/assistant-context";
+import { useNumoMembers } from "@/lib/use-numo-mentionables";
+import { useProjects } from "@/lib/projects-context";
+import { displayName } from "@/lib/display-name";
+import type { MentionOption } from "@/components/assistant/mention-suggest";
 import type {
+  AssistantMention,
   AssistantMessage,
   AssistantPageContext,
+  AssistantPinnedContext,
 } from "@/lib/assistant-types";
 import type { AttachmentInput } from "@/lib/types";
 
@@ -73,8 +85,6 @@ export interface AssistantShellHandle {
 export interface AssistantShellProps {
   /** null = global assistant (no project context). */
   projectId: string | null;
-  /** Appended after "Assistant" in the empty-state title. null = no suffix. */
-  titleSuffix?: string | null;
   /** Which i18n key to render under the empty-state title. */
   descriptionKey?: "emptyDescription" | "globalPlaceholder";
   /** Optional mobile-only secondary label next to the sidebar toggle. */
@@ -99,7 +109,6 @@ export const AssistantShell = forwardRef<
 >(function AssistantShell(
   {
     projectId,
-    titleSuffix = null,
     descriptionKey = "emptyDescription",
     mobileSubtitle,
     compact = false,
@@ -143,14 +152,100 @@ export const AssistantShell = forwardRef<
     );
   }, []);
 
-  // Latest page context (e.g. the issue being viewed), read by send handlers
-  // without stale closures. The host may set it the same tick it dispatches a
-  // one-shot send, so the imperative sendMessage also takes an explicit
-  // override to avoid that race.
-  const pageContextRef = useRef<AssistantPageContext | null>(pageContext);
+  // ── Contexte : ce que Numo a sous les yeux ────────────────────────
+  // Le contexte de la page (ambiant) est complété par la PORTÉE (le projet
+  // courant, qui vaut contexte à lui seul) et par ce que l'utilisateur épingle
+  // à la main depuis le bouton @. Les pilules éteintes ne sont pas retirées de
+  // l'affichage : elles sortent seulement du contexte envoyé — c'est
+  // `applyContextSelection` qui fait le tri, une fois, à l'envoi.
+  const { projects } = useProjects();
+  const [pinned, setPinned] = useState<AssistantPinnedContext[]>([]);
+  const [disabledKeys, setDisabledKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  const fullContext = useMemo(
+    () => withPinnedContext(pageContext, { scopeProjectId: projectId, pinned }),
+    [pageContext, projectId, pinned],
+  );
+
+  const resolveProject = useCallback(
+    (id: string) => projects.find((p) => p.id === id),
+    [projects],
+  );
+
+  const chips = useMemo(
+    () => contextChips(fullContext, { t, project: resolveProject }),
+    [fullContext, t, resolveProject],
+  );
+
+  // Nouvelle conversation → on repart du contexte de la page, sans les
+  // épingles ni les extinctions du tour précédent.
+  const resetContextSelection = useCallback(() => {
+    setPinned([]);
+    setDisabledKeys(new Set());
+  }, []);
+
+  const toggleChip = useCallback((key: string) => {
+    setDisabledKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const removePinned = useCallback((key: string) => {
+    setPinned((prev) =>
+      prev.filter((item) => `pinned:${item.kind}:${item.id}` !== key),
+    );
+  }, []);
+
+  const addPinned = useCallback((item: AssistantPinnedContext) => {
+    setPinned((prev) =>
+      prev.some((p) => p.kind === item.kind && p.id === item.id)
+        ? prev
+        : [...prev, item],
+    );
+  }, []);
+
+  // Mentions « @ » dans le texte : la liste ne se charge qu'à la première
+  // frappe d'un « @ » (et reste ensuite en cache).
+  const [mentionsWanted, setMentionsWanted] = useState(false);
+  const { members } = useNumoMembers(mentionsWanted, projectId);
+  const mentionables = useMemo<MentionOption[]>(
+    () => [
+      ...members.map((m) => ({
+        type: "member" as const,
+        id: m.user_id,
+        label: displayName(m),
+        avatarSeed: m.avatar_seed,
+        keywords: m.email ? [m.email] : [],
+      })),
+      ...projects.map((p) => ({
+        type: "project" as const,
+        id: p.id,
+        label: p.name,
+        iconUrl: p.icon_url,
+        keywords: [p.key],
+      })),
+    ],
+    [members, projects],
+  );
+
+  // Read by the send handlers without stale closures. The host may set the
+  // context the same tick it dispatches a one-shot send, so the imperative
+  // sendMessage also takes an explicit override to avoid that race.
+  // Le contexte EFFECTIF (portée + épingles − pilules éteintes) : c'est lui qui
+  // part avec le message, et lui qui reste sur la bulle.
+  const effectiveContext = useMemo(
+    () => applyContextSelection(fullContext, disabledKeys),
+    [fullContext, disabledKeys],
+  );
+  const effectiveContextRef = useRef(effectiveContext);
   useEffect(() => {
-    pageContextRef.current = pageContext;
-  }, [pageContext]);
+    effectiveContextRef.current = effectiveContext;
+  }, [effectiveContext]);
 
   // Expose imperative controls to the host page (URL-param driven flows).
   useImperativeHandle(
@@ -158,7 +253,7 @@ export const AssistantShell = forwardRef<
     () => ({
       sendMessage: (pid, msg, ctx) =>
         sendMessage(pid, msg, {
-          pageContext: ctx !== undefined ? ctx : pageContextRef.current,
+          pageContext: ctx !== undefined ? ctx : effectiveContextRef.current,
         }),
       fill: (text) => chatInputRef.current?.fill(text),
     }),
@@ -166,10 +261,15 @@ export const AssistantShell = forwardRef<
   );
 
   const handleSend = useCallback(
-    (message: string, attachments: AttachmentInput[] = []) => {
+    (
+      message: string,
+      attachments: AttachmentInput[] = [],
+      mentions: AssistantMention[] = [],
+    ) => {
       sendMessage(projectId, message, {
-        pageContext: pageContextRef.current,
+        pageContext: effectiveContextRef.current,
         attachments,
+        mentions,
       });
     },
     [projectId, sendMessage]
@@ -195,8 +295,9 @@ export const AssistantShell = forwardRef<
 
   const handleNewConversation = useCallback(() => {
     reset();
+    resetContextSelection();
     setRefreshKey((k) => k + 1);
-  }, [reset]);
+  }, [reset, resetContextSelection]);
 
   const isStreaming =
     state.status === "streaming" || state.status === "executing_tool";
@@ -425,11 +526,8 @@ export const AssistantShell = forwardRef<
         </Tooltip>
       )}
 
-      {titleSuffix && (
-        <span className="ml-1 min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {titleSuffix}
-        </span>
-      )}
+      {/* Pas de nom de projet ici : le projet courant est un contexte comme un
+          autre, il s'affiche (et s'éteint) en pilule dans le composer. */}
 
       {onClose && (
         <Tooltip>
@@ -437,7 +535,7 @@ export const AssistantShell = forwardRef<
             <Button
               variant="ghost"
               size="icon-sm"
-              className={titleSuffix ? "" : "ml-auto"}
+              className="ml-auto"
               aria-label={tc("close")}
               onClick={onClose}
             >
@@ -640,7 +738,20 @@ export const AssistantShell = forwardRef<
                   isStreaming={isStreaming}
                   beam={isBusy}
                   noBorder={!hasMessages}
-                  pageContext={pageContext}
+                  mentionables={mentionables}
+                  onMentionQuery={(active) => {
+                    if (active) setMentionsWanted(true);
+                  }}
+                  contextSlot={
+                    <AssistantContextBar
+                      chips={chips}
+                      disabledKeys={disabledKeys}
+                      onToggle={toggleChip}
+                      onRemove={removePinned}
+                      onAdd={addPinned}
+                      scopeProjectId={projectId}
+                    />
+                  }
                 />
               </div>
             </div>

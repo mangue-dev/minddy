@@ -65,6 +65,10 @@ export type SearchMenuProps = {
   emptyText?: string;
   align?: "start" | "center" | "end";
   contentClassName?: string;
+  /** Portal target. Dans un Sheet/Dialog modal, react-remove-scroll bloque la
+   *  molette sur tout ce qui est porté à <body> : porter le menu DANS le
+   *  panneau est ce qui garde sa liste défilable (le composer de Numo). */
+  container?: HTMLElement | null;
   /** Stop pointer/click from bubbling to a draggable/clickable ancestor. */
   stopPropagation?: boolean;
   /** cmdk groups/items (each caller wraps its options in a CommandGroup). */
@@ -84,6 +88,7 @@ export function SearchMenu({
   emptyText,
   align = "start",
   contentClassName,
+  container,
   stopPropagation,
   children,
 }: SearchMenuProps) {
@@ -95,6 +100,7 @@ export function SearchMenu({
   const content = (
     <PopoverContent
       align={align}
+      container={container}
       className={cn("w-60 overflow-hidden p-0", contentClassName)}
       onClick={stop}
       onPointerDown={stop}

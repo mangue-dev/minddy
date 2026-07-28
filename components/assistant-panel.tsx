@@ -155,7 +155,6 @@ export function AssistantPanel() {
             key={scopeProjectId ?? "__global__"}
             ref={handleShellRef}
             projectId={scopeProjectId}
-            titleSuffix={activeProject?.name ?? null}
             descriptionKey={
               scopeProjectId ? "emptyDescription" : "globalPlaceholder"
             }

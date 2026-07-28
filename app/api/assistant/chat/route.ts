@@ -11,7 +11,9 @@ import {
 } from "@/lib/server/plan-limit-error";
 import type {
   AssistantChatRequest,
+  AssistantMention,
   AssistantPageContext,
+  AssistantPinnedContext,
 } from "@/lib/assistant-types";
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
@@ -66,8 +68,39 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
       .slice(0, 50);
     return list.length > 0 ? list : undefined;
   };
+  // Contexte épinglé à la main (bouton @ du composer) : quelques entrées, des
+  // libellés courts. Les ids ne sont que cités dans le prompt — chaque outil
+  // repasse par la RLS de l'utilisateur, donc rien ne s'ouvre ici.
+  const pinned = ((): AssistantPinnedContext[] | undefined => {
+    if (!Array.isArray(obj.pinned)) return undefined;
+    const list = obj.pinned
+      .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
+      .filter(
+        (v) =>
+          (v.kind === "issue" || v.kind === "project" || v.kind === "member") &&
+          typeof v.id === "string" &&
+          v.id.length <= 100 &&
+          typeof v.label === "string" &&
+          v.label.length <= 200,
+      )
+      .slice(0, 20)
+      .map((v) => ({
+        kind: v.kind as AssistantPinnedContext["kind"],
+        id: v.id as string,
+        label: v.label as string,
+        ...(typeof v.detail === "string" && v.detail.length <= 500
+          ? { detail: v.detail }
+          : {}),
+        ...(typeof v.avatarSeed === "string" && v.avatarSeed.length <= 100
+          ? { avatarSeed: v.avatarSeed }
+          : {}),
+      }));
+    return list.length > 0 ? list : undefined;
+  })();
+
   const ctx: AssistantPageContext = {
     projectId: pick("projectId"),
+    pinned,
     onglet: obj.onglet === "my" || obj.onglet === "all" ? obj.onglet : undefined,
     issueId: pick("issueId"),
     issueIds: pickList("issueIds"),
@@ -86,6 +119,48 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
   };
   const hasAnything = Object.values(ctx).some((v) => v !== undefined);
   return hasAnything ? ctx : null;
+}
+
+/** Les « @ » écrits dans le message, résolus côté client. Même confiance que le
+ *  contexte : ils ne servent qu'à nommer, jamais à ouvrir un accès. */
+function parseMentions(raw: unknown): AssistantMention[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
+    .filter(
+      (v) =>
+        (v.type === "member" || v.type === "project") &&
+        typeof v.id === "string" &&
+        v.id.length <= 100 &&
+        typeof v.label === "string" &&
+        v.label.length > 0 &&
+        v.label.length <= 200,
+    )
+    .slice(0, 20)
+    .map((v) => ({
+      type: v.type as AssistantMention["type"],
+      id: v.id as string,
+      label: v.label as string,
+      ...(typeof v.avatarSeed === "string" && v.avatarSeed.length <= 100
+        ? { avatarSeed: v.avatarSeed }
+        : {}),
+    }));
+}
+
+/** Résolution « @Nom → id » accrochée au message qui porte les mentions : Numo
+ *  peut assigner ou cibler sans re-chercher le nom, et la ligne survit dans
+ *  l'historique puisqu'elle se recalcule depuis la métadonnée persistée. */
+function mentionsNote(metadata: unknown): string {
+  const list = parseMentions(
+    (metadata as { mentions?: unknown } | null)?.mentions
+  );
+  if (list.length === 0) return "";
+  const parts = list.map((m) =>
+    m.type === "member"
+      ? `@${m.label} = team member (user id: ${m.id})`
+      : `@${m.label} = project (id: ${m.id})`
+  );
+  return `\n\n[Mentions in this message: ${parts.join("; ")}]`;
 }
 
 export async function POST(request: NextRequest) {
@@ -130,6 +205,7 @@ export async function POST(request: NextRequest) {
 
   const { projectId, message, conversationId } = body;
   let pageContext = parsePageContext(body.pageContext);
+  const mentions = parseMentions(body.mentions);
   if (!message?.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
@@ -273,7 +349,10 @@ export async function POST(request: NextRequest) {
     role: "user",
     content: sanitizedUserMessage,
     context: pageContext,
-    metadata: attachments.length > 0 ? { attachments } : {},
+    metadata: {
+      ...(attachments.length > 0 ? { attachments } : {}),
+      ...(mentions.length > 0 ? { mentions } : {}),
+    },
   });
 
   if (userMsgError) {
@@ -364,7 +443,9 @@ export async function POST(request: NextRequest) {
       : null;
 
     for (const [i, msg] of history.entries()) {
-      const sanitized = sanitizeAssistantMessageContent(msg.content);
+      const sanitized =
+        sanitizeAssistantMessageContent(msg.content) +
+        (msg.role === "user" ? mentionsNote(msg.metadata) : "");
       const atts = rowAttachments(msg);
       let content: string | ChatContentPart[] = sanitized;
       if (atts.length > 0 && modalities) {

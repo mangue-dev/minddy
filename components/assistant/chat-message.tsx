@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 import { IconButton, toast } from "mangue-ui";
-import type { AssistantMessage } from "@/lib/assistant-types";
+import type {
+  AssistantMention,
+  AssistantMessage,
+  AssistantPageContext,
+} from "@/lib/assistant-types";
 import {
   Message,
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
 import { ToolCallList } from "./tool-call-display";
-import { PageContextBadge } from "./page-context-badge";
+import { ContextPill } from "./context-pill";
+import { contextChips } from "@/lib/assistant-context";
+import { useProjects } from "@/lib/projects-context";
+import { MentionChip } from "@/components/assistant/mention-chip";
 import { AttachmentPills, type AttachmentLike } from "@/components/attachments";
 
 interface ChatMessageProps {
@@ -69,6 +76,99 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+// ── Contexte d'un message ─────────────────────────────────────────────
+
+/** Ce que Numo avait sous les yeux pour CE message. Le projet est laissé de
+    côté : il vaut pour toute la conversation, le répéter à chaque bulle
+    n'apprendrait rien. */
+function MessageContextChips({ context }: { context: AssistantPageContext }) {
+  const t = useTranslations("Assistant");
+  const { projects } = useProjects();
+  const chips = useMemo(
+    () =>
+      contextChips(context, {
+        t,
+        project: (id) => projects.find((p) => p.id === id),
+      }).filter((chip) => chip.kind !== "project"),
+    [context, t, projects],
+  );
+
+  if (chips.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-1">
+      {chips.map((chip) => (
+        <ContextPill key={chip.key} chip={chip} />
+      ))}
+    </div>
+  );
+}
+
+// ── Texte d'un message utilisateur ────────────────────────────────────
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Le texte de la bulle, avec les « @ » rendus en pilules. Les mentions sont
+    persistées sur la métadonnée du message (nom + id) : on n'a donc pas à
+    deviner à quel membre « @Clément » renvoyait au moment de l'envoi. */
+function UserText({
+  content,
+  mentions,
+}: {
+  content: string;
+  mentions: AssistantMention[];
+}) {
+  // Un projet mentionné montre sa vraie figure. Son orbe se dessine à partir
+  // de son id seul : même un projet devenu inaccessible garde la sienne, seul
+  // le favicon importé demande de connaître le projet.
+  const { projects } = useProjects();
+  const parts = useMemo(() => {
+    if (mentions.length === 0) return [content];
+    // Le plus long d'abord : « @Marie Curie » avant « @Marie ».
+    const sorted = [...mentions].sort((a, b) => b.label.length - a.label.length);
+    const re = new RegExp(
+      `@(${sorted.map((m) => escapeRegExp(m.label)).join("|")})`,
+      "g",
+    );
+    const out: Array<string | AssistantMention> = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(content)) !== null) {
+      if (match.index > last) out.push(content.slice(last, match.index));
+      const mention = sorted.find((m) => m.label === match?.[1]);
+      out.push(mention ?? match[0]);
+      last = match.index + match[0].length;
+    }
+    if (last < content.length) out.push(content.slice(last));
+    return out;
+  }, [content, mentions]);
+
+  return (
+    <p className="whitespace-pre-wrap">
+      {parts.map((part, i) =>
+        typeof part === "string" ? (
+          part
+        ) : (
+          <MentionChip
+            key={`${part.type}:${part.id}:${i}`}
+            type={part.type}
+            id={part.id}
+            label={part.label}
+            avatarSeed={part.avatarSeed}
+            iconUrl={
+              part.type === "project"
+                ? projects.find((p) => p.id === part.id)?.icon_url
+                : null
+            }
+            // Sur la bulle sombre, la teinte de marque ne passe pas : la pilule
+            // s'éclaircit dans la couleur du texte qui l'entoure.
+            className="bg-background/15 text-background"
+          />
+        ),
+      )}
+    </p>
+  );
+}
+
 // ── Assistant text renderer ───────────────────────────────────────────
 // For assistant responses: AI Elements Response (Streamdown).
 
@@ -97,10 +197,7 @@ export function ChatMessage({
       <div className="flex w-full flex-col">
         {isUser ? (
           <div className="ml-auto flex max-w-[85%] flex-col items-end gap-1">
-            {message.context &&
-              (message.context.issueId || message.context.objectiveId) && (
-                <PageContextBadge context={message.context} />
-              )}
+            {message.context && <MessageContextChips context={message.context} />}
             {Array.isArray(message.metadata?.attachments) &&
               message.metadata.attachments.length > 0 && (
                 <AttachmentPills
@@ -112,7 +209,14 @@ export function ChatMessage({
             {message.content && (
               <>
                 <div className="chat-selectable relative rounded-2xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background">
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <UserText
+                    content={message.content}
+                    mentions={
+                      Array.isArray(message.metadata?.mentions)
+                        ? (message.metadata.mentions as AssistantMention[])
+                        : []
+                    }
+                  />
                 </div>
                 <div className="-mt-0.5">
                   <CopyButton text={message.content} />

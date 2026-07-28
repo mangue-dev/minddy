@@ -70,6 +70,38 @@ export type AssistantSSEEvent =
   | { type: "done"; data: Record<string, never> };
 
 /**
+ * Un élément de contexte choisi à la main (bouton @ du composer) : un ticket,
+ * un projet ou un membre de l'équipe. Le libellé vient du client — il n'est là
+ * que pour que Numo puisse nommer la chose sans re-résoudre son id.
+ */
+export interface AssistantPinnedContext {
+  kind: "issue" | "project" | "member";
+  id: string;
+  /** « MIN-42 », « minddy », « Clément » — ce qu'affiche la pilule. */
+  label: string;
+  /** Détail secondaire : titre du ticket, e-mail du membre. */
+  detail?: string;
+  /** Membres : la graine du portrait (public.user_avatars), qui n'est PAS
+      toujours le user_id — la déduire afficherait un autre visage. */
+  avatarSeed?: string;
+}
+
+/**
+ * Une mention « @ » écrite DANS le message (membre de l'équipe ou projet),
+ * résolue au moment de la frappe. Persistée sur `metadata.mentions` du message
+ * utilisateur : elle sert à re-rendre la pilule dans la bulle, et à dire à Numo
+ * qui/quoi ce nom désigne exactement.
+ */
+export interface AssistantMention {
+  type: "member" | "project";
+  id: string;
+  /** Le texte écrit après le « @ » dans le message. */
+  label: string;
+  /** Membres : la graine du portrait — voir AssistantPinnedContext.avatarSeed. */
+  avatarSeed?: string;
+}
+
+/**
  * Structured "what the user is currently looking at" context, attached to a
  * chat request so Numo can resolve deictic references ("ce ticket", "cette
  * vue") to a concrete issue/board without guessing. Derived ambiently from
@@ -78,6 +110,12 @@ export type AssistantSSEEvent =
  */
 export interface AssistantPageContext {
   projectId?: string;
+  /**
+   * Contexte ÉPINGLÉ à la main depuis le composer (bouton @), par opposition
+   * au reste de cet objet, déduit de la page. Il survit à la navigation : c'est
+   * l'utilisateur qui l'a choisi, pas la page qui l'a publié.
+   */
+  pinned?: AssistantPinnedContext[];
   /** Legacy (pre views-v2): the board tab the message was sent from. No longer
       populated — kept so old persisted messages still render their badge. */
   onglet?: "my" | "all";
@@ -133,4 +171,10 @@ export interface AssistantChatRequest {
     mime_type: string;
     size_bytes: number;
   }>;
+  /**
+   * Les « @ » écrits dans le message (membres, projets), résolus côté client.
+   * Persistés sur la métadonnée du message et donnés à Numo sous forme d'une
+   * ligne de résolution nom → id.
+   */
+  mentions?: AssistantMention[];
 }

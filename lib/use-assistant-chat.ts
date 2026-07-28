@@ -3,6 +3,7 @@
 import { useCallback, useReducer, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type {
+  AssistantMention,
   AssistantMessage,
   AssistantToolCall,
   AssistantChatRequest,
@@ -112,6 +113,7 @@ type Action =
       content: string;
       context?: AssistantPageContext | null;
       attachments?: AttachmentInput[];
+      mentions?: AssistantMention[];
     }
   | { type: "DONE" }
   | { type: "GENERATING_SERVER" }
@@ -245,9 +247,12 @@ function reducer(
         tool_calls: null,
         tool_call_id: null,
         tool_name: null,
-        metadata: action.attachments?.length
-          ? { attachments: action.attachments }
-          : {},
+        metadata: {
+          ...(action.attachments?.length
+            ? { attachments: action.attachments }
+            : {}),
+          ...(action.mentions?.length ? { mentions: action.mentions } : {}),
+        },
         context: action.context ?? null,
         created_at: new Date().toISOString(),
       };
@@ -406,6 +411,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       options?: {
         pageContext?: AssistantPageContext | null;
         attachments?: AttachmentInput[];
+        /** Les « @ » écrits dans le message (membres, projets). */
+        mentions?: AssistantMention[];
       },
     ) => {
       if (!message.trim()) return;
@@ -433,6 +440,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         content: message,
         context: options?.pageContext ?? null,
         attachments: options?.attachments,
+        mentions: options?.mentions,
       });
       dispatch({ type: "START_STREAMING" });
 
@@ -445,6 +453,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(options?.attachments?.length
             ? { attachments: options.attachments }
             : {}),
+          ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
         };
 
         const response = await fetch("/api/assistant/chat", {
