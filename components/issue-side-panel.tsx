@@ -486,6 +486,20 @@ export function IssueSidePanel({
     resetDictation();
   }, [issue?.id, resetDictation]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
+  // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
+  const [transcribing, setTranscribing] = useState(false);
+  const handleOpenChange = (next: boolean) => {
+    // La dictée édite CE ticket : le transcript, puis le patch de Numo, vont y
+    // atterrir. Fermer maintenant les jetterait — on refuse, en le disant (une
+    // Échap sans effet passerait pour une panne).
+    if (!next && (transcribing || numoBusy)) {
+      toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
+      return;
+    }
+    onOpenChange(next);
+  };
+
   if (!issue) return null;
 
   const patch = async (updates: IssueUpdateInput) => {
@@ -553,7 +567,7 @@ export function IssueSidePanel({
           title={`${issueIdentifier(projectKey, issue.number)} · ${issue.title} · ${SITE_NAME}`}
         />
       )}
-      <SidePanel open={open} onOpenChange={onOpenChange}>
+      <SidePanel open={open} onOpenChange={handleOpenChange}>
         <SidePanelContent
           onInteractOutside={keepOverlayOpenForPopper}
           // Radix moves focus to the first tabbable element when the panel
@@ -629,6 +643,7 @@ export function IssueSidePanel({
                   onTranscription={onTranscript}
                   tooltipLabel={t("dictateEditTooltip")}
                   shortcutKey="mod+shift+d"
+                  onProcessingChange={setTranscribing}
                 />
               )}
             </div>

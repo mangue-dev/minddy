@@ -56,6 +56,14 @@ export interface DictateButtonProps {
    * rendering the button in the context where the shortcut should apply.
    */
   shortcutKey?: string;
+  /**
+   * Notified while a finished take is being transcribed (mic released, audio in
+   * flight). Hosts that can be dismissed use it to refuse the dismissal: unlike
+   * recording — which puts an open popover in front of everything, swallowing
+   * Escape and outside clicks — this window leaves every close path open, and
+   * closing here throws the take away.
+   */
+  onProcessingChange?: (processing: boolean) => void;
   className?: string;
 }
 
@@ -124,6 +132,7 @@ export function DictateButton({
   disabled = false,
   tooltipLabel,
   shortcutKey,
+  onProcessingChange,
   className,
 }: DictateButtonProps) {
   const t = useTranslations("Dictate");
@@ -393,6 +402,20 @@ export function DictateButton({
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
   }, [shortcut, handleClick]);
+
+  // Report the transcribing window to the host. Routed through a ref so the
+  // callback needn't be memoized, and always reported as over on unmount: the
+  // transcript landing is exactly what makes some hosts swap this button out
+  // (for Numo's icon), and a host still waiting on a component that no longer
+  // exists would stay blocked forever.
+  const onProcessingChangeRef = useRef(onProcessingChange);
+  useEffect(() => {
+    onProcessingChangeRef.current = onProcessingChange;
+  });
+  useEffect(() => {
+    onProcessingChangeRef.current?.(status === "processing");
+  }, [status]);
+  useEffect(() => () => onProcessingChangeRef.current?.(false), []);
 
   const isBusy = status !== "idle";
   const isRecording = status === "recording";

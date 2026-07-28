@@ -128,9 +128,10 @@ export function CreateProjectWizard({
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [repo, setRepo] = useState<DraftRepo | null>(null);
 
-  // Étape « Finitions »
+  // Étape « Finitions ». Smart Assign est proposé ACTIVÉ : c'est le réglage
+  // qu'on veut par défaut sur un projet neuf, et le décocher reste à un clic.
   const [feedbackEnabled, setFeedbackEnabled] = useState(false);
-  const [smartAssignEnabled, setSmartAssignEnabled] = useState(false);
+  const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
   const step: StepId = STEPS[Math.min(stepIndex, STEPS.length - 1)];
@@ -151,7 +152,7 @@ export function CreateProjectWizard({
     setCandidates(null);
     setRepo(null);
     setFeedbackEnabled(false);
-    setSmartAssignEnabled(false);
+    setSmartAssignEnabled(true);
     setAutoAssignEnabled(false);
   }, []);
 

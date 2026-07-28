@@ -136,6 +136,9 @@ export function CreateIssueDialog({
   // re-open the confirmation just dismissed. This ref muffles the dialog's close
   // signal for the brief window right after the confirmation closes.
   const ignoreCloseAfterConfirmRef = useRef(false);
+  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
+  // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
+  const [transcribing, setTranscribing] = useState(false);
   // Remount the markdown editor to swap its content (it only commits on blur).
   const [editorKey, setEditorKey] = useState(0);
   // Live emptiness of the editor — `description` alone would miss text that was
@@ -272,6 +275,13 @@ export function CreateIssueDialog({
   };
 
   const handleOpenChange = (next: boolean) => {
+    // Une dictée en vol travaille SUR ce formulaire : le transcript, puis le
+    // patch de Numo, vont y atterrir. Fermer maintenant les jetterait — on
+    // refuse, en le disant (une Échap sans effet passerait pour une panne).
+    if (!next && (transcribing || numoBusy)) {
+      toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
+      return;
+    }
     // Swallow close signals while the confirmation owns the decision (it's up),
     // and for the brief window right after it closes — that window is the
     // fall-through click that would otherwise re-open the confirmation in a loop.
@@ -596,6 +606,7 @@ export function CreateIssueDialog({
                   }}
                   disabled={submitting}
                   shortcutKey="mod+shift+d"
+                  onProcessingChange={setTranscribing}
                   className="-ml-2"
                 />
               )}
