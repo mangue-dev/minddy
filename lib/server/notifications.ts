@@ -19,6 +19,15 @@ export interface NotificationRow {
   feedback_post_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
+  /** L'action est passée par le serveur MCP : l'acteur affiché dans l'inbox est
+      l'AGENT porté par `api_key_id`, pas le propriétaire de la clé. Même
+      vocabulaire que `issue_events` (lib/server/issue-events.ts). */
+  via_mcp?: boolean;
+  /** La clé API derrière une action MCP — son agent/nom donne logo et libellé. */
+  api_key_id?: string | null;
+  /** L'affectation vient de Smart Assign (`actor_id` null) : l'inbox nomme la
+      fonctionnalité au lieu de dire « Quelqu'un ». */
+  via_smart_assign?: boolean;
 }
 
 /** The agent types displace each other: one live agent notification per issue. */

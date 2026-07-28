@@ -17,7 +17,6 @@ import {
   toast,
 } from "mangue-ui";
 import {
-  Bot,
   ChevronDown,
   ChevronRight,
   Ellipsis,
@@ -27,9 +26,13 @@ import {
   Pencil,
   Plug,
   Trash2,
-  WandSparkles,
 } from "lucide-react";
-import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
+import { mcpActorLabel } from "@/lib/mcp-agents";
+import {
+  McpAvatar,
+  NumoAvatar,
+  SmartAssignAvatar,
+} from "@/components/actor-avatars";
 import { isForgePrEvent, forgePrActor, type ForgeProvider } from "@/lib/pr-events";
 import { getRepoProvider } from "@/lib/repo-providers";
 import {
@@ -53,7 +56,6 @@ import {
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
-import { NumoIcon } from "@/components/numo-icon";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
@@ -93,20 +95,13 @@ function actorName(members: Member[], id: string | null, t: TimelineT): string {
   return displayName(m, t("someUser"));
 }
 
-/** Display name for an action performed through the MCP endpoint: the acting
-    agent's canonical label (Claude Code, Cursor…) when its key maps to a known
-    agent, else the raw key name with a trailing "(…)" (workspace/project the
-    client tacks on) dropped. No "(mcp)" suffix — the agent's logo already marks
-    the source; just the agent name. */
-function mcpActorName(
+/** Display name for an action performed through the MCP endpoint (shared with
+    the inbox — see `mcpActorLabel`); only the fallback wording is local. */
+const mcpActorName = (
   agent: string | null | undefined,
   keyName: string | null | undefined,
   t: TimelineT,
-): string {
-  if (isMcpAgentId(agent)) return getMcpAgent(agent).label;
-  const raw = (keyName ?? t("mcpFallback")).trim();
-  return raw.replace(/\s*\([^()]*\)\s*$/, "").trim() || raw;
-}
+): string => mcpActorLabel(agent, keyName, t("mcpFallback"));
 
 /** Bridge next-intl translators into the loose types describeEvent expects. */
 function useEventTranslators(): EventTranslators {
@@ -149,70 +144,6 @@ function ActorAvatar({
   // qui emprunter sa graine : son nom fait un repli stable.
   const seed = (id ? members.find((m) => m.user_id === id)?.avatar_seed : null) ?? name;
   return <UserAvatar seed={seed} className={cn("size-5", className)} />;
-}
-
-/** Avatar for actions triggered through Numo — the assistant's face instead of
-    the user's initials, so agent actions read as Numo's in the timeline. */
-function NumoAvatar({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
-        className,
-      )}
-    >
-      <NumoIcon animated={false} className="size-3.5" />
-    </span>
-  );
-}
-
-/** Avatar for actions performed through the MCP endpoint — the acting agent's
-    logo (Claude Code, Cursor…) when the key is tied to a known agent, else a
-    generic bot. The actor is the AGENT, never the user. */
-function McpAvatar({ agent, className }: { agent: string | null | undefined; className?: string }) {
-  const known = isMcpAgentId(agent) ? getMcpAgent(agent) : null;
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
-        className,
-      )}
-    >
-      {known ? (
-        known.logoDark ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={known.logo} alt="" className="size-3 dark:hidden" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={known.logoDark} alt="" className="hidden size-3 dark:block" />
-          </>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={known.logo} alt="" className="size-3" />
-        )
-      ) : (
-        <Bot className="size-3.5" />
-      )}
-    </span>
-  );
-}
-
-/** Avatar for assignments made by Smart Assign — the feature acts as its own
-    entity in the timeline, never as a user. */
-function SmartAssignAvatar({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand",
-        className,
-      )}
-    >
-      <WandSparkles className="size-3" />
-    </span>
-  );
 }
 
 /** Avatar for feedback submitted through the public board — the anonymous

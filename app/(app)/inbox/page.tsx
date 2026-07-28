@@ -17,8 +17,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
-import { NumoIcon } from "@/components/numo-icon";
+import {
+  McpAvatar,
+  NumoAvatar,
+  SmartAssignAvatar,
+} from "@/components/actor-avatars";
 import { UserAvatar } from "@/components/user-avatar";
+import { mcpActorLabel } from "@/lib/mcp-agents";
 import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import type { MyInvitation, MyNotification, NotificationType } from "@/lib/types";
@@ -67,26 +72,66 @@ function groupOf(at: string): DateGroup {
   return "earlier";
 }
 
-function TypeIcon({
-  type,
-  fromNumo,
+/**
+ * La marque de QUI a déclenché la ligne, au même endroit pour tout le monde :
+ * le portrait de la personne, le visage de Numo, le logo de l'agent branché sur
+ * le MCP, la baguette de Smart Assign — le vocabulaire de la timeline d'un
+ * ticket (components/actor-avatars.tsx), pour que la même action se reconnaisse
+ * des deux côtés.
+ *
+ * Faute d'acteur — un retour déposé sur le board public, une notification d'un
+ * compte parti — l'icône du TYPE reprend sa place : mieux vaut dire ce qui est
+ * arrivé que dessiner un visage qui n'existe pas.
+ */
+function RowAvatar({
+  notification: n,
+  unread,
 }: {
-  type: NotificationType;
-  /** The comment behind the row is Numo's reply — same icon as the agent rows. */
-  fromNumo?: boolean;
+  notification: MyNotification;
+  unread: boolean;
 }) {
-  if (fromNumo || AGENT_TYPES.includes(type)) {
-    return <NumoIcon className="size-5" animated={false} />;
+  if (n.from_numo || AGENT_TYPES.includes(n.type)) {
+    return <NumoAvatar className="size-8" iconClassName="size-5" />;
+  }
+  if (n.via_smart_assign) {
+    return <SmartAssignAvatar className="size-8" iconClassName="size-4" />;
+  }
+  if (n.via_mcp) {
+    return (
+      <McpAvatar
+        agent={n.api_key_agent}
+        className="size-8"
+        iconClassName="size-4"
+      />
+    );
+  }
+  if (n.actor_avatar_seed) {
+    return (
+      <UserAvatar
+        seed={n.actor_avatar_seed}
+        className="size-8"
+        title={n.actor_name ?? undefined}
+      />
+    );
   }
   const Icon =
-    type === "assigned"
+    n.type === "assigned"
       ? UserPlus
-      : type === "mention"
+      : n.type === "mention"
         ? AtSign
-        : type === "feedback_new"
+        : n.type === "feedback_new"
           ? Megaphone
           : MessageSquare;
-  return <Icon className="size-4" />;
+  return (
+    <span
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-full",
+        unread ? "bg-muted text-foreground" : "bg-muted/60 text-muted-foreground"
+      )}
+    >
+      <Icon className="size-4" />
+    </span>
+  );
 }
 
 export default function InboxPage() {
@@ -94,6 +139,9 @@ export default function InboxPage() {
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
   const tProjects = useTranslations("Projects");
+  // Le seul emprunt à la timeline : le repli d'une clé MCP sans nom, qui se dit
+  // au même endroit des deux côtés.
+  const tTimeline = useTranslations("Timeline");
   const format = useFormatter();
   // Référence de temps stable pour les horodatages relatifs, rafraîchie
   // chaque minute — sans ça next-intl retombe sur Date.now() et prévient.
@@ -178,10 +226,21 @@ export default function InboxPage() {
   const inviterOf = (inv: MyInvitation): string =>
     inv.inviter_name || inv.inviter_email || t("someone");
 
+  /** Le nom de l'acteur, dans les mêmes termes que la timeline : une action
+   *  passée par le MCP est celle de l'AGENT, une affectation automatique celle
+   *  de Smart Assign — jamais « Quelqu'un », qui ne renseigne personne. */
+  const actorOf = (n: MyNotification): string => {
+    if (n.via_smart_assign) return "Smart Assign";
+    if (n.via_mcp) {
+      return mcpActorLabel(n.api_key_agent, n.api_key_name, tTimeline("mcpFallback"));
+    }
+    return n.actor_name ?? t("someone");
+  };
+
   /** Ligne 2 : qui a fait quoi — complétée par l'extrait du commentaire. */
   const sentenceOf = (n: MyNotification): string => {
     const sentence = t(LINE_KEYS[n.type] as Parameters<typeof t>[0], {
-      actor: n.actor_name ?? t("someone"),
+      actor: actorOf(n),
     });
     return n.comment_excerpt ? `${sentence} : ${n.comment_excerpt}` : sentence;
   };
@@ -350,16 +409,7 @@ export default function InboxPage() {
                         )}
                         aria-hidden
                       />
-                      <span
-                        className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full",
-                          unread
-                            ? "bg-muted text-foreground"
-                            : "bg-muted/60 text-muted-foreground"
-                        )}
-                      >
-                        <TypeIcon type={n.type} fromNumo={n.from_numo} />
-                      </span>
+                      <RowAvatar notification={n} unread={unread} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline gap-2">
                           {n.issue_id && n.project_key && n.issue_number != null && (

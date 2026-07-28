@@ -105,9 +105,21 @@ export interface MyNotification {
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;
+  /** The actor's generated mark (lib/avatar.ts). Null when the actor isn't a
+      person — Numo, an MCP agent, Smart Assign — or when there is none at all. */
+  actor_avatar_seed: string | null;
   /** The comment behind this row was written by Numo — the inbox shows its
       icon and names Numo as the actor, not the user the row is stored under. */
   from_numo: boolean;
+  /** The action came through the MCP endpoint: the displayed actor is the AGENT
+      below, never the account whose key it held. */
+  via_mcp: boolean;
+  /** Acting agent's id (`claude`, `cursor`…) when its key maps to a known one —
+      gives the logo; else null and the raw key name stands in. */
+  api_key_agent: string | null;
+  api_key_name: string | null;
+  /** The assignment was made by Smart Assign (no human actor). */
+  via_smart_assign: boolean;
   /** First characters of the comment that triggered a mention/comment row. */
   comment_excerpt: string | null;
 }

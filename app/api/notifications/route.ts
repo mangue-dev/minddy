@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
@@ -52,6 +54,7 @@ export async function GET(request: NextRequest) {
     { data: feedbackPosts },
     { data: projects },
     actorsById,
+    actorSeeds,
     { data: comments },
   ] = await Promise.all([
     issueIds.length
@@ -67,13 +70,22 @@ export async function GET(request: NextRequest) {
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
     fetchAuthUsersById(service, actorIds),
+    // La marque de l'acteur, à côté de son nom : l'inbox montre le portrait de
+    // qui a déclenché la ligne (lib/server/avatar-seeds.ts).
+    fetchAvatarSeeds(service, actorIds),
     commentIds.length
       ? service
           .from("comments")
-          .select("id, body, via_assistant")
+          .select("id, body, via_assistant, via_mcp, api_key_id")
           .in("id", commentIds)
       : Promise.resolve({
-          data: [] as { id: string; body: string; via_assistant: boolean }[],
+          data: [] as {
+            id: string;
+            body: string;
+            via_assistant: boolean;
+            via_mcp: boolean;
+            api_key_id: string | null;
+          }[],
         }),
   ]);
 
@@ -82,6 +94,15 @@ export async function GET(request: NextRequest) {
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
   const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));
+
+  // L'agent derrière une action MCP. Deux provenances pour la même chose : la
+  // notification elle-même la porte (affectation), ou le commentaire dont elle
+  // découle (mention / réponse) — la ligne du commentaire reste la source de
+  // vérité pour ce qui a été écrit, comme pour `via_assistant`.
+  const keyActors = await resolveApiKeyActors([
+    ...notifs.map((n) => n.api_key_id as string | null),
+    ...(comments ?? []).map((c) => c.api_key_id),
+  ]);
 
   const result: MyNotification[] = notifs.map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
@@ -94,6 +115,10 @@ export async function GET(request: NextRequest) {
     // belongs to them, the words don't) — the inbox names Numo, like the
     // timeline does, otherwise the requester reads "you commented".
     const fromNumo = !!comment?.via_assistant;
+    const viaMcp = !fromNumo && (!!n.via_mcp || !!comment?.via_mcp);
+    const keyActor = viaMcp
+      ? keyActors.get((comment?.api_key_id ?? n.api_key_id) as string)
+      : undefined;
     return {
       id: n.id,
       type: n.type,
@@ -113,7 +138,17 @@ export async function GET(request: NextRequest) {
         : actor
           ? displayName(toNamed(actor))
           : null,
+      // Le portrait suit le nom : pas de graine pour un acteur non humain
+      // (Numo, agent MCP, Smart Assign), qui a sa propre marque côté client.
+      actor_avatar_seed:
+        !fromNumo && !viaMcp && n.actor_id
+          ? (actorSeeds.get(n.actor_id as string) ?? null)
+          : null,
       from_numo: fromNumo,
+      via_mcp: viaMcp,
+      api_key_agent: keyActor?.agent ?? null,
+      api_key_name: keyActor?.name ?? null,
+      via_smart_assign: !!n.via_smart_assign,
       comment_excerpt: comment ? excerptOf(comment.body as string) : null,
     };
   });

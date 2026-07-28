@@ -150,6 +150,9 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
         type: "assigned",
         issue_id: params.issueId,
         actor_id: null,
+        // Sans ce drapeau l'inbox lit un acteur nul et affiche « Quelqu'un » —
+        // la timeline, elle, nomme déjà Smart Assign sur le même geste.
+        via_smart_assign: true,
       },
     ]);
   }

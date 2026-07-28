@@ -327,11 +327,10 @@ export default function TriagePage() {
               <span className="font-mono text-sm text-muted-foreground">
                 {issueIdentifier(project.key, selected.number)}
               </span>
+              {/* Même ordre que les actions d'une pull request (pr-detail) :
+                  l'action neutre, puis le refus, puis l'acceptation en dernier
+                  — le geste qui fait avancer le ticket est toujours à droite. */}
               <div className="ml-auto flex items-center gap-1.5">
-                <Button size="sm" onClick={() => openConfirm("accept", selected)}>
-                  <Check />
-                  {t("accept")}
-                </Button>
                 <SearchSelect
                   value={null}
                   onChange={(id) => {
@@ -353,6 +352,10 @@ export default function TriagePage() {
                 >
                   <X />
                   {t("decline")}
+                </Button>
+                <Button size="sm" onClick={() => openConfirm("accept", selected)}>
+                  <Check />
+                  {t("accept")}
                 </Button>
               </div>
             </div>

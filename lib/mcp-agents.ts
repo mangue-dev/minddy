@@ -123,6 +123,26 @@ export const isMcpAgentId = (v: unknown): v is McpAgentId =>
 export const getMcpAgent = (id: McpAgentId): McpAgent =>
   MCP_AGENTS.find((a) => a.id === id) as McpAgent;
 
+/**
+ * Nom affiché d'une action passée par le serveur MCP : le libellé canonique de
+ * l'agent (Claude Code, Cursor…) quand la clé est rattachée à un agent connu,
+ * sinon le nom brut de la clé, débarrassé du « (…) » final que les clients y
+ * accrochent (dossier/projet courant). Pas de suffixe « (mcp) » : le logo de
+ * l'agent dit déjà d'où vient l'action.
+ *
+ * `fallback` est la traduction du cas « clé sans nom », fournie par l'appelant
+ * (côté client, `Timeline.mcpFallback`).
+ */
+export function mcpActorLabel(
+  agent: string | null | undefined,
+  keyName: string | null | undefined,
+  fallback: string
+): string {
+  if (isMcpAgentId(agent)) return getMcpAgent(agent).label;
+  const raw = (keyName ?? fallback).trim();
+  return raw.replace(/\s*\([^()]*\)\s*$/, "").trim() || raw;
+}
+
 /** Devine l'agent derrière un client_name OAuth (DCR) pour réutiliser les
     logos/attribution du registry — null si inconnu (icône générique). */
 export function mapClientNameToAgent(name: string): McpAgentId | null {

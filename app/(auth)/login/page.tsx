@@ -230,7 +230,7 @@ function LoginForm() {
                   <Input
                     id="full-name"
                     type="text"
-                    className="h-10"
+                    className="h-10 bg-card"
                     autoComplete="name"
                     placeholder={t("fullNamePlaceholder")}
                     value={fullName}
@@ -246,7 +246,7 @@ function LoginForm() {
                 <Input
                   id="email"
                   type="email"
-                  className="h-10"
+                  className="h-10 bg-card"
                   autoComplete="email"
                   required
                   placeholder={t("emailPlaceholder")}
@@ -262,7 +262,7 @@ function LoginForm() {
                 <Input
                   id="password"
                   type="password"
-                  className="h-10"
+                  className="h-10 bg-card"
                   autoComplete={isSignUp ? "new-password" : "current-password"}
                   required
                   minLength={6}
@@ -281,7 +281,7 @@ function LoginForm() {
                   <Input
                     id="confirm-password"
                     type="password"
-                    className="h-10"
+                    className="h-10 bg-card"
                     autoComplete="new-password"
                     required
                     minLength={6}

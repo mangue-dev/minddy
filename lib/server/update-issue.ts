@@ -335,6 +335,11 @@ export async function updateIssueFields({
           type: "assigned",
           issue_id: issueId,
           actor_id: actorId,
+          // Même attribution que les événements produits juste au-dessus : une
+          // affectation venue du MCP est l'agent qui l'a faite, pas le compte
+          // dont il porte la clé.
+          via_mcp: !!mcpKeyId,
+          api_key_id: mcpKeyId,
         },
       ]);
     }

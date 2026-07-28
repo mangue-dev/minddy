@@ -3,7 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Input, Spinner, toast } from "mangue-ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Spinner,
+  toast,
+} from "mangue-ui";
 import { UserPlus, Users, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
@@ -38,6 +50,9 @@ export function ProjectMembers({
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Retirer un membre est irréversible côté serveur (la ligne `project_members`
+  // est supprimée) : on passe par une confirmation explicite.
+  const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,12 +70,15 @@ export function ProjectMembers({
     }
   };
 
+  /** Renvoie `false` si l'appel a échoué — l'appelant garde alors son dialogue ouvert. */
   const withBusy = async (id: string, fn: () => Promise<void>) => {
     setBusyId(id);
     try {
       await fn();
+      return true;
     } catch (err) {
       toast.error((err as Error).message);
+      return false;
     } finally {
       setBusyId(null);
     }
@@ -131,15 +149,12 @@ export function ProjectMembers({
                   isOwner && (
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("removeMemberAria")}
+                      variant="destructive"
+                      size="sm"
                       disabled={busyId === m.user_id}
-                      onClick={() =>
-                        withBusy(m.user_id, () => removeMember(m.user_id))
-                      }
+                      onClick={() => setRemoveTarget(m)}
                     >
-                      <X />
+                      {t("remove")}
                     </Button>
                   )
                 )}
@@ -174,6 +189,44 @@ export function ProjectMembers({
           </ul>
         </div>
       )}
+
+      <Dialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t("removeMemberTitle", {
+                name: removeTarget ? displayName(removeTarget) : "",
+              })}
+            </DialogTitle>
+            <DialogDescription>{t("removeMemberDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveTarget(null)}>
+              {tc("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={removeTarget !== null && busyId === removeTarget.user_id}
+              onClick={async () => {
+                if (!removeTarget) return;
+                const userId = removeTarget.user_id;
+                const ok = await withBusy(userId, () => removeMember(userId));
+                if (ok) setRemoveTarget(null);
+              }}
+            >
+              {removeTarget !== null && busyId === removeTarget.user_id ? (
+                <Spinner />
+              ) : null}
+              {t("remove")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

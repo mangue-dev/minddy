@@ -375,6 +375,10 @@ export async function createIssueForProject({
           type: "assigned",
           issue_id: data.id as string,
           actor_id: actorId,
+          // Cf. update-issue : un ticket créé assigné depuis le MCP est l'œuvre
+          // de l'agent, la notification doit le nommer comme la timeline.
+          via_mcp: !!mcpKeyId,
+          api_key_id: mcpKeyId,
         },
       ]);
     }
