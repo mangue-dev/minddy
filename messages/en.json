@@ -1066,6 +1066,7 @@
       "labels": "Change categories",
       "dueDate": "Change due date",
       "objective": "Change objective",
+      "askNumo": "Ask Numo (card or selection)",
       "copyPrompt": "Copy as prompt",
       "launchAgent": "Launch the Numo agent",
       "dictate": "Dictate (issue panel or new issue)"

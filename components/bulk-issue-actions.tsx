@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandIcon, X } from "lucide-react";
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
+import { Button, Kbd, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
 import {
   useBulkActions,
@@ -94,7 +94,11 @@ export function BulkIssueActions({
             <NumoIcon className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{t("askNumo")}</TooltipContent>
+        {/* Le raccourci se découvre là où vit l'action (MIN-105). */}
+        <TooltipContent className="flex items-center gap-1.5">
+          {t("askNumo")}
+          <Kbd size="sm">@</Kbd>
+        </TooltipContent>
       </Tooltip>
       <Button
         type="button"

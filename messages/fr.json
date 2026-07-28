@@ -1066,6 +1066,7 @@
       "labels": "Changer les catégories",
       "dueDate": "Changer l'échéance",
       "objective": "Changer l'objectif",
+      "askNumo": "Demander à Numo (carte ou sélection)",
       "copyPrompt": "Copier le prompt",
       "launchAgent": "Lancer l'agent Numo",
       "dictate": "Dicter (panneau ou nouveau ticket)"

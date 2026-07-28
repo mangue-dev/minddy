@@ -32,6 +32,7 @@ import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -309,6 +310,9 @@ export function KanbanBoard({
 
   return (
     <AgentActivityProvider projectId={projectId}>
+    {/* « @ » au survol d'une carte (ou sur la sélection) ouvre Numo — même
+        contexte que le bouton Numo de la pilule de sélection (MIN-105). */}
+    <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -404,6 +408,7 @@ export function KanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </AskNumoProvider>
     </AgentActivityProvider>
   );
 }

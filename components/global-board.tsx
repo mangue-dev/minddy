@@ -21,6 +21,7 @@ import {
   useAssistantContext,
   useAssistantPanel,
 } from "@/lib/assistant-panel-context";
+import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyState } from "@/components/empty-state";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
@@ -451,14 +452,10 @@ function GlobalBoardInner() {
     onDeleteIssue: (id: string, pid: string) => deleteIssue(id, pid),
     onAskNumo: (selectedIssues: Issue[]) => openAssistant({
       projectId: null,
-      pageContext: {
-        issueIds: selectedIssues.map((issue) => issue.id),
-        issueIdentifiers: selectedIssues.map((issue) => {
-          const project = projectMap.get(issue.project_id);
-          return project ? `${project.key}-${issue.number}` : String(issue.number);
-        }),
-        issueTitles: selectedIssues.map((issue) => issue.title),
-      },
+      pageContext: issuesPageContext(selectedIssues, (issue) => {
+        const project = projectMap.get(issue.project_id);
+        return project ? `${project.key}-${issue.number}` : String(issue.number);
+      }),
     }),
     onMove: moveIssue,
     allIssues: scopedIssues,

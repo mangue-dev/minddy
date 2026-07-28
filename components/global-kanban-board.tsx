@@ -31,6 +31,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
@@ -312,6 +313,9 @@ export function GlobalKanbanBoard({
     // Halo « agent en cours » sur les cartes cross-projet : provider en mode GLOBAL
     // (pas de projectId → endpoint /api/agent-activity, borné par la RLS).
     <AgentActivityProvider>
+    {/* « @ » au survol d'une carte (ou sur la sélection) ouvre Numo — même
+        contexte que le bouton Numo de la pilule de sélection (MIN-105). */}
+    <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -395,6 +399,7 @@ export function GlobalKanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </AskNumoProvider>
     </AgentActivityProvider>
   );
 }

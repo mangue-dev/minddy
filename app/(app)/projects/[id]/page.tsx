@@ -29,6 +29,7 @@ import {
   useAssistantContext,
   useAssistantPanel,
 } from "@/lib/assistant-panel-context";
+import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { IssueSidePanel } from "@/components/issue-side-panel";
@@ -484,9 +485,9 @@ function ProjectBoard() {
                 projectId: project.id,
                 pageContext: {
                   projectId: project.id,
-                  issueIds: selectedIssues.map((issue) => issue.id),
-                  issueIdentifiers: selectedIssues.map((issue) => issueIdentifier(project.key, issue.number)),
-                  issueTitles: selectedIssues.map((issue) => issue.title),
+                  ...issuesPageContext(selectedIssues, (issue) =>
+                    issueIdentifier(project.key, issue.number)
+                  ),
                 },
               })}
               onUpdateIssue={(id, patch) =>

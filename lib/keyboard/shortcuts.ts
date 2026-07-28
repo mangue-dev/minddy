@@ -100,6 +100,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "card.labels", labelKey: "labels", keys: [["L"]] },
       { id: "card.dueDate", labelKey: "dueDate", keys: [["D"]] },
       { id: "card.objective", labelKey: "objective", keys: [["O"]] },
+      // Le seul raccourci de la section qui accepte AUSSI la sélection multiple :
+      // quand la pilule est là, « @ » parle des tickets cochés (MIN-105).
+      { id: "card.askNumo", labelKey: "askNumo", keys: [["@"]] },
       { id: "card.copyPrompt", labelKey: "copyPrompt", keys: [["⇧", "P"]] },
       { id: "card.launchAgent", labelKey: "launchAgent", keys: [["⇧", "A"]] },
       // Monté partout où DictateButton porte le raccourci : panneau du ticket

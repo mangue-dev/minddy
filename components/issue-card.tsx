@@ -94,6 +94,7 @@ import {
   buildIssuePrompt,
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
+import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/attachments";
@@ -1035,6 +1036,11 @@ export function IssueCard({
     }
   );
 
+  // « @ » (MIN-105) : la carte se déclare cible du raccourci pendant le survol,
+  // le board écoute la touche. Les deux jeux de handlers vivent sur la même
+  // div racine — d'où la fusion explicite plus bas.
+  const askNumoHover = useAskNumoTarget(issue);
+
   const menuActions: ContextMenuAction[] = [
     // Prompt et agent : deux sous-menus « Générer un plan » / « Implémenter le
     // ticket », partagés avec le panneau latéral. L'agent de code travaille sur
@@ -1082,6 +1088,14 @@ export function IssueCard({
       {...attributes}
       {...listeners}
       {...containerProps}
+      onMouseEnter={(e) => {
+        containerProps.onMouseEnter(e);
+        askNumoHover.onMouseEnter();
+      }}
+      onMouseLeave={() => {
+        containerProps.onMouseLeave();
+        askNumoHover.onMouseLeave();
+      }}
       onClick={(e) => {
         if (e.shiftKey && onSelect) {
           e.preventDefault();
