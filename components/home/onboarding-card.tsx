@@ -1,70 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Button, Spinner, Switch, cn, toast } from "mangue-ui";
-import { ArrowRight, Check } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Spinner,
+  Switch,
+  cn,
+  toast,
+} from "mangue-ui";
+import { ArrowRight, FileUp, PartyPopper } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
+import { useAnalytics } from "@/lib/use-analytics";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { HOME_SUMMARY_KEY } from "@/lib/use-home-summary-query";
 import { CYCLES_ENABLED_META_KEY, resolveCyclePrefs } from "@/lib/cycle-prefs";
 import type { OnboardingStepId } from "@/lib/onboarding";
 import type { UseOnboardingResult } from "@/lib/use-onboarding";
-import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
-import { OnboardingImportStep } from "@/components/home/onboarding-import-step";
+import { OnboardingStepRow } from "@/components/home/onboarding-step-row";
+import { OnboardingMcpStep } from "@/components/home/onboarding-mcp-step";
+import { OnboardingImportDialog } from "@/components/home/onboarding-import-dialog";
+import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 
 /**
- * Onboarding du nouveau compte (MIN-74). Il prend la place du corps de la home
- * tant qu'il n'est pas terminé : pour un compte neuf, les cartes cycle/global,
- * le feedback et la grille de projets n'ont de toute façon rien à montrer.
+ * Onboarding du nouveau compte (MIN-74), sur le patron d'AutoKap : à gauche les
+ * quatre étapes et leur état, à droite la courante, et elle seule. Le titre de
+ * l'étape n'est pas répété à droite — la colonne de gauche le tient déjà.
  *
- * À gauche les cinq étapes et leur état, à droite l'étape courante. Deux
- * étapes se cochent seules quand la donnée existe (projet, ticket) ; les
- * autres sont acquittées à la main — importer son backlog et connecter un
- * agent sont des propositions, jamais des prérequis. « Passer l'onboarding »
- * reste visible en permanence.
+ * Il prend la place du corps de la home tant qu'il n'est pas terminé : pour un
+ * compte neuf, les cartes cycle/global, le feedback et la grille de projets
+ * n'ont de toute façon rien à montrer. Deux étapes se cochent seules quand la
+ * donnée existe (projet, ticket) ; les autres sont acquittées à la main —
+ * importer son backlog et connecter un agent sont des propositions, jamais des
+ * prérequis. « Passer l'onboarding » reste visible en permanence, sous
+ * confirmation : c'est irréversible.
  */
 
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
-
-/** Une ligne de la colonne de gauche : pastille d'état + titre. */
-function StepRow({
-  index,
-  title,
-  state,
-}: {
-  index: number;
-  title: string;
-  state: "completed" | "current" | "pending";
-}) {
-  return (
-    <div className="flex items-center gap-2.5 py-1">
-      <span
-        aria-hidden
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition-colors",
-          state === "completed" && "bg-brand/15 text-brand",
-          state === "current" && "bg-foreground text-background",
-          state === "pending" && "border border-border text-muted-foreground",
-        )}
-      >
-        {state === "completed" ? <Check className="size-3" strokeWidth={3} /> : index}
-      </span>
-      <span
-        className={cn(
-          "min-w-0 truncate text-sm transition-colors",
-          state === "current" ? "font-medium text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {title}
-      </span>
-    </div>
-  );
-}
 
 export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult }) {
   const t = useTranslations("Onboarding");
@@ -72,38 +56,40 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
   const { user, updateUserMetadata } = useAuth();
   const { openCreateProject } = useProjects();
   const { openCreateIssue } = useCreate();
+  const { track } = useAnalytics();
 
   const [busy, setBusy] = useState(false);
+  const [confirmSkip, setConfirmSkip] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
 
-  const { steps, currentStepId, currentStepNumber, totalCount } = onboarding;
+  const { steps, currentStepId, currentStepNumber, totalCount, finalScreen } = onboarding;
 
   const title: Record<OnboardingStepId, string> = {
     project: t("projectTitle"),
-    issue: t("issueTitle"),
-    import: t("importTitle"),
+    tickets: t("ticketsTitle"),
     mcp: t("mcpTitle"),
     cycles: t("cyclesTitle"),
   };
   const description: Record<OnboardingStepId, string> = {
     project: t("projectDesc"),
-    issue: t("issueDesc"),
-    import: t("importDesc"),
+    tickets: t("ticketsDesc"),
     mcp: t("mcpDesc"),
     cycles: t("cyclesDesc"),
   };
 
   /** Acquitte une étape ; la dernière ferme l'onboarding, d'où le mot de fin. */
-  const acknowledge = async (step: OnboardingStepId, done = false) => {
+  const acknowledge = async (step: OnboardingStepId) => {
     setBusy(true);
     try {
       await onboarding.acknowledgeStep(step);
-      if (done) toast.success(t("doneToast"));
     } finally {
       setBusy(false);
     }
   };
 
-  /** Activer les cycles coche l'étape 4 — donc termine l'onboarding. */
+  /** Activer les cycles coche la dernière étape — donc termine l'onboarding. */
   const enableCycles = async () => {
     if (!user) return;
     setBusy(true);
@@ -113,7 +99,6 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
       // le résumé, qui est ce que la home a sous les yeux, et le board agrégé.
       void queryClient.invalidateQueries({ queryKey: HOME_SUMMARY_KEY });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
-      toast.success(t("doneToast"));
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -121,23 +106,79 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
     }
   };
 
-  // `currentStepId` est non-null tant que la carte est montée (la home ne la
-  // rend que si `visible`), mais on reste défensif plutôt que d'assener un `!`.
-  if (!currentStepId) return null;
+  const openImport = (file: File | null = null) => {
+    setDroppedFile(file);
+    setImportOpen(true);
+  };
+
+  const openJoin = () => {
+    // Le compte qui clique ici n'a pas de projet à lui : c'est le seul endroit
+    // du produit qui le dit, et l'entonnoir d'activation a besoin de le savoir.
+    track("onboarding_join_opened");
+    setJoinOpen(true);
+  };
+
+  /**
+   * DÉPÔT SUR TOUTE LA CARTE, pendant l'étape des tickets. On arrive avec un
+   * CSV sous le bras, pas avec l'envie d'ouvrir un dialog d'abord : le fichier
+   * lâché n'importe où sur l'onboarding ouvre l'import, déjà chargé.
+   *
+   * `dragenter`/`dragleave` se déclenchent aussi en traversant les enfants —
+   * d'où le compteur, sans quoi le survol clignoterait.
+   */
+  const dropTarget = currentStepId === "tickets" && !finalScreen;
+  const dragDepth = useRef(0);
+  const [dragOver, setDragOver] = useState(false);
+  const hasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
+
+  const dragHandlers = dropTarget
+    ? {
+        onDragEnter: (e: React.DragEvent) => {
+          if (!hasFiles(e)) return;
+          dragDepth.current += 1;
+          setDragOver(true);
+        },
+        onDragOver: (e: React.DragEvent) => {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+        },
+        onDragLeave: () => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0) setDragOver(false);
+        },
+        onDrop: (e: React.DragEvent) => {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+          dragDepth.current = 0;
+          setDragOver(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) openImport(file);
+        },
+      }
+    : {};
+
+  // `currentStepId` est non-null tant que les étapes défilent ; sur le mot de
+  // fin il vaut null et c'est justement ce qu'on rend.
+  if (!currentStepId && !finalScreen) return null;
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <section className="w-full rounded-xl border border-border bg-card p-5 text-card-foreground md:p-6">
-        <div className="grid gap-6 md:grid-cols-[200px_1fr] md:gap-8">
+      <section
+        {...dragHandlers}
+        className="relative w-full rounded-2xl border border-border bg-card p-2.5 text-card-foreground md:p-3.5"
+      >
+        <div className="grid gap-3 md:grid-cols-[280px_1fr] md:gap-5">
           {/* Colonne gauche : où j'en suis. */}
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium tracking-tight text-muted-foreground">
-              {t("stepIndicator", { current: currentStepNumber, total: totalCount })}
+            <p className="pr-1 text-right text-sm text-muted-foreground">
+              {finalScreen
+                ? t("stepIndicatorDone")
+                : t("stepIndicator", { current: currentStepNumber, total: totalCount })}
             </p>
-            <ol className="flex flex-col">
+            <ol className="flex flex-col gap-2">
               {steps.map((step, index) => (
                 <li key={step.id}>
-                  <StepRow
+                  <OnboardingStepRow
                     index={index + 1}
                     title={title[step.id]}
                     state={
@@ -154,116 +195,172 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
           </div>
 
           {/* Colonne droite : l'étape courante, et elle seule. */}
-          <div className="min-w-0 md:border-l md:border-border md:pl-8">
+          <div className="flex min-w-0 flex-col items-center justify-center gap-4 md:px-4">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
-                key={currentStepId}
+                key={currentStepId ?? "final"}
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -12 }}
                 transition={MOTION}
-                className="flex min-w-0 flex-col gap-4"
+                className="flex w-full min-w-0 flex-col items-center gap-4"
               >
-                <div className="flex flex-col gap-1.5">
-                  <h2 className="text-base font-semibold tracking-tight">
-                    {title[currentStepId]}
-                  </h2>
-                  <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
-                    {description[currentStepId]}
-                  </p>
-                </div>
-
-                {currentStepId === "project" && (
-                  <div>
-                    <Button type="button" onClick={openCreateProject}>
-                      {t("projectCta")}
-                      <ArrowRight data-icon="inline-end" />
-                    </Button>
-                  </div>
-                )}
-
-                {currentStepId === "issue" && (
-                  <div>
-                    <Button type="button" onClick={() => openCreateIssue()}>
-                      {t("issueCta")}
-                      <ArrowRight data-icon="inline-end" />
-                    </Button>
-                  </div>
-                )}
-
-                {/* Les deux chemins acquittent la même étape — importer son
-                    backlog n'est pas obligatoire. Ils restent distincts pour
-                    l'analytics : « importé » et « passé » ne disent pas la
-                    même chose de l'activation. */}
-                {currentStepId === "import" && (
-                  <OnboardingImportStep
-                    onDone={() => void acknowledge("import")}
-                    onSkip={() => void acknowledge("import")}
-                    busy={busy}
-                  />
-                )}
-
-                {currentStepId === "mcp" && (
-                  <>
-                    <McpConnectPanel />
-                    <div>
-                      <Button
-                        type="button"
-                        onClick={() => void acknowledge("mcp")}
-                        disabled={busy}
-                      >
-                        {busy && <Spinner />}
-                        {t("mcpCta")}
-                        {!busy && <ArrowRight data-icon="inline-end" />}
-                      </Button>
+                {finalScreen ? (
+                  <div className="flex w-full max-w-md flex-col items-center gap-4 py-2">
+                    <PartyPopper className="size-6 text-brand" aria-hidden />
+                    <p className="text-center text-sm font-medium text-foreground">
+                      {t("finalTitle")}
+                    </p>
+                    <div className="w-full rounded-lg bg-muted/60 px-4 py-3 text-center text-sm leading-relaxed text-foreground/80">
+                      {t("finalHint")}
                     </div>
-                  </>
-                )}
-
-                {currentStepId === "cycles" && (
+                    <Button type="button" onClick={() => void onboarding.finish()}>
+                      {t("finalCta")}
+                    </Button>
+                  </div>
+                ) : (
                   <>
-                    <label className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
-                      {/* Toujours décoché ici : cycles activés = étape franchie
-                          = carte démontée. On lit quand même la préférence
-                          réelle plutôt que de câbler `false` en dur. */}
-                      <Switch
-                        id="onboarding-cycles"
-                        checked={resolveCyclePrefs(user?.user_metadata).enabled}
-                        onCheckedChange={() => void enableCycles()}
-                        disabled={busy || !user}
+                    <p className="w-full text-left text-sm leading-relaxed text-foreground">
+                      {description[currentStepId!]}
+                    </p>
+
+                    {currentStepId === "project" && (
+                      <div className="flex w-full flex-wrap items-center gap-2">
+                        <Button type="button" onClick={openCreateProject}>
+                          {t("projectCta")}
+                          <ArrowRight data-icon="inline-end" />
+                        </Button>
+                        <Button type="button" variant="outline" onClick={openJoin}>
+                          {t("joinCta")}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Deux chemins vers la même étape, et elle se coche de
+                        toute façon toute seule dès qu'un ticket existe : celui
+                        qu'on vient de créer, ou les cent qu'on vient
+                        d'importer. */}
+                    {currentStepId === "tickets" && (
+                      <div className="flex w-full flex-col gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button type="button" onClick={() => openCreateIssue()}>
+                            {t("ticketsCreateCta")}
+                            <ArrowRight data-icon="inline-end" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => openImport()}
+                          >
+                            {t("ticketsImportCta")}
+                          </Button>
+                        </div>
+                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <FileUp className="size-3.5 shrink-0" aria-hidden />
+                          {t("ticketsDropHint")}
+                        </p>
+                      </div>
+                    )}
+
+                    {currentStepId === "mcp" && (
+                      <OnboardingMcpStep
+                        onDone={() => void acknowledge("mcp")}
+                        onSkip={() => void acknowledge("mcp")}
+                        busy={busy}
                       />
-                      <span className="text-sm text-foreground">
-                        {t("cyclesToggle")}
-                      </span>
-                    </label>
-                    <div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void acknowledge("cycles", true)}
-                        disabled={busy}
-                      >
-                        {busy && <Spinner />}
-                        {t("cyclesCta")}
-                      </Button>
-                    </div>
+                    )}
+
+                    {currentStepId === "cycles" && (
+                      <div className="flex w-full flex-col gap-4">
+                        <label className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                          {/* Toujours décoché ici : cycles activés = étape
+                              franchie. On lit quand même la préférence réelle
+                              plutôt que de câbler `false` en dur. */}
+                          <Switch
+                            id="onboarding-cycles"
+                            checked={resolveCyclePrefs(user?.user_metadata).enabled}
+                            onCheckedChange={() => void enableCycles()}
+                            disabled={busy || !user}
+                          />
+                          <span className="text-sm text-foreground">
+                            {t("cyclesToggle")}
+                          </span>
+                        </label>
+                        <div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void acknowledge("cycles")}
+                            disabled={busy}
+                          >
+                            {busy && <Spinner />}
+                            {t("cyclesCta")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                   </>
                 )}
               </motion.div>
             </AnimatePresence>
           </div>
         </div>
+
+        {/* Voile de dépôt : au-dessus de la carte entière, transparent aux
+            événements pour que le `drop` du conteneur reste atteignable. */}
+        {dragOver && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand bg-card/95 backdrop-blur-sm">
+            <FileUp className="size-6 text-brand" aria-hidden />
+            <p className="text-sm font-medium text-foreground">{t("ticketsDropOverlay")}</p>
+          </div>
+        )}
       </section>
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="bg-transparent text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground hover:underline"
-        onClick={() => void onboarding.dismiss()}
-      >
-        {t("skip")}
-      </Button>
+      {!finalScreen && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="bg-transparent text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground hover:underline"
+          onClick={() => setConfirmSkip(true)}
+        >
+          {t("skip")}
+        </Button>
+      )}
+
+      <AlertDialog open={confirmSkip} onOpenChange={setConfirmSkip}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("skipConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("skipConfirmDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("skipConfirmCancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void onboarding.dismiss()}>
+              {t("skipConfirmCta")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <OnboardingJoinDialog open={joinOpen} onOpenChange={setJoinOpen} />
+
+      <OnboardingImportDialog
+        open={importOpen}
+        onOpenChange={(next) => {
+          setImportOpen(next);
+          if (!next) setDroppedFile(null);
+        }}
+        initialFile={droppedFile}
+        onImported={() => {
+          setImportOpen(false);
+          setDroppedFile(null);
+          // L'étape se cochera seule au prochain résumé (des tickets existent) ;
+          // l'acquitter tout de suite évite d'attendre l'aller-retour.
+          void acknowledge("tickets");
+        }}
+      />
     </div>
   );
 }

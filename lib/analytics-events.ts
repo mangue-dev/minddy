@@ -58,6 +58,12 @@ export interface AnalyticsEventProps {
   /** Étape « importer mes tickets » (MIN-98) : de quel outil vient le compte.
    *  `import_started` / `import_completed` couvrent déjà l'import lui-même. */
   onboarding_import_provider_selected: { provider: string };
+  /** « Rejoindre un projet » à l'étape 1 : le compte n'en crée pas, il attend
+   *  une invitation. C'est le seul endroit du produit qui le dit. */
+  onboarding_join_opened: NoProps;
+  /** Étape « connecter un agent » : lequel. Dit pour qui écrire la doc MCP
+   *  en premier. */
+  onboarding_mcp_agent_selected: { agent: string };
   onboarding_dismissed: { last_step: string; completed_count: number };
   onboarding_completed: { steps_acknowledged: number };
 
@@ -361,6 +367,8 @@ const EVENT_NAMES = [
   "onboarding_step_viewed",
   "onboarding_step_acknowledged",
   "onboarding_import_provider_selected",
+  "onboarding_join_opened",
+  "onboarding_mcp_agent_selected",
   "onboarding_dismissed",
   "onboarding_completed",
   // Projets

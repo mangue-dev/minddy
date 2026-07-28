@@ -20,8 +20,16 @@ import {
 export interface UseOnboardingResult extends OnboardingState {
   /** Les signaux ne sont pas encore connus — la home n'affiche rien. */
   loading: boolean;
+  /** Dernière étape franchie sous les yeux de l'utilisateur : la carte reste,
+   *  et montre son mot de fin. Se ferme sur `finish`. */
+  finalScreen: boolean;
+  /** Ce que la home a besoin de savoir pour monter la carte : les étapes, ou
+   *  l'écran de fin qui les suit. */
+  showCard: boolean;
   /** Marque une étape franchie (« Continuer », « Terminer »). */
   acknowledgeStep: (step: OnboardingStepId) => Promise<void>;
+  /** Ferme le mot de fin — l'onboarding ne reviendra pas. */
+  finish: () => Promise<void>;
   /** « Passer l'onboarding » — définitif. */
   dismiss: () => Promise<void>;
 }
@@ -136,6 +144,46 @@ export function useOnboarding(): UseOnboardingResult {
     setPersonProperties(undefined, { onboarding_completed_at: new Date().toISOString() });
   }, [loading, state.eligible, state.allComplete, state.completedCount, track, setPersonProperties]);
 
+  /**
+   * MOT DE FIN. La dernière étape franchie fait tomber `visible` — la carte
+   * disparaîtrait au moment précis où il y a quelque chose à dire. On retient
+   * donc la TRANSITION, sous les yeux de qui la provoque : la carte était
+   * affichée, elle ne l'est plus parce que tout est fait.
+   *
+   * C'est un état de session, pas une métadonnée : le seul moment où il compte
+   * est celui du clic. Un rechargement de page à cet instant précis rend la
+   * home normale — ce qui est justement ce que l'écran annonce.
+   */
+  const wasVisibleRef = useRef(false);
+  const [finalScreen, setFinalScreen] = useState(false);
+  useEffect(() => {
+    if (loading) return;
+    if (state.visible) {
+      wasVisibleRef.current = true;
+      return;
+    }
+    if (wasVisibleRef.current && state.allComplete && !state.dismissed) {
+      setFinalScreen(true);
+    }
+  }, [loading, state.visible, state.allComplete, state.dismissed]);
+
+  const finish = useCallback(async () => {
+    setFinalScreen(false);
+    wasVisibleRef.current = false;
+    if (!user) return;
+    // Même clé que « Passer l'onboarding » : tout est fait, il ne doit plus
+    // rien reprendre à la home. L'événement de complétion, lui, est déjà parti
+    // par l'effet ci-dessus — inutile d'ajouter un `onboarding_dismissed` qui
+    // dirait le contraire de ce qui s'est passé.
+    try {
+      await updateUserMetadata({ [ONBOARDING_DISMISSED_META_KEY]: true });
+    } catch {
+      // Silencieux : l'onboarding est fini, la home est déjà rendue. Le pire
+      // cas est un mot de fin revu au prochain passage — pas une erreur à
+      // montrer.
+    }
+  }, [user, updateUserMetadata]);
+
   const acknowledgeStep = useCallback(
     async (step: OnboardingStepId) => {
       if (!user) return;
@@ -157,6 +205,7 @@ export function useOnboarding(): UseOnboardingResult {
   );
 
   const dismiss = useCallback(async () => {
+    setFinalScreen(false);
     if (!user) return;
     track("onboarding_dismissed", {
       last_step: state.currentStepId ?? "none",
@@ -177,7 +226,10 @@ export function useOnboarding(): UseOnboardingResult {
     // défaut (0 projet, 0 ticket) et ferait clignoter l'onboarding sur la home
     // d'un compte bien installé.
     loading,
+    finalScreen,
+    showCard: state.visible || finalScreen,
     acknowledgeStep,
+    finish,
     dismiss,
   };
 }

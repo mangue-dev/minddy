@@ -58,12 +58,26 @@ export default function HomePage() {
 
       {/* Greeting + a clearly-accessible "new ticket" button (MIN-38). During
           onboarding the button is hidden: with no project it would only render
-          disabled next to the step's own call to action. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          {name ? t("greeting", { name }) : t("greetingNoName")}
-        </h1>
-        {!onboarding.visible && (
+          disabled next to the step's own call to action — and the greeting
+          welcomes rather than says hello, because it is a first visit. */}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            {onboarding.showCard
+              ? name
+                ? t("welcome", { name })
+                : t("welcomeNoName")
+              : name
+                ? t("greeting", { name })
+                : t("greetingNoName")}
+          </h1>
+          {onboarding.showCard && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("onboardingSubtitle")}
+            </p>
+          )}
+        </div>
+        {!onboarding.showCard && (
           <Button onClick={() => openCreateIssue()} disabled={!canCreate}>
             <Plus className="size-4" />
             {t("newTicket")}
@@ -82,7 +96,7 @@ export default function HomePage() {
           <Skeleton className="h-[200px] rounded-xl" />
           <Skeleton className="h-[200px] rounded-xl" />
         </div>
-      ) : onboarding.visible ? (
+      ) : onboarding.showCard ? (
         <div className="mt-6">
           <OnboardingCard onboarding={onboarding} />
         </div>

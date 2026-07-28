@@ -1,16 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Spinner, cn, toast } from "mangue-ui";
 import { FileUp, TriangleAlert, X } from "lucide-react";
 import { mapCsvToIssues } from "@/lib/import/parse";
-import {
-  MAX_IMPORT_CSV_BYTES,
-  type ImportParseError,
-  type ImportParseResult,
-} from "@/lib/import/types";
+import { MAX_IMPORT_CSV_BYTES, type ImportParseResult } from "@/lib/import/types";
 import { importIssuesApi, type ImportCommitResponse } from "@/lib/import-api";
 import { ISSUE_STATUSES } from "@/lib/issue-validation";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
@@ -22,18 +18,22 @@ type Preview = Extract<ImportParseResult, { ok: true }>;
     Trello ou un CSV générique, voir le mapping AVANT de valider (même parseur
     que celui que le serveur rejoue au commit), importer en un POST.
 
-    Partagé par les réglages du projet (`project-import-section.tsx`, qui pose
-    la garde propriétaire) et l'étape import de l'onboarding
-    (`components/home/onboarding-import-step.tsx`) — comme `McpConnectPanel`
-    l'est entre les réglages du compte et l'étape MCP. Il garde le namespace
-    i18n `Settings` : aucune chaîne n'a changé de place. */
+    Le geste seul : la marche à suivre qui le précède vit dans `import-panel.tsx`,
+    qui assemble les deux et sert aussi bien les réglages du projet que le dialog
+    d'import de l'onboarding. Il garde le namespace i18n `Settings` : aucune
+    chaîne n'a changé de place. */
 export function CsvImportPanel({
   projectId,
   className,
+  initialFile,
   onImported,
 }: {
   projectId: string;
   className?: string;
+  /** Fichier déjà tenu par l'appelant — l'onboarding accepte le dépôt sur
+   *  toute sa carte et ouvre le dialog avec le CSV en main. Analysé comme s'il
+   *  venait de la zone de dépôt : un seul chemin de lecture. */
+  initialFile?: File | null;
   onImported?: (result: ImportCommitResponse) => void;
 }) {
   const t = useTranslations("Settings");
@@ -49,13 +49,6 @@ export function CsvImportPanel({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [importing, setImporting] = useState(false);
 
-  const parseErrorMessage = (error: ImportParseError): string =>
-    error === "tooManyIssues"
-      ? t("importErrorTooMany")
-      : error === "empty"
-        ? t("importErrorEmpty")
-        : t("importErrorInvalid");
-
   const reset = () => {
     setFileName(null);
     setCsvText(null);
@@ -63,25 +56,44 @@ export function CsvImportPanel({
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const handleFile = async (file: File) => {
-    if (file.size > MAX_IMPORT_CSV_BYTES) {
-      toast.error(t("importErrorTooLarge"));
-      return;
-    }
-    const text = await file.text();
-    const result = mapCsvToIssues(text);
-    if (!result.ok) {
-      toast.error(parseErrorMessage(result.error));
-      return;
-    }
-    if (result.issues.length === 0) {
-      toast.error(t("importErrorEmpty"));
-      return;
-    }
-    setFileName(file.name);
-    setCsvText(text);
-    setPreview(result);
-  };
+  const handleFile = useCallback(
+    async (file: File) => {
+      if (file.size > MAX_IMPORT_CSV_BYTES) {
+        toast.error(t("importErrorTooLarge"));
+        return;
+      }
+      const text = await file.text();
+      const result = mapCsvToIssues(text);
+      if (!result.ok) {
+        toast.error(
+          result.error === "tooManyIssues"
+            ? t("importErrorTooMany")
+            : result.error === "empty"
+              ? t("importErrorEmpty")
+              : t("importErrorInvalid")
+        );
+        return;
+      }
+      if (result.issues.length === 0) {
+        toast.error(t("importErrorEmpty"));
+        return;
+      }
+      setFileName(file.name);
+      setCsvText(text);
+      setPreview(result);
+    },
+    [t]
+  );
+
+  // Un fichier confié par l'appelant est analysé une fois, à l'identité de
+  // l'objet `File` : sans la marque, chaque rendu relancerait la lecture et
+  // effacerait l'aperçu qu'on vient d'obtenir.
+  const handledFileRef = useRef<File | null>(null);
+  useEffect(() => {
+    if (!initialFile || handledFileRef.current === initialFile) return;
+    handledFileRef.current = initialFile;
+    void handleFile(initialFile);
+  }, [initialFile, handleFile]);
 
   // Status breakdown in board order; label names not matching an existing
   // category (case-insensitive) will be created by the import.

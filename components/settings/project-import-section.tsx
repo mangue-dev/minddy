@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { SettingsSection } from "@/components/settings-shell";
-import { CsvImportPanel } from "@/components/settings/csv-import-panel";
+import { ImportPanel } from "@/components/settings/import-panel";
 
 /** Réglages du projet → Import (MIN-45). L'enveloppe seulement : le titre de
     section, la garde propriétaire — un mauvais fichier crée des centaines de
@@ -20,7 +20,7 @@ export function ProjectImportSection({
   return (
     <SettingsSection title={t("importTab")} description={t("importSectionDesc")}>
       {isOwner ? (
-        <CsvImportPanel projectId={projectId} />
+        <ImportPanel projectId={projectId} />
       ) : (
         <p className="text-sm text-muted-foreground">{t("importOwnerOnlyHint")}</p>
       )}
