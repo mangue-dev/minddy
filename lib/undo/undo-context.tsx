@@ -56,6 +56,7 @@ import type {
   Issue,
   IssueUpdateInput,
 } from "@/lib/types";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { trackEvent } from "@/lib/analytics";
 
 /** Handle returned by record(): the canonical stack entry (rapid category
@@ -80,13 +81,16 @@ export function useUndoHistory(): UndoHistory {
 }
 
 /** i18n key under `Undo.actions` for each entry kind. */
-const ACTION_KEYS: Record<UndoEntry["kind"], string> = {
-  update: "update",
-  categories: "categories",
-  create: "create",
-  delete: "delete",
-  "relation-add": "relationAdd",
-  "relation-remove": "relationRemove",
+/** Clés COMPLÈTES (`actions.*`) plutôt que des suffixes recollés au point
+ *  d'appel : c'est ce qui permet à TypeScript de les vérifier contre le
+ *  catalogue — un `actions.` + suffixe n'est qu'une chaîne pour lui. */
+const ACTION_KEYS: Record<UndoEntry["kind"], MessageKey<"Undo">> = {
+  update: "actions.update",
+  categories: "actions.categories",
+  create: "actions.create",
+  delete: "actions.delete",
+  "relation-add": "actions.relationAdd",
+  "relation-remove": "actions.relationRemove",
 };
 
 export function UndoProvider({ children }: { children: ReactNode }) {
@@ -387,7 +391,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       // Instant feedback: patch the caches and toast now, write in the queue.
       applyOptimistic(entry, direction);
       to.push(entry);
-      const action = tRef.current(`actions.${ACTION_KEYS[entry.kind]}`);
+      const action = tRef.current(ACTION_KEYS[entry.kind]);
       toast.success(
         tRef.current(direction === "undo" ? "undone" : "redone", { action })
       );

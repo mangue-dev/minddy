@@ -7,6 +7,7 @@ import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import { changelogFeedPath } from "@/lib/changelog-feed";
 import { Reveal, RevealHeading } from "@/components/marketing/reveal";
 import { SectionCta } from "@/components/marketing/section-cta";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * `/changelog` — ce qui a été livré, du plus récent au plus ancien (MIN-93).
@@ -98,10 +99,10 @@ export default async function ChangelogPage() {
                   {formatDate(entry.date, locale)}
                 </time>
                 <h2 className="mb-3 text-xl font-semibold tracking-tight text-balance sm:text-2xl">
-                  {t(`entry_${entry.id}_title`)}
+                  {t(`entry_${entry.id}_title` as MessageKey<"Changelog">)}
                 </h2>
                 <p className="leading-relaxed text-pretty text-muted-foreground">
-                  {t(`entry_${entry.id}_body`)}
+                  {t(`entry_${entry.id}_body` as MessageKey<"Changelog">)}
                 </p>
               </li>
             ))}

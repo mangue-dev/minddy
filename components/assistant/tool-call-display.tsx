@@ -65,8 +65,11 @@ interface ToolCallListProps {
   askUserAnswer?: string | null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TranslateFn = (key: string, values?: any) => string;
+/** Le translator du namespace `ToolCall`, tel que le rendent `useTranslations`
+ *  et `getTranslations`. Typé depuis la source plutôt que réécrit à la main :
+ *  une signature maison `(key: string, values?: any)` accepte tout, y compris
+ *  une clé à placeholder appelée sans ses valeurs. */
+type TranslateFn = ReturnType<typeof useTranslations<"ToolCall">>;
 
 interface ToolMeta {
   icon: React.ComponentType<{ className?: string }>;

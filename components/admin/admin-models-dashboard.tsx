@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Separator, Skeleton, Spinner, Switch, toast } from "mangue-ui";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { SettingsSection } from "@/components/settings-shell";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
@@ -13,6 +14,10 @@ import {
 } from "@/lib/ai-model-config";
 
 type ConfigValues = Record<string, string | null>;
+
+/** Clé du namespace `Admin`. Sert aux clés assemblées à l'exécution, qui doivent
+ *  y être castées explicitement (convention : cf. lib/i18n-keys.ts). */
+type AdminKey = MessageKey<"Admin">;
 
 async function patchConfig(key: string, value: string): Promise<void> {
   const res = await fetch("/api/admin/app-config", {
@@ -93,8 +98,11 @@ export function AdminModelsDashboard() {
                 // Description optionnelle : certains groupes s'expliquent par
                 // les descriptions de leurs champs.
                 description={
-                  t.has(`groups.${group}.desc`)
-                    ? t(`groups.${group}.desc`)
+                  // Cast : la clé n'existe que pour certains groupes (2 sur 4),
+                  // ce que le type ne sait pas dire — `t.has` est le garde-fou,
+                  // à l'exécution.
+                  t.has(`groups.${group}.desc` as AdminKey)
+                    ? t(`groups.${group}.desc` as AdminKey)
                     : undefined
                 }
               >
@@ -130,9 +138,11 @@ function ConfigRow({
   onSaved: (key: string, value: string) => void;
 }) {
   const t = useTranslations("Admin");
-  const label = t(`fields.${field.key}.label`);
+  // Casts : `field.key` vient de la config serveur, donc la clé se construit à
+  // l'exécution et échappe au catalogue typé (cf. lib/i18n-keys.ts).
+  const label = t(`fields.${field.key}.label` as AdminKey);
   // Description optionnelle : un champ dont le libellé se suffit n'en a pas.
-  const descKey = `fields.${field.key}.desc`;
+  const descKey = `fields.${field.key}.desc` as AdminKey;
   const desc = t.has(descKey) ? t(descKey) : null;
 
   if (loading) {

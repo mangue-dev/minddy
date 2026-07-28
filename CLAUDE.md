@@ -1,5 +1,50 @@
 # Conventions minddy
 
+## i18n : le placeholder est un contrat entre deux fichiers
+
+Toute chaîne visible passe par next-intl, et vit en double : `messages/en.json`
+et `messages/fr.json`. Les deux catalogues portent **exactement les mêmes clés**
+et **exactement les mêmes placeholders**.
+
+La règle qui compte : **un message à placeholder s'appelle avec ses valeurs.**
+
+```tsx
+// messages/en.json → "deleteViewTitle": "Delete “{name}”?"
+t("deleteViewTitle", { name: view.name })   // ✅
+t("deleteViewTitle")                        // ❌ affiche « Board.deleteViewTitle »
+```
+
+L'oubli ne lève rien et ne journalise rien : next-intl retombe silencieusement
+sur le chemin de la clé, et c'est ce chemin que l'utilisateur lit à l'écran.
+C'est arrivé deux fois (le dialog de suppression de vue, l'aide de signature des
+webhooks), et dans les deux cas le code était juste dans chaque fichier pris
+séparément — la faute n'existait qu'entre les deux.
+
+Écrire une chaîne **et** son appel dans le même geste, c'est écrire les deux
+moitiés d'un contrat. Les relire séparément ne le vérifie pas. Ce qui le vérifie :
+
+```bash
+npx vitest run lib/i18n-contract.test.ts   # < 1 s
+```
+
+Il appelle le vrai formateur sur les 2 600 clés et signale, en `fichier:ligne`,
+tout message à placeholder appelé sans ses valeurs, plus toute divergence fr/en.
+**Le lancer dès qu'on a touché à `messages/*.json` ou ajouté un `t(...)`.**
+
+Deux pièges de plus :
+
+- `tsc` vérifie les **noms** de clés (via [global.d.ts](global.d.ts)) mais **pas**
+  les placeholders — les valeurs de chaîne d'un import JSON sont élargies en
+  `string`. Un type-check vert ne dit rien sur ce contrat-là ; seul le test ci-dessus le dit.
+- `<mot>` dans un message est lu comme une **balise riche**, pas comme du texte.
+  Pour de la doc technique, écrire `HMAC-SHA256(corps)`, jamais `<HMAC du corps>`.
+
+Une clé assemblée à l'exécution (`t(\`errors.${code}\`)`) échappe au typage : la
+caster en `MessageKey<"Namespace">` ([lib/i18n-keys.ts](lib/i18n-keys.ts)), et
+typer les **tables** de clés avec `MessageKey` plutôt que `string`. Enfin, un
+translator passé en prop se type `ReturnType<typeof useTranslations<"Namespace">>` :
+sans le namespace, TypeScript renonce (TS2589) et ne vérifie plus rien du tout.
+
 ## Sitemap : tenir `lastModified` à la main
 
 Quand le **contenu d'une page publique change vraiment**, mettre à jour le

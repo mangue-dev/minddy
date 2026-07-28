@@ -1,3 +1,5 @@
+import type { useTranslations } from "next-intl";
+
 import { usageMultiplierVsFree, type BillingPlan } from "@/lib/billing-plans";
 
 /**
@@ -9,10 +11,11 @@ import { usageMultiplierVsFree, type BillingPlan } from "@/lib/billing-plans";
  * L'usage IA se dit en MULTIPLES du plan Free, jamais en montants (cf. le
  * commentaire d'en-tête de `lib/billing-plans.ts`).
  */
-export type PlanFeatureTranslator = (
-  key: string,
-  values?: Record<string, string | number>,
-) => string;
+/** Le translator du namespace `Billing` (import de TYPE : rien n'entre dans le
+ *  bundle). Typé depuis la source plutôt que réécrit à la main — une signature
+ *  maison `(key: string, values?: …)` accepte une clé à placeholder appelée sans
+ *  ses valeurs, ce qui rend le label muet à l'écran au lieu de casser le build. */
+export type PlanFeatureTranslator = ReturnType<typeof useTranslations<"Billing">>;
 
 export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): string[] {
   return [

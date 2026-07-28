@@ -34,19 +34,19 @@ import { Reveal, RevealGroup, RevealHeading } from "./reveal";
  */
 
 /** Les trois usages de la dictée, tels que `DictateButton` est réellement monté. */
-const VOICE_WAYS: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
+const VOICE_WAYS = [
   { key: "create", icon: Mic },
   { key: "edit", icon: PencilLine },
   { key: "everywhere", icon: MessagesSquare },
-];
+] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
 
-const SCRATCHPAD_POINTS: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
+const SCRATCHPAD_POINTS = [
   { key: "write", icon: ListChecks },
   { key: "prompt", icon: ClipboardCopy },
   { key: "agent", icon: Bot },
   { key: "promote", icon: ArrowUpRight },
   { key: "mcp", icon: Plug },
-];
+] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
 
 export async function SectionSpeed() {
   const t = await getTranslations("Landing");

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { PricingInfoHint } from "./pricing-info-hint";
 import { FeatureTable, type FeatureCell } from "./feature-table";
+import type { MessageKey } from "@/lib/i18n-keys";
 import {
   BILLING_PLANS,
   usageMultiplierVsFree,
@@ -38,7 +39,10 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
   pro: "planPro",
 };
 
-type Translator = (key: string, values?: Record<string, string | number>) => string;
+/** Le translator du namespace `Billing`, typé depuis la source. Une signature
+ *  maison `(key: string, values?: …)` accepterait une clé inexistante ou un
+ *  message à placeholder appelé sans ses valeurs. */
+type Translator = Awaited<ReturnType<typeof getTranslations<"Billing">>>;
 
 /** `true` = inclus, `false` = absent, une chaîne = la valeur chiffrée du plan. */
 type Cell = FeatureCell;
@@ -168,11 +172,13 @@ export async function PricingComparison() {
       }))}
       groups={GROUPS.map((group) => ({
         key: group.key,
-        label: tp(`group_${group.key}`),
+        label: tp(`group_${group.key}` as MessageKey<"Pricing">),
         rows: group.rows.map((row) => ({
           key: row.key,
-          label: tp(`row_${row.key}`),
-          hint: row.hint ? <PricingInfoHint text={tp(`row_${row.key}_hint`)} /> : undefined,
+          label: tp(`row_${row.key}` as MessageKey<"Pricing">),
+          hint: row.hint ? (
+            <PricingInfoHint text={tp(`row_${row.key}_hint` as MessageKey<"Pricing">)} />
+          ) : undefined,
           cells: BILLING_PLANS.map((plan) => row.value(plan, t)),
         })),
       }))}

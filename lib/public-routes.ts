@@ -33,6 +33,7 @@
  * contenu de la page change**, pas à chaque déploiement.
  */
 import { CHANGELOG_LAST_MODIFIED } from "@/lib/changelog";
+import type { Namespace } from "@/lib/i18n-keys";
 
 export interface PublicRoute {
   /** Clé stable, utilisée par `publicPageMetadata` et les liens. */
@@ -42,7 +43,7 @@ export interface PublicRoute {
   /** URL française. */
   fr: string;
   /** Namespace i18n où vivent `metaTitle` et `metaDescription`. */
-  namespace: string;
+  namespace: Namespace;
   /**
    * Le titre porte-t-il déjà la marque ? La landing s'appelle « minddy, … » :
    * le template « %s · minddy » du root layout la répéterait.

@@ -27,11 +27,11 @@ import { Reveal, RevealHeading } from "./reveal";
  * réglages du compte, pas dans une page qui promet de la sobriété.
  */
 
-const ITEMS: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
+const ITEMS = [
   { key: "share", icon: Link2 },
   { key: "import", icon: Upload },
   { key: "api", icon: Plug2 },
-];
+] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
 
 export async function SectionMore() {
   const t = await getTranslations("Landing");

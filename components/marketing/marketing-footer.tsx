@@ -9,6 +9,7 @@ import { MinddyLogo } from "@/components/minddy-logo";
 import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Pied de page du site public (MIN-73). Reprend la grille du footer d'AutoKap :
@@ -19,8 +20,8 @@ import type { Locale } from "@/i18n/config";
 const CONTACT_EMAIL = "hello@minddy.app";
 
 type FooterColumn = {
-  titleKey: string;
-  links: ReadonlyArray<{ href: string; labelKey: string }>;
+  titleKey: MessageKey<"Landing">;
+  links: ReadonlyArray<{ href: string; labelKey: MessageKey<"Landing"> }>;
 };
 
 const COLUMNS: ReadonlyArray<FooterColumn> = [

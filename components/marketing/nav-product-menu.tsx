@@ -36,9 +36,24 @@ import type { Locale } from "@/i18n/config";
  *  - **Tactile.** Le survol n'existe pas : le clic bascule.
  */
 
+/**
+ * Les slugs du menu Produit. Union de littéraux, et non `string` : c'est ce qui
+ * permet à TypeScript de résoudre `navMenu_${key}_title` en clés réelles et de
+ * les confronter au catalogue. Ajouter une entrée sans ajouter ses deux messages
+ * ne compile pas.
+ */
+export type ProductEntryKey =
+  | "tracker"
+  | "speed"
+  | "agents"
+  | "numo"
+  | "feedback"
+  | "more"
+  | "mcp";
+
 export type ProductEntry = {
   /** Clé i18n : `navMenu_<key>_title` et `navMenu_<key>_desc`. */
-  key: string;
+  key: ProductEntryKey;
   href: string;
   /** `null` pour Numo, qui porte son propre logo plutôt qu'une icône générique. */
   icon: LucideIcon | null;

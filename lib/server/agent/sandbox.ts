@@ -285,6 +285,37 @@ function numstatNewPath(field: string): string {
 }
 
 /**
+ * Le diff TEXTUEL du tour, pour l'auto-relecture de fin de tour (self-review.ts) :
+ * le patch depuis `fromSha` jusqu'à l'arbre de travail — donc le travail déjà
+ * poussé en WIP au milieu du chunk ET ce qui n'est pas encore committé — plus la
+ * sortie brute de `git status --porcelain`, d'où se lisent les fichiers ajoutés
+ * (que `git diff` ignore tant qu'ils ne sont pas suivis).
+ *
+ * LECTURE SEULE : ni `add`, ni `add -N`. L'index appartient à la fin de tour, qui
+ * stage et committe seule — une intention d'ajout posée ici se retrouverait dans
+ * le commit de quelqu'un d'autre.
+ *
+ * Best-effort, comme `changedFiles` : toute erreur rend des chaînes vides plutôt
+ * que d'empêcher un tour de se terminer.
+ */
+export async function turnDiff(
+  sandbox: Sandbox,
+  fromSha: string,
+): Promise<{ diff: string; porcelain: string }> {
+  const [diff, porcelain] = await Promise.all([
+    fromSha
+      ? runShell(sandbox, `git diff ${sq(fromSha)}`, { timeoutMs: 30_000 })
+          .then((r) => (r.exitCode === 0 ? r.stdout : ""))
+          .catch(() => "")
+      : Promise.resolve(""),
+    runShell(sandbox, `git status --porcelain`, { timeoutMs: 30_000 })
+      .then((r) => (r.exitCode === 0 ? r.stdout : ""))
+      .catch(() => ""),
+  ]);
+  return { diff, porcelain };
+}
+
+/**
  * Fichiers changés entre deux shas (le « diff par tour »). Deux passes git :
  * `--name-status` (statut + chemins propres, renommages compris) pour la liste, et
  * `--numstat` pour les compteurs +/− (fichier binaire → 0/0). Forme deux-points

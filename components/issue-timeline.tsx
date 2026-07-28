@@ -60,7 +60,11 @@ import type { AttachmentInput, Comment, Member } from "@/lib/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
 type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
-type TimelineT = ReturnType<typeof useTranslations>;
+/** Le translator du namespace `Timeline` — celui que reçoivent les helpers
+ *  ci-dessous. Nommer le namespace n'est pas cosmétique : sans lui, le type
+ *  couvre les 2 600 clés du catalogue et TypeScript abandonne sur un
+ *  « type instantiation is excessively deep » (TS2589). */
+type TimelineT = ReturnType<typeof useTranslations<"Timeline">>;
 /** Which entity's activity we render — picks the event describer + status set. */
 export type ActivityEntity = "issue" | "objective" | "feedback";
 

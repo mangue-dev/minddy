@@ -963,10 +963,10 @@ export function BoardToolbar({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{t("deleteViewTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("deleteViewDescription", { name: deleteTarget?.name ?? "" })}
-            </DialogDescription>
+            <DialogTitle>
+              {t("deleteViewTitle", { name: deleteTarget?.name ?? "" })}
+            </DialogTitle>
+            <DialogDescription>{t("deleteViewDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>

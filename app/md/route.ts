@@ -12,6 +12,7 @@ import {
 import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
+import type { MessageKey } from "@/lib/i18n-keys";
 import {
   FAQ_KEYS,
   MCP_FAQ_KEYS,
@@ -274,9 +275,9 @@ async function renderChangelog(locale: Locale, canonical: string): Promise<strin
     header(t("metaTitle"), t("metaDescription"), canonical),
     ...CHANGELOG_ENTRIES.map((entry) =>
       [
-        `## ${t(`entry_${entry.id}_title`)}`,
+        `## ${t(`entry_${entry.id}_title` as MessageKey<"Changelog">)}`,
         `*${entry.date}*`,
-        t(`entry_${entry.id}_body`),
+        t(`entry_${entry.id}_body` as MessageKey<"Changelog">),
       ].join("\n\n"),
     ),
     links(locale),

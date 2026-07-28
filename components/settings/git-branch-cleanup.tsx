@@ -23,6 +23,7 @@ import {
 } from "@/lib/git-integration-api";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentBranch, AgentBranchState } from "@/lib/types";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Gestion des branches d'agent (MIN-102) : TOUTES les branches que minddy a
@@ -46,7 +47,7 @@ import type { AgentBranch, AgentBranchState } from "@/lib/types";
 /** Libellé et allure du badge d'état — l'ordre du tri va de haut en bas. */
 const STATE_BADGE: Record<
   AgentBranchState,
-  { key: string; variant: "secondary" | "outline" }
+  { key: MessageKey<"Settings">; variant: "secondary" | "outline" }
 > = {
   merged: { key: "gitCleanBranchesMerged", variant: "secondary" },
   closed: { key: "gitCleanBranchesRejected", variant: "outline" },

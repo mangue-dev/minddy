@@ -68,9 +68,14 @@ import {
  */
 
 const MAX_ROUNDS_PER_CHUNK = 60;
-/** Garde-fou : relances du tour par le hook de fin de tour (MIN-110). Une seule —
- *  le check qui suit la correction vérifie, il ne relance pas une troisième fois. */
-const MAX_TURN_END_REENTRIES = 1;
+/**
+ * Garde-fou : relances du tour par le hook de fin de tour. DEUX, parce que le
+ * hook porte maintenant deux préoccupations distinctes, chacune tirant au plus
+ * une fois : les erreurs de typage (MIN-110) puis l'auto-relecture du diff
+ * (self-review.ts). Le pire cas est donc « réponse → types → correction →
+ * réponse → relecture → réponse », et le tour se termine quoi qu'il arrive.
+ */
+const MAX_TURN_END_REENTRIES = 2;
 /** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
 const MAX_COMPACTIONS_PER_CHUNK = 3;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */

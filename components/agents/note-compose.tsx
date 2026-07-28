@@ -17,6 +17,7 @@ import {
   toast,
 } from "mangue-ui";
 import { Check, ChevronsUpDown } from "lucide-react";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -31,7 +32,7 @@ import { useProjects } from "@/lib/projects-context";
 import type { Project } from "@/lib/types";
 
 /** Codes d'erreur du lancement carnet → clés i18n Agent (miroir AgentConversation). */
-const LAUNCH_ERROR_KEYS: Record<string, string> = {
+const LAUNCH_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
   noRepo: "errorNoRepo",
   unsupportedProvider: "errorUnsupportedProvider",
   quotaExceeded: "errorQuotaExceeded",

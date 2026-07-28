@@ -24,6 +24,7 @@ import {
   TotalItem,
 } from "@/components/stats/stats-chrome";
 import type { AdminFinance, AdminFinanceDay } from "@/lib/types";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * `/admin` → onglet « Finances » (MIN-92). L'écran répond à UNE question : est-ce
@@ -41,6 +42,15 @@ import type { AdminFinance, AdminFinanceDay } from "@/lib/types";
  *
  * Accès verrouillé côté serveur par `app/(app)/admin/layout.tsx` + l'API.
  */
+
+/**
+ * Le translator du namespace `Admin`, tel que le passent les sous-composants
+ * de ce fichier. Le namespace n'est pas décoratif : `ReturnType<typeof
+ * useTranslations>` (sans argument) type `t` sur les 2 600 clés du catalogue,
+ * et TypeScript abandonne alors sur un « type instantiation is excessively
+ * deep » (TS2589) — donc plus aucune vérification sur ces appels.
+ */
+type AdminT = ReturnType<typeof useTranslations<"Admin">>;
 
 const FEATURES = [
   "numo_chat",
@@ -151,7 +161,9 @@ export function AdminFinanceDashboard() {
   const featureLabel = useCallback(
     (feature: string) =>
       FEATURES.includes(feature as Feature)
-        ? t(`finance.features.${feature}`)
+        ? // `feature` vient de l'API : clé assemblée à l'exécution, gardée par
+          // le `FEATURES.includes` juste au-dessus.
+          t(`finance.features.${feature}` as MessageKey<"Admin">)
         : feature,
     [t],
   );
@@ -301,7 +313,7 @@ function MoneyTiles({
   t,
 }: {
   finance: AdminFinance;
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   const format = useFormatter();
   const eur = (value: number | null) =>
@@ -374,7 +386,7 @@ function FreshnessBar({
   finance: AdminFinance;
   refreshing: boolean;
   onRefresh: () => void;
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   const format = useFormatter();
   const minutes = Math.max(
@@ -439,7 +451,7 @@ function MarginChart({
   t,
 }: {
   days: AdminFinanceDay[];
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   const format = useFormatter();
 
@@ -578,7 +590,7 @@ function SpendCap({
   t,
 }: {
   finance: AdminFinance;
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   const format = useFormatter();
   const cap = finance.cap;
@@ -669,7 +681,7 @@ function FeatureTable({
 }: {
   rows: FeatureRow[];
   featureLabel: (f: string) => string;
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   if (rows.length === 0) {
     return (
@@ -733,7 +745,7 @@ function RecentRunsAccordion({
 }: {
   runs: RunRow[];
   featureLabel: (f: string) => string;
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -790,7 +802,7 @@ function RunRowItem({
 }: {
   run: RunRow;
   featureLabel: (f: string) => string;
-  t: ReturnType<typeof useTranslations>;
+  t: AdminT;
 }) {
   const [open, setOpen] = useState(false);
   const [calls, setCalls] = useState<RunCall[] | null>(null);

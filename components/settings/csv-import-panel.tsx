@@ -14,6 +14,7 @@ import {
 import { importIssuesApi, type ImportCommitResponse } from "@/lib/import-api";
 import { ISSUE_STATUSES } from "@/lib/issue-validation";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 type Preview = Extract<ImportParseResult, { ok: true }>;
 
@@ -202,7 +203,9 @@ export function CsvImportPanel({
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{fileName}</p>
               <p className="text-xs text-muted-foreground">
-                {t(`importSource_${preview.source}`)} —{" "}
+                {/* La source est détectée à l'analyse du fichier : clé
+                    assemblée à l'exécution. */}
+                {t(`importSource_${preview.source}` as MessageKey<"Settings">)} —{" "}
                 {t("importPreviewCount", { count: preview.issues.length })}
                 {newCategoryCount > 0 &&
                   ` · ${t("importCategoriesToCreate", { count: newCategoryCount })}`}

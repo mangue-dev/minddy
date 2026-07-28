@@ -2,6 +2,8 @@ import "server-only";
 
 import { getTranslations } from "next-intl/server";
 
+import type { MessageKey } from "@/lib/i18n-keys";
+
 /**
  * Erreur typée levée quand une limite de plan bloque une action (MIN-72).
  * Les routes la convertissent via `planLimitResponse` en 403 JSON
@@ -35,7 +37,7 @@ export function isPlanLimitError(error: unknown): error is PlanLimitError {
 }
 
 /** code → clé du namespace ApiErrors (messages localisés FR/EN). */
-const PLAN_LIMIT_I18N_KEYS: Record<PlanLimitCode, string> = {
+const PLAN_LIMIT_I18N_KEYS: Record<PlanLimitCode, MessageKey<"ApiErrors">> = {
   project_limit_reached: "projectLimitReached",
   issue_limit_reached: "issueLimitReached",
   members_pro_only: "membersProOnly",

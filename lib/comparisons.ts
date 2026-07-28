@@ -1,3 +1,5 @@
+import type { Namespace } from "@/lib/i18n-keys";
+
 import type { PublicRouteKey } from "@/lib/public-routes";
 
 /**
@@ -53,7 +55,7 @@ export interface Comparison {
   /** Entrée de `lib/public-routes.ts` qui sert cette page. */
   routeKey: PublicRouteKey;
   /** Namespace i18n des textes propres à ce comparatif. */
-  namespace: string;
+  namespace: Namespace;
   /** Sa page de tarifs publique : le lecteur doit pouvoir vérifier lui-même. */
   pricingUrl: string;
 }

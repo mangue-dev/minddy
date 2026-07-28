@@ -26,6 +26,7 @@ import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Barre de navigation du site public (MIN-73) — landing, tarifs, pages légales.
@@ -39,7 +40,7 @@ import type { Locale } from "@/i18n/config";
 
 type NavLink = {
   href: string;
-  key: string;
+  key: MessageKey<"Landing">;
   icon: LucideIcon;
 };
 

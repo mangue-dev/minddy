@@ -37,6 +37,7 @@ import {
 } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
 import { StatusIndicator } from "@/components/issue-indicators";
+import type { MessageKey } from "@/lib/i18n-keys";
 import {
   CategoryTag,
   FEEDBACK_TO_ISSUE_STATUS,
@@ -576,7 +577,10 @@ function ComposerDialog({
           </div>
         )}
         {error && (
-          <p className="mt-3 text-sm text-destructive">{t(`errors.${error}`)}</p>
+          <p className="mt-3 text-sm text-destructive">
+            {/* Code d'erreur serveur : clé assemblée à l'exécution. */}
+            {t(`errors.${error}` as MessageKey<"PublicFeedback">)}
+          </p>
         )}
         <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
           <label htmlFor="feedback-make-public" className="flex min-w-0 cursor-pointer flex-col">

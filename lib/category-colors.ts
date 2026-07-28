@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/lib/i18n-keys";
+
 // Fixed label palette — categories pick from these (predictable, "label"-like,
 // not a free color picker). Values are plain hex so they render in <span style>.
 export const CATEGORY_COLORS = [
@@ -17,7 +19,7 @@ export const DEFAULT_CATEGORY_COLOR = CATEGORY_COLORS[9];
 
 /** hex → clé de nom traduit (namespace `Categories.colors`). Sert aux libellés
     de lecteur d'écran des pastilles, qui annonçaient le hex brut. */
-export const CATEGORY_COLOR_NAMES: Record<string, string> = {
+export const CATEGORY_COLOR_NAMES: Record<string, MessageKey<"Categories.colors">> = {
   "#ef4444": "red",
   "#f97316": "orange",
   "#eab308": "amber",

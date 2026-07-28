@@ -29,6 +29,7 @@ import { EyeOff, RotateCcw, Search, Undo2, X } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { BILLING_PLANS, type BillingPlanId } from "@/lib/billing-plans";
 import type { AdminUserRow, AdminUsersResponse } from "@/lib/types";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * `/admin` → onglet « Utilisateurs » (MIN-90) : LA vue des comptes de l'app.
@@ -379,7 +380,10 @@ function UserSheet({
             {user.onboarding.started && user.onboarding.currentStep ? (
               <p className="text-xs text-muted-foreground">
                 {t("users.onboardingCurrent", {
-                  step: t(`users.step_${user.onboarding.currentStep}`),
+                  // L'étape vient de la base : clé assemblée à l'exécution.
+                  step: t(
+                    `users.step_${user.onboarding.currentStep}` as MessageKey<"Admin">,
+                  ),
                 })}
               </p>
             ) : null}

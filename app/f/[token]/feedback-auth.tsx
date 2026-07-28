@@ -15,6 +15,7 @@ import {
 } from "mangue-ui";
 import { MailCheck } from "lucide-react";
 import { requestOtpAction, verifyOtpAction } from "./actions";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Porte d'identité du board public (MIN-37) : vérification email par code OTP
@@ -131,7 +132,13 @@ export function FeedbackAuthDialog({
             />
           )}
 
-          {error && <p className="text-sm text-destructive">{t(`errors.${error}`)}</p>}
+          {/* Le code d'erreur vient de la réponse serveur : clé assemblée à
+              l'exécution. */}
+          {error && (
+            <p className="text-sm text-destructive">
+              {t(`errors.${error}` as MessageKey<"PublicFeedback">)}
+            </p>
+          )}
 
           <div className="flex items-center justify-between gap-2">
             {step === "code" ? (

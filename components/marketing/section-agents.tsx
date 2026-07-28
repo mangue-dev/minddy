@@ -39,11 +39,11 @@ const CAPABILITY_KEYS = [
 ] as const;
 
 /** Les trois temps d'un ticket confié à l'agent de code. */
-const STEPS: ReadonlyArray<{ key: string; slot: ScreenshotSlotId }> = [
+const STEPS = [
   { key: "write", slot: "workflowIssue" },
   { key: "run", slot: "workflowAgent" },
   { key: "review", slot: "workflowPr" },
-];
+] as const satisfies ReadonlyArray<{ key: string; slot: ScreenshotSlotId }>;
 
 /**
  * Ce que Numo sait faire et que rien d'autre ne fait : chercher, agir, et
@@ -51,11 +51,11 @@ const STEPS: ReadonlyArray<{ key: string; slot: ScreenshotSlotId }> = [
  * lance » — a été retirée : elle redisait mot pour mot le parcours en trois
  * temps qui la précède maintenant dans la même section.
  */
-const NUMO_CAPABILITIES: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
+const NUMO_CAPABILITIES = [
   { key: "find", icon: Search },
   { key: "act", icon: PencilLine },
   { key: "context", icon: Crosshair },
-];
+] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
 
 const NUMO_EXAMPLES = ["triage", "assign", "view", "plan"] as const;
 

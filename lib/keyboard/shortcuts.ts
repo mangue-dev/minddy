@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/lib/i18n-keys";
+
 // Single source of truth for the keyboard cheat sheet. Each shortcut carries an
 // i18n label key (under "Keyboard.shortcuts") and the keys to render.
 //
@@ -9,7 +11,7 @@
 export interface CheatsheetShortcut {
   id: string;
   /** i18n key under `Keyboard.shortcuts`. */
-  labelKey: string;
+  labelKey: MessageKey<"Keyboard.shortcuts">;
   keys: string[][];
   /** Combinaison ÉQUIVALENTE (pas une suite) — rendue après un « / ». */
   altKeys?: string[][];
@@ -18,7 +20,7 @@ export interface CheatsheetShortcut {
 export interface CheatsheetSection {
   id: string;
   /** i18n key under `Keyboard.sections`. */
-  titleKey: string;
+  titleKey: MessageKey<"Keyboard.sections">;
   shortcuts: CheatsheetShortcut[];
 }
 

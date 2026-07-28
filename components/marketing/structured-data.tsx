@@ -4,6 +4,7 @@ import { CONTACT_EMAIL, MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 import { routeByKey, type PublicRouteKey } from "@/lib/public-routes";
 import type { Locale } from "@/i18n/config";
 import { FAQ_KEYS, MCP_FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Données structurées du site public (schema.org, JSON-LD).
@@ -117,8 +118,8 @@ export async function StructuredData({
     inLanguage,
     mainEntity: faqKeys.map((key) => ({
       "@type": "Question",
-      name: tFaq(`faq_${key}_q`),
-      acceptedAnswer: { "@type": "Answer", text: tFaq(`faq_${key}_a`) },
+      name: tFaq(`faq_${key}_q` as MessageKey<"Landing">),
+      acceptedAnswer: { "@type": "Answer", text: tFaq(`faq_${key}_a` as MessageKey<"Landing">) },
     })),
   };
 

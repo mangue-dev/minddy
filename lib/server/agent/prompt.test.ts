@@ -552,6 +552,25 @@ describe("buildAgentSystemPrompt — erreurs de typage rendues par le harness", 
 });
 
 /**
+ * L'auto-relecture est EXÉCUTÉE par le harness (self-review.ts), plus demandée en
+ * prose. Ce test verrouille l'accord entre les deux : le prompt a longtemps promis
+ * une relecture que rien ne lançait, et c'est exactement cet écart — une consigne
+ * prise pour un mécanisme — qui laissait passer les erreurs de jointure.
+ */
+describe("buildAgentSystemPrompt — auto-relecture rendue par le harness", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`annonce le diff de fin de tour, et dissuade de le relancer (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/the harness runs it, you don't/i);
+      expect(prompt).toMatch(/do NOT run `git diff` yourself/i);
+      // La classe d'erreur visée, nommée : c'est elle qui justifie l'injection.
+      expect(prompt).toMatch(/no single file shows/i);
+      expect(prompt).toContain("i18n placeholders");
+    });
+  }
+});
+
+/**
  * MIN-111 : l'agent VOIT les maquettes — mais seulement sur un run dont le modèle
  * accepte les images. La promesse est conditionnée à la capacité réelle : dire à un
  * modèle texte qu'il peut regarder une maquette lui ferait annoncer « je vois la

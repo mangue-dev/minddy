@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/lib/i18n-keys";
+
 /**
  * Catalogue des captures du site public (MIN-73).
  *
@@ -45,7 +47,7 @@ export interface ScreenshotSlot {
    * que soit la langue de la page. Un `alt` décrit ce qu'on voit à quelqu'un
    * qui ne le voit pas — pas ce qu'il fallait faire pour le photographier.
    */
-  altKey: string;
+  altKey: MessageKey<"Landing">;
   /** Rapport d'image du cadre, en notation CSS `aspect-ratio`. */
   ratio: string;
   /**

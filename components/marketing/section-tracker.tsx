@@ -25,14 +25,14 @@ import { Reveal, RevealHeading } from "./reveal";
  * pas les gestes pour les manipuler.
  */
 
-const FEATURES: ReadonlyArray<{ key: string; icon: LucideIcon }> = [
+const FEATURES = [
   { key: "board", icon: LayoutList },
   { key: "all", icon: Layers },
   { key: "inbox", icon: Inbox },
   { key: "objectives", icon: Target },
   { key: "cycles", icon: CalendarRange },
   { key: "triage", icon: ListFilter },
-];
+] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
 
 export async function SectionTracker() {
   const t = await getTranslations("Landing");

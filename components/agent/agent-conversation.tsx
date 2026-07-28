@@ -8,6 +8,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { unechoedMessages } from "@/lib/agent-pending";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 import {
@@ -42,7 +43,7 @@ import { AgentChangesBar } from "./agent-changes-bar";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 
 /** Codes d'erreur bruts des routes agent (lancement ET reprise) → clés i18n Agent. */
-const AGENT_ERROR_KEYS: Record<string, string> = {
+const AGENT_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
   noRepo: "errorNoRepo",
   unsupportedProvider: "errorUnsupportedProvider",
   alreadyRunning: "errorAlreadyRunning",

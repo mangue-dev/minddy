@@ -5,6 +5,7 @@ import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import { CHANGELOG_FEED_PATH, changelogFeedStylePath } from "@/lib/changelog-feed";
 import { routeByKey } from "@/lib/public-routes";
 import { SITE_URL } from "@/lib/site";
+import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Le flux RSS du changelog (MIN-93).
@@ -35,13 +36,13 @@ export async function GET(request: NextRequest): Promise<Response> {
   const items = CHANGELOG_ENTRIES.map((entry) =>
     [
       "    <item>",
-      `      <title>${escapeXml(t(`entry_${entry.id}_title`))}</title>`,
+      `      <title>${escapeXml(t(`entry_${entry.id}_title` as MessageKey<"Changelog">))}</title>`,
       `      <link>${escapeXml(`${pageUrl}#${entry.id}`)}</link>`,
       // `isPermaLink="false"` : le guid est l'identifiant stable de l'entrée,
       // pas une URL. Sans ça, changer d'ancre republierait toute la liste.
       `      <guid isPermaLink="false">minddy:changelog:${entry.id}</guid>`,
       `      <pubDate>${rfc822(entry.date)}</pubDate>`,
-      `      <description>${escapeXml(t(`entry_${entry.id}_body`))}</description>`,
+      `      <description>${escapeXml(t(`entry_${entry.id}_body` as MessageKey<"Changelog">))}</description>`,
       "    </item>",
     ].join("\n"),
   ).join("\n");

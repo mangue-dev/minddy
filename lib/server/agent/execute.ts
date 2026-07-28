@@ -18,6 +18,7 @@ import {
   revParseHead,
   changedFiles,
   runShell,
+  turnDiff,
   readWorkFile,
   readWorkFileWindow,
   writeWorkFile,
@@ -42,6 +43,7 @@ import {
 } from "./background";
 import { resolveWithin } from "./repo-path";
 import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "./diagnostics";
+import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "./self-review";
 import { LITERAL_RETRY_NOTE } from "./grep-pattern";
 import {
   formatRunCommandResult,
@@ -1280,7 +1282,24 @@ export async function executeAgentRun(
      * la boucle). Best-effort de bout en bout : une panne du checker ne doit jamais
      * empêcher un tour de se terminer.
      */
-    const onTurnEnd = async ({ budgetMs }: { budgetMs: number }): Promise<string | null> => {
+    /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide
+     *  à chaque type-check : après une relance, le tour a toujours édité, même si
+     *  le modèle n'a plus rien touché depuis. */
+    let repoTouched = false;
+    /** L'auto-relecture ne passe qu'UNE fois par chunk : elle sert à faire relire
+     *  le tour avant la réponse, pas à commenter chaque correctif qui suit. */
+    let selfReviewed = false;
+
+    /**
+     * Type-check de fin de tour. Se tait — et coûte alors un aller-retour shell de
+     * ~1 ms — dès que l'une des conditions manque : rien d'édité, pas de
+     * `tsconfig.json`, pas de `node_modules/.bin/tsc`, ou pas assez de budget mural
+     * pour absorber un check à froid (mesuré 22 s, cf. §3.3 du comparatif). Sinon,
+     * les erreurs partent au modèle et le tour repart (plafond tenu par la boucle).
+     * Best-effort de bout en bout : une panne du checker ne doit jamais empêcher un
+     * tour de se terminer.
+     */
+    const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
       if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
       const touched = [...editedPaths];
       editedPaths.clear();
@@ -1301,6 +1320,42 @@ export async function executeAgentRun(
         errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
       });
       return block;
+    };
+
+    /**
+     * Auto-relecture de fin de tour : le diff du tour, injecté avant que l'agent ne
+     * réponde (cf. self-review.ts pour le pourquoi). Deux commandes git en lecture
+     * seule — l'index n'est jamais touché, la fin de tour reste seule à stager.
+     *
+     * `filesFromSha` est la même baseline que le diff par tour émis au feed : elle
+     * couvre le travail poussé en WIP au milieu du chunk aussi bien que ce qui
+     * dort encore dans l'arbre de travail.
+     */
+    const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
+      if (selfReviewed || !repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
+      selfReviewed = true;
+      const startedAt = Date.now();
+      const { diff, porcelain } = await turnDiff(sb, filesFromSha).catch(() => ({
+        diff: "",
+        porcelain: "",
+      }));
+      const block = formatSelfReview({ diff, porcelain });
+      await emit("status", {
+        phase: "self_review",
+        durationMs: Date.now() - startedAt,
+        chars: block?.length ?? 0,
+      });
+      return block;
+    };
+
+    /**
+     * Dernier mot du harness. Les erreurs de typage passent AVANT la relecture :
+     * elles sont concrètes et bloquantes, et servir un diff par-dessus un dépôt qui
+     * ne compile pas noierait le seul signal qui compte.
+     */
+    const onTurnEnd = async ({ budgetMs }: { budgetMs: number }): Promise<string | null> => {
+      if (editedPaths.size > 0) repoTouched = true;
+      return (await typeCheckBlock(budgetMs)) ?? (await selfReviewBlock(budgetMs));
     };
 
     const result = await runAgentLoop({
