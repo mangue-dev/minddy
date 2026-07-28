@@ -478,6 +478,19 @@ const CORE_TOOLS: AgentToolDef[] = [
   },
 ];
 
+/**
+ * Description de `read_attachment`, en deux versions : un run dont le modèle voit
+ * les images ANNONCE qu'il peut regarder une maquette (MIN-111) ; les autres
+ * gardent le texte d'avant, au mot près. Promettre une capacité qu'on n'a pas ferait
+ * dire au modèle « je regarde la maquette » sur un résultat qui ne porte que des
+ * métadonnées. `agentToolsFor` choisit.
+ */
+const READ_ATTACHMENT_DESCRIPTION =
+  "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. Text files come back inline (capped); binaries and large files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
+
+const READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES =
+  "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. An IMAGE (png, jpeg, webp, gif) comes back as the image itself, attached to the result: you actually see it. When the ticket carries a mockup, a screenshot or a diagram, open it BEFORE writing the code it describes, and say what you see — a layout you were shown beats a layout you were told about. Text files come back inline (capped); other binaries and oversized files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
+
 /** Tools d'ANCRAGE TICKET : l'état vivant de l'issue + la PR du ticket. */
 const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
   {
@@ -501,8 +514,7 @@ const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
     type: "function",
     function: {
       name: "read_attachment",
-      description:
-        "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. Text files come back inline (capped); binaries and large files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.",
+      description: READ_ATTACHMENT_DESCRIPTION,
       parameters: {
         type: "object",
         properties: {
@@ -698,16 +710,29 @@ export function agentToolsFor(opts: {
   webSearch: boolean;
   /** Modèle du run — décide de l'interface d'édition servie. */
   model?: string | null;
+  /** Le modèle du run voit-il les images (MIN-111) ? Change ce que `read_attachment`
+   *  ANNONCE — le tool est là dans les deux cas, mais il ne promet une maquette
+   *  regardable que quand elle le sera vraiment. */
+  images?: boolean;
 }): AgentToolDef[] {
   const patch = usesApplyPatch(opts.model);
   const tools = opts.anchor === "issue" ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS;
-  return tools.filter((t) => {
-    const name = t.function.name;
-    if (name === "web_search") return opts.webSearch;
-    if (name === "apply_patch") return patch;
-    if (STRING_EDIT_TOOLS.has(name)) return !patch;
-    return true;
-  });
+  return tools
+    .filter((t) => {
+      const name = t.function.name;
+      if (name === "web_search") return opts.webSearch;
+      if (name === "apply_patch") return patch;
+      if (STRING_EDIT_TOOLS.has(name)) return !patch;
+      return true;
+    })
+    .map((t) =>
+      opts.images === true && t.function.name === "read_attachment"
+        ? {
+            ...t,
+            function: { ...t.function, description: READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES },
+          }
+        : t,
+    );
 }
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */

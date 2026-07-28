@@ -275,7 +275,7 @@ l'histoire du produit) :
 | Shell | `run_command { command }` | `exec_command` (PTY, `session_id`), `write_stdin`, `shell_command` | `shell { command, timeout, workdir }` |
 | Web | `web_search` (OpenRouter only) | `web.run`, `tool_search` (BM25 sur tools différés) | `websearch`, `webfetch` |
 | Délégation | — | `spawn_agent`, `send_input`, `send_message`, `followup_task`, `wait_agent`, `list_agents`, `resume_agent`, `close_agent`, `interrupt_agent` | `task` (sous-agents, avec `task_id` pour reprendre la même session) |
-| Multimodal | — | `view_image` (« View a local image file … when visual inspection is needed ») | `read` renvoie images et PDF **en pièces jointes** ([read.txt](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/read.txt)) |
+| Multimodal | `read_attachment` renvoie **la pièce jointe image du ticket** en partie image, quand le modèle du run l'accepte (MIN-111) | `view_image` (« View a local image file … when visual inspection is needed ») | `read` renvoie images et PDF **en pièces jointes** ([read.txt](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/read.txt)) |
 | Introspection du contexte | — | `get_context_remaining` → `{ tokens_left }` ; `new_context` (« Start a new context window ») | — |
 | Sémantique du code | — | — | `lsp` (expérimental) : `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `callHierarchy` |
 | Réparation d'appel invalide | — | — | tool `invalid` : les args malformés reviennent au modèle en message d'erreur au lieu de casser le round |
@@ -827,6 +827,20 @@ n'est plus un risque** : les `input_modalities` de l'index OpenRouter donnent
 `["text","image","file"]` pour `anthropic/claude-sonnet-5` — soit **11 de nos 15
 runs**. Seul `deepseek/deepseek-v4-flash` est `["text"]`. Ça monte le rang de R7 :
 la capacité manque à la grande majorité des sessions réelles.
+
+> **Fait le 2026-07-28 (MIN-111).** `content` accepte les parties `text`/`image_url`
+> (helpers de lecture dans `content.ts`, utilisés par les cinq consommateurs), la
+> capacité du modèle est lue dans le même index OpenRouter que la fenêtre de contexte
+> (`supportsImageInput`), et `read_attachment` renvoie l'image en **data URL** — pas
+> en URL signée : elle expire en 10 minutes, le checkpoint est rejoué bien plus tard.
+> Le risque « checkpoint qui grossit » est borné par trois plafonds : 750 Ko par image
+> (~1 Mo encodée), 2 images par tour, 3 images retenues dans tout l'historique
+> (`capHistoryImages`). Une image est facturée au contexte à un forfait de 4 000
+> caractères, jamais à la taille de sa base64 — sinon la première maquette ouverte
+> déclencherait une compaction à chaque round. Forme vérifiée contre le vrai
+> provider : Anthropic, OpenAI et Google acceptent tous une partie image DANS un
+> message `role:"tool"` et décrivent correctement l'image (le point qu'aucun test
+> unitaire ne pouvait trancher).
 
 ### R8 — `apply_patch` pour les modèles `gpt-*` *(rang 2)*
 

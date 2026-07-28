@@ -17,10 +17,12 @@
  * en attente de résultats).
  */
 
+import { contentChars, imageCount, textOf, type AgentContentPart } from "./content";
+
 /** Forme minimale d'un message (compatible AgentChatMessage). */
 export interface CompactMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content?: string | null;
+  content?: string | AgentContentPart[] | null;
   tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }>;
   tool_call_id?: string;
   name?: string;
@@ -33,7 +35,7 @@ const MIN_SUMMARIZE_MESSAGES = 4;
 
 /** Octets « de contexte » d'un message (contenu + arguments des tool_calls). */
 function messageBytes(m: CompactMessage): number {
-  let bytes = typeof m.content === "string" ? m.content.length : 0;
+  let bytes = contentChars(m.content);
   if (m.tool_calls) {
     for (const tc of m.tool_calls) {
       bytes += (tc.function?.arguments?.length ?? 0) + (tc.function?.name?.length ?? 0);
@@ -140,6 +142,21 @@ function cap(str: string, max: number): string {
 }
 
 /**
+ * Texte d'un message pour la transcription du résumeur. Une partie IMAGE n'y est
+ * pas rejouée (MIN-111) : un résumé porte les décisions, pas les pixels — et
+ * réinjecter les maquettes dans un sous-appel dont la sortie est du texte ne ferait
+ * que payer deux fois. Le marqueur dit qu'elles ont existé ; le texte qui
+ * l'accompagne (le résultat de `read_attachment`) en garde le nom de fichier.
+ */
+function summaryText(m: CompactMessage): string {
+  const text = textOf(m.content).trim();
+  const images = imageCount(m.content);
+  if (images === 0) return text;
+  const marker = `[${images} image${images > 1 ? "s" : ""} attached — not replayed in this summary]`;
+  return text ? `${text}\n${marker}` : marker;
+}
+
+/**
  * Sérialise un bloc de messages en transcription texte pour le résumeur. On passe
  * par du texte (et non les messages bruts) pour que le sous-appel de résumé soit
  * INSENSIBLE à l'appariement tool_call↔résultat et aux particularités providers.
@@ -152,12 +169,12 @@ export function serializeForSummary(messages: ReadonlyArray<CompactMessage>): st
           m.tool_calls
             ?.map((tc) => `→ ${tc.function.name}(${cap(tc.function.arguments ?? "", 300)})`)
             .join("\n") ?? "";
-        const text = (m.content ?? "").trim();
+        const text = summaryText(m);
         return `ASSISTANT: ${text}${text && calls ? "\n" : ""}${calls}`.trim();
       }
-      if (m.role === "tool") return `TOOL RESULT: ${cap(String(m.content ?? ""), 600)}`;
+      if (m.role === "tool") return `TOOL RESULT: ${cap(summaryText(m), 600)}`;
       if (m.role === "user") {
-        const content = (m.content ?? "").trim();
+        const content = summaryText(m);
         // Garde anti-résumé-de-résumé : un résumé de compaction antérieur est déjà
         // condensé — on le présente comme tel pour que le résumeur préserve ses
         // faits sans les ré-étendre (drift).
@@ -166,7 +183,7 @@ export function serializeForSummary(messages: ReadonlyArray<CompactMessage>): st
         }
         return `USER: ${content}`;
       }
-      return `${m.role.toUpperCase()}: ${(m.content ?? "").trim()}`;
+      return `${m.role.toUpperCase()}: ${summaryText(m)}`;
     })
     .join("\n\n");
 }

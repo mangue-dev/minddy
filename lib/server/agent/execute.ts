@@ -66,6 +66,7 @@ import {
   type EmitAgentLive,
   type ExecuteAgentTool,
 } from "./agent-loop";
+import type { AgentToolImage } from "./content";
 import { broadcastRunStream } from "./live";
 import { agentToolsFor, RUN_COMMAND_TIMEOUT_MS } from "./tools";
 import {
@@ -83,7 +84,7 @@ import {
   toPrLineThreads,
   type AgentRepoContext,
 } from "./prompt";
-import { resolveAgentApiKey, getModelContextWindow } from "./model";
+import { resolveAgentApiKey, getModelContextWindow, supportsImageInput } from "./model";
 import { forgeFor, isForgeApiError, type Forge } from "./forge";
 import type { PullRequestRef } from "./pr";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -152,6 +153,12 @@ const MIN_SOFT_DEADLINE_MS = 20_000;
 const MAX_WALL_CLOCK_MS = 60 * 60_000;
 /** Taille max du checkpoint sérialisé. */
 const MAX_CHECKPOINT_BYTES = 8_000_000;
+/**
+ * Images montrées au modèle par TOUR (MIN-111) — même esprit que
+ * `MAX_WEB_SEARCHES_PER_TURN` : une maquette ou deux états d'un même écran, c'est
+ * ce dont un tour a besoin. Au-delà, `read_attachment` répond sans image.
+ */
+const MAX_IMAGES_PER_TURN = 2;
 /** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
     `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
     donc une erreur persistante s'arrête après ce nombre de claims. */
@@ -232,6 +239,35 @@ function makeExecTool(
   editedPaths: Set<string>,
 ): ExecuteAgentTool {
   let outputSeq = 0;
+  /** Images déjà montrées au modèle sur ce chunk (plafond MAX_IMAGES_PER_TURN). */
+  let imagesUsed = 0;
+
+  /**
+   * Plafonne les images renvoyées par un tool (MIN-111), sur le modèle du plafond
+   * de `web_search` : au-delà, le résultat repart SANS image, avec une note qui dit
+   * pourquoi — un modèle qui rouvre la même maquette à chaque round remplirait le
+   * checkpoint sans rien apprendre de plus.
+   */
+  const capTurnImages = (out: {
+    result: unknown;
+    success: boolean;
+    reason?: string;
+    images?: AgentToolImage[];
+  }) => {
+    const images = out.images ?? [];
+    if (images.length === 0) return out;
+    const room = MAX_IMAGES_PER_TURN - imagesUsed;
+    if (room <= 0) {
+      const note = `Image limit reached for this turn (${MAX_IMAGES_PER_TURN} images). Work from the ones you already looked at — the metadata and download_url above still describe this file.`;
+      const result =
+        out.result && typeof out.result === "object"
+          ? { ...(out.result as object), image_omitted: note }
+          : { image_omitted: note };
+      return { ...out, images: undefined, result };
+    }
+    imagesUsed += Math.min(room, images.length);
+    return { ...out, images: images.slice(0, room) };
+  };
 
   /**
    * Colle au résultat d'un tool d'édition réussi les instructions des SOUS-DOSSIERS
@@ -272,7 +308,7 @@ function makeExecTool(
 
   return async (name, args) => {
     if (anchor.kind === "issue" && ISSUE_TOOL_NAMES.has(name)) {
-      return await executeIssueTool(anchor.ctx, name, args);
+      return capTurnImages(await executeIssueTool(anchor.ctx, name, args));
     }
     if (anchor.kind === "notebook" && NOTEBOOK_TOOL_NAMES.has(name)) {
       return await executeNotebookTool(anchor.ctx, name, args);
@@ -925,6 +961,12 @@ export async function executeAgentRun(
         }
       : null;
 
+    // Le modèle du run VOIT-IL les images (MIN-111) ? Résolu ici, avant l'amorce,
+    // pour la même raison que web_search : le prompt ne doit décrire que ce que le
+    // run sait vraiment faire. C'est aussi ce qui autorise `read_attachment` à
+    // renvoyer une maquette au lieu de sa fiche signalétique.
+    const imageInput = await supportsImageInput(run.model, provider, apiKey).catch(() => false);
+
     // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
     // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
@@ -944,6 +986,7 @@ export async function executeAgentRun(
         anchor: issue ? "issue" : "notebook",
         webSearch: webSearchAllowed,
         applyPatch: usesApplyPatch(run.model),
+        images: imageInput,
       });
       const contextMsg = issue
         ? buildAgentContextMessage({
@@ -956,6 +999,7 @@ export async function executeAgentRun(
             repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
             projectName: issue.projectName,
             attachments: issue.attachments,
+            images: imageInput,
           })
         : buildNotebookContextMessage({
             repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
@@ -1201,6 +1245,7 @@ export async function executeAgentRun(
               projectId: run.project_id,
               projectKey: issue.projectKey,
               actorId: run.created_by,
+              imageInput,
             },
           }
         : {
@@ -1264,6 +1309,7 @@ export async function executeAgentRun(
         anchor: issue ? "issue" : "notebook",
         webSearch: webSearchAllowed,
         model: run.model,
+        images: imageInput,
       }),
       model: run.model,
       apiKey,

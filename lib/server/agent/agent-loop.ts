@@ -16,7 +16,8 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import type { AgentToolDef } from "./tools";
-import { pruneToolOutputs, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
+import type { AgentContentPart, AgentToolImage } from "./content";
+import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
 import { markSystemPromptCache } from "./caching";
 import {
   estimateTokens,
@@ -91,10 +92,15 @@ const CONTEXT_WARNING_MESSAGE =
 /** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
 const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep", "read_issue", "read_attachment"]);
 
-/** Un message du protocole chat OpenRouter (identique à celui de processChat). */
+/**
+ * Un message du protocole chat OpenRouter (identique à celui de processChat).
+ * `content` accepte un TABLEAU DE PARTIES (texte + image, MIN-111) : c'est ce qui
+ * permet à une maquette jointe au ticket d'arriver dans les yeux du modèle. Tout
+ * le harness lit ce champ via les helpers de `content.ts`, jamais comme une chaîne.
+ */
 export interface AgentChatMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content?: string | null;
+  content?: string | AgentContentPart[] | null;
   tool_calls?: AssistantToolCall[];
   tool_call_id?: string;
   name?: string;
@@ -129,6 +135,10 @@ export type ExecuteAgentTool = (
    *  du harness doit être COMPTABLE en base, pas seulement lisible dans le preview
    *  (cf. `forbidden_command` du garde-fou git, MIN-108). */
   reason?: string;
+  /** Images à MONTRER au modèle (MIN-111) — les octets voyagent ici et JAMAIS dans
+   *  `result` : celui-ci est sérialisé, capé et recopié dans l'event `tool_result`,
+   *  où une data URL n'aurait rien à faire. */
+  images?: AgentToolImage[];
 }>;
 
 /** État du round EN COURS d'écriture, poussé au fil ouvert (jamais persisté). */
@@ -259,6 +269,25 @@ function safeParse(json: string): Record<string, unknown> {
 
 function previewResult(result: unknown): string {
   return cap(typeof result === "string" ? result : JSON.stringify(result), 400);
+}
+
+/**
+ * Contenu d'un message `role:"tool"` : le JSON du résultat (capé par `headTail`)
+ * et, quand le tool renvoie des images (MIN-111), une partie `image_url` par
+ * image. Les octets de l'image ne traversent PAS `headTail` : il élide le milieu,
+ * ce qui d'une data URL ferait une chaîne base64 tronquée — illisible pour le
+ * modèle, et non détectable autrement qu'à l'erreur du provider.
+ */
+function toolMessageContent(
+  result: unknown,
+  images?: AgentToolImage[],
+): string | AgentContentPart[] {
+  const text = headTail(JSON.stringify(result), TOOL_RESULT_MAX_CHARS);
+  if (!images?.length) return text;
+  return [
+    { type: "text", text },
+    ...images.map((img) => ({ type: "image_url" as const, image_url: { url: img.url } })),
+  ];
 }
 
 export type PlanStepStatus = "pending" | "in_progress" | "completed" | "cancelled";
@@ -697,6 +726,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // qu'il n'y a pas ≥20 Ko à récupérer → sans effet sur les runs courts.
     pruneToolOutputs(messages);
 
+    // Même hygiène pour les IMAGES (MIN-111) : on garde les plus récentes et on
+    // remplace les plus anciennes par une note re-demandable. Une maquette pèse en
+    // data URL bien plus que ce qu'elle coûte en tokens — sans ce plafond, c'est le
+    // CHECKPOINT (8 Mo) qu'elle finirait par remplir, pas la fenêtre du modèle.
+    capHistoryImages(messages);
+
     // Compaction : si l'historique reste énorme après élagage et qu'il reste du
     // budget, résume le milieu périmé en un message unique (préserve système +
     // queue récente). Rare — ne se déclenche que sur les runs très longs.
@@ -928,20 +963,21 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         stream.toolCalls.map(async (tc) => {
           const args = safeParse(tc.function.arguments);
           try {
-            const { result, success, reason } = await execTool(tc.function.name, args);
-            return { tc, result, success, reason };
+            const { result, success, reason, images } = await execTool(tc.function.name, args);
+            return { tc, result, success, reason, images };
           } catch (err) {
             return {
               tc,
               result: { error: err instanceof Error ? err.message : String(err) },
               success: false,
               reason: undefined,
+              images: undefined,
             };
           }
         }),
       );
       for (const o of outcomes) {
-        messages.push({ role: "tool", tool_call_id: o.tc.id, content: headTail(JSON.stringify(o.result), TOOL_RESULT_MAX_CHARS) });
+        messages.push({ role: "tool", tool_call_id: o.tc.id, content: toolMessageContent(o.result, o.images) });
         await emit("tool_result", {
           id: o.tc.id,
           name: o.tc.function.name,
@@ -1021,13 +1057,14 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       let result: unknown;
       let success: boolean;
       let reason: string | undefined;
+      let images: AgentToolImage[] | undefined;
       try {
-        ({ result, success, reason } = await execTool(name, args));
+        ({ result, success, reason, images } = await execTool(name, args));
       } catch (err) {
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
       }
-      messages.push({ role: "tool", tool_call_id: tc.id, content: headTail(JSON.stringify(result), TOOL_RESULT_MAX_CHARS) });
+      messages.push({ role: "tool", tool_call_id: tc.id, content: toolMessageContent(result, images) });
       await emit("tool_result", {
         id: tc.id,
         name,

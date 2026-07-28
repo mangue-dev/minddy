@@ -7,6 +7,7 @@ import { updateIssueFields } from "@/lib/server/update-issue";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { parsePlan } from "@/lib/plan";
+import type { AgentToolImage } from "./content";
 
 /**
  * Tools TICKET de l'agent de code : l'agent est ancré à une issue minddy, et son
@@ -16,7 +17,9 @@ import { parsePlan } from "@/lib/plan";
  *  - `read_issue`       → tout le ticket (getIssue, partagé avec Numo/MCP) + plan
  *                          parsé en tâches + derniers commentaires.
  *  - `read_attachment`  → une pièce jointe : texte inline quand c'est lisible,
- *                          sinon URL signée courte (curl-able depuis la sandbox).
+ *                          l'IMAGE ELLE-MÊME quand c'est une maquette et que le
+ *                          modèle du run la voit (MIN-111), sinon URL signée courte
+ *                          (curl-able depuis la sandbox).
  *  - `write_issue_plan` → écrit le plan markdown du ticket (updateIssueFields,
  *                          via_assistant) SANS lancer l'implémentation.
  * Service client : l'accès a été contrôlé au lancement du run (membre du projet),
@@ -29,6 +32,9 @@ export interface IssueToolContext {
   projectKey: string;
   /** Propriétaire du run — acteur des écritures (plan). */
   actorId: string | null;
+  /** Le modèle du run accepte-t-il une image en entrée ? (cf. `supportsImageInput`).
+   *  Faux → `read_attachment` se comporte exactement comme avant MIN-111. */
+  imageInput?: boolean;
 }
 
 /** Noms des tools ticket (routés vers ce module par execute.ts). */
@@ -44,6 +50,20 @@ const COMMENT_BODY_MAX_CHARS = 2000;
 const ATTACHMENT_INLINE_MAX_CHARS = 6000;
 /** Taille max d'une pièce jointe téléchargée pour lecture inline. */
 const ATTACHMENT_INLINE_MAX_BYTES = 256 * 1024;
+/**
+ * Formats d'image qu'on MONTRE au modèle (MIN-111). Liste fermée : ce sont ceux
+ * que les providers multimodaux acceptent tous. Un SVG est du texte, il passe par
+ * la lecture inline ; un TIFF ou un HEIC ne se montre pas — URL signée, comme avant.
+ */
+const VIEWABLE_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+/**
+ * Taille max d'une image montrée au modèle, en octets SOURCE. La base64 pèse 4/3 —
+ * 750 Ko de PNG font ~1 Mo dans le message, et l'historique EST le checkpoint
+ * (plafonné à 8 Mo, avec `capHistoryImages` qui n'en garde que trois). Une maquette
+ * d'écran tient très largement dedans ; au-delà, on renvoie l'URL signée avec une
+ * note qui le dit.
+ */
+const ATTACHMENT_IMAGE_MAX_BYTES = 750 * 1024;
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -63,7 +83,7 @@ function isTextMime(mime: string): boolean {
   );
 }
 
-type ToolOutcome = { result: unknown; success: boolean };
+type ToolOutcome = { result: unknown; success: boolean; images?: AgentToolImage[] };
 
 async function readIssue(
   ctx: IssueToolContext,
@@ -166,6 +186,32 @@ async function readAttachment(
     download_url: url,
     download_url_expires_in_seconds: 600,
   };
+
+  // Une MAQUETTE se regarde (MIN-111). L'image part en data URL dans le message :
+  // l'URL signée, elle, expire en 10 minutes alors que le checkpoint est rejoué
+  // des heures plus tard. C'est le seul chemin par lequel l'agent VOIT ce que
+  // quelqu'un a déposé sur le ticket, au lieu d'en lire la fiche signalétique.
+  if (VIEWABLE_IMAGE_MIMES.has(mime) && ctx.imageInput) {
+    if (size > ATTACHMENT_IMAGE_MAX_BYTES) {
+      return {
+        result: {
+          ...meta,
+          image_omitted: `Image too large to look at (${Math.round(ATTACHMENT_IMAGE_MAX_BYTES / 1024)} KB max) — download it in the sandbox with run_command (\`curl -sL '<download_url>' -o …\`) if you need the file itself.`,
+        },
+        success: true,
+      };
+    }
+    const buf = await downloadAttachment(service, row.storage_path as string);
+    if (buf && buf.length <= ATTACHMENT_IMAGE_MAX_BYTES) {
+      return {
+        result: { ...meta, image: "The image itself is attached to this result — look at it." },
+        success: true,
+        images: [{ url: `data:${mime};base64,${buf.toString("base64")}`, name: fileName }],
+      };
+    }
+    // Téléchargement raté ou taille réelle au-dessus du cap → on retombe sur
+    // l'URL signée, en le disant (le modèle ne doit pas croire qu'il a vu l'image).
+  }
 
   if (isTextMime(mime) && size <= ATTACHMENT_INLINE_MAX_BYTES) {
     const buf = await downloadAttachment(service, row.storage_path as string);

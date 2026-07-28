@@ -16,6 +16,8 @@
  * messages de l'agent, de l'utilisateur et les tool-calls ne sont jamais touchés.
  */
 
+import { contentChars, imageCount, stripImages, type AgentContentPart } from "./content";
+
 /**
  * Enveloppe d'UN résultat de tool dans l'historique : la boucle sérialise le
  * résultat en JSON et le passe à `headTail`. Un tool qui compose sa sortie doit
@@ -47,7 +49,51 @@ export function headTail(str: string, max: number): string {
 /** Forme minimale d'un message manipulé (compatible AgentChatMessage). */
 interface PrunableMessage {
   role: string;
-  content?: string | null;
+  content?: string | AgentContentPart[] | null;
+}
+
+/**
+ * Parties image gardées dans TOUT l'historique (MIN-111). L'historique EST le
+ * checkpoint : une maquette y reste sous forme de data URL, tour après tour. Sans
+ * plafond, une conversation qui ouvre des maquettes à répétition ferait grossir le
+ * checkpoint jusqu'au `MAX_CHECKPOINT_BYTES` (8 Mo) qui met le run au repos. Trois
+ * images (≈ 3 Mo au pire, cf. le cap par image d'issue-tools.ts) couvrent le cas
+ * réel — le ticket porte une maquette, parfois deux états d'un même écran — et
+ * laissent la marge au reste du contexte.
+ */
+export const MAX_HISTORY_IMAGES = 3;
+/** Note qui remplace une image élaguée (même contrat que PRUNE_STUB : re-demandable). */
+export const IMAGE_ELIDED_NOTE =
+  "[Image elided to save context. Call read_attachment again if you still need to look at it.]";
+
+/**
+ * Borne le nombre d'images RETENUES dans l'historique : garde les
+ * `max` plus récentes, remplace les plus anciennes par une note. Ne touche QUE les
+ * messages `role:"tool"` (mêmes garanties que `pruneToolOutputs` : l'appariement
+ * tool_call↔résultat reste intact, les messages de l'agent et de l'utilisateur ne
+ * sont jamais réécrits). Renvoie le nombre d'images élaguées.
+ */
+export function capHistoryImages<T extends PrunableMessage>(
+  messages: T[],
+  max: number = MAX_HISTORY_IMAGES,
+): number {
+  let seen = 0;
+  let elided = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "tool") continue;
+    const count = imageCount(m.content);
+    if (count === 0) continue;
+    if (seen + count <= max) {
+      seen += count;
+      continue;
+    }
+    // Ce message fait déborder le plafond : on le vide de ses images d'un bloc
+    // (une partie d'un même résultat de tool n'a pas de sens à moitié).
+    messages[i] = { ...m, content: stripImages(m.content, IMAGE_ELIDED_NOTE) } as T;
+    elided += count;
+  }
+  return elided;
 }
 
 /**
@@ -70,7 +116,16 @@ export function pruneToolOutputs<T extends PrunableMessage>(
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (m.role !== "tool" || typeof m.content !== "string") continue;
+    if (m.role !== "tool") continue;
+    if (typeof m.content !== "string") {
+      // Résultat MULTIPART (une pièce jointe image, MIN-111) : on ne le remplace
+      // pas par un marqueur texte — ce serait retirer l'image au modèle qui vient
+      // de la demander. Il consomme quand même la fenêtre protégée (au proxy de
+      // `contentChars`, pas aux octets de la base64) ; c'est `capHistoryImages`
+      // qui borne son accumulation.
+      remainingProtect -= contentChars(m.content);
+      continue;
+    }
     if (m.content === PRUNE_STUB) continue; // déjà élagué
     const size = m.content.length;
     if (remainingProtect > 0) {

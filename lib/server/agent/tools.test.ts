@@ -67,3 +67,36 @@ describe("agentToolsFor — ancrage (inchangé)", () => {
     expect(notebook).not.toContain("read_issue");
   });
 });
+
+/**
+ * MIN-111 : `read_attachment` est toujours servi, mais il n'ANNONCE une image
+ * regardable que sur un run dont le modèle en accepte. La description du tool est
+ * ce que le modèle lit en premier — la laisser promettre une capacité absente
+ * ferait « je vois la maquette » sur des métadonnées.
+ */
+describe("agentToolsFor — read_attachment et les images", () => {
+  const description = (images: boolean) =>
+    agentToolsFor({ anchor: "issue", webSearch: true, images }).find(
+      (t) => t.function.name === "read_attachment",
+    )!.function.description;
+
+  it("promet l'image sur un run multimodal", () => {
+    expect(description(true)).toMatch(/comes back as the image itself/);
+    expect(description(true)).toMatch(/BEFORE writing the code it describes/);
+  });
+
+  it("garde le texte d'avant sur un run texte", () => {
+    expect(description(false)).not.toMatch(/image itself/);
+    expect(description(false)).toBe(
+      agentToolsFor({ anchor: "issue", webSearch: true }).find(
+        (t) => t.function.name === "read_attachment",
+      )!.function.description,
+    );
+  });
+
+  it("ne change rien au jeu de tools servi", () => {
+    expect(names({ anchor: "issue", webSearch: true, images: true })).toEqual(
+      names({ anchor: "issue", webSearch: true }),
+    );
+  });
+});

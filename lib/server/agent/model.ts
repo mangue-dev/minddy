@@ -117,9 +117,45 @@ export async function userHasByokKey(userId: string): Promise<boolean> {
   return (await getUserByok(userId)) != null;
 }
 
-// ── Fenêtre de contexte par modèle (pour dimensionner la compaction) ─────────
-const contextWindowCache = new Map<string, number>();
+// ── Capacités par modèle, lues dans l'index OpenRouter ──────────────────────
+/** Ce que l'index /models nous apprend d'un modèle (fenêtre + entrées acceptées). */
+interface OpenRouterModelInfo {
+  contextLength: number | null;
+  /** `architecture.input_modalities` contient `image` → on peut lui MONTRER une
+   *  maquette (MIN-111). */
+  imageInput: boolean;
+}
+
+const orModelIndex = new Map<string, OpenRouterModelInfo>();
 let orModelsLoaded = false;
+
+/** Charge l'index /models UNE fois par process (best-effort : un échec laisse le
+    cache vide, les appelants retombent sur leur défaut conservateur). */
+async function loadOpenRouterIndex(apiKey: string): Promise<void> {
+  if (orModelsLoaded) return;
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok) return;
+    const body = (await res.json()) as {
+      data?: Array<{
+        id: string;
+        context_length?: number;
+        architecture?: { input_modalities?: string[] };
+      }>;
+    };
+    for (const m of body.data ?? []) {
+      orModelIndex.set(m.id, {
+        contextLength: m.context_length && m.context_length > 0 ? m.context_length : null,
+        imageInput: (m.architecture?.input_modalities ?? []).includes("image"),
+      });
+    }
+    orModelsLoaded = true;
+  } catch {
+    // best-effort — les appelants retombent sur leur défaut
+  }
+}
 
 /**
  * Fenêtre de contexte (tokens) d'un modèle, pour dimensionner le seuil de
@@ -133,23 +169,27 @@ export async function getModelContextWindow(
   apiKey: string,
 ): Promise<number | null> {
   if (provider !== "openrouter") return null;
-  if (!orModelsLoaded) {
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/models", {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const body = (await res.json()) as { data?: Array<{ id: string; context_length?: number }> };
-        for (const m of body.data ?? []) {
-          if (m.context_length && m.context_length > 0) contextWindowCache.set(m.id, m.context_length);
-        }
-        orModelsLoaded = true;
-      }
-    } catch {
-      // best-effort — l'appelant retombe sur le seuil par défaut
-    }
-  }
-  return contextWindowCache.get(model) ?? null;
+  await loadOpenRouterIndex(apiKey);
+  return orModelIndex.get(model)?.contextLength ?? null;
+}
+
+/**
+ * Le modèle du run accepte-t-il une image en entrée ? Décide si `read_attachment`
+ * RENVOIE la maquette au lieu d'en décrire les métadonnées (MIN-111), et si le
+ * prompt annonce la capacité. Même source que la fenêtre de contexte : l'index
+ * OpenRouter. Hors OpenRouter (BYOK direct openai/anthropic/google/generic), on
+ * n'a pas d'index de capacités fiable → `false`, c.-à-d. le comportement d'avant
+ * MIN-111 à l'octet près. Envoyer une image à un modèle qui n'en veut pas casse le
+ * tour sur un 400 : le défaut conservateur est le bon.
+ */
+export async function supportsImageInput(
+  model: string,
+  provider: AgentProviderId,
+  apiKey: string,
+): Promise<boolean> {
+  if (provider !== "openrouter") return false;
+  await loadOpenRouterIndex(apiKey);
+  return orModelIndex.get(model)?.imageInput ?? false;
 }
 
 export type AgentKeyMode = "platform" | "byok";

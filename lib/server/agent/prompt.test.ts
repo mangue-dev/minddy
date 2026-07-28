@@ -550,3 +550,57 @@ describe("buildAgentSystemPrompt — erreurs de typage rendues par le harness", 
     });
   }
 });
+
+/**
+ * MIN-111 : l'agent VOIT les maquettes — mais seulement sur un run dont le modèle
+ * accepte les images. La promesse est conditionnée à la capacité réelle : dire à un
+ * modèle texte qu'il peut regarder une maquette lui ferait annoncer « je vois la
+ * maquette » sur un résultat qui ne porte que des métadonnées.
+ */
+describe("buildAgentSystemPrompt — maquettes visibles", () => {
+  it("annonce que read_attachment rend l'image, sur un run multimodal", () => {
+    const prompt = buildAgentSystemPrompt({ anchor: "issue", images: true });
+    expect(prompt).toMatch(/AS AN IMAGE you can actually look at/);
+    expect(prompt).toMatch(/mockups the ticket carries BEFORE implementing/);
+  });
+
+  it("n'en dit RIEN sur un run non multimodal (défaut)", () => {
+    for (const prompt of [
+      buildAgentSystemPrompt({ anchor: "issue" }),
+      buildAgentSystemPrompt({ anchor: "issue", images: false }),
+    ]) {
+      expect(prompt).not.toMatch(/AS AN IMAGE/);
+      expect(prompt).toContain("`read_attachment`"); // le tool reste décrit
+      expect(prompt).toMatch(/binaries via a signed URL/);
+    }
+  });
+
+  it("ne concerne pas l'ancrage carnet, qui n'a pas de pièces jointes", () => {
+    const prompt = buildAgentSystemPrompt({ anchor: "notebook", images: true });
+    expect(prompt).not.toContain("read_attachment");
+  });
+});
+
+describe("buildAgentContextMessage — pièces jointes image", () => {
+  const ticket = {
+    issue: { identifier: "MIN-42", title: "Add search", description: null, plan: null },
+    repo,
+    attachments: [
+      { id: "att-1", name: "spec.md", mimeType: "text/markdown", sizeBytes: 2048 },
+      { id: "att-2", name: "mock.png", mimeType: "image/png", sizeBytes: 120 * 1024 },
+    ],
+  };
+
+  it("marque les images comme ouvrables quand le run les voit", () => {
+    const msg = buildAgentContextMessage({ ...ticket, images: true });
+    expect(msg).toMatch(/mock\.png .*— an image: read_attachment shows it to you/);
+    // Le fichier texte, lui, n'est pas annoncé comme une image.
+    expect(msg).toMatch(/spec\.md \(text\/markdown, 2 KB\) — id: att-1\n/);
+  });
+
+  it("laisse la liste inchangée sur un run non multimodal", () => {
+    const msg = buildAgentContextMessage(ticket);
+    expect(msg).toContain("mock.png (image/png, 120 KB) — id: att-2");
+    expect(msg).not.toContain("shows it to you");
+  });
+});

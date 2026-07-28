@@ -13,6 +13,8 @@
  * au SEUL corps de requête. Gate provider assurée par l'appelant (agent-loop.ts).
  */
 
+import type { AgentContentPart } from "./content";
+
 /** Bloc de texte OpenAI-compatible portant un cache breakpoint. */
 export interface EphemeralTextPart {
   type: "text";
@@ -28,7 +30,7 @@ export interface EphemeralTextPart {
  * OpenRouter. N'altère pas l'entrée (l'historique-checkpoint reste en string).
  */
 export function markSystemPromptCache(
-  messages: ReadonlyArray<{ role: string; content?: string | null }>,
+  messages: ReadonlyArray<{ role: string; content?: string | AgentContentPart[] | null }>,
 ): unknown[] {
   // Fin du préfixe de seed : dernier index avant le premier message `assistant`.
   let seedEnd = -1;
@@ -39,6 +41,9 @@ export function markSystemPromptCache(
   return messages.map((m, i) => {
     const isSystem = i === 0 && m.role === "system";
     const isSeedEnd = i === seedEnd && seedEnd > 0; // >0 : distinct du système seul
+    // Un contenu DÉJÀ multipart (une image, MIN-111) passe tel quel : le seed est
+    // du texte, et poser un breakpoint au milieu de parties hétérogènes n'aurait
+    // pas de préfixe stable à cacher.
     if ((isSystem || isSeedEnd) && typeof m.content === "string" && m.content.length > 0) {
       const part: EphemeralTextPart = {
         type: "text",

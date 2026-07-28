@@ -50,10 +50,15 @@ export function buildAgentSystemPrompt(input: {
    *  d'`edit_file`/`apply_edits`/`write_file` ? Les deux jeux ne sont jamais
    *  servis ensemble : le prompt décrit celui que le modèle a vraiment. */
   applyPatch?: boolean;
+  /** Le modèle du run VOIT-IL les images (MIN-111) ? On ne promet pas de regarder
+   *  une maquette à un modèle texte : sur un run non multimodal, cette phrase ne
+   *  doit pas exister. */
+  images?: boolean;
 }): string {
   const replyLanguage = input.locale === "fr" ? "French" : "English";
   const notebook = input.anchor === "notebook";
   const patch = input.applyPatch === true;
+  const images = input.images === true;
 
   const intro = notebook
     ? `You are numo, minddy's coding agent. You work inside an isolated sandbox that already has a git repository cloned and checked out on a working branch. This session was launched from the user's NOTEBOOK (their personal notes doc): a note of theirs is your instruction — there is no minddy ticket behind it.
@@ -68,7 +73,11 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - \`read_scratchpad\` — the LIVE state of the user's notebook: full markdown + every checkbox task with a stable \`task_index\` and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index (see The notebook below).
 - \`create_issue\` — promote work into a real minddy ticket, only when it genuinely deserves one (see The notebook below).`
     : `- \`create_pr\` — open the ticket's pull request when there is none yet (see Git below).
-- \`read_issue\` — the LIVE state of the ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; binaries via a signed URL you can curl in the sandbox).
+- \`read_issue\` — the LIVE state of the ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; ${
+        images
+          ? "an image comes back AS AN IMAGE you can actually look at — open the mockups the ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
+          : "binaries"
+      } via a signed URL you can curl in the sandbox).
 - \`write_issue_plan\` — write the ticket's persistent implementation plan (see The ticket below).`;
 
   // Le harness REFUSE ces commandes (command-guard.ts, MIN-108) : le prompt les
@@ -366,6 +375,10 @@ export function buildAgentContextMessage(input: {
   repo: AgentRepoContext;
   projectName?: string | null;
   attachments?: AgentAttachmentContext[];
+  /** Le modèle du run voit-il les images (MIN-111) ? Marque alors les pièces
+   *  jointes image comme OUVRABLES — sans ça, l'agent lit « mockup.png » dans une
+   *  liste et passe à côté du seul document qui dit à quoi l'écran doit ressembler. */
+  images?: boolean;
 }): string {
   const { issue, repo } = input;
   const planBlock = issue.plan?.trim()
@@ -378,7 +391,14 @@ export function buildAgentContextMessage(input: {
   const attachmentsBlock =
     attachments.length > 0
       ? `\n\n## Attachments on the ticket (open with read_attachment)\n${attachments
-          .map((a) => `- ${a.name} (${a.mimeType}, ${formatSize(a.sizeBytes)}) — id: ${a.id}`)
+          .map(
+            (a) =>
+              `- ${a.name} (${a.mimeType}, ${formatSize(a.sizeBytes)}) — id: ${a.id}${
+                input.images === true && a.mimeType.startsWith("image/")
+                  ? " — an image: read_attachment shows it to you, look at it before implementing it"
+                  : ""
+              }`,
+          )
           .join("\n")}`
       : "";
 
