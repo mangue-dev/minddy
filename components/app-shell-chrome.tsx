@@ -28,6 +28,7 @@ import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
+import { useMyInvitations } from "@/lib/use-invitations-query";
 import { fetchIssuesApi } from "@/lib/issues-api";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
@@ -169,6 +170,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { openCreateIssue, openCreateObjective } = useCreate();
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
+  // Le badge de l'inbox compte aussi les invitations en attente : elles s'y
+  // affichent, et rien d'autre ne les signale une fois la home quittée.
+  const { invitations } = useMyInvitations();
+  const inboxCount = unreadCount + invitations.length;
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
 
   // Command palette open state — shared by the header search pill and the
@@ -661,9 +666,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     active: isInbox,
     shortcut: "I",
     badge:
-      unreadCount > 0 ? (
+      inboxCount > 0 ? (
         <span className="text-xs tabular-nums text-muted-foreground">
-          {unreadCount > 99 ? "99+" : unreadCount}
+          {inboxCount > 99 ? "99+" : inboxCount}
         </span>
       ) : undefined,
   };
@@ -837,7 +842,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, unreadCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, t]);
+  }, [currentProject, pathname, projects, inboxCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

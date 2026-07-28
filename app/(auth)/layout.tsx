@@ -1,24 +1,17 @@
-"use client";
+import { FullCatalogMessages } from "@/components/full-catalog-messages";
+import { AuthShell } from "./auth-shell";
 
-import { usePathname } from "next/navigation";
-import { AuthProvider } from "@/lib/auth-context";
-
+/**
+ * Écrans d'authentification. Composant SERVEUR, comme celui de `(app)` : il ne
+ * porte que le catalogue i18n complet — sans lui, `/login` atteinte depuis la
+ * landing en navigation cliente n'aurait que les namespaces du site public et
+ * afficherait le chemin de ses clés (MIN-100). La mise en page, qui dépend du
+ * `usePathname`, vit dans `auth-shell.tsx`.
+ */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  // Login/signup possèdent leur propre mise en page pleine hauteur à deux
-  // colonnes ; les écrans OAuth (consentement / succès) sont de simples cartes
-  // centrées.
-  const fullBleed = pathname === "/login" || pathname === "/signup";
-
   return (
-    <AuthProvider>
-      {fullBleed ? (
-        <div className="min-h-[100dvh] bg-background">{children}</div>
-      ) : (
-        <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
-          {children}
-        </div>
-      )}
-    </AuthProvider>
+    <FullCatalogMessages>
+      <AuthShell>{children}</AuthShell>
+    </FullCatalogMessages>
   );
 }

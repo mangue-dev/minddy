@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FullCatalogMessages } from "@/components/full-catalog-messages";
 import { AppProviders } from "./app-providers";
 
 /**
@@ -19,5 +20,9 @@ export const metadata: Metadata = {
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppProviders>{children}</AppProviders>;
+  return (
+    <FullCatalogMessages>
+      <AppProviders>{children}</AppProviders>
+    </FullCatalogMessages>
+  );
 }

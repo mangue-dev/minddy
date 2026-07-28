@@ -24,6 +24,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
 import { useAnalytics } from "@/lib/use-analytics";
+import { useInvitationResponder } from "@/lib/use-invitations-query";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { HOME_SUMMARY_KEY } from "@/lib/use-home-summary-query";
 import { CYCLES_ENABLED_META_KEY, resolveCyclePrefs } from "@/lib/cycle-prefs";
@@ -57,6 +58,15 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
   const { openCreateProject } = useProjects();
   const { openCreateIssue } = useCreate();
   const { track } = useAnalytics();
+  // Une invitation en attente change l'étape 1 : on n'a plus à expliquer
+  // comment se faire inviter, il n'y a qu'à entrer. La plus récente d'abord —
+  // l'API les renvoie triées ; les autres restent dans la bannière et l'inbox.
+  const {
+    invitations,
+    busyId: invitationBusyId,
+    answer: answerInvitation,
+  } = useInvitationResponder();
+  const invitation = invitations[0] ?? null;
 
   const [busy, setBusy] = useState(false);
   const [confirmSkip, setConfirmSkip] = useState(false);
@@ -230,9 +240,26 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                           {t("projectCta")}
                           <ArrowRight data-icon="inline-end" />
                         </Button>
-                        <Button type="button" variant="outline" onClick={openJoin}>
-                          {t("joinCta")}
-                        </Button>
+                        {/* Invité : le bouton nomme le projet et y fait entrer
+                            d'un clic, au lieu d'ouvrir le mode d'emploi de
+                            l'invitation qu'on a déjà reçue. */}
+                        {invitation ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={invitationBusyId === invitation.id}
+                            onClick={() =>
+                              void answerInvitation(invitation.id, "accept")
+                            }
+                          >
+                            {invitationBusyId === invitation.id && <Spinner />}
+                            {t("joinProjectCta", { project: invitation.project_name })}
+                          </Button>
+                        ) : (
+                          <Button type="button" variant="outline" onClick={openJoin}>
+                            {t("joinCta")}
+                          </Button>
+                        )}
                       </div>
                     )}
 

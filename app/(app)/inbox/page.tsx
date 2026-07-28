@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter, useNow } from "next-intl";
-import { Button, IconButton, Skeleton, cn, toast } from "mangue-ui";
+import { Button, IconButton, Skeleton, Spinner, cn, toast } from "mangue-ui";
 import {
   Inbox,
   UserPlus,
@@ -15,10 +15,12 @@ import {
   MailOpen,
   Settings,
   Trash2,
+  Users,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { NumoIcon } from "@/components/numo-icon";
 import { useNotifications } from "@/lib/use-notifications";
+import { useInvitationResponder } from "@/lib/use-invitations-query";
 import type { MyNotification, NotificationType } from "@/lib/types";
 
 const AGENT_TYPES: readonly NotificationType[] = [
@@ -91,6 +93,7 @@ export default function InboxPage() {
   const router = useRouter();
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
+  const tProjects = useTranslations("Projects");
   const format = useFormatter();
   // Référence de temps stable pour les horodatages relatifs, rafraîchie
   // chaque minute — sans ça next-intl retombe sur Date.now() et prévient.
@@ -105,6 +108,15 @@ export default function InboxPage() {
     remove,
     clearRead,
   } = useNotifications();
+  // Les invitations de projet ne sont pas des notifications : elles vivent dans
+  // leur table, se répondent au lieu de se lire, et disparaissent une fois
+  // répondues. Elles arrivent donc ici en section propre, en tête — mais avec
+  // exactement les mêmes boutons que la bannière de la home.
+  const {
+    invitations,
+    busyId: invitationBusyId,
+    answer: answerInvitation,
+  } = useInvitationResponder();
   const [filter, setFilter] = useState<InboxFilter>("all");
 
   const visible = useMemo(() => {
@@ -132,6 +144,10 @@ export default function InboxPage() {
   }, [visible]);
 
   const readCount = notifications.length - unreadCount;
+  // Une invitation sans réponse est par nature « non lue » : elle compte dans le
+  // filtre et reste visible quand on le sélectionne. Seul « Mentions » l'écarte.
+  const showInvitations = filter !== "mentions" && invitations.length > 0;
+  const pendingCount = unreadCount + invitations.length;
 
   // Toute mutation est optimiste dans le hook — ici on ne gère que l'échec.
   const act = (p: Promise<void>) =>
@@ -208,14 +224,69 @@ export default function InboxPage() {
             )}
           >
             {t(labelKey as Parameters<typeof t>[0])}
-            {key === "unread" && unreadCount > 0 && (
+            {key === "unread" && pendingCount > 0 && (
               <span className="tabular-nums text-xs text-muted-foreground">
-                {unreadCount > 99 ? "99+" : unreadCount}
+                {pendingCount > 99 ? "99+" : pendingCount}
               </span>
             )}
           </button>
         ))}
       </div>
+
+      {showInvitations && (
+        <section className="mt-6">
+          <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t("groupInvitations")}
+          </h2>
+          <ul
+            data-inbox-invitations
+            className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card"
+          >
+            {invitations.map((inv) => {
+              const busy = invitationBusyId === inv.id;
+              return (
+                <li key={inv.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-hidden />
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                    <Users className="size-4" />
+                  </span>
+                  {/* Le nom du projet suffit — sa clé ne dit rien à qui n'y est
+                      pas encore entré. */}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {inv.project_name}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                      {t("lineInvitation", {
+                        actor:
+                          inv.inviter_name || inv.inviter_email || t("someone"),
+                      })}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => void answerInvitation(inv.id, "reject")}
+                    >
+                      {tProjects("reject")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void answerInvitation(inv.id, "accept")}
+                    >
+                      {busy && <Spinner />}
+                      {tProjects("join")}
+                    </Button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {loading ? (
         <div className="mt-6 flex flex-col gap-2">
@@ -224,15 +295,21 @@ export default function InboxPage() {
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <EmptyState
-          className="mt-6"
-          icon={<Inbox className="size-6" />}
-          description={t("emptyMessage")}
-        />
+        // Une invitation seule tient lieu de contenu : le « vous êtes à jour »
+        // mentirait juste en dessous d'une chose qui attend une réponse.
+        showInvitations ? null : (
+          <EmptyState
+            className="mt-6"
+            icon={<Inbox className="size-6" />}
+            description={t("emptyMessage")}
+          />
+        )
       ) : visible.length === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">
-          {t("emptyFiltered")}
-        </p>
+        showInvitations ? null : (
+          <p className="py-16 text-center text-sm text-muted-foreground">
+            {t("emptyFiltered")}
+          </p>
+        )
       ) : (
         groups.map(([group, items]) => (
           <section key={group} className="mt-6">

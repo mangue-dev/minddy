@@ -83,18 +83,6 @@ const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
 const ROUTE_HEADER = "x-minddy-route";
 
-/**
- * Les six pages du site marketing, et elles seules (MIN-100). Le root layout
- * s'en sert pour ne PAS sérialiser les 67 namespaces du catalogue i18n dans le
- * document — 39 Ko gzippés en travers de la file de téléchargement de l'image
- * du LCP. Voir `lib/public-client-messages.ts`.
- *
- * Distinct de `PUBLIC_THEME_HEADER`, qui couvre aussi les boards de feedback et
- * les vues partagées : ces pages-là sont de vraies applications clientes et ont
- * besoin de leurs propres namespaces.
- */
-const MARKETING_HEADER = "x-minddy-marketing";
-
 /** Réécrit les en-têtes de la REQUÊTE (ce que lisent le layout et next-intl). */
 function withRequestHeaders(
   request: NextRequest,
@@ -209,7 +197,6 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
   const route = routeByPath(pathname);
   const headers: Record<string, string> = {
     [PUBLIC_THEME_HEADER]: "1",
-    [MARKETING_HEADER]: "1",
     [LOCALE_HEADER]: locale,
     ...(route ? { [ROUTE_HEADER]: route.key } : {}),
   };

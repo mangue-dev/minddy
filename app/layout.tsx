@@ -81,12 +81,22 @@ export default async function RootLayout({
   // en dark comme l'app interne (MIN-60).
   const defaultTheme = headerList.get("x-minddy-public") === "1" ? "system" : "dark";
 
-  // Les six pages marketing n'envoient au navigateur que les quatre namespaces
-  // dont leurs composants clients se servent, au lieu des 67 du catalogue : les
-  // messages sont une PROP de composant client, donc du flux RSC inline, donc
-  // 39 Ko gzippés de plus à télécharger avant l'image du LCP (MIN-100).
-  const marketing = headerList.get("x-minddy-marketing") === "1";
-  const clientMessages = marketing ? publicClientMessages(messages) : messages;
+  // Ce provider n'envoie au navigateur que les quatre namespaces du site public
+  // au lieu des 67 du catalogue : les messages sont une PROP de composant
+  // client, donc du flux RSC inline, donc 39 Ko gzippés de plus à télécharger
+  // avant l'image du LCP (MIN-100).
+  //
+  // **Toujours les mêmes, quelle que soit la route.** Ce layout choisissait
+  // autrefois entre catalogue réduit et catalogue complet selon un en-tête posé
+  // par le proxy sur les pages marketing — mais un layout partagé n'est PAS
+  // re-rendu lors d'une navigation cliente : partie de la landing, la page
+  // `/login` héritait des quatre namespaces du marketing et affichait
+  // « Auth.signIn » jusqu'au premier rechargement. Un jeu de messages dérivé de
+  // la requête est figé au premier document ; il ne peut donc dépendre que de ce
+  // qui est vrai partout.
+  //
+  // Les segments qui traduisent ailleurs montent `FullCatalogMessages`.
+  const clientMessages = publicClientMessages(messages);
 
   return (
     <html lang={locale} suppressHydrationWarning>

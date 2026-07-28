@@ -15,18 +15,28 @@
  * budget, loin devant les frontières clientes des animations (13,9 Ko bruts à
  * elles toutes, cf. le commentaire de `components/marketing/reveal.tsx`).
  *
- * Les six pages publiques n'ont besoin que de ces quatre namespaces. L'app
- * authentifiée, elle, continue de recevoir tout le catalogue : elle est derrière
- * l'authentification, son coût d'entrée n'est pas un coût d'acquisition.
+ * Les six pages publiques (et la 404, qui rend le même chrome) n'ont besoin que
+ * de ces quatre namespaces. Tout le reste — app authentifiée, écrans de
+ * connexion, boards de feedback, vues partagées — reçoit le catalogue complet
+ * depuis son propre segment, via `components/full-catalog-messages.tsx`.
+ *
+ * ## Le root layout ne choisit pas selon la route
+ *
+ * Il l'a fait, et c'était un bug : un layout partagé n'est pas re-rendu lors
+ * d'une navigation cliente, donc `/login` atteinte depuis la landing héritait
+ * des quatre namespaces ci-dessous et affichait « Auth.signIn ». Ce qui sort du
+ * root layout doit être vrai sur TOUTES les routes ; le supplément se monte plus
+ * bas, là où le segment change vraiment.
  *
  * ## Tenu à jour par un test, pas à la main
  *
- * `public-client-messages.test.ts` part de `app/layout.tsx` et des layouts
- * `(marketing)` / `(legal)`, suit les imports, et vérifie que tout
+ * `public-client-messages.test.ts` part de `app/layout.tsx`, de `not-found.tsx`
+ * et des layouts `(marketing)` / `(legal)`, suit les imports, et vérifie que tout
  * `useTranslations("X")` trouvé dans un composant CLIENT atteignable a bien son
  * `X` dans la liste ci-dessous. Ajouter un composant client au site public qui
  * traduit dans un namespace absent fait donc échouer `npm run test`, et non la
- * page en production.
+ * page en production. Un second test vérifie que les segments à catalogue
+ * complet montent bien leur provider.
  */
 
 /** Namespaces servis aux composants clients des six pages publiques. */

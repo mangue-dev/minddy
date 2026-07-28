@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -11,12 +11,14 @@ import frMessages from "../messages/fr.json";
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 /**
- * Racines du site public : le root layout (qui monte le bandeau cookies) et les
- * deux groupes de routes publiques. Le reste de l'app garde tout le catalogue,
- * donc n'a rien à vérifier ici.
+ * Racines du site public : le root layout (qui monte le bandeau cookies), la 404
+ * — qui rend le chrome marketing directement sous lui — et les deux groupes de
+ * routes publiques. Le reste de l'app monte son propre provider et garde tout le
+ * catalogue, donc n'a rien à vérifier ici (voir `FULL_CATALOG_SEGMENTS`).
  */
 const PUBLIC_ENTRIES = [
   "app/layout.tsx",
+  "app/not-found.tsx",
   "app/(marketing)/layout.tsx",
   "app/(marketing)/page.tsx",
   "app/(marketing)/pricing/page.tsx",
@@ -54,7 +56,7 @@ interface Scan {
 
 /** Suit les imports depuis les racines et relève les namespaces traduits dans
     les fichiers marqués `"use client"`. */
-function scanPublicSite(): Scan {
+function scanEntries(entries: readonly string[]): Scan {
   const seen = new Set<string>();
   const scan: Scan = { namespaces: new Map(), undecidable: [], clientFiles: new Set() };
 
@@ -91,12 +93,16 @@ function scanPublicSite(): Scan {
     }
   };
 
-  for (const entry of PUBLIC_ENTRIES) walk(path.join(REPO_ROOT, entry));
+  for (const entry of entries) {
+    const file = path.join(REPO_ROOT, entry);
+    if (!existsSync(file)) throw new Error(`racine introuvable : ${entry}`);
+    walk(file);
+  }
   return scan;
 }
 
 describe("messages du site public", () => {
-  const scan = scanPublicSite();
+  const scan = scanEntries(PUBLIC_ENTRIES);
 
   it("part bien de composants clients réels", () => {
     // Filet contre un scan qui ne résoudrait plus rien (renommage de dossier,
@@ -149,5 +155,74 @@ describe("messages du site public", () => {
     const scoped = publicClientMessages({ Landing: { a: "1" } });
     expect(scoped).toEqual({ Landing: { a: "1" } });
     expect("Billing" in scoped).toBe(false);
+  });
+});
+
+/** Toutes les pages de `app/`, en chemin relatif au dépôt. */
+function allPages(dir = path.join(REPO_ROOT, "app")): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...allPages(full));
+    else if (entry.name === "page.tsx") found.push(path.relative(REPO_ROOT, full));
+  }
+  return found;
+}
+
+/** Chaîne des layouts au-dessus d'une page, du plus proche au root layout. */
+function layoutChain(page: string): string[] {
+  const chain: string[] = [];
+  let dir = path.dirname(path.join(REPO_ROOT, page));
+  const appDir = path.join(REPO_ROOT, "app");
+  for (;;) {
+    const layout = path.join(dir, "layout.tsx");
+    if (existsSync(layout)) chain.push(path.relative(REPO_ROOT, layout));
+    if (dir === appDir) break;
+    dir = path.dirname(dir);
+  }
+  return chain;
+}
+
+/**
+ * Le root layout ne diffuse que `PUBLIC_CLIENT_NAMESPACES`, et il le fait sur
+ * TOUTES les routes : ce qu'il envoie ne peut pas dépendre de la requête, un
+ * layout partagé n'étant pas re-rendu lors d'une navigation cliente. Toute page
+ * qui traduit ailleurs doit donc trouver `FullCatalogMessages` au-dessus d'elle.
+ *
+ * Sans ce test, la sanction d'un oubli est un `MISSING_MESSAGE` en production —
+ * et seulement sur les visiteurs arrivés depuis le site public, ce qui le rend
+ * invisible en développement, où l'on recharge la page.
+ */
+describe("chaque page reçoit les messages qu'elle traduit", () => {
+  const pages = allPages();
+
+  it("trouve bien toutes les pages", () => {
+    expect(pages.length).toBeGreaterThan(20);
+    expect(pages).toContain("app/(auth)/login/page.tsx");
+  });
+
+  it.each(pages)("%s", (page) => {
+    const chain = layoutChain(page);
+    // L'IMPORT, pas le nom : le root layout cite `FullCatalogMessages` dans le
+    // commentaire qui explique pourquoi il ne le monte pas, et une simple
+    // recherche de chaîne déclarait alors toutes les pages servies.
+    const servesFullCatalog = chain.some((layout) =>
+      /from\s*["']@\/components\/full-catalog-messages["']/.test(
+        readFileSync(path.join(REPO_ROOT, layout), "utf8"),
+      ),
+    );
+    if (servesFullCatalog) return;
+
+    // Pas de provider au-dessus : la page ne dispose que du jeu public.
+    const scan = scanEntries([page, ...chain]);
+    const missing = [...scan.namespaces]
+      .filter(([namespace]) => !PUBLIC_CLIENT_NAMESPACES.includes(namespace as never))
+      .map(([namespace, users]) => `${namespace} (${[...users].join(", ")})`);
+
+    expect(
+      missing,
+      `${page} traduit hors du jeu public sans <FullCatalogMessages> au-dessus : ${missing.join(" · ")}`,
+    ).toEqual([]);
+    expect(scan.undecidable, `${page} : ${scan.undecidable.join(" | ")}`).toEqual([]);
   });
 });
