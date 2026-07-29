@@ -111,13 +111,25 @@ function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
     case "notifications":
       return [active(["notifications"])];
+    // Ces deux tables sont exactement ce dont dépend l'avertissement Smart
+    // Assign (réglage du projet, liste des membres) : la marque de la sidebar
+    // et la bannière de l'accueil s'effacent donc dès que les règles sont
+    // enregistrées, sans attendre une navigation.
     case "projects":
-    case "project_members": // my membership changed → my project list
-      // Ces deux tables sont exactement ce dont dépend l'avertissement Smart
-      // Assign (réglage du projet, liste des membres) : la marque de la sidebar
-      // et la bannière de l'accueil s'effacent donc dès que les règles sont
-      // enregistrées, sans attendre une navigation.
       return [active(["projects"]), active(SMART_ASSIGN_WARNINGS_KEY)];
+    // Mon adhésion à moi a changé (rejoint / retiré) : ce n'est pas seulement
+    // une ligne de plus ou de moins dans la barre latérale, c'est le PÉRIMÈTRE
+    // de tous mes agrégats — le board cross-projet, le tableau de bord et
+    // l'index de la palette portent encore les tickets d'un projet auquel je
+    // n'ai plus accès (ou pas encore les siens).
+    case "project_members":
+      return [
+        active(["projects"]),
+        active(SMART_ASSIGN_WARNINGS_KEY),
+        active(GLOBAL_BOARD_KEY),
+        active(HOME_SUMMARY_KEY),
+        { key: SEARCH_INDEX_KEY, refetch: "none" },
+      ];
     case "project_invitations":
       return [active(["my-invitations"]), active(["projects"])];
     case "views": // global (project-less) views broadcast on the user topic
@@ -166,8 +178,25 @@ function keysForProjectEvent(
       ];
     case "views":
       return [active(["views", projectId])];
+    // Une adhésion qui change ne bouge pas que l'onglet Membres : la liste des
+    // membres est RECOPIÉE dans deux caches agrégés — la carte `members` du
+    // board cross-projet (filtre et sélecteur d'assigné, panneau d'un ticket,
+    // personnes mentionnables de Numo — lib/use-numo-mentionables.ts) et l'index
+    // de la palette. Sans les invalider ici, quelqu'un qui vient d'être retiré
+    // restait proposé partout ailleurs jusqu'au prochain montage périmé, cinq
+    // minutes plus tard — et un rechargement n'y changeait rien, le cache étant
+    // réhydraté depuis le disque (lib/query-provider.tsx).
     case "project_members":
-    case "project_invitations": // the members view lists both
+      return [
+        active(["members", projectId]),
+        active(GLOBAL_BOARD_KEY),
+        { key: SEARCH_INDEX_KEY, refetch: "none" },
+        // L'équipe change de taille → l'avertissement Smart Assign aussi.
+        active(SMART_ASSIGN_WARNINGS_KEY),
+      ];
+    // Une invitation en attente n'est encore membre de rien : seule la vue
+    // Membres, qui liste les deux, la montre.
+    case "project_invitations":
       return [active(["members", projectId])];
     // Feedback (MIN-89): the team board, the open-feedback badge in the sidebar
     // and the home section all move when a post is created, voted or triaged.
