@@ -9,6 +9,9 @@ import type { Issue } from "@/lib/types";
 // Adding is only offered for real, living work; removal is always offered for
 // an issue already in the current cycle (whatever its status became). Exported
 // for the bulk path, which applies the same rule to a whole selection.
+// Closed statuses are here because adding them would be pointless; "triage" is
+// here because it's the hard invariant (lib/cycle statusAllowsCycle) — the
+// server refuses it, and moving a cycled issue back to triage takes it out.
 export const CYCLE_INELIGIBLE_STATUSES: readonly Issue["status"][] = [
   "done",
   "canceled",

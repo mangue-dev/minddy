@@ -1990,9 +1990,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Add issues (1–50) of a project to the key owner's CURRENT cycle. Adding " +
         "ASSIGNS each issue to the owner as a side-effect; it NEVER changes the " +
-        "status (the cycle is orthogonal to status). Reassigning an issue to " +
-        "someone else later silently drops it from the cycle. The cycle is " +
-        "cross-project: call once per project to add issues from several.",
+        "status (the cycle is orthogonal to status). An issue in TRIAGE is " +
+        "refused ('triageCannotJoinCycle'): triage is undecided work, a cycle is " +
+        "a commitment — move it out of triage first. Reassigning an issue to " +
+        "someone else later silently drops it from the cycle, and so does moving " +
+        "it back to triage. The cycle is cross-project: call once per project to " +
+        "add issues from several.",
       inputSchema: {
         project_id: PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),

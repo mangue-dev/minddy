@@ -14,6 +14,7 @@ import { trackEvent } from "./analytics";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
+import { leavesCycleOnStatus } from "./cycle";
 import { useUndoHistory, type UndoRecord } from "./undo/undo-context";
 import { buildBeforePatch, snapshotIssue } from "./undo/undo-core";
 import type {
@@ -129,7 +130,14 @@ export function useIssuesQuery(projectId: string | null) {
       const previous = key ? queryClient.getQueryData<Issue[]>(key) : undefined;
       const current = previous?.find((i) => i.id === issueId);
       const assignee = startAssignee(current, updates.status, "assignee_id" in updates);
-      const patch = assignee ? { ...updates, assignee_id: assignee } : updates;
+      // Les deux effets de bord serveur, reflétés localement : démarrer un
+      // ticket peut se l'attribuer, et le passer en triage le sort du cycle
+      // (triage et cycle s'excluent — MIN-32).
+      const patch: IssueUpdateInput = {
+        ...updates,
+        ...(assignee ? { assignee_id: assignee } : {}),
+        ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
+      };
       if (key) {
         queryClient.setQueryData<Issue[]>(key, (old) =>
           (old ?? []).map((i) => (i.id === issueId ? { ...i, ...patch } : i))
@@ -240,29 +248,31 @@ export function useIssuesQuery(projectId: string | null) {
       if (!projectId) return;
       const key = issuesKey(projectId);
       const previous = queryClient.getQueryData<Issue[]>(key);
-      const assignee = startAssignee(
-        previous?.find((i) => i.id === issueId),
-        patch.status,
-        false
-      );
-      const write = assignee ? { ...patch, assignee_id: assignee } : patch;
+      const moved = previous?.find((i) => i.id === issueId);
+      const assignee = startAssignee(moved, patch.status, false);
+      // Mêmes reflets qu'au-dessus : auto-attribution au démarrage, sortie du
+      // cycle sur un passage en triage.
+      const write: IssueUpdateInput = {
+        ...patch,
+        ...(assignee ? { assignee_id: assignee } : {}),
+        ...(leavesCycleOnStatus(moved, patch.status) ? { cycle_id: null } : {}),
+      };
       queryClient.setQueryData<Issue[]>(key, (old) =>
         (old ?? []).map((i) => (i.id === issueId ? { ...i, ...write } : i))
       );
-      const current = previous?.find((i) => i.id === issueId);
       // Glisser-déposer : la surface qui dit si le kanban sert vraiment.
       const request = updateIssueApi(issueId, write, {
         surface: "kanban_drag",
-        previousStatus: current?.status ?? null,
+        previousStatus: moved?.status ?? null,
       });
-      if (patch.status && patch.status !== current?.status) {
+      if (patch.status && patch.status !== moved?.status) {
         trackEvent("issue_dragged", {
-          from: current?.status ?? "unknown",
+          from: moved?.status ?? "unknown",
           to: patch.status,
           scope: "project",
         });
       }
-      const before = current ? buildBeforePatch(current, write) : null;
+      const before = moved ? buildBeforePatch(moved, write) : null;
       const rec = before
         ? record(
             { kind: "update", projectId, issueId, before, after: write },

@@ -16,6 +16,7 @@ import {
   removeIssueRelationApi,
 } from "./issue-relations-api";
 import { buildOptimisticIssue } from "./optimistic-issue";
+import { leavesCycleOnStatus } from "./cycle";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
 import { useUndoHistory } from "./undo/undo-context";
@@ -111,7 +112,14 @@ export function useGlobalBoardQuery() {
       const prev = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const current = prev?.issues.find((i) => i.id === issueId);
       const assignee = startAssignee(current, updates.status, patchHasAssignee);
-      const patch = assignee ? { ...updates, assignee_id: assignee } : updates;
+      // Both server side-effects are mirrored here so the card doesn't flash:
+      // starting an issue can self-assign it, and moving one to triage takes it
+      // out of the cycle (triage and cycle exclude each other — MIN-32).
+      const patch: IssueUpdateInput = {
+        ...updates,
+        ...(assignee ? { assignee_id: assignee } : {}),
+        ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
+      };
       patchCache(issueId, patch as Partial<Issue>);
       // Single record point for updateIssue/moveIssue/setIssueCycle — recorded
       // with the optimistic patch so an instant ⌘Z works; retracted on failure.

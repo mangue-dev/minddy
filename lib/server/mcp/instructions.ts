@@ -37,7 +37,8 @@ export const MCP_SERVER_INSTRUCTIONS =
       "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +
       "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +
       "individual issues; adding assigns the issue to the owner and never changes " +
-      "its status. " +
+      "its status. An issue in triage is never in a cycle: it can't be added to " +
+      "one, and moving a cycled issue back to triage takes it out. " +
       "The key owner also has a SCRATCHPAD: one personal, cross-project notes doc of " +
       "quick things to do right now (the in-app replacement for a problems.md), in the " +
       "same checkbox markdown as plans. minddy_get_scratchpad reads it (tasks listed with " +

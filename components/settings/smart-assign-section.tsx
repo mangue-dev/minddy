@@ -176,7 +176,9 @@ export function SmartAssignSection({
                     onChange={(e) =>
                       setRules((r) => ({ ...r, [m.user_id]: e.target.value }))
                     }
-                    placeholder={t("smartAssignRulePlaceholder")}
+                    placeholder={t("smartAssignRulePlaceholder", {
+                      name: displayName(m),
+                    })}
                     maxLength={500}
                     disabled={!isOwner}
                     className="min-h-9 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring disabled:opacity-60"

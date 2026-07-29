@@ -951,7 +951,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "add_issues_to_cycle",
       description:
-        "Add issues (1–50, by id) to the user's CURRENT cycle. Adding ASSIGNS each issue to the user as a side-effect; it NEVER changes the status (the cycle is orthogonal to status). Reassigning an issue to someone else later silently drops it from the cycle.",
+        "Add issues (1–50, by id) to the user's CURRENT cycle. Adding ASSIGNS each issue to the user as a side-effect; it NEVER changes the status (the cycle is orthogonal to status). An issue in TRIAGE is refused ('triageCannotJoinCycle'): triage is undecided work, a cycle is a commitment — move it out of triage first. Reassigning an issue to someone else later silently drops it from the cycle, and so does moving it back to triage.",
       parameters: {
         type: "object",
         properties: {

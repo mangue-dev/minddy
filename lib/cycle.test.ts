@@ -14,8 +14,10 @@ import {
   fillCycle,
   pickEvictions,
   isoDow,
+  leavesCycleOnStatus,
   recoComparator,
   recoScore,
+  statusAllowsCycle,
   type RecoIssue,
 } from "./cycle";
 import type { IssueRelation } from "./types";
@@ -94,6 +96,34 @@ describe("dates", () => {
     expect(cyclePhase(window, "2026-07-06")).toBe("current");
     expect(cyclePhase(window, "2026-07-12")).toBe("current");
     expect(cyclePhase(window, "2026-07-13")).toBe("past");
+  });
+});
+
+describe("triage excludes the cycle", () => {
+  it("allows every status but triage", () => {
+    expect(statusAllowsCycle("triage")).toBe(false);
+    for (const status of [
+      "backlog",
+      "todo",
+      "in_progress",
+      "in_review",
+      "done",
+      "canceled",
+      "duplicate",
+    ] as IssueStatus[]) {
+      expect(statusAllowsCycle(status)).toBe(true);
+    }
+  });
+
+  it("ejects a cycled issue moved to triage, and only that", () => {
+    expect(leavesCycleOnStatus({ cycle_id: "c1" }, "triage")).toBe(true);
+    // Already out of any cycle, or not a status change at all.
+    expect(leavesCycleOnStatus({ cycle_id: null }, "triage")).toBe(false);
+    expect(leavesCycleOnStatus({ cycle_id: "c1" }, undefined)).toBe(false);
+    expect(leavesCycleOnStatus(undefined, "triage")).toBe(false);
+    // Closed work stays in its cycle — it's the history of the week.
+    expect(leavesCycleOnStatus({ cycle_id: "c1" }, "done")).toBe(false);
+    expect(leavesCycleOnStatus({ cycle_id: "c1" }, "canceled")).toBe(false);
   });
 });
 

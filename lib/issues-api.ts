@@ -99,9 +99,11 @@ function trackIssueUpdate(updates: IssueUpdateInput, meta?: IssueMutationMeta): 
   if (patch.due_date !== undefined) {
     trackEvent("issue_due_date_changed", { cleared: patch.due_date === null });
   }
-  if (patch.cycle_id !== undefined) {
+  if (patch.cycle_id !== undefined && patch.status !== "triage") {
     // Le cycle est un champ du ticket, mais l'action utilisateur est « ajouter
-    // à / retirer de mon cycle » — c'est sous ce nom qu'on veut la lire.
+    // à / retirer de mon cycle » — c'est sous ce nom qu'on veut la lire. D'où
+    // l'exception : un passage en triage sort le ticket du cycle (MIN-32), mais
+    // c'est une conséquence, pas le geste — le compter fausserait la mesure.
     trackEvent(patch.cycle_id === null ? "cycle_issue_removed" : "cycle_issue_added", {
       surface,
     });

@@ -98,6 +98,30 @@ export function cyclePhase(
   return "current";
 }
 
+// ── Statuses ─────────────────────────────────────────────────────────────────
+
+/**
+ * Triage is work not yet decided; a cycle is the commitment to do it now — the
+ * two can't overlap. THE triage/cycle invariant, enforced on every write path:
+ * an issue moved to triage LEAVES its cycle (SQL trigger `enforce_issue_cycle`,
+ * mirrored in updateIssueFields so the activity event and the realtime nudge
+ * are honest), and a triage issue can never be added to one.
+ */
+export function statusAllowsCycle(status: IssueStatus): boolean {
+  return status !== "triage";
+}
+
+/** The same invariant, for an optimistic client patch: whether this status
+ *  change takes the issue OUT of its cycle. Mirroring the server side-effect
+ *  locally is what makes the card leave the cycle board at once — and what
+ *  puts the cycle back on ⌘Z (the undo snapshot diffs the patch's keys). */
+export function leavesCycleOnStatus(
+  issue: { cycle_id: string | null } | undefined,
+  nextStatus: IssueStatus | undefined
+): boolean {
+  return !!issue?.cycle_id && nextStatus !== undefined && !statusAllowsCycle(nextStatus);
+}
+
 // ── Points ───────────────────────────────────────────────────────────────────
 
 /** T-shirt effort → Fibonacci points. Hidden from the UI (3 XL ≠ 3 XS). */

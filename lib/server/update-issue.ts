@@ -21,6 +21,8 @@ import {
   scheduleSmartAssign,
 } from "@/lib/server/smart-assign";
 import { scheduleCycleCapture } from "@/lib/server/cycles";
+import { statusAllowsCycle } from "@/lib/cycle";
+import type { IssueStatus } from "@/lib/issue-constants";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { captureServerEvent } from "./posthog";
 import { resolveIssueSource } from "./create-issue";
@@ -49,6 +51,7 @@ export type UpdateIssueResult =
         | "invalidDate"
         | "invalidPosition"
         | "invalidCycle"
+        | "triageCannotJoinCycle"
         | "planTooLong"
         | "noFieldsToUpdate"
         | "issueNotFound"
@@ -191,6 +194,18 @@ export async function updateIssueFields({
   }
   if (!hasAccess) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+
+  // Triage and cycle exclude each other (MIN-32): moving an issue to triage
+  // takes it OUT of its cycle, and a triage issue can't be added to one. The
+  // SQL trigger enforces it whatever the write path; nulling it HERE too is
+  // what makes the activity event and the cycle's realtime nudge below honest.
+  const statusAfter = (updates.status ?? before.status) as IssueStatus;
+  if (!statusAllowsCycle(statusAfter)) {
+    if (typeof updates.cycle_id === "string") {
+      return { ok: false, status: 400, errorKey: "triageCannotJoinCycle" };
+    }
+    if (before.cycle_id) updates.cycle_id = null;
   }
 
   // Adding to a cycle ASSIGNS the issue to the cycle's owner as a side-effect
