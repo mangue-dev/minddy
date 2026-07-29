@@ -37,6 +37,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
+import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -148,6 +149,23 @@ const NumoNavIcon = ({ className }: { className?: string }) => (
   <NumoIcon animated={false} className={className} />
 );
 NumoNavIcon.displayName = "NumoNavIcon";
+
+/**
+ * Le compteur d'une entrée de la sidebar (inbox, PR, triage, feedback, projet).
+ * Plafonné à « 99+ » : une file très en retard ne doit pas élargir la ligne au
+ * point de rogner le nom du projet. `label` sert de lecture au lecteur d'écran,
+ * pour qui un « 12 » posé à côté d'un nom de projet ne veut rien dire.
+ */
+function countBadge(count: number, label?: string) {
+  return (
+    <span
+      className="text-xs tabular-nums text-muted-foreground"
+      aria-label={label}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 /** Muted monospace identifier badge, e.g. "MIND-42". */
 function identifierBadge(id: string) {
@@ -307,6 +325,40 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         className="size-3.5 text-amber-500"
         aria-label={t("smartAssignIncomplete")}
       />
+    ) : undefined;
+
+  // Ce qui attend d'être trié dans chacun de mes projets — tickets en triage +
+  // retours ouverts, la file « À trier » de l'accueil vue par projet. Hors d'un
+  // projet, la sidebar ne montrait rien de tout ça : elle y liste les projets
+  // sans un seul badge, et le triage d'ailleurs restait invisible tant qu'on
+  // n'entrait pas dedans. Chaque ligne de projet porte donc maintenant la somme
+  // des deux compteurs qu'on lira sur ses onglets une fois à l'intérieur.
+  const { counts: triageCounts } = useTriageCountsQuery();
+  // Depuis un projet, la même information sur les AUTRES : l'entrée de retour
+  // « Accueil » en porte le total (celui du projet courant est déjà sur ses
+  // propres onglets, deux lignes plus bas).
+  const triageElsewhere = useMemo(
+    () =>
+      Object.entries(triageCounts).reduce(
+        (sum, [projectId, count]) =>
+          projectId === currentProjectId ? sum : sum + triageCountTotal(count),
+        0
+      ),
+    [triageCounts, currentProjectId]
+  );
+  // L'entrée « Accueil » cumule donc deux marques. Repliée, la pastille de coin
+  // ne garde que le triangle : un compteur n'y tiendrait pas.
+  const homeBadge =
+    smartAssignBadge || triageElsewhere > 0 ? (
+      <span className="flex items-center gap-1.5">
+        {smartAssignBadge}
+        {triageElsewhere > 0
+          ? countBadge(
+              triageElsewhere,
+              t("triageElsewhereBadge", { count: triageElsewhere })
+            )
+          : null}
+      </span>
     ) : undefined;
 
   // Agents : un spinner sur l'onglet dès qu'une session TRAVAILLE (génération en
@@ -679,12 +731,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     href: "/inbox",
     active: isInbox,
     shortcut: "I",
-    badge:
-      inboxCount > 0 ? (
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {inboxCount > 99 ? "99+" : inboxCount}
-        </span>
-      ) : undefined,
+    badge: inboxCount > 0 ? countBadge(inboxCount) : undefined,
   };
 
   // Verrous de plan (MIN-72) : Agents & Pull Requests restent visibles mais
@@ -699,12 +746,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     shortcut: "R",
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
-    badge:
-      agentsAllowed && openPrCount > 0 ? (
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {openPrCount}
-        </span>
-      ) : undefined,
+    badge: agentsAllowed && openPrCount > 0 ? countBadge(openPrCount) : undefined,
   };
   const agentsItem: AppNavItem = {
     key: "agents",
@@ -748,8 +790,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: ChevronLeft,
               href: "/home",
               shortcut: "H",
-              badge: smartAssignBadge,
+              badge: homeBadge,
               showBadgeCollapsed: true,
+              badgeCollapsed: smartAssignBadge,
             },
           ],
         },
@@ -779,12 +822,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
               shortcut: "T",
-              badge:
-                triageCount > 0 ? (
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {triageCount}
-                  </span>
-                ) : undefined,
+              badge: triageCount > 0 ? countBadge(triageCount) : undefined,
             },
             {
               key: "feedback",
@@ -793,12 +831,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/feedback`,
               active: pathname.startsWith(`${base}/feedback`),
               shortcut: "F",
-              badge:
-                feedbackCount > 0 ? (
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {feedbackCount}
-                  </span>
-                ) : undefined,
+              badge: feedbackCount > 0 ? countBadge(feedbackCount) : undefined,
             },
             {
               key: "settings",
@@ -840,12 +873,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
       {
         items: [
-          ...projects.map((p) => ({
-            key: `project-${p.id}`,
-            label: p.name,
-            icon: projectOrbIcon(p.id, p.icon_url),
-            href: `/projects/${p.id}`,
-          })),
+          ...projects.map((p) => {
+            // Un seul chiffre pour les deux moitiés de la file : entrer dans le
+            // projet le redécompose en ses onglets Triage et Feedback, et la
+            // somme doit y retomber juste.
+            const toTriage = triageCountTotal(triageCounts[p.id]);
+            return {
+              key: `project-${p.id}`,
+              label: p.name,
+              icon: projectOrbIcon(p.id, p.icon_url),
+              href: `/projects/${p.id}`,
+              badge:
+                toTriage > 0
+                  ? countBadge(toTriage, t("triageBadge", { count: toTriage }))
+                  : undefined,
+            };
+          }),
           {
             key: "new-project",
             label: t("newProject"),
@@ -860,7 +903,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, inboxCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, t]);
+  }, [currentProject, pathname, projects, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

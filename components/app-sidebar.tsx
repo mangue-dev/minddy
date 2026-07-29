@@ -71,6 +71,12 @@ export type AppNavItem = NavItem & {
    * compacts — spinner « agent en cours », pastille non-lu — pas aux compteurs.
    */
   showBadgeCollapsed?: boolean;
+  /**
+   * Ce que la pastille de coin porte à la place du `badge`, quand celui-ci n'y
+   * tiendrait pas. Cas réel : l'entrée « Accueil » du mode projet cumule le
+   * triangle Smart Assign et un compteur ; repliée, seul le triangle passe.
+   */
+  badgeCollapsed?: ReactNode;
 };
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
@@ -121,6 +127,8 @@ function SidebarRow({
     item.disabled && "pointer-events-none opacity-50",
   );
 
+  const collapsedBadge = item.badgeCollapsed ?? item.badge;
+
   const inner = (
     <>
       {Icon ? <Icon className="h-[18px] w-[18px] shrink-0" /> : null}
@@ -134,9 +142,9 @@ function SidebarRow({
       ) : null}
       {/* Replié : le badge (spinner « agent en cours » / pastille non-lu) se replie
           en pastille de coin sur l'icône — sinon l'info disparaît en mode rail. */}
-      {collapsed && item.showBadgeCollapsed && item.badge != null ? (
+      {collapsed && item.showBadgeCollapsed && collapsedBadge != null ? (
         <span className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-sidebar">
-          {item.badge}
+          {collapsedBadge}
         </span>
       ) : null}
     </>

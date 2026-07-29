@@ -1019,6 +1019,8 @@
     "agentsUnread": "The Numo agent finished",
     "agentsAwaiting": "The Numo agent is waiting for your answer",
     "smartAssignIncomplete": "Smart Assign isn't fully set up",
+    "triageBadge": "{count, plural, one {# item to triage} other {# items to triage}}",
+    "triageElsewhereBadge": "{count, plural, one {# item to triage in your other projects} other {# items to triage in your other projects}}",
     "objectives": "Objectives",
     "triage": "Triage",
     "projectSettings": "Project settings",

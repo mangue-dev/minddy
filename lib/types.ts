@@ -402,6 +402,29 @@ export interface SmartAssignWarningsResponse {
   warnings: SmartAssignConfigWarning[];
 }
 
+/**
+ * Ce qui attend d'être trié dans un projet — les deux moitiés de la file
+ * « À trier » de l'accueil (MIN-104), comptées séparément parce que ce sont
+ * exactement les deux compteurs que porteront les onglets Triage et Feedback
+ * une fois qu'on sera ENTRÉ dans le projet. La ligne de projet de la sidebar
+ * affiche leur somme, et il faut que ça tombe juste.
+ */
+export interface ProjectTriageCount {
+  /** Tickets en statut `triage`. */
+  triage: number;
+  /** Retours canoniques encore ouverts ou prévus (`open` | `planned`). */
+  feedback: number;
+}
+
+/**
+ * Réponse de GET /api/me/triage-counts, indexée par id de projet. Un projet
+ * dont la file est vide est ABSENT de la table plutôt que présent à zéro : le
+ * cas courant est « rien à trier nulle part », et il ne coûte alors rien.
+ */
+export interface TriageCountsResponse {
+  counts: Record<string, ProjectTriageCount>;
+}
+
 /** Réponse de GET /api/me/summary — la charge utile du tableau de bord. */
 export interface HomeSummaryResponse {
   /**

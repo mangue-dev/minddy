@@ -1019,6 +1019,8 @@
     "agentsUnread": "L'agent Numo a terminé",
     "agentsAwaiting": "L'agent Numo attend votre réponse",
     "smartAssignIncomplete": "Smart Assign n'est pas complètement réglé",
+    "triageBadge": "{count, plural, one {# élément à trier} other {# éléments à trier}}",
+    "triageElsewhereBadge": "{count, plural, one {# élément à trier dans vos autres projets} other {# éléments à trier dans vos autres projets}}",
     "objectives": "Objectifs",
     "triage": "Triage",
     "projectSettings": "Paramètres du projet",

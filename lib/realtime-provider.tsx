@@ -61,6 +61,9 @@ const HOME_SUMMARY_KEY: QueryKey = ["me", "summary"]; // lib/use-home-summary-qu
 const SEARCH_INDEX_KEY: QueryKey = ["me", "search-index"]; // lib/use-search-index.ts
 // Smart Assign mal réglé : la sidebar en porte la marque sur toutes les pages.
 const SMART_ASSIGN_WARNINGS_KEY: QueryKey = ["me", "smart-assign-warnings"]; // lib/use-smart-assign-warnings-query.ts
+// Ce qui attend d'être trié par projet : le chiffre des lignes de projet de la
+// sidebar, lu lui aussi sur toutes les pages. lib/use-triage-counts-query.ts.
+const TRIAGE_COUNTS_KEY: QueryKey = ["me", "triage-counts"];
 const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
 // Listes GLOBALES de l'agent de code : la barre latérale les lit sur toutes les
 // pages, un run de n'importe quel projet les bouge. lib/use-agent-runs.ts.
@@ -79,6 +82,7 @@ const ISSUE_AGGREGATE_KEYS: { key: QueryKey; refetch: RefetchMode }[] = [
   { key: GLOBAL_BOARD_KEY, refetch: "active" },
   { key: HOME_SUMMARY_KEY, refetch: "active" },
   { key: STATS_KEY, refetch: "active" },
+  { key: TRIAGE_COUNTS_KEY, refetch: "active" },
   { key: SEARCH_INDEX_KEY, refetch: "none" },
 ];
 
@@ -128,6 +132,7 @@ function keysForUserEvent(change: BroadcastChange): Invalidation[] {
         active(SMART_ASSIGN_WARNINGS_KEY),
         active(GLOBAL_BOARD_KEY),
         active(HOME_SUMMARY_KEY),
+        active(TRIAGE_COUNTS_KEY),
         { key: SEARCH_INDEX_KEY, refetch: "none" },
       ];
     case "project_invitations":
@@ -211,6 +216,10 @@ function keysForProjectEvent(
         active(["feedback-detail", projectId]),
         active(["feedback-count", projectId]),
         active(HOME_SUMMARY_KEY),
+        // Le chiffre des lignes de projet de la sidebar compte les retours
+        // ouverts avec les tickets en triage : un retour publié, promu ou
+        // fusionné le bouge, exactement comme le badge de l'onglet Feedback.
+        active(TRIAGE_COUNTS_KEY),
       ];
     case "comments": {
       // A comment hangs off an issue OR an objective OR a feedback post — route
@@ -280,6 +289,7 @@ const USER_SCOPE_KEYS: QueryKey[] = [
   ["me", "board"],
   ["me", "cycle"],
   ["me", "scratchpad"],
+  ["me", "triage-counts"],
   ["billing"],
 ];
 const projectScopeKeys = (projectId: string): QueryKey[] => [
@@ -306,6 +316,7 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   GLOBAL_BOARD_KEY,
   HOME_SUMMARY_KEY,
   STATS_KEY,
+  TRIAGE_COUNTS_KEY,
   ALL_AGENT_SESSIONS_KEY,
   ALL_PULL_REQUESTS_KEY,
 ];
