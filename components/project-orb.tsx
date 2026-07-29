@@ -16,6 +16,19 @@ function projectHue(seed: string): number {
 }
 
 /**
+ * Safari's accelerated compositing clips a filtered child — here the blurred
+ * conic layer — to the container's *rectangle*, ignoring `border-radius`: the
+ * orb then paints square corners. Giving the container a mask (and its own
+ * stacking context) puts it back on the path where the rounded clip is applied.
+ * Both gradient stops are fully opaque, so the mask itself paints nothing.
+ */
+const ROUNDED_CLIP_IN_SAFARI = {
+  WebkitMaskImage: "radial-gradient(#fff, #000)",
+  maskImage: "radial-gradient(#fff, #000)",
+  isolation: "isolate",
+} as const;
+
+/**
  * A project's icon: the imported favicon when `iconUrl` is set (MIN-62), else a
  * deterministic gradient "orb" keyed off a stable seed (the project id).
  * Layered OKLCH gradients — a base fill, a blurred offset conic for organic
@@ -66,6 +79,7 @@ export function ProjectOrb({
         "relative block size-5 shrink-0 overflow-hidden rounded-[5px]",
         className,
       )}
+      style={ROUNDED_CLIP_IN_SAFARI}
     >
       {/* Base color fill */}
       <span

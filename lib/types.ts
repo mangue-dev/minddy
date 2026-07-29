@@ -397,6 +397,11 @@ export interface SmartAssignConfigWarning {
   memberCount: number;
 }
 
+/** Réponse de GET /api/me/smart-assign-warnings. */
+export interface SmartAssignWarningsResponse {
+  warnings: SmartAssignConfigWarning[];
+}
+
 /** Réponse de GET /api/me/summary — la charge utile du tableau de bord. */
 export interface HomeSummaryResponse {
   /**
@@ -434,8 +439,6 @@ export interface HomeSummaryResponse {
   relations: IssueRelation[];
   /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */
   blockerStatuses: Record<string, IssueStatus>;
-  /** Mes projets où Smart Assign est actif mais mal réglé (vide le plus souvent). */
-  smartAssignWarnings: SmartAssignConfigWarning[];
 }
 
 export interface GlobalBoardResponse {

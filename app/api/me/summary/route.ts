@@ -3,7 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
-import { loadSmartAssignConfigWarnings } from "@/lib/server/smart-assign";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
 import { CLOSED_STATUSES } from "@/lib/issue-constants";
 import { dueSoonUpperBound, isDueSoon } from "@/lib/due-soon";
@@ -160,7 +159,6 @@ export async function GET(request: NextRequest) {
     dueSoonRes,
     triageRes,
     myProjectsRes,
-    smartAssignWarnings,
   ] = await Promise.all([
       countQuery().in("status", OPEN_STATUSES),
       countQuery().eq("status", "in_progress"),
@@ -198,10 +196,6 @@ export async function GET(request: NextRequest) {
       // Mes projets, à seule fin de borner la lecture service-role du feedback
       // (loadNewFeedback) : RLS `projects_select` = owner ∪ membre.
       auth.supabase.from("projects").select("id").is("deleted_at", null),
-      // Smart Assign mal réglé sur un de MES projets (règles manquantes) : deux
-      // petites lectures, et le plus souvent zéro projet concerné. Ne peut pas
-      // rejeter — la fonction avale ses erreurs et rend une liste vide.
-      loadSmartAssignConfigWarnings(auth.user.id),
     ]);
 
   const firstError =
@@ -290,7 +284,6 @@ export async function GET(request: NextRequest) {
     newFeedbackTotal: newFeedback.total,
     relations,
     blockerStatuses,
-    smartAssignWarnings,
   };
   return NextResponse.json(body);
 }

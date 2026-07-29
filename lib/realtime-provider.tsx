@@ -59,6 +59,8 @@ const INVALIDATE_COALESCE_MS = 200;
 const GLOBAL_BOARD_KEY: QueryKey = ["me", "board"]; // lib/use-global-board-query.ts
 const HOME_SUMMARY_KEY: QueryKey = ["me", "summary"]; // lib/use-home-summary-query.ts
 const SEARCH_INDEX_KEY: QueryKey = ["me", "search-index"]; // lib/use-search-index.ts
+// Smart Assign mal réglé : la sidebar en porte la marque sur toutes les pages.
+const SMART_ASSIGN_WARNINGS_KEY: QueryKey = ["me", "smart-assign-warnings"]; // lib/use-smart-assign-warnings-query.ts
 const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
 // Listes GLOBALES de l'agent de code : la barre latérale les lit sur toutes les
 // pages, un run de n'importe quel projet les bouge. lib/use-agent-runs.ts.
@@ -111,12 +113,11 @@ function keysForUserEvent(change: BroadcastChange): Invalidation[] {
       return [active(["notifications"])];
     case "projects":
     case "project_members": // my membership changed → my project list
-      // Le tableau de bord y lit aussi l'avertissement Smart Assign, qui dépend
-      // du réglage du projet et de sa liste de membres. Marqué périmé sans
-      // refetch : un simple renommage ne vaut pas de relancer la requête du
-      // tableau de bord ; elle se rafraîchit au prochain passage sur l'accueil,
-      // c'est-à-dire dès qu'on revient des réglages qu'on vient de corriger.
-      return [active(["projects"]), { key: HOME_SUMMARY_KEY, refetch: "none" }];
+      // Ces deux tables sont exactement ce dont dépend l'avertissement Smart
+      // Assign (réglage du projet, liste des membres) : la marque de la sidebar
+      // et la bannière de l'accueil s'effacent donc dès que les règles sont
+      // enregistrées, sans attendre une navigation.
+      return [active(["projects"]), active(SMART_ASSIGN_WARNINGS_KEY)];
     case "project_invitations":
       return [active(["my-invitations"]), active(["projects"])];
     case "views": // global (project-less) views broadcast on the user topic

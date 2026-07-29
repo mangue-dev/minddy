@@ -23,6 +23,7 @@ import {
   NotebookPen,
   IterationCw,
   Brush,
+  TriangleAlert,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -35,6 +36,7 @@ import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -294,6 +296,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const openPrCount = pullRequests.filter(
     (p) => p.pr_state === "open" || p.pr_state === "draft" || p.pr_state == null
   ).length;
+
+  // Smart Assign actif mais sans règles sur un de mes projets (MIN-31) : la
+  // sidebar en porte la marque, et c'est l'accueil qui l'explique — l'entrée
+  // « Accueil » la porte donc, dans les deux modes de la sidebar.
+  const { warnings: smartAssignWarnings } = useSmartAssignWarningsQuery();
+  const smartAssignBadge =
+    smartAssignWarnings.length > 0 ? (
+      <TriangleAlert
+        className="size-3.5 text-amber-500"
+        aria-label={t("smartAssignIncomplete")}
+      />
+    ) : undefined;
 
   // Agents : un spinner sur l'onglet dès qu'une session TRAVAILLE (génération en
   // cours), tous projets confondus ; sinon une bulle bleue si au moins une session a
@@ -734,6 +748,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: ChevronLeft,
               href: "/home",
               shortcut: "H",
+              badge: smartAssignBadge,
+              showBadgeCollapsed: true,
             },
           ],
         },
@@ -809,6 +825,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             href: "/home",
             active: pathname.startsWith("/home"),
             shortcut: "H",
+            badge: smartAssignBadge,
+            showBadgeCollapsed: true,
           },
           {
             key: "all-global",
@@ -842,7 +860,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, inboxCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, t]);
+  }, [currentProject, pathname, projects, inboxCount, triageCount, feedbackCount, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, t]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

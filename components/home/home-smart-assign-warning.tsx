@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, TriangleAlert } from "lucide-react";
-import { useHomeSummaryQuery } from "@/lib/use-home-summary-query";
+import { motion } from "framer-motion";
+import { ChevronRight, TriangleAlert } from "lucide-react";
+import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
+
+/** Même courbe que l'onboarding et l'assistant de création : une seule entrée,
+    courte, quand le résumé arrive — pour que la bannière se pose au lieu
+    d'apparaître d'un coup au-dessus du salut. */
+const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
 /**
  * Smart Assign actif mais mal réglé (MIN-31) : un projet à plusieurs où au
@@ -13,57 +19,79 @@ import { ProjectOrb } from "@/components/project-orb";
  * rien à faire correspondre et l'affectation retombe sur le owner — la
  * fonctionnalité a l'air de marcher tout en ne triant rien.
  *
- * La liste vient de GET /api/me/summary, déjà chargé par le tableau de bord, et
- * ne contient QUE les projets dont je suis owner (seul lui peut écrire les
- * règles). Rien à signaler → rien ne s'affiche.
+ * Forme : un avis, pas une alerte. Le mobilier des autres cartes de l'accueil
+ * (`bg-card`, même rayon, même géométrie) ; l'ambre ne tient qu'au filet de la
+ * bordure — un peu plus appuyé en clair, où il s'efface — et au triangle posé
+ * dans la ligne de titre. Les projets concernés sont des puces qui s'enroulent
+ * plutôt qu'une liste : il y en a un le plus souvent, et une liste d'un seul
+ * élément n'est pas une liste.
+ *
+ * La liste vient de GET /api/me/smart-assign-warnings — la même que la pastille
+ * de la sidebar — et ne contient QUE les projets dont je suis owner (seul lui
+ * peut écrire les règles). Rien à signaler → rien ne s'affiche.
  */
 export function HomeSmartAssignWarning() {
   const t = useTranslations("Home");
-  const { smartAssignWarnings } = useHomeSummaryQuery();
+  const { warnings } = useSmartAssignWarningsQuery();
   const { projects } = useProjects();
 
-  if (smartAssignWarnings.length === 0) return null;
+  if (warnings.length === 0) return null;
 
   return (
-    <div className="mb-6 flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+    <motion.section
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={MOTION}
+      className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-card px-4 py-3.5 dark:border-amber-500/25"
+    >
       <div className="flex flex-col gap-0.5">
-        <p className="flex items-start gap-2 text-sm font-medium text-amber-700 dark:text-amber-500">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+        {/* Le triangle est DANS la ligne de titre, pas dans une colonne à lui :
+            la description reprend au bord du bloc, comme partout ailleurs sur
+            l'accueil, au lieu d'être décalée sous une gouttière d'icône. */}
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          <TriangleAlert
+            className="size-4 shrink-0 text-amber-500"
+            aria-hidden
+          />
           {t("smartAssignWarningTitle")}
         </p>
-        <p className="pl-6 text-xs text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           {t("smartAssignWarningDesc")}
         </p>
       </div>
-      <ul className="flex flex-col gap-1 pl-6">
-        {smartAssignWarnings.map((warning) => {
+
+      <ul className="flex flex-wrap gap-2">
+        {warnings.map((warning) => {
           const project = projects.find((p) => p.id === warning.projectId);
           return (
             <li key={warning.projectId}>
               <Link
                 href={`/projects/${warning.projectId}/settings?tab=smart-assign`}
-                className="group -mx-2 flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
+                className="group flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-xs outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <ProjectOrb
                   seed={warning.projectId}
-                  iconUrl={project?.icon_url ?? null}
-                  className="size-5 rounded"
+                  iconUrl={project?.icon_url}
+                  className="size-4 rounded-[5px]"
                 />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                <span className="max-w-56 truncate font-medium">
                   {project?.name || warning.projectName}
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                <span className="text-muted-foreground/50" aria-hidden>
+                  ·
+                </span>
+                <span className="text-muted-foreground">
                   {t("smartAssignWarningMissing", {
                     count: warning.missingCount,
                     total: warning.memberCount,
                   })}
                 </span>
-                <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                <ChevronRight className="size-3 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </li>
           );
         })}
       </ul>
-    </div>
+    </motion.section>
   );
 }

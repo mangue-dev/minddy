@@ -56,7 +56,6 @@ export function useHomeSummaryQuery() {
     newFeedbackTotal: data?.newFeedbackTotal ?? 0,
     relations: data?.relations ?? [],
     blockerStatuses: data?.blockerStatuses ?? {},
-    smartAssignWarnings: data?.smartAssignWarnings ?? [],
     loading: isLoading,
   };
 }
