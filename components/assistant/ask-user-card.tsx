@@ -172,21 +172,22 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         <Icon
           className={cn(
             "mt-0.5 h-3.5 w-3.5 shrink-0",
-            selected ? "text-brand" : "opacity-50"
+            selected ? "text-primary" : "opacity-50"
           )}
         />
       );
     }
-    // Radio classique : anneau + espace + point plein quand coché.
+    // Radio classique : anneau + espace + point plein quand coché. Encre
+    // (`primary`), comme la Checkbox de mangue-ui — pas de couleur de marque.
     return (
       <span
         aria-hidden
         className={cn(
           "mt-[3px] flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border",
-          selected ? "border-brand" : "border-muted-foreground/40"
+          selected ? "border-primary" : "border-muted-foreground/40"
         )}
       >
-        {selected && <span className="h-2 w-2 rounded-full bg-brand" />}
+        {selected && <span className="h-2 w-2 rounded-full bg-primary" />}
       </span>
     );
   };
@@ -206,8 +207,8 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
       className={cn(
         "flex w-full cursor-pointer items-start gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
         selected
-          ? "bg-brand/10 text-foreground"
-          : "text-muted-foreground hover:bg-brand/5 hover:text-foreground",
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
         !live && "cursor-default opacity-60 hover:bg-transparent"
       )}
     >
@@ -216,7 +217,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         <span className="leading-snug">
           {label}
           {recommended && (
-            <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-px text-[10px] font-medium text-brand">
+            <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-foreground">
               {t("recommendedBadge")}
             </span>
           )}
@@ -239,12 +240,12 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
           className={cn(
             "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border",
             draft?.otherValue.trim()
-              ? "border-brand"
+              ? "border-primary"
               : "border-muted-foreground/40"
           )}
         >
           {!!draft?.otherValue.trim() && (
-            <span className="h-2 w-2 rounded-full bg-brand" />
+            <span className="h-2 w-2 rounded-full bg-primary" />
           )}
         </span>
       )}
@@ -273,7 +274,10 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   );
 
   return (
-    <div className="relative rounded-xl border border-brand/20 bg-brand/5 px-3.5 py-3 text-sm">
+    // La carte prend la PLACE du composer : elle en reprend la surface (carte
+    // bordée, ombre légère, rounded-2xl) plutôt qu'une teinte de marque — elle
+    // suit ainsi le thème clair/sombre comme le reste de l'interface.
+    <div className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm shadow-sm">
       {/* Croix « passer les questions » — coin haut droit de la carte. */}
       {showSkip && (
         <Tooltip>
@@ -299,7 +303,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
       {sets > 1 && (
         <div
           className={cn(
-            "mb-2.5 flex flex-wrap items-center gap-1.5 border-b border-brand/15 pb-2.5",
+            "mb-2.5 flex flex-wrap items-center gap-1.5 border-b border-border pb-2.5",
             showSkip && "pr-7"
           )}
         >
@@ -313,8 +317,8 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
                 className={cn(
                   "cursor-pointer rounded-full border px-2 py-0.5 text-xs transition-colors",
                   active
-                    ? "border-brand/40 bg-brand/10 text-foreground"
-                    : "border-transparent text-muted-foreground hover:bg-brand/5 hover:text-foreground"
+                    ? "border-border bg-accent text-foreground"
+                    : "border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                 )}
               >
                 <span className="block max-w-24 truncate">

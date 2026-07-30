@@ -25,7 +25,18 @@ un provider qui ne le déclare pas n'envoie jamais rien.
 | **Générique** (OpenAI-compatible) | base URL saisie | *(aucun)* | **rien, jamais** |
 
 À `off`, **aucun** champ n'est envoyé, quel que soit le provider : c'est le
-comportement d'avant MIN-122 à l'octet près, et c'est le défaut.
+comportement d'avant MIN-122 à l'octet près.
+
+**Le défaut est `medium`** (« Standard » dans l'UI) : un agent de code gagne à
+réfléchir un peu avant d'agir. `off` a été le défaut le jour de la livraison de
+MIN-122, pour ne rien changer au comportement existant le temps de constater le
+champ sur du vrai ; ce n'était pas le meilleur réglage pour l'utilisateur.
+Le défaut vit à un seul endroit, `DEFAULT_REASONING_LEVEL`
+([lib/agent-reasoning.ts](../lib/agent-reasoning.ts)) : la cascade du serveur
+(`resolveReasoningLevel`), le sélecteur de lancement et le réglage du compte le
+lisent tous. La colonne `agent_runs.reasoning_level` garde, elle, un `default 'off'`
+en base — un filet qui ne sert jamais, `createRun` écrivant toujours le niveau
+résolu.
 
 ### Pourquoi le générique reste muet
 
@@ -106,7 +117,10 @@ n'a rien à changer — ni pour le quota (compté en USD), ni pour l'affichage d
 tokens.
 
 Le surcoût est réel et se voit : sur le même prompt court, `off` coûtait
-0.000165 $ et `low` 0.002592 $ — d'où la borne `medium` en mode plateforme.
+0.000165 $ et `low` 0.002592 $. Il n'est pas borné par un plafond de niveau — les
+quatre sont ouverts à tous, quota minddy compris — mais par le budget d'usage
+lui-même : `checkAgentQuota` refuse le lancement et la boucle s'arrête d'elle-même
+quand il est épuisé.
 
 ## Quand le modèle n'est pas capable
 
@@ -147,7 +161,8 @@ monologue. À la place :
 Le niveau est **figé sur le run** (`agent_runs.reasoning_level`), comme le modèle :
 un run est découpé en chunks repris par des invocations serverless successives, un
 état en mémoire n'y survivrait pas. Le défaut perso vit dans
-`user_agent_preferences.default_reasoning_level`.
+`user_agent_preferences.default_reasoning_level` ; `null` (jamais réglé) retombe sur
+`DEFAULT_REASONING_LEVEL`, soit `medium`.
 
 ## Le raisonnement de la compaction
 

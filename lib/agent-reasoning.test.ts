@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_REASONING_LEVEL,
   isReasoningLevel,
   reasoningMaxTokens,
   reasoningRequestFields,
@@ -22,10 +23,14 @@ describe("isReasoningLevel / toReasoningLevel", () => {
     expect(isReasoningLevel(2)).toBe(false);
   });
 
-  it("normalise tout le reste en `off`", () => {
+  it("normalise tout le reste au défaut", () => {
     expect(toReasoningLevel("high")).toBe("high");
-    expect(toReasoningLevel("nope")).toBe("off");
-    expect(toReasoningLevel(undefined)).toBe("off");
+    expect(toReasoningLevel("nope")).toBe(DEFAULT_REASONING_LEVEL);
+    expect(toReasoningLevel(undefined)).toBe(DEFAULT_REASONING_LEVEL);
+  });
+
+  it("le défaut est `medium` — l'agent réfléchit un peu, sauf choix contraire", () => {
+    expect(DEFAULT_REASONING_LEVEL).toBe("medium");
   });
 });
 

@@ -66,7 +66,8 @@ export async function getUserDefaultReasoningLevel(
 
 /**
  * Résout le niveau de raisonnement à FIGER sur un run (MIN-122). Cascade
- * run > user > `off` — pas de défaut racine : aucun réglage admin ici.
+ * run > user > `DEFAULT_REASONING_LEVEL` (`medium`) — pas de défaut racine : aucun
+ * réglage admin ici.
  *
  * Les quatre niveaux sont ouverts à TOUS, quota minddy compris : l'abonnement est
  * payé, il doit être utilisable en entier. Ce qui borne la dépense est le budget

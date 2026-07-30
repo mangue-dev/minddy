@@ -27,15 +27,23 @@ export type ReasoningLevel = "off" | "low" | "medium" | "high";
 /** Ordre d'affichage du sélecteur, du moins cher au plus cher. */
 export const REASONING_LEVELS: ReasoningLevel[] = ["off", "low", "medium", "high"];
 
-/** Défaut : aucun raisonnement demandé (comportement d'avant MIN-122 à l'octet près). */
-export const DEFAULT_REASONING_LEVEL: ReasoningLevel = "off";
+/**
+ * Défaut : `medium` (« Standard » dans l'UI). L'agent réfléchit un peu avant
+ * d'agir, parce que c'est ce qu'on veut d'un agent de code dans le cas général —
+ * `off` était le défaut d'atterrissage de MIN-122, choisi pour n'introduire aucun
+ * changement de comportement le jour de la livraison, pas parce qu'il servait mieux
+ * l'utilisateur. Le surcoût reste borné par le budget d'usage (`checkAgentQuota`),
+ * et un endpoint qui refuse le champ est rattrapé par la relance sans champ de
+ * `streamCompletion` (cf. docs/reasoning-levels.md).
+ */
+export const DEFAULT_REASONING_LEVEL: ReasoningLevel = "medium";
 
 /** Valide une entrée d'API / une valeur lue en base. */
 export function isReasoningLevel(value: unknown): value is ReasoningLevel {
   return typeof value === "string" && (REASONING_LEVELS as string[]).includes(value);
 }
 
-/** Normalise n'importe quoi en niveau valide (défaut `off`). */
+/** Normalise n'importe quoi en niveau valide (défaut `DEFAULT_REASONING_LEVEL`). */
 export function toReasoningLevel(value: unknown): ReasoningLevel {
   return isReasoningLevel(value) ? value : DEFAULT_REASONING_LEVEL;
 }

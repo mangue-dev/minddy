@@ -70,7 +70,9 @@ export interface LaunchAgentInput {
   forced?: boolean;
   /**
    * Niveau de raisonnement choisi au lancement (MIN-122). Absent → le défaut perso
-   * de l'utilisateur, sinon `off`. Borné à `medium` en quota minddy.
+   * de l'utilisateur, sinon `DEFAULT_REASONING_LEVEL` (`medium`). Aucune borne :
+   * les quatre niveaux sont ouverts, y compris en quota minddy (cf.
+   * `resolveReasoningLevel`).
    */
   reasoningLevel?: string | null;
   /**
