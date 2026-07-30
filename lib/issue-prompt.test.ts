@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
   buildIssueVerifyPrompt,
@@ -94,6 +95,54 @@ describe("buildIssuePlanPrompt", () => {
       issue: { ...issue, plan: "Quelques notes en vrac." } as Issue,
     });
     expect(prompt).toContain("Write the implementation plan");
+  });
+});
+
+describe("buildIssueCustomPrompt", () => {
+  const instructions = "Ne touche qu'au menu contextuel, sans changer les raccourcis.";
+
+  it("garde le contexte du ticket autour de la consigne de l'utilisateur", () => {
+    const prompt = buildIssueCustomPrompt(input, instructions);
+    expect(prompt).toContain("Work on this minddy issue");
+    expect(prompt).toContain("<identifier>MIN-42</identifier>");
+    expect(prompt).toContain("<category>UI</category>");
+    expect(prompt).toContain('<relation type="blocks">');
+    expect(prompt).toContain('<attachments count="2" />');
+    expect(prompt).toContain(instructions);
+    expect(prompt).toContain('project_id "proj-1"');
+    expect(prompt).toContain("minddy_add_comment");
+  });
+
+  it("place la consigne AU MILIEU : après le ticket, avant les pas MCP", () => {
+    const prompt = buildIssueCustomPrompt(input, instructions);
+    expect(prompt.indexOf("</issue>")).toBeLessThan(prompt.indexOf(instructions));
+    expect(prompt.indexOf(instructions)).toBeLessThan(
+      prompt.indexOf("minddy_get_issue")
+    );
+  });
+
+  it("n'impose PAS la consigne d'implémentation : celle de l'utilisateur fait foi", () => {
+    const prompt = buildIssueCustomPrompt(input, instructions);
+    expect(prompt).toContain("these instructions are the request itself");
+    expect(prompt).not.toContain("Before writing any code, produce a real implementation plan");
+  });
+
+  it("signale un plan existant sans l'inliner, et n'en réclame le suivi que s'il y en a un", () => {
+    const planned = buildIssueCustomPrompt(
+      { ...input, issue: { ...issue, plan: "- [x] a\n- [ ] b" } as Issue },
+      instructions
+    );
+    expect(planned).toContain("(1/2 tasks done)");
+    expect(planned).not.toContain("- [x] a");
+    expect(planned).toContain("minddy_update_plan_task");
+    expect(buildIssueCustomPrompt(input, instructions)).not.toContain(
+      "minddy_update_plan_task"
+    );
+  });
+
+  it("recadre la consigne (espaces autour) sans la réécrire", () => {
+    const prompt = buildIssueCustomPrompt(input, `\n  ${instructions}  \n`);
+    expect(prompt).toContain(`\n\n${instructions}\n\n`);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePlan, planProgress } from "./plan";
+import { appendToPlan, parsePlan, planProgress } from "./plan";
 
 /** Raccourci de lecture : "texte" → question ? pour chaque tâche. */
 const questionFlags = (plan: string) =>
@@ -101,5 +101,112 @@ describe("sections de questions", () => {
     const plan = "- [x] t1\n- [ ] t2\n- [-] t3";
     expect(planProgress(plan)).toEqual({ done: 1, total: 2 });
     expect(parsePlan(plan).tasks.every((t) => !t.question)).toBe(true);
+  });
+});
+
+describe("appendToPlan", () => {
+  it("écrit le bloc tel quel quand le plan est vide", () => {
+    expect(appendToPlan(null, "- [ ] t1")).toBe("- [ ] t1");
+    expect(appendToPlan("   \n", "- [ ] t1\n- [ ] t2")).toBe(
+      "- [ ] t1\n- [ ] t2"
+    );
+  });
+
+  it("ne touche pas un octet de l'existant — états compris", () => {
+    const plan = `## Contexte
+
+Objectif : brancher l'invitation.
+
+- [x] Écrire le handler
+- [~] Brancher le formulaire`;
+
+    const next = appendToPlan(plan, "- [ ] Valider l'email avant l'envoi");
+    expect(next).toBe(`${plan}\n- [ ] Valider l'email avant l'envoi`);
+    // Les tâches d'origine gardent leur état et leur index.
+    expect(parsePlan(next!).tasks.map((t) => t.state)).toEqual([
+      "completed",
+      "in_progress",
+      "pending",
+    ]);
+  });
+
+  it("sépare d'une ligne vide sauf entre deux cases à cocher", () => {
+    // Deux listes collées = une seule liste à l'écran.
+    expect(appendToPlan("- [ ] t1", "- [ ] t2")).toBe("- [ ] t1\n- [ ] t2");
+    // De la prose après des tâches a besoin de son paragraphe.
+    expect(appendToPlan("- [ ] t1", "Vérification : `pnpm test`.")).toBe(
+      "- [ ] t1\n\nVérification : `pnpm test`."
+    );
+    expect(appendToPlan("Contexte.", "- [ ] t1")).toBe("Contexte.\n\n- [ ] t1");
+  });
+
+  it("recolle le bloc sous la dernière ligne utile, pas sous les blancs de fin", () => {
+    expect(appendToPlan("- [ ] t1\n\n\n", "- [ ] t2")).toBe(
+      "- [ ] t1\n- [ ] t2"
+    );
+  });
+
+  it("insère avant la section de questions, qui reste en dernier", () => {
+    const plan = `- [ ] t1
+
+## Questions
+
+- [ ] On garde l'ancien endpoint ?`;
+
+    const next = appendToPlan(plan, "- [ ] t2")!;
+    expect(next).toBe(`- [ ] t1
+- [ ] t2
+
+## Questions
+
+- [ ] On garde l'ancien endpoint ?`);
+    // La tâche ajoutée est du travail, pas une question : elle compte.
+    expect(planProgress(next)).toEqual({ done: 0, total: 2 });
+  });
+
+  it("insère à la fin de la section demandée, avant le titre suivant", () => {
+    const plan = `## Backend
+
+- [ ] Handler
+
+## Frontend
+
+- [ ] Formulaire`;
+
+    expect(appendToPlan(plan, "- [ ] Migration", "Backend")).toBe(`## Backend
+
+- [ ] Handler
+- [ ] Migration
+
+## Frontend
+
+- [ ] Formulaire`);
+  });
+
+  it("vise une section sans se soucier de la casse, questions comprises", () => {
+    const plan = "- [ ] t1\n\n## Questions\n\n- [ ] q1";
+    expect(appendToPlan(plan, "- [ ] q2", "questions")).toBe(
+      "- [ ] t1\n\n## Questions\n\n- [ ] q1\n- [ ] q2"
+    );
+  });
+
+  it("renvoie null quand la section demandée n'existe pas", () => {
+    expect(appendToPlan("- [ ] t1", "- [ ] t2", "Backend")).toBeNull();
+    expect(appendToPlan("", "- [ ] t2", "Backend")).toBeNull();
+  });
+
+  it("ignore un titre à l'intérieur d'un bloc de code", () => {
+    const plan = `- [ ] t1
+
+\`\`\`md
+## Questions
+\`\`\``;
+
+    // Le faux titre ne déplace pas l'insertion : le bloc va bien à la fin.
+    expect(appendToPlan(plan, "- [ ] t2")).toBe(`${plan}\n\n- [ ] t2`);
+  });
+
+  it("laisse le plan intact pour un bloc vide", () => {
+    expect(appendToPlan("- [ ] t1", "   \n\n")).toBe("- [ ] t1");
   });
 });

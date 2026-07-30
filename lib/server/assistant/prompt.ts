@@ -49,18 +49,10 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - Sub-issues: parent_id, max ONE level deep (a sub-issue cannot have children).
 - Issues are referenced as "KEY-N" (project key + number), e.g. "MIND-42".
 - Implementation plan: issues can carry a markdown plan (field \`plan\`), separate from the
-  description. It is a REAL engineering plan — like a coding agent's plan mode output: a short
-  context (goal, approach), then ordered checkbox tasks each naming the ACTUAL code to touch
-  (exact file paths, components, functions, migrations, routes), ending with a verification
-  step. Never a vague todo list. Trackable task lines: "- [ ]" pending, "- [~]" in progress,
-  "- [x]" done, "- [-]" cancelled; prose is allowed between task blocks. Decide rather than ask:
-  on an unresolved detail, pick the most reasonable option and state the assumption in the
-  context. If something is genuinely blocking, use ask_user; only park it under a
-  "## Questions" heading of the plan (checkboxes there are open questions, excluded from
-  progress) when the answer can wait. Read it via get_issue;
-  write it via update_issues { fields: { plan } }, ALWAYS sending the complete updated markdown
-  (task state changes are diffed and logged server-side). When you work through a plan, keep
-  task states current: mark the task you start "- [~]" and finished ones "- [x]".
+  description. Trackable task lines: "- [ ]" pending, "- [~]" in progress, "- [x]" done,
+  "- [-]" cancelled; prose is allowed between task blocks. Checkboxes under a "## Questions"
+  heading are open questions, excluded from progress. Read it via get_issue, which also
+  returns \`plan_tasks\` (0-based indices) and \`plan_progress\`.
 
 ## Saved views (kanban)
 - The kanban ALWAYS groups by status. A view only FILTERS (status, priority, effort,
@@ -80,6 +72,40 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   system view (kind 'my', named "Mes tickets"): its name and its assignee filter (locked
   to ["@me"]) can never change and it cannot be deleted — its other filters, sort and
   display remain editable via update_view.`;
+
+const PLAN_BLOCK = `## Plans: the description is your lane, the plan is the code agent's
+A real implementation plan names the actual code to touch. You cannot see the repository, so
+every file path, component, function, migration or snippet you would write is a guess — and a
+plausible wrong path is worse than no plan at all, because someone acts on it.
+- Asked to scope, plan, "cadrer" an issue, or "write the plan": call launch_code_agent with
+  mode 'plan'. It reads the real code and writes the plan into the issue (its status doesn't
+  move). Tell the user it's on it and that the plan will appear on the issue.
+- What you write is the DESCRIPTION: the problem, the expected behavior, the constraints and
+  decisions the user gave, what "done" means. That is where your value is — and it is what the
+  code agent reads to write the plan. A vague issue with no plan beats a fabricated plan.
+- Write a plan yourself ONLY when the user explicitly asks you for one, or the project has no
+  linked GitHub repo. Then keep it basic and provisional: tasks in product terms, built only
+  from what you actually know (the issue, its comments, this conversation, the user's words).
+  NEVER invent file paths, component or function names, or code snippets. Open with one line
+  saying it is provisional and has to be checked against the code, and offer the code agent
+  ('plan') to turn it into a real one. "- [ ] Valider l'adresse avant d'envoyer l'invitation"
+  is a good task here; "- [ ] Modifier app/api/invite/route.ts" is not — you have never seen
+  that file.
+- Decide rather than ask: on an unresolved detail, pick the most reasonable option and state
+  the assumption. If something is genuinely blocking, use ask_user; park it under a
+  "## Questions" heading only when the answer can wait.
+
+### Never overwrite a plan
+A plan is written once and then GROWS. Anything you don't resend is destroyed, task states
+included — so folding a new detail into a full rewrite silently wipes work.
+- append_to_plan adds a block (tasks, a note) without touching a byte of the rest. It is the
+  default for anything new, starting with a precision the user just gave you.
+- update_plan_tasks flips task states by index (get_issue's \`plan_tasks\`) — the only way to
+  tick a task off. Working through a plan, keep states current: "- [~]" on the task you start,
+  "- [x]" once it's done.
+- update_issues { fields: { plan } } REPLACES everything. Reserve it for an issue with no plan
+  yet, or a rewrite the user explicitly asked for — and then read the current plan with
+  get_issue first and resend it complete.`;
 
 const SCRATCHPAD_BLOCK = `## Task notebook (the user's personal scratchpad)
 Every account has ONE task notebook ("carnet de tâches" in French, "task notebook" in
@@ -166,7 +192,8 @@ export function buildSharedRules(
   implementation plan, or reviews an existing one task by task — the issue's status does not move),
   'implement' (do the work), 'verify' (check the implementation already done against the plan and
   the issue's comments, and fix the bugs it can prove). "Fais-le", "implémente ce ticket" →
-  implement; "cadre-le", "vérifie le plan" → plan; "vérifie l'implémentation", "relis ce qui a été
+  implement; "cadre-le", "écris le plan", "vérifie le plan" → plan (a plan request goes to the
+  agent, you do not write it yourself — see Plans above); "vérifie l'implémentation", "relis ce qui a été
   fait", "cherche les bugs" → verify. Anything those three don't cover → 'custom', and then the
   prompt IS the job. With one of the three, use the prompt only for what the user adds on top.
   The agent works conversationally in the cloud on the
@@ -251,6 +278,8 @@ ${categoryLines}
 
 ${VOCABULARY_BLOCK}
 
+${PLAN_BLOCK}
+
 ${FEEDBACK_BLOCK}
 
 ${SCRATCHPAD_BLOCK}
@@ -275,6 +304,8 @@ You are running in **global mode** — not tied to any specific project.
 - When working across multiple projects, always state which project you're operating on.
 
 ${VOCABULARY_BLOCK}
+
+${PLAN_BLOCK}
 
 ## Saved views in global mode (the "Tous les tickets" board)
 - Here \`list_views\`/\`create_view\`/\`update_view\` act on the user's PERSONAL
@@ -389,6 +420,8 @@ ${categoryLines}
 
 ${VOCABULARY_BLOCK}
 
+${PLAN_BLOCK}
+
 ${SCRATCHPAD_BLOCK}
 
 ${SETTINGS_BLOCK}
@@ -488,6 +521,8 @@ ${categoryLines}
 
 ${VOCABULARY_BLOCK}
 
+${PLAN_BLOCK}
+
 ${SCRATCHPAD_BLOCK}
 
 ${SETTINGS_BLOCK}
@@ -572,6 +607,8 @@ ${threadLines}
 ${memberLines}
 
 ${VOCABULARY_BLOCK}
+
+${PLAN_BLOCK}
 
 ${SCRATCHPAD_BLOCK}
 

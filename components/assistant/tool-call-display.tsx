@@ -224,6 +224,27 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("issuesUpdated", { count: updated });
     },
   },
+  append_to_plan: {
+    icon: ListChecks,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("appendingToPlan");
+      return success ? t("planAppended") : t("appendToPlanFailed");
+    },
+  },
+  update_plan_tasks: {
+    icon: ListChecks,
+    getLabel: (args, result, success, status, t) => {
+      if (status === "running") return t("updatingPlanTasks");
+      if (!success) return t("updatePlanTasksFailed");
+      const updated =
+        typeof result?.updated === "number"
+          ? result.updated
+          : Array.isArray(args.tasks)
+            ? args.tasks.length
+            : 0;
+      return t("planTasksUpdated", { count: updated });
+    },
+  },
   set_issue_categories: {
     icon: Tags,
     getLabel: (_args, _result, success, status, t) => {

@@ -1,7 +1,7 @@
 import { cn } from "mangue-ui";
 import { Bot, WandSparkles } from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
-import { NumoIcon } from "@/components/numo-icon";
+import { NumoFace } from "@/components/numo-face";
 
 /**
  * Les portraits des acteurs QUI NE SONT PAS DES PERSONNES : Numo, un agent
@@ -20,7 +20,13 @@ const disc = (className?: string) =>
   );
 
 /** Action déclenchée via Numo — le visage de l'assistant plutôt que celui de la
-    personne dont l'action porte techniquement le nom. */
+    personne dont l'action porte techniquement le nom.
+
+    Le dessin vient de `NumoFace`, pas de `NumoIcon` : ce portrait-là ne cligne
+    jamais, et `NumoIcon` appelle `useAnimate()` au premier niveau — il ferait
+    donc entrer framer-motion dans le bundle de tout écran qui montre un acteur
+    (une pilule de mention dans un commentaire, par exemple) pour un visage
+    immobile. Même raison qu'en MIN-100, voir components/numo-face.tsx. */
 export function NumoAvatar({
   className,
   iconClassName,
@@ -30,7 +36,7 @@ export function NumoAvatar({
 }) {
   return (
     <span aria-hidden className={disc(className)}>
-      <NumoIcon animated={false} className={cn("size-3.5", iconClassName)} />
+      <NumoFace className={cn("size-3.5", iconClassName)} />
     </span>
   );
 }

@@ -41,6 +41,10 @@ import { AgentChatModal } from "@/components/agent/agent-chat-modal";
 import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
+  CustomPromptDialog,
+  type CustomPromptTarget,
+} from "@/components/agent/custom-prompt-dialog";
+import {
   IssueActionsMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
@@ -58,6 +62,7 @@ import {
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
 import {
+  buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
   buildIssueVerifyPrompt,
@@ -162,6 +167,9 @@ export function IssueSidePanel({
   // ne doit pas coûter le contexte du ticket (la carte, elle, n'a rien à perdre
   // et navigue vers /agents).
   const [chatOpen, setChatOpen] = useState(false);
+  // « Personnalisé » : le dialog de consigne libre, ouvert soit pour copier le
+  // prompt, soit pour lancer l'agent (`null` = fermé).
+  const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
     useIssueTimeline(issue?.id ?? null);
@@ -403,6 +411,39 @@ export function IssueSidePanel({
     toast.success(t("verifyPromptCopied"));
   }, [issue, promptContext, projectKey, t]);
 
+  // « Personnalisé » : la consigne saisie dans le dialog remplace la consigne
+  // toute faite — le contexte du ticket, lui, reste fourni par minddy (bloc
+  // <issue> du prompt copié ; contexte de session côté agent Numo). Aucun
+  // démarrage automatique : on ne sait pas si cette consigne est du travail.
+  const runCustomPrompt = useCallback(
+    async (instructions: string, target: CustomPromptTarget) => {
+      if (!issue || !promptContext) return;
+      if (target === "launch") {
+        const identifier = issueIdentifier(projectKey, issue.number);
+        composeAgentSession(
+          `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${instructions}`,
+          "custom"
+        );
+        return;
+      }
+      await navigator.clipboard.writeText(
+        buildIssueCustomPrompt(
+          {
+            issue,
+            projectId: issue.project_id,
+            projectKey,
+            categories: promptContext.categories,
+            relations: promptContext.relations,
+            attachmentCount: issue.attachment_count,
+          },
+          instructions
+        )
+      );
+      toast.success(t("promptCopied"));
+    },
+    [issue, promptContext, projectKey, composeAgentSession, tAgent, t]
+  );
+
   // « Copier le prompt » et « Lancer l'agent Numo » : deux sous-menus, chacun
   // avec la feuille « plan » (générer ou vérifier, selon le ticket) et
   // « Implémenter le ticket » (hook partagé avec les cartes du board).
@@ -413,9 +454,11 @@ export function IssueSidePanel({
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onCopyVerifyPrompt: () => void copyVerifyPrompt(),
+    onCopyCustomPrompt: () => setCustomTarget("copy"),
     onImplementWithAgent: startNewAgentSession,
     onWritePlanWithAgent: writePlanWithAgent,
     onVerifyWithAgent: verifyWithAgent,
+    onCustomWithAgent: () => setCustomTarget("launch"),
     onOpenSession: () => setChatOpen(true),
   });
 
@@ -425,10 +468,15 @@ export function IssueSidePanel({
   // `v`, so nothing needs to be freed). ⇧P / ⇧A doublent le menu « ⋯ », comme sur
   // les cartes ; le hook ne les déclenche jamais pendant une saisie (titre,
   // description, commentaire).
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(open, {
-    "shift+p": () => void copyPrompt(),
-    "shift+a": launchAgent,
-  });
+  // Le dialog « Personnalisé » les suspend : il couvre le panneau, et une touche
+  // frappée là-dedans ne doit pas ouvrir un picker sur le ticket en dessous.
+  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
+    open && !customTarget,
+    {
+      "shift+p": () => void copyPrompt(),
+      "shift+a": launchAgent,
+    }
+  );
 
   // Apply a dictated patch: categories go through their own join-table
   // endpoint, everything else is one immediate issue update. Also sync the
@@ -878,6 +926,14 @@ export function IssueSidePanel({
           initialRunId={latestRun.id}
         />
       )}
+
+      <CustomPromptDialog
+        target={customTarget}
+        onOpenChange={(open) => !open && setCustomTarget(null)}
+        onSubmit={(instructions, target) => {
+          void runCustomPrompt(instructions, target);
+        }}
+      />
 
       <ConfirmDeleteDialog
         open={confirmDelete}

@@ -102,11 +102,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     forced: !!model,
     baseBranch,
     reasoningLevel,
-    // Cadrage (« Générer un plan » / « Vérifier le plan ») et contrôle
-    // (« Vérifier l'implémentation ») : le lancement ne déplace pas le ticket.
-    // Tout le reste vaut « implémenter ».
+    // Cadrage (« Générer un plan » / « Vérifier le plan »), contrôle
+    // (« Vérifier l'implémentation ») et consigne libre (« Personnalisé ») : le
+    // lancement ne déplace pas le ticket. Tout le reste vaut « implémenter ».
     intent:
-      body.intent === "plan" || body.intent === "verify" ? body.intent : "implement",
+      body.intent === "plan" || body.intent === "verify" || body.intent === "custom"
+        ? body.intent
+        : "implement",
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

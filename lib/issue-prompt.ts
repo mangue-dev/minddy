@@ -124,6 +124,54 @@ If the minddy MCP tools are not available, that's fine — just work on the issu
 }
 
 /**
+ * Variante « personnalisée » : la consigne est écrite par l'UTILISATEUR, minddy
+ * ne fournit que ce qui l'entoure — le bloc `<issue>` avant, les pas MCP après.
+ * Le texte saisi est repris VERBATIM, au milieu, dans la langue où il a été
+ * écrit : c'est LA demande, pas une précision ajoutée à « implémente le ticket »
+ * (qui n'est donc pas là — sinon les deux consignes se disputeraient l'agent).
+ *
+ * Le plan n'est pas inliné ici non plus : le prompt signale seulement qu'il
+ * existe, et l'agent le lit via le MCP si la consigne l'y amène.
+ */
+export function buildIssueCustomPrompt(
+  input: IssuePromptInput,
+  instructions: string
+): string {
+  const { issue, projectId, projectKey } = input;
+  const identifier = issueIdentifier(projectKey, issue.number);
+
+  const plan = issue.plan ? parsePlan(issue.plan) : null;
+  const hasPlan = !!plan && plan.tasks.length > 0;
+
+  const planLine = hasPlan
+    ? `An implementation plan already exists on this issue (${plan.progress.done}/${plan.progress.total} tasks done); it is intentionally not inlined here.`
+    : "This issue has no implementation plan yet.";
+
+  // Suivre le plan n'est PAS demandé d'office (la consigne est celle de
+  // l'utilisateur) — mais s'il s'y appuie, son avancée doit rester logée dans
+  // minddy plutôt que dans la tête de l'agent.
+  const planStep = hasPlan
+    ? "\n- If the instructions lead you to follow that plan, keep its task states updated with `minddy_update_plan_task` as you work (mark a task '- [~]' when you start it, '- [x]' when done)."
+    : "";
+
+  return `Work on this minddy issue, following the instructions below.
+
+${issueBlock(input)}
+
+${planLine}
+
+Here is what I want you to do on this issue — these instructions are the request itself, so follow them rather than assuming the whole ticket has to be implemented:
+
+${instructions.trim()}
+
+Optionally, if minddy MCP tools are available in your environment (parameters for this issue: project_id "${projectId}", issue "${identifier}"):
+- Read the full issue and its comments with \`minddy_get_issue\` — they carry the context this prompt doesn't inline.${planStep}
+- When you are done, report the outcome with \`minddy_add_comment\`.
+
+If the minddy MCP tools are not available, that's fine — just work on the issue as described above and skip the MCP steps.`;
+}
+
+/**
  * Variante « vérifier l'implémentation » : le travail a déjà été fait (au moins
  * en partie), on demande à l'agent de le CONFRONTER à ce qui avait été demandé
  * — le plan ET les commentaires du ticket, puisque c'est là que les écarts se

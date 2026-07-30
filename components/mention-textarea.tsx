@@ -5,7 +5,8 @@ import { cn } from "mangue-ui";
 import { displayName } from "@/lib/display-name";
 import { useAutosize } from "@/lib/use-autosize";
 import { UserAvatar } from "@/components/user-avatar";
-import { NumoIcon } from "@/components/numo-icon";
+import { NumoAvatar } from "@/components/actor-avatars";
+import { NUMO_MENTION_ID } from "@/components/mention-chip";
 import type { Member } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -36,7 +37,6 @@ function activeMention(text: string, caret: number): { at: number; query: string
     suggestion list — callers' `members` arrays never contain it, so
     extractMentions can't return its id as a mentioned user. The actual
     trigger is a server-side, case-insensitive scan of the comment body. */
-const NUMO_MENTION_ID = "__numo__";
 const NUMO_MENTION = {
   user_id: NUMO_MENTION_ID,
   email: null,
@@ -194,9 +194,7 @@ export function MentionTextarea({
               )}
             >
               {m.user_id === NUMO_MENTION_ID ? (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                  <NumoIcon animated={false} className="size-3.5" />
-                </span>
+                <NumoAvatar />
               ) : (
                 <UserAvatar
                   seed={m.avatar_seed}

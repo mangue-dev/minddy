@@ -18,7 +18,7 @@ import { ToolCallList } from "./tool-call-display";
 import { ContextPill } from "./context-pill";
 import { contextChips } from "@/lib/assistant-context";
 import { useProjects } from "@/lib/projects-context";
-import { MentionChip } from "@/components/assistant/mention-chip";
+import { MentionChip } from "@/components/mention-chip";
 import { AttachmentPills, type AttachmentLike } from "@/components/attachments";
 
 interface ChatMessageProps {

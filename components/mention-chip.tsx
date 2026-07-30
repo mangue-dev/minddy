@@ -1,17 +1,24 @@
 "use client";
 
-// La pilule d'une mention « @ » — dans le composer pendant qu'on écrit, puis
-// dans la bulle envoyée. Une seule et même chose aux deux endroits.
+// La pilule d'une mention « @ » — dans le composer de Numo pendant qu'on écrit,
+// dans la bulle envoyée, et dans un commentaire publié. Une seule et même chose
+// aux trois endroits.
 //
-// Elle montre la FIGURE de qui est cité (le portrait, l'orbe du projet) et son
-// nom NU : l'arobase a servi à l'appeler, elle n'a plus rien à dire une fois la
-// pilule posée — exactement comme une pilule de contexte au-dessus du composer.
-// Le « @ » reste dans le TEXTE envoyé (voir la sérialisation du composer) : côté
-// modèle, c'est lui qui marque la mention.
+// Elle montre la FIGURE de qui est cité (le portrait, l'orbe du projet, le
+// visage de Numo) et son nom NU : l'arobase a servi à l'appeler, elle n'a plus
+// rien à dire une fois la pilule posée — exactement comme une pilule de contexte
+// au-dessus du composer. Le « @ » reste dans le TEXTE envoyé (voir la
+// sérialisation du composer, et le corps du commentaire tel qu'il est stocké) :
+// côté modèle comme côté serveur, c'est lui qui marque la mention.
 
 import { cn } from "mangue-ui";
+import { NumoAvatar } from "@/components/actor-avatars";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
+
+/** L'id de la pseudo-entité « Numo » dans les listes de mentions : l'assistant
+    n'est pas un compte, il n'a donc pas d'id à lui. */
+export const NUMO_MENTION_ID = "__numo__";
 
 export function MentionChip({
   type,
@@ -21,8 +28,9 @@ export function MentionChip({
   iconUrl,
   className,
 }: {
-  type: "member" | "project";
-  /** Membre : user_id. Projet : id du projet — c'est la graine de son orbe. */
+  type: "member" | "project" | "numo";
+  /** Membre : user_id. Projet : id du projet — c'est la graine de son orbe.
+      Numo n'a rien à identifier : `NUMO_MENTION_ID` fait l'affaire. */
   id: string;
   label: string;
   /** Graine du portrait (elle n'est PAS toujours le user_id). */
@@ -51,6 +59,11 @@ export function MentionChip({
     >
       {type === "member" ? (
         <UserAvatar seed={avatarSeed ?? id} className="size-4" />
+      ) : type === "numo" ? (
+        // Le visage de l'assistant, exactement celui qui signe ses réponses. Son
+        // disque garde la couleur de marque : dans une pilule à l'encre, c'est
+        // ce qui dit d'un coup d'œil que la mention n'appelle pas une personne.
+        <NumoAvatar className="size-4" iconClassName="size-3" />
       ) : (
         <ProjectOrb seed={id} iconUrl={iconUrl} className="size-4 rounded-full" />
       )}

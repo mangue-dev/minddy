@@ -23,7 +23,7 @@ import {
 import { ArrowUp, Paperclip, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { MentionChip } from "@/components/assistant/mention-chip";
+import { MentionChip } from "@/components/mention-chip";
 import {
   MentionSuggestions,
   filterMentions,

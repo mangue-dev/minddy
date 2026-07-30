@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { ClipboardCopy, Code2, ListChecks, Plus, SearchCheck } from "lucide-react";
+import { ClipboardCopy, Code2, ListChecks, PenLine, Plus, SearchCheck } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
@@ -11,12 +11,14 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
  * prompt, lancer l'agent Numo — partagées par les cartes du board et le panneau
  * latéral, pour qu'elles ne divergent pas.
  *
- * Chacune est un SOUS-MENU avec les trois façons de travailler un ticket, dans
- * l'ordre où on les traverse : le plan (cadrer, sans coder), « Implémenter le
- * ticket », puis « Vérifier l'implémentation » (relire le travail fait face au
- * plan et aux commentaires, corriger les vrais bugs). Les raccourcis clavier ne
- * bougent pas — ⇧P copie le prompt d'implémentation, ⇧A lance l'agent dessus —
- * et s'affichent donc sur cette feuille-là.
+ * Chacune est un SOUS-MENU avec les façons de travailler un ticket, dans l'ordre
+ * où on les traverse : le plan (cadrer, sans coder), « Implémenter le ticket »,
+ * « Vérifier l'implémentation » (relire le travail fait face au plan et aux
+ * commentaires, corriger les vrais bugs), puis « Personnalisé » — la consigne
+ * écrite par l'utilisateur, en dernier parce qu'elle sort des trois façons
+ * cadrées. Les raccourcis clavier ne bougent pas — ⇧P copie le prompt
+ * d'implémentation, ⇧A lance l'agent dessus — et s'affichent donc sur cette
+ * feuille-là.
  *
  * La feuille « plan » suit l'état du ticket : « Générer un plan » quand il n'en
  * a pas, « Vérifier le plan » quand il en a un — en redemander un n'aurait pas
@@ -35,9 +37,11 @@ export function useAgentMenuActions({
   onCopyPrompt,
   onCopyPlanPrompt,
   onCopyVerifyPrompt,
+  onCopyCustomPrompt,
   onImplementWithAgent,
   onWritePlanWithAgent,
   onVerifyWithAgent,
+  onCustomWithAgent,
   onOpenSession,
 }: {
   /** Agents disponibles (plan payant + dépôt lié) — sinon, pas d'entrée agent. */
@@ -50,10 +54,14 @@ export function useAgentMenuActions({
   onCopyPlanPrompt: () => void;
   /** Copie le prompt « vérifie l'implémentation » pour un agent externe. */
   onCopyVerifyPrompt: () => void;
+  /** Ouvre le dialog de consigne libre, puis copie le prompt correspondant. */
+  onCopyCustomPrompt: () => void;
   onImplementWithAgent: () => void;
   onWritePlanWithAgent: () => void;
   /** Lance Numo sur la vérification du travail déjà fait. */
   onVerifyWithAgent: () => void;
+  /** Ouvre le dialog de consigne libre, puis lance Numo dessus. */
+  onCustomWithAgent: () => void;
   /** Rouvre la conversation existante (modal côté panneau, page côté carte). */
   onOpenSession: () => void;
 }): ContextMenuAction[] {
@@ -98,6 +106,25 @@ export function useAgentMenuActions({
       onSelect,
     });
 
+    // « Personnalisé » : l'utilisateur écrit la consigne (dialog), minddy garde
+    // le contexte du ticket autour. Cherchable par ce qu'on tape quand on veut
+    // sortir des trois façons cadrées.
+    const customAction = (id: string, onSelect: () => void): ContextMenuAction => ({
+      id,
+      label: t("actionCustomPrompt"),
+      keywords: [
+        "custom",
+        "personnalisé",
+        "personnalise",
+        "prompt",
+        "libre",
+        "autre",
+        "own",
+      ],
+      icon: <PenLine className="size-4" />,
+      onSelect,
+    });
+
     const copyPrompt: ContextMenuAction = {
       id: "copy-prompt",
       label: t("copyAsPrompt"),
@@ -120,6 +147,7 @@ export function useAgentMenuActions({
           onSelect: onCopyPrompt,
         },
         verifyAction("copy-prompt-verify", onCopyVerifyPrompt),
+        customAction("copy-prompt-custom", onCopyCustomPrompt),
       ],
     };
 
@@ -145,6 +173,7 @@ export function useAgentMenuActions({
         onSelect: onImplementWithAgent,
       },
       verifyAction("agent-verify", onVerifyWithAgent),
+      customAction("agent-custom", onCustomWithAgent),
     ];
 
     return hasSession
@@ -183,9 +212,11 @@ export function useAgentMenuActions({
     onCopyPrompt,
     onCopyPlanPrompt,
     onCopyVerifyPrompt,
+    onCopyCustomPrompt,
     onImplementWithAgent,
     onWritePlanWithAgent,
     onVerifyWithAgent,
+    onCustomWithAgent,
     onOpenSession,
     t,
     tAgent,

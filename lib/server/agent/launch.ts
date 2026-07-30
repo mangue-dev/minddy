@@ -84,23 +84,25 @@ export interface LaunchAgentInput {
   /**
    * Ce qu'on demande à l'agent, du point de vue du TICKET. Seul `implement`
    * (le défaut) fait passer le ticket « en cours » ; `plan` (« Générer un
-   * plan » / « Vérifier le plan ») le CADRE sans le commencer, et `verify`
+   * plan » / « Vérifier le plan ») le CADRE sans le commencer, `verify`
    * (« Vérifier l'implémentation ») CONTRÔLE du travail déjà fait — un ticket
-   * en revue doit y rester, pas régresser « en cours ».
+   * en revue doit y rester, pas régresser « en cours » — et `custom` porte une
+   * consigne libre, dont on ne sait pas si elle est du travail.
    */
   intent?: AgentLaunchIntent;
 }
 
 /** Ce que le lancement fait au statut du ticket : cf. `intentStartsWork`. */
-export type AgentLaunchIntent = "implement" | "plan" | "verify";
+export type AgentLaunchIntent = "implement" | "plan" | "verify" | "custom";
 
 /**
  * Le lancement fait-il DÉMARRER le ticket ? Seul « implémenter » est du travail
- * neuf ; cadrer vient avant, vérifier vient après — ni l'un ni l'autre ne doit
+ * neuf : cadrer vient avant, vérifier vient après, et une consigne écrite par
+ * l'utilisateur (`custom`) peut être n'importe quoi — aucun des trois ne doit
  * déplacer le ticket. `undefined` (appelant historique) vaut « implémenter ».
  */
 export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean {
-  return intent !== "plan" && intent !== "verify";
+  return intent === undefined || intent === "implement";
 }
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
@@ -212,8 +214,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     ]);
 
     // Agent lancé → l'issue passe « en cours » (MIN-46). Deux exceptions :
-    //  • run qui n'est pas du travail neuf (`intent` `plan` ou `verify` — cadrer
-    //    avant, contrôler après) : le ticket garde son statut, quel qu'il soit ;
+    //  • run qui n'est pas du travail neuf (`intent` `plan`, `verify` ou
+    //    `custom` — cadrer avant, contrôler après, consigne libre) : le ticket
+    //    garde son statut, quel qu'il soit ;
     //  • la run hérite d'une PR encore en revue (open/draft) — c'est SON état qui
     //    gouverne le statut (in_review), on ne le fait pas régresser le temps d'une
     //    itération. Une PR refusée (closed → issue `todo`) repasse bien « en cours ».

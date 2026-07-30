@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "mangue-ui";
 import { displayName } from "@/lib/display-name";
-import { UserAvatar } from "@/components/user-avatar";
+import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import type { Member } from "@/lib/types";
 
 function memberLabel(m: Member): string {
@@ -22,30 +22,56 @@ type HastNode = {
   children?: HastNode[];
 };
 
-/** Rehype plugin: turn "@Display Name" tokens (matching known members) into
-    <span class="mention" data-user-id> so the renderer can show a badge. Runs on
-    the HTML AST, so surrounding markdown formatting is preserved. */
+/* « @numo » s'écrit comme on veut : c'est ainsi que le serveur le reconnaît
+   (mentionsNumo, lib/server/assistant/comment-agent.ts). Un nom de membre, lui,
+   se reconnaît à sa casse EXACTE — c'est ce que extractMentions notifie, et une
+   pilule doit dire vrai sur qui a été prévenu. Deux règles, une seule passe :
+   comme JS n'a pas de drapeau par branche, la casse libre de « numo » s'écrit
+   lettre par lettre. */
+const NUMO_PATTERN = "[Nn][Uu][Mm][Oo]";
+
+/** Rehype plugin: turn "@Display Name" / "@numo" tokens into
+    <span data-mention-*> so the renderer can swap in a MentionChip. Runs on the
+    HTML AST, so surrounding markdown formatting is preserved. */
 function rehypeMentions(members: Member[]) {
   const byLength = [...members].sort(
     (a, b) => memberLabel(b).length - memberLabel(a).length
   );
-  const idByName = new Map(byLength.map((m) => [memberLabel(m), m.user_id]));
-  const pattern = byLength.map((m) => escapeRegExp(memberLabel(m))).join("|");
-  const re = pattern ? new RegExp(`@(${pattern})`, "g") : null;
+  const byName = new Map(byLength.map((m) => [memberLabel(m), m]));
+  const names = byLength.map((m) => escapeRegExp(memberLabel(m)));
+  // Sans membre, pas de branche de noms : un « (|) » vide matcherait la chaîne
+  // vide, et chaque « @ » du texte deviendrait une pilule.
+  const re = new RegExp(
+    names.length
+      ? `@(?:(${NUMO_PATTERN})\\b|(${names.join("|")}))`
+      : `@(${NUMO_PATTERN})\\b`,
+    "g"
+  );
 
   const split = (value: string): HastNode[] => {
-    if (!re) return [{ type: "text", value }];
     const out: HastNode[] = [];
     let last = 0;
     let m: RegExpExecArray | null;
     re.lastIndex = 0;
     while ((m = re.exec(value)) !== null) {
+      const numo = !!m[1];
+      // Même garde que côté serveur : « clement@numo.dev » ne cite personne.
+      if (numo && m.index > 0 && !/[\s(>]/.test(value[m.index - 1])) continue;
+      const member = numo ? null : byName.get(m[2]);
+      if (!numo && !member) continue;
       if (m.index > last) out.push({ type: "text", value: value.slice(last, m.index) });
       out.push({
         type: "element",
         tagName: "span",
-        properties: { className: ["mention"], "data-user-id": idByName.get(m[1]) },
-        children: [{ type: "text", value: m[1] }],
+        properties: numo
+          ? { "data-mention-type": "numo" }
+          : {
+              "data-mention-type": "member",
+              "data-mention-id": member!.user_id,
+              "data-mention-label": memberLabel(member!),
+              "data-mention-seed": member!.avatar_seed,
+            },
+        children: [],
       });
       last = m.index + m[0].length;
     }
@@ -55,6 +81,9 @@ function rehypeMentions(members: Member[]) {
 
   const walk = (node: HastNode) => {
     if (!node.children) return;
+    // Du code se cite littéralement : « `@numo` » montre le geste à faire, il ne
+    // le fait pas.
+    if (node.tagName === "code" || node.tagName === "pre") return;
     const next: HastNode[] = [];
     for (const child of node.children) {
       if (child.type === "text" && child.value?.includes("@")) {
@@ -67,27 +96,14 @@ function rehypeMentions(members: Member[]) {
     node.children = next;
   };
 
-  return () => (tree: HastNode) => {
-    if (re) walk(tree);
-  };
-}
-
-function MentionBadge({ userId, members }: { userId: string; members: Member[] }) {
-  const m = members.find((x) => x.user_id === userId);
-  const name = m ? memberLabel(m) : "Utilisateur";
-  return (
-    <span className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pr-1.5 pl-1 align-middle text-[0.9em] font-medium text-primary">
-      <UserAvatar
-        seed={userId}
-        className="size-4"
-      />
-      @{name}
-    </span>
-  );
+  return () => (tree: HastNode) => walk(tree);
 }
 
 /** Renders markdown (GFM) with minimal, token-aware styling — no raw HTML.
-    Pass `members` to render "@Name" mentions as avatar badges. */
+    Pass `members` to render "@Name" and "@numo" mentions as chips — the same
+    chip as the Numo composer's (components/mention-chip). The array may be
+    empty: it says "this surface carries mentions", and "@numo" is citable there
+    even when nobody else is. */
 export function Markdown({
   children,
   className,
@@ -106,7 +122,7 @@ export function Markdown({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={members && members.length ? [rehypeMentions(members)] : []}
+        rehypePlugins={members ? [rehypeMentions(members)] : []}
         components={{
           p: (props) => <p className="my-2" {...props} />,
           a: (props) => (
@@ -166,8 +182,21 @@ export function Markdown({
           strong: (props) => <strong className="font-semibold" {...props} />,
           hr: () => <hr className="my-3 border-border" />,
           span: ({ node, ...props }) => {
-            const uid = node?.properties?.["data-user-id"] as string | undefined;
-            if (uid && members) return <MentionBadge userId={uid} members={members} />;
+            const p = node?.properties ?? {};
+            const type = p["data-mention-type"] as string | undefined;
+            if (type === "numo") {
+              return <MentionChip type="numo" id={NUMO_MENTION_ID} label="Numo" />;
+            }
+            if (type === "member") {
+              return (
+                <MentionChip
+                  type="member"
+                  id={p["data-mention-id"] as string}
+                  label={p["data-mention-label"] as string}
+                  avatarSeed={p["data-mention-seed"] as string}
+                />
+              );
+            }
             return <span {...props} />;
           },
         }}

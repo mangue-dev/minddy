@@ -45,9 +45,12 @@ import {
   type NewTask,
 } from "@/lib/scratchpad";
 import {
+  appendToPlan,
   isPlanTaskState,
   parsePlan,
   setTaskState,
+  MAX_PLAN_LENGTH,
+  type ParsedPlan,
   type PlanTaskState,
 } from "@/lib/plan";
 import {
@@ -202,6 +205,68 @@ function readCtx(
     service: ctx.service,
     projectId,
     projectKey: access.project.key,
+  };
+}
+
+// ── Implementation plan (append_to_plan / update_plan_tasks) ───────────
+// Both tools are surgical by construction: they read the plan that is stored
+// RIGHT NOW and give back that same markdown with something added or one
+// marker flipped. Nothing the model didn't touch can be lost on the way —
+// which a full `update_issues { plan }` rewrite cannot promise.
+
+/** Task labels are elided here: the list exists to give the model an INDEX to
+ *  address, and the plan markdown right beside it already carries the full text
+ *  — spending the get_issue result budget on it twice would truncate the reply
+ *  mid-array (see getToolResultCharLimit). */
+const PLAN_TASK_TEXT_MAX = 120;
+
+const planTaskList = (parsed: ParsedPlan) =>
+  parsed.tasks.map((t) => ({
+    task_index: t.index,
+    state: t.state,
+    text:
+      t.text.length > PLAN_TASK_TEXT_MAX
+        ? `${t.text.slice(0, PLAN_TASK_TEXT_MAX)}…`
+        : t.text,
+    ...(t.question ? { question: true } : {}),
+  }));
+
+/** The issue's plan markdown as stored ("" when it has none). */
+async function readPlan(
+  ctx: ToolContext,
+  issueId: string
+): Promise<{ plan: string } | { error: string }> {
+  const { data, error } = await ctx.supabase
+    .from("issues")
+    .select("plan")
+    .eq("id", issueId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  return { plan: typeof data?.plan === "string" ? data.plan : "" };
+}
+
+/** Save a rewritten plan and report back its refreshed tasks. */
+async function writePlan(
+  ctx: ToolContext,
+  issueId: string,
+  plan: string,
+  updated?: number
+): Promise<ToolExecution> {
+  const result = await updateIssueFields({
+    issueId,
+    actorId: ctx.userId,
+    input: { plan },
+    viaAssistant: true,
+  });
+  if (!result.ok) return libError(result);
+  const parsed = parsePlan((result.issue.plan as string) ?? "");
+  return {
+    result: {
+      ...(updated === undefined ? {} : { updated }),
+      plan_tasks: planTaskList(parsed),
+      plan_progress: parsed.progress,
+    },
+    success: true,
   };
 }
 
@@ -484,7 +549,20 @@ export async function executeTool(
       }
       case "get_issue": {
         const r = await getIssue(readCtx(ctx, projectId, access), args);
-        return "error" in r ? toolError(r.error) : { result: r, success: true };
+        if ("error" in r) return toolError(r.error);
+        // Plan tasks come out parsed, with the indices append_to_plan's sibling
+        // update_plan_tasks addresses — without them the only way to tick a
+        // task off would be to resend a whole rewritten plan.
+        const parsed = parsePlan(
+          typeof r.issue.plan === "string" ? r.issue.plan : null
+        );
+        return {
+          result:
+            parsed.tasks.length > 0
+              ? { ...r, plan_tasks: planTaskList(parsed), plan_progress: parsed.progress }
+              : r,
+          success: true,
+        };
       }
       case "list_members": {
         const r = await listMembers(
@@ -599,6 +677,74 @@ export async function executeTool(
           result: { updated, failed },
           success: failed.length === 0,
         };
+      }
+
+      case "append_to_plan": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        if (!scoped.ok) return toolError(scoped.error);
+        const markdown = typeof args.markdown === "string" ? args.markdown : "";
+        if (!markdown.trim()) {
+          return toolError("markdown must contain the block to add to the plan.");
+        }
+        const section =
+          typeof args.section === "string" && args.section.trim()
+            ? args.section.trim()
+            : null;
+        const current = await readPlan(ctx, issueId);
+        if ("error" in current) return toolError(current.error);
+        const next = appendToPlan(current.plan, markdown, section);
+        if (next === null) {
+          return toolError(
+            `This plan has no "${section}" heading. Read the plan with get_issue to see its headings, or omit "section" to append at the end.`
+          );
+        }
+        if (next.length > MAX_PLAN_LENGTH) {
+          return toolError(`The plan is capped at ${MAX_PLAN_LENGTH} characters.`);
+        }
+        return writePlan(ctx, issueId, next);
+      }
+
+      case "update_plan_tasks": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        if (!scoped.ok) return toolError(scoped.error);
+        const raw = Array.isArray(args.tasks) ? args.tasks : null;
+        if (!raw || raw.length === 0 || raw.length > 50) {
+          return toolError("tasks must be a list of 1 to 50 task-state changes.");
+        }
+        const changes: { index: number; state: PlanTaskState }[] = [];
+        for (const item of raw) {
+          const row = item as Record<string, unknown>;
+          const index = row.task_index;
+          if (typeof index !== "number" || !Number.isInteger(index) || index < 0) {
+            return toolError("task_index must be a non-negative integer.");
+          }
+          if (!isPlanTaskState(row.state)) {
+            return toolError(
+              `Invalid task state "${String(row.state)}" — use pending, in_progress, completed or cancelled.`
+            );
+          }
+          changes.push({ index, state: row.state });
+        }
+        const current = await readPlan(ctx, issueId);
+        if ("error" in current) return toolError(current.error);
+        const parsed = parsePlan(current.plan);
+        // All or nothing: a stale index points at another task, so refuse the
+        // whole call rather than flip the wrong checkbox.
+        const invalid = changes
+          .map((c) => c.index)
+          .filter((i) => !parsed.tasks[i]);
+        if (invalid.length > 0) {
+          return toolError(
+            `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — this plan has ${parsed.tasks.length} task(s). Call get_issue again for fresh plan_tasks.`
+          );
+        }
+        let next = current.plan;
+        for (const change of changes) {
+          next = setTaskState(next, parsed.tasks[change.index].line, change.state);
+        }
+        return writePlan(ctx, issueId, next, changes.length);
       }
 
       case "set_issue_categories": {

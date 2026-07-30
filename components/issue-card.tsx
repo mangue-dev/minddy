@@ -26,6 +26,10 @@ import {
 } from "lucide-react";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
+  CustomPromptDialog,
+  type CustomPromptTarget,
+} from "@/components/agent/custom-prompt-dialog";
+import {
   ALL_STATUSES,
   PRIORITIES,
   EFFORTS,
@@ -90,6 +94,7 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import {
+  buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
   buildIssueVerifyPrompt,
@@ -853,6 +858,9 @@ export function IssueCard({
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  // « Personnalisé » : le dialog de consigne libre, ouvert soit pour copier le
+  // prompt, soit pour lancer l'agent (`null` = fermé).
+  const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
   // Agent de code sur ce ticket (MIN-46) — menu clic droit + raccourci ⇧A. Redirige
   // vers la page Agents plutôt que d'ouvrir une modal. Deux points d'entrée :
   //  • openAgentSession — rouvre la session existante (sa run la plus active, `?issue=`) ;
@@ -1011,6 +1019,36 @@ export function IssueCard({
     toast.success(t("verifyPromptCopied"));
   };
 
+  // « Personnalisé » : la consigne saisie dans le dialog remplace la consigne
+  // toute faite — le contexte du ticket, lui, reste fourni par minddy (bloc
+  // <issue> du prompt copié ; contexte de session côté agent Numo). Aucun
+  // démarrage automatique : on ne sait pas si cette consigne est du travail.
+  const runCustomPrompt = async (
+    instructions: string,
+    target: CustomPromptTarget
+  ) => {
+    if (target === "launch") {
+      composeAgentSession(
+        `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${instructions}`,
+        "custom"
+      );
+      return;
+    }
+    await navigator.clipboard.writeText(
+      buildIssueCustomPrompt(
+        {
+          issue,
+          projectId,
+          projectKey,
+          attachmentCount: issue.attachment_count,
+          ...promptContext(),
+        },
+        instructions
+      )
+    );
+    toast.success(t("promptCopied"));
+  };
+
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: agentHasSession,
@@ -1018,17 +1056,21 @@ export function IssueCard({
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onCopyVerifyPrompt: () => void copyVerifyPrompt(),
+    onCopyCustomPrompt: () => setCustomTarget("copy"),
     onImplementWithAgent: startNewAgentSession,
     onWritePlanWithAgent: writePlanWithAgent,
     onVerifyWithAgent: verifyWithAgent,
+    onCustomWithAgent: () => setCustomTarget("launch"),
     onOpenSession: openAgentSession,
   });
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
   // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
   // ouvre l'agent (la dernière conversation du ticket, ou un composer vierge).
+  // Le dialog « Personnalisé » les suspend : il couvre la carte, et une touche
+  // frappée là-dedans ne doit pas ouvrir un picker sur le ticket en dessous.
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
-    !isDragging,
+    !isDragging && !customTarget,
     {
       " ": onOpen,
       "shift+p": () => void copyPrompt(),
@@ -1173,6 +1215,13 @@ export function IssueCard({
         onSelect={(targetId) => {
           if (relationType) onAddRelation?.(issue.id, relationType, targetId);
           setRelationType(null);
+        }}
+      />
+      <CustomPromptDialog
+        target={customTarget}
+        onOpenChange={(open) => !open && setCustomTarget(null)}
+        onSubmit={(instructions, target) => {
+          void runCustomPrompt(instructions, target);
         }}
       />
       <IssueShortcutMenu

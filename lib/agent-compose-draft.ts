@@ -28,8 +28,11 @@ import { useSyncExternalStore } from "react";
  *  • `verify` — relire une implémentation déjà faite : le ticket est au-delà du
  *    travail, pas avant. Le repasser « en cours » ferait REGRESSER un ticket en
  *    revue — or on ne fait que le contrôler.
+ *  • `custom` — consigne écrite par l'utilisateur : on ne sait pas ce qu'elle
+ *    demande (explorer, corriger un détail, relire), donc on ne présume pas que
+ *    le travail commence et on laisse le ticket exactement où il est.
  */
-export type AgentComposeIntent = "implement" | "plan" | "verify";
+export type AgentComposeIntent = "implement" | "plan" | "verify" | "custom";
 
 export interface AgentIssueComposeDraft {
   kind: "issue";

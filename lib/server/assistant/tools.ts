@@ -41,7 +41,7 @@ const ISSUE_FIELD_PROPERTIES = {
   plan: {
     type: ["string", "null"],
     description:
-      "Implementation plan, markdown, separate from the description — a REAL engineering plan, like a coding agent's plan mode output: a short context (goal, approach), then ordered checkbox tasks each naming the ACTUAL code to touch (exact file paths, components, functions, migrations, routes), ending with a verification step (how to test). 'Add POST handler in app/api/foo/route.ts with zod validation' is a good task; 'do the backend' is not. Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. ALWAYS send the FULL plan markdown (never a fragment) — task state changes are diffed and logged server-side. null clears the plan.",
+      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets — the grounded technical plan is the code agent's job (launch_code_agent, mode 'plan'). On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan.",
   },
   status: {
     type: "string",
@@ -305,6 +305,66 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["issue_ids", "fields"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "append_to_plan",
+      description:
+        "Add to an issue's implementation plan WITHOUT touching what is already there — the way to record a precision the user just gave, an extra task or a note on a plan that already exists. The block lands at the end of the plan (above its questions section when it has one), or at the end of a named section with `section`. Creates the plan when the issue has none. Prefer this to update_issues { fields: { plan } }, which rewrites the whole plan and drops anything you don't resend.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: { type: "string", description: "Issue id." },
+          markdown: {
+            type: "string",
+            description:
+              "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a short paragraph. Only what is new — everything already in the plan is kept as-is, so never repeat it here.",
+          },
+          section: {
+            type: "string",
+            description:
+              "Title of an existing heading in the plan to append under (e.g. 'Questions' to park an open question). Omit to append at the end of the plan. Read the plan with get_issue first to know its headings — an unknown title is an error, not a new section.",
+          },
+        },
+        required: ["issue_id", "markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_plan_tasks",
+      description:
+        "Flip the state of one or several tasks of an issue's implementation plan, leaving every other byte of the plan untouched. task_index comes from get_issue's plan_tasks (0-based, document order) — read it right before calling. This is how a task gets ticked off: never rewrite the whole plan for a state change.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: { type: "string", description: "Issue id." },
+          tasks: {
+            type: "array",
+            description: "The task state changes to apply (1–50).",
+            items: {
+              type: "object",
+              properties: {
+                task_index: {
+                  type: "integer",
+                  description:
+                    "0-based index of the task in get_issue's plan_tasks.",
+                },
+                state: {
+                  type: "string",
+                  enum: [...PLAN_TASK_STATES],
+                  description: "The task's new state.",
+                },
+              },
+              required: ["task_index", "state"],
+            },
+          },
+        },
+        required: ["issue_id", "tasks"],
       },
     },
   },

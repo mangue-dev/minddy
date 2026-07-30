@@ -129,9 +129,10 @@ export async function launchAgentRunApi(
     baseBranch?: string;
     /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
     reasoningLevel?: ReasoningLevel;
-    /** `plan` (cadrer) et `verify` (contrôler du travail fait) laissent l'issue
-     *  où elle est : seul `implement` la passe « en cours » côté serveur. */
-    intent?: "implement" | "plan" | "verify";
+    /** `plan` (cadrer), `verify` (contrôler du travail fait) et `custom`
+     *  (consigne libre de l'utilisateur) laissent l'issue où elle est : seul
+     *  `implement` la passe « en cours » côté serveur. */
+    intent?: "implement" | "plan" | "verify" | "custom";
   },
 ): Promise<{ run: AgentRunSummary }> {
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.

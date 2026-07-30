@@ -182,6 +182,97 @@ export function setTaskState(
   return lines.join("\n");
 }
 
+/** Index of the first heading line matching `match` at or after `from`, or -1.
+ *  Fence-aware: the walk always starts at line 0 so a '#' inside a code block
+ *  opened before `from` is not mistaken for a heading. */
+function findHeadingLine(
+  lines: string[],
+  match: (text: string) => boolean,
+  from = 0
+): number {
+  let fence: string | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const fenceMatch = lines[i].match(FENCE_LINE);
+    if (fenceMatch) {
+      if (!fence) fence = fenceMatch[1];
+      else if (
+        fenceMatch[1][0] === fence[0] &&
+        fenceMatch[1].length >= fence.length
+      )
+        fence = null;
+      continue;
+    }
+    if (fence || i < from) continue;
+    const heading = lines[i].match(HEADING_LINE);
+    if (heading && match(heading[2])) return i;
+  }
+  return -1;
+}
+
+/**
+ * Append a markdown block to a plan WITHOUT touching a single existing byte —
+ * how a precision that lands after the plan was written gets recorded. The
+ * alternative (resending a whole rewritten plan) silently drops whatever the
+ * writer didn't happen to carry over, task states included.
+ *
+ * With `section`, the block goes at the END of the section opened by the
+ * matching heading (before the next heading of any level); returns null when no
+ * such heading exists, so the caller can say so rather than append elsewhere.
+ * Without it, the block goes at the end of the plan — or just above its
+ * "Questions" heading when it has one: a checkbox landing under that heading
+ * would be read as an open question and count for nothing (see parsePlan). An
+ * empty plan simply becomes the block.
+ */
+export function appendToPlan(
+  plan: string | null | undefined,
+  block: string,
+  section?: string | null
+): string | null {
+  const addition = block.replace(/^\n+/, "").replace(/\s+$/, "");
+  const current = plan ?? "";
+  const wanted = section?.trim() ? section.trim().toLowerCase() : null;
+  if (!addition) return current;
+  if (!current.trim()) return wanted ? null : addition;
+
+  const lines = current.split("\n");
+  let insertAt = lines.length;
+
+  if (wanted) {
+    const headingIdx = findHeadingLine(
+      lines,
+      (text) => text.trim().toLowerCase() === wanted
+    );
+    if (headingIdx === -1) return null;
+    const nextHeading = findHeadingLine(lines, () => true, headingIdx + 1);
+    if (nextHeading !== -1) insertAt = nextHeading;
+  } else {
+    const questions = findHeadingLine(lines, (text) =>
+      QUESTION_HEADING.test(text)
+    );
+    if (questions !== -1) insertAt = questions;
+  }
+
+  // Sit tight under the section rather than after its trailing blank lines.
+  while (insertAt > 0 && lines[insertAt - 1].trim() === "") insertAt--;
+
+  const head = lines.slice(0, insertAt);
+  // The blank lines the block is being slipped in front of are re-emitted as
+  // the single separator below — kept here they would double up.
+  let tailAt = insertAt;
+  while (tailAt < lines.length && lines[tailAt].trim() === "") tailAt++;
+  const tail = lines.slice(tailAt);
+  // One blank line between the block and its surroundings, except between two
+  // checkbox lines — a gap there would split one list into two on screen.
+  const joinsTasks =
+    TASK_LINE.test(head[head.length - 1] ?? "") &&
+    TASK_LINE.test(addition.split("\n")[0]);
+  const out = [...head];
+  if (head.length > 0 && !joinsTasks) out.push("");
+  out.push(...addition.split("\n"));
+  if (tail.length > 0) out.push("", ...tail);
+  return out.join("\n");
+}
+
 /** The plan with every task marker normalized to "[ ]" — used to tell pure
  *  state flips apart from real content edits. */
 export function stripTaskStates(plan: string | null | undefined): string {
