@@ -5,6 +5,7 @@ import {
   buildInheritedBranchMessage,
   buildInheritedPrMessage,
   buildNotebookContextMessage,
+  buildSubagentSystemPrompt,
   toPrLineThreads,
 } from "./prompt";
 
@@ -717,5 +718,149 @@ describe("statut d'atterrissage annoncé dans le contexte", () => {
   it("ne dit rien quand le statut n'est pas connu", () => {
     expect(buildAgentContextMessage(ticket)).not.toContain("land in");
     expect(buildNotebookContextMessage({ repo })).not.toContain("land in");
+  });
+});
+
+/**
+ * Délégation (MIN-112). Deux règles du fichier sont testées ici plutôt que relues :
+ * le prompt ne décrit JAMAIS ce que le run n'a pas (sinon le modèle appelle un tool
+ * absent et brûle un round), et le prompt d'un sous-agent est une persona à part —
+ * pas celui du parent amputé, qui lui ferait chercher un ticket inexistant.
+ */
+const FAVORITES = [
+  {
+    id: "deepseek/cheap",
+    label: "Cheap One",
+    use_case: "Exploration, greps, reading a lot of files.",
+    thinking_effort: "low" as const,
+  },
+  { id: "anthropic/strong", label: "Strong One", use_case: "Code you will not re-read." },
+];
+
+describe("buildAgentSystemPrompt — section Delegation", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`n'existe PAS quand les tools ne sont pas servis (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).not.toContain("spawn_agent");
+      expect(prompt).not.toContain("Delegating to sub-agents");
+      expect(prompt).not.toContain("Favorites for sub-agents");
+    });
+
+    it(`dit le contrat de wakeup et le gel des éditions (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({
+        anchor,
+        subagents: { favorites: FAVORITES, models: true },
+      });
+      expect(prompt).toContain("Delegating to sub-agents");
+      expect(prompt).toContain("`spawn_agent`");
+      expect(prompt).toMatch(/You never wait/);
+      expect(prompt).toMatch(/woken up/);
+      // Les deux contraintes structurelles : un seul écrivain, et le parent en est un.
+      expect(prompt).toMatch(/One writer at a time/);
+      expect(prompt).toMatch(/SO ARE YOUR OWN EDITING TOOLS/);
+      // Quand NE PAS déléguer compte autant que quand le faire.
+      expect(prompt).toMatch(/Do NOT delegate/);
+      expect(prompt).toMatch(/cannot delegate further/);
+    });
+  }
+
+  it("sert les favoris avec leur use-case et le thinking_effort conseillé", () => {
+    const prompt = buildAgentSystemPrompt({
+      anchor: "issue",
+      subagents: { favorites: FAVORITES, models: true },
+    });
+    expect(prompt).toContain("Favorites for sub-agents");
+    expect(prompt).toContain("Cheap One");
+    expect(prompt).toContain("`deepseek/cheap`");
+    expect(prompt).toContain("Exploration, greps, reading a lot of files.");
+    expect(prompt).toContain("suggested thinking_effort: `low`");
+    // Un favori sans conseil ne s'invente pas de niveau.
+    expect(prompt).toContain("Strong One");
+  });
+
+  it("tait les favoris quand le run ne peut pas changer de modèle, et le DIT", () => {
+    const prompt = buildAgentSystemPrompt({
+      anchor: "issue",
+      subagents: { favorites: FAVORITES, models: false },
+    });
+    expect(prompt).toContain("Delegating to sub-agents");
+    expect(prompt).not.toContain("Favorites for sub-agents");
+    expect(prompt).not.toContain("Cheap One");
+    expect(prompt).toMatch(/always runs on your own model/);
+  });
+
+  it("sert la bibliothèque de templates avec leurs variables", () => {
+    const prompt = buildAgentSystemPrompt({
+      anchor: "issue",
+      subagents: { favorites: [], models: true },
+    });
+    expect(prompt).toContain("Prompt templates");
+    expect(prompt).toContain("{{task}}");
+    for (const id of ["explore", "implement", "test", "docs"]) {
+      expect(prompt).toContain(`\`${id}\``);
+    }
+  });
+});
+
+describe("buildSubagentSystemPrompt", () => {
+  it("dit ce qu'un sous-agent n'a pas — et surtout qu'il n'a pas de tour suivant", () => {
+    for (const mode of ["explore", "implement"] as const) {
+      const prompt = buildSubagentSystemPrompt({ mode });
+      expect(prompt).toMatch(/You are a SUB-AGENT/);
+      expect(prompt).toMatch(/No ticket, no notebook, no pull request/);
+      expect(prompt).toMatch(/No delegation/);
+      expect(prompt).toMatch(/No next turn/);
+      expect(prompt).toMatch(/No conversation/);
+      // Le garde-fou git de command-guard.ts s'applique aussi à lui — mais on ne
+      // l'annonce qu'à celui qui a un shell : dire à un `explore` que `run_command`
+      // refuse `git push` lui ferait croire qu'il a `run_command`.
+      if (mode === "implement") {
+        expect(prompt).toContain("git commit");
+        expect(prompt).toMatch(/REFUSES/);
+      } else {
+        expect(prompt).toMatch(/No shell/);
+      }
+      // Le rapport est l'UNIQUE livrable, avec ses ancres.
+      expect(prompt).toContain("## Your report");
+      expect(prompt).toContain("`path:line`");
+      // Aucun tool du parent n'est jamais décrit.
+      for (const tool of ["spawn_agent", "create_pr", "ask_user", "update_plan", "read_issue", "read_scratchpad", "run_background"]) {
+        expect(prompt).not.toContain(tool);
+      }
+    }
+  });
+
+  it("un explore est READ-ONLY : aucun tool d'édition décrit", () => {
+    const prompt = buildSubagentSystemPrompt({ mode: "explore", webSearch: true });
+    for (const tool of ["edit_file", "apply_edits", "write_file", "apply_patch", "web_search"]) {
+      expect(prompt).not.toContain(tool);
+    }
+    expect(prompt).toMatch(/READ-ONLY/);
+    expect(prompt).toContain("read_file");
+    // `run_command` n'est cité que pour dire qu'il ne l'a PAS : un explore qui
+    // tenterait un `npm test` brûlerait un round pour lire « unknown tool ».
+    expect(prompt).toMatch(/You have no `run_command`/);
+  });
+
+  it("un implement reçoit l'interface d'édition de SON modèle, et la sandbox partagée", () => {
+    const strings = buildSubagentSystemPrompt({ mode: "implement" });
+    expect(strings).toContain("edit_file");
+    expect(strings).not.toContain("apply_patch");
+    expect(strings).toMatch(/sandbox is SHARED/);
+
+    const patch = buildSubagentSystemPrompt({ mode: "implement", applyPatch: true });
+    expect(patch).toContain("apply_patch");
+    for (const tool of ["edit_file", "apply_edits", "write_file"]) {
+      expect(patch).not.toContain(tool);
+    }
+  });
+
+  it("ne promet `web_search` que quand il est servi", () => {
+    expect(buildSubagentSystemPrompt({ mode: "implement", webSearch: true })).toContain(
+      "web_search",
+    );
+    expect(buildSubagentSystemPrompt({ mode: "implement", webSearch: false })).not.toContain(
+      "web_search",
+    );
   });
 });

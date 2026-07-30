@@ -82,6 +82,15 @@ const MAX_ROUNDS_PER_CHUNK = 60;
  * réponse → relecture → réponse », et le tour se termine quoi qu'il arrive.
  */
 const MAX_TURN_END_REENTRIES = 2;
+/**
+ * Garde-fou PROPRE aux sous-agents (MIN-112) : relances du tour pour livrer un
+ * rapport arrivé après que le modèle a rendu la main. Indépendant de
+ * `MAX_TURN_END_REENTRIES` — un tour qui délègue trois fois de suite est un tour
+ * normal, là où trois passages de type-check signalent un dépôt inréparable. Le
+ * plafond existe quand même : sans lui, une fille qui relance une fille (impossible
+ * par construction) ou un rapport qui ne se drainerait jamais retiendrait le tour.
+ */
+const MAX_SUBAGENT_WAIT_REENTRIES = 8;
 /** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
 const MAX_COMPACTIONS_PER_CHUNK = 3;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
@@ -110,6 +119,10 @@ const READ_ONLY_TOOLS = new Set([
   "read_issue",
   "read_attachment",
   "read_scratchpad",
+  // Suivi des sous-agents (MIN-112) : deux lectures du registre en mémoire, sans
+  // effet de bord. `spawn_agent` n'y est PAS — il lance du travail.
+  "agent_status",
+  "list_agents",
 ]);
 
 /**
@@ -151,6 +164,13 @@ export type EmitAgentEvent = (
 export type ExecuteAgentTool = (
   name: string,
   args: Record<string, unknown>,
+  /**
+   * Id du tool-call en cours, tel qu'il part sur l'event `tool_call`. Sert à
+   * RATTACHER ce qu'un tool engendre à sa ligne du fil : les events d'un sous-agent
+   * portent le `parent_call_id` de son `spawn_agent` (MIN-112), et le fil les replie
+   * dessous au lieu d'ouvrir une bulle par event.
+   */
+  callId?: string,
 ) => Promise<{
   result: unknown;
   success: boolean;
@@ -224,6 +244,60 @@ export interface RunAgentLoopParams {
    * d'un `ask_user`. Optionnel (absent = pas de steering).
    */
   pullSteering?: () => Promise<string[]>;
+  /**
+   * Rapports de sous-agents TERMINÉS, drainés au SOMMET de chaque round juste après
+   * le steering (MIN-112) : chaque rapport devient un message `user`. C'est ÇA le
+   * wakeup — le parent n'a jamais attendu, le rapport arrive tout seul à la
+   * prochaine frontière sûre, exactement comme un message de steering. Absent = pas
+   * de délégation sur ce run.
+   *
+   * `costUsd` est ajouté à l'accumulateur de la boucle : sans lui, `budgetUsd`
+   * sous-compte et un run dépasse le budget mensuel de l'utilisateur (c'est le trou
+   * de facturation le plus facile à laisser ouvert).
+   */
+  pullSubagentReports?: () => Promise<Array<{ id: string; text: string; costUsd: number }>>;
+  /**
+   * Dernière chance de livrer un rapport avant que le tour ne se termine (MIN-112) :
+   * appelé quand le modèle répond SANS tool-call, AVANT `onTurnEnd`, avec le budget
+   * mural restant. Tant qu'il rend des rapports, le tour REPART (plafond
+   * `MAX_SUBAGENT_WAIT_REENTRIES`). C'est ce qui fait tenir le contrat annoncé dans
+   * la description de `spawn_agent` — « tu n'attends pas, le rapport te revient » —
+   * à l'intérieur du chunk : une promesse ne survivrait pas à la fin de la fonction
+   * Vercel. Si le budget tombe d'abord, l'appelant coupe les filles en vol et livre
+   * leur rapport PARTIEL au chunk suivant.
+   */
+  awaitSubagents?: (opts: { budgetMs: number }) => Promise<{
+    reports: Array<{ id: string; text: string; costUsd: number }>;
+    /**
+     * L'attente a été rompue par un MESSAGE de l'utilisateur, sans qu'aucune fille
+     * n'ait fini. Le tour repart quand même : le sommet du round suivant draine le
+     * steering, et le parent peut répondre — pendant que les filles continuent de
+     * tourner. C'est ce qui permet à l'utilisateur de réveiller un agent qu'il
+     * trouve trop long, sans tuer le travail en cours.
+     */
+    interrupted?: boolean;
+    /**
+     * Le chunk n'a plus de budget mais une fille TRAVAILLE ENCORE, son état sauvé.
+     * La boucle SUSPEND alors le tour au lieu de le terminer : l'appelant persiste
+     * le checkpoint et re-queue, la fille repart au chunk suivant. C'est ce qui lui
+     * permet de dépasser les 300 s de la fonction Vercel — sans quoi toute tâche
+     * déléguée de plus de trois minutes serait coupée à mi-chemin.
+     */
+    suspend?: boolean;
+  }>;
+  /**
+   * Ce chunk reprend un tour GARÉ en attente de ses sous-agents : le parent avait
+   * déjà répondu, il n'a rien de neuf à dire. On attend donc AVANT le premier appel
+   * LLM plutôt qu'après — sinon chaque chunk d'attente paierait un aller-retour au
+   * modèle pour lui faire redire qu'il attend.
+   */
+  parkedForSubagents?: boolean;
+  /**
+   * Plafond de rounds de CETTE boucle (défaut `MAX_ROUNDS_PER_CHUNK`). Sert à borner
+   * une boucle FILLE (MIN-112) : un sous-agent n'a pas de reprise, laisser tourner
+   * soixante rounds au nom du parent n'a aucun sens.
+   */
+  maxRounds?: number;
   /**
    * Miroir best-effort des états du checklist (tool update_plan) vers le plan de
    * l'issue liée. Appelé après l'event `plan_update`, jamais bloquant (les erreurs
@@ -448,6 +522,19 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { count: Array.isArray(args.tasks) ? args.tasks.length : 0 };
     case "set_scratchpad":
       return { chars: String(args.content ?? "").length };
+    // Sous-agents (MIN-112). Sans ces cas, le payload persisté part à `{}` et le
+    // bloc replié du fil n'a rien à afficher au replay : ni le mode, ni la tâche,
+    // ni le modèle sur lequel la fille a tourné.
+    case "spawn_agent":
+      return {
+        mode: String(args.mode ?? ""),
+        task: cap(String(args.task ?? ""), 200),
+        ...(args.model ? { model: String(args.model) } : {}),
+        ...(args.thinking_effort ? { thinking_effort: String(args.thinking_effort) } : {}),
+        ...(args.prompt_template ? { prompt_template: String(args.prompt_template) } : {}),
+      };
+    case "agent_status":
+      return { id: String(args.id ?? "") };
     default:
       return {};
   }
@@ -851,6 +938,15 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // corriger, le check suivant vérifie le correctif — puis le tour se termine,
   // erreurs restantes ou non. Compté par CHUNK, comme les compactions.
   let turnEndReentries = 0;
+  // Relances du tour pour livrer un rapport de sous-agent (MIN-112) — budget PROPRE,
+  // cf. MAX_SUBAGENT_WAIT_REENTRIES.
+  let subagentReentries = 0;
+  // Tour repris en ATTENTE de ses filles : on attend avant le premier appel LLM,
+  // une seule fois (le drapeau retombe dès qu'on est passé).
+  let parked = params.parkedForSubagents === true;
+  // Plafond de rounds de cette boucle : celui du chunk par défaut, plus serré pour
+  // une boucle fille (MIN-112).
+  const maxRounds = params.maxRounds ?? MAX_ROUNDS_PER_CHUNK;
   // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut —
   // mais TOUJOURS borné par le plafond absolu. Une fenêtre de 1 M donnerait sinon
   // un seuil de ~787 000 tokens, que nos runs n'atteignent jamais : c'est ce qui
@@ -876,7 +972,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
     // Frontière sûre : suspend AVANT le prochain appel LLM.
-    if (elapsed() >= params.softDeadlineMs || round >= MAX_ROUNDS_PER_CHUNK) {
+    if (elapsed() >= params.softDeadlineMs || round >= maxRounds) {
       return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
     // Budget d'usage épuisé (quota minddy) — MÊME frontière, même raison : on ne
@@ -901,6 +997,46 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         messages.push({ role: "user", content: text });
         await emit("user_message", { text: cap(text, 4000) });
       }
+    }
+
+    // Wakeup des sous-agents (MIN-112) : MÊME frontière, MÊME mécanique que le
+    // steering — les rapports terminés entrent comme messages `user` avant l'appel.
+    // Pas de bulle par rapport : le bloc replié du sous-agent raconte déjà le détail
+    // dans le fil, un event `status` suffit à le marquer.
+    let injectedThisRound = 0;
+    if (params.pullSubagentReports) {
+      const reports = await params.pullSubagentReports().catch(() => []);
+      for (const report of reports) {
+        messages.push({ role: "user", content: report.text });
+        costUsd += report.costUsd;
+        injectedThisRound++;
+        await emit("status", { phase: "subagent_report", id: report.id });
+      }
+    }
+
+    // Tour GARÉ repris (MIN-112) : le parent avait déjà répondu et attend ses
+    // filles. On attend ICI, avant tout appel LLM — le faire parler pour qu'il
+    // redise « j'attends » coûterait un aller-retour par chunk d'attente.
+    // `injectedThisRound` garde le parking : si un rapport attendait déjà, le parent
+    // a quelque chose à dire — le garer de nouveau lui ferait rater son tour de
+    // parole et retarderait la réponse d'un chunk entier.
+    if (parked && injectedThisRound === 0 && params.awaitSubagents) {
+      parked = false;
+      const waited = await params
+        .awaitSubagents({ budgetMs: params.softDeadlineMs - elapsed() })
+        .catch(() => null);
+      if (waited?.suspend) {
+        return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+      }
+      for (const report of waited?.reports ?? []) {
+        messages.push({ role: "user", content: report.text });
+        costUsd += report.costUsd;
+        injectedThisRound++;
+        await emit("status", { phase: "subagent_report", id: report.id });
+      }
+    } else if (parked) {
+      // Un rapport attendait : le tour n'est plus garé, il reprend la parole.
+      parked = false;
     }
 
     // Durcissement : élague les sorties de tools périmées (protège les ~40 Ko
@@ -1111,6 +1247,37 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       messages.push({ role: "assistant", content: stream.content || "" });
       const reply = stream.content.trim() || "Done.";
 
+      // Sous-agents encore en vol (MIN-112) : le tour ne se termine pas tant qu'une
+      // fille peut encore rendre son rapport DANS ce chunk. Placé AVANT le
+      // type-check : les éditions d'un `implement` doivent être dans `editedPaths`
+      // et dans le diff avant que diagnostics.ts et self-review.ts ne parlent —
+      // sinon un sous-agent casse les types en silence.
+      if (params.awaitSubagents && subagentReentries < MAX_SUBAGENT_WAIT_REENTRIES) {
+        const waited = await params
+          .awaitSubagents({ budgetMs: params.softDeadlineMs - elapsed() })
+          .catch(() => null);
+        // Plus de budget mais une fille travaille encore, son état sauvé : on
+        // SUSPEND le tour au lieu de le terminer. L'appelant persiste et re-queue ;
+        // la fille repart au chunk suivant, et le parent la retrouve garée.
+        if (waited?.suspend) {
+          clearLive();
+          return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+        }
+        // Le tour repart si une fille a rendu son rapport, OU si l'utilisateur a
+        // écrit pendant l'attente (son message est drainé au sommet du round).
+        if (waited && (waited.reports.length > 0 || waited.interrupted)) {
+          subagentReentries++;
+          if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
+          for (const report of waited.reports) {
+            messages.push({ role: "user", content: report.text });
+            costUsd += report.costUsd;
+            await emit("status", { phase: "subagent_report", id: report.id });
+          }
+          clearLive();
+          continue;
+        }
+      }
+
       // Dernier mot du harness (MIN-110) : le type-check de fin de tour. S'il a
       // quelque chose à dire, ce n'était pas la fin du tour — on injecte et on
       // reboucle. La réponse écrite part en `thinking` (même convention qu'un
@@ -1161,7 +1328,11 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         stream.toolCalls.map(async (tc) => {
           const args = safeParse(tc.function.arguments);
           try {
-            const { result, success, reason, images } = await execTool(tc.function.name, args);
+            const { result, success, reason, images } = await execTool(
+              tc.function.name,
+              args,
+              tc.id,
+            );
             return { tc, result, success, reason, images };
           } catch (err) {
             return {
@@ -1257,7 +1428,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       let reason: string | undefined;
       let images: AgentToolImage[] | undefined;
       try {
-        ({ result, success, reason, images } = await execTool(name, args));
+        ({ result, success, reason, images } = await execTool(name, args, tc.id));
       } catch (err) {
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;

@@ -24,6 +24,7 @@ import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
 import { ReasoningBlock } from "./reasoning-block";
+import { SubagentBlock } from "./subagent-block";
 import { QuotaExhaustedCard } from "./quota-exhausted-card";
 import { coerceBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -111,6 +112,35 @@ type FeedItem =
       files: AgentFileChange[];
       truncated: boolean;
       createdAt: string;
+    }
+  /**
+   * UN sous-agent (MIN-112), replié. Tous les events qui portent son `subagent_id`
+   * sont AGRÉGÉS ici plutôt que rendus un par un : une fille produit autant d'events
+   * qu'un tour entier, et les laisser dans le flux rendrait illisible le tour qui a
+   * délégué — c'est le risque principal identifié en R9.
+   */
+  | {
+      kind: "subagent";
+      id: string;
+      /** Id lisible du sous-agent (`sub-1`), tel que le parent le manipule. */
+      subagentId: string;
+      mode: "explore" | "implement" | null;
+      /** Tool-calls de la fille : le seul compteur d'avancement que le fil voit. */
+      steps: number;
+      /** Rapport final (event `summary` de la fille). */
+      report: string;
+      /** Message d'erreur si sa boucle a échoué. */
+      error: string;
+      /** Son rapport a été livré au parent (event `status` du parent). */
+      delivered: boolean;
+      /** Livré PARTIEL : la fille a été coupée avant d'avoir conclu. */
+      partial: boolean;
+      createdAt: string;
+      /** Instant où la fille a rendu la main (résumé, erreur, ou livraison du
+       *  rapport par le parent), ou null tant qu'elle tourne : c'est ce qui FIGE
+       *  son chrono. Sans ça, une session relue trois jours plus tard afficherait
+       *  un sous-agent « lancé depuis 72 heures ». */
+      endedAt: string | null;
     };
 
 /**
@@ -214,8 +244,68 @@ function buildFeed(
     current = item;
   };
 
+  // Sous-agents rencontrés (MIN-112) : un bloc replié par fille, créé à son PREMIER
+  // event — donc juste après la ligne `spawn_agent` qui l'a lancée, puisque celle-ci
+  // précède forcément. Les events suivants de la même fille viennent s'y agréger.
+  const subagentBlocks = new Map<string, Extract<FeedItem, { kind: "subagent" }>>();
+  const subagentBlock = (
+    subagentId: string,
+    e: AgentRunEvent,
+    p: Record<string, unknown>,
+  ): Extract<FeedItem, { kind: "subagent" }> => {
+    const existing = subagentBlocks.get(subagentId);
+    if (existing) return existing;
+    const mode: "explore" | "implement" | null =
+      p.subagent_mode === "implement" ? "implement" : p.subagent_mode === "explore" ? "explore" : null;
+    const block = {
+      kind: "subagent" as const,
+      id: `subagent-${subagentId}`,
+      subagentId,
+      mode,
+      steps: 0,
+      report: "",
+      error: "",
+      delivered: false,
+      partial: false,
+      createdAt: e.created_at,
+      endedAt: null,
+    };
+    subagentBlocks.set(subagentId, block);
+    items.push(block);
+    return block;
+  };
+
   for (const e of ordered) {
     const p = e.payload ?? {};
+    // Event d'un SOUS-AGENT : il ne traverse pas le flux du parent. Sans ce détour,
+    // chaque `thinking` de la fille ouvrirait une bulle et chaque `tool_call` se
+    // rattacherait au message du parent, mélangeant deux sessions dans une seule
+    // ligne de lecture.
+    if (typeof p.subagent_id === "string" && p.subagent_id) {
+      const block = subagentBlock(p.subagent_id, e, p);
+      if (e.type === "tool_call") block.steps++;
+      else if (e.type === "summary") {
+        block.report = str(p.text);
+        block.endedAt = e.created_at;
+      } else if (e.type === "error") {
+        block.error = str(p.message) || str(p.text);
+        block.endedAt = e.created_at;
+      }
+      continue;
+    }
+    // Le parent annonce qu'un rapport lui a été remis : c'est ce qui distingue une
+    // fille COUPÉE (livrée sans rapport) d'une fille encore au travail.
+    if (e.type === "status" && p.phase === "subagent_report" && typeof p.id === "string") {
+      const block = subagentBlocks.get(p.id);
+      if (block) {
+        block.delivered = true;
+        block.partial = p.partial === true;
+        // Filet du chrono : une fille COUPÉE n'émet ni résumé ni erreur, donc c'est
+        // cette livraison-là qui est son seul instant de fin.
+        block.endedAt ??= e.created_at;
+      }
+      continue;
+    }
     // La fenêtre « le prochain user_message répond à la question » ne survit
     // qu'aux events neutres — tout event de contenu (nouveau tour) la referme.
     if (!["user_message", "question", "tool_result", "status"].includes(e.type)) {
@@ -559,6 +649,22 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
   if (it.kind === "reasoning") {
     return (
       <ReasoningBlock key={it.id} active={it.active} durationMs={it.durationMs} text={it.text} />
+    );
+  }
+  if (it.kind === "subagent") {
+    return (
+      <SubagentBlock
+        key={it.id}
+        subagentId={it.subagentId}
+        mode={it.mode}
+        steps={it.steps}
+        report={it.report}
+        error={it.error}
+        delivered={it.delivered}
+        partial={it.partial}
+        startedAt={it.createdAt}
+        endedAt={it.endedAt}
+      />
     );
   }
   if (it.kind === "quota") {

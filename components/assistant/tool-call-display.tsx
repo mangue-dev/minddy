@@ -6,6 +6,7 @@ import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import {
   Activity,
+  Bot,
   ChevronRight,
   FilePen,
   FilePlus2,
@@ -580,6 +581,35 @@ const TOOL_META: Record<string, ToolMeta> = {
       if (args.action === "check") return t("agentBackgroundCheck", { job });
       return t("agentBackgroundStart", { command: (args.command as string) || "…" });
     },
+  },
+  // Sous-agents (MIN-112). `toolArgSummary` persiste `{ mode, task, model,
+  // thinking_effort }` : la ligne dit ce qui a été délégué et à qui, sinon un tour
+  // qui délègue n'affiche qu'un « Traitement… » anonyme.
+  spawn_agent: {
+    icon: Bot,
+    getLabel: (args, _result, success, status, t) => {
+      if (!success && status === "complete") return t("agentSpawnRefused");
+      const task = typeof args.task === "string" ? args.task.trim() : "";
+      const label = task.length > 60 ? `${task.slice(0, 60)}…` : task || "…";
+      return args.mode === "implement"
+        ? t("agentSpawnImplement", { task: label })
+        : t("agentSpawnExplore", { task: label });
+    },
+  },
+  agent_status: {
+    icon: Activity,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentSubagentStatus", { id: (args.id as string) || "…" }),
+  },
+  list_agents: {
+    icon: Bot,
+    // Libellé SANS compte, délibérément. `list_agents` n'a pas d'arguments, et le
+    // fil d'un run d'agent ne transporte PAS le résultat des tools : `buildFeed`
+    // ne garde que `{status, success}` par tool-call. Un libellé qui lirait
+    // `result.agents` afficherait donc « Aucun sous-agent » sur une session qui en
+    // a trois — c'est exactement le piège déjà documenté pour `apply_edits`
+    // ci-dessus, et il a été vu à l'écran avant d'être corrigé ici.
+    getLabel: (_a, _r, _s, _st, t) => t("agentSubagentList"),
   },
 };
 

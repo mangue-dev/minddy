@@ -42,6 +42,20 @@ import {
   BACKGROUND_FETCH_BYTES,
   type BackgroundJobRunner,
 } from "./background";
+import {
+  Subagents,
+  subagentUsageSeq,
+  MAX_SUBAGENTS_PER_CHUNK,
+  type SubagentRunner,
+  type SubagentRunResult,
+} from "./subagent";
+import {
+  getSubagentFavorites,
+  makeSubagentModelResolver,
+  maxParallelSubagents,
+} from "./subagent-config";
+import { getAgentModelsForUser } from "./models-catalog";
+import { pruneToolOutputs } from "./prune";
 import { resolveWithin } from "./repo-path";
 import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "./diagnostics";
 import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "./self-review";
@@ -71,7 +85,12 @@ import {
 } from "./agent-loop";
 import type { AgentToolImage } from "./content";
 import { broadcastRunStream } from "./live";
-import { agentToolsFor, RUN_COMMAND_TIMEOUT_MS } from "./tools";
+import {
+  agentToolsFor,
+  subagentToolsFor,
+  SUBAGENT_CONTROL_TOOLS,
+  RUN_COMMAND_TIMEOUT_MS,
+} from "./tools";
 import {
   isWebSearchEnabled,
   runWebSearchTool,
@@ -80,6 +99,7 @@ import {
 } from "@/lib/server/web-search";
 import {
   buildAgentSystemPrompt,
+  buildSubagentSystemPrompt,
   buildAgentContextMessage,
   buildNotebookContextMessage,
   buildInheritedPrMessage,
@@ -167,6 +187,37 @@ const MAX_IMAGES_PER_TURN = 2;
     `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
     donc une erreur persistante s'arrête après ce nombre de claims. */
 const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
+/**
+ * Wall-clock max d'UN sous-agent (MIN-112). Sa soft-deadline effective est
+ * `min(ça, budget restant du chunk − SUBAGENT_PARENT_RESERVE_MS)`.
+ *
+ * Pas « la moitié du restant » : le parent n'a pas besoin de la moitié du chunk
+ * pour lire un rapport et conclure — il lui faut une RÉSERVE, pas une part. La
+ * moitié plafonnait une fille à ~2 min sur un chunk de 250 s, ce qui coupait net
+ * toute tâche déléguée un peu sérieuse.
+ */
+const SUBAGENT_MAX_MS = 180_000;
+/**
+ * Ce qu'on GARDE au parent quand une fille tourne : de quoi recevoir le rapport,
+ * relancer un round, faire le type-check de fin de tour et pousser. En dessous, le
+ * tour se terminerait sur un rapport que personne n'a eu le temps de lire.
+ */
+const SUBAGENT_PARENT_RESERVE_MS = 60_000;
+/** En dessous, un `spawn_agent` est REFUSÉ : la fille n'aurait pas le temps de
+ *  produire un rapport utile, et un round payé pour rien est un round perdu. */
+const SUBAGENT_MIN_MS = 30_000;
+/** Marge gardée pour couper les filles et livrer leur rapport partiel DANS le tour
+ *  (avant le type-check, qui doit voir leurs fichiers). */
+const SUBAGENT_CUT_MARGIN_MS = 10_000;
+/** Plafond de rounds d'une boucle FILLE : elle n'a pas de reprise. */
+const SUBAGENT_MAX_ROUNDS = 15;
+/**
+ * Base des seq de fichiers de sortie d'un sous-agent, hors de la bande du parent
+ * (`run.continuations * 1000`, soit au plus ~20 000 avec AGENT_MAX_CONTINUATIONS).
+ * Sans ça, deux exec-tools d'un même chunk écriraient le même `slug-<seq>.log`
+ * (cf. `toolOutputFileName`) et le second écraserait la sortie du premier.
+ */
+const SUBAGENT_OUTPUT_SEQ_BASE = 500_000;
 
 export type ExecuteOutcome = "completed" | "suspended" | "interrupted" | "failed";
 
@@ -180,6 +231,45 @@ function slugForBranch(identifier: string): string {
 
 /** Cap du diff renvoyé au modèle après une édition (le diff complet n'est pas utile). */
 const EDIT_DIFF_CAP = 4000;
+
+/**
+ * Dernier texte écrit par l'assistant dans un historique. Sert au rapport PARTIEL
+ * d'un sous-agent coupé (MIN-112) : sa boucle n'a pas de `reply`, mais ce qu'elle a
+ * écrit en dernier est souvent l'essentiel de ce qu'elle avait à dire. Le jeter
+ * reviendrait à perdre le travail et l'argent déjà dépensés.
+ */
+/**
+ * Budget d'historique qu'UNE fille suspendue a le droit d'emporter dans le
+ * checkpoint (MIN-112). Le checkpoint entier est plafonné à `MAX_CHECKPOINT_BYTES`
+ * (8 Mo) et le dépassement fait ÉCHOUER le tour : une fille bavarde ne doit pas
+ * pouvoir tuer la session de son parent pour s'offrir une reprise.
+ */
+const SUBAGENT_HISTORY_MAX_BYTES = 1_500_000;
+
+/**
+ * Prépare l'historique d'une fille pour le checkpoint, ou `null` s'il ne rentre
+ * pas. On élague d'abord les sorties de tools périmées — le même traitement que la
+ * boucle applique à son propre historique, et de loin le plus gros poste. Ce qui
+ * reste au-dessus du budget n'est pas tronqué au hasard : un historique coupé au
+ * milieu casse l'appariement tool_call ↔ tool_result et le round-trip échouerait
+ * au provider. Mieux vaut renoncer à la reprise et livrer un rapport partiel.
+ */
+function capSubagentHistory(messages: AgentChatMessage[]): AgentChatMessage[] | null {
+  if (!messages.length) return null;
+  const trimmed = [...messages];
+  pruneToolOutputs(trimmed);
+  return JSON.stringify(trimmed).length <= SUBAGENT_HISTORY_MAX_BYTES ? trimmed : null;
+}
+
+function lastAssistantText(messages: AgentChatMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "assistant") continue;
+    const text = typeof m.content === "string" ? m.content.trim() : "";
+    if (text) return text;
+  }
+  return "";
+}
 
 function toNum(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
@@ -196,6 +286,22 @@ type CreatePrHandler = (args: {
 type WebSearchHandler =
   | ((query: string) => Promise<{ result: unknown; success: boolean }>)
   | null;
+
+/**
+ * Refus d'un tool absent du jeu de l'appelant (MIN-112). Un sous-agent ne devrait
+ * jamais y arriver (le tool n'est pas dans son schéma) mais un modèle en invente
+ * parfois un qu'il a vu ailleurs, et un vieux checkpoint peut porter un système qui
+ * le décrit : mieux vaut un refus qui DIT pourquoi qu'un « Unknown tool » qui laisse
+ * le modèle retenter au round suivant.
+ */
+function subagentDenied(name: string, why: string): { result: unknown; success: boolean } {
+  return {
+    result: {
+      error: `You do not have the ${name} tool: ${why}. Do the part you can, then report it.`,
+    },
+    success: false,
+  };
+}
 
 /**
  * Les mains de `run_background` (MIN-114) dans LA microVM de ce chunk : la
@@ -217,29 +323,61 @@ function sandboxBackgroundRunner(sandbox: Sandbox): BackgroundJobRunner {
   };
 }
 
-/** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
-    git/PR (`createPr`), tickets minddy (`issue-tools.ts`) et carnet du lanceur
-    (`scratchpad-tools.ts`) — routés par nom. Les deux derniers sont servis aux
-    DEUX ancrages (MIN-125) : l'ancrage ne pilote plus que la cible par défaut des
-    tools ticket, portée par leur contexte. */
-function makeExecTool(
-  sandbox: Sandbox,
-  createPr: CreatePrHandler,
-  issueCtx: IssueToolContext,
-  scratchpadCtx: ScratchpadToolContext,
-  webSearch: WebSearchHandler,
+/**
+ * Ce dont un exec-tool a besoin. Un objet plutôt qu'une liste de positions : depuis
+ * les sous-agents (MIN-112) il y a DEUX exec-tools par chunk, celui du parent et
+ * celui d'une fille, et ils ne diffèrent que par une poignée de champs — nullables
+ * ici, structurellement absents là-bas.
+ */
+interface ExecToolConfig {
+  sandbox: Sandbox;
+  /** null = pas de livraison (jeu d'un sous-agent : la PR appartient au parent). */
+  createPr: CreatePrHandler | null;
+  /** null = pas de tools ticket (idem : le ticket appartient au parent). */
+  issueCtx: IssueToolContext | null;
+  /** null = pas de tools carnet. */
+  scratchpadCtx: ScratchpadToolContext | null;
+  webSearch: WebSearchHandler;
   /** Base des seq de fichiers de sortie déposés (tranchée par continuation, comme
-      les autres compteurs de run) : deux chunks n'écrasent pas leurs fichiers. */
-  outputSeqBase: number,
+      les autres compteurs de run) : deux chunks n'écrasent pas leurs fichiers — et
+      deux exec-tools d'un même chunk non plus (cf. `toolOutputFileName`). */
+  outputSeqBase: number;
   /** Registre des jobs de fond du chunk (MIN-114). Tenu par l'appelant : c'est lui
-      qui les tue avant chaque push et en fin de chunk. */
-  background: BackgroundJobs,
-  /** Instructions repo déjà servies (MIN-115) — muté ici, persisté par l'appelant. */
-  instructions: InstructionsState,
+      qui les tue avant chaque push et en fin de chunk. null = pas de jobs de fond. */
+  background: BackgroundJobs | null;
+  /** Instructions repo déjà servies (MIN-115) — muté ici, persisté par l'appelant.
+      PROPRE à chaque exec-tool : partager celui du parent marquerait un `AGENTS.md`
+      « déjà servi » alors qu'il ne l'a été qu'à une fille, dont le contexte meurt
+      avec elle — le parent ne le lirait jamais. */
+  instructions: InstructionsState;
   /** Fichiers du dépôt édités depuis le dernier type-check (MIN-110). Muté ici,
-      lu et vidé par le hook de fin de tour de l'appelant. */
-  editedPaths: Set<string>,
-): ExecuteAgentTool {
+      lu et vidé par le hook de fin de tour de l'appelant. PARTAGÉ avec les
+      sous-agents : c'est ce que le type-check de fin de tour lit, et une fille qui
+      casse un type doit le faire dire. */
+  editedPaths: Set<string>;
+  /** Registre des sous-agents du chunk (MIN-112). null = jeu d'un sous-agent (la
+      hiérarchie est à un niveau) ou vieux checkpoint qui appelle encore ces tools. */
+  subagents: Subagents | null;
+}
+
+/** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
+    git/PR (`createPr`), tickets minddy (`issue-tools.ts`), carnet du lanceur
+    (`scratchpad-tools.ts`) et délégation (`subagent.ts`) — routés par nom. Les
+    tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage ne pilote plus
+    que la cible par défaut des tools ticket, portée par leur contexte. */
+function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
+  const {
+    sandbox,
+    createPr,
+    issueCtx,
+    scratchpadCtx,
+    webSearch,
+    outputSeqBase,
+    background,
+    instructions,
+    editedPaths,
+    subagents,
+  } = cfg;
   let outputSeq = 0;
   /** Images déjà montrées au modèle sur ce chunk (plafond MAX_IMAGES_PER_TURN). */
   let imagesUsed = 0;
@@ -308,12 +446,34 @@ function makeExecTool(
     return { ...res, result: { repo_instructions: block, ...(res.result as object) } };
   };
 
-  return async (name, args) => {
+  return async (name, args, callId) => {
+    // Verrou d'écriture de la sandbox PARTAGÉE (MIN-112). Le parent qui continue
+    // d'éditer pendant qu'une fille écrit est exactement le même risque que deux
+    // filles simultanées, dans un dépôt dont la fin de tour fait `git add -A`. La
+    // décision vit dans `subagent.ts` (module de politique, testable) ; ici il n'y a
+    // que le branchement. La lecture et `run_command` restent ouverts.
+    const locked = subagents?.writeLock(name);
+    if (locked) return locked;
     if (ISSUE_TOOL_NAMES.has(name)) {
+      if (!issueCtx) return subagentDenied(name, "minddy tickets belong to the parent session");
       return capTurnImages(await executeIssueTool(issueCtx, name, args));
     }
     if (SCRATCHPAD_TOOL_NAMES.has(name)) {
+      if (!scratchpadCtx) {
+        return subagentDenied(name, "the user's notebook belongs to the parent session");
+      }
       return await executeScratchpadTool(scratchpadCtx, name, args);
+    }
+    if (SUBAGENT_CONTROL_TOOLS.has(name)) {
+      if (!subagents) {
+        return subagentDenied(
+          name,
+          "the sub-agent hierarchy is one level deep, so a sub-agent cannot delegate further",
+        );
+      }
+      if (name === "agent_status") return subagents.status(args);
+      if (name === "list_agents") return subagents.list();
+      return await subagents.spawn(args, { parentCallId: callId });
     }
     switch (name) {
       case "web_search": {
@@ -325,6 +485,12 @@ function makeExecTool(
         return await webSearch(query);
       }
       case "create_pr": {
+        if (!createPr) {
+          return subagentDenied(
+            "create_pr",
+            "the pull request belongs to the parent session, which decides when to open it",
+          );
+        }
         return await createPr({
           title: String(args.title ?? "").trim(),
           body: typeof args.body === "string" ? args.body : undefined,
@@ -631,6 +797,12 @@ function makeExecTool(
         // Le garde-fou git, le plafond de jobs et les offsets sont dans
         // `background.ts` — y compris le refus des commandes interdites (MIN-108),
         // sans quoi ce tool serait une porte dérobée sur `git push`.
+        if (!background) {
+          return subagentDenied(
+            "run_background",
+            "background jobs are held by the parent session, which kills them at the end of the turn — a job you left running would keep the machine awake with nobody watching it",
+          );
+        }
         return await background.handle(args);
       }
       default:
@@ -835,7 +1007,27 @@ export async function executeAgentRun(
   opts: { deadlineMs: number },
 ): Promise<ExecuteOutcome> {
   const callStart = Date.now();
-  const emit: EmitAgentEvent = (type, payload) => appendEvent(run.id, type, payload);
+  /**
+   * Events du chunk, SÉRIALISÉS derrière une chaîne de promesses (MIN-112).
+   *
+   * `appendEvent` calcule `seq` en lisant le max puis en insérant, et
+   * `idx_agent_run_events_run_seq` est UNIQUE : c'était sûr tant qu'un chunk n'avait
+   * qu'un émetteur. Depuis les sous-agents, une fille émet EN MÊME TEMPS que son
+   * parent. `appendEvent` retente désormais sur collision — il ne PERD plus rien —
+   * mais l'ORDRE du fil resterait au hasard des courses. La chaîne le rétablit : les
+   * events partent dans l'ordre où ils ont été produits, donc `?after=<seq>` reste
+   * un curseur honnête et le fil relu raconte les faits dans l'ordre.
+   *
+   * Le maillon avale les erreurs (`appendEvent` est déjà best-effort) : une chaîne
+   * cassée arrêterait tous les events suivants du chunk.
+   */
+  let emitChain: Promise<void> = Promise.resolve();
+  const emit: EmitAgentEvent = (type, payload) => {
+    emitChain = emitChain
+      .then(() => appendEvent(run.id, type, payload))
+      .catch(() => {});
+    return emitChain;
+  };
   // Direct du fil : le texte du round pendant qu'il s'écrit, diffusé sur le topic
   // du run. Rien en base — le fil ouvert l'affiche, les autres n'en savent rien.
   const emitLive: EmitAgentLive = (progress) =>
@@ -844,6 +1036,10 @@ export async function executeAgentRun(
   // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
   // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
   let backgroundJobs: BackgroundJobs | null = null;
+  // Sous-agents du chunk (MIN-112), visibles du `finally` : une fille laissée en vol
+  // continuerait d'appeler un modèle et d'écrire dans la sandbox après le retour de
+  // la fonction — au nom d'un tour qui n'existe plus.
+  let subagentRegistry: Subagents | null = null;
 
   try {
     await emit("status", { status: "running", continuation: run.continuations });
@@ -996,6 +1192,27 @@ export async function executeAgentRun(
     // renvoyer une maquette au lieu de sa fiche signalétique.
     const imageInput = await supportsImageInput(run.model, provider, apiKey).catch(() => false);
 
+    // Sous-agents (MIN-112) : réglages résolus ICI, avant l'amorce, pour la même
+    // raison que `web_search` et les images — le prompt système ne doit décrire que
+    // ce que le run sait vraiment faire.
+    //
+    // Le choix du MODÈLE d'un sous-agent suit la même règle du tout ou rien que
+    // `web_search` : un run BYOK Anthropic ne peut pas faire tourner `deepseek/…`,
+    // donc hors OpenRouter le champ `model` disparaît du schéma et la fille hérite
+    // du modèle du parent. Le catalogue n'est chargé que dans ce cas (il est caché
+    // une heure et ne lève jamais) : c'est lui qui valide un id, et il FILTRE sur le
+    // tool-calling — un sous-agent qui ne sait pas appeler d'outil ne peut rien faire.
+    const subagentModels = provider === "openrouter";
+    const [subagentFavorites, subagentMaxParallel, subagentCatalog] = await Promise.all([
+      getSubagentFavorites().catch(() => []),
+      maxParallelSubagents().catch(() => 2),
+      subagentModels && run.created_by
+        ? getAgentModelsForUser(run.created_by)
+            .then((c) => c.models.map((m) => m.id))
+            .catch(() => [] as string[])
+        : Promise.resolve([] as string[]),
+    ]);
+
     // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
     // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
@@ -1016,6 +1233,7 @@ export async function executeAgentRun(
         webSearch: webSearchAllowed,
         applyPatch: usesApplyPatch(run.model),
         images: imageInput,
+        subagents: { favorites: subagentFavorites, models: subagentModels },
       });
       const contextMsg = issue
         ? buildAgentContextMessage({
@@ -1311,17 +1529,224 @@ export async function executeAgentRun(
     backgroundJobs = background;
 
     // Fichiers édités depuis le dernier type-check (MIN-110). Vidé à chaque check :
-    // un tour qui ne touche à rien après coup n'en relance pas un second.
+    // un tour qui ne touche à rien après coup n'en relance pas un second. PARTAGÉ
+    // avec les sous-agents (MIN-112) : c'est ce que le type-check lit, et une fille
+    // qui casse un type doit le faire dire avant que le parent ne réponde.
     const editedPaths = new Set<string>();
+
+    // ── Sous-agents (MIN-112) ──────────────────────────────────────────────────
+    /** Chrono de la boucle : le budget restant du chunk borne chaque sous-agent. */
+    let loopStartedAt = Date.now();
+    const chunkRemainingMs = () => softDeadlineMs - (Date.now() - loopStartedAt);
+
     /**
-     * Type-check de fin de tour. Se tait — et coûte alors un aller-retour shell de
-     * ~1 ms — dès que l'une des conditions manque : rien d'édité, pas de
-     * `tsconfig.json`, pas de `node_modules/.bin/tsc`, ou pas assez de budget mural
-     * pour absorber un check à froid (mesuré 22 s, cf. §3.3 du comparatif). Sinon,
-     * les erreurs partent au modèle et le tour repart (une fois — plafond tenu par
-     * la boucle). Best-effort de bout en bout : une panne du checker ne doit jamais
-     * empêcher un tour de se terminer.
+     * Instructions du dépôt (AGENTS.md / CLAUDE.md à la racine) pour un sous-agent
+     * qui ÉCRIT. Le parent les a reçues à son amorce ; une fille, non — son
+     * historique n'est que son prompt système et sa tâche. Sans elles, un
+     * `implement` écrirait du code en ignorant les conventions du dépôt : exactement
+     * ce que `withTouchedInstructions` existe pour éviter, sauf que le sous-agent
+     * n'a même pas la racine. Un `explore` n'en a pas besoin (il ne produit rien
+     * qui doive suivre une convention), donc il ne les paie pas.
+     *
+     * Lues UNE fois par chunk, à la première fille qui écrit (promesse mémoïsée) :
+     * deux allers-retours sandbox, pas deux par sous-agent.
      */
+    let repoInstructionsForSubagent: Promise<{ message: string; bytes: number } | null> | null =
+      null;
+    const subagentRepoInstructions = () => {
+      repoInstructionsForSubagent ??= readRepoInstructions(sb).catch(() => null);
+      return repoInstructionsForSubagent;
+    };
+
+    /**
+     * Les mains d'un sous-agent : un SECOND appel de `runAgentLoop`, dans la MÊME
+     * microVM, avec un jeu de tools restreint, son propre `messages`, et le
+     * `runId`/`userId`/`projectId` du parent (facturation). Pas de nouveau moteur.
+     *
+     * Ce que la fille ne partage PAS avec son parent, et pourquoi :
+     *  - `emitLive` : `broadcastRunStream` diffuse sur le topic du RUN — une fille
+     *    qui streame son texte ÉCRASERAIT la bulle en cours d'écriture du parent. Le
+     *    fil la suit par ses events persistés, repliés, pas par le direct.
+     *  - `InstructionsState` : partager celui du parent marquerait un `AGENTS.md`
+     *    comme « déjà servi » alors qu'il ne l'a été qu'à la fille, dont le contexte
+     *    meurt avec elle — le parent ne le lirait jamais.
+     *  - `outputSeqBase` : deux exec-tools écriraient sinon le même `slug-<seq>.log`.
+     *  - `createPr`, les tools minddy, le registre de jobs de fond : ils appartiennent
+     *    au parent (et ne sont pas dans le schéma de la fille — c'est structurel).
+     */
+    const subagentRunner: SubagentRunner = {
+      run: async (job): Promise<SubagentRunResult> => {
+        // Soft-deadline : tout ce qui reste au chunk MOINS la réserve du parent,
+        // plafonné. Une fille peut donc travailler ~3 min par chunk — et REPRENDRE
+        // au chunk suivant si elle n'a pas fini (cf. `resumeMessages`), ce qui la
+        // libère du plafond de 300 s de la fonction Vercel.
+        const budget = Math.min(
+          SUBAGENT_MAX_MS,
+          chunkRemainingMs() - SUBAGENT_PARENT_RESERVE_MS,
+        );
+        const model = job.model ?? run.model!;
+        // REPRISE : on repart de l'historique sauvé, sans réamorcer prompt système
+        // ni tâche (ils y sont déjà). Sinon, amorçage neuf.
+        const childMessages: AgentChatMessage[] = job.resumeMessages?.length
+          ? job.resumeMessages
+          : [
+              {
+                role: "system",
+                content: buildSubagentSystemPrompt({
+                  mode: job.mode,
+                  applyPatch: usesApplyPatch(model),
+                  webSearch: webSearchAllowed,
+                }),
+              },
+            ];
+        if (!job.resumeMessages?.length) {
+          // Conventions du dépôt, avant la tâche : une fille qui écrit doit les
+          // connaître, et le message doit précéder ce sur quoi elle va travailler.
+          if (job.mode === "implement") {
+            const repoInstructions = await subagentRepoInstructions();
+            if (repoInstructions) {
+              childMessages.push({ role: "user", content: repoInstructions.message });
+            }
+          }
+          childMessages.push({
+            role: "user",
+            content: `${job.prompt}\n\n## What your report must contain\n${job.expectedOutput}`,
+          });
+        }
+
+        // Events de la fille : types EXISTANTS (`thinking`, `tool_call`,
+        // `tool_result`, `status`) marqués `subagent_id` + `parent_call_id` — le
+        // CHECK de `agent_run_events.type` n'a pas à bouger, et le fil replie ces
+        // events sous la ligne `spawn_agent`. Les ids de tool-call sont PRÉFIXÉS :
+        // deux modèles peuvent rendre le même `call_1`, et le fil apparie par id.
+        const childEmit: EmitAgentEvent = (type, payload) => {
+          if (type === "tool_call") job.onRound();
+          const id = payload.id;
+          return emit(type, {
+            ...payload,
+            ...(typeof id === "string" ? { id: `${job.id}:${id}` } : {}),
+            subagent_id: job.id,
+            ...(job.parentCallId ? { parent_call_id: job.parentCallId } : {}),
+            subagent_mode: job.mode,
+          });
+        };
+
+        const result = await runAgentLoop({
+          messages: childMessages,
+          tools: subagentToolsFor(job.mode, { webSearch: webSearchAllowed, model }),
+          model,
+          apiKey,
+          baseUrl,
+          provider,
+          reasoningLevel: job.thinkingEffort ?? run.reasoning_level,
+          runId: run.run_id ?? run.id,
+          userId: run.created_by,
+          projectId: run.project_id,
+          softDeadlineMs: Math.max(1_000, budget),
+          // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk. Légèrement
+          // généreux (le parent a dépensé depuis), mais son coût REMONTE dans
+          // l'accumulateur de la boucle parente, qui s'arrête à sa frontière.
+          budgetUsd,
+          contextWindow: job.model ? null : contextWindow,
+          // Plafond CUMULATIF : une fille reprise ne repart pas avec quinze rounds
+          // neufs à chaque chunk, sinon le garde-fou anti-runaway ne borne rien.
+          maxRounds: Math.max(1, SUBAGENT_MAX_ROUNDS - (job.roundsSoFar ?? 0)),
+          usageSeqStart: job.resumeUsageSeq ?? subagentUsageSeq(job.slot),
+          signal: job.signal,
+          emit: childEmit,
+          execTool: makeExecTool({
+            sandbox: sb,
+            createPr: null,
+            issueCtx: null,
+            scratchpadCtx: null,
+            webSearch,
+            outputSeqBase: SUBAGENT_OUTPUT_SEQ_BASE + job.slot * 1000,
+            background: null,
+            // Racine marquée VUE (elle vient d'être servie en message ci-dessus) ;
+            // le budget repart à zéro pour que la fille puisse charger les
+            // instructions des sous-dossiers qu'elle édite, comme le parent.
+            instructions: { paths: [...REPO_INSTRUCTION_FILES], bytes: 0 },
+            editedPaths,
+            subagents: null,
+          }),
+        });
+
+        const rounds = (job.roundsSoFar ?? 0) + result.rounds;
+        const costUsd = (job.costSoFar ?? 0) + result.costUsd;
+
+        // SUSPENSION : la fille n'a pas fini, mais son état est sauvable — soit sa
+        // propre soft-deadline a sonné, soit le chunk se termine et le harness le
+        // lui a demandé (`isSuspending`). `result.messages` s'arrête au dernier
+        // round COMPLET (la boucle ne pousse jamais un round partiel), donc c'est un
+        // point de reprise sûr. Ce qui la rend possible : la microVM, elle, survit
+        // au chunk (snapshot persistant) — seule la mémoire de la boucle mourait.
+        if (result.status === "suspended" || job.isSuspending()) {
+          const saved = capSubagentHistory(result.messages);
+          if (saved) {
+            return { report: "", rounds, costUsd, status: "suspended", messages: saved, usageSeq: result.usageSeqEnd };
+          }
+          // Historique trop gros pour le checkpoint : on dégrade honnêtement en
+          // coupure — rapport partiel livré une fois, plutôt qu'une reprise promise
+          // qui ferait exploser `MAX_CHECKPOINT_BYTES` et tuerait le tour entier.
+          const partial = lastAssistantText(result.messages);
+          return {
+            report:
+              partial ||
+              "No report: the sub-agent was stopped and its state was too large to carry over to the next turn.",
+            rounds,
+            costUsd,
+            status: "cut",
+          };
+        }
+
+        // Le rapport : la réponse finale si la fille a conclu, sinon ce qu'elle a
+        // écrit en dernier. Un sous-agent coupé a souvent déjà dit l'essentiel — le
+        // jeter serait perdre le travail ET l'argent.
+        const report = result.reply?.trim() || lastAssistantText(result.messages);
+        const status: SubagentRunResult["status"] =
+          result.status === "completed" ? "done" : result.status === "error" ? "error" : "cut";
+        return {
+          report:
+            report ||
+            (result.errorMessage
+              ? `No report: the sub-agent's model failed (${cap(result.errorMessage, 300)}).`
+              : "No report: the sub-agent produced nothing before it stopped."),
+          rounds,
+          costUsd,
+          status,
+        };
+      },
+    };
+
+    const subagents = new Subagents(subagentRunner, {
+      maxParallel: subagentMaxParallel,
+      favorites: subagentFavorites,
+      ...(subagentModels
+        ? {
+            resolveModel: makeSubagentModelResolver({
+              favorites: subagentFavorites,
+              catalogIds: subagentCatalog,
+            }),
+          }
+        : {}),
+      // Une tranche par continuation : les ids ET les bandes de seq `ai_usage`
+      // restent uniques sur la vie du run, pas seulement du chunk.
+      seqBase: run.continuations * MAX_SUBAGENTS_PER_CHUNK,
+      budgetGuard: () => {
+        const left = chunkRemainingMs();
+        return left >= SUBAGENT_MIN_MS
+          ? null
+          : `Not enough time left in this turn to delegate (${Math.max(0, Math.round(left / 1000))}s): a sub-agent launched now would be cut off before it could report. Do what you can yourself and reply — you can delegate at the start of the next turn.`;
+      },
+    });
+    subagentRegistry = subagents;
+    subagents.restore(run.checkpoint?.subagents);
+    // Filles SUSPENDUES au chunk précédent : elles repartent MAINTENANT, avec leur
+    // historique, avant que la boucle du parent ne reprenne. Leurs rapports lui
+    // arriveront par le même wakeup que d'habitude.
+    const resumed = subagents.resumeSuspended();
+    if (resumed > 0) await emit("status", { phase: "subagent_resumed", count: resumed });
+
     /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide
      *  à chaque type-check : après une relance, le tour a toujours édité, même si
      *  le modèle n'a plus rien touché depuis. */
@@ -1405,6 +1830,10 @@ export async function executeAgentRun(
     const budgetUsd =
       quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
 
+    // Chrono de la boucle : c'est depuis ici que se mesure le budget restant d'un
+    // sous-agent (`chunkRemainingMs`).
+    loopStartedAt = Date.now();
+
     const result = await runAgentLoop({
       messages,
       tools: agentToolsFor({
@@ -1412,6 +1841,7 @@ export async function executeAgentRun(
         webSearch: webSearchAllowed,
         model: run.model,
         images: imageInput,
+        subagentModels,
       }),
       model: run.model,
       apiKey,
@@ -1425,19 +1855,53 @@ export async function executeAgentRun(
       softDeadlineMs,
       budgetUsd,
       contextWindow,
-      execTool: makeExecTool(
+      execTool: makeExecTool({
         sandbox,
         createPr,
-        issueToolCtx,
-        scratchpadToolCtx,
+        issueCtx: issueToolCtx,
+        scratchpadCtx: scratchpadToolCtx,
         webSearch,
-        run.continuations * 1000,
+        outputSeqBase: run.continuations * 1000,
         background,
         instructions,
         editedPaths,
-      ),
+        subagents,
+      }),
       onTurnEnd,
       pullSteering: () => pullPendingMessages(run.id),
+      // Wakeup des sous-agents (MIN-112) : drainé au sommet de chaque round, comme
+      // le steering. Le parent n'a jamais attendu — le rapport arrive tout seul.
+      pullSubagentReports: async () => subagents.drainReports(),
+      /**
+       * Dernière chance de livrer AVANT que le tour ne se termine. Si le budget
+       * tombe alors qu'une fille tourne encore, on la COUPE ICI plutôt qu'après la
+       * boucle : ses fichiers doivent être dans `editedPaths` et dans le diff avant
+       * que le type-check et l'auto-relecture ne parlent — sinon un sous-agent
+       * casse les types en silence et le tour dit « c'est fait ».
+       */
+      awaitSubagents: async ({ budgetMs }) => {
+        const waited = await subagents.awaitReports(
+          Math.max(0, budgetMs - SUBAGENT_CUT_MARGIN_MS),
+          // L'utilisateur peut RÉVEILLER le parent pendant qu'il attend : son
+          // message rompt l'attente sans toucher aux filles, qui continuent.
+          () => hasPendingRunMessages(run.id),
+        );
+        if (waited.reports.length > 0 || waited.interrupted || subagents.pending() === 0) {
+          return waited;
+        }
+        // Plus de budget, et une fille travaille encore. On ne la TUE pas : on lui
+        // demande de sauver son état, et on SUSPEND le tour. Elle reprendra au chunk
+        // suivant, et c'est ce qui lui permet de dépasser les 300 s de la fonction.
+        await subagents.suspendAll().catch(() => 0);
+        // Celles qui n'ont pas su se sauver (historique trop gros, pas rendu la main
+        // à temps) sont coupées : leur rapport partiel part quand même.
+        const salvaged = subagents.drainReports();
+        if (subagents.suspendedCount() > 0) {
+          return { reports: salvaged, interrupted: false, suspend: true };
+        }
+        return { reports: salvaged, interrupted: false };
+      },
+      parkedForSubagents: run.checkpoint?.parkedForSubagents === true,
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).
       checkInterrupt: () => readInterruptFlag(run.id),
@@ -1450,7 +1914,34 @@ export async function executeAgentRun(
       usageSeqStart,
     });
 
-    const newCost = run.cost_usd + result.costUsd;
+    // Sous-agents encore en vol (MIN-112) : coupés ICI, avant TOUT le reste — avant
+    // `background.stopAll()`, avant le commit, avant la construction du checkpoint.
+    // Une fille laissée en vol écrirait dans la sandbox pendant le `git add -A`, et
+    // sa promesse mourrait de toute façon avec la fonction Vercel. Leur rapport
+    // PARTIEL entre dans `result.messages` (donc dans le checkpoint) : le chunk
+    // suivant le livre au parent, qui sait ainsi ce qui a été fait à moitié.
+    //
+    // Sur le chemin de fin de tour NORMAL il n'y a en général plus rien à couper :
+    // `awaitSubagents` a déjà attendu, livré et coupé au besoin. Ce qui atterrit ici
+    // ce sont les autres sorties — suspend, interruption, `ask_user`, budget épuisé.
+    // Le tour est SUSPENDU (re-queue immédiat) : les filles encore en vol sauvent
+    // leur état et repartiront au chunk suivant. Sur tout autre chemin de sortie —
+    // fin de tour, interruption, erreur, budget épuisé — le run s'arrête là, donc
+    // elles sont COUPÉES et leur rapport partiel est livré une bonne fois.
+    if (result.status === "suspended") {
+      await subagents.suspendAll().catch(() => 0);
+    } else {
+      await subagents.cutAll("the parent chunk ended").catch(() => 0);
+    }
+    let subagentCost = 0;
+    for (const report of subagents.drainReports()) {
+      result.messages.push({ role: "user", content: report.text });
+      subagentCost += report.costUsd;
+      await emit("status", { phase: "subagent_report", id: report.id, partial: true });
+    }
+
+    const subagentRecords = subagents.records();
+    const newCost = run.cost_usd + result.costUsd + subagentCost;
     // `lastFilesSha` amorcé pour TOUTES les mises au repos (ce checkpoint est réutilisé
     // par les chemins WIP/interruption/erreur/budget) : sur le 1er chunk on fixe la
     // baseline, jamais avancée en cours de tour — seule une fin de tour la fait
@@ -1460,6 +1951,12 @@ export async function executeAgentRun(
       usageSeq: result.usageSeqEnd,
       lastFilesSha: run.checkpoint?.lastFilesSha ?? baselineHead,
       instructions,
+      ...(subagentRecords.length > 0 ? { subagents: subagentRecords } : {}),
+      // Tour GARÉ : le parent avait fini de parler et attend une fille suspendue.
+      // Le chunk suivant attendra donc AVANT de faire parler le modèle.
+      ...(result.status === "suspended" && subagents.suspendedCount() > 0
+        ? { parkedForSubagents: true }
+        : {}),
     };
     const nowIso = new Date().toISOString();
 
@@ -1754,6 +2251,14 @@ export async function executeAgentRun(
     if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
   } finally {
+    // Filet des sous-agents (MIN-112), AVANT celui des jobs de fond : le chemin
+    // normal les a déjà coupés, mais pas le chemin d'ERREUR mid-tour ni celui d'une
+    // erreur d'amorçage. Une fille laissée en vol continuerait d'appeler un modèle
+    // (facturé) et d'écrire dans la sandbox au nom d'un tour terminé. Son rapport
+    // est perdu ici — c'est assumé : sur ce chemin il n'y a plus de checkpoint sain
+    // où le mettre.
+    if (subagentRegistry) await subagentRegistry.cutAll("the chunk failed").catch(() => 0);
+
     // Filet des jobs de fond (MIN-114) : les chemins de push les ont déjà tués, mais
     // pas le chemin d'ERREUR mid-tour — et un serveur laissé vivant tiendrait la
     // microVM éveillée jusqu'au reaper. Best-effort, jamais bloquant.

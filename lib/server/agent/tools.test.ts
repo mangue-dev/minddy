@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentToolsFor } from "./tools";
+import { agentToolsFor, subagentToolsFor, SUBAGENT_CONTROL_TOOLS } from "./tools";
 
 /**
  * MIN-115 : le jeu de tools d'un run n'est plus fixe. Les modèles `gpt-*`
@@ -160,5 +160,101 @@ describe("agentToolsFor — read_attachment et les images", () => {
     expect(names({ anchor: "issue", webSearch: true, images: true })).toEqual(
       names({ anchor: "issue", webSearch: true }),
     );
+  });
+});
+
+/**
+ * MIN-112 : la hiérarchie à UN niveau est STRUCTURELLE. Un sous-agent n'a pas
+ * `spawn_agent` dans son jeu de tools — ce n'est pas une consigne de prompt qu'un
+ * modèle peut décider d'ignorer. Même chose pour le ticket, le carnet et la PR :
+ * ils appartiennent au parent, et le seul moyen fiable de le garantir est de ne pas
+ * les servir. Ce test remplace « lancer une session et regarder ce qu'elle fait ».
+ */
+const SUBAGENT_READERS = ["read_file", "list_dir", "glob", "grep"];
+const MINDDY_AND_CONTROL = [
+  ...MINDDY_TOOLS,
+  "create_pr",
+  "ask_user",
+  "update_plan",
+  "run_background",
+  "spawn_agent",
+  "agent_status",
+  "list_agents",
+];
+
+describe("subagentToolsFor — hiérarchie à un niveau", () => {
+  for (const mode of ["explore", "implement"] as const) {
+    it(`ne sert JAMAIS de tool de délégation ni de tool du parent (mode ${mode})`, () => {
+      const served = subagentToolsFor(mode, { webSearch: true }).map((t) => t.function.name);
+      for (const tool of MINDDY_AND_CONTROL) expect(served).not.toContain(tool);
+      // Un même nom servi deux fois est un tool-call ambigu.
+      expect(new Set(served).size).toBe(served.length);
+      expect(served.length).toBeGreaterThan(0);
+    });
+  }
+
+  it("sert les quatre lecteurs et RIEN d'autre en mode explore", () => {
+    const served = subagentToolsFor("explore", { webSearch: true }).map((t) => t.function.name);
+    expect(served.sort()).toEqual([...SUBAGENT_READERS].sort());
+  });
+
+  it("ajoute l'édition, run_command et web_search en mode implement", () => {
+    const served = subagentToolsFor("implement", { webSearch: true }).map((t) => t.function.name);
+    for (const tool of [...SUBAGENT_READERS, "edit_file", "apply_edits", "write_file", "move_file", "delete_file", "run_command", "web_search"]) {
+      expect(served).toContain(tool);
+    }
+  });
+
+  it("sert apply_patch SEUL à une fille qui tourne sur un gpt-*", () => {
+    const served = subagentToolsFor("implement", {
+      webSearch: false,
+      model: "openai/gpt-5.6-luna",
+    }).map((t) => t.function.name);
+    expect(served).toContain("apply_patch");
+    for (const tool of STRING_EDIT) expect(served).not.toContain(tool);
+    // Le modèle de la FILLE décide, pas celui du parent : elle peut tourner sur un
+    // gpt-* alors que son parent est sur DeepSeek.
+    expect(served).not.toContain("web_search");
+  });
+});
+
+describe("agentToolsFor — les tools de délégation du parent", () => {
+  it("sert les trois tools de suivi et de délégation", () => {
+    const served = names({ anchor: "issue", webSearch: true });
+    for (const tool of SUBAGENT_CONTROL_TOOLS) expect(served).toContain(tool);
+  });
+
+  const spawn = (subagentModels?: boolean) =>
+    agentToolsFor({ anchor: "issue", webSearch: true, subagentModels }).find(
+      (t) => t.function.name === "spawn_agent",
+    )!.function;
+
+  it("RETIRE le champ model quand le run ne peut pas en changer (BYOK non-OpenRouter)", () => {
+    // Règle du tout ou rien, comme `web_search` : un champ qui reviendrait toujours
+    // en erreur ne mérite pas d'être décrit — et la délégation, elle, reste offerte.
+    expect(Object.keys(spawn(false).parameters.properties)).not.toContain("model");
+    expect(spawn(false).description).toMatch(/always runs on your own model/);
+    expect(spawn(undefined).parameters.properties).not.toHaveProperty("model");
+
+    expect(Object.keys(spawn(true).parameters.properties)).toContain("model");
+    expect(spawn(true).description).not.toMatch(/always runs on your own model/);
+  });
+
+  it("garde task, mode et expected_output obligatoires dans les deux cas", () => {
+    for (const models of [true, false]) {
+      expect(spawn(models).parameters.required).toEqual(["task", "mode", "expected_output"]);
+    }
+  });
+
+  it("annonce le lancement asynchrone, le wakeup, l'absence d'attente et le gel des éditions", () => {
+    // Le modèle ne peut pas deviner ce contrat : s'il n'est pas écrit ici, il
+    // cherchera un `wait_agent`, ou pire, bouclera sur `agent_status`.
+    const description = spawn(true).description;
+    expect(description).toMatch(/IT DOES NOT BLOCK/);
+    expect(description).toMatch(/woken up/);
+    expect(description).toMatch(/NO tool to wait/);
+    expect(description).toMatch(/YOUR OWN editing tools are refused/);
+    expect(description).toMatch(/ability to delegate further/);
+    expect(description).toMatch(/report is ALL you get back/);
   });
 });

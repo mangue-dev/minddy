@@ -2,6 +2,7 @@ import "server-only";
 
 import { MAX_BACKGROUND_JOBS } from "./background";
 import { usesApplyPatch } from "./patch";
+import { SUBAGENT_TEMPLATE_IDS } from "./subagent-templates";
 
 /**
  * Tools de l'agent de code (MIN-46), format function-calling OpenRouter (même
@@ -482,6 +483,87 @@ const CORE_TOOLS: AgentToolDef[] = [
       },
     },
   },
+  // ── Délégation (MIN-112) : UN tool pour déléguer, deux pour regarder. ────────
+  {
+    type: "function",
+    function: {
+      name: "spawn_agent",
+      description:
+        `Delegate one well-defined piece of work to a SUB-AGENT: a child session with its own context, its own model if you want, that does the work and hands you back a REPORT. Use it when the work is broad but its conclusion is short (searching the whole repo for every caller of something), when several independent pieces can run at the same time, or when a task would flood your own context with output you do not need to keep. Do NOT use it for a targeted change you can make in two tool calls — briefing a sub-agent costs more than doing that yourself.\n\nIT DOES NOT BLOCK. The call returns immediately with an id, and you keep working. When the sub-agent finishes, its report is handed to you automatically — even if you have already replied: you get woken up. There is deliberately NO tool to wait for a sub-agent; asking for one is asking for nothing. If you have nothing useful to do meanwhile, END YOUR TURN and say what you are waiting for: the system holds the turn open at zero cost and re-opens it when the report lands. Never poll agent_status in a loop to pass the time — a sub-agent can take several minutes, and every check costs money to learn something you were going to be told anyway.\n\nTwo modes. 'explore' is READ-ONLY (it can read, search and list, nothing else) and several can run in parallel. 'implement' EDITS the repository, and only one writer is allowed at a time because the sandbox is SHARED — while an 'implement' sub-agent is running, YOUR OWN editing tools are refused too (reading and run_command stay open). So delegate an 'implement' when you have something else to do that is not editing.\n\nWhat the sub-agent does NOT have: your conversation, the ticket, the notebook, the pull request, the ability to ask the user anything, and the ability to delegate further. It gets your prompt and nothing else — so write it as a complete briefing, and describe 'expected_output' precisely: the report is ALL you get back, and you cannot ask a follow-up question.` +
+        `\n\nPrompt templates (optional, recommended): pass 'prompt_template' to wrap your task in a pre-written briefing — ${SUBAGENT_TEMPLATE_IDS.join(", ")} — and fill its variables in 'template_vars'. Your 'task' and 'expected_output' are injected into it automatically.`,
+      parameters: {
+        type: "object",
+        properties: {
+          task: {
+            type: "string",
+            description:
+              "The work to delegate, written for someone who has never seen this conversation: what to do, where (paths, symbols), and what NOT to touch. Be specific — it cannot ask you to clarify.",
+          },
+          mode: {
+            type: "string",
+            enum: ["explore", "implement"],
+            description:
+              "'explore' = read-only investigation (parallelisable). 'implement' = edits the repository (one at a time, and it freezes your own editing tools while it runs).",
+          },
+          expected_output: {
+            type: "string",
+            description:
+              "What the report must contain, concretely: the file paths and line numbers you need, the answer to a specific question, the list of call sites, what it verified. The report is the only thing that comes back.",
+          },
+          model: {
+            type: "string",
+            description:
+              "Optional: run the sub-agent on ANOTHER model — an id from the catalogue, or the name of one of the 'Favorites for sub-agents' listed in your instructions. Omit it to use your own model. A cheap fast model is usually right for 'explore'; keep a strong one for 'implement'.",
+          },
+          thinking_effort: {
+            type: "string",
+            enum: ["low", "medium", "high"],
+            description:
+              "Optional reasoning budget for the sub-agent: 'low' for mechanical work (grep, listing, reading), 'high' for hard analysis or subtle code. Defaults to your own level.",
+          },
+          prompt_template: {
+            type: "string",
+            enum: [...SUBAGENT_TEMPLATE_IDS],
+            description:
+              "Optional pre-written briefing to wrap your task in. Omit to send 'task' as-is.",
+          },
+          template_vars: {
+            type: "object",
+            description:
+              "Values for the template's variables (e.g. {\"file_path\": \"lib/foo.ts\", \"constraints\": \"do not touch the tests\"}). 'task' and 'expected_output' are filled in for you.",
+          },
+        },
+        required: ["task", "mode", "expected_output"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_status",
+      description:
+        "Look in on ONE of your sub-agents: whether it is still running, finished, failed or was cut off, how many steps it has taken, and its report if it already has one. Read-only. You do not need to poll it — a finished sub-agent's report is handed to you automatically; this is for when you want to know where it stands before deciding what to do next.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description: "The sub-agent id returned by spawn_agent, e.g. 'sub-1'.",
+          },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_agents",
+      description:
+        "List every sub-agent of this session with its state, task, mode, model and thinking effort — plus how many are running and how many may run at once. Read-only. Use it to see what you have in flight before delegating more.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 /**
@@ -831,6 +913,15 @@ export function agentToolsFor(opts: {
    *  ANNONCE — le tool est là dans les deux cas, mais il ne promet une maquette
    *  regardable que quand elle le sera vraiment. */
   images?: boolean;
+  /**
+   * Le run peut-il faire tourner un sous-agent sur un AUTRE modèle (MIN-112) ? À
+   * false, le champ `model` est RETIRÉ du schéma de `spawn_agent` : un run BYOK
+   * Anthropic ne peut pas faire tourner `deepseek/…`, et un champ qui revient
+   * toujours en erreur ne mérite pas d'être décrit (même règle du tout ou rien
+   * que `web_search` et `apply_patch`). La délégation reste offerte — c'est
+   * seulement le choix du modèle qui disparaît.
+   */
+  subagentModels?: boolean;
 }): AgentToolDef[] {
   const patch = usesApplyPatch(opts.model);
   const tools = opts.anchor === "issue" ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS;
@@ -850,6 +941,9 @@ export function agentToolsFor(opts: {
           function: { ...t.function, description: READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES },
         };
       }
+      if (name === "spawn_agent" && opts.subagentModels !== true) {
+        return withoutModelField(t);
+      }
       if (TARGETABLE_ISSUE_TOOLS.has(name)) {
         return {
           ...t,
@@ -863,5 +957,86 @@ export function agentToolsFor(opts: {
     });
 }
 
+/** `spawn_agent` sans son champ `model` — la phrase du modèle part avec lui. */
+function withoutModelField(tool: AgentToolDef): AgentToolDef {
+  const properties = Object.fromEntries(
+    Object.entries(tool.function.parameters.properties).filter(([key]) => key !== "model"),
+  );
+  return {
+    ...tool,
+    function: {
+      ...tool.function,
+      description: tool.function.description.replace(
+        /\n\nPrompt templates/,
+        "\n\nThe sub-agent always runs on your own model (this session's provider serves a single model family).\n\nPrompt templates",
+      ),
+      parameters: { ...tool.function.parameters, properties },
+    },
+  };
+}
+
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
 export const CONTROL_TOOLS = new Set(["update_plan", "ask_user"]);
+
+/**
+ * Tools de DÉLÉGATION, exposés au parent seulement (MIN-112). Un sous-agent ne les
+ * a pas : la hiérarchie à un niveau est STRUCTURELLE (`subagentToolsFor` les
+ * retire), pas une consigne de prompt qu'un modèle peut ignorer.
+ */
+export const SUBAGENT_CONTROL_TOOLS: ReadonlySet<string> = new Set([
+  "spawn_agent",
+  "agent_status",
+  "list_agents",
+]);
+
+/**
+ * Tools qu'un sous-agent n'a JAMAIS, quel que soit son mode. Au-delà de la
+ * délégation : le ticket, le carnet, la PR, la checklist de session et les jobs de
+ * fond appartiennent au PARENT. Une fille qui coche le plan de l'utilisateur ou qui
+ * ouvre une pull request agirait au nom d'une conversation qu'elle n'a pas lue.
+ */
+const SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
+  ...SUBAGENT_CONTROL_TOOLS,
+  "create_pr",
+  "ask_user",
+  "update_plan",
+  "run_background",
+  ...MINDDY_TOOLS.map((t) => t.function.name),
+]);
+
+/** Les quatre lecteurs : tout ce qu'un sous-agent `explore` a le droit de faire. */
+const SUBAGENT_READ_TOOLS: ReadonlySet<string> = new Set([
+  "read_file",
+  "list_dir",
+  "glob",
+  "grep",
+]);
+
+/**
+ * Jeu de tools d'un SOUS-AGENT (MIN-112).
+ *
+ * `explore` → les quatre lecteurs, rien d'autre : la lecture seule est une propriété
+ * du JEU DE TOOLS, pas une phrase de prompt. `implement` → les lecteurs, l'interface
+ * d'édition du modèle de la fille (`apply_patch` ou les tools par chaîne, jamais les
+ * deux), `run_command` et `web_search` s'il est offert au run.
+ *
+ * `run_background` est volontairement absent des deux : le registre de jobs de fond
+ * vit dans le chunk du parent, et un serveur laissé vivant par une fille tiendrait
+ * la microVM éveillée sans que personne ne sache qu'il tourne.
+ */
+export function subagentToolsFor(
+  mode: "explore" | "implement",
+  opts: { webSearch: boolean; model?: string | null } = { webSearch: false },
+): AgentToolDef[] {
+  const patch = usesApplyPatch(opts.model);
+  return AGENT_TOOLS.filter((t) => {
+    const name = t.function.name;
+    if (SUBAGENT_FORBIDDEN_TOOLS.has(name)) return false;
+    if (SUBAGENT_READ_TOOLS.has(name)) return true;
+    if (mode === "explore") return false;
+    if (name === "web_search") return opts.webSearch;
+    if (name === "apply_patch") return patch;
+    if (STRING_EDIT_TOOLS.has(name)) return !patch;
+    return true;
+  });
+}

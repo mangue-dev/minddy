@@ -8,6 +8,7 @@ import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
+import type { SubagentRecord } from "./subagent";
 import { broadcastRunEvent } from "./live";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
@@ -57,6 +58,22 @@ export interface AgentCheckpoint {
    * re-serve jamais un `AGENTS.md` que le modèle a déjà lu.
    */
   instructions?: { paths: string[]; bytes: number };
+  /**
+   * Sous-agents de ce run (MIN-112), records sérialisés — rapport capé à
+   * `SUBAGENT_RECORD_REPORT_MAX_CHARS`. C'est ce qui permet à `agent_status` et
+   * `list_agents` de répondre HONNÊTEMENT après un suspend, au lieu de dire
+   * « inconnu » sur un sous-agent que l'agent vient de lancer. Un record restauré
+   * n'est plus rattaché à rien (une promesse ne survit pas à la fin d'une fonction
+   * Vercel) : `Subagents.restore` le déclare coupé et déjà livré.
+   */
+  subagents?: SubagentRecord[];
+  /**
+   * Le tour est GARÉ en attente de ses sous-agents (MIN-112) : le parent a déjà
+   * répondu, une fille suspendue reprendra au chunk suivant. Sans ce drapeau, le
+   * chunk repris ferait parler le modèle pour rien — un aller-retour payant par
+   * chunk d'attente, juste pour lui faire redire qu'il attend.
+   */
+  parkedForSubagents?: boolean;
 }
 
 export interface AgentRun {
@@ -712,10 +729,29 @@ export async function hasPendingRunMessages(runId: string): Promise<boolean> {
   return ((data ?? []) as unknown[]).length > 0;
 }
 
+/** Violation d'unicité Postgres — ici, `idx_agent_run_events_run_seq`. */
+const UNIQUE_VIOLATION = "23505";
+/**
+ * Recalculs de `seq` sur collision. Deux émetteurs (le parent et un sous-agent,
+ * MIN-112) peuvent lire le même max(seq) et tenter le même numéro : le perdant
+ * recalcule. Trois reprises couvrent largement le parallélisme réel (au plus
+ * quelques sous-agents), et le compteur ne peut que MONTER — chaque tour de boucle
+ * relit un max déjà avancé par le gagnant.
+ */
+const APPEND_EVENT_MAX_ATTEMPTS = 4;
+
 /**
  * Ajoute un event au flux du live view (seq monotone par run). Best-effort : le
- * suivi ne doit jamais faire échouer le run. Un run n'a qu'UN écrivain à la fois
- * (le claimer), donc le max(seq)+1 est sûr.
+ * suivi ne doit jamais faire échouer le run.
+ *
+ * `seq` se calcule en LISANT le max puis en insérant, et `idx_agent_run_events_run_seq`
+ * est UNIQUE. C'était sûr tant que la boucle émettait en série ; depuis les
+ * sous-agents (MIN-112), une fille émet EN MÊME TEMPS que son parent — même max lu,
+ * même `seq` tenté, insert refusé, event AVALÉ (le code loguait et rendait la main).
+ * D'où la reprise sur violation d'unicité. Le second garde-fou est chez l'appelant :
+ * `execute.ts` sérialise les emits d'un chunk derrière une chaîne de promesses, pour
+ * que l'ORDRE du fil reste celui des faits — cette reprise-ci ne garantit que de ne
+ * rien PERDRE, pas l'ordre.
  *
  * La ligne insérée est aussi DIFFUSÉE sur le topic du run (lib/server/agent/live)
  * : le fil ouvert l'affiche à l'instant plutôt qu'au prochain poll. Le `returning`
@@ -728,28 +764,40 @@ export async function appendEvent(
 ): Promise<void> {
   try {
     const service = getServiceClient();
-    const { data } = await service
-      .from("agent_run_events")
-      .select("seq")
-      .eq("run_id", runId)
-      .order("seq", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const nextSeq = ((data as { seq: number } | null)?.seq ?? -1) + 1;
-    // supabase-js ne LÈVE pas sur un insert refusé (contrainte CHECK, RLS…) — il
-    // renvoie { error }. Sans ce log, un type d'event non déclaré dans le CHECK
-    // de agent_run_events disparaît en silence total (vécu sur `question`, MIN-86).
-    const { data: row, error } = await service
-      .from("agent_run_events")
-      .insert({ run_id: runId, seq: nextSeq, type, payload })
-      .select("id, seq, type, payload, created_at")
-      .single();
-    if (error) {
-      console.error(`[agent-runs] appendEvent(${type}) rejected:`, error.message);
+    for (let attempt = 0; attempt < APPEND_EVENT_MAX_ATTEMPTS; attempt++) {
+      const { data } = await service
+        .from("agent_run_events")
+        .select("seq")
+        .eq("run_id", runId)
+        .order("seq", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextSeq = ((data as { seq: number } | null)?.seq ?? -1) + 1;
+      // supabase-js ne LÈVE pas sur un insert refusé (contrainte CHECK, RLS…) — il
+      // renvoie { error }. Sans ce log, un type d'event non déclaré dans le CHECK
+      // de agent_run_events disparaît en silence total (vécu sur `question`, MIN-86).
+      const { data: row, error } = await service
+        .from("agent_run_events")
+        .insert({ run_id: runId, seq: nextSeq, type, payload })
+        .select("id, seq, type, payload, created_at")
+        .single();
+      if (error) {
+        // `seq` déjà pris par un autre émetteur : on relit le max et on retente.
+        // Tout autre refus (CHECK sur `type`, RLS) est définitif — le retenter
+        // à l'identique redonnerait la même erreur.
+        if (
+          (error as { code?: string }).code === UNIQUE_VIOLATION &&
+          attempt < APPEND_EVENT_MAX_ATTEMPTS - 1
+        ) {
+          continue;
+        }
+        console.error(`[agent-runs] appendEvent(${type}) rejected:`, error.message);
+        return;
+      }
+      if (row) {
+        broadcastRunEvent(runId, row as Parameters<typeof broadcastRunEvent>[1]);
+      }
       return;
-    }
-    if (row) {
-      broadcastRunEvent(runId, row as Parameters<typeof broadcastRunEvent>[1]);
     }
   } catch (err) {
     console.error("[agent-runs] appendEvent failed:", (err as Error).message);
