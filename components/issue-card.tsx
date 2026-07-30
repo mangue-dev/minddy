@@ -6,6 +6,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
 import {
+  ConfirmDeleteDialog,
   Spinner,
   Tooltip,
   TooltipContent,
@@ -21,6 +22,8 @@ import {
   IterationCw,
   Link2,
   ListChecks,
+  Target,
+  Trash2,
   Triangle,
   User,
 } from "lucide-react";
@@ -92,6 +95,7 @@ import {
   IssueShortcutMenu,
   KEY_FOR_FIELD,
   useIssueFieldShortcuts,
+  type ShortcutField,
 } from "@/components/issue-field-shortcuts";
 import {
   buildIssueCustomPrompt,
@@ -110,6 +114,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 
 /** Strip common markdown so the description preview reads as plain text. */
@@ -765,6 +770,7 @@ export function IssueCard({
   onOpen,
   onUpdateIssue,
   onSetCategories,
+  onDelete,
   extraActions,
   inCurrentCycle,
   selected,
@@ -795,6 +801,9 @@ export function IssueCard({
   onOpen: () => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
+  /** Corbeille : quand le board le câble, le clic droit gagne « Déplacer vers
+      la corbeille » (confirmation avant, comme dans le panneau d'issue). */
+  onDelete?: () => Promise<void>;
   /** Board-provided right-click actions appended to the menu (e.g. the cycle
       add/remove actions — MIN-32). */
   extraActions?: ContextMenuAction[];
@@ -808,6 +817,7 @@ export function IssueCard({
   const tAttach = useTranslations("Attachments");
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
+  const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -858,6 +868,8 @@ export function IssueCard({
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  // Confirmation avant la corbeille (entrée « Déplacer vers la corbeille »).
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // « Personnalisé » : le dialog de consigne libre, ouvert soit pour copier le
   // prompt, soit pour lancer l'agent (`null` = fermé).
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
@@ -1069,14 +1081,29 @@ export function IssueCard({
   // ouvre l'agent (la dernière conversation du ticket, ou un composer vierge).
   // Le dialog « Personnalisé » les suspend : il couvre la carte, et une touche
   // frappée là-dedans ne doit pas ouvrir un picker sur le ticket en dessous.
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
-    !isDragging && !customTarget,
-    {
+  const { containerProps, menuState, openField, closeMenu } =
+    useIssueFieldShortcuts(!isDragging && !customTarget, {
       " ": onOpen,
       "shift+p": () => void copyPrompt(),
       "shift+a": launchAgent,
+    });
+
+  // Ouvre le picker d'un champ au point du dernier clic droit — là où le menu
+  // qui vient de le proposer était affiché, comme pour le picker de relation.
+  const openFieldAtPointer = (field: ShortcutField) => {
+    const at = pointerRef.current;
+    if (at) openField(field, at);
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    try {
+      await onDelete();
+      toast.success(t("issueDeletedToast"));
+    } catch (e) {
+      toast.error((e as Error).message);
     }
-  );
+  };
 
   // « @ » (MIN-105) : la carte se déclare cible du raccourci pendant le survol,
   // le board écoute la touche. Les deux jeux de handlers vivent sur la même
@@ -1120,7 +1147,62 @@ export function IssueCard({
           },
         ]
       : []),
+    // Objectif et échéance ne s'affichent sur la carte QUE lorsqu'ils sont
+    // posés : sans eux, la carte n'offre aucune prise pour les poser. Le menu
+    // rouvre alors le picker au pointeur — exactement ce que font O et D.
+    ...(!issue.objective_id && objectiveMap && objectiveMap.size > 0
+      ? [
+          {
+            id: "set-objective",
+            label: t("actionLinkObjective"),
+            keywords: ["objectif", "objective", "goal", "lier", "link"],
+            icon: <Target className="size-4" />,
+            shortcut: KEY_FOR_FIELD.objective,
+            onSelect: () => openFieldAtPointer("objective"),
+          },
+        ]
+      : []),
+    ...(!issue.due_date
+      ? [
+          {
+            id: "set-due-date",
+            label: t("actionSetDueDate"),
+            keywords: [
+              "échéance",
+              "echeance",
+              "date",
+              "due",
+              "deadline",
+              "calendrier",
+              "calendar",
+            ],
+            icon: <Calendar className="size-4" />,
+            shortcut: KEY_FOR_FIELD.dueDate,
+            onSelect: () => openFieldAtPointer("dueDate"),
+          },
+        ]
+      : []),
     ...(extraActions ?? []),
+    ...(onDelete
+      ? [
+          {
+            id: "delete",
+            label: tCommon("moveToTrash"),
+            keywords: [
+              "corbeille",
+              "trash",
+              "supprimer",
+              "delete",
+              "remove",
+              "archiver",
+            ],
+            icon: <Trash2 className="size-4" />,
+            separatorBefore: true,
+            variant: "destructive" as const,
+            onSelect: () => setConfirmDelete(true),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -1224,6 +1306,21 @@ export function IssueCard({
           void runCustomPrompt(instructions, target);
         }}
       />
+      {/* Portalisé lui aussi, donc rendu dans l'arbre React de la carte : le
+          wrapper stoppe les événements qui, sans lui, remonteraient jusqu'au
+          clic (ouvrir le ticket) et au capteur de drag. */}
+      <div onClick={stop} onMouseDown={stop} onContextMenu={stop}>
+        <ConfirmDeleteDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("deleteDialogTitle")}
+          description={t("deleteDialogDescription", {
+            days: TRASH_RETENTION_DAYS,
+          })}
+          confirmLabel={tCommon("moveToTrash")}
+          onConfirm={handleDelete}
+        />
+      </div>
       <IssueShortcutMenu
         state={menuState}
         onClose={closeMenu}

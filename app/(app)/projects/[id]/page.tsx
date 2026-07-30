@@ -500,6 +500,7 @@ function ProjectBoard() {
                   toast.error((err as Error).message)
                 )
               }
+              onDeleteIssue={deleteIssue}
               onMove={moveIssue}
             />
           </div>

@@ -900,6 +900,8 @@
     "actionImplement": "Implémenter le ticket",
     "actionVerifyImplementation": "Vérifier l'implémentation",
     "actionCustomPrompt": "Personnalisé…",
+    "actionLinkObjective": "Lier un objectif",
+    "actionSetDueDate": "Ajouter une échéance",
     "promptCopied": "Prompt copié. Collez-le dans votre agent de code.",
     "verifyPromptCopied": "Prompt copié. Collez-le dans votre agent de code pour qu'il vérifie l'implémentation.",
     "promptCopiedMoved": "Prompt copié. Le ticket est passé « En cours ».",

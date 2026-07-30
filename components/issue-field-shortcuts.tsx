@@ -164,6 +164,15 @@ export function useIssueFieldShortcuts(
   return {
     containerProps,
     menuState,
+    // Ouvrir un picker SANS passer par sa touche : le menu clic droit propose
+    // les champs que la carte n'affiche pas (objectif, échéance) et les ouvre
+    // au point du clic — l'entrée de menu et le raccourci font alors la même
+    // chose, par le même chemin.
+    openField: React.useCallback(
+      (field: ShortcutField, position: { x: number; y: number }) =>
+        setMenuState({ field, position }),
+      []
+    ),
     closeMenu: React.useCallback(() => setMenuState(null), []),
   };
 }
@@ -206,11 +215,15 @@ export function IssueShortcutMenu({
   };
 
   // Due date opens the full calendar (not a cmdk list) at the pointer.
+  // `stopPropagation` : le calendrier est portalisé mais rendu, dans l'arbre
+  // React, à l'intérieur de la carte cliquable — sans lui, choisir un jour
+  // ouvrirait le ticket par-dessus (même précaution que `CommandAnchor`).
   if (field === "dueDate") {
     return (
       <DateTimePicker
         variant="anchored"
         open
+        stopPropagation
         onOpenChange={(o) => !o && onClose()}
         anchor={position}
         value={issue.due_date}

@@ -211,6 +211,15 @@ export function DateTimePicker({
         className="w-auto p-3"
         onClick={stop}
         onPointerDown={stop}
+        // Variante ancrée : elle s'ouvre sur une action (raccourci D, entrée du
+        // menu clic droit), pas sur un trigger. Ouverte depuis le menu, celui-ci
+        // se démonte juste après et le focus retombe sur le document : Radix y
+        // lit un « focus parti dehors » et referme le calendrier avant même
+        // qu'on ait vu s'afficher. Le clic dehors et Échap le ferment toujours —
+        // c'est bien le seul chemin qu'on neutralise ici.
+        onFocusOutside={
+          variant === "anchored" ? (e) => e.preventDefault() : undefined
+        }
       >
         <Calendar
           mode="single"

@@ -53,6 +53,7 @@ export function GlobalKanbanColumn({
   onSelect,
   onCreateIssue,
   onAddRelation,
+  onDeleteIssue,
   buildMenuActions,
   currentCycleId,
 }: {
@@ -86,6 +87,8 @@ export function GlobalKanbanColumn({
     targetId: string,
     projectId: string
   ) => void;
+  /** Corbeille depuis le clic droit d'une carte (le projet du ticket suit). */
+  onDeleteIssue?: (issueId: string, projectId: string) => Promise<void>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
@@ -156,6 +159,9 @@ export function GlobalKanbanColumn({
                 onOpen={() => onOpenIssue(issue)}
                 onUpdateIssue={(id, patch) => onUpdateIssue(id, patch, pid)}
                 onSetCategories={(id, ids) => onSetCategories(id, ids, pid)}
+                onDelete={
+                  onDeleteIssue ? () => onDeleteIssue(issue.id, pid) : undefined
+                }
                 selected={selectedIds.has(issue.id)}
                 onSelect={onSelect}
                 extraActions={buildMenuActions?.(issue)}

@@ -374,6 +374,7 @@ export function KanbanBoard({
               onUpdateIssue={onUpdateIssue}
               onSetCategories={onSetCategories}
               onAddRelation={onAddRelation}
+              onDeleteIssue={onDeleteIssue}
               buildMenuActions={buildMenuActions}
               currentCycleId={currentCycleId}
               selectedIds={selectedIds}
