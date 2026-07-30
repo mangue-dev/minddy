@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import { defaultLocale, type Locale } from "@/i18n/config";
+import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 import {
   AGENT_SOFT_DEADLINE_MS,
   AGENT_MAX_CONTINUATIONS,
@@ -94,10 +95,10 @@ import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
 import { executeIssueTool, ISSUE_TOOL_NAMES, type IssueToolContext } from "./issue-tools";
 import {
-  executeNotebookTool,
-  NOTEBOOK_TOOL_NAMES,
-  type NotebookToolContext,
-} from "./notebook-tools";
+  executeScratchpadTool,
+  SCRATCHPAD_TOOL_NAMES,
+  type ScratchpadToolContext,
+} from "./scratchpad-tools";
 import {
   stampRun,
   getRun,
@@ -191,11 +192,6 @@ type CreatePrHandler = (args: {
   body?: string;
 }) => Promise<{ result: unknown; success: boolean }>;
 
-/** Ancrage des tools « métier » d'un run : ticket minddy ou carnet (MIN-84). */
-type ExecToolAnchor =
-  | { kind: "issue"; ctx: IssueToolContext }
-  | { kind: "notebook"; ctx: NotebookToolContext };
-
 /** Exécuteur du tool `web_search` (null quand le run n'a pas accès au web). */
 type WebSearchHandler =
   | ((query: string) => Promise<{ result: unknown; success: boolean }>)
@@ -222,12 +218,15 @@ function sandboxBackgroundRunner(sandbox: Sandbox): BackgroundJobRunner {
 }
 
 /** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
-    git/PR (`createPr`) et, selon l'ancrage du run, ticket minddy (`issue-tools.ts`)
-    ou carnet (`notebook-tools.ts`) — routés par nom. */
+    git/PR (`createPr`), tickets minddy (`issue-tools.ts`) et carnet du lanceur
+    (`scratchpad-tools.ts`) — routés par nom. Les deux derniers sont servis aux
+    DEUX ancrages (MIN-125) : l'ancrage ne pilote plus que la cible par défaut des
+    tools ticket, portée par leur contexte. */
 function makeExecTool(
   sandbox: Sandbox,
   createPr: CreatePrHandler,
-  anchor: ExecToolAnchor,
+  issueCtx: IssueToolContext,
+  scratchpadCtx: ScratchpadToolContext,
   webSearch: WebSearchHandler,
   /** Base des seq de fichiers de sortie déposés (tranchée par continuation, comme
       les autres compteurs de run) : deux chunks n'écrasent pas leurs fichiers. */
@@ -310,11 +309,11 @@ function makeExecTool(
   };
 
   return async (name, args) => {
-    if (anchor.kind === "issue" && ISSUE_TOOL_NAMES.has(name)) {
-      return capTurnImages(await executeIssueTool(anchor.ctx, name, args));
+    if (ISSUE_TOOL_NAMES.has(name)) {
+      return capTurnImages(await executeIssueTool(issueCtx, name, args));
     }
-    if (anchor.kind === "notebook" && NOTEBOOK_TOOL_NAMES.has(name)) {
-      return await executeNotebookTool(anchor.ctx, name, args);
+    if (SCRATCHPAD_TOOL_NAMES.has(name)) {
+      return await executeScratchpadTool(scratchpadCtx, name, args);
     }
     switch (name) {
       case "web_search": {
@@ -888,8 +887,9 @@ export async function executeAgentRun(
       : await loadProjectContext(run.project_id);
     // Référence lisible du run dans les messages de commit (`wip(...)`).
     const commitRef = issue?.identifier ?? "note";
-    // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner).
-    const commentLocale = await resolveRunLocale(run);
+    // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner),
+    // et statut d'atterrissage des tickets créés par l'agent = son réglage de compte.
+    const { locale: commentLocale, numoDefaultStatus } = await resolveRunPrefs(run);
     const baseBranch = run.base_branch ?? target.defaultBranch;
     const workBranch =
       run.branch_name ??
@@ -1029,10 +1029,12 @@ export async function executeAgentRun(
             projectName: issue.projectName,
             attachments: issue.attachments,
             images: imageInput,
+            numoDefaultStatus,
           })
         : buildNotebookContextMessage({
             repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
             projectName: project.name,
+            numoDefaultStatus,
           });
       messages = [
         { role: "system", content: system },
@@ -1283,27 +1285,19 @@ export async function executeAgentRun(
       Math.min(opts.deadlineMs - elapsedSetup - COMMIT_MARGIN_MS, AGENT_SOFT_DEADLINE_MS),
     );
 
-    // Ancrage des tools métier : ticket (issue-tools) ou carnet (notebook-tools).
-    const toolAnchor: ExecToolAnchor =
-      issue && run.issue_id
-        ? {
-            kind: "issue",
-            ctx: {
-              issueId: run.issue_id,
-              projectId: run.project_id,
-              projectKey: issue.projectKey,
-              actorId: run.created_by,
-              imageInput,
-            },
-          }
-        : {
-            kind: "notebook",
-            ctx: {
-              userId: run.created_by,
-              projectId: run.project_id,
-              projectKey: project.key,
-            },
-          };
+    // Contextes des tools métier, construits côte à côte : les deux jeux sont
+    // servis quel que soit l'ancrage (MIN-125). Ce que l'ancrage décide encore,
+    // c'est `anchorIssueId` — la cible par défaut des tools ticket, null sur un
+    // run de carnet (`issue` devient alors obligatoire).
+    const issueToolCtx: IssueToolContext = {
+      anchorIssueId: run.issue_id ?? null,
+      projectId: run.project_id,
+      projectKey: issue?.projectKey ?? project.key,
+      actorId: run.created_by,
+      numoDefaultStatus,
+      imageInput,
+    };
+    const scratchpadToolCtx: ScratchpadToolContext = { userId: run.created_by };
 
     // Jobs de fond du chunk (MIN-114). Ils meurent AVANT chaque push (un watcher
     // qui écrit pendant le `git add -A` commiterait n'importe quoi) et de toute
@@ -1434,7 +1428,8 @@ export async function executeAgentRun(
       execTool: makeExecTool(
         sandbox,
         createPr,
-        toolAnchor,
+        issueToolCtx,
+        scratchpadToolCtx,
         webSearch,
         run.continuations * 1000,
         background,
@@ -1837,14 +1832,25 @@ const COMMENT_STRINGS: Record<
 };
 
 /**
- * Langue du run = celle du lanceur (préférence de compte user_metadata.locale),
- * défaut owner du projet, puis défaut de l'app. Utilisée pour le résumé de
- * l'agent et le commentaire d'issue.
+ * Réglages de compte qui pilotent le run, lus en UN appel (`getAccountSettings`
+ * porte déjà les deux) :
+ *  - `locale` : langue du résumé de l'agent et du commentaire d'issue. Celle du
+ *    lanceur, défaut owner du projet, puis défaut de l'app.
+ *  - `numoDefaultStatus` : statut d'atterrissage d'un ticket créé par l'agent
+ *    (Compte → Préférences). Il ne vient QUE du lanceur — c'est SON réglage ;
+ *    sans lanceur, le défaut historique (`triage`), jamais celui de l'owner.
  */
-async function resolveRunLocale(run: AgentRun): Promise<Locale> {
+async function resolveRunPrefs(
+  run: AgentRun,
+): Promise<{ locale: Locale; numoDefaultStatus: NumoDefaultStatus }> {
   if (run.created_by) {
     const r = await getAccountSettings({ userId: run.created_by });
-    if (r.ok) return r.settings.locale;
+    if (r.ok) {
+      return {
+        locale: r.settings.locale,
+        numoDefaultStatus: r.settings.numo_default_status,
+      };
+    }
   }
   try {
     const service = getServiceClient();
@@ -1856,12 +1862,14 @@ async function resolveRunLocale(run: AgentRun): Promise<Locale> {
     const ownerId = (data as { owner_id?: string } | null)?.owner_id;
     if (ownerId) {
       const r = await getAccountSettings({ userId: ownerId });
-      if (r.ok) return r.settings.locale;
+      if (r.ok) {
+        return { locale: r.settings.locale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
+      }
     }
   } catch {
     // ignore — on retombe sur le défaut
   }
-  return defaultLocale;
+  return { locale: defaultLocale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
 }
 
 /**

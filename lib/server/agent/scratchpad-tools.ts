@@ -4,40 +4,55 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   getScratchpad,
   applyScratchpadTaskChanges,
+  mutateScratchpad,
+  setScratchpad,
   type ScratchpadTaskChange,
 } from "@/lib/server/scratchpad";
-import { createIssueForProject } from "@/lib/server/create-issue";
+import {
+  appendScratchpadTasks,
+  splitScratchpadSections,
+  MAX_SCRATCHPAD_LENGTH,
+  type NewTask,
+} from "@/lib/scratchpad";
 import { parsePlan, isPlanTaskState } from "@/lib/plan";
 
 /**
- * Tools CARNET de l'agent de code (MIN-84) : un run lancé depuis le carnet de
- * tâches n'est ancré à aucun ticket — son ancrage est la NOTE de son lanceur, et
- * ces tools remplacent les tools ticket (issue-tools.ts) :
- *  - `read_scratchpad`         → l'état VIVANT du carnet du lanceur (contenu,
- *                                 tâches indexées, rev) — la note d'amorce n'est
- *                                 qu'un snapshot.
- *  - `update_scratchpad_task`  → coche/décoche des tâches du carnet par index
- *                                 (même logique que le tool MCP, partagée via
+ * Tools CARNET de l'agent de code (MIN-84, étendus en MIN-125) : le carnet de
+ * tâches PERSONNEL du lanceur du run — une seule note markdown, sans notion de
+ * projet. Servis aux DEUX ancrages : un run de ticket tient le carnet de son
+ * lanceur aussi bien qu'un run lancé depuis le carnet lui-même.
+ *  - `read_scratchpad`         → l'état VIVANT du carnet (contenu, tâches
+ *                                 indexées, rev) — l'amorce n'est qu'un snapshot.
+ *  - `add_scratchpad_tasks`    → ajoute des tâches, à la fin ou sous une section.
+ *  - `update_scratchpad_task`  → coche/décoche des tâches par index (même logique
+ *                                 que le tool MCP, partagée via
  *                                 applyScratchpadTaskChanges).
- *  - `create_issue`            → promeut le travail en VRAI ticket du projet du
- *                                 run, quand ça le mérite — jamais automatique.
- * Service client : l'accès a été contrôlé au lancement (membre du projet), et le
- * carnet est celui du PROPRIÉTAIRE du run (il est strictement personnel).
+ *  - `set_scratchpad`          → réécrit le carnet en entier (la voie pour
+ *                                 SUPPRIMER une tâche), sous compare-and-swap.
+ * Service client : le carnet est celui du PROPRIÉTAIRE du run (il est strictement
+ * personnel), et la ligne est clé par user_id.
  */
 
-export interface NotebookToolContext {
+export interface ScratchpadToolContext {
   /** Propriétaire du run — son carnet est celui qu'on lit/écrit. */
-  userId: string;
-  projectId: string;
-  projectKey: string;
+  userId: string | null;
 }
 
 /** Noms des tools carnet (routés vers ce module par execute.ts). */
-export const NOTEBOOK_TOOL_NAMES = new Set([
+export const SCRATCHPAD_TOOL_NAMES = new Set([
   "read_scratchpad",
+  "add_scratchpad_tasks",
   "update_scratchpad_task",
-  "create_issue",
+  "set_scratchpad",
 ]);
+
+/** Nombre max de tâches par appel (aligné sur Numo chat et le MCP). */
+const MAX_TASKS_PER_CALL = 50;
+/** Cap du libellé d'une tâche ajoutée. */
+const MAX_TASK_TEXT = 2000;
+
+const CONCURRENT_EDIT =
+  "The notebook is being edited right now; call read_scratchpad again and retry.";
 
 type ToolOutcome = { result: unknown; success: boolean };
 
@@ -55,13 +70,75 @@ function scratchpadPayload(content: string, rev: number) {
   };
 }
 
-async function readScratchpad(ctx: NotebookToolContext): Promise<ToolOutcome> {
-  const state = await getScratchpad(getServiceClient(), ctx.userId);
+async function readScratchpad(userId: string): Promise<ToolOutcome> {
+  const state = await getScratchpad(getServiceClient(), userId);
   return { result: scratchpadPayload(state.content, state.rev), success: true };
 }
 
+async function addScratchpadTasks(
+  userId: string,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const raw = Array.isArray(args.tasks) ? (args.tasks as Array<Record<string, unknown>>) : null;
+  if (!raw || raw.length === 0 || raw.length > MAX_TASKS_PER_CALL) {
+    return {
+      result: { error: `tasks must be a list of 1 to ${MAX_TASKS_PER_CALL} tasks.` },
+      success: false,
+    };
+  }
+  const tasks: NewTask[] = [];
+  for (const item of raw) {
+    const text = typeof item.text === "string" ? item.text.trim() : "";
+    if (!text) return { result: { error: "Every task needs a non-empty text." }, success: false };
+    if (item.state !== undefined && !isPlanTaskState(item.state)) {
+      return {
+        result: {
+          error: `Invalid task state "${String(item.state)}" — use pending, in_progress, completed or cancelled.`,
+        },
+        success: false,
+      };
+    }
+    tasks.push({
+      text: text.slice(0, MAX_TASK_TEXT),
+      state: isPlanTaskState(item.state) ? item.state : "pending",
+    });
+  }
+  const section =
+    typeof args.section === "string" && args.section.trim() ? args.section.trim() : undefined;
+
+  const service = getServiceClient();
+  // L'ajout est POSITION-INDÉPENDANT : mutateScratchpad relit et réapplique sous
+  // CAS en cas de conflit, donc les tâches atterrissent sur le texte le plus récent
+  // de l'utilisateur au lieu d'écraser son édition en cours.
+  const outcome = await mutateScratchpad(service, userId, (content) =>
+    appendScratchpadTasks(content, tasks, section),
+  );
+  if (outcome.status === "aborted") {
+    const current = await getScratchpad(service, userId);
+    const known = splitScratchpadSections(current.content)
+      .map((s) => s.title)
+      .filter((title): title is string => title !== null);
+    return {
+      result: {
+        error: `Section "${section}" was not found. ${known.length > 0 ? `Existing sections: ${known.join(", ")}.` : "The notebook has no sections yet."} Omit "section" to add at the end, or create the heading with set_scratchpad first.`,
+      },
+      success: false,
+    };
+  }
+  if (outcome.status === "conflict") {
+    return { result: { error: CONCURRENT_EDIT }, success: false };
+  }
+  return {
+    result: {
+      added: tasks.length,
+      ...scratchpadPayload(outcome.state.content, outcome.state.rev),
+    },
+    success: true,
+  };
+}
+
 async function updateScratchpadTask(
-  ctx: NotebookToolContext,
+  userId: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const raw = Array.isArray(args.tasks) ? (args.tasks as Array<Record<string, unknown>>) : [];
@@ -89,7 +166,7 @@ async function updateScratchpadTask(
       : undefined;
   const outcome = await applyScratchpadTaskChanges(
     getServiceClient(),
-    ctx.userId,
+    userId,
     changes,
     expectedRev,
   );
@@ -119,67 +196,89 @@ async function updateScratchpadTask(
     };
   }
   return {
-    result: scratchpadPayload(outcome.state.content, outcome.state.rev),
+    result: {
+      // Le fil d'exécution compte dessus pour dire « 2 tâches mises à jour ».
+      updated: changes.length,
+      ...scratchpadPayload(outcome.state.content, outcome.state.rev),
+    },
     success: true,
   };
 }
 
-async function createIssue(
-  ctx: NotebookToolContext,
+/**
+ * Réécriture TOTALE du carnet — et la seule voie pour SUPPRIMER une tâche.
+ * `expected_rev` est OBLIGATOIRE ici, là où Numo chat et le MCP le laissent
+ * optionnel : c'est l'écrasement d'un document personnel sans historique ni undo,
+ * écrit par un agent autonome — un `rev` périmé doit être refusé, pas arbitré.
+ */
+async function setScratchpadTool(
+  userId: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const title = typeof args.title === "string" ? args.title.trim() : "";
-  if (!title) return { result: { error: "title is required." }, success: false };
-
-  const result = await createIssueForProject({
-    projectId: ctx.projectId,
-    actorId: ctx.userId,
-    viaAssistant: true,
-    input: {
-      title,
-      // `todo` : un ticket issu d'une note déjà en travail n'a rien à trier.
-      status: "todo",
-      ...(typeof args.description === "string" && args.description.trim()
-        ? { description: args.description }
-        : {}),
-      ...(typeof args.priority === "string" ? { priority: args.priority } : {}),
-      ...(typeof args.effort === "string" ? { effort: args.effort } : {}),
-    },
-  });
-  if (!result.ok) {
+  const content = typeof args.content === "string" ? args.content : null;
+  if (content === null) {
     return {
-      result: { error: result.errorKey ?? result.rawMessage ?? "Issue creation refused." },
+      result: {
+        error:
+          "content must be a string — the FULL new notebook markdown (call read_scratchpad first and keep everything you are not changing). An empty string clears the notebook.",
+      },
       success: false,
     };
   }
-  const number = (result.issue as { number?: number }).number;
-  return {
-    result: {
-      ok: true,
-      id: (result.issue as { id?: string }).id,
-      identifier: typeof number === "number" ? `${ctx.projectKey}-${number}` : null,
-      title,
-    },
-    success: true,
-  };
+  if (content.length > MAX_SCRATCHPAD_LENGTH) {
+    return {
+      result: { error: `The notebook is capped at ${MAX_SCRATCHPAD_LENGTH} characters.` },
+      success: false,
+    };
+  }
+  const expectedRev = args.expected_rev;
+  if (typeof expectedRev !== "number" || !Number.isInteger(expectedRev) || expectedRev < 0) {
+    return {
+      result: {
+        error:
+          "expected_rev is required — pass the `rev` of the read_scratchpad your content is based on, so a concurrent edit by the user can never be overwritten.",
+      },
+      success: false,
+    };
+  }
+
+  const write = await setScratchpad(getServiceClient(), userId, content, expectedRev);
+  if (write.conflicted) {
+    return {
+      result: {
+        error: `The notebook changed since rev ${expectedRev} (it is now at rev ${write.rev}) — the user edited it meanwhile, and nothing was written. Call read_scratchpad again, reapply your change onto the fresh content, then retry.`,
+      },
+      success: false,
+    };
+  }
+  return { result: scratchpadPayload(write.content, write.rev), success: true };
 }
 
-/** Exécute un tool carnet. L'appelant a déjà routé sur `NOTEBOOK_TOOL_NAMES`. */
-export async function executeNotebookTool(
-  ctx: NotebookToolContext,
+/** Exécute un tool carnet. L'appelant a déjà routé sur `SCRATCHPAD_TOOL_NAMES`. */
+export async function executeScratchpadTool(
+  ctx: ScratchpadToolContext,
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  const userId = ctx.userId;
+  if (!userId) {
+    return {
+      result: { error: "This run has no owner, so there is no notebook to read or write." },
+      success: false,
+    };
+  }
   try {
     switch (name) {
       case "read_scratchpad":
-        return await readScratchpad(ctx);
+        return await readScratchpad(userId);
+      case "add_scratchpad_tasks":
+        return await addScratchpadTasks(userId, args);
       case "update_scratchpad_task":
-        return await updateScratchpadTask(ctx, args);
-      case "create_issue":
-        return await createIssue(ctx, args);
+        return await updateScratchpadTask(userId, args);
+      case "set_scratchpad":
+        return await setScratchpadTool(userId, args);
       default:
-        return { result: { error: `Unknown notebook tool: ${name}` }, success: false };
+        return { result: { error: `Unknown scratchpad tool: ${name}` }, success: false };
     }
   } catch (err) {
     return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };

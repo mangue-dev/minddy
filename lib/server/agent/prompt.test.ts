@@ -4,6 +4,7 @@ import {
   buildAgentSystemPrompt,
   buildInheritedBranchMessage,
   buildInheritedPrMessage,
+  buildNotebookContextMessage,
   toPrLineThreads,
 } from "./prompt";
 
@@ -580,7 +581,7 @@ describe("buildAgentSystemPrompt — maquettes visibles", () => {
   it("annonce que read_attachment rend l'image, sur un run multimodal", () => {
     const prompt = buildAgentSystemPrompt({ anchor: "issue", images: true });
     expect(prompt).toMatch(/AS AN IMAGE you can actually look at/);
-    expect(prompt).toMatch(/mockups the ticket carries BEFORE implementing/);
+    expect(prompt).toMatch(/mockups a ticket carries BEFORE implementing/);
   });
 
   it("n'en dit RIEN sur un run non multimodal (défaut)", () => {
@@ -594,9 +595,13 @@ describe("buildAgentSystemPrompt — maquettes visibles", () => {
     }
   });
 
-  it("ne concerne pas l'ancrage carnet, qui n'a pas de pièces jointes", () => {
-    const prompt = buildAgentSystemPrompt({ anchor: "notebook", images: true });
-    expect(prompt).not.toContain("read_attachment");
+  // MIN-125 : le carnet aussi atteint les tickets, donc leurs pièces jointes —
+  // la promesse d'image y suit exactement la même règle.
+  it("vaut aussi pour l'ancrage carnet, qui atteint les tickets du projet", () => {
+    expect(buildAgentSystemPrompt({ anchor: "notebook", images: true })).toMatch(
+      /AS AN IMAGE you can actually look at/,
+    );
+    expect(buildAgentSystemPrompt({ anchor: "notebook" })).not.toMatch(/AS AN IMAGE/);
   });
 });
 
@@ -621,5 +626,96 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
     const msg = buildAgentContextMessage(ticket);
     expect(msg).toContain("mock.png (image/png, 120 KB) — id: att-2");
     expect(msg).not.toContain("shows it to you");
+  });
+});
+
+/**
+ * MIN-125 : les tools minddy ne dépendent plus de l'ancrage. L'inventaire du
+ * prompt doit donc les citer TOUS DEUX CÔTÉS — sinon un run de carnet reçoit
+ * `update_issue` sans savoir qu'il l'a, et un run de ticket ignore le carnet.
+ */
+describe("buildAgentSystemPrompt — tools minddy aux deux ancrages", () => {
+  const anchors = ["issue", "notebook"] as const;
+
+  it("cite les dix tools quel que soit l'ancrage", () => {
+    for (const anchor of anchors) {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      for (const tool of [
+        "search_issues",
+        "read_issue",
+        "read_attachment",
+        "update_issue",
+        "write_issue_plan",
+        "create_issue",
+        "read_scratchpad",
+        "add_scratchpad_tasks",
+        "update_scratchpad_task",
+        "set_scratchpad",
+      ]) {
+        expect(prompt, `${tool} absent de l'ancrage ${anchor}`).toContain(`\`${tool}\``);
+      }
+    }
+  });
+
+  it("porte la règle dure de non-changement de statut des deux côtés", () => {
+    for (const anchor of anchors) {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toContain("**You never change a ticket's status**");
+      expect(prompt).toMatch(/refuses `status` and `priority`/);
+    }
+  });
+
+  it("dit comment viser un autre ticket, selon l'ancrage", () => {
+    expect(buildAgentSystemPrompt({ anchor: "issue" })).toMatch(
+      /Omit `issue` and they act on THIS session's ticket/,
+    );
+    expect(buildAgentSystemPrompt({ anchor: "notebook" })).toMatch(
+      /they have no default target here, so always pass it/,
+    );
+  });
+
+  it("assouplit la règle du carnet sans l'ouvrir en grand", () => {
+    for (const anchor of anchors) {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      // Ajouter/supprimer devient possible, mais sur demande explicite seulement.
+      expect(prompt).toMatch(/only when they explicitly ask for it/);
+      expect(prompt).not.toContain("you never add, remove or rewrite notes in it");
+    }
+  });
+
+  it("ne contient PAS le statut d'atterrissage (il varie par utilisateur)", () => {
+    // Le prompt système est le préfixe partagé par tous les runs d'un même
+    // ancrage : y glisser un réglage de compte ruinerait le prompt caching.
+    for (const anchor of anchors) {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).not.toMatch(/land in '(triage|backlog|todo)'/);
+    }
+  });
+});
+
+/**
+ * Le statut d'atterrissage vit dans le message de CONTEXTE, qui est de toute
+ * façon propre au run (dépôt, branche, ticket).
+ */
+describe("statut d'atterrissage annoncé dans le contexte", () => {
+  const ticket = {
+    issue: { identifier: "MIN-42", title: "Add search", description: null, plan: null },
+    repo,
+  };
+
+  it("l'annonce sur un run de ticket", () => {
+    const msg = buildAgentContextMessage({ ...ticket, numoDefaultStatus: "backlog" });
+    expect(msg).toContain("land in 'backlog'");
+    expect(msg).toContain("create_issue");
+  });
+
+  it("l'annonce sur un run de carnet", () => {
+    const msg = buildNotebookContextMessage({ repo, numoDefaultStatus: "todo" });
+    expect(msg).toContain("land in 'todo'");
+  });
+
+  it("ne dit rien quand le statut n'est pas connu", () => {
+    expect(buildAgentContextMessage(ticket)).not.toContain("land in");
+    expect(buildNotebookContextMessage({ repo })).not.toContain("land in");
   });
 });

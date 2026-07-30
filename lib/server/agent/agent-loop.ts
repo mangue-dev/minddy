@@ -101,7 +101,16 @@ const CONTEXT_WARNING_RATIO = 0.7;
 const CONTEXT_WARNING_MESSAGE =
   "You are approaching the context limit for this session. Finish the step you are on and reply — do not start new exploration.";
 /** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
-const READ_ONLY_TOOLS = new Set(["read_file", "list_dir", "glob", "grep", "read_issue", "read_attachment"]);
+const READ_ONLY_TOOLS = new Set([
+  "read_file",
+  "list_dir",
+  "glob",
+  "grep",
+  "search_issues",
+  "read_issue",
+  "read_attachment",
+  "read_scratchpad",
+]);
 
 /**
  * Un message du protocole chat OpenRouter (identique à celui de processChat).
@@ -413,8 +422,32 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { title: cap(String(args.title ?? ""), 200) };
     case "read_attachment":
       return { attachment_id: String(args.attachment_id ?? "") };
+    // Tools minddy (MIN-125). Sans ces cas, les events persistés partent avec
+    // `{}` et le fil relu affiche « Recherche de « … » » ou « 0 tâche » — le
+    // résumé EST ce que la relecture du run a pour raconter l'appel.
+    case "search_issues":
+      return { query: cap(String(args.query ?? ""), 100) };
+    case "read_issue":
+      // `issue` seulement quand il est passé : sur le ticket de la session, son
+      // absence est l'information (« il a relu SON ticket »).
+      return args.issue ? { issue: String(args.issue) } : {};
     case "write_issue_plan":
-      return { chars: String(args.plan ?? "").length };
+      return {
+        chars: String(args.plan ?? "").length,
+        ...(args.issue ? { issue: String(args.issue) } : {}),
+      };
+    case "update_issue":
+      return {
+        fields: ["title", "description", "effort"].filter((f) => args[f] !== undefined),
+        ...(args.issue ? { issue: String(args.issue) } : {}),
+      };
+    case "create_issue":
+      return { title: cap(String(args.title ?? ""), 200) };
+    case "add_scratchpad_tasks":
+    case "update_scratchpad_task":
+      return { count: Array.isArray(args.tasks) ? args.tasks.length : 0 };
+    case "set_scratchpad":
+      return { chars: String(args.content ?? "").length };
     default:
       return {};
   }

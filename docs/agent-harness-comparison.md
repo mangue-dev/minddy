@@ -49,10 +49,32 @@ cœur**, communs aux deux ancrages :
 | Hors dépôt | `web_search` (runs OpenRouter uniquement, cf. `agentToolsFor`) |
 | Contrôle | `update_plan`, `ask_user` |
 
-puis, selon l'ancrage du run (MIN-84), **4 tools d'ancrage** : ticket
-(`read_issue`, `read_attachment`, `write_issue_plan`, `create_pr`) ou carnet
-(`read_scratchpad`, `update_scratchpad_task`, `create_issue`, `create_pr`).
-Soit **17 tools au maximum** dans une session.
+puis **10 tools minddy**, servis aux DEUX ancrages depuis MIN-125 :
+
+| Famille | Tools |
+| --- | --- |
+| Tickets du projet | `search_issues`, `read_issue`, `read_attachment`, `update_issue`, `write_issue_plan`, `create_issue` |
+| Carnet du lanceur | `read_scratchpad`, `add_scratchpad_tasks`, `update_scratchpad_task`, `set_scratchpad` |
+
+plus `create_pr`, le seul dont la formulation dépende encore de l'ancrage. Soit
+**25 tools au maximum** dans une session.
+
+L'ancrage (MIN-84) ne décide plus que d'une chose côté tools : la **cible par
+défaut** des trois tools qui prennent un `issue` (`read_issue`, `update_issue`,
+`write_issue_plan`) — le ticket du run quand il y en a un, sinon `issue` est
+obligatoire et se résout avec `search_issues`. `agentToolsFor` le dit dans la
+description de ces trois tools, comme il patche déjà celle de `read_attachment`
+selon la multimodalité du modèle.
+
+**Aucun tool ne change un statut de ticket** : `update_issue` n'expose ni `status`
+ni `priority` et refuse explicitement l'argument si le modèle l'hallucine. Les
+seules écritures de statut côté agent restent celles du harness
+([issue-status-sync.ts](../lib/server/agent/issue-status-sync.ts) : `in_progress`
+au lancement, puis le cycle de la PR). De même, `create_issue` n'expose pas de
+statut : le ticket créé atterrit sur le réglage de compte du LANCEUR
+(`user_metadata.numo_default_status`), annoncé dans le message de contexte du run
+— jamais dans le prompt système, qui doit rester identique d'un utilisateur à
+l'autre pour le prompt caching.
 
 Constantes qui gouvernent leur comportement :
 
@@ -125,9 +147,10 @@ Sandbox par run, nommée `agent-<run.id>` :
 
 - `MAX_ROUNDS_PER_CHUNK = 60`, suspend au **sommet** de chaque round si la
   soft-deadline du chunk est dépassée (frontière sûre : aucun appel en vol).
-- `READ_ONLY_TOOLS` = `read_file, list_dir, glob, grep, read_issue,
-  read_attachment` → si **tous** les tool-calls d'un round sont read-only, ils sont
-  exécutés en parallèle (`Promise.all`), résultats repoussés dans l'ordre d'origine.
+- `READ_ONLY_TOOLS` = `read_file, list_dir, glob, grep, search_issues, read_issue,
+  read_attachment, read_scratchpad` → si **tous** les tool-calls d'un round sont
+  read-only, ils sont exécutés en parallèle (`Promise.all`), résultats repoussés
+  dans l'ordre d'origine.
 - `pullSteering()` draine les messages utilisateur en attente au sommet de chaque
   round → orientation à chaud, et reprise d'un `ask_user`.
 - `emitLive` republie le texte en cours d'écriture ~4×/s (`LIVE_FLUSH_MS = 250`).

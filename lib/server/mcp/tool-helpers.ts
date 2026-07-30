@@ -4,7 +4,10 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-access";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
-import { issueIdentifier } from "@/lib/issue-constants";
+import {
+  resolveIssueRef as resolveIssueRefCore,
+  type ResolvedIssueRef,
+} from "@/lib/server/issue-reads";
 
 /**
  * Boîte à outils commune des tools MCP : résultats ok/fail (JSON dans un bloc
@@ -90,79 +93,26 @@ export async function resolveProject(
   return { access };
 }
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const IDENTIFIER_RE = /^([A-Za-z]{2,5})-(\d+)$/;
-
-export interface ResolvedIssue {
-  id: string;
-  number: number;
-  identifier: string;
-}
+export type ResolvedIssue = ResolvedIssueRef;
 
 /**
  * Résout une référence de ticket — UUID, identifiant « MIND-42 » ou numéro
- * nu — vers son id, épinglée au projet. Un préfixe d'identifiant qui ne
- * correspond pas à la clé du projet est une erreur explicite (protège d'un
- * copier-coller depuis un autre projet).
+ * nu — vers son id, épinglée au projet. Enveloppe fine du résolveur partagé
+ * (`lib/server/issue-reads.ts`, également utilisé par les tools ticket de
+ * l'agent de code) : elle ne fait que rendre les codes d'erreur du MCP.
  */
 export async function resolveIssueRef(
   access: ProjectAccess,
   ref: unknown
 ): Promise<{ issue: ResolvedIssue } | { error: ToolResult }> {
-  const raw = typeof ref === "string" ? ref.trim() : "";
-  if (!raw) {
-    return {
-      error: fail(
-        "invalid_params",
-        "issue is required — pass a UUID, an identifier like 'MIND-42', or a bare issue number."
-      ),
-    };
-  }
-
-  const service = getServiceClient();
   const project = access.project;
-  let query = service
-    .from("issues")
-    .select("id, number")
-    .eq("project_id", project.id);
-
-  const identifierMatch = raw.match(IDENTIFIER_RE);
-  if (UUID_RE.test(raw)) {
-    query = query.eq("id", raw);
-  } else if (identifierMatch) {
-    if (identifierMatch[1].toUpperCase() !== project.key.toUpperCase()) {
-      return {
-        error: fail(
-          "issue_not_found",
-          `Identifier prefix '${identifierMatch[1]}' doesn't match this project's key '${project.key}'.`
-        ),
-      };
-    }
-    query = query.eq("number", Number(identifierMatch[2]));
-  } else if (/^\d+$/.test(raw)) {
-    query = query.eq("number", Number(raw));
-  } else {
-    return {
-      error: fail(
-        "invalid_params",
-        `'${raw}' is not a valid issue reference — pass a UUID, '${project.key}-<number>', or a bare number.`
-      ),
-    };
+  const resolved = await resolveIssueRefCore(
+    getServiceClient(),
+    { projectId: project.id, projectKey: project.key },
+    ref
+  );
+  if ("error" in resolved) {
+    return { error: fail(resolved.code, resolved.error) };
   }
-
-  const { data, error } = await query.maybeSingle();
-  if (error) return { error: fail("database_error", error.message) };
-  if (!data) {
-    return {
-      error: fail("issue_not_found", `Issue '${raw}' not found in this project.`),
-    };
-  }
-  return {
-    issue: {
-      id: data.id as string,
-      number: data.number as number,
-      identifier: issueIdentifier(project.key, data.number as number),
-    },
-  };
+  return { issue: resolved.issue };
 }

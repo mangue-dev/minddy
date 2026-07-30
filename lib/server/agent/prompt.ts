@@ -69,16 +69,18 @@ This is an open-ended CONVERSATION, not a scripted job. The note is a FREE-FORM 
 This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: the user's messages drive each turn. They may ask you to implement something, fix a bug, explore or explain the code, review a diff, run tests, or just answer a question — do what they ask, nothing more. A turn ends when you stop calling tools and write your reply. If a message only calls for an answer, just answer: no edits, no pull request, no ceremony. If no request is given at all, treat the ticket itself as the work to do. You keep the same sandbox, working branch and full history across turns — treat each new message as the next step of ongoing work, never as a fresh start.`;
 
   const anchorTools = notebook
-    ? `- \`create_pr\` — open this session's pull request when there is none yet (see Git below).
-- \`read_scratchpad\` — the LIVE state of the user's notebook: full markdown + every checkbox task with a stable \`task_index\` and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index (see The notebook below).
-- \`create_issue\` — promote work into a real minddy ticket, only when it genuinely deserves one (see The notebook below).`
-    : `- \`create_pr\` — open the ticket's pull request when there is none yet (see Git below).
-- \`read_issue\` — the LIVE state of the ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; ${
-        images
-          ? "an image comes back AS AN IMAGE you can actually look at — open the mockups the ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
-          : "binaries"
-      } via a signed URL you can curl in the sandbox).
-- \`write_issue_plan\` — write the ticket's persistent implementation plan (see The ticket below).`;
+    ? `- \`create_pr\` — open this session's pull request when there is none yet (see Git below).`
+    : `- \`create_pr\` — open the ticket's pull request when there is none yet (see Git below).`;
+
+  // Les tools minddy sont les MÊMES aux deux ancrages (MIN-125) : seule la cible
+  // par défaut des tools ticket change, et la description de chaque tool le dit.
+  const minddyTools = `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; ${
+    images
+      ? "an image comes back AS AN IMAGE you can actually look at — open the mockups a ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
+      : "binaries"
+  } via a signed URL you can curl in the sandbox).
+- \`update_issue\` — rename a ticket, rewrite its description, change its effort estimate. \`write_issue_plan\` — write a ticket's persistent implementation plan (see below). \`create_issue\` — create a real ticket in this project.
+- \`read_scratchpad\` — the LIVE state of the user's notebook (their personal notes doc): full markdown + every checkbox task with a stable \`task_index\`, and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index. \`add_scratchpad_tasks\` — append tasks. \`set_scratchpad\` — rewrite the whole notebook (the only way to DELETE a task).`;
 
   // Le harness REFUSE ces commandes (command-guard.ts, MIN-108) : le prompt les
   // annonce comme une contrainte exécutée, pas comme une politesse — sinon le
@@ -96,12 +98,25 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 
   const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
 
+  // Règle DURE, identique aux deux ancrages : la seule écriture de statut côté
+  // agent est celle du harness (lancement, cycle de la PR) — jamais un tool.
+  const statusRule = `**You never change a ticket's status** — not to open a triage, not to close one when you are done: that is the user's decision, and the harness already applies the transitions tied to the pull request. \`update_issue\` refuses \`status\` and \`priority\` outright. When you think a ticket should move, say so in your reply and let them do it.`;
+
+  const notebookRules = `- The notebook is the user's PERSONAL space. Ticking tasks off as you work is expected; ADDING tasks (\`add_scratchpad_tasks\`) or deleting/rewording them (\`set_scratchpad\` — a full rewrite, no undo) happens only when they explicitly ask for it. Never reword a task you are merely ticking.
+- Before any \`set_scratchpad\`, call \`read_scratchpad\`, apply your change to the content it returned, keep everything else verbatim, and pass its \`rev\` as \`expected_rev\`.`;
+
   const anchorSection = notebook
     ? `## The notebook
 - The note in your first messages is a SNAPSHOT of part of the user's notebook. It goes stale: whenever fresh state matters — before ticking tasks, or when the user mentions an edit you haven't seen — call \`read_scratchpad\` instead of guessing.
 - **Keep the notebook's checkboxes current as you work**: when you start a task from the note, mark it \`in_progress\`; when you finish it, mark it \`completed\` — via \`update_scratchpad_task\`, addressing tasks by the \`task_index\` of a FRESH \`read_scratchpad\` and passing its \`rev\`. Only flip tasks the note asked you to do; never rewrite their text.
-- The notebook is the user's personal space: you can tick its tasks, but you never add, remove or rewrite notes in it.
+${notebookRules}
 - **\`create_issue\` is an option, never a reflex**: if the work turns out to deserve a formal, trackable ticket (substantial feature, real bug the team should see) or the user asks for one, create it — otherwise just do the work. Creating a ticket is NOT part of finishing a note.
+
+## Tickets of the project
+- This session is not anchored to a ticket, but the project's tickets are yours to read and edit. \`search_issues\` finds the one the user means, then \`read_issue\`, \`update_issue\` and \`write_issue_plan\` take its identifier in \`issue\` — they have no default target here, so always pass it.
+- \`update_issue\` renames, rewrites the description or re-estimates the effort. Do it when the user asks, or when the ticket's own words have become wrong — not as a drive-by tidy-up.
+- **When the user asks for a plan** on a ticket ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work. Never write a ticket's plan unprompted: it belongs to the user.
+- ${statusRule}
 
 ## Git and pull requests
 ${gitOwnership}
@@ -112,6 +127,13 @@ ${gitOwnership}
 - **The ticket may carry an implementation plan** (markdown checkbox tasks: \`- [ ]\` pending, \`- [~]\` in progress, \`- [x]\` done, \`- [-]\` cancelled). When asked to implement a ticket that ships a plan, follow it, and reuse its task wording VERBATIM as your \`update_plan\` steps — your progress then mirrors onto the ticket's plan automatically.
 - **When the user asks for a plan** ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work — reply and stop unless they also asked to implement. Decide rather than ask: on an unresolved detail, pick the most reasonable option and state the assumption in the context. If something is genuinely blocking, \`ask_user\` while you still have the turn; only park it under a \`## Questions\` heading of the plan (checkboxes there are open questions, excluded from progress) when the answer can wait.
 - Never write the ticket's plan unprompted: it belongs to the user. Your session checklist (\`update_plan\`) is yours; the ticket plan (\`write_issue_plan\`) only changes on their request.
+- \`update_issue\` renames the ticket, rewrites its description or re-estimates its effort. Do it when the user asks, or when the ticket's own words have become wrong about the work — not as a drive-by tidy-up.
+- **The project's OTHER tickets are within reach too**: \`search_issues\` finds one, and \`read_issue\` / \`update_issue\` / \`write_issue_plan\` take an \`issue\` argument to target it. Omit \`issue\` and they act on THIS session's ticket — which is what you want almost every time.
+- ${statusRule}
+
+## The notebook
+- The user's personal notebook is readable and writable from here as well: \`read_scratchpad\` for its live state, \`update_scratchpad_task\` to tick off a task of theirs that your work just completed.
+${notebookRules}
 
 ## Git and pull requests
 ${gitOwnership}
@@ -135,6 +157,7 @@ ${editingTools}
 - \`update_plan\` — maintain a short ordered checklist of your steps for multi-step work (keep exactly one step \`in_progress\`; skip it for trivial or conversational turns).
 - \`ask_user\` — pose structured clarifying questions and end your turn (see Asking below).
 ${anchorTools}
+${minddyTools}
 
 ${anchorSection}
 
@@ -364,6 +387,17 @@ function formatSize(bytes: number): string {
 }
 
 /**
+ * Où atterrit un ticket créé par l'agent — le réglage de compte du LANCEUR.
+ * Annoncé dans le message de CONTEXTE et pas dans le prompt système : celui-ci
+ * doit rester identique d'un utilisateur à l'autre pour un même ancrage (prompt
+ * caching), là où le contexte est de toute façon propre au run.
+ */
+function landingStatusLine(status: string | null | undefined): string {
+  if (!status) return "";
+  return `\nTickets you create with \`create_issue\` land in '${status}' — the landing status this user chose; it is not something you pass, so report where the ticket went.`;
+}
+
+/**
  * Message utilisateur de CONTEXTE : dépôt + ticket (description + plan + pièces
  * jointes). Volontairement présenté comme du contexte — la demande réelle est le
  * message utilisateur qui suit (le prompt du lanceur, poussé à part par
@@ -380,6 +414,8 @@ export function buildAgentContextMessage(input: {
    *  jointes image comme OUVRABLES — sans ça, l'agent lit « mockup.png » dans une
    *  liste et passe à côté du seul document qui dit à quoi l'écran doit ressembler. */
   images?: boolean;
+  /** Statut d'atterrissage d'un ticket créé par l'agent (réglage du lanceur). */
+  numoDefaultStatus?: string | null;
 }): string {
   const { issue, repo } = input;
   const planBlock = issue.plan?.trim()
@@ -407,7 +443,7 @@ export function buildAgentContextMessage(input: {
 
 # Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${attachmentsBlock}
 
-This ticket is the session's anchor and context. Everything above is a snapshot taken at session start — \`read_issue\` gives you the live state (fields, plan, comments, attachments) whenever it matters. The user's messages drive the work; if none follows, the ticket itself is the request.`;
+This ticket is the session's anchor and context. Everything above is a snapshot taken at session start — \`read_issue\` gives you the live state (fields, plan, comments, attachments) whenever it matters. The user's messages drive the work; if none follows, the ticket itself is the request.${landingStatusLine(input.numoDefaultStatus)}`;
 }
 
 /**
@@ -419,9 +455,11 @@ This ticket is the session's anchor and context. Everything above is a snapshot 
 export function buildNotebookContextMessage(input: {
   repo: AgentRepoContext;
   projectName?: string | null;
+  /** Statut d'atterrissage d'un ticket créé par l'agent (réglage du lanceur). */
+  numoDefaultStatus?: string | null;
 }): string {
   const { repo } = input;
   return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.${input.projectName ? `\nProject: ${input.projectName}` : ""}
 
-This session was launched from the user's NOTEBOOK: their note follows as the next message — it is your instruction, a free-form prompt rather than a formal ticket. The note is a snapshot of part of the notebook; \`read_scratchpad\` gives you its live state (all tasks with their \`task_index\` and current checkboxes) whenever it matters — and always right before \`update_scratchpad_task\`.`;
+This session was launched from the user's NOTEBOOK: their note follows as the next message — it is your instruction, a free-form prompt rather than a formal ticket. The note is a snapshot of part of the notebook; \`read_scratchpad\` gives you its live state (all tasks with their \`task_index\` and current checkboxes) whenever it matters — and always right before \`update_scratchpad_task\`.${landingStatusLine(input.numoDefaultStatus)}`;
 }

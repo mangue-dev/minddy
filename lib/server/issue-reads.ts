@@ -82,6 +82,88 @@ export async function assertIssueInProject(
   return { ok: true };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const IDENTIFIER_RE = /^([A-Za-z]{2,5})-(\d+)$/;
+
+export interface ResolvedIssueRef {
+  id: string;
+  number: number;
+  identifier: string;
+}
+
+/** Pourquoi une référence n'a pas résolu — l'appelant mappe ce code sur SA
+    convention d'erreur (codes stables du MCP, message nu pour un tool d'agent). */
+export type IssueRefErrorCode =
+  | "invalid_params"
+  | "issue_not_found"
+  | "database_error";
+
+/**
+ * Résout une référence de ticket — UUID, identifiant « MIND-42 » ou numéro nu —
+ * vers son id, épinglée au projet. Un préfixe d'identifiant qui ne correspond pas
+ * à la clé du projet est une erreur explicite (protège d'un copier-coller depuis
+ * un autre projet).
+ *
+ * Partagé par le MCP (`lib/server/mcp/tool-helpers.ts`, qui l'enveloppe pour ses
+ * codes d'erreur) et les tools ticket de l'agent de code, où le modèle passe
+ * indifféremment l'un des trois formats.
+ */
+export async function resolveIssueRef(
+  db: SupabaseClient,
+  scope: { projectId: string; projectKey: string },
+  ref: unknown
+): Promise<
+  { issue: ResolvedIssueRef } | { error: string; code: IssueRefErrorCode }
+> {
+  const raw = typeof ref === "string" ? ref.trim() : "";
+  if (!raw) {
+    return {
+      code: "invalid_params",
+      error:
+        "issue is required — pass a UUID, an identifier like 'MIND-42', or a bare issue number.",
+    };
+  }
+
+  let query = db.from("issues").select("id, number").eq("project_id", scope.projectId);
+
+  const identifierMatch = raw.match(IDENTIFIER_RE);
+  if (UUID_RE.test(raw)) {
+    query = query.eq("id", raw);
+  } else if (identifierMatch) {
+    if (identifierMatch[1].toUpperCase() !== scope.projectKey.toUpperCase()) {
+      return {
+        code: "issue_not_found",
+        error: `Identifier prefix '${identifierMatch[1]}' doesn't match this project's key '${scope.projectKey}'.`,
+      };
+    }
+    query = query.eq("number", Number(identifierMatch[2]));
+  } else if (/^\d+$/.test(raw)) {
+    query = query.eq("number", Number(raw));
+  } else {
+    return {
+      code: "invalid_params",
+      error: `'${raw}' is not a valid issue reference — pass a UUID, '${scope.projectKey}-<number>', or a bare number.`,
+    };
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error) return { code: "database_error", error: error.message };
+  if (!data) {
+    return {
+      code: "issue_not_found",
+      error: `Issue '${raw}' not found in this project.`,
+    };
+  }
+  return {
+    issue: {
+      id: data.id as string,
+      number: data.number as number,
+      identifier: issueIdentifier(scope.projectKey, data.number as number),
+    },
+  };
+}
+
 export async function listIssues(
   ctx: ReadContext,
   args: Record<string, unknown>

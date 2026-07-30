@@ -106,6 +106,35 @@ function resultCount(
   return rows?.length ?? 0;
 }
 
+/**
+ * Cochage de tâches du carnet. Servi sous DEUX noms : `update_scratchpad_tasks`
+ * (Numo chat) et `update_scratchpad_task` (agent de code, MIN-84/MIN-125) — les
+ * renommer casserait la reprise des runs en cours, donc le fil connaît les deux.
+ * Le compte vient du résultat, sinon des arguments bruts du modèle, sinon du
+ * résumé à plat que `toolArgSummary` persiste pour un run d'agent (`count`).
+ */
+const SCRATCHPAD_TASKS_META: ToolMeta = {
+  icon: ListChecks,
+  getLabel: (args, result, success, status, t) => {
+    if (status === "running") return t("updatingScratchpadTasks");
+    if (!success) return t("updateScratchpadTasksFailed");
+    const updated =
+      typeof result?.updated === "number"
+        ? result.updated
+        : Array.isArray(args.tasks)
+          ? args.tasks.length
+          : typeof args.count === "number"
+            ? args.count
+            : 0;
+    return t("scratchpadTasksUpdated", { count: updated });
+  },
+};
+
+/** Référence du ticket visé quand le tool en portait une (sinon : celui du run). */
+function targetIssue(args: Record<string, unknown>): string | null {
+  return typeof args.issue === "string" && args.issue.trim() ? args.issue.trim() : null;
+}
+
 const TOOL_META: Record<string, ToolMeta> = {
   list_projects: {
     icon: LayoutGrid,
@@ -391,24 +420,14 @@ const TOOL_META: Record<string, ToolMeta> = {
           ? result.added
           : Array.isArray(args.tasks)
             ? args.tasks.length
-            : 0;
+            : typeof args.count === "number"
+              ? args.count
+              : 0;
       return t("scratchpadTasksAdded", { count: added });
     },
   },
-  update_scratchpad_tasks: {
-    icon: ListChecks,
-    getLabel: (args, result, success, status, t) => {
-      if (status === "running") return t("updatingScratchpadTasks");
-      if (!success) return t("updateScratchpadTasksFailed");
-      const updated =
-        typeof result?.updated === "number"
-          ? result.updated
-          : Array.isArray(args.tasks)
-            ? args.tasks.length
-            : 0;
-      return t("scratchpadTasksUpdated", { count: updated });
-    },
-  },
+  update_scratchpad_tasks: SCRATCHPAD_TASKS_META,
+  update_scratchpad_task: SCRATCHPAD_TASKS_META,
   set_scratchpad: {
     icon: NotebookPen,
     getLabel: (_args, _result, success, status, t) => {
@@ -515,6 +534,40 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: Terminal,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentRunCommand", { command: (args.command as string) || "…" }),
+  },
+  // Tools minddy de l'agent (MIN-125). `search_issues`, `create_issue`,
+  // `add_scratchpad_tasks` et `set_scratchpad` réutilisent tels quels les entrées
+  // de Numo ci-dessus : mêmes noms, mêmes formes de résultat.
+  read_issue: {
+    icon: FileSearch,
+    getLabel: (args, _r, _s, _st, t) => {
+      const issue = targetIssue(args);
+      return issue ? t("agentReadIssueTarget", { issue }) : t("agentReadIssue");
+    },
+  },
+  read_attachment: {
+    icon: FileSearch,
+    getLabel: (_a, _r, _s, _st, t) => t("agentReadAttachment"),
+  },
+  update_issue: {
+    icon: FilePen,
+    getLabel: (args, _r, _s, _st, t) => {
+      const issue = targetIssue(args);
+      return issue ? t("agentUpdateIssueTarget", { issue }) : t("agentUpdateIssue");
+    },
+  },
+  write_issue_plan: {
+    icon: FilePen,
+    getLabel: (args, _r, _s, _st, t) => {
+      const issue = targetIssue(args);
+      return issue
+        ? t("agentWriteIssuePlanTarget", { issue })
+        : t("agentWriteIssuePlan");
+    },
+  },
+  read_scratchpad: {
+    icon: Notebook,
+    getLabel: (_a, _r, _s, _st, t) => t("agentReadScratchpad"),
   },
   run_background: {
     icon: Activity,

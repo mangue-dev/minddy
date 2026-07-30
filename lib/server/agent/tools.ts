@@ -18,15 +18,19 @@ import { usesApplyPatch } from "./patch";
  *  - vérif       : run_command (install/lint/build/tests, git, etc.), run_background
  *                  (serveur de dev / watcher : démarrer, sonder, arrêter — MIN-114)
  *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
- *  - ticket      : read_issue (état VIVANT du ticket : champs, plan, commentaires,
- *                  pièces jointes), read_attachment, write_issue_plan (écrit le
- *                  plan du ticket SUR DEMANDE de l'utilisateur, sans l'appliquer)
- *                  — exécutés par lib/server/agent/issue-tools.ts.
+ *  - tickets     : search_issues, read_issue (état VIVANT d'un ticket : champs,
+ *                  plan, commentaires, pièces jointes), read_attachment,
+ *                  update_issue (titre / description / effort — JAMAIS le statut),
+ *                  write_issue_plan (écrit le plan SUR DEMANDE, sans l'appliquer),
+ *                  create_issue — exécutés par lib/server/agent/issue-tools.ts.
+ *  - carnet      : read_scratchpad, add_scratchpad_tasks, update_scratchpad_task,
+ *                  set_scratchpad — exécutés par lib/server/agent/scratchpad-tools.ts.
  *
- * Deux JEUX selon l'ancrage du run (MIN-84) : `AGENT_TOOLS` (run de ticket) et
- * `NOTEBOOK_AGENT_TOOLS` (run carnet — les tools ticket sont remplacés par
- * read_scratchpad / update_scratchpad_task / create_issue, exécutés par
- * lib/server/agent/notebook-tools.ts, et create_pr est reformulé sans ticket).
+ * Les dix tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
+ * ne décide plus que de la CIBLE PAR DÉFAUT des tools ticket (le ticket du run,
+ * sinon `issue` est obligatoire) et de la formulation de `create_pr`. D'où deux
+ * jeux qui ne diffèrent que par là : `AGENT_TOOLS` (run de ticket) et
+ * `NOTEBOOK_AGENT_TOOLS` (run carnet).
  *
  * PAS de tool de fin de tour : le tour se termine quand l'agent répond en texte
  * (fin naturelle, comme une conversation). Les commits sont pilotés par le harnais
@@ -493,17 +497,53 @@ const READ_ATTACHMENT_DESCRIPTION =
 const READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES =
   "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. An IMAGE (png, jpeg, webp, gif) comes back as the image itself, attached to the result: you actually see it. When the ticket carries a mockup, a screenshot or a diagram, open it BEFORE writing the code it describes, and say what you see — a layout you were shown beats a layout you were told about. Text files come back inline (capped); other binaries and oversized files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
 
-/** Tools d'ANCRAGE TICKET : l'état vivant de l'issue + la PR du ticket. */
-const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
+/** États de tâche du carnet, tels que les tools les acceptent. */
+const SCRATCHPAD_TASK_STATES = ["pending", "in_progress", "completed", "cancelled"];
+
+/** Référence de ticket acceptée partout où un tool prend `issue`. */
+const ISSUE_REF_DESCRIPTION =
+  "The ticket to act on: a UUID, an identifier like 'MIN-42', or a bare issue number. Resolve it with search_issues when you only know its subject.";
+
+/**
+ * Tools minddy, servis aux DEUX ancrages (MIN-125) : les tickets du projet du run
+ * et le carnet de son lanceur. Ce qui reste ancrage-dépendant est ajouté par
+ * `agentToolsFor` — la phrase de ciblage des tools qui prennent `issue`, et
+ * `create_pr`, déclaré à part parce que sa formulation change.
+ */
+const MINDDY_TOOLS: AgentToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "search_issues",
+      description:
+        "Find tickets in the minddy project this session works on. Matches free text against titles and descriptions, and resolves an exact reference ('MIN-42' or a bare number) directly. Returns compact rows — id, identifier, title, status, priority, effort, assignee, objective — enough to pick the right one and then read_issue it. Use it whenever the user mentions another ticket by subject, number or name, or before targeting one with read_issue / update_issue / write_issue_plan.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "What to look for: words from the title or description, or an exact 'MIN-42' / bare number.",
+          },
+          limit: {
+            type: "number",
+            description: "Max rows to return (default 20, max 100).",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
       name: "read_issue",
       description:
-        "Re-read the minddy ticket this session is anchored to: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its attachments (metadata + ids), the most recent comments, sub-issues and relations. The ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or attachments mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
+        "Read a minddy ticket in full: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its attachments (metadata + ids), the most recent comments, sub-issues and relations. Any ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or attachments mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
       parameters: {
         type: "object",
         properties: {
+          issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
           include_all_comments: {
             type: "boolean",
             description: "Return the FULL comment thread instead of the last 15 (default false).",
@@ -532,9 +572,33 @@ const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "update_issue",
+      description:
+        "Edit a ticket's TITLE, DESCRIPTION or EFFORT estimate. Send only the fields you are changing — the others are left untouched. Rename when the title no longer describes the work; rewrite the description when the user asks, or when what it claims has become wrong. You CANNOT change a ticket's STATUS or its PRIORITY here: those are the user's decision (and the harness already moves the ticket along with the pull request), and passing either is refused. Say in your reply what you think the status should be instead.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
+          title: { type: "string", description: "New title. Concise, imperative." },
+          description: {
+            type: "string",
+            description: "New description in markdown — REPLACES the current one entirely.",
+          },
+          effort: {
+            type: "string",
+            enum: ["xs", "s", "m", "l", "xl"],
+            description: "New t-shirt effort estimate. Pass null to clear it.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "write_issue_plan",
       description:
-        "Write the ticket's implementation PLAN — the persistent markdown plan stored on the minddy ticket, visible to the whole team. Call it ONLY when the user asks for a plan (e.g. 'prépare un plan', 'plan this ticket', 'how would you do it? write it down') — never spontaneously. Full replacement: send the complete plan. Format: a short context (goal, approach), then ordered checkbox tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' cancelled — each naming the exact files/components/functions/migrations to touch, and a final verification step. Explore the code FIRST so tasks reference real paths. Writing the plan does NOT start the work: after writing it, reply and stop unless the user also asked to implement. Distinct from update_plan, which is only your live session checklist.",
+        "Write a ticket's implementation PLAN — the persistent markdown plan stored on the minddy ticket, visible to the whole team. Call it ONLY when the user asks for a plan (e.g. 'prépare un plan', 'plan this ticket', 'how would you do it? write it down') — never spontaneously. Full replacement: send the complete plan. Format: a short context (goal, approach), then ordered checkbox tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' cancelled — each naming the exact files/components/functions/migrations to touch, and a final verification step. Explore the code FIRST so tasks reference real paths. Writing the plan does NOT start the work: after writing it, reply and stop unless the user also asked to implement. Distinct from update_plan, which is only your live session checklist.",
       parameters: {
         type: "object",
         properties: {
@@ -542,6 +606,7 @@ const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
             type: "string",
             description: "The complete plan in markdown (context + '- [ ]' tasks + verification).",
           },
+          issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
         },
         required: ["plan"],
       },
@@ -550,40 +615,74 @@ const ISSUE_ANCHOR_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
-      name: "create_pr",
+      name: "create_issue",
       description:
-        "Open the pull request for this ticket's working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. The system commits and pushes your changes first, then opens the PR. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.",
+        "Create a REAL ticket in the project this session works on. Use it when the user asks for one, or when work you ran into genuinely deserves a formal, trackable ticket (a substantial feature, a real bug the team should see) — never automatically, and never as a substitute for just doing the work. The ticket lands in the status the user chose for tickets created through Numo: that is an account setting, not a parameter, so you cannot pick it — the result tells you where it landed, report that.",
       parameters: {
         type: "object",
         properties: {
-          title: {
+          title: { type: "string", description: "Ticket title. Concise, imperative." },
+          description: {
             type: "string",
-            description: "Pull request title. Imperative, concise, in English.",
+            description: "Ticket description in markdown (context, scope, acceptance).",
           },
-          body: {
+          priority: {
             type: "string",
-            description:
-              "Pull request description in markdown: what changed, why, how it was verified.",
+            enum: ["none", "urgent", "high", "medium", "low"],
+            description: "Optional priority.",
+          },
+          effort: {
+            type: "string",
+            enum: ["xs", "s", "m", "l", "xl"],
+            description: "Optional t-shirt effort estimate.",
           },
         },
         required: ["title"],
       },
     },
   },
-];
-
-/** États de tâche du carnet, tels que le tool les accepte. */
-const NOTEBOOK_TASK_STATES = ["pending", "in_progress", "completed", "cancelled"];
-
-/** Tools d'ANCRAGE CARNET (MIN-84) : le carnet du lanceur + la promotion en ticket. */
-const NOTEBOOK_ANCHOR_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
       name: "read_scratchpad",
       description:
-        "Re-read the launcher's notebook (their personal cross-project notes doc): the full markdown, plus every checkbox task parsed with a stable 0-based task_index, its text and its state (pending '- [ ]', in_progress '- [~]', completed '- [x]', cancelled '- [-]'), and `rev`, the doc's version. The note you were given at session start is a SNAPSHOT — call this whenever fresh state matters, and ALWAYS right before update_scratchpad_task so your indices and rev are current.",
+        "Re-read the launcher's notebook (their personal cross-project notes doc): the full markdown, plus every checkbox task parsed with a stable 0-based task_index, its text and its state (pending '- [ ]', in_progress '- [~]', completed '- [x]', cancelled '- [-]'), and `rev`, the doc's version. Anything you were shown of it at session start is a SNAPSHOT — call this whenever fresh state matters, and ALWAYS right before update_scratchpad_task or set_scratchpad so your indices and rev are current.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_scratchpad_tasks",
+      description:
+        "Append tasks to the launcher's notebook. Only on their explicit request ('note that', 'add it to my notes') — the notebook is their personal space, not your scratch space. Tasks land at the end of the doc, or at the end of a named '##' section when you pass one (an unknown section is refused and the existing ones are listed). Appending merges with whatever the user is typing right now; it never overwrites their text.",
+      parameters: {
+        type: "object",
+        properties: {
+          tasks: {
+            type: "array",
+            description: "The tasks to add, in order (1 to 50).",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string", description: "The task label, one line." },
+                state: {
+                  type: "string",
+                  enum: SCRATCHPAD_TASK_STATES,
+                  description: "Initial state. Defaults to pending.",
+                },
+              },
+              required: ["text"],
+            },
+          },
+          section: {
+            type: "string",
+            description:
+              "Optional heading title to add them under, exactly as it reads in the notebook. Omit to add at the end of the doc.",
+          },
+        },
+        required: ["tasks"],
+      },
     },
   },
   {
@@ -607,7 +706,7 @@ const NOTEBOOK_ANCHOR_TOOLS: AgentToolDef[] = [
                 },
                 state: {
                   type: "string",
-                  enum: NOTEBOOK_TASK_STATES,
+                  enum: SCRATCHPAD_TASK_STATES,
                   description: "New state for this task.",
                 },
               },
@@ -627,68 +726,84 @@ const NOTEBOOK_ANCHOR_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
-      name: "create_issue",
+      name: "set_scratchpad",
       description:
-        "Create a REAL ticket in the project this session works on. Use it ONLY when the work genuinely deserves a formal, trackable ticket (a substantial feature or bug the team should see) or when the user asks for one — never automatically, and never as a substitute for just doing the work. The note itself stays in the notebook; creating a ticket does not remove it.",
+        "Rewrite the launcher's notebook IN FULL — the only way to remove or reword a task. Destructive and without undo, so use it only when they explicitly ask to delete or restructure something, and never to tick a box (update_scratchpad_task) or to add tasks (add_scratchpad_tasks). Call read_scratchpad immediately before, send back its content with your change applied and everything else kept verbatim, and pass its `rev` as expected_rev — a stale rev is refused rather than overwriting what they wrote meanwhile.",
       parameters: {
         type: "object",
         properties: {
-          title: {
-            type: "string",
-            description: "Ticket title. Concise, imperative.",
-          },
-          description: {
-            type: "string",
-            description: "Ticket description in markdown (context, scope, acceptance).",
-          },
-          priority: {
-            type: "string",
-            enum: ["none", "urgent", "high", "medium", "low"],
-            description: "Optional priority.",
-          },
-          effort: {
-            type: "string",
-            enum: ["xs", "s", "m", "l", "xl"],
-            description: "Optional t-shirt effort estimate.",
-          },
-        },
-        required: ["title"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "create_pr",
-      description:
-        "Open the pull request for this session's working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. The system commits and pushes your changes first, then opens the PR. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.",
-      parameters: {
-        type: "object",
-        properties: {
-          title: {
-            type: "string",
-            description: "Pull request title. Imperative, concise, in English.",
-          },
-          body: {
+          content: {
             type: "string",
             description:
-              "Pull request description in markdown: what changed, why, how it was verified.",
+              "The COMPLETE new notebook markdown. An empty string clears the notebook entirely.",
+          },
+          expected_rev: {
+            type: "number",
+            description:
+              "REQUIRED: the `rev` returned by the read_scratchpad this content is based on.",
           },
         },
-        required: ["title"],
+        required: ["content", "expected_rev"],
       },
     },
   },
 ];
 
-/** Jeu complet d'un run de TICKET (l'historique — inchangé). */
-export const AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...ISSUE_ANCHOR_TOOLS];
+/** `create_pr` — même tool, formulé selon l'ancrage (le carnet n'a pas de ticket). */
+const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
+  type: "function",
+  function: {
+    name: "create_pr",
+    description: `Open the pull request for ${anchor === "issue" ? "this ticket's" : "this session's"} working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. The system commits and pushes your changes first, then opens the PR. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.`,
+    parameters: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "Pull request title. Imperative, concise, in English.",
+        },
+        body: {
+          type: "string",
+          description:
+            "Pull request description in markdown: what changed, why, how it was verified.",
+        },
+      },
+      required: ["title"],
+    },
+  },
+});
 
-/** Jeu complet d'un run CARNET (MIN-84). */
-export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [...CORE_TOOLS, ...NOTEBOOK_ANCHOR_TOOLS];
+/** Jeu complet d'un run de TICKET. */
+export const AGENT_TOOLS: AgentToolDef[] = [
+  ...CORE_TOOLS,
+  ...MINDDY_TOOLS,
+  CREATE_PR_TOOL("issue"),
+];
+
+/** Jeu complet d'un run CARNET (MIN-84) — mêmes tools minddy, `create_pr` sans ticket. */
+export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
+  ...CORE_TOOLS,
+  ...MINDDY_TOOLS,
+  CREATE_PR_TOOL("notebook"),
+];
 
 /** Les deux interfaces d'édition, mutuellement EXCLUSIVES (MIN-115). */
 const STRING_EDIT_TOOLS = new Set(["edit_file", "apply_edits", "write_file"]);
+
+/** Tools qui prennent un `issue` : leur CIBLE PAR DÉFAUT dépend de l'ancrage. */
+const TARGETABLE_ISSUE_TOOLS = new Set(["read_issue", "update_issue", "write_issue_plan"]);
+
+/**
+ * Phrase de ciblage ajoutée à ces tools selon l'ancrage. Sans elle, un run de
+ * carnet lirait « the ticket this session is anchored to » sur une session qui
+ * n'en a pas, et un run de ticket croirait devoir passer `issue` à chaque appel.
+ */
+const TARGET_SUFFIX: Record<"issue" | "notebook", string> = {
+  issue:
+    " `issue` is OPTIONAL: omit it to act on the ticket this session is anchored to, pass it to target ANOTHER ticket of the project.",
+  notebook:
+    " `issue` is REQUIRED: this session is not anchored to a ticket, so name the one you mean — resolve it with search_issues first.",
+};
 
 /**
  * Jeu de tools d'un run, selon son ancrage, son modèle et l'accès au web.
@@ -727,14 +842,25 @@ export function agentToolsFor(opts: {
       if (STRING_EDIT_TOOLS.has(name)) return !patch;
       return true;
     })
-    .map((t) =>
-      opts.images === true && t.function.name === "read_attachment"
-        ? {
-            ...t,
-            function: { ...t.function, description: READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES },
-          }
-        : t,
-    );
+    .map((t) => {
+      const name = t.function.name;
+      if (opts.images === true && name === "read_attachment") {
+        return {
+          ...t,
+          function: { ...t.function, description: READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES },
+        };
+      }
+      if (TARGETABLE_ISSUE_TOOLS.has(name)) {
+        return {
+          ...t,
+          function: {
+            ...t.function,
+            description: t.function.description + TARGET_SUFFIX[opts.anchor],
+          },
+        };
+      }
+      return t;
+    });
 }
 
 /** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
