@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         totalTokens:
           (result.inputTokens || 0) + (result.outputTokens || 0) || null,
         cost: result.cost || null,
-        userId: user.id,
+        billTo: { userId: user.id },
       }),
     );
 

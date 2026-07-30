@@ -8,6 +8,7 @@ import {
   OPENROUTER_USAGE_INCLUDE,
   type OpenRouterUsage,
   type NormalizedUsage,
+  type AiUsageBillTo,
 } from "@/lib/server/ai-usage";
 import {
   chatCompletionsUrl,
@@ -228,7 +229,8 @@ export interface RunAgentLoopParams {
    */
   reasoningLevel?: ReasoningLevel;
   runId: string;
-  userId?: string | null;
+  /** Imputation des lignes `ai_usage` du run (MIN-131) — jamais devinée ici. */
+  billTo: AiUsageBillTo;
   projectId?: string | null;
   /** Budget du chunk courant, mesuré depuis l'entrée dans la boucle. */
   softDeadlineMs: number;
@@ -1095,7 +1097,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             completionTokens: summaryStream.usage.completionTokens,
             totalTokens: summaryStream.usage.totalTokens,
             cost: summaryStream.usage.cost,
-            userId: params.userId ?? null,
+            billTo: params.billTo,
             projectId: params.projectId ?? null,
           });
           costUsd += summaryStream.usage.cost ?? 0;
@@ -1219,7 +1221,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       completionTokens: stream.usage.completionTokens,
       totalTokens: stream.usage.totalTokens,
       cost: stream.usage.cost,
-      userId: params.userId ?? null,
+      billTo: params.billTo,
       projectId: params.projectId ?? null,
     });
     costUsd += stream.usage.cost ?? 0;

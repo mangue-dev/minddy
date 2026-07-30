@@ -365,7 +365,8 @@ async function reviewOne(
       post.submitted_body
         ? `${post.submitted_title}\n\n${post.submitted_body}`
         : post.submitted_title,
-      { record: { projectId: post.project_id } }
+      // Passe de fond (cron) : pas de déclencheur, le owner paye (MIN-131).
+      { record: { billTo: { projectOwner: post.project_id }, projectId: post.project_id } }
     );
     if (!embedding) return false;
     await service
@@ -618,7 +619,13 @@ ${categoryBlock}`;
     {
       xTitle: "Feedback Review (minddy)",
       logPrefix: "[feedback-review]",
-      record: { feature: "feedback_classify", projectId: post.project_id },
+      record: {
+        feature: "feedback_classify",
+        // Revue de fond : c'est le budget du owner qui l'autorise (ligne 164),
+        // c'est donc à lui qu'elle se facture — explicitement (MIN-131).
+        billTo: { projectOwner: post.project_id },
+        projectId: post.project_id,
+      },
     }
   );
   if (!args) return null;

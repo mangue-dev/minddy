@@ -428,7 +428,7 @@ async function executeWebSearch(
     apiKey,
     runId: turn.runId,
     seq,
-    userId: ctx.userId,
+    billTo: { userId: ctx.userId },
     projectId: ctx.projectId,
     conversationId: ctx.conversationId ?? null,
   });

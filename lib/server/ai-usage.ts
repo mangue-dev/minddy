@@ -81,12 +81,39 @@ export function newRunId(): string {
   return randomUUID();
 }
 
-/** Une ligne d'usage à enregistrer. Seuls `runId` et `feature` sont requis. */
+/**
+ * À QUI la ligne est imputée (MIN-131) — dit par l'appelant, jamais deviné.
+ *
+ * La règle produit : chacun paye son propre usage, pas celui des autres membres
+ * de son projet. Le repli sur le owner existe toujours, mais il se DEMANDE : un
+ * chemin d'appel qui oublie l'utilisateur ne peut plus faire payer le owner en
+ * silence, parce que `billTo` est obligatoire et que ces trois formes sont les
+ * seules qui existent.
+ */
+export type AiUsageBillTo =
+  /** Le déclencheur identifié paye. Le cas normal de toute action d'un user. */
+  | { userId: string }
+  /**
+   * Aucun déclencheur nommable (visiteur anonyme du board public, passe de fond
+   * du cron) : le owner du projet paye, parce que c'est SON budget qui a
+   * autorisé l'appel (`ownerHasUsageBudget`). À réserver à ces cas-là.
+   */
+  | { projectOwner: string }
+  /**
+   * Personne ne paye — la ligne existe pour la compta, mais n'entre dans le
+   * compteur d'aucun budget. Le motif est journalisé en erreur : c'est une
+   * anomalie qu'on assume bruyamment, jamais un défaut tranquille.
+   */
+  | { unattributed: string };
+
+/** Une ligne d'usage à enregistrer. `runId`, `feature` et `billTo` sont requis. */
 export interface AiUsageInput {
   runId: string;
   /** Index de l'appel dans le run (0 pour un appel unique). */
   seq?: number;
   feature: AiFeature;
+  /** Qui paye, et à quel titre. Voir `AiUsageBillTo`. */
+  billTo: AiUsageBillTo;
   model?: string | null;
   /** Défaut DB : 'openrouter'. Poser 'vercel' pour le compute sandbox. */
   provider?: string;
@@ -95,10 +122,12 @@ export interface AiUsageInput {
   completionTokens?: number | null;
   totalTokens?: number | null;
   cost?: number | null;
-  userId?: string | null;
   projectId?: string | null;
   conversationId?: string | null;
 }
+
+/** Motif d'imputation écrit en base — 1:1 avec le check de la migration. */
+type BilledReason = "trigger" | "project_owner" | "unattributed";
 
 function toRow(input: AiUsageInput) {
   return {
@@ -112,7 +141,8 @@ function toRow(input: AiUsageInput) {
     completion_tokens: input.completionTokens ?? null,
     total_tokens: input.totalTokens ?? null,
     cost: input.cost ?? null,
-    user_id: input.userId ?? null,
+    user_id: null as string | null,
+    billed_reason: "unattributed" as BilledReason,
     project_id: input.projectId ?? null,
     conversation_id: input.conversationId ?? null,
   };
@@ -126,8 +156,8 @@ function toRow(input: AiUsageInput) {
  * personne. Or les passes de fond (revue du feedback, smart-assign, embeddings
  * du board public) sont AUTORISÉES par le budget du owner du projet
  * (`ownerHasUsageBudget`) — les laisser hors compteur revenait à ouvrir une
- * consommation illimitée à côté de la porte qui la garde. Tout appel rattaché à
- * un projet est donc imputé à son owner quand aucun utilisateur n'est nommé.
+ * consommation illimitée à côté de la porte qui la garde. D'où `projectOwner` :
+ * ce que MIN-131 a retiré, c'est l'automatisme, pas le repli lui-même.
  */
 const OWNER_CACHE_TTL_MS = 60_000;
 const ownerCache = new Map<string, { ownerId: string | null; expiresAt: number }>();
@@ -163,27 +193,50 @@ async function resolveProjectOwners(projectIds: string[]): Promise<Map<string, s
  * Enregistre un (ou plusieurs) appel(s) IA dans le ledger `ai_usage`. Best-effort :
  * log l'erreur et l'avale — n'interrompt jamais l'appelant.
  *
- * Les lignes sans `userId` mais rattachées à un projet sont imputées au owner du
- * projet : c'est lui qui paye l'IA déclenchée par son board public ou par les
- * passes de fond, et c'est son budget qui les autorise.
+ * L'imputation vient de `billTo` et de nulle part ailleurs (MIN-131) : un appel
+ * avec déclencheur paye au déclencheur, un appel sans déclencheur nommable doit
+ * demander le owner du projet, et tout ce qui n'entre dans aucun des deux cas
+ * s'écrit `unattributed` — compté pour personne, mais journalisé en erreur.
  */
 export async function recordAiUsage(
   input: AiUsageInput | AiUsageInput[]
 ): Promise<void> {
-  const rows = (Array.isArray(input) ? input : [input]).map(toRow);
+  const inputs = Array.isArray(input) ? input : [input];
+  const rows = inputs.map(toRow);
   if (rows.length === 0) return;
   try {
-    const orphans = rows
-      .filter((r) => !r.user_id && r.project_id)
-      .map((r) => r.project_id as string);
-    if (orphans.length > 0) {
-      const owners = await resolveProjectOwners(orphans);
-      for (const row of rows) {
-        if (!row.user_id && row.project_id) {
-          row.user_id = owners.get(row.project_id) ?? null;
+    // Les owners des lignes qui les demandent, en une seule requête (cache court).
+    const ownerRequests = inputs
+      .map((i) => ("projectOwner" in i.billTo ? i.billTo.projectOwner : null))
+      .filter((id): id is string => Boolean(id));
+    const owners =
+      ownerRequests.length > 0
+        ? await resolveProjectOwners(ownerRequests)
+        : new Map<string, string | null>();
+
+    for (const [i, row] of rows.entries()) {
+      const billTo = inputs[i].billTo;
+      if ("userId" in billTo && billTo.userId) {
+        row.user_id = billTo.userId;
+        row.billed_reason = "trigger";
+      } else if ("projectOwner" in billTo) {
+        const ownerId = owners.get(billTo.projectOwner) ?? null;
+        row.user_id = ownerId;
+        row.billed_reason = ownerId ? "project_owner" : "unattributed";
+        if (!ownerId) {
+          // Le repli a été demandé mais n'a personne à qui aller : la dépense
+          // sort de tous les compteurs. Ça se dit, sinon ça ne se voit jamais.
+          console.error(
+            `[ai-usage] ${row.feature}: owner introuvable pour le projet ${billTo.projectOwner} — ligne non imputée`
+          );
         }
+      } else {
+        const reason =
+          "unattributed" in billTo ? billTo.unattributed : "déclencheur annoncé mais vide";
+        console.error(`[ai-usage] ${row.feature}: ligne non imputée — ${reason}`);
       }
     }
+
     const service = getServiceClient();
     const { error } = await service.from("ai_usage").insert(rows);
     if (error) console.error("[ai-usage] insert failed:", error.message);

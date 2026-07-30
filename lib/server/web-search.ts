@@ -5,6 +5,7 @@ import {
   OPENROUTER_USAGE_INCLUDE,
   parseOpenRouterUsage,
   recordAiUsage,
+  type AiUsageBillTo,
   type NormalizedUsage,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
@@ -241,8 +242,9 @@ export async function runWebSearch(params: {
  * ledger, résultat prêt à renvoyer au modèle. Même forme de retour que les autres
  * tools des deux boucles (`{ result, success }`).
  *
- * L'imputation suit la règle du ledger : `userId` quand on l'a, sinon le owner du
- * projet (cf. recordAiUsage). Le coût enregistré inclut le forfait de recherche.
+ * L'imputation vient de l'appelant (`billTo`) : la recherche est un sous-appel du
+ * tour, elle se facture à qui se facture le tour. Le coût enregistré inclut le
+ * forfait de recherche.
  */
 export async function runWebSearchTool(params: {
   query: string;
@@ -250,7 +252,7 @@ export async function runWebSearchTool(params: {
   runId: string;
   seq: number;
   maxResults?: number;
-  userId?: string | null;
+  billTo: AiUsageBillTo;
   projectId?: string | null;
   conversationId?: string | null;
   signal?: AbortSignal;
@@ -283,7 +285,7 @@ export async function runWebSearchTool(params: {
     completionTokens: outcome.usage.completionTokens,
     totalTokens: outcome.usage.totalTokens,
     cost: outcome.usage.cost,
-    userId: params.userId ?? null,
+    billTo: params.billTo,
     projectId: params.projectId ?? null,
     conversationId: params.conversationId ?? null,
   });

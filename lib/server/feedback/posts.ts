@@ -112,13 +112,13 @@ export async function createFeedbackPost(input: {
   const body = (input.body ?? "").trim().slice(0, FEEDBACK_BODY_MAX);
   if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
 
-  // Usage imputé au projet SEULEMENT : `authorId` est un `feedback_users.id`
-  // (un visiteur du board), pas un compte auth — le poser dans `ai_usage.user_id`
-  // violait la FK vers auth.users et faisait perdre la ligne à chaque soumission.
-  // `recordAiUsage` impute au owner du projet, celui dont le budget autorise l'appel.
+  // Imputation au owner du projet, DEMANDÉE (MIN-131) : `authorId` est un
+  // `feedback_users.id` (un visiteur du board), pas un compte auth — il n'y a
+  // donc aucun déclencheur nommable à facturer, et c'est bien le budget du owner
+  // qui autorise l'appel (`ownerHasUsageBudget`).
   const embedding = await embedText(body ? `${title}\n\n${body}` : title, {
     timeoutMs: EMBED_TIMEOUT_MS,
-    record: { projectId: input.projectId },
+    record: { billTo: { projectOwner: input.projectId }, projectId: input.projectId },
   });
 
   // Revue avant publication (MIN-54) : les soumissions board/API attendent la

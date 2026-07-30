@@ -5,6 +5,7 @@ import {
   newRunId,
   parseOpenRouterUsage,
   type AiFeature,
+  type AiUsageBillTo,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 
@@ -21,11 +22,12 @@ import {
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-/** Contexte de suivi de coût pour un appel forcé (feature + rattachements). */
+/** Contexte de suivi de coût pour un appel forcé (feature + imputation). */
 export interface ForcedToolCallRecord {
   feature: AiFeature;
+  /** Qui paye — dit par l'appelant, jamais déduit du projet (MIN-131). */
+  billTo: AiUsageBillTo;
   projectId?: string | null;
-  userId?: string | null;
 }
 
 export async function forcedToolCall(
@@ -97,8 +99,8 @@ export async function forcedToolCall(
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        billTo: options.record.billTo,
         projectId: options.record.projectId ?? null,
-        userId: options.record.userId ?? null,
       });
     }
     const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;

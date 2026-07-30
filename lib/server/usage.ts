@@ -14,7 +14,7 @@ import {
 } from "@/lib/server/billing-accounts";
 import { resolveUsageWindow } from "@/lib/billing-cycle";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
-import { recordAiUsage } from "@/lib/server/ai-usage";
+import { recordAiUsage, type AiUsageBillTo } from "@/lib/server/ai-usage";
 
 /**
  * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
@@ -200,7 +200,7 @@ export async function ownerHasUsageBudget(projectId: string): Promise<boolean> {
 export async function recordSandboxUsage(params: {
   runId: string;
   seq: number;
-  userId: string | null;
+  billTo: AiUsageBillTo;
   projectId: string | null;
   durationMs: number;
 }): Promise<void> {
@@ -214,7 +214,7 @@ export async function recordSandboxUsage(params: {
     provider: "vercel",
     model: "vercel/sandbox",
     cost,
-    userId: params.userId,
+    billTo: params.billTo,
     projectId: params.projectId,
   });
 }

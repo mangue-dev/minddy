@@ -989,7 +989,9 @@ async function runLoop(
       completionTokens: usageInfo?.completion_tokens ?? null,
       totalTokens: usageInfo?.total_tokens ?? null,
       cost: usageInfo?.cost ?? null,
-      userId: ctx.userId,
+      // L'auteur de la mention paye — c'est son budget qui a ouvert le tour
+      // (`hasUsageBudget(actorId)`), même sur le projet d'un autre.
+      billTo: { userId: ctx.userId },
       projectId: ctx.projectId,
     });
 

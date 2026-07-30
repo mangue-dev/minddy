@@ -523,7 +523,9 @@ export async function POST(request: NextRequest) {
               completionTokens: g.completionTokens,
               totalTokens: g.totalTokens,
               cost: g.cost,
-              userId: user.id,
+              // Le budget gaté en pré-vol est celui de `user` : c'est donc lui
+              // qui paye, y compris sur le projet de quelqu'un d'autre.
+              billTo: { userId: user.id },
               projectId: projectId ?? null,
               conversationId: finalConvId,
             }))

@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       completionTokens: u.completionTokens,
       totalTokens: u.totalTokens,
       cost: u.cost,
-      userId: auth.user.id,
+      billTo: { userId: auth.user.id },
     });
 
     const call = data.choices?.[0]?.message?.tool_calls?.find(

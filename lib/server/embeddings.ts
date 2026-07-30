@@ -7,14 +7,19 @@ import {
   recordAiUsage,
   newRunId,
   parseOpenRouterUsage,
+  type AiUsageBillTo,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
 
-/** Contexte de suivi de coût pour un appel d'embeddings (un appel = un run). */
+/**
+ * Contexte de suivi de coût pour un appel d'embeddings (un appel = un run).
+ * `billTo` dit qui paye : sur le board public il n'y a pas de déclencheur
+ * nommable (un visiteur anonyme, ou le cron), donc `{ projectOwner }`.
+ */
 export interface EmbeddingUsageRecord {
+  billTo: AiUsageBillTo;
   projectId?: string | null;
-  userId?: string | null;
 }
 
 /**
@@ -86,8 +91,8 @@ export async function embedTexts(
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        billTo: opts.record.billTo,
         projectId: opts.record.projectId ?? null,
-        userId: opts.record.userId ?? null,
       });
     }
     const byIndex = new Map<number, number[]>();

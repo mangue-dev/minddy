@@ -99,6 +99,7 @@ const baseParams = {
   apiKey: "sk-test",
   baseUrl: "https://example.invalid/v1",
   runId: "run_test",
+  billTo: { userId: "user_test" } as const,
   softDeadlineMs: 250_000,
   emit: async () => {},
 };

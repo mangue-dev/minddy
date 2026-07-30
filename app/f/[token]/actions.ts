@@ -214,7 +214,8 @@ export async function findSimilarPostsAction(
   // et un échec ici est silencieux pour le visiteur.
   const embedding = await embedText(trimmed, {
     timeoutMs: 5000,
-    record: { projectId: ctx.project.id },
+    // Visiteur du board : aucun déclencheur nommable, le owner paye (MIN-131).
+    record: { billTo: { projectOwner: ctx.project.id }, projectId: ctx.project.id },
   });
   if (!embedding) return [];
   const matches = await matchFeedbackPosts({

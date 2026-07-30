@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { recordSandboxUsage } from "@/lib/server/usage";
+import type { AiUsageBillTo } from "@/lib/server/ai-usage";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 import {
@@ -1032,6 +1033,18 @@ export async function executeAgentRun(
   // du run. Rien en base — le fil ouvert l'affiche, les autres n'en savent rien.
   const emitLive: EmitAgentLive = (progress) =>
     broadcastRunStream(run.id, { ...progress, at: Date.now() });
+  /**
+   * Qui paye ce run (MIN-131) : son CRÉATEUR, pas le owner du projet — un membre
+   * qui lance un agent chez quelqu'un d'autre consomme son propre budget, et
+   * c'est déjà son quota qui l'a autorisé (`checkAgentQuota(run.created_by)`).
+   * Calculé ici, avant le `try`, pour que le métrage sandbox du `finally` en
+   * dispose aussi. Un run sans créateur ne peut pas atteindre la sandbox (le
+   * tour throw), mais s'il y arrivait, la ligne le dirait plutôt que d'aller
+   * chercher un payeur par défaut.
+   */
+  const runBillTo: AiUsageBillTo = run.created_by
+    ? { userId: run.created_by }
+    : { unattributed: `run ${run.id} sans created_by` };
   let sandbox: Sandbox | null = null;
   // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
   // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
@@ -1180,7 +1193,7 @@ export async function executeAgentRun(
             apiKey,
             runId: run.run_id ?? run.id,
             seq,
-            userId: run.created_by,
+            billTo: runBillTo,
             projectId: run.project_id,
           });
         }
@@ -1640,7 +1653,7 @@ export async function executeAgentRun(
           provider,
           reasoningLevel: job.thinkingEffort ?? run.reasoning_level,
           runId: run.run_id ?? run.id,
-          userId: run.created_by,
+          billTo: runBillTo,
           projectId: run.project_id,
           softDeadlineMs: Math.max(1_000, budget),
           // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk. Légèrement
@@ -1850,7 +1863,7 @@ export async function executeAgentRun(
       // Figé au lancement (MIN-122) : chaque chunk du run repart du même niveau.
       reasoningLevel: run.reasoning_level,
       runId: run.run_id ?? run.id,
-      userId: run.created_by,
+      billTo: runBillTo,
       projectId: run.project_id,
       softDeadlineMs,
       budgetUsd,
@@ -2272,7 +2285,7 @@ export async function executeAgentRun(
       await recordSandboxUsage({
         runId: run.run_id ?? run.id,
         seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
-        userId: run.created_by,
+        billTo: runBillTo,
         projectId: run.project_id,
         durationMs: Date.now() - callStart,
       }).catch(() => {});

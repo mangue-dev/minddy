@@ -22,7 +22,7 @@ import type { AgentChatMessage } from "./agent-loop";
  *    dépôt dont la fin de tour fait `git add -A`. D'où : un seul `implement` en
  *    vol — et le PARENT compte comme écrivain (cf. `PARENT_WRITE_TOOLS`).
  * 2. **Le budget se compte par `ai_usage.user_id`.** Le runner passe le
- *    `runId`/`userId`/`projectId` du parent, dans la bande de seq dédiée
+ *    `runId`/`billTo`/`projectId` du parent, dans la bande de seq dédiée
  *    `SUBAGENT_USAGE_SEQ_BASE` — et le coût REMONTE dans l'accumulateur de la
  *    boucle parente, sinon `budgetUsd` sous-compte et le run dépasse son budget.
  * 3. **La soft-deadline est celle du parent.** Un sous-agent en vol quand le chunk

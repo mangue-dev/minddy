@@ -464,7 +464,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
-        userId: auth.user.id,
+        billTo: { userId: auth.user.id },
         projectId,
       });
       const message = data.choices?.[0]?.message;

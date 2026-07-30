@@ -357,7 +357,12 @@ ${memberLines}`;
       model?: string;
       usage?: OpenRouterUsage;
     };
-    // Suivi des coûts : appel unique (un run d'un seul appel), job de fond → userId null.
+    // Suivi des coûts : appel unique (un run d'un seul appel), imputé au owner
+    // du projet — explicitement (MIN-131). Le ticket a bien un créateur, mais
+    // Smart Assign est une automatisation DU PROJET, que le owner a activée et
+    // que SON budget autorise (`canUseSmartAssign(project.owner_id)`) : facturer
+    // le membre qui dépose un ticket lui ferait payer un réglage qui n'est pas
+    // le sien, et découplerait le payeur de la porte qui laisse passer l'appel.
     const u = parseOpenRouterUsage(data.usage);
     after(() =>
       recordAiUsage({
@@ -369,6 +374,7 @@ ${memberLines}`;
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        billTo: { projectOwner: projectId },
         projectId,
       }),
     );
