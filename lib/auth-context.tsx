@@ -52,6 +52,37 @@ interface AuthContextValue {
    * event, so the UI would otherwise keep reading the stale JWT.
    */
   refreshUser: () => Promise<void>;
+  /**
+   * Enrôlement TOTP (MIN-132) : crée un facteur `unverified` et renvoie de quoi
+   * l'afficher — le QR en SVG inline, et le secret pour la saisie manuelle.
+   */
+  enrollTotp: (friendlyName: string) => Promise<{
+    factorId: string;
+    qrCode: string;
+    secret: string;
+  }>;
+  /**
+   * Présente un code à six chiffres. C'est ce qui vérifie le facteur à
+   * l'enrôlement, et ce qui monte la session en `aal2` à chaque connexion —
+   * l'API GoTrue est la même dans les deux cas.
+   */
+  verifyTotp: (factorId: string, code: string) => Promise<void>;
+  /** Retire un facteur — utilisé pour nettoyer un enrôlement abandonné. */
+  unenrollTotp: (factorId: string) => Promise<void>;
+  /** Le premier facteur TOTP du compte, vérifié ou non. */
+  firstTotpFactorId: () => Promise<string | null>;
+  /**
+   * Vrai quand le compte a un facteur vérifié mais que la session est restée en
+   * `aal1` — il reste donc un code à présenter. Lecture LOCALE (le JWT et les
+   * facteurs de la session), aucun aller-retour réseau.
+   */
+  needsMfaChallenge: () => Promise<boolean>;
+  /**
+   * Révoque toutes les AUTRES sessions du compte. Appelé à l'activation de la
+   * 2FA : sans ça, un jeton déjà volé resterait valide jusqu'à son propre
+   * rafraîchissement, c'est-à-dire précisément ce qu'on vient de vouloir couper.
+   */
+  signOutOtherSessions: () => Promise<void>;
 }
 
 // Safety net: if Supabase is unreachable, onAuthStateChange may never fire
@@ -232,6 +263,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const enrollTotp = useCallback(async (friendlyName: string) => {
+    const { data, error } = await getSupabase().auth.mfa.enroll({
+      factorType: "totp",
+      friendlyName,
+    });
+    if (error) throw error;
+    return {
+      factorId: data.id,
+      qrCode: data.totp.qr_code,
+      secret: data.totp.secret,
+    };
+  }, []);
+
+  const verifyTotp = useCallback(async (factorId: string, code: string) => {
+    // `challengeAndVerify` = challenge + verify en un aller-retour. Le succès
+    // remplace la session courante par une session `aal2` ; `onAuthStateChange`
+    // la propage, donc rien à recopier ici.
+    const { error } = await getSupabase().auth.mfa.challengeAndVerify({
+      factorId,
+      code,
+    });
+    if (error) throw error;
+  }, []);
+
+  const unenrollTotp = useCallback(async (factorId: string) => {
+    const { error } = await getSupabase().auth.mfa.unenroll({ factorId });
+    if (error) throw error;
+  }, []);
+
+  const firstTotpFactorId = useCallback(async () => {
+    const { data, error } = await getSupabase().auth.mfa.listFactors();
+    if (error) throw error;
+    return data.totp[0]?.id ?? null;
+  }, []);
+
+  const needsMfaChallenge = useCallback(async () => {
+    const { data, error } =
+      await getSupabase().auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !data) return false;
+    return data.currentLevel === "aal1" && data.nextLevel === "aal2";
+  }, []);
+
+  const signOutOtherSessions = useCallback(async () => {
+    const { error } = await getSupabase().auth.signOut({ scope: "others" });
+    if (error) throw error;
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -245,6 +323,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUser,
         updateUserMetadata,
         refreshUser,
+        enrollTotp,
+        verifyTotp,
+        unenrollTotp,
+        firstTotpFactorId,
+        needsMfaChallenge,
+        signOutOtherSessions,
       }}
     >
       {children}

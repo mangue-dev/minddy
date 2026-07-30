@@ -17,6 +17,7 @@ import {
   type SettingsTab,
 } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
+import { AccountSecuritySection } from "@/components/settings/account-security-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
 import { AccountNotificationsSection } from "@/components/settings/account-notifications-section";
@@ -35,11 +36,18 @@ export default function AccountSettingsPage() {
   if (!user) return null;
 
   const tabs: SettingsTab[] = [
+    // Le second facteur (MIN-132) vit ici, sous le profil, plutôt que dans un
+    // neuvième onglet : c'est une option, pas un chapitre.
     {
       value: "profile",
       label: t("profileTab"),
       icon: User,
-      content: <AccountProfileSection />,
+      content: (
+        <>
+          <AccountProfileSection />
+          <AccountSecuritySection />
+        </>
+      ),
     },
     {
       value: "preferences",

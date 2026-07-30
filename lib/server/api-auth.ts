@@ -5,6 +5,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import { MFA_REQUIRED_CODE, needsMfaChallenge } from "@/lib/mfa";
+
 /**
  * Anon Supabase client bound to the request cookies (RLS-enforced). Route
  * handlers act *as the user*, so RLS does the tenant isolation — no service
@@ -44,8 +46,23 @@ export type AuthedResult =
  * Une instance Supabase injoignable (retries réseau épuisés, ~20 s) n'est PAS
  * une session invalide : la déguiser en 401 fait croire à une déconnexion.
  * On répond 503 avec un message explicite dans ce cas.
+ *
+ * ## Second facteur (MIN-132)
+ *
+ * Un compte qui a enrôlé un facteur TOTP n'est servi qu'en `aal2`. Le refus est
+ * GLOBAL et vit ici plutôt que route par route : une liste de routes sensibles
+ * demanderait d'y penser à chaque ajout, et celle qu'on oublie de compléter est
+ * une faille qu'aucun test ne signale. Comme le challenge est posé juste après le
+ * mot de passe, une session `aal1` sur un compte protégé veut dire « connexion
+ * abandonnée en cours de route » — la refuser ne casse aucun usage normal.
+ *
+ * `allowAal1` n'est là que pour la route de récupération (`/api/account/mfa/recover`),
+ * le seul endroit qui doit répondre à quelqu'un qui n'a PLUS son téléphone.
  */
-export async function getAuthedUser(request: NextRequest): Promise<AuthedResult> {
+export async function getAuthedUser(
+  request: NextRequest,
+  options?: { allowAal1?: boolean }
+): Promise<AuthedResult> {
   const supabase = createSupabaseFromRequest(request);
   const { data, error } = await supabase.auth.getClaims();
   const claims = data?.claims;
@@ -68,6 +85,17 @@ export async function getAuthedUser(request: NextRequest): Promise<AuthedResult>
       response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     };
   }
+  if (!options?.allowAal1 && needsMfaChallenge(claims)) {
+    const t = await getTranslations("ApiErrors");
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: t("mfaRequired"), code: MFA_REQUIRED_CODE },
+        { status: 403 }
+      ),
+    };
+  }
+
   // Les claims du JWT vérifié portent tout ce que les handlers lisent (id via
   // `sub`, email, user_metadata, app_metadata). On reconstruit l'objet `User`
   // attendu par les appelants à partir de ces claims — pas d'appel réseau

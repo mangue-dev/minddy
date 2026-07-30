@@ -4,9 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Input, Spinner, cn } from "mangue-ui";
+import { Button, Input, Spinner, cn, toast } from "mangue-ui";
 import { Github } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
@@ -47,7 +48,14 @@ function LoginForm() {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, signInWithPassword, signUpWithPassword, signInWithOAuth } = useAuth();
+  const {
+    user,
+    signInWithPassword,
+    signUpWithPassword,
+    signInWithOAuth,
+    needsMfaChallenge,
+    refreshUser,
+  } = useAuth();
   const { track } = useAnalytics();
 
   const redirectTo = sanitizeInternalRedirectPath(searchParams.get("redirect"));
@@ -75,10 +83,35 @@ function LoginForm() {
   // Une seule tentative de connexion à la fois (email OU provider).
   const busy = loading || oauthPending !== null;
 
-  // Already authenticated (e.g. session restored) → leave the auth screen.
+  /**
+   * Second facteur (MIN-132). `unknown` = on n'a pas encore regardé — donc on
+   * n'affiche ni le formulaire ni le challenge, sinon l'un des deux clignote à
+   * chaque retour de Google. `required` = la session existe mais reste en
+   * `aal1` : c'est le proxy qui nous a renvoyés ici, et cet écran EST la suite.
+   */
+  const [mfaStep, setMfaStep] = useState<"unknown" | "none" | "required">("unknown");
+
+  // Already authenticated (e.g. session restored) → leave the auth screen, à
+  // moins qu'il reste un facteur à présenter.
   useEffect(() => {
-    if (user) router.replace(redirectTo);
-  }, [user, router, redirectTo]);
+    if (!user) {
+      setMfaStep("none");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const required = await needsMfaChallenge();
+      if (cancelled) return;
+      if (required) setMfaStep("required");
+      else {
+        setMfaStep("none");
+        router.replace(redirectTo);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, router, redirectTo, needsMfaChallenge]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +145,13 @@ function LoginForm() {
       } else {
         await signInWithPassword(email, password);
         track("login_succeeded", { method: "password" });
+        // Mot de passe accepté, mais la session est en `aal1` : le challenge
+        // prend la place du formulaire (MIN-132). Naviguer d'abord ferait un
+        // aller-retour visible par le proxy, qui nous renverrait ici.
+        if (await needsMfaChallenge()) {
+          setMfaStep("required");
+          return;
+        }
       }
       router.push(redirectTo);
     } catch (err) {
@@ -170,6 +210,21 @@ function LoginForm() {
         </Link>
 
         <div className="flex flex-1 items-center justify-center">
+          {mfaStep === "required" ? (
+            <MfaChallenge
+              onVerified={() => router.replace(redirectTo)}
+              onRecovered={async () => {
+                // La 2FA vient d'être coupée : rafraîchir le jeton avant de
+                // partir, sinon le proxy lit encore l'ancien drapeau et renvoie
+                // ici — une boucle, juste après avoir brûlé un code.
+                await refreshUser();
+                toast.success(t("mfaDisabledNotice"));
+                router.replace(redirectTo);
+              }}
+            />
+          ) : mfaStep === "unknown" ? (
+            <Spinner className="size-6" />
+          ) : (
           <div className="w-full max-w-[380px] space-y-8">
             <div>
               <h1 className="font-display text-2xl font-semibold tracking-tight">
@@ -348,6 +403,7 @@ function LoginForm() {
               </button>
             </p>
           </div>
+          )}
         </div>
       </div>
     </div>

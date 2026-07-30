@@ -9,6 +9,7 @@ import {
   routeByPath,
 } from "@/lib/public-routes";
 import { isProtectedPath } from "@/lib/protected-prefixes";
+import { decodeJwtPayload, needsMfaChallenge } from "@/lib/mfa";
 
 /**
  * Next 16 middleware (named `proxy`). Il fait quatre choses : router les
@@ -185,6 +186,21 @@ async function readSession(request: NextRequest, url: string, key: string) {
 }
 
 /**
+ * Session authentifiée mais dont le second facteur n'a pas encore été présenté
+ * (MIN-132) : elle a le droit d'aller à l'écran de challenge, et nulle part
+ * ailleurs.
+ *
+ * Le proxy ne VÉRIFIE pas la signature ici — il ne fait que router, comme pour
+ * la présence de session juste au-dessus. Le vrai garde est `getAuthedUser` :
+ * une session `aal1` qui forcerait le passage n'obtiendrait, sur chaque appel
+ * d'API, qu'un 403 `mfa_required`. L'app rendue serait une coquille vide.
+ */
+function awaitsMfaChallenge(session: { access_token?: string } | null): boolean {
+  if (!session?.access_token) return false;
+  return needsMfaChallenge(decodeJwtPayload(session.access_token));
+}
+
+/**
  * Site public : langue portée par l'URL (MIN-88). `/fr/tarifs` est réécrite
  * vers `/pricing` en posant `x-minddy-locale: fr` — une seule page de code,
  * deux URLs indexables. Sans en-tête, la même URL servait les deux langues
@@ -321,10 +337,12 @@ export async function proxy(request: NextRequest) {
 
   // --- Autres routes publiques (login, assets de métadonnées, boards…) ------
   if (PUBLIC_ROUTES.has(pathname) || hasPrefix(pathname, PUBLIC_PREFIXES)) {
-    // On /login, bounce already-authenticated users to /home.
+    // On /login, bounce already-authenticated users to /home — sauf si leur
+    // session attend encore son second facteur (MIN-132) : /login EST l'écran de
+    // challenge, et les renvoyer vers /home reboucle indéfiniment.
     if (pathname === "/login") {
       const session = await readSession(request, supabaseUrl, supabaseKey);
-      if (session?.user) {
+      if (session?.user && !awaitsMfaChallenge(session)) {
         return NextResponse.redirect(new URL("/home", request.url));
       }
     }
@@ -378,7 +396,10 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getSession();
   console.warn = _w;
 
-  if (!session?.user) {
+  // Pas de session, ou session dont le second facteur n'a pas encore été
+  // présenté (MIN-132) : dans les deux cas la destination est /login, qui rend
+  // le formulaire ou l'écran de challenge selon ce qu'il trouve.
+  if (!session?.user || awaitsMfaChallenge(session)) {
     const loginUrl = new URL("/login", request.url);
     // pathname + search : /oauth/authorize doit retrouver ses paramètres
     // (client_id, code_challenge…) après le passage par /login.
