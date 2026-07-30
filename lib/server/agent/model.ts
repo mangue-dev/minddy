@@ -9,6 +9,12 @@ import {
   resolveProviderBaseUrl,
   type AgentProviderId,
 } from "@/lib/agent-providers";
+import {
+  capReasoningLevel,
+  isReasoningLevel,
+  DEFAULT_REASONING_LEVEL,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 import { decryptUserAiKey } from "./byok-credentials";
 
 /**
@@ -43,6 +49,40 @@ export async function getUserDefaultModel(userId: string): Promise<string | null
     .eq("user_id", userId)
     .maybeSingle();
   return (data as { default_model: string | null } | null)?.default_model ?? null;
+}
+
+/** Défaut de raisonnement de l'utilisateur, ou null s'il n'en a pas défini. */
+export async function getUserDefaultReasoningLevel(
+  userId: string,
+): Promise<ReasoningLevel | null> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from("user_agent_preferences")
+    .select("default_reasoning_level")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const raw = (data as { default_reasoning_level: string | null } | null)?.default_reasoning_level;
+  return isReasoningLevel(raw) ? raw : null;
+}
+
+/**
+ * Résout le niveau de raisonnement à FIGER sur un run (MIN-122). Cascade
+ * run > user > `off` — pas de défaut racine : aucun réglage admin ici.
+ *
+ * Puis BORNE selon le mode de clé : en quota minddy (`platform`), les tokens de
+ * réflexion sont facturés sur le budget d'usage mensuel du plan, partagé avec
+ * toutes les autres features → `high` est réservé au BYOK. La borne vit ICI, pas
+ * dans l'UI : celle-ci la reflète (option désactivée), elle ne la garantit pas.
+ */
+export async function resolveReasoningLevel(opts: {
+  perRunLevel?: string | null;
+  userId: string;
+  keyMode: AgentKeyMode;
+}): Promise<ReasoningLevel> {
+  const perRun = isReasoningLevel(opts.perRunLevel) ? opts.perRunLevel : null;
+  const level =
+    perRun ?? (await getUserDefaultReasoningLevel(opts.userId)) ?? DEFAULT_REASONING_LEVEL;
+  return capReasoningLevel(level, opts.keyMode);
 }
 
 /** Levée quand un provider BYOK non-OpenRouter n'a aucun modèle résolu. */

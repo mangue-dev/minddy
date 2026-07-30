@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
 import { broadcastRunEvent } from "./live";
 import { captureServerEvent } from "@/lib/server/posthog";
@@ -72,6 +73,9 @@ export interface AgentRun {
   prompt: string | null;
   model: string | null;
   model_forced: boolean;
+  /** Niveau de raisonnement FIGÉ au lancement (MIN-122), comme le modèle : un run
+   *  repris par une autre invocation doit retrouver le même. */
+  reasoning_level: ReasoningLevel;
   key_mode: "platform" | "byok";
   base_branch: string | null;
   branch_name: string | null;
@@ -121,6 +125,8 @@ export interface CreateRunInput {
   prompt?: string | null;
   model: string;
   modelForced: boolean;
+  /** Niveau de raisonnement résolu au lancement (cf. `resolveReasoningLevel`). */
+  reasoningLevel: ReasoningLevel;
   keyMode: "platform" | "byok";
   triggeredBy: "button" | "chat" | "mention";
   /**
@@ -166,6 +172,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       prompt: input.prompt ?? null,
       model: input.model,
       model_forced: input.modelForced,
+      reasoning_level: input.reasoningLevel,
       key_mode: input.keyMode,
       base_branch: input.baseBranch ?? null,
       branch_name: input.branchName ?? null,
@@ -189,6 +196,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     properties: {
       model: input.model ?? "default",
       model_forced: input.modelForced,
+      reasoning_level: input.reasoningLevel,
       key_mode: input.keyMode,
       triggered_by: input.triggeredBy,
       scope: input.issueId ? "issue" : "notebook",

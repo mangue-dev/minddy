@@ -30,11 +30,15 @@ export function agentRunTopic(runId: string): string {
 export interface AgentLiveStream {
   /** Réponse du modèle telle qu'écrite jusqu'ici. */
   text: string;
-  /** Trace de raisonnement streamée (selon le modèle). */
-  reasoning: string;
   /** Nombre d'appels d'outils déjà amorcés dans ce round : >0 ⇒ ce texte est de
    *  la narration (le tour continue), 0 ⇒ c'est peut-être la réponse finale. */
   tools: number;
+  /** Le modèle raisonne EN CE MOMENT (MIN-122) → indicateur + compteur dans le fil.
+   *  Le TEXTE du raisonnement ne passe pas par ici : il n'est pas streamé, il est
+   *  persisté replié en fin de round. */
+  reasoningActive: boolean;
+  /** Millisecondes de réflexion accumulées dans ce round (alimente le compteur). */
+  reasoningMs: number;
   /** Horodatage d'émission (ms). Le client jette ce qui arrive dans le désordre.
    *  Un compteur ne conviendrait pas : un run repris repart d'une autre
    *  invocation, donc d'un compteur remis à zéro. */

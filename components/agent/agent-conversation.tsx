@@ -34,9 +34,12 @@ import {
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
+import { useAiKeysQuery } from "@/lib/use-ai-keys-query";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
+import { ReasoningCombobox } from "./reasoning-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 import { AgentChangesBar } from "./agent-changes-bar";
@@ -354,11 +357,20 @@ export function AgentConversation({
 
   // Sélection de modèle (phase compose).
   const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
-  const { defaultModel } = useAgentPreferencesQuery();
+  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
   // Branche de BASE (phase compose, lignée neuve) : "" = le défaut du dépôt.
   // Comme le modèle, le choix ne se fait qu'au lancement — figée ensuite.
   const [baseBranch, setBaseBranch] = useState("");
+  // Niveau de raisonnement (MIN-122), figé au lancement lui aussi. `null` = pas
+  // encore touché → on suit le défaut perso, qui peut arriver après le montage.
+  const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
+  const reasoningLevel = reasoningOverride ?? defaultReasoningLevel;
+  // Quota minddy (aucune clé BYOK) : `high` est hors de portée — les tokens de
+  // réflexion se paient sur le budget mensuel partagé du plan. La borne est
+  // appliquée côté serveur ; ceci n'en est que le reflet.
+  const { keys: byokKeys } = useAiKeysQuery();
+  const reasoningMax: ReasoningLevel = byokKeys.length > 0 ? "high" : "medium";
   const [launching, setLaunching] = useState(false);
   // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
   const modelRequired = provider === "generic" && !defaultModel && !model;
@@ -385,6 +397,7 @@ export function AgentConversation({
         // Le serveur l'ignore si la lignée hérite déjà d'une branche (le picker
         // est alors verrouillé — ceinture et bretelles côté course).
         baseBranch: baseBranch || undefined,
+        reasoningLevel,
         intent: composeIntent,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
@@ -657,6 +670,13 @@ export function AgentConversation({
                     disabled
                     disabledTooltip={t("modelLocked")}
                   />
+                  {/* Niveau de raisonnement, figé au lancement comme le modèle. */}
+                  <ReasoningCombobox
+                    value={liveRun.reasoning_level ?? "off"}
+                    onChange={() => {}}
+                    disabled
+                    disabledTooltip={t("reasoningLocked")}
+                  />
                   {/* Branche copiée au lancement, figée elle aussi pour la session.
                       Dès que la branche de travail est stampée (`branch_name`), le
                       chip se dédouble en « origine → branche de session » pour
@@ -708,6 +728,12 @@ export function AgentConversation({
                     loadingLabel={t("modelSearchLoading")}
                     freeTextLabel={(q) => t("modelUseCustom", { model: q })}
                     disabled={launching}
+                  />
+                  <ReasoningCombobox
+                    value={reasoningLevel}
+                    onChange={setReasoningOverride}
+                    disabled={launching}
+                    maxLevel={reasoningMax}
                   />
                   {/* Branche que l'agent COPIE pour son espace de travail. Choix
                       possible seulement ici (au lancement) et seulement pour une

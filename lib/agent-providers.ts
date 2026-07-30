@@ -35,6 +35,16 @@ export interface ProviderRequestProfile {
    * directes (risque de rejet du champ).
    */
   promptCaching?: boolean;
+  /**
+   * Forme du champ de raisonnement acceptée par cet endpoint (MIN-122) : la SEULE
+   * gate de la feature — un provider sans ce champ n'en envoie jamais aucun.
+   *   `reasoning`        → `reasoning: { effort }` (OpenRouter).
+   *   `reasoning_effort` → `reasoning_effort` à plat (couches compat OpenAI :
+   *                        openai, anthropic, google).
+   * Le générique reste muet : sa base URL est un serveur inconnu, et un champ
+   * refusé revient en 400. Les niveaux et leur traduction : lib/agent-reasoning.ts.
+   */
+  reasoningField?: "reasoning" | "reasoning_effort";
 }
 
 export interface AgentProviderDef {
@@ -81,6 +91,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
       maxTokens: 8192,
       attribution: true,
       promptCaching: true,
+      reasoningField: "reasoning",
     },
     keysUrl: "https://openrouter.ai/keys",
   },
@@ -92,7 +103,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-…",
     logoModel: "openai/x",
     listStrategy: "openai",
-    requestProfile: { streamUsage: true },
+    requestProfile: { streamUsage: true, reasoningField: "reasoning_effort" },
     keysUrl: "https://platform.openai.com/api-keys",
   },
   {
@@ -104,7 +115,11 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     logoModel: "anthropic/x",
     listStrategy: "anthropic",
     // La couche compat Anthropic s'appuie sur l'API Messages → max_tokens requis.
-    requestProfile: { anthropicVersion: true, maxTokens: 8192 },
+    requestProfile: {
+      anthropicVersion: true,
+      maxTokens: 8192,
+      reasoningField: "reasoning_effort",
+    },
     keysUrl: "https://console.anthropic.com/settings/keys",
   },
   {
@@ -115,7 +130,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "AIza…",
     logoModel: "google/x",
     listStrategy: "openai",
-    requestProfile: {},
+    requestProfile: { reasoningField: "reasoning_effort" },
     keysUrl: "https://aistudio.google.com/apikey",
   },
   {

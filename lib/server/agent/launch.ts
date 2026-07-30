@@ -7,7 +7,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectLink } from "@/lib/server/git/repo-links";
 import { REPO_PROVIDERS, isRepoProviderId } from "@/lib/repo-providers";
 import { insertEvents } from "@/lib/server/issue-events";
-import { resolveAgentModel, AgentModelRequiredError } from "./model";
+import { resolveAgentModel, resolveReasoningLevel, AgentModelRequiredError } from "./model";
 import { checkAgentQuota, type AgentQuota } from "./quota";
 import {
   createRun,
@@ -68,6 +68,11 @@ export interface LaunchAgentInput {
   model?: string | null;
   /** true si le modèle est imposé (numo « utilise tel modèle »). */
   forced?: boolean;
+  /**
+   * Niveau de raisonnement choisi au lancement (MIN-122). Absent → le défaut perso
+   * de l'utilisateur, sinon `off`. Borné à `medium` en quota minddy.
+   */
+  reasoningLevel?: string | null;
   /**
    * Branche de base choisie au lancement (défaut : la branche par défaut du
    * dépôt). IGNORÉE si l'issue a une lignée vivante à hériter : la branche de
@@ -146,6 +151,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     throw err;
   }
 
+  // Niveau de raisonnement figé sur le run, comme le modèle : les chunks suivants
+  // tournent dans d'autres invocations et doivent retrouver le même.
+  const reasoningLevel = await resolveReasoningLevel({
+    perRunLevel: input.reasoningLevel,
+    userId: input.userId,
+    keyMode: quota.mode,
+  });
+
   // Héritage du TRAVAIL (MIN-68, indexé sur la branche) : tant que la lignée de
   // l'issue est vivante (branche portée par une run, PR non mergée — ou pas de PR
   // du tout), la run froide repart de SA branche et porte ses `pr_*` dès la
@@ -166,6 +179,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       prompt: input.prompt ?? null,
       model,
       modelForced: !!input.forced,
+      reasoningLevel,
       keyMode: quota.mode,
       triggeredBy: input.triggeredBy,
       branchName: inherited?.branchName ?? null,

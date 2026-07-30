@@ -34,6 +34,8 @@ import {
   agentPreferencesQueryKey,
   useAgentPreferencesQuery,
 } from "@/lib/use-agent-preferences-query";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 
 /**
  * Section « Agent de code » des paramètres du compte (MIN-46). Un seul sélecteur
@@ -48,7 +50,7 @@ export function AccountAiKeysSection() {
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
 
-  const { defaultModel, loading: prefLoading } = useAgentPreferencesQuery();
+  const { defaultModel, defaultReasoningLevel, loading: prefLoading } = useAgentPreferencesQuery();
   const { keys, loading: keysLoading } = useAiKeysQuery();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const activeKey = keys[0] ?? null;
@@ -75,7 +77,17 @@ export function AccountAiKeysSection() {
 
   const onModelChange = async (value: string) => {
     try {
-      await saveAgentPreferencesApi(value || null);
+      await saveAgentPreferencesApi({ default_model: value || null });
+      await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
+      toast.success(t("agentModelSavedToast"));
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const onReasoningChange = async (value: ReasoningLevel) => {
+    try {
+      await saveAgentPreferencesApi({ default_reasoning_level: value });
       await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
       toast.success(t("agentModelSavedToast"));
     } catch (err) {
@@ -267,6 +279,23 @@ export function AccountAiKeysSection() {
               emptyLabel={tAgent("modelSearchEmpty")}
               loadingLabel={tAgent("modelSearchLoading")}
               freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+            />
+          </div>
+        )}
+      </SettingsSection>
+
+      {/* ── Niveau de raisonnement par défaut (MIN-122) ─────────────────────── */}
+      <SettingsSection title={t("agentReasoningTitle")} description={t("agentReasoningDesc")}>
+        {prefLoading ? (
+          <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
+        ) : (
+          <div className="max-w-md">
+            <ReasoningCombobox
+              value={defaultReasoningLevel}
+              onChange={(v) => void onReasoningChange(v)}
+              // `high` demande un BYOK : sur le quota minddy, les tokens de
+              // réflexion se paient sur le budget mensuel partagé du plan.
+              maxLevel={activeKey ? "high" : "medium"}
             />
           </div>
         )}

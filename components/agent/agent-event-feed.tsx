@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
   AlertTriangle,
+  Brain,
   CheckCircle2,
   Circle,
   CircleDot,
@@ -22,6 +23,7 @@ import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
+import { ReasoningBlock } from "./reasoning-block";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { unechoedMessages } from "@/lib/agent-pending";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
@@ -74,11 +76,21 @@ type FeedItem =
   | {
       kind: "note";
       id: string;
-      variant: "commit" | "error";
+      variant: "commit" | "error" | "reasoningUnsupported";
       text: string;
       createdAt: string;
     }
   | { kind: "plan"; id: string; steps: PlanStep[]; createdAt: string }
+  /** Phase de réflexion du modèle (MIN-122) : ligne compacte + compteur, jamais
+   *  le texte en direct. `active` tant que le round n'a pas rendu la main. */
+  | {
+      kind: "reasoning";
+      id: string;
+      active: boolean;
+      durationMs: number;
+      text: string;
+      createdAt: string;
+    }
   | {
       kind: "files";
       id: string;
@@ -196,6 +208,24 @@ function buildFeed(
     switch (e.type) {
       case "thinking": {
         const text = str(p.text);
+        // Deux `thinking` distincts sous le même type d'event : la RÉFLEXION du
+        // modèle (marquée `kind`, rendue en ligne compacte repliée) et sa
+        // NARRATION (du texte, rendue en bulle). Sans le marqueur, le comportement
+        // d'avant MIN-122 est inchangé.
+        if (p.kind === "reasoning") {
+          // `current` n'est PAS touché : `openMessage` sert à rattacher les
+          // tool_call suivants, et une ligne de réflexion ne doit pas devenir
+          // leur bulle d'accueil.
+          items.push({
+            kind: "reasoning",
+            id: e.id,
+            active: false,
+            durationMs: typeof p.durationMs === "number" ? p.durationMs : 0,
+            text,
+            createdAt: e.created_at,
+          });
+          break;
+        }
         if (!text.trim()) break;
         openMessage({ kind: "message", message: makeMessage(e.id, text), createdAt: e.created_at });
         break;
@@ -322,6 +352,20 @@ function buildFeed(
         if (prev !== -1) items.splice(prev, 1);
         current = null;
         if (steps.length > 0) items.push({ kind: "plan", id: e.id, steps, createdAt: e.created_at });
+        break;
+      }
+      case "status": {
+        // Le seul `status` rendu : le provider a REFUSÉ le niveau de raisonnement
+        // demandé (MIN-122). Sans cette ligne, le niveau choisi resterait affiché
+        // dans le composer alors qu'il n'a plus aucun effet — silencieusement.
+        if (p.phase !== "reasoning_unsupported") break;
+        items.push({
+          kind: "note",
+          id: e.id,
+          variant: "reasoningUnsupported",
+          text: "",
+          createdAt: e.created_at,
+        });
         break;
       }
       case "error": {
@@ -472,6 +516,13 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
   }
   if (it.kind === "plan") return <PlanRow key={it.id} item={it} />;
   if (it.kind === "files") return <FilesRow key={it.id} item={it} onOpenFile={ctx.onOpenFile} />;
+  // Avant le repli en note : `renderItem` se termine par un NoteRow fourre-tout,
+  // sans cette branche une ligne de réflexion s'y rendrait.
+  if (it.kind === "reasoning") {
+    return (
+      <ReasoningBlock key={it.id} active={it.active} durationMs={it.durationMs} text={it.text} />
+    );
+  }
   return <NoteRow key={it.id} item={it} />;
 }
 
@@ -516,6 +567,14 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
       <div className="flex items-start gap-2 text-sm text-destructive">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
         <span className="whitespace-pre-wrap">{item.text}</span>
+      </div>
+    );
+  }
+  if (item.variant === "reasoningUnsupported") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Brain className="size-3 shrink-0" />
+        {t("reasoningUnsupported")}
       </div>
     );
   }
@@ -658,17 +717,22 @@ export function AgentEventFeed({
     }
   }
 
-  // Queue VIVANTE du round en cours, ajoutée en fin de fil : le raisonnement et
-  // le texte tels qu'ils s'écrivent, dans l'ordre où leurs vrais events se
-  // poseront (raisonnement d'abord, réponse ensuite) — la bascule du provisoire
-  // au définitif ne déplace donc rien à l'écran.
+  // Queue VIVANTE du round en cours, ajoutée en fin de fil : l'indicateur de
+  // réflexion et le texte tel qu'il s'écrit, dans l'ordre où leurs vrais events se
+  // poseront (réflexion d'abord, réponse ensuite) — la bascule du provisoire au
+  // définitif ne déplace donc rien à l'écran.
   const liveItems = useMemo((): FeedItem[] => {
     if (!live) return [];
     const out: FeedItem[] = [];
-    if (live.reasoning.trim()) {
+    if (live.reasoningActive) {
+      // Ligne compacte + compteur, PAS le texte du raisonnement : il n'est pas
+      // streamé. Sa trace arrive avec l'event de fin de round, repliée.
       out.push({
-        kind: "message",
-        message: makeMessage("live-reasoning", live.reasoning),
+        kind: "reasoning",
+        id: "live-reasoning",
+        active: true,
+        durationMs: live.reasoningMs,
+        text: "",
         createdAt: live.startedAt,
       });
     }
@@ -715,7 +779,9 @@ export function AgentEventFeed({
   // event tant qu'il est actif — et à chaque poussée du texte en direct, sinon la
   // réponse s'écrirait sous la ligne de flottaison. useLayoutEffect → pas de flash
   // « scroll depuis le haut » avant peinture.
-  const liveLength = (live?.text.length ?? 0) + (live?.reasoning.length ?? 0);
+  // Le chrono de réflexion COMPTE dans le déclencheur : pendant une phase de pure
+  // pensée, le texte ne bouge pas — sans lui, le fil cesserait de suivre.
+  const liveLength = (live?.text.length ?? 0) + (live?.reasoningMs ?? 0);
   useLayoutEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   }, [items.length, liveLength]);

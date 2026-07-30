@@ -15,6 +15,12 @@ import {
   DEFAULT_AGENT_PROVIDER,
   type AgentProviderId,
 } from "@/lib/agent-providers";
+import {
+  reasoningRequestFields,
+  reasoningMaxTokens,
+  REASONING_REQUEST_KEYS,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 import type { AgentToolDef } from "./tools";
 import type { AgentContentPart, AgentToolImage } from "./content";
 import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
@@ -150,11 +156,17 @@ export type ExecuteAgentTool = (
 export interface AgentLiveProgress {
   /** Réponse du modèle telle qu'écrite jusqu'ici (texte COMPLET, pas un delta). */
   text: string;
-  /** Trace de raisonnement streamée, quand le modèle en émet. */
-  reasoning: string;
   /** Appels d'outils déjà amorcés dans ce round : >0 ⇒ le texte est de la
    *  narration, le tour continue. 0 ⇒ c'est peut-être la réponse finale. */
   tools: number;
+  /**
+   * Le modèle est EN TRAIN de raisonner (MIN-122) : le fil affiche un indicateur
+   * compact + un compteur. Le TEXTE du raisonnement ne voyage pas ici — il n'est
+   * pas streamé à l'écran, seulement persisté replié en fin de round.
+   */
+  reasoningActive: boolean;
+  /** Millisecondes de réflexion accumulées dans ce round (0 si pas de raisonnement). */
+  reasoningMs: number;
 }
 
 export type EmitAgentLive = (progress: AgentLiveProgress) => void;
@@ -170,6 +182,12 @@ export interface RunAgentLoopParams {
   baseUrl: string;
   /** Provider effectif (OpenRouter par défaut) — pilote headers/body. */
   provider?: AgentProviderId;
+  /**
+   * Niveau de raisonnement FIGÉ sur le run (MIN-122). Absent/`off` = aucun champ
+   * envoyé. Appliqué aux appels du TOUR, jamais à la compaction (une summarization
+   * mécanique n'a rien à réfléchir, le raisonnement n'y serait que du coût).
+   */
+  reasoningLevel?: ReasoningLevel;
   runId: string;
   userId?: string | null;
   projectId?: string | null;
@@ -416,6 +434,9 @@ interface StreamResult {
   content: string;
   /** Trace de raisonnement streamée (non round-trippée en chat-completions). */
   reasoning: string;
+  /** Durée de la phase de réflexion : du premier delta de raisonnement au premier
+   *  delta de réponse ou de tool-call. 0 = le modèle n'a pas raisonné (MIN-122). */
+  reasoningMs: number;
   toolCalls: AssistantToolCall[];
   generationId: string | null;
   modelUsed: string | null;
@@ -443,6 +464,8 @@ async function streamCompletionOnce(opts: {
   signal?: AbortSignal;
   checkInterrupt?: () => Promise<boolean>;
   onProgress?: EmitAgentLive;
+  /** Niveau de raisonnement à demander (MIN-122). Absent/`off` = rien d'envoyé. */
+  reasoningLevel?: ReasoningLevel;
 }): Promise<StreamResult> {
   const profile = getAgentProvider(opts.provider)?.requestProfile ?? {};
 
@@ -455,7 +478,13 @@ async function streamCompletionOnce(opts: {
   };
   if (profile.streamUsage) requestBody.stream_options = { include_usage: true };
   if (profile.usageAccounting) requestBody.usage = OPENROUTER_USAGE_INCLUDE;
-  if (profile.maxTokens) requestBody.max_tokens = profile.maxTokens;
+  // Raisonnement (MIN-122) : rien tant que le niveau est `off` ou que le provider
+  // n'a pas déclaré sa forme au registre. Les tokens de réflexion sont comptés
+  // DANS `max_tokens` par les couches compat → on relève le plafond en même temps,
+  // sinon à `high` la réflexion tronque la réponse ET les tool-calls du round.
+  Object.assign(requestBody, reasoningRequestFields(opts.reasoningLevel, opts.provider));
+  const maxTokens = reasoningMaxTokens(profile.maxTokens, opts.reasoningLevel);
+  if (maxTokens) requestBody.max_tokens = maxTokens;
   if (opts.tools.length > 0) requestBody.tools = opts.tools;
 
   const headers: Record<string, string> = {
@@ -542,17 +571,44 @@ async function streamCompletionOnce(opts: {
     let usageRaw: OpenRouterUsage | null = null;
     const acc = new Map<number, { id: string; name: string; arguments: string }>();
 
+    // Chrono de la phase de réflexion (MIN-122) : ouvert au premier delta de
+    // raisonnement, CLOS au premier delta de réponse ou de tool-call — c'est le
+    // moment où le modèle passe de « il réfléchit » à « il écrit ». `reasoningMs`
+    // accumule, pour qu'un modèle qui alterne réflexion et écriture compte juste.
+    let reasoningMs = 0;
+    let reasoningStartedAt: number | null = null;
+    const openReasoning = () => {
+      if (reasoningStartedAt === null) reasoningStartedAt = Date.now();
+    };
+    const closeReasoning = () => {
+      if (reasoningStartedAt === null) return;
+      reasoningMs += Date.now() - reasoningStartedAt;
+      reasoningStartedAt = null;
+    };
+    /** Total à l'instant t, phase ouverte comprise (le compteur doit avancer). */
+    const reasoningElapsed = () =>
+      reasoningMs + (reasoningStartedAt === null ? 0 : Date.now() - reasoningStartedAt);
+
     // Direct : on republie l'état accumulé au plus une fois par `LIVE_FLUSH_MS`,
-    // et seulement s'il a bougé depuis le dernier envoi.
+    // et seulement s'il a bougé depuis le dernier envoi. Pendant une phase de pure
+    // réflexion RIEN ne bouge (ni texte ni tools) : c'est le chrono qui tient le
+    // flux en vie, sans quoi l'indicateur s'afficherait puis se figerait.
     let lastFlushAt = 0;
     let lastFlushLen = -1;
     const flushProgress = (force = false) => {
       if (!opts.onProgress) return;
+      const thinking = reasoningStartedAt !== null;
       const len = content.length + reasoning.length + acc.size;
-      if (!force && (len === lastFlushLen || Date.now() - lastFlushAt < LIVE_FLUSH_MS)) return;
+      const moved = len !== lastFlushLen || thinking;
+      if (!force && (!moved || Date.now() - lastFlushAt < LIVE_FLUSH_MS)) return;
       lastFlushAt = Date.now();
       lastFlushLen = len;
-      opts.onProgress({ text: content, reasoning, tools: acc.size });
+      opts.onProgress({
+        text: content,
+        tools: acc.size,
+        reasoningActive: thinking,
+        reasoningMs: reasoningElapsed(),
+      });
     };
 
     for (;;) {
@@ -585,10 +641,17 @@ async function streamCompletionOnce(opts: {
         if (parsed.usage) usageRaw = parsed.usage;
         const delta = parsed.choices?.[0]?.delta;
         if (!delta) continue;
-        if (delta.content) content += delta.content;
-        if (delta.reasoning) reasoning += delta.reasoning;
-        if (delta.reasoning_content) reasoning += delta.reasoning_content;
+        if (delta.content) {
+          closeReasoning();
+          content += delta.content;
+        }
+        if (delta.reasoning || delta.reasoning_content) {
+          openReasoning();
+          reasoning += delta.reasoning ?? "";
+          reasoning += delta.reasoning_content ?? "";
+        }
         if (delta.tool_calls) {
+          closeReasoning();
           for (const tc of delta.tool_calls) {
             const idx = tc.index ?? 0;
             if (!acc.has(idx)) {
@@ -603,6 +666,9 @@ async function streamCompletionOnce(opts: {
       }
       flushProgress();
     }
+    // Fin du flux : une phase de réflexion encore ouverte (le modèle a raisonné
+    // puis rendu la main sans écrire) se clôt ici, sinon sa durée serait perdue.
+    closeReasoning();
     // Dernier état de l'essai : sans ça, la fin du texte (écrite entre le dernier
     // flush et la fermeture du flux) n'apparaîtrait qu'une fois l'event posé.
     flushProgress(true);
@@ -617,7 +683,15 @@ async function streamCompletionOnce(opts: {
     // à la toute fin (abort sans erreur de lecture) → on la fait remonter.
     if (interrupted) throw new InterruptedError();
 
-    return { content, reasoning, toolCalls, generationId, modelUsed, usage: parseOpenRouterUsage(usageRaw) };
+    return {
+      content,
+      reasoning,
+      reasoningMs,
+      toolCalls,
+      generationId,
+      modelUsed,
+      usage: parseOpenRouterUsage(usageRaw),
+    };
   } finally {
     clearTimeout(hardTimer);
     clearTimeout(idleTimer);
@@ -626,10 +700,32 @@ async function streamCompletionOnce(opts: {
 }
 
 /**
+ * Endpoints dont on a CONSTATÉ qu'ils rejettent le champ de raisonnement (MIN-122),
+ * clés `provider:model`. Les couches compat documentent qu'elles ignorent les
+ * champs inconnus, mais « ignoré » et « rejeté » ne se distinguent qu'à
+ * l'exécution (cas connu : OpenAI + modèle non raisonneur type `gpt-4o`). On le
+ * découvre une fois, on le mémorise pour le process — comme `orModelIndex` dans
+ * model.ts. Un cold start réapprend, ce qui coûte un aller-retour, pas un run.
+ */
+const reasoningRefused = new Set<string>();
+
+/** Le 400 vient-il du champ de raisonnement qu'on a envoyé ? */
+function isReasoningRejection(err: unknown): boolean {
+  if (!(err instanceof StreamError) || err.status !== 400) return false;
+  const message = err.message.toLowerCase();
+  return REASONING_REQUEST_KEYS.some((key) => message.includes(key));
+}
+
+/**
  * Complétion streamée avec REPRISES : retente les erreurs reprenables (429, 5xx,
  * réseau, stream figé) avec backoff (Retry-After sinon exponentiel + jitter).
  * Après épuisement, relève la `StreamError` (l'appelant décide : suspendre le run
  * plutôt qu'échouer si elle est reprenable).
+ *
+ * Cas à part : un 400 qui cite le champ de raisonnement. Il n'est pas reprenable
+ * au sens du backoff (le retenter à l'identique redonnera le même 400) mais il est
+ * RÉPARABLE — on relance UNE fois sans le champ, et on retient l'endpoint. Un
+ * provider qui refuse le raisonnement ne doit pas tuer le run.
  */
 async function streamCompletion(opts: {
   apiKey: string;
@@ -641,17 +737,37 @@ async function streamCompletion(opts: {
   signal?: AbortSignal;
   checkInterrupt?: () => Promise<boolean>;
   onProgress?: EmitAgentLive;
+  reasoningLevel?: ReasoningLevel;
+  /** Signale au fil que ce couple provider/modèle ne sait pas raisonner. */
+  onReasoningUnsupported?: () => void;
   /** Deadline absolue (Date.now() ms) du chunk : au-delà, on ne dort pas, on relève. */
   deadlineAt?: number;
 }): Promise<StreamResult> {
+  // Endpoint déjà connu comme réfractaire : on n'y repasse pas par le 400.
+  const endpointKey = `${opts.provider}:${opts.model}`;
+  let attemptOpts = reasoningRefused.has(endpointKey)
+    ? { ...opts, reasoningLevel: undefined }
+    : opts;
+
   let lastErr: unknown;
   for (let attempt = 0; attempt < MAX_STREAM_ATTEMPTS; attempt++) {
     try {
-      return await streamCompletionOnce(opts);
+      return await streamCompletionOnce(attemptOpts);
     } catch (err) {
       lastErr = err;
       // Interruption utilisateur : jamais retentée — on la fait remonter.
       if (err instanceof InterruptedError) throw err;
+      // Le provider refuse le champ de raisonnement : on le retire et on relance
+      // le MÊME appel. L'échec n'étant pas transitoire, la relance ne consomme PAS
+      // d'essai — sinon un endpoint réfractaire mangerait le budget de reprise des
+      // vraies erreurs réseau. Ne peut se produire qu'une fois (le champ a disparu).
+      if (attemptOpts.reasoningLevel && isReasoningRejection(err)) {
+        reasoningRefused.add(endpointKey);
+        opts.onReasoningUnsupported?.();
+        attemptOpts = { ...opts, reasoningLevel: undefined };
+        attempt--;
+        continue;
+      }
       const retryable = err instanceof StreamError ? err.retryable : true;
       if (!retryable || attempt === MAX_STREAM_ATTEMPTS - 1) throw err;
       // Attente plafonnée (un Retry-After absurde ne doit pas nous faire dormir au-
@@ -682,7 +798,8 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // Direct : `emitLive` pendant l'écriture, puis À VIDE dès que les events du
   // round sont posés — le fil bascule alors du texte provisoire aux vrais
   // messages, sans que les deux se superposent une seconde.
-  const clearLive = () => params.emitLive?.({ text: "", reasoning: "", tools: 0 });
+  const clearLive = () =>
+    params.emitLive?.({ text: "", tools: 0, reasoningActive: false, reasoningMs: 0 });
 
   let seq = params.usageSeqStart ?? 0;
   let costUsd = 0;
@@ -840,6 +957,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           signal: params.signal,
           checkInterrupt: params.checkInterrupt,
           onProgress: params.emitLive,
+          reasoningLevel: params.reasoningLevel,
+          // Le refus est lisible dans le fil plutôt que silencieux : sans ça, un
+          // niveau choisi resterait affiché alors qu'il n'a aucun effet.
+          onReasoningUnsupported: () => {
+            void emit("status", { phase: "reasoning_unsupported", model });
+          },
           deadlineAt: startedAt + params.softDeadlineMs,
         });
         break;
@@ -908,9 +1031,19 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Taille de contexte réelle pour la décision de compaction du prochain round.
     lastPromptTokens = stream.usage.promptTokens ?? lastPromptTokens;
 
-    // Reasoning : affiché en live mais JAMAIS poussé dans `messages` (chat-completions
-    // ne le round-trippe pas ; le persister gonflerait/rejouerait le contexte).
-    if (stream.reasoning.trim()) await emit("thinking", { text: cap(stream.reasoning, 2000) });
+    // Raisonnement (MIN-122) : JAMAIS poussé dans `messages` (chat-completions ne le
+    // round-trippe pas ; le persister gonflerait/rejouerait le contexte) et jamais
+    // streamé à l'écran — le fil n'a montré qu'un indicateur + un compteur. On en
+    // garde la trace, repliée, avec la durée que le compteur affichait.
+    // `kind: "reasoning"` distingue cet event des `thinking` de NARRATION émis plus
+    // bas (du texte du modèle, rendu en bulle) : même type, deux rendus.
+    if (stream.reasoning.trim() || stream.reasoningMs > 0) {
+      await emit("thinking", {
+        text: cap(stream.reasoning, 2000),
+        kind: "reasoning",
+        durationMs: stream.reasoningMs,
+      });
+    }
     // Le contenu n'est émis en `thinking` QUE s'il accompagne des tool-calls (pensée
     // intermédiaire). Un round SANS tool-call est la réponse finale : elle part en
     // `summary` seul juste en dessous — l'émettre aussi ici créerait une bulle

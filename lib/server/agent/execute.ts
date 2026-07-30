@@ -1370,6 +1370,8 @@ export async function executeAgentRun(
       apiKey,
       baseUrl,
       provider,
+      // Figé au lancement (MIN-122) : chaque chunk du run repart du même niveau.
+      reasoningLevel: run.reasoning_level,
       runId: run.run_id ?? run.id,
       userId: run.created_by,
       projectId: run.project_id,

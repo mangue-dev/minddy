@@ -19,6 +19,7 @@ function sanitizeRun(run: AgentRun) {
     status: run.status,
     model: run.model,
     model_forced: run.model_forced,
+    reasoning_level: run.reasoning_level,
     key_mode: run.key_mode,
     triggered_by: run.triggered_by,
     // Bulle « originelle » de la conversation (la note, pour un run carnet).

@@ -1,10 +1,12 @@
 "use client";
 
+import type { ReasoningLevel } from "./agent-reasoning";
 import { trackEvent } from "./analytics";
 
 /**
- * Fetchers client de l'agent de code (MIN-46) : clés BYOK OpenRouter du compte
- * et modèle par défaut de l'utilisateur. La clé en clair n'est jamais renvoyée.
+ * Fetchers client de l'agent de code (MIN-46) : clés BYOK OpenRouter du compte,
+ * modèle par défaut et niveau de raisonnement par défaut (MIN-122) de
+ * l'utilisateur. La clé en clair n'est jamais renvoyée.
  */
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -59,18 +61,29 @@ export async function deleteAiKeyApi(): Promise<void> {
   await parseJson(await fetch("/api/account/ai-keys", { method: "DELETE" }));
 }
 
-export async function fetchAgentPreferencesApi(): Promise<{ default_model: string | null }> {
+export interface AgentPreferences {
+  default_model: string | null;
+  /** null = `off` (MIN-122). */
+  default_reasoning_level: ReasoningLevel | null;
+}
+
+export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {
   return parseJson(await fetch("/api/account/agent-preferences"));
 }
 
+/**
+ * Écriture PARTIELLE : seuls les champs passés sont envoyés (le PUT n'écrit que
+ * ce qu'il reçoit) — les deux réglages partagent une ligne, l'un ne doit pas
+ * effacer l'autre.
+ */
 export async function saveAgentPreferencesApi(
-  defaultModel: string | null,
-): Promise<{ default_model: string | null }> {
+  patch: Partial<AgentPreferences>,
+): Promise<AgentPreferences> {
   return parseJson(
     await fetch("/api/account/agent-preferences", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ default_model: defaultModel }),
+      body: JSON.stringify(patch),
     }),
   );
 }

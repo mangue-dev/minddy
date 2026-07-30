@@ -1,6 +1,7 @@
 "use client";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
@@ -47,6 +48,9 @@ export interface AgentRunSummary {
   status: AgentRunStatus;
   model: string | null;
   model_forced: boolean;
+  /** Niveau de raisonnement FIGÉ au lancement (MIN-122) : le sélecteur d'une run
+   *  en cours l'affiche en lecture seule, comme le modèle et la branche. */
+  reasoning_level: ReasoningLevel;
   key_mode: "platform" | "byok";
   triggered_by: "button" | "chat" | "mention";
   /** Prompt de lancement (bulle « originelle » de la conversation). */
@@ -123,6 +127,8 @@ export async function launchAgentRunApi(
     prompt?: string;
     model?: string;
     baseBranch?: string;
+    /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
+    reasoningLevel?: ReasoningLevel;
     /** `plan` (cadrer) et `verify` (contrôler du travail fait) laissent l'issue
      *  où elle est : seul `implement` la passe « en cours » côté serveur. */
     intent?: "implement" | "plan" | "verify";
@@ -131,6 +137,7 @@ export async function launchAgentRunApi(
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
   trackEvent("agent_launched", {
     model: body.model ?? "default",
+    reasoning_level: body.reasoningLevel ?? "default",
     has_branch: !!body.baseBranch,
     provider: "unknown",
     scope: "issue",

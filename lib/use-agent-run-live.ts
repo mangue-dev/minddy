@@ -16,7 +16,9 @@ import type { AgentRunEvent } from "./agent-api";
  * du run (lib/server/agent/live.ts), et c'est ici qu'on les reçoit :
  *
  *   `stream` — le texte du round en cours, ~4 fois par seconde. Rendu comme
- *              queue vivante du fil, puis remplacé par le vrai message.
+ *              queue vivante du fil, puis remplacé par le vrai message. Porte
+ *              aussi l'état de RÉFLEXION (MIN-122) — un drapeau et un chrono,
+ *              jamais le texte du raisonnement : celui-ci n'est pas streamé.
  *   `event`  — une ligne `agent_run_events` fraîchement insérée, poussée
  *              directement dans le cache du fil : les tool-calls et la réponse
  *              apparaissent à l'instant au lieu d'attendre le poll.
@@ -28,18 +30,22 @@ import type { AgentRunEvent } from "./agent-api";
 export interface AgentRunLive {
   /** Réponse du modèle telle qu'écrite jusqu'ici. */
   text: string;
-  /** Trace de raisonnement, quand le modèle en émet. */
-  reasoning: string;
   /** Appels d'outils déjà amorcés dans ce round : >0 ⇒ narration, le tour continue. */
   tools: number;
+  /** Le modèle raisonne EN CE MOMENT (MIN-122) → indicateur + compteur dans le fil.
+   *  Le TEXTE du raisonnement n'est PAS streamé : il arrive persisté en fin de round. */
+  reasoningActive: boolean;
+  /** Millisecondes de réflexion de ce round, mesurées côté serveur (le compteur). */
+  reasoningMs: number;
   /** ISO — premier instant où ce round a écrit quelque chose (chrono du tour). */
   startedAt: string;
 }
 
 interface StreamPayload {
   text?: unknown;
-  reasoning?: unknown;
   tools?: unknown;
+  reasoningActive?: unknown;
+  reasoningMs?: unknown;
   at?: unknown;
 }
 
@@ -130,17 +136,22 @@ export function useAgentRunLive(
         if (at < lastAt.current) return;
         lastAt.current = at;
         const text = str(p.text);
-        const reasoning = str(p.reasoning);
+        const tools = typeof p.tools === "number" ? p.tools : 0;
+        const reasoningActive = p.reasoningActive === true;
+        const reasoningMs = typeof p.reasoningMs === "number" ? p.reasoningMs : 0;
         // Envoi À VIDE : les vrais events du round sont posés, ils prennent le
-        // relais à l'écran.
-        if (!text && !reasoning) {
+        // relais à l'écran. Une phase de PURE réflexion n'écrit ni texte ni outil —
+        // sans `reasoningActive` dans ce test, l'indicateur disparaîtrait au lieu
+        // de s'afficher.
+        if (!text && !tools && !reasoningActive) {
           setLive(null);
           return;
         }
         setLive((prev) => ({
           text,
-          reasoning,
-          tools: typeof p.tools === "number" ? p.tools : 0,
+          tools,
+          reasoningActive,
+          reasoningMs,
           // Le chrono du tour date du PREMIER signe de vie du round, pas du dernier.
           startedAt: prev?.startedAt ?? new Date().toISOString(),
         }));

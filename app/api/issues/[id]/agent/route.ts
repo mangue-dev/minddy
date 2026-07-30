@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import {
   launchAgentRun,
   type AgentLaunchIntent,
@@ -25,7 +26,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const RUN_COLUMNS =
-  "id, status, model, model_forced, key_mode, triggered_by, prompt, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
+  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     prompt?: string;
     model?: string;
     baseBranch?: string;
+    reasoningLevel?: string;
     intent?: AgentLaunchIntent;
   };
   let body: LaunchBody = {};
@@ -88,6 +90,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     typeof body.baseBranch === "string" && body.baseBranch.trim()
       ? body.baseBranch.trim()
       : undefined;
+  // Niveau inconnu ignoré : le lancement retombe alors sur le défaut perso.
+  const reasoningLevel = isReasoningLevel(body.reasoningLevel) ? body.reasoningLevel : undefined;
 
   const result = await launchAgentRun({
     issueId: id,
@@ -97,6 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     model,
     forced: !!model,
     baseBranch,
+    reasoningLevel,
     // Cadrage (« Générer un plan » / « Vérifier le plan ») et contrôle
     // (« Vérifier l'implémentation ») : le lancement ne déplace pas le ticket.
     // Tout le reste vaut « implémenter ».
