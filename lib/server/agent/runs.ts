@@ -126,10 +126,17 @@ export interface AgentRun {
 }
 
 const ACTIVE_STATUSES: AgentRunStatus[] = ["queued", "running"];
-/** Un run 'running' plus vieux que ce seuil est présumé bloqué (fonction morte).
-    Un chunk sain dure ≤ ~270s ; 6 min laisse une marge sûre tout en récupérant
-    vite un vrai crash (au lieu d'attendre 10 min). */
-const STUCK_RUNNING_MS = 6 * 60_000;
+/**
+ * Un run 'running' plus vieux que ce seuil est présumé bloqué (fonction morte).
+ *
+ * DOIT rester au-dessus de la durée d'un chunk SAIN, sinon le sweeper vole un run
+ * en pleine exécution : deux fonctions travailleraient alors sur la même sandbox,
+ * et le second checkpoint écraserait le premier. Depuis que le cron tourne en
+ * fonctions de 800 s (Fluid, plan Pro), un chunk sain va jusqu'à ~13 min — d'où 20,
+ * qui garde une marge nette tout en récupérant un vrai crash bien avant qu'un
+ * humain ne s'en aperçoive.
+ */
+const STUCK_RUNNING_MS = 20 * 60_000;
 const MAX_CRASH_ATTEMPTS = 2;
 
 export interface CreateRunInput {

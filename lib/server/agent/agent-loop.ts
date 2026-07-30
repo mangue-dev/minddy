@@ -73,7 +73,14 @@ import {
  * à `execTool` (fourni par execute.ts, qui détient le Sandbox).
  */
 
-const MAX_ROUNDS_PER_CHUNK = 60;
+/**
+ * Garde-fou anti-runaway, PAS un budget : ce qui doit borner un chunk normal est le
+ * TEMPS (`softDeadlineMs`), pas un compteur de rounds. Relevé de 60 à 150 quand le
+ * chunk est passé de 250 s à 700 s — à 60, le compteur serait devenu la contrainte
+ * qui mord en premier, et chaque tour un peu long se serait mis à suspendre pour
+ * une raison qui n'a rien à voir avec le temps réellement disponible.
+ */
+const MAX_ROUNDS_PER_CHUNK = 150;
 /**
  * Garde-fou : relances du tour par le hook de fin de tour. DEUX, parce que le
  * hook porte maintenant deux préoccupations distinctes, chacune tirant au plus

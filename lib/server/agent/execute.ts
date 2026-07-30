@@ -196,13 +196,13 @@ const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
  * moitié plafonnait une fille à ~2 min sur un chunk de 250 s, ce qui coupait net
  * toute tâche déléguée un peu sérieuse.
  */
-const SUBAGENT_MAX_MS = 180_000;
+const SUBAGENT_MAX_MS = 600_000;
 /**
  * Ce qu'on GARDE au parent quand une fille tourne : de quoi recevoir le rapport,
- * relancer un round, faire le type-check de fin de tour et pousser. En dessous, le
- * tour se terminerait sur un rapport que personne n'a eu le temps de lire.
+ * relancer un round ou deux, faire le type-check de fin de tour et pousser. En
+ * dessous, le tour se terminerait sur un rapport que personne n'a eu le temps de lire.
  */
-const SUBAGENT_PARENT_RESERVE_MS = 60_000;
+const SUBAGENT_PARENT_RESERVE_MS = 120_000;
 /** En dessous, un `spawn_agent` est REFUSÉ : la fille n'aurait pas le temps de
  *  produire un rapport utile, et un round payé pour rien est un round perdu. */
 const SUBAGENT_MIN_MS = 30_000;

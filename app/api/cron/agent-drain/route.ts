@@ -15,7 +15,22 @@ import { durationBucket } from "@/lib/analytics-sanitize";
  */
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+/**
+ * 800 s, le maximum du plan Pro sous Fluid Compute (300 s n'est que le DÉFAUT).
+ *
+ * C'est le levier qui rend l'agent continu : un chunk de treize minutes au lieu de
+ * cinq, donc un sous-agent qui travaille ~10 min d'affilée sans jamais passer par
+ * la reprise. Le coût ne triple pas pour autant — la facturation Fluid est à l'Active
+ * CPU, et une boucle d'agent passe l'essentiel de son temps à ATTENDRE un modèle,
+ * pas à calculer.
+ *
+ * Ne vaut QUE pour cette route : les drains déclenchés par un lancement utilisateur
+ * (`launchAgentRun` via `after`) tournent dans des fonctions de 300 s et gardent le
+ * budget par défaut de `drainAgentRuns`.
+ */
+export const maxDuration = 800;
+/** Budget du drain, sous le `maxDuration` ci-dessus (marge pour la réponse + le kick). */
+const CRON_DRAIN_BUDGET_MS = 760_000;
 
 async function handle(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -25,7 +40,7 @@ async function handle(request: NextRequest) {
 
   const service = getServiceClient();
   const startedAt = Date.now();
-  const summary = await drainAgentRuns(service);
+  const summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
   // Santé du worker (MIN-78) : un cron qui ne réclame plus rien, ou qui frôle
   // les 300 s, est un incident silencieux — invisible dans les stats produit.
   captureServerEvent({

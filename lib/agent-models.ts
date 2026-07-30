@@ -43,8 +43,16 @@ export const AGENT_MODEL_CONFIG_KEY = "agent_model";
 // depuis MIN-72 par le budget d'usage du PLAN (lib/billing-plans.ts).
 
 // ── Réglages opérationnels (défauts ; surchargables plus tard) ────────────────
-/** Soft-deadline d'un chunk : au-delà, on suspend au round suivant (< 300s maxDuration). */
-export const AGENT_SOFT_DEADLINE_MS = 250_000;
+/**
+ * PLAFOND de la soft-deadline d'un chunk : au-delà, on suspend au round suivant.
+ *
+ * 700 s, calé sur les 800 s du plan Pro sous Fluid Compute (cf. le `maxDuration` de
+ * `app/api/cron/agent-drain`). Ce n'est qu'un PLAFOND : la soft-deadline effective
+ * est `min(budget que l'appelant a annoncé, ceci)`, donc un drain lancé depuis une
+ * route de 300 s reste borné par son propre budget. C'est ce qui permet d'avoir des
+ * chunks longs au cron sans mettre en danger les chemins courts.
+ */
+export const AGENT_SOFT_DEADLINE_MS = 700_000;
 /** Timeout dur d'un appel modèle dans la boucle agentique. */
 export const AGENT_RUN_TIMEOUT_MS = 210_000;
 /** Garde-fou anti-runaway : nombre max de reprises (suspend→resume) d'un run. */

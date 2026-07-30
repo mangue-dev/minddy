@@ -14,7 +14,13 @@ import { stopSandboxByName } from "./sandbox";
  * basse latence), comme AutoKap.
  */
 
-/** Budget d'un drain (sous les 300s de maxDuration). */
+/**
+ * Budget d'un drain lancé depuis une route de 300 s (`launchAgentRun` via `after`).
+ * Le CRON, lui, tourne dans une fonction de 800 s et passe son propre budget : le
+ * budget ne peut pas être une constante globale, sinon un drain déclenché par un
+ * lancement utilisateur croirait disposer de treize minutes et se ferait tuer en
+ * plein chunk — checkpoint non écrit, tour perdu.
+ */
 const DRAIN_TIME_BUDGET_MS = 270_000;
 /** On ne démarre pas un chunk s'il reste moins que ça. */
 const MIN_CHUNK_BUDGET_MS = 40_000;
@@ -81,8 +87,13 @@ export async function hasDueAgentWork(service: SupabaseClient): Promise<boolean>
 
 export async function drainAgentRuns(
   service: SupabaseClient,
+  opts?: {
+    /** Budget mural de CE drain. Doit rester sous le `maxDuration` de la route qui
+     *  l'appelle : c'est l'appelant, et lui seul, qui connaît sa propre durée. */
+    budgetMs?: number;
+  },
 ): Promise<{ claimed: number }> {
-  const deadline = Date.now() + DRAIN_TIME_BUDGET_MS;
+  const deadline = Date.now() + (opts?.budgetMs ?? DRAIN_TIME_BUDGET_MS);
   let claimed = 0;
 
   await requeueStuckRuns(service);
