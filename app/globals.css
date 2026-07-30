@@ -15,6 +15,21 @@
 :root { --primary: oklch(0.21 0.012 265); }                          /* encre, texte blanc dessus */
 .dark { --primary: oklch(0.97 0.004 265); --primary-foreground: oklch(0.18 0.01 265); }
 
+/* ── Le fond de la pilule de mention (components/mention-chip.tsx) ────────────
+   Elle ne peut pas se déduire de --primary comme le reste : l'encre est presque
+   noire en clair et presque blanche en sombre, donc une même opacité d'encre
+   ÉCLAIRCIT le fond sombre alors qu'elle assombrit le clair. La pilule doit
+   s'enfoncer dans les deux thèmes — clair sur clair, sombre sur sombre — c'est
+   donc une teinte en clair et une ombre en sombre, deux valeurs sans rapport.
+
+   Translucide des deux côtés, et pas une couleur pleine : la pilule se pose
+   aussi bien sur une carte de commentaire que sur une ligne survolée ou sur la
+   surface du composer de Numo, et doit prendre la nuance de ce qui la porte.
+   Une seule variable, donc une seule classe `bg-*` : un appelant qui repeint la
+   pilule (la bulle sombre du chat) la remplace proprement via tailwind-merge. */
+:root { --mention-chip: oklch(0.21 0.012 265 / 6%); }
+.dark { --mention-chip: oklch(0 0 0 / 25%); }
+
 
 
 /* ── Vue diff des Pull Requests (MIN-66) ──────────────────────────────────────

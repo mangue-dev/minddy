@@ -53,7 +53,7 @@ export function MentionChip({
     // la hauteur de la figure remet les quatre marges à égalité.
     <span
       className={cn(
-        "mx-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 p-[3px] pr-2.5 align-middle text-[0.95em] font-medium leading-4 text-primary",
+        "mx-0.5 inline-flex items-center gap-1 rounded-full bg-(--mention-chip) p-[3px] pr-2.5 align-middle text-[0.95em] font-medium leading-4 text-primary",
         className,
       )}
     >
