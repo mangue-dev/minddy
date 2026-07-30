@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -160,9 +160,37 @@ export function IssueSidePanel({
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"description" | "plan">(initialTab);
-  // Remount the description editor when dictation rewrites it — it reads
-  // `value` only on mount and commits on blur.
+  // Remount the description editor when the description is rewritten under it
+  // (dictation, ou une écriture distante) — il ne lit `value` qu'au montage et
+  // ne commite qu'au blur.
   const [editorKey, setEditorKey] = useState(0);
+
+  /**
+   * Suivre les écritures DISTANTES pendant que le panneau reste ouvert (MIN-89).
+   *
+   * Le reste du panneau lit `issue` directement : statut, priorité, plan, liens
+   * suivent donc le cache dès que le pont temps réel l'invalide. Le titre et la
+   * description, eux, sont des copies LOCALES — un état pour l'un, une valeur
+   * lue au montage par l'éditeur pour l'autre — semées à l'ouverture du ticket
+   * et jamais reprises ensuite. Un agent (Numo, MCP, coéquipier) pouvait donc
+   * réécrire les deux sans que l'écran bouge, jusqu'au rechargement.
+   *
+   * La règle : adopter la version distante, JAMAIS par-dessus une frappe. Un
+   * champ qui a le focus, ou retouché sans être encore commité, garde la main.
+   */
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  /** Ticket dont les copies locales ci-dessous portent la version. */
+  const shownFor = useRef<string | null>(null);
+  /** Dernière version SERVEUR déjà reflétée à l'écran : distingue une écriture
+      distante (à adopter) de l'écho de notre propre édition (déjà affichée). */
+  const shownTitle = useRef("");
+  const shownDescription = useRef("");
+  /** Retouché à la main depuis la dernière synchro. Sans ces deux drapeaux, un
+      simple aller-retour du focus recommiterait le reflet périmé du champ —
+      c'est-à-dire annulerait la modification que l'agent vient d'écrire. */
+  const titleEdited = useRef(false);
+  const descriptionEdited = useRef(false);
   // Conversation de l'agent, en modal PAR-DESSUS le panneau : la reprise à chaud
   // ne doit pas coûter le contexte du ticket (la carte, elle, n'a rien à perdre
   // et navigue vers /agents).
@@ -215,12 +243,52 @@ export function IssueSidePanel({
     onSetIssueCycle
   );
 
-  // Sync the editable title when a different issue opens (not on every tick),
-  // and land on the tab the opener asked for (plan indicator → plan tab).
+  // Land on the tab the opener asked for (plan indicator → plan tab).
   useEffect(() => {
-    if (issue) setTitle(issue.title);
     setTab(initialTab);
   }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Titre et description : semés à l'ouverture du ticket, puis tenus à jour sur
+  // les écritures distantes (voir les refs plus haut).
+  useEffect(() => {
+    if (!issue) return;
+    const description = issue.description ?? "";
+
+    // Ticket différent : tout repart de lui. L'éditeur remonte déjà de son côté
+    // (sa `key` porte `issue.id`), il n'y a que l'état du titre à semer.
+    if (shownFor.current !== issue.id) {
+      shownFor.current = issue.id;
+      shownTitle.current = issue.title;
+      shownDescription.current = description;
+      titleEdited.current = false;
+      descriptionEdited.current = false;
+      setTitle(issue.title);
+      return;
+    }
+
+    // Une version qu'on refuse d'adopter n'est PAS notée : elle reste « en
+    // attente », et le champ la prend dès qu'il rend la main (commitTitle pour
+    // le titre, le blur du conteneur pour la description).
+    if (
+      issue.title !== shownTitle.current &&
+      !titleEdited.current &&
+      document.activeElement !== titleRef.current
+    ) {
+      shownTitle.current = issue.title;
+      setTitle(issue.title);
+    }
+
+    // L'éditeur ne relit pas `value` : l'adopter, c'est le remonter — le même
+    // levier que la dictée. Donc jamais pendant qu'on y écrit.
+    if (
+      description !== shownDescription.current &&
+      !descriptionEdited.current &&
+      !descriptionRef.current?.contains(document.activeElement)
+    ) {
+      shownDescription.current = description;
+      setEditorKey((k) => k + 1);
+    }
+  }, [issue?.id, issue?.title, issue?.description]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = useMemo(() => planProgress(issue?.plan), [issue?.plan]);
   // Un plan existe déjà → les entrées « plan » (menu ⋯, onglet Plan, prompt
@@ -495,8 +563,19 @@ export function IssueSidePanel({
         toast.error((err as Error).message)
       );
     }
-    if (fields.title !== undefined) setTitle(fields.title);
-    if (fields.description !== undefined) setEditorKey((k) => k + 1);
+    // La dictée écrit CE que le panneau affiche : on note la version au passage,
+    // sinon l'écho de notre propre patch repasserait pour une écriture distante
+    // et remonterait l'éditeur une seconde fois.
+    if (fields.title !== undefined) {
+      shownTitle.current = fields.title;
+      titleEdited.current = false;
+      setTitle(fields.title);
+    }
+    if (fields.description !== undefined) {
+      shownDescription.current = fields.description.trim();
+      descriptionEdited.current = false;
+      setEditorKey((k) => k + 1);
+    }
     if (category_ids) {
       void onSetCategories(issue.id, category_ids).catch((err) =>
         toast.error((err as Error).message)
@@ -565,13 +644,28 @@ export function IssueSidePanel({
 
   const commitTitle = () => {
     const trimmed = title.trim();
-    if (trimmed && trimmed !== issue.title) void patch({ title: trimmed });
-    else if (!trimmed) setTitle(issue.title);
+    // Le champ n'a fait que perdre le focus, sans une frappe. Si un agent a
+    // renommé le ticket entre-temps, c'est SON titre qui vaut : le nôtre n'est
+    // qu'un reflet, et le recommitter annulerait sa modification.
+    if (!titleEdited.current) {
+      if (trimmed !== issue.title) setTitle(issue.title);
+      return;
+    }
+    titleEdited.current = false;
+    if (trimmed && trimmed !== issue.title) {
+      shownTitle.current = trimmed;
+      void patch({ title: trimmed });
+    } else if (!trimmed) setTitle(issue.title);
   };
 
   const commitDescription = (markdown: string) => {
+    // Même garde que pour le titre : un blur sans frappe ne réécrit rien.
+    if (!descriptionEdited.current) return;
+    descriptionEdited.current = false;
     const next = markdown.trim() || null;
-    if (next !== (issue.description ?? null)) void patch({ description: next });
+    if (next === (issue.description ?? null)) return;
+    shownDescription.current = next ?? "";
+    void patch({ description: next });
   };
 
   const handleDelete = async () => {
@@ -724,8 +818,12 @@ export function IssueSidePanel({
 
           <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
             <AutoTextarea
+              ref={titleRef}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                titleEdited.current = true;
+                setTitle(e.target.value);
+              }}
               onBlur={commitTitle}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -775,12 +873,35 @@ export function IssueSidePanel({
               </TabsContent>
 
               <TabsContent value="description" className="mt-4 flex flex-col gap-6">
-                <MarkdownEditor
-                  key={`${issue.id}:${editorKey}`}
-                  value={issue.description ?? ""}
-                  onCommit={commitDescription}
-                  placeholder={t("descriptionPlaceholder")}
-                />
+                {/* Le conteneur sert de repère de focus : tant que le curseur est
+                    DANS l'éditeur, une écriture distante ne le remonte pas — et
+                    au moment où il en sort, l'éditeur prend la version en
+                    attente (le blur ne change rien d'autre : sans frappe, rien
+                    n'est commité, donc rien ne redéclencherait l'effet). */}
+                <div
+                  ref={descriptionRef}
+                  onBlur={() => {
+                    const description = issue.description ?? "";
+                    if (
+                      descriptionEdited.current ||
+                      description === shownDescription.current
+                    ) {
+                      return;
+                    }
+                    shownDescription.current = description;
+                    setEditorKey((k) => k + 1);
+                  }}
+                >
+                  <MarkdownEditor
+                    key={`${issue.id}:${editorKey}`}
+                    value={issue.description ?? ""}
+                    onCommit={commitDescription}
+                    onEdit={() => {
+                      descriptionEdited.current = true;
+                    }}
+                    placeholder={t("descriptionPlaceholder")}
+                  />
+                </div>
 
                 {/* Key/value properties — borderless, like the issue cards.
                     Attachments and relations are rows of this table too: each

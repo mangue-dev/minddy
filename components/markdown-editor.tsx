@@ -39,6 +39,7 @@ export function MarkdownEditor({
   value,
   onCommit,
   onEmptyChange,
+  onEdit,
   placeholder = "Ajoute une description…",
   className,
 }: {
@@ -47,6 +48,11 @@ export function MarkdownEditor({
   /** Live emptiness signal (fires on mount and on each edit) — lets callers see
       typed-but-uncommitted content, since onCommit only fires on blur. */
   onEmptyChange?: (empty: boolean) => void;
+  /** Le contenu vient d'être MODIFIÉ (frappe, collage) — jamais au montage.
+      Dit à l'appelant que ce qui est à l'écran n'est plus ce qu'il a chargé :
+      de quoi ne pas remplacer le texte sous les doigts, ni recommitter un
+      reflet périmé au blur. */
+  onEdit?: () => void;
   placeholder?: string;
   className?: string;
 }) {
@@ -70,7 +76,10 @@ export function MarkdownEditor({
     content: value,
     editorProps: { attributes: { class: PROSE } },
     onCreate: ({ editor }) => syncEmpty(editor.isEmpty),
-    onUpdate: ({ editor }) => syncEmpty(editor.isEmpty),
+    onUpdate: ({ editor }) => {
+      syncEmpty(editor.isEmpty);
+      onEdit?.();
+    },
     // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
     onBlur: ({ editor }) =>
       onCommit(
