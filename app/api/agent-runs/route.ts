@@ -106,7 +106,14 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = (data ?? []) as unknown as RunRow[];
+  // Un run dont l'issue est à la corbeille (MIN-133) : `issue_id` est renseigné
+  // mais la ressource imbriquée revient nulle, la policy `issues_select` l'ayant
+  // écartée. Le laisser passer le ferait lire comme une session CARNET — même
+  // forme (issue nulle), titre de repli compris — pour un ticket qui n'existe
+  // plus à l'écran. Restaurer le ticket ramène sa session telle quelle.
+  const rows = ((data ?? []) as unknown as RunRow[]).filter(
+    (r) => r.issue_id === null || r.issue !== null,
+  );
   // Les lignes arrivent triées par created_at DESC : le 1er run vu par issue est la
   // DERNIÈRE session en date — c'est elle le représentant (badge fidèle à l'état de
   // la dernière session/PR ; ses `pr_*` portent déjà la PR héritée du ticket, même

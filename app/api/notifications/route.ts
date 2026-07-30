@@ -107,7 +107,23 @@ export async function GET(request: NextRequest) {
     ...(comments ?? []).map((c) => c.api_key_id),
   ]);
 
-  const result: MyNotification[] = notifs.map((n) => {
+  /**
+   * La cible est-elle encore là ? Depuis MIN-133, supprimer ne supprime plus :
+   * la notification survit à la mise en corbeille de son ticket, de son
+   * objectif ou de son retour, là où le `on delete cascade` l'emportait avant.
+   * Les hydratations ci-dessus écartant les corbeillés, la ligne s'afficherait
+   * sans titre et mènerait à un écran vide — on la retire de l'inbox, sans la
+   * détruire : restaurer l'élément la fait revenir, non lue si elle l'était.
+   *
+   * `data === null` = la lecture a ÉCHOUÉ, et non « rien de vivant » : on ne
+   * filtre alors sur rien, plutôt que de vider l'inbox sur une erreur passagère.
+   */
+  const targetAlive = (n: (typeof notifs)[number]): boolean =>
+    (!n.issue_id || !issues || issueMap.has(n.issue_id)) &&
+    (!n.objective_id || !objectives || objectiveMap.has(n.objective_id)) &&
+    (!n.feedback_post_id || !feedbackPosts || feedbackMap.has(n.feedback_post_id));
+
+  const result: MyNotification[] = notifs.filter(targetAlive).map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
     const objective = n.objective_id ? objectiveMap.get(n.objective_id) : undefined;
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;

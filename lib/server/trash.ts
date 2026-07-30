@@ -109,11 +109,13 @@ export async function softDeleteItem(
   const service = getServiceClient();
 
   if (type === "project") {
+    // Pas de `.is("deleted_at", null)` ici : le contrôle porte sur le
+    // PROPRIÉTAIRE, qui ne change pas quand le projet passe à la corbeille.
+    // Le filtrer ferait répondre « projet introuvable » à un second appel.
     const { data: project } = await service
       .from("projects")
       .select("owner_id")
       .eq("id", id)
-      .is("deleted_at", null)
       .maybeSingle();
     if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
     if (project.owner_id !== actorId) {
@@ -127,7 +129,7 @@ export async function softDeleteItem(
     }
   }
 
-  const { data, error } = await service
+  const { error } = await service
     .from(TABLE[type])
     .update({ deleted_at: new Date().toISOString(), deleted_by: actorId })
     .eq("id", id)
@@ -139,9 +141,11 @@ export async function softDeleteItem(
     console.error(`[trash] soft delete ${type} failed:`, error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  // Déjà en corbeille : la ligne n'a pas bougé, mais l'intention de l'appelant
-  // est satisfaite (double clic, rejeu d'une requête) — 404 induirait en erreur.
-  if (!data) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
+  // Aucune ligne mise à jour ne veut PAS dire « introuvable » : l'existence et
+  // l'accès viennent d'être vérifiés juste au-dessus, donc la seule façon de ne
+  // rien toucher est que la ligne soit DÉJÀ en corbeille. L'intention de
+  // l'appelant est satisfaite (double clic, rejeu d'une requête) — un 404
+  // l'induirait en erreur.
   return { ok: true };
 }
 
@@ -426,21 +430,35 @@ export async function purgeItem(
 }
 
 /**
- * Chemins storage à effacer avec ces lignes. Seuls les tickets et les projets en
- * portent (`attachments.issue_id` / `.project_id`) ; un objectif ou un feedback
- * n'a pas de pièce jointe qui lui soit propre.
+ * La colonne d'`attachments` qui rattache un fichier à chaque type. Une pièce
+ * jointe pend d'EXACTEMENT un parent — `attachments_parent_ck` l'impose sur
+ * `issue_id` / `objective_id` / `feedback_post_id` (20260731090000) — et porte
+ * en plus le `project_id`, qui ramasse tout le projet d'un coup.
+ */
+const ATTACHMENT_PARENT: Record<TrashType, string> = {
+  issue: "issue_id",
+  objective: "objective_id",
+  feedback: "feedback_post_id",
+  project: "project_id",
+};
+
+/**
+ * Chemins storage à effacer avec ces lignes. Les QUATRE types en portent : un
+ * objectif et un feedback ont leurs propres fichiers depuis 20260728091000 et
+ * 20260731090000. Les oublier laisserait les objets orphelins dans le bucket,
+ * la ligne `attachments` partie en cascade — invisibles, et impossibles à
+ * rattraper ensuite.
  */
 export async function attachmentPaths(
   service: SupabaseClient,
   type: TrashType,
   ids: string[]
 ): Promise<string[]> {
-  if (ids.length === 0 || type === "objective" || type === "feedback") return [];
-  const column = type === "issue" ? "issue_id" : "project_id";
+  if (ids.length === 0) return [];
   const { data } = await service
     .from("attachments")
     .select("storage_path")
-    .in(column, ids);
+    .in(ATTACHMENT_PARENT[type], ids);
   return (data ?? []).map((a) => a.storage_path as string);
 }
 

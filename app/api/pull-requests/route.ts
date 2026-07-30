@@ -29,6 +29,7 @@ const ACTIVE_STATUSES = ["queued", "running"];
 
 interface RunRow {
   id: string;
+  issue_id: string | null;
   repo_link_id: string | null;
   status: string;
   pr_number: number | null;
@@ -84,14 +85,19 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, repo_link_id, status, pr_number, pr_url, pr_state, model, created_at, updated_at, issue:issues(id, number, title), project:projects(id, key, name), repo_link:project_git_links(provider)",
+      "id, issue_id, repo_link_id, status, pr_number, pr_url, pr_state, model, created_at, updated_at, issue:issues(id, number, title), project:projects(id, key, name), repo_link:project_git_links(provider)",
     )
     .not("pr_number", "is", null)
     .order("created_at", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = (data ?? []) as unknown as RunRow[];
+  // `issue_id` renseigné mais ressource imbriquée nulle = ticket à la corbeille
+  // (MIN-133, policy `issues_select`). Sa PR n'a plus à figurer dans la liste :
+  // le ticket a disparu de partout ailleurs, et restaurer le ramènera avec elle.
+  const rows = ((data ?? []) as unknown as RunRow[]).filter(
+    (r) => r.issue_id === null || r.issue !== null,
+  );
   // Dédoublonnage par (repo_link_id, pr_number). Les lignes arrivent triées par
   // created_at asc → la première vue est le run canonique (le plus ancien). On
   // garde ensuite l'état PR le plus frais (webhook / merge tamponnent updated_at).
