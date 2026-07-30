@@ -410,7 +410,9 @@
     "mfaRecoveryLabel": "Recovery code",
     "mfaRecoverySubmit": "Turn off and sign in",
     "mfaDisabledNotice": "Two-factor authentication is off. You can turn it back on from your account settings.",
-    "mfaGenericError": "Something went wrong. Try again."
+    "mfaGenericError": "Something went wrong. Try again.",
+    "mfaInvalidCode": "That code didn't work. It may have expired — try the next one your app shows.",
+    "mfaTooManyAttempts": "Too many attempts. Wait a moment, then try again."
   },
   "BulkActions": {
     "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
@@ -1325,7 +1327,9 @@
     "aiKeySave": "Save key",
     "aiKeyAddedToast": "Key saved.",
     "aiKeyRemovedToast": "Key removed.",
-    "aiKeyRemove": "Remove"
+    "aiKeyRemove": "Remove",
+    "securityTab": "Security",
+    "securityTabIndicator": "Two-factor authentication is off"
   },
   "AccountData": {
     "exportTitle": "Export my data",
@@ -1355,7 +1359,6 @@
     "description": "A six-digit code from your phone, on top of your password, every time you sign in.",
     "oauthNote": "You sign in with {provider}. This code comes on top of theirs, it doesn't replace it.",
     "enableButton": "Turn on",
-    "statusOn": "On",
     "enrollScanTitle": "Scan this with your authenticator app",
     "enrollScanHint": "1Password, Bitwarden, Google Authenticator, Raycast — any of them will do.",
     "enrollQrAlt": "QR code to set up two-factor authentication",
@@ -1380,7 +1383,14 @@
     "disableConfirmTitle": "Turn off two-factor authentication?",
     "disableConfirmDescription": "Your password alone will open this account again — including its Git connections and its model keys.",
     "disabledToast": "Two-factor authentication is off.",
-    "genericError": "Something went wrong. Try again."
+    "genericError": "Something went wrong. Try again.",
+    "recommendedBadge": "Recommended",
+    "recommendTitle": "A password alone opens this account",
+    "recommendBody": "It carries write access to your connected Git repositories, through the code agent, plus your model keys and everything you can delete here. A second factor closes that door.",
+    "enabledCardTitle": "Two-factor authentication is on",
+    "mfaInvalidCode": "That code didn't work. It may have expired — try the next one your app shows.",
+    "mfaTooManyAttempts": "Too many attempts. Wait a moment, then try again.",
+    "mfaGenericError": "Couldn't verify the code. Try again."
   },
   "Agent": {
     "sectionTitle": "Numo agent",

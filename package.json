@@ -41,6 +41,7 @@
     "cmdk": "^1.1.1",
     "diff": "^9.0.0",
     "framer-motion": "^12.42.2",
+    "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
     "mangue-ui": "^0.1.0",
     "mcp-handler": "^1.1.0",

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,13 +13,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Button,
-  Input,
+  Checkbox,
   Spinner,
   toast,
 } from "mangue-ui";
-import { Check, Copy, Download, ShieldCheck } from "lucide-react";
+import { Check, Copy, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsSection } from "@/components/settings-shell";
+import { mfaStatusQueryKey, useMfaStatusQuery } from "@/lib/use-mfa-status";
+import { mfaVerifyErrorKey } from "@/lib/mfa";
+import { OtpInput } from "@/components/otp-input";
 
 /**
  * Réglages du compte → « Second facteur » (MIN-132).
@@ -36,13 +40,17 @@ import { SettingsSection } from "@/components/settings-shell";
  * Les codes ne sont montrés qu'une fois, et l'écran ne se referme pas tout seul :
  * il faut cocher « je les ai notés ». C'est le seul chemin de retour si le
  * téléphone disparaît — il n'y a pas de support humain derrière.
+ *
+ * ## Pourquoi un encart et pas un réglage de plus
+ *
+ * Rendu comme les autres lignes de réglages, ce choix-là se lisait aussi anodin
+ * qu'un fuseau horaire. Il ne l'est pas : ce compte ouvre les dépôts Git reliés
+ * EN ÉCRITURE, via l'agent de code. Tant que la 2FA est inactive, la section
+ * porte donc un encart qui dit ce qui est réellement en jeu — et la page de
+ * réglages pose une pastille sur l'onglet, pour que la recommandation existe
+ * aussi quand on n'est pas venu la chercher. Une fois activée, l'encart se tait :
+ * il constate, il ne félicite pas.
  */
-
-interface MfaStatus {
-  enabled: boolean;
-  verifiedFactors: number;
-  unusedRecoveryCodes: number;
-}
 
 type Stage = "idle" | "enrolling" | "codes";
 
@@ -51,8 +59,9 @@ export function AccountSecuritySection() {
   const tc = useTranslations("Common");
   const { user, enrollTotp, verifyTotp, unenrollTotp, refreshUser, signOutOtherSessions } =
     useAuth();
+  const queryClient = useQueryClient();
 
-  const [status, setStatus] = useState<MfaStatus | null>(null);
+  const { status } = useMfaStatusQuery();
   const [stage, setStage] = useState<Stage>("idle");
   const [busy, setBusy] = useState(false);
 
@@ -74,19 +83,9 @@ export function AccountSecuritySection() {
   const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
   const providerLabel = provider === "google" ? "Google" : provider === "github" ? "GitHub" : null;
 
-  const loadStatus = useCallback(async () => {
-    try {
-      const response = await fetch("/api/account/mfa");
-      if (!response.ok) return;
-      setStatus((await response.json()) as MfaStatus);
-    } catch {
-      // La section sait vivre sans : elle reste sur son état précédent.
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadStatus();
-  }, [loadStatus]);
+  // La pastille de l'onglet lit le même cache : l'invalider met les deux à jour.
+  const reloadStatus = () =>
+    void queryClient.invalidateQueries({ queryKey: mfaStatusQueryKey });
 
   const startEnrollment = async () => {
     setBusy(true);
@@ -120,14 +119,14 @@ export function AccountSecuritySection() {
     if (pending) await unenrollTotp(pending).catch(() => {});
   };
 
-  const confirmEnrollment = async () => {
-    if (!factorId) return;
+  const confirmEnrollment = async (submitted: string) => {
+    if (!factorId || busy) return;
     setBusy(true);
     setCodeError(null);
     try {
       // Vérifie le facteur ET monte la session en aal2 — sans quoi l'appel
       // suivant se ferait refuser par le garde-fou qu'on vient d'activer.
-      await verifyTotp(factorId, code.trim());
+      await verifyTotp(factorId, submitted.trim());
 
       const response = await fetch("/api/account/mfa", { method: "POST" });
       if (!response.ok) {
@@ -151,9 +150,11 @@ export function AccountSecuritySection() {
       // Et couper les autres sessions, sinon un jeton déjà volé resterait bon
       // jusqu'à son propre rafraîchissement — soit exactement ce qu'on ferme.
       await signOutOtherSessions().catch(() => {});
-      void loadStatus();
+      reloadStatus();
     } catch (e) {
-      setCodeError((e as Error).message);
+      // Le message brut de GoTrue est anglais et technique — on ne garde que la
+      // distinction utile (code refusé / trop d'essais / le reste).
+      setCodeError(t(mfaVerifyErrorKey(e)));
     } finally {
       setBusy(false);
     }
@@ -172,7 +173,7 @@ export function AccountSecuritySection() {
       setAcknowledged(false);
       setCopied(false);
       setStage("codes");
-      void loadStatus();
+      reloadStatus();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -191,7 +192,7 @@ export function AccountSecuritySection() {
       await refreshUser();
       setStage("idle");
       toast.success(t("disabledToast"));
-      void loadStatus();
+      reloadStatus();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -257,12 +258,11 @@ export function AccountSecuritySection() {
               </Button>
             </div>
 
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="mt-0.5 size-4 accent-brand"
+            <label className="flex items-start gap-2.5 text-sm">
+              <Checkbox
+                className="mt-0.5"
                 checked={acknowledged}
-                onChange={(e) => setAcknowledged(e.target.checked)}
+                onCheckedChange={(next) => setAcknowledged(next === true)}
               />
               <span>{t("codesAcknowledge")}</span>
             </label>
@@ -299,25 +299,23 @@ export function AccountSecuritySection() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="mfa-enroll-code" className="text-sm font-medium">
+              <label htmlFor="mfa-enroll-code" className="block text-sm font-medium">
                 {t("enrollCodeLabel")}
               </label>
-              <Input
+              <OtpInput
                 id="mfa-enroll-code"
-                className="max-w-40 font-mono tracking-[0.3em]"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="000000"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                onChange={setCode}
+                disabled={busy}
+                aria-label={t("enrollCodeLabel")}
+                onComplete={(value) => void confirmEnrollment(value)}
               />
               {codeError && <p className="text-sm text-destructive">{codeError}</p>}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Button
                   size="sm"
                   disabled={busy || code.length !== 6}
-                  onClick={() => void confirmEnrollment()}
+                  onClick={() => void confirmEnrollment(code)}
                 >
                   {busy && <Spinner />}
                   {t("enrollConfirm")}
@@ -334,17 +332,18 @@ export function AccountSecuritySection() {
             </div>
           </div>
         ) : status.enabled ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <ShieldCheck className="size-4 text-emerald-600" />
-              <span className="font-medium">{t("statusOn")}</span>
-              <span className="text-muted-foreground">
+          /* Activée : le même encart, mais qui se tait. Il constate l'état et
+             donne les deux gestes d'entretien — il ne félicite personne. */
+          <div className="space-y-3 rounded-lg border border-emerald-600/25 p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{t("enabledCardTitle")}</p>
+              <p className="text-xs text-muted-foreground">
                 {t("recoveryCodesLeft", { count: status.unusedRecoveryCodes })}
-              </span>
+              </p>
+              {status.unusedRecoveryCodes === 0 && (
+                <p className="text-xs text-destructive">{t("noRecoveryCodesLeft")}</p>
+              )}
             </div>
-            {status.unusedRecoveryCodes === 0 && (
-              <p className="text-xs text-destructive">{t("noRecoveryCodesLeft")}</p>
-            )}
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
@@ -365,12 +364,25 @@ export function AccountSecuritySection() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            {providerLabel && (
-              <p className="text-xs text-muted-foreground">
-                {t("oauthNote", { provider: providerLabel })}
+          /* Inactive : l'encart de recommandation. Le titre nomme ce qui est en
+             jeu — pas la fonctionnalité, qui est déjà écrite juste au-dessus. */
+          <div className="space-y-3 rounded-lg border border-brand/30 p-4">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium">{t("recommendTitle")}</p>
+                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
+                  {t("recommendedBadge")}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("recommendBody")}
               </p>
-            )}
+              {providerLabel && (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("oauthNote", { provider: providerLabel })}
+                </p>
+              )}
+            </div>
             <Button size="sm" disabled={busy} onClick={() => void startEnrollment()}>
               {busy && <Spinner />}
               {t("enableButton")}

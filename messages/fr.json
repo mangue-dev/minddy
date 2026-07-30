@@ -410,7 +410,9 @@
     "mfaRecoveryLabel": "Code de récupération",
     "mfaRecoverySubmit": "Désactiver et se connecter",
     "mfaDisabledNotice": "La double authentification est désactivée. Vous pouvez la réactiver depuis les réglages du compte.",
-    "mfaGenericError": "Une erreur est survenue. Réessayez."
+    "mfaGenericError": "Une erreur est survenue. Réessayez.",
+    "mfaInvalidCode": "Ce code n'a pas fonctionné. Il a peut-être expiré — essayez le suivant affiché par votre application.",
+    "mfaTooManyAttempts": "Trop de tentatives. Patientez un instant, puis réessayez."
   },
   "BulkActions": {
     "selected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
@@ -1325,7 +1327,9 @@
     "aiKeySave": "Enregistrer la clé",
     "aiKeyAddedToast": "Clé enregistrée.",
     "aiKeyRemovedToast": "Clé supprimée.",
-    "aiKeyRemove": "Supprimer"
+    "aiKeyRemove": "Supprimer",
+    "securityTab": "Sécurité",
+    "securityTabIndicator": "Double authentification inactive"
   },
   "AccountData": {
     "exportTitle": "Exporter mes données",
@@ -1355,7 +1359,6 @@
     "description": "Un code à six chiffres, depuis votre téléphone, en plus du mot de passe à chaque connexion.",
     "oauthNote": "Vous vous connectez avec {provider}. Ce code s'ajoute au sien, il ne le remplace pas.",
     "enableButton": "Activer",
-    "statusOn": "Activée",
     "enrollScanTitle": "Scannez ceci avec votre application d'authentification",
     "enrollScanHint": "1Password, Bitwarden, Google Authenticator, Raycast — n'importe laquelle fait l'affaire.",
     "enrollQrAlt": "QR code de configuration de la double authentification",
@@ -1380,7 +1383,14 @@
     "disableConfirmTitle": "Désactiver la double authentification ?",
     "disableConfirmDescription": "Le mot de passe seul rouvrira ce compte — y compris ses connexions Git et ses clés de modèle.",
     "disabledToast": "Double authentification désactivée.",
-    "genericError": "Une erreur est survenue. Réessayez."
+    "genericError": "Une erreur est survenue. Réessayez.",
+    "recommendedBadge": "Recommandé",
+    "recommendTitle": "Un mot de passe suffit à ouvrir ce compte",
+    "recommendBody": "Il donne l'accès en écriture à vos dépôts Git reliés, via l'agent de code, ainsi qu'à vos clés de modèle et à tout ce que vous pouvez supprimer ici. Un second facteur ferme cette porte.",
+    "enabledCardTitle": "Double authentification activée",
+    "mfaInvalidCode": "Ce code n'a pas fonctionné. Il a peut-être expiré — essayez le suivant affiché par votre application.",
+    "mfaTooManyAttempts": "Trop de tentatives. Patientez un instant, puis réessayez.",
+    "mfaGenericError": "Impossible de vérifier le code. Réessayez."
   },
   "Agent": {
     "sectionTitle": "Agent Numo",

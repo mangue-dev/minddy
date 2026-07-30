@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner } from "mangue-ui";
 import { useAuth } from "@/lib/auth-context";
+import { mfaVerifyErrorKey } from "@/lib/mfa";
+import { OtpInput } from "@/components/otp-input";
 
 /**
  * L'étape de challenge de la connexion (MIN-132). Elle prend la place du
@@ -48,16 +50,16 @@ export function MfaChallenge({
     };
   }, [firstTotpFactorId]);
 
-  const submitCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!factorId) return;
+  const submitCode = async (submitted: string) => {
+    if (!factorId || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await verifyTotp(factorId, code.trim());
+      await verifyTotp(factorId, submitted.trim());
       onVerified();
     } catch (err) {
-      setError((err as Error).message);
+      // Jamais le message de GoTrue : il est en anglais et en jargon.
+      setError(t(mfaVerifyErrorKey(err)));
       setCode("");
     } finally {
       setBusy(false);
@@ -98,21 +100,28 @@ export function MfaChallenge({
       </div>
 
       {mode === "totp" ? (
-        <form onSubmit={submitCode} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitCode(code);
+          }}
+          className="space-y-4"
+        >
           <div className="space-y-1.5">
-            <label htmlFor="mfa-code" className="text-sm font-medium">
+            <label htmlFor="mfa-code" className="block text-sm font-medium">
               {t("mfaCodeLabel")}
             </label>
-            <Input
+            <OtpInput
               id="mfa-code"
-              className="h-10 bg-card font-mono tracking-[0.3em]"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              maxLength={6}
-              placeholder="000000"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              onChange={setCode}
+              disabled={busy}
+              autoFocus
+              aria-label={t("mfaCodeLabel")}
+              // Six chiffres saisis (ou collés, ou remplis par le gestionnaire
+              // de mots de passe) = intention de valider. Attendre un clic de
+              // plus n'apporte rien : il n'y a pas d'autre champ à remplir.
+              onComplete={(value) => void submitCode(value)}
             />
           </div>
 

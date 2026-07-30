@@ -6,12 +6,14 @@ import {
   GitBranch,
   Inbox,
   IterationCw,
+  Lock,
   Plug,
   ShieldCheck,
   SlidersHorizontal,
   User,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import {
   SettingsShell,
   type SettingsTab,
@@ -31,23 +33,29 @@ import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt"
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
   const { user } = useAuth();
+  // La pastille d'attention de l'onglet « Sécurité » (MIN-132) : tant que la 2FA
+  // est inactive, la recommandation doit être visible depuis les autres onglets.
+  // Sans ça elle n'existe que pour qui pense à aller la chercher — c'est-à-dire
+  // pour qui n'en a pas besoin.
+  const { status: mfa } = useMfaStatusQuery();
 
   // The sections read the account; hold off until it resolves.
   if (!user) return null;
 
   const tabs: SettingsTab[] = [
-    // Le second facteur (MIN-132) vit ici, sous le profil, plutôt que dans un
-    // neuvième onglet : c'est une option, pas un chapitre.
     {
       value: "profile",
       label: t("profileTab"),
       icon: User,
-      content: (
-        <>
-          <AccountProfileSection />
-          <AccountSecuritySection />
-        </>
-      ),
+      content: <AccountProfileSection />,
+    },
+    // Juste après le profil : qui je suis, puis comment on entre chez moi.
+    {
+      value: "security",
+      label: t("securityTab"),
+      icon: Lock,
+      indicator: mfa && !mfa.enabled ? t("securityTabIndicator") : undefined,
+      content: <AccountSecuritySection />,
     },
     {
       value: "preferences",

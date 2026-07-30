@@ -77,6 +77,43 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
 }
 
 /**
+ * Traduit un échec de `challengeAndVerify` en clé de message.
+ *
+ * GoTrue répond en anglais et en jargon — « Invalid TOTP code entered ». Le
+ * remonter tel quel à l'écran, c'est afficher un message qui n'est ni dans la
+ * langue de la personne ni dans ses mots, au moment précis où elle est déjà
+ * bloquée dehors. On ne garde donc du serveur que la DISTINCTION utile : code
+ * refusé, trop d'essais, ou le reste.
+ *
+ * Les trois clés existent dans `Auth` et dans `AccountSecurity` — les deux
+ * écrans qui vérifient un code — avec la formulation propre à chacun.
+ */
+export type MfaErrorKey =
+  | "mfaInvalidCode"
+  | "mfaTooManyAttempts"
+  | "mfaGenericError";
+
+export function mfaVerifyErrorKey(error: unknown): MfaErrorKey {
+  const err = error as { code?: unknown; status?: unknown; message?: unknown };
+  const code = typeof err?.code === "string" ? err.code : "";
+  const status = typeof err?.status === "number" ? err.status : 0;
+
+  if (code === "over_request_rate_limit" || status === 429) {
+    return "mfaTooManyAttempts";
+  }
+  // `mfa_verification_failed` est le cas courant ; le repli sur 4xx couvre les
+  // variantes de GoTrue sans les nommer une par une (elles changent, le sens
+  // « ce code ne passe pas » reste).
+  if (
+    code.startsWith("mfa_verification") ||
+    (status >= 400 && status < 500)
+  ) {
+    return "mfaInvalidCode";
+  }
+  return "mfaGenericError";
+}
+
+/**
  * Format d'un code de récupération : deux groupes de quatre caractères en
  * Crockford base32 (sans I, L, O, U — les confusions à l'oral et à la copie).
  * ~40 bits par code, dix codes : rien à deviner, et c'est lisible sur un papier.
