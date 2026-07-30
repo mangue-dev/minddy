@@ -47,7 +47,7 @@ import { MinddyLogo } from "@/components/minddy-logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { WhatsNewDialog } from "@/components/whats-new-dialog";
 import { hasRecentChangelog } from "@/lib/changelog";
-import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
+import { getAppEnv, ENV_LABEL, ENV_LOGO_TINT } from "@/lib/env";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import {
   useChordPrefix,
@@ -85,13 +85,31 @@ const MotionLink = motion.create(Link);
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
 function SidebarBrand() {
+  const env = getAppEnv();
+  const label = ENV_LABEL[env];
   return (
     <Link
       href="/home"
-      aria-label="minddy"
-      className="inline-flex items-center px-1 text-sidebar-foreground"
+      aria-label={label ? `minddy ${label}` : "minddy"}
+      className="inline-flex items-center gap-1.5 px-1 text-sidebar-foreground"
     >
-      <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
+      <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[env])} />
+      {/* Hors production, le nom de l'environnement se pose comme un logotype :
+          même teinte que le brandmark, Inter (la police du produit, `font-sans`),
+          casse basse et chasse resserrée pour qu'il se lise comme la suite du
+          logo et non comme une étiquette rapportée. Repliée, la barre n'a que
+          56 px : le mot n'y tiendrait pas, et la teinte du mark suffit à dire
+          l'environnement. */}
+      {label ? (
+        <span
+          className={cn(
+            "font-sans text-[15px] font-semibold leading-none tracking-[-0.02em]",
+            ENV_LOGO_TINT[env],
+          )}
+        >
+          {label}
+        </span>
+      ) : null}
     </Link>
   );
 }

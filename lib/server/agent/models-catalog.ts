@@ -1,9 +1,8 @@
 import "server-only";
 
-import { getRootDefaultModel, resolveAgentApiKey } from "./model";
+import { getRootDefaultModel, resolveAgentApiKey, resolveProviderDefaultModel } from "./model";
 import {
   getAgentProvider,
-  getProviderDefaultModel,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
   DEFAULT_AGENT_PROVIDER,
@@ -133,7 +132,7 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
 
   // Défaut effectif du provider actif : frontier du provider BYOK, sinon défaut
   // racine (quota minddy / OpenRouter BYOK) ; null pour un générique.
-  const providerDefault = getProviderDefaultModel(provider);
+  const providerDefault = await resolveProviderDefaultModel(provider);
   const defaultModel =
     providerDefault ?? (provider === "generic" ? null : await getRootDefaultModel());
 

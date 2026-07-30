@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
+import { byokDefaultModelKey } from "@/lib/ai-model-config";
 import {
   DEFAULT_AGENT_PROVIDER,
   getProviderDefaultModel,
@@ -22,7 +23,8 @@ import { decryptUserAiKey } from "./byok-credentials";
  * MODÈLE — cascade à 3 niveaux, précédence run > user > racine :
  *   1. override du run (choisi au lancement, ou forcé par numo),
  *   2. défaut perso de l'user (user_agent_preferences.default_model),
- *   3. défaut frontier du provider BYOK (openai/anthropic/google),
+ *   3. défaut frontier du provider BYOK (openai/anthropic/google) —
+ *      app_config.byok_default_model_<provider> / registre des providers,
  *   4. défaut racine OpenRouter (app_config.agent_model / fallback code) —
  *      utilisé par le quota minddy ET par OpenRouter BYOK (même endpoint).
  * Seul le provider « generic » n'a aucun défaut fiable (namespace inconnu) :
@@ -36,7 +38,25 @@ import { decryptUserAiKey } from "./byok-credentials";
 
 /** Défaut racine (admin) : app_config.agent_model ou le fallback code. */
 export async function getRootDefaultModel(): Promise<string> {
-  return (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY)) ?? AGENT_ROOT_MODEL_FALLBACK;
+  return (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() || AGENT_ROOT_MODEL_FALLBACK;
+}
+
+/**
+ * Défaut frontier d'un provider BYOK — réglable depuis /admin
+ * (`byok_default_model_<provider>`), sinon celui du registre des providers.
+ *
+ * C'est le modèle que tourne un compte qui a posé sa clé sans jamais en choisir un :
+ * il change à chaque génération de modèles, donc il ne peut pas vivre uniquement
+ * dans le code. `undefined` reste possible — OpenRouter (qui reprend le défaut
+ * racine) et le générique (namespace inconnu) n'en ont pas.
+ */
+export async function resolveProviderDefaultModel(
+  providerId: string | null | undefined,
+): Promise<string | undefined> {
+  const fallback = getProviderDefaultModel(providerId);
+  if (!providerId || !fallback) return fallback;
+  const configured = await getAppConfigValue(byokDefaultModelKey(providerId)).catch(() => null);
+  return configured?.trim() || fallback;
 }
 
 /** Défaut perso de l'utilisateur, ou null s'il n'en a pas défini. */
@@ -106,8 +126,8 @@ export async function resolveAgentModel(opts: {
   const userDefault = await getUserDefaultModel(opts.userId);
   if (userDefault) return userDefault;
   const byok = await getUserByok(opts.userId);
-  // Défaut frontier du provider (openai/anthropic/google).
-  const providerDefault = byok ? getProviderDefaultModel(byok.provider) : undefined;
+  // Défaut frontier du provider (openai/anthropic/google), réglable en /admin.
+  const providerDefault = byok ? await resolveProviderDefaultModel(byok.provider) : undefined;
   if (providerDefault) return providerDefault;
   // Générique BYOK : aucun défaut fiable → l'utilisateur doit choisir.
   if (byok && byok.provider !== "openrouter") {

@@ -1,6 +1,7 @@
 import { NextRequest, after } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
   transcribeAudio,
@@ -23,7 +24,7 @@ export const maxDuration = 300;
 // prise ; au-delà, la réponse est un 413 et le client affiche `Dictate.tooLarge`.
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
-const FALLBACK_MODEL = "openai/whisper-large-v3";
+const FALLBACK_MODEL = aiModelFallback("transcription_model");
 
 function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | null {
   const lower = mimeType.toLowerCase();

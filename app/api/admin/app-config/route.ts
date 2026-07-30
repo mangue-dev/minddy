@@ -9,8 +9,10 @@ import {
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_KEYS,
+  getAiConfigField,
   isFlagKey,
 } from "@/lib/ai-model-config";
+import { parseSubagentFavorites } from "@/lib/subagent-favorites";
 
 /**
  * Admin gate for the app-config endpoints: authenticate the request (JWT via
@@ -39,9 +41,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/admin/app-config — set one AI knob. Only registry keys are
- * writable; flags must be "true"/"false". A model key accepts an EMPTY value,
- * which clears the row so the registry fallback applies again — that's the
- * picker's "default model" option (MIN-90).
+ * writable; flags must be "true"/"false", and a favorites list must survive the
+ * runtime parser (`parseSubagentFavorites`) — otherwise we would store a value
+ * the run silently ignores, replacing it with the built-in defaults. Any other
+ * key accepts an EMPTY value, which clears the row so the registry fallback
+ * applies again — that's the picker's "default model" option (MIN-90).
  */
 export async function PATCH(request: NextRequest) {
   const denied = await requireAdmin(request);
@@ -66,13 +70,20 @@ export async function PATCH(request: NextRequest) {
   }
 
   const trimmed = value.trim();
-  if (isFlagKey(key)) {
+  const kind = getAiConfigField(key)?.kind;
+  if (kind === "flag") {
     if (trimmed !== "true" && trimmed !== "false") {
       return NextResponse.json(
         { error: "Flag must be 'true' or 'false'" },
         { status: 400 }
       );
     }
+  }
+  if (kind === "favorites" && trimmed && parseSubagentFavorites(trimmed) === null) {
+    return NextResponse.json(
+      { error: "Favorites must be a JSON array with at least one entry carrying an id" },
+      { status: 400 }
+    );
   }
 
   try {

@@ -10,6 +10,7 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -48,7 +49,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Modèle dédié à l'étape agentique post-dictée (transcript → patch d'issue).
 // Rapide et pas cher, distinct du modèle global de Numo (assistant_model).
 // Surchargeable en base via la clé app_config `dictate_model`.
-const DICTATE_DEFAULT_MODEL = "google/gemini-3.1-flash-lite";
+const DICTATE_DEFAULT_MODEL = aiModelFallback("dictate_model");
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;

@@ -3,6 +3,11 @@ import {
   SubagentTemplateError,
   SUBAGENT_TEMPLATE_IDS,
 } from "./subagent-templates";
+import {
+  SUBAGENT_THINKING_EFFORTS,
+  type FavoriteSubagentModel,
+  type SubagentThinkingEffort,
+} from "@/lib/subagent-favorites";
 import type { AgentChatMessage } from "./agent-loop";
 
 /**
@@ -32,15 +37,18 @@ import type { AgentChatMessage } from "./agent-loop";
 export type SubagentMode = "explore" | "implement";
 
 /**
- * Niveau de réflexion d'un sous-agent (`reasoning_effort` d'OpenAI, cf.
- * `lib/agent-reasoning.ts`). `off` n'est PAS exposé : un sous-agent sans réflexion
- * sur un modèle raisonneur saute ses vérifications, et il n'a pas de tour suivant
- * pour se rattraper.
+ * Le niveau de réflexion d'un sous-agent (`reasoning_effort` d'OpenAI, cf.
+ * `lib/agent-reasoning.ts`) et la forme d'un favori vivent dans
+ * `lib/subagent-favorites.ts` : le dashboard admin ÉDITE ces favoris, et le
+ * client ne peut pas importer ce module-ci. Ré-exportés pour que les appelants
+ * serveur gardent un seul point d'entrée. `off` n'est PAS un niveau exposé : un
+ * sous-agent sans réflexion sur un modèle raisonneur saute ses vérifications, et
+ * il n'a pas de tour suivant pour se rattraper.
  */
-export type SubagentThinkingEffort = "low" | "medium" | "high";
+export type { FavoriteSubagentModel, SubagentThinkingEffort };
 
 const MODES: ReadonlySet<string> = new Set<SubagentMode>(["explore", "implement"]);
-const EFFORTS: ReadonlySet<string> = new Set<SubagentThinkingEffort>(["low", "medium", "high"]);
+const EFFORTS: ReadonlySet<string> = new Set<string>(SUBAGENT_THINKING_EFFORTS);
 
 /**
  * `suspended` = la fille n'a pas fini, mais son état est SAUVÉ : elle repartira au
@@ -51,18 +59,6 @@ const EFFORTS: ReadonlySet<string> = new Set<SubagentThinkingEffort>(["low", "me
  * rapport partiel est livré une fois, et on n'y revient pas.
  */
 export type SubagentStatus = "running" | "suspended" | "done" | "error" | "cut";
-
-/** Un modèle de la liste « Favorites for sub-agents » (réglable par `app_config`). */
-export interface FavoriteSubagentModel {
-  /** Id exact du fournisseur, tel qu'OpenRouter le connaît. */
-  id: string;
-  /** Nom lisible — l'agent peut référencer le modèle par là. */
-  label: string;
-  /** Use-case conseillé, servi dans le prompt système du parent. */
-  use_case: string;
-  /** Niveau de réflexion conseillé pour ce modèle (indicatif). */
-  thinking_effort?: SubagentThinkingEffort;
-}
 
 /**
  * Ce qu'on garde d'un sous-agent — y compris dans le checkpoint, pour que

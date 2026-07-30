@@ -4,6 +4,7 @@ import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -42,7 +43,7 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Surchargeable en base via la clé app_config `smart_assign_model`.
-const SMART_ASSIGN_DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
+const SMART_ASSIGN_DEFAULT_MODEL = aiModelFallback("smart_assign_model");
 const MAX_DESCRIPTION_CHARS = 4000;
 
 /** Statuses Smart Assign acts on: anything past triage that is still a real,

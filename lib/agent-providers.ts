@@ -59,6 +59,10 @@ export interface AgentProviderDef {
    * sélecteur et utilisé comme fallback de résolution (cf. `resolveAgentModel`).
    * Absent pour OpenRouter (reprend le défaut racine = quota minddy) et pour le
    * générique (namespace inconnu → l'utilisateur doit choisir).
+   *
+   * REPLI seulement : un admin le change depuis /admin sans redéploiement (clé
+   * `byok_default_model_<provider>`, cf. `resolveProviderDefaultModel`). Ce qui
+   * tourne vraiment se lit là, pas ici.
    */
   defaultModel?: string;
   /** Placeholder de clé affiché dans le wizard. */

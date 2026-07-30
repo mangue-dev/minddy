@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createSupabaseFromRequest } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -47,7 +48,7 @@ export const maxDuration = 300;
 
 const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
-const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
+const DEFAULT_MODEL = aiModelFallback("assistant_model");
 
 /** Validate the untrusted client-sent page context (prompt-only trust: every
  *  write it could lead to is access-gated in executeTool / lib/server). */

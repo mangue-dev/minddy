@@ -7,6 +7,7 @@
  *   override du run  >  défaut perso de l'user (user_agent_preferences)  >
  *   défaut racine (app_config.agent_model, fallback AGENT_ROOT_MODEL_FALLBACK).
  */
+import { aiModelFallback } from "@/lib/ai-model-config";
 
 export interface AgentModelOption {
   /** id OpenRouter au format `provider/model`. */
@@ -17,11 +18,19 @@ export interface AgentModelOption {
   hint?: string;
 }
 
+// ── Clés app_config (surcharge admin sans redeploy) ──────────────────────────
+/** Défaut racine du modèle de l'agent. */
+export const AGENT_MODEL_CONFIG_KEY = "agent_model";
+// L'ancien plafond mensuel fixe (`agent_monthly_cap_usd`, 10 $) est remplacé
+// depuis MIN-72 par le budget d'usage du PLAN (lib/billing-plans.ts).
+
 /**
- * Défaut racine si `app_config.agent_model` est absent — miroir du seed de la
- * migration 20260806090000_agent_runs.sql. Tenir les deux synchronisés.
+ * Défaut racine si `app_config.agent_model` est absent. L'id lui-même vit dans
+ * le registre admin (`lib/ai-model-config.ts`), avec tous les autres — on ne le
+ * réécrit pas ici. Miroir du seed de la migration 20260806090000_agent_runs.sql :
+ * tenir les deux synchronisés.
  */
-export const AGENT_ROOT_MODEL_FALLBACK = "deepseek/deepseek-v4-flash";
+export const AGENT_ROOT_MODEL_FALLBACK = aiModelFallback(AGENT_MODEL_CONFIG_KEY);
 
 /**
  * Libellés curatés d'une poignée de modèles phares. Le picker (lancement +
@@ -35,12 +44,6 @@ export const AGENT_ALLOWED_MODELS: AgentModelOption[] = [
   { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5", hint: "Équilibré, fort en code" },
   { id: "anthropic/claude-opus-4.8", label: "Claude Opus 4.8", hint: "Qualité maximale" },
 ];
-
-// ── Clés app_config (surcharge admin sans redeploy) ──────────────────────────
-/** Défaut racine du modèle de l'agent. */
-export const AGENT_MODEL_CONFIG_KEY = "agent_model";
-// L'ancien plafond mensuel fixe (`agent_monthly_cap_usd`, 10 $) est remplacé
-// depuis MIN-72 par le budget d'usage du PLAN (lib/billing-plans.ts).
 
 // ── Réglages opérationnels (défauts ; surchargables plus tard) ────────────────
 /**

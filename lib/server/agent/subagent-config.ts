@@ -3,8 +3,11 @@ import "server-only";
 import os from "node:os";
 
 import { getAppConfigValue } from "@/lib/server/app-config";
-import { AGENT_ALLOWED_MODELS } from "@/lib/agent-models";
-import type { FavoriteSubagentModel, SubagentThinkingEffort } from "./subagent";
+import {
+  DEFAULT_SUBAGENT_FAVORITES,
+  parseSubagentFavorites,
+  type FavoriteSubagentModel,
+} from "@/lib/subagent-favorites";
 
 /**
  * Réglages des sous-agents (MIN-112) : la liste « Favorites for sub-agents » et le
@@ -14,6 +17,10 @@ import type { FavoriteSubagentModel, SubagentThinkingEffort } from "./subagent";
  * `agent_model` (`getAppConfigValue`, cache 60 s) : réglable sans déploiement, comme
  * demandé, et sans variable Vercel de plus. Une config cassée retombe sur le repli
  * écrit en code : un JSON mal formé ne doit pas tuer un run.
+ *
+ * Les favoris s'éditent depuis /admin (registre `lib/ai-model-config.ts`), donc la
+ * FORME de la liste — type, repli produit, parseur — vit dans un module partagé
+ * client/serveur : `lib/subagent-favorites.ts`.
  */
 
 /** Clé `app_config` de la liste de favoris (JSON : tableau de FavoriteSubagentModel). */
@@ -22,73 +29,17 @@ export const SUBAGENT_FAVORITES_CONFIG_KEY = "agent_subagent_favorites";
 export const SUBAGENT_MAX_PARALLEL_CONFIG_KEY = "agent_subagent_max_parallel";
 
 /**
- * Repli écrit EN CODE, en ANGLAIS — c'est du prompt, pas de l'UI. On reprend les
- * ids d'`AGENT_ALLOWED_MODELS` (source unique des modèles curatés) mais PAS leurs
- * `hint`, qui sont en français et écrits pour le picker de lancement : « Économique ·
- * défaut » ne dit rien à un agent qui choisit un modèle pour une exploration.
- */
-const FALLBACK_FAVORITES: FavoriteSubagentModel[] = [
-  {
-    id: "deepseek/deepseek-v4-flash",
-    label: "DeepSeek V4 Flash",
-    use_case:
-      "Cheap and fast. Default choice for exploration, greps, reading a lot of files, and any mechanical task.",
-    thinking_effort: "low",
-  },
-  {
-    id: "anthropic/claude-sonnet-5",
-    label: "Claude Sonnet 5",
-    use_case:
-      "Balanced and strong at code. Use it when the sub-agent has to WRITE code you will not re-read line by line.",
-    thinking_effort: "medium",
-  },
-  {
-    id: "anthropic/claude-opus-4.8",
-    label: "Claude Opus 4.8",
-    use_case:
-      "Most capable, most expensive. Only for genuinely hard analysis or a change with subtle logic.",
-    thinking_effort: "high",
-  },
-];
-
-const EFFORTS: ReadonlySet<string> = new Set<SubagentThinkingEffort>(["low", "medium", "high"]);
-
-/** Valide une entrée de la config (une entrée cassée est ignorée, pas fatale). */
-function parseFavorite(raw: unknown): FavoriteSubagentModel | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const o = raw as Record<string, unknown>;
-  const id = typeof o.id === "string" ? o.id.trim() : "";
-  if (!id) return null;
-  const label = typeof o.label === "string" && o.label.trim() ? o.label.trim() : id;
-  const useCase = typeof o.use_case === "string" ? o.use_case.trim() : "";
-  const effort = typeof o.thinking_effort === "string" ? o.thinking_effort.trim() : "";
-  return {
-    id,
-    label,
-    use_case: useCase,
-    ...(EFFORTS.has(effort) ? { thinking_effort: effort as SubagentThinkingEffort } : {}),
-  };
-}
-
-/**
  * Favoris servis au prompt système du parent. Surchargeables par `app_config` ;
  * un JSON illisible, un tableau vide ou une liste dont aucune entrée n'est valide
  * retombe sur le repli — le run garde une liste utilisable dans tous les cas.
  */
 export async function getSubagentFavorites(): Promise<FavoriteSubagentModel[]> {
   const raw = await getAppConfigValue(SUBAGENT_FAVORITES_CONFIG_KEY).catch(() => null);
-  if (!raw?.trim()) return FALLBACK_FAVORITES;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return FALLBACK_FAVORITES;
-    const favorites = parsed
-      .map(parseFavorite)
-      .filter((f): f is FavoriteSubagentModel => f !== null);
-    return favorites.length > 0 ? favorites : FALLBACK_FAVORITES;
-  } catch {
-    console.error(`[subagent-config] ${SUBAGENT_FAVORITES_CONFIG_KEY} is not valid JSON`);
-    return FALLBACK_FAVORITES;
+  const favorites = parseSubagentFavorites(raw);
+  if (!favorites && raw?.trim()) {
+    console.error(`[subagent-config] ${SUBAGENT_FAVORITES_CONFIG_KEY} is unusable, using defaults`);
   }
+  return favorites ?? DEFAULT_SUBAGENT_FAVORITES;
 }
 
 /** Bornes du plafond calculé. Un seul sous-agent ne servirait à rien ; au-delà de

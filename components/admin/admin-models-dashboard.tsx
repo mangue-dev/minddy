@@ -2,16 +2,39 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Separator, Skeleton, Spinner, Switch, toast } from "mangue-ui";
+import { Plus, Trash2 } from "lucide-react";
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Separator,
+  Skeleton,
+  Spinner,
+  Switch,
+  Textarea,
+  toast,
+} from "mangue-ui";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { SettingsSection } from "@/components/settings-shell";
 import { ModelCombobox } from "@/components/agent/model-combobox";
+import { formatModelName } from "@/lib/model-display";
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_GROUPS,
   type AiConfigField,
   type AiConfigGroup,
 } from "@/lib/ai-model-config";
+import {
+  DEFAULT_SUBAGENT_FAVORITES,
+  parseSubagentFavorites,
+  SUBAGENT_THINKING_EFFORTS,
+  type FavoriteSubagentModel,
+  type SubagentThinkingEffort,
+} from "@/lib/subagent-favorites";
 
 type ConfigValues = Record<string, string | null>;
 
@@ -63,6 +86,7 @@ export function AdminModelsDashboard() {
     const map: Record<AiConfigGroup, AiConfigField[]> = {
       assistant: [],
       agent: [],
+      byok: [],
       voice: [],
       feedback: [],
     };
@@ -154,11 +178,18 @@ function ConfigRow({
     );
   }
 
-  return field.kind === "flag" ? (
-    <FlagRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
-  ) : (
-    <ModelRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
-  );
+  switch (field.kind) {
+    case "flag":
+      return <FlagRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
+    case "favorites":
+      return (
+        <FavoritesRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
+      );
+    case "modelId":
+      return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
+    case "model":
+      return <ModelRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
+  }
 }
 
 /**
@@ -273,6 +304,269 @@ function FlagRow({
         checked={checked}
         onCheckedChange={(v) => void toggle(v)}
       />
+    </div>
+  );
+}
+
+/**
+ * Un id de modèle SAISI, pas choisi : les défauts frontier des providers BYOK
+ * vivent dans le namespace du provider (`claude-sonnet-5`, pas
+ * `anthropic/claude-sonnet-5`), donc le picker plateforme — qui liste des ids
+ * OpenRouter — y écrirait des valeurs cassées au runtime. Le placeholder montre
+ * le défaut produit ; vider le champ y revient.
+ */
+function ModelIdRow({
+  field,
+  label,
+  desc,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  label: string;
+  desc: string | null;
+  value: string | null;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const saved = (value ?? "").trim();
+  const [draft, setDraft] = useState(saved);
+  useEffect(() => setDraft(saved), [saved]);
+  const [busy, setBusy] = useState(false);
+
+  const commit = async () => {
+    const next = draft.trim();
+    if (busy || next === saved) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      setDraft(next);
+      toast.success(t("saved"));
+    } catch (e) {
+      setDraft(saved);
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={`cfg-${field.key}`} className="text-sm font-medium">
+        {label}
+      </label>
+      {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
+      <div className="mt-1 flex max-w-md items-center gap-2">
+        <Input
+          id={`cfg-${field.key}`}
+          value={draft}
+          placeholder={field.fallback}
+          disabled={busy}
+          spellCheck={false}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Escape") setDraft(saved);
+          }}
+        />
+        {busy ? <Spinner className="shrink-0" /> : null}
+      </div>
+    </div>
+  );
+}
+
+/** Valeur du `Select` pour « pas de niveau conseillé » (un item ne peut être vide). */
+const INHERIT_EFFORT = "__inherit__";
+
+/** Clés des libellés de niveau de réflexion — table typée, pas de clé assemblée. */
+const EFFORT_LABEL_KEYS: Record<SubagentThinkingEffort, AdminKey> = {
+  low: "favorites.effortLow",
+  medium: "favorites.effortMedium",
+  high: "favorites.effortHigh",
+};
+
+/**
+ * La liste « Favorites for sub-agents » (MIN-112) : ce que l'agent parent lit dans
+ * son prompt pour décider sur quoi lancer une fille.
+ *
+ * Deux choses la distinguent des autres lignes. D'abord elle s'enregistre EN LOT :
+ * un favori n'est utile que complet (le modèle sans son conseil d'usage ne dit rien),
+ * donc bouton « Enregistrer » plutôt qu'un enregistrement au choix. Ensuite le
+ * `use_case` est du PROMPT, pas de l'UI : il part tel quel dans le prompt système du
+ * parent — écrit en anglais, et adressé à un modèle qui choisit, pas à un humain qui
+ * lit. « Réinitialiser » efface la ligne `app_config` : le réglage suit de nouveau le
+ * défaut produit au lieu d'être figé sur sa valeur du jour.
+ */
+function FavoritesRow({
+  field,
+  label,
+  desc,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  label: string;
+  desc: string | null;
+  value: string | null;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const tAgent = useTranslations("Agent");
+  const saved = (value ?? "").trim();
+  // Le MÊME parseur que le runtime : ce que l'écran montre est ce que l'agent lira.
+  const savedList = useMemo(
+    () => parseSubagentFavorites(saved) ?? DEFAULT_SUBAGENT_FAVORITES,
+    [saved],
+  );
+  const [list, setList] = useState<FavoriteSubagentModel[]>(savedList);
+  useEffect(() => setList(savedList), [savedList]);
+  const [busy, setBusy] = useState(false);
+
+  const dirty = JSON.stringify(list) !== JSON.stringify(savedList);
+  const incomplete = list.some((f) => !f.id);
+
+  const patchAt = (index: number, next: Partial<FavoriteSubagentModel>) =>
+    setList((prev) => prev.map((f, i) => (i === index ? { ...f, ...next } : f)));
+
+  const write = async (next: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Liste vidée = retour au repli produit : on efface la ligne plutôt que
+  // d'enregistrer un tableau vide, que le runtime remplacerait de toute façon.
+  const save = () => void write(list.length > 0 ? JSON.stringify(list) : "");
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium">{label}</span>
+      {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
+
+      <div className="mt-2 space-y-3">
+        {list.map((favorite, index) => (
+          <div
+            key={index}
+            className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3"
+          >
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <ModelCombobox
+                  scope="platform"
+                  value={favorite.id}
+                  onChange={(id) =>
+                    patchAt(index, { id, label: formatModelName(id) || id })
+                  }
+                  disabled={busy}
+                  defaultLabel={t("favorites.pickModel")}
+                  placeholder={tAgent("modelSearchPlaceholder")}
+                  emptyLabel={tAgent("modelSearchEmpty")}
+                  loadingLabel={tAgent("modelSearchLoading")}
+                  freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
+                />
+              </div>
+              <Select
+                value={favorite.thinking_effort ?? INHERIT_EFFORT}
+                disabled={busy}
+                onValueChange={(next) =>
+                  patchAt(index, {
+                    thinking_effort:
+                      next === INHERIT_EFFORT ? undefined : (next as SubagentThinkingEffort),
+                  })
+                }
+              >
+                <SelectTrigger className="w-40 shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={INHERIT_EFFORT}>{t("favorites.effortInherit")}</SelectItem>
+                  {SUBAGENT_THINKING_EFFORTS.map((effort) => (
+                    <SelectItem key={effort} value={effort}>
+                      {t(EFFORT_LABEL_KEYS[effort])}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-muted-foreground"
+                disabled={busy}
+                aria-label={t("favorites.remove")}
+                onClick={() => setList((prev) => prev.filter((_, i) => i !== index))}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+            <Textarea
+              value={favorite.use_case}
+              disabled={busy}
+              rows={2}
+              spellCheck={false}
+              placeholder={t("favorites.useCasePlaceholder")}
+              onChange={(e) => patchAt(index, { use_case: e.target.value })}
+            />
+          </div>
+        ))}
+
+        {list.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("favorites.empty")}</p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => setList((prev) => [...prev, { id: "", label: "", use_case: "" }])}
+          >
+            <Plus className="size-4" />
+            {t("favorites.add")}
+          </Button>
+          {dirty ? (
+            <>
+              <Button type="button" size="sm" disabled={busy || incomplete} onClick={save}>
+                {t("favorites.save")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => setList(savedList)}
+              >
+                {t("favorites.cancel")}
+              </Button>
+            </>
+          ) : saved ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => void write("")}
+            >
+              {t("favorites.reset")}
+            </Button>
+          ) : null}
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </div>
+        {incomplete ? (
+          <p className="text-xs text-muted-foreground">{t("favorites.incomplete")}</p>
+        ) : null}
+      </div>
     </div>
   );
 }

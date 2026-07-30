@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import {
   OPENROUTER_USAGE_INCLUDE,
   parseOpenRouterUsage,
@@ -40,7 +41,7 @@ export const WEB_SEARCH_MODEL_CONFIG_KEY = "web_search_model";
 export const WEB_SEARCH_ENABLED_CONFIG_KEY = "web_search_enabled";
 
 /** Modèle du sous-appel si la clé n'est pas posée (miroir du registre admin). */
-export const WEB_SEARCH_MODEL_FALLBACK = "deepseek/deepseek-v4-flash";
+export const WEB_SEARCH_MODEL_FALLBACK = aiModelFallback(WEB_SEARCH_MODEL_CONFIG_KEY);
 
 /** Forfait Exa par recherche, tel que facturé par OpenRouter (USD, indicatif). */
 export const WEB_SEARCH_USD_PER_CALL = 0.005;

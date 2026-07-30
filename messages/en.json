@@ -2188,6 +2188,10 @@
       "agent": {
         "title": "Numo agent"
       },
+      "byok": {
+        "title": "Personal keys",
+        "desc": "What an account runs when it brought its own key and never picked a model. Provider ids, not OpenRouter ones — these calls go to that provider's endpoint, on that account's bill."
+      },
       "voice": {
         "title": "Voice"
       },
@@ -2208,6 +2212,19 @@
       "agent_model": {
         "label": "Numo agent model",
         "desc": "Applies to everyone by default. Each user can set their own, and pick another when starting a session."
+      },
+      "agent_subagent_favorites": {
+        "label": "Sub-agent favorite models",
+        "desc": "What the agent reads to pick what to run a sub-agent on. It may use any model in the catalogue; these are the ones we recommend. The use case goes into its prompt verbatim: write it in English, for a model that picks."
+      },
+      "byok_default_model_openai": {
+        "label": "OpenAI default"
+      },
+      "byok_default_model_anthropic": {
+        "label": "Anthropic default"
+      },
+      "byok_default_model_google": {
+        "label": "Google (Gemini) default"
       },
       "smart_assign_model": {
         "label": "Smart assignment",
@@ -2232,9 +2249,6 @@
       "feedback_classify_enabled": {
         "label": "Automatic classification",
         "desc": "Sorts incoming feedback into categories, drops spam, hides sensitive content and publishes the rest to the board. Without it, every post waits for manual review."
-      },
-      "feedback_classify_model": {
-        "label": "Classification model"
       },
       "feedback_analysis_model": {
         "label": "Feedback analysis",
@@ -2401,6 +2415,21 @@
       "totalProjects": "Projects",
       "totalIssues": "Issues",
       "issuesPerProject": "Issues per project"
+    },
+    "favorites": {
+      "pickModel": "Pick a model",
+      "useCasePlaceholder": "When to pick this model — in English, read by the agent.",
+      "add": "Add a model",
+      "save": "Save",
+      "cancel": "Cancel",
+      "reset": "Back to the default favorites",
+      "remove": "Remove this model",
+      "empty": "No favorites: the agent will pick from the catalogue on its own. Saving an empty list hands the setting back to the default favorites.",
+      "incomplete": "Pick a model for every favorite before saving.",
+      "effortInherit": "No level advised",
+      "effortLow": "Low thinking",
+      "effortMedium": "Medium thinking",
+      "effortHigh": "High thinking"
     }
   },
   "Legal": {

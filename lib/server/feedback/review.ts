@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import {
   embedText,
   matchFeedbackPosts,
@@ -50,7 +51,7 @@ import {
  * assumé : rien de non modéré ne part sur un board public).
  */
 
-const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
+const DEFAULT_MODEL = aiModelFallback("feedback_analysis_model");
 const DEFAULT_AUTO_THRESHOLD = 0.92;
 const DEFAULT_SUGGEST_FLOOR = 0.6;
 const DEFAULT_BATCH_SIZE = 50;

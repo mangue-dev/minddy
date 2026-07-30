@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
 import {
   recordAiUsage,
@@ -34,7 +35,7 @@ export interface EmbeddingUsageRecord {
  */
 
 const OPENROUTER_EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings";
-const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+const DEFAULT_EMBEDDING_MODEL = aiModelFallback("feedback_embedding_model");
 export const EMBEDDING_DIMENSIONS = 1536;
 const MAX_INPUT_CHARS = 6000;
 const DEFAULT_TIMEOUT_MS = 8000;

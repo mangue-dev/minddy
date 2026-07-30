@@ -2188,6 +2188,10 @@
       "agent": {
         "title": "Agent Numo"
       },
+      "byok": {
+        "title": "Clés personnelles",
+        "desc": "Ce que tourne un compte qui a posé sa propre clé sans jamais choisir de modèle. Ids du provider, pas d'OpenRouter — ils partent sur son endpoint à lui, à ses frais."
+      },
       "voice": {
         "title": "Voix"
       },
@@ -2208,6 +2212,19 @@
       "agent_model": {
         "label": "Modèle de l'agent Numo",
         "desc": "S'applique à tous par défaut. Chacun peut définir le sien, et en choisir un autre au lancement d'une session."
+      },
+      "agent_subagent_favorites": {
+        "label": "Modèles favoris des sous-agents",
+        "desc": "Ce que l'agent lit pour choisir sur quoi lancer un sous-agent. Il peut prendre n'importe quel modèle du catalogue ; ceux-ci sont ceux qu'on lui conseille. Le conseil d'usage part tel quel dans son prompt : écrivez-le en anglais, pour un modèle qui choisit."
+      },
+      "byok_default_model_openai": {
+        "label": "Défaut OpenAI"
+      },
+      "byok_default_model_anthropic": {
+        "label": "Défaut Anthropic"
+      },
+      "byok_default_model_google": {
+        "label": "Défaut Google (Gemini)"
       },
       "smart_assign_model": {
         "label": "Assignation intelligente",
@@ -2232,9 +2249,6 @@
       "feedback_classify_enabled": {
         "label": "Classification automatique",
         "desc": "Classe les retours entrants par catégorie, écarte le spam, masque les contenus sensibles et publie le reste sur le board. Sans ce tri, chaque retour attend une revue manuelle."
-      },
-      "feedback_classify_model": {
-        "label": "Modèle de classification"
       },
       "feedback_analysis_model": {
         "label": "Analyse des retours",
@@ -2401,6 +2415,21 @@
       "totalProjects": "Projets",
       "totalIssues": "Tickets",
       "issuesPerProject": "Tickets par projet"
+    },
+    "favorites": {
+      "pickModel": "Choisir un modèle",
+      "useCasePlaceholder": "When to pick this model — in English, read by the agent.",
+      "add": "Ajouter un modèle",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "reset": "Revenir aux favoris par défaut",
+      "remove": "Retirer ce modèle",
+      "empty": "Aucun favori : l'agent choisira seul dans le catalogue. Enregistrer une liste vide rend le réglage aux favoris par défaut.",
+      "incomplete": "Choisissez un modèle pour chaque favori avant d'enregistrer.",
+      "effortInherit": "Niveau libre",
+      "effortLow": "Réflexion basse",
+      "effortMedium": "Réflexion moyenne",
+      "effortHigh": "Réflexion haute"
     }
   },
   "Legal": {
