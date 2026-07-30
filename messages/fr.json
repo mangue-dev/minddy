@@ -1401,7 +1401,7 @@
     "customPromptTitle": "Prompt personnalisé",
     "customPromptCopyDescription": "Écrivez ce qu'il faut faire sur ce ticket. Le prompt copié porte déjà son contexte : champs, description, relations.",
     "customPromptLaunchDescription": "Écrivez ce qu'il faut faire sur ce ticket. L'agent reçoit déjà son contexte : description, plan, commentaires et pièces jointes.",
-    "customPromptPlaceholder": "Ne touche qu'au menu contextuel des cartes, et propose une approche avant de coder.",
+    "customPromptPlaceholder": "Qu'est-ce que l'agent doit faire ?",
     "endedPlaceholder": "Cette session n'a pas pu démarrer. Lancez un nouvel agent.",
     "pastRunPlaceholder": "Session passée, en lecture seule. Lancez un nouvel agent pour continuer.",
     "mergedRunPlaceholder": "Travail fusionné. Lancez un nouvel agent pour continuer.",

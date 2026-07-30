@@ -1401,7 +1401,7 @@
     "customPromptTitle": "Custom prompt",
     "customPromptCopyDescription": "Write what to do on this issue. The copied prompt already carries its context: fields, description, relations.",
     "customPromptLaunchDescription": "Write what to do on this issue. The agent already gets its context: description, plan, comments and attachments.",
-    "customPromptPlaceholder": "Only touch the cards' context menu, and propose an approach before writing code.",
+    "customPromptPlaceholder": "What should the agent do?",
     "endedPlaceholder": "This session failed to start. Launch a new agent.",
     "pastRunPlaceholder": "Past session (read-only). Launch a new agent to carry on.",
     "mergedRunPlaceholder": "Work merged. Launch a new agent to carry on.",

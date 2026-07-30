@@ -1,6 +1,7 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
+import type { ElementType, JSX } from "react";
+import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "mangue-ui";
 import { displayName } from "@/lib/display-name";
@@ -99,6 +100,23 @@ function rehypeMentions(members: Member[]) {
   return () => (tree: HastNode) => walk(tree);
 }
 
+/**
+ * Une balise rendue telle quelle, juste habillée.
+ *
+ * react-markdown passe TOUJOURS le nœud hast en prop à un composant de
+ * remplacement (`passNode: true`, codé en dur — il n'y a pas d'option pour
+ * l'éteindre). Laissé dans le spread, il finit dans le DOM : chaque paragraphe,
+ * chaque cellule, chaque titre d'un commentaire portait un attribut
+ * `node="[object Object]"`. Il se retire ici, une bonne fois, plutôt que dans
+ * quinze fermetures qui répéteraient la même destructuration.
+ */
+function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string) {
+  const Tag = tag as ElementType;
+  return function Styled({ node, ...props }: JSX.IntrinsicElements[T] & ExtraProps) {
+    return <Tag className={className} {...props} />;
+  };
+}
+
 /** Renders markdown (GFM) with minimal, token-aware styling — no raw HTML.
     Pass `members` to render "@Name" and "@numo" mentions as chips — the same
     chip as the Numo composer's (components/mention-chip). The array may be
@@ -124,8 +142,8 @@ export function Markdown({
         remarkPlugins={[remarkGfm]}
         rehypePlugins={members ? [rehypeMentions(members)] : []}
         components={{
-          p: (props) => <p className="my-2" {...props} />,
-          a: (props) => (
+          p: styled("p", "my-2"),
+          a: ({ node, ...props }) => (
             <a
               className="text-primary underline underline-offset-2"
               target="_blank"
@@ -133,25 +151,18 @@ export function Markdown({
               {...props}
             />
           ),
-          ul: (props) => <ul className="my-2 list-disc pl-5" {...props} />,
-          ol: (props) => <ol className="my-2 list-decimal pl-5" {...props} />,
-          li: (props) => <li className="my-0.5" {...props} />,
-          code: (props) => (
-            <code
-              className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"
-              {...props}
-            />
-          ),
-          pre: (props) => (
-            <pre className="my-2 overflow-x-auto rounded-lg bg-muted p-3 text-xs" {...props} />
-          ),
+          ul: styled("ul", "my-2 list-disc pl-5"),
+          ol: styled("ol", "my-2 list-decimal pl-5"),
+          li: styled("li", "my-0.5"),
+          code: styled("code", "rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"),
+          pre: styled("pre", "my-2 overflow-x-auto rounded-lg bg-muted p-3 text-xs"),
           /* GFM tables can be arbitrarily wide: keep them in their own scroll
              box so a wide one never stretches (nor side-scrolls) the comment
              around it. `min-w-max` lets the table keep its natural width inside
              that box instead of being squeezed into towering rows, while
              `w-full` still makes a small table fill the width; long cells stay
              readable by wrapping at 20rem. */
-          table: (props) => (
+          table: ({ node, ...props }) => (
             <div className="my-2 max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-border">
               <table
                 className="w-full min-w-max border-collapse text-left text-[0.9em]"
@@ -159,27 +170,18 @@ export function Markdown({
               />
             </div>
           ),
-          thead: (props) => <thead className="bg-muted/60" {...props} />,
-          tr: (props) => (
-            <tr className="border-b border-border/60 last:border-0" {...props} />
+          thead: styled("thead", "bg-muted/60"),
+          tr: styled("tr", "border-b border-border/60 last:border-0"),
+          th: styled("th", "max-w-80 px-2.5 py-1.5 font-medium text-foreground"),
+          td: styled("td", "max-w-80 px-2.5 py-1.5 align-top"),
+          h1: styled("h1", "mt-3 mb-1 text-base font-semibold"),
+          h2: styled("h2", "mt-3 mb-1 text-sm font-semibold"),
+          h3: styled("h3", "mt-2 mb-1 text-sm font-semibold"),
+          blockquote: styled(
+            "blockquote",
+            "my-2 border-l-2 border-border pl-3 text-muted-foreground"
           ),
-          th: (props) => (
-            <th
-              className="max-w-80 px-2.5 py-1.5 font-medium text-foreground"
-              {...props}
-            />
-          ),
-          td: (props) => <td className="max-w-80 px-2.5 py-1.5 align-top" {...props} />,
-          h1: (props) => <h1 className="mt-3 mb-1 text-base font-semibold" {...props} />,
-          h2: (props) => <h2 className="mt-3 mb-1 text-sm font-semibold" {...props} />,
-          h3: (props) => <h3 className="mt-2 mb-1 text-sm font-semibold" {...props} />,
-          blockquote: (props) => (
-            <blockquote
-              className="my-2 border-l-2 border-border pl-3 text-muted-foreground"
-              {...props}
-            />
-          ),
-          strong: (props) => <strong className="font-semibold" {...props} />,
+          strong: styled("strong", "font-semibold"),
           hr: () => <hr className="my-3 border-border" />,
           span: ({ node, ...props }) => {
             const p = node?.properties ?? {};
