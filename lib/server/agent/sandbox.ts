@@ -192,23 +192,54 @@ export async function cloneRepo(
 }
 
 /**
+ * Sha du tip de la BASE tel que le clone l'a rapporté (`refs/remotes/origin/<base>`,
+ * créé par `git clone --branch <base>` et intact après la reprise d'une branche de
+ * travail). C'est le point de comparaison du détecteur de travail ci-dessous.
+ *
+ * Renvoie "" si le ref est illisible (clone d'une forme inattendue) : l'appelant
+ * pousse alors comme avant — en cas de doute, on ne prend jamais le risque de
+ * garder du travail hors du remote.
+ */
+async function baseTipSha(sandbox: Sandbox, baseBranch: string): Promise<string> {
+  try {
+    const res = await runShell(
+      sandbox,
+      `git rev-parse --verify ${sq(`refs/remotes/origin/${baseBranch}`)}`,
+    );
+    return res.exitCode === 0 ? res.stdout.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Stage tout, commit s'il y a des changements, puis push HEAD → workBranch. À
  * appeler à chaque suspend et à la fin (l'état du repo devient durable dans git).
  * `authUrl` doit porter un token FRAIS (l'appelant le re-résout avant l'appel).
  *
- * Renvoie le sha de HEAD, si un commit a été créé, et surtout `remoteUpdated` : le
- * push a-t-il fait AVANCER la branche distante ? C'est LE signal « du vrai travail
- * vient d'arriver sur le remote » — plus fiable que `committed`, qui ne voit que
- * l'appel courant : un commit posé par un appel précédent dont le push avait
- * échoué (5xx transitoire) part avec un arbre PROPRE au push suivant
- * (committed=false), et inversement un tour purement conversationnel pousse un
- * no-op (remote déjà à jour). Les décisions du type « rouvrir la PR refusée »
- * doivent se prendre sur `remoteUpdated`.
+ * PAS DE BRANCHE POUR RIEN (MIN-123) : `git push HEAD:refs/heads/<branche>` CRÉE la
+ * branche distante même quand l'arbre est propre — au sha de la base. Une session
+ * qui ne touche à aucun fichier (question, plan, vérification) laissait donc une
+ * branche vide sur le dépôt de l'utilisateur. D'où le détecteur : si, commit
+ * conditionnel fait, HEAD est ENCORE au tip de la base, la branche n'a rien à dire
+ * et on ne pousse pas du tout (`pushed: false`). Dès qu'un commit existe — c'est
+ * le seul signal de « du code a changé », `git add -A` ne voyant que du suivi — on
+ * pousse comme avant : le WIP poussé reste le filet durable au-delà du snapshot de
+ * la microVM.
+ *
+ * Renvoie le sha de HEAD, si un commit a été créé, si un push a eu lieu, et surtout
+ * `remoteUpdated` : le push a-t-il fait AVANCER la branche distante ? C'est LE
+ * signal « du vrai travail vient d'arriver sur le remote » — plus fiable que
+ * `committed`, qui ne voit que l'appel courant : un commit posé par un appel
+ * précédent dont le push avait échoué (5xx transitoire) part avec un arbre PROPRE
+ * au push suivant (committed=false), et inversement un tour purement conversationnel
+ * pousse un no-op (remote déjà à jour). Les décisions du type « rouvrir la PR
+ * refusée » doivent se prendre sur `remoteUpdated`.
  */
 export async function commitAndPush(
   sandbox: Sandbox,
-  opts: { authUrl: string; workBranch: string; message: string },
-): Promise<{ committed: boolean; remoteUpdated: boolean; headSha: string }> {
+  opts: { authUrl: string; workBranch: string; baseBranch: string; message: string },
+): Promise<{ committed: boolean; remoteUpdated: boolean; headSha: string; pushed: boolean }> {
   const status = await runShell(sandbox, `git status --porcelain`);
   const dirty = status.stdout.trim().length > 0;
 
@@ -221,6 +252,14 @@ export async function commitAndPush(
 
   const head = await runShell(sandbox, `git rev-parse HEAD`);
   const headSha = head.stdout.trim();
+
+  // Rien de commité par-dessus la base : aucune branche à créer sur le remote.
+  // `!dirty` est redondant (un commit fait forcément avancer HEAD) mais tenu
+  // explicitement : ce chemin ne doit JAMAIS pouvoir garder un commit au chaud.
+  const baseSha = await baseTipSha(sandbox, opts.baseBranch);
+  if (!dirty && baseSha && baseSha === headSha) {
+    return { committed: false, remoteUpdated: false, headSha, pushed: false };
+  }
 
   // Sha actuel de la branche distante (vide si elle n'existe pas encore). Best-
   // effort : si ls-remote échoue, on suppose le remote en retard (remoteUpdated
@@ -240,7 +279,7 @@ export async function commitAndPush(
   );
   if (push.exitCode !== 0) throw new Error(`git push failed: ${push.stderr || push.stdout}`);
 
-  return { committed: dirty, remoteUpdated: remoteSha !== headSha, headSha };
+  return { committed: dirty, remoteUpdated: remoteSha !== headSha, headSha, pushed: true };
 }
 
 // ── Diff par tour (event `files_changed`, MIN-46) ────────────────────────────

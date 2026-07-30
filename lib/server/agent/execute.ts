@@ -909,14 +909,40 @@ export async function executeAgentRun(
     });
     sandbox = sb;
 
-    // Persiste l'identité du Sandbox + les branches AVANT la boucle (reprise si crash).
+    // Persiste l'identité du Sandbox + la base AVANT la boucle (reprise si crash).
     // sandbox_stopped_at:null → la microVM est de nouveau vivante (le reaper l'ignore).
+    //
+    // `branch_name`, lui, attend le PREMIER PUSH RÉEL (MIN-123, `noteBranchPushed`
+    // plus bas) : tant que rien n'est poussé, la branche n'existe que dans la
+    // microVM, et les surfaces qui lisent une branche (vue diff, héritage de
+    // lignée, ménage des branches) ne doivent pas en désigner une qui n'est pas
+    // sur le dépôt. Le nom, lui, est déterministe — un chunk suivant le retrouve
+    // sans avoir besoin de le relire en base.
     await stampRun(run.id, {
       sandbox_id: sandboxName(sandbox),
       sandbox_stopped_at: null,
       base_branch: baseBranch,
-      branch_name: workBranch,
     });
+
+    // La branche est-elle DÉJÀ sur le remote ? Vrai quand la run hérite d'une
+    // lignée (`launchAgentRun` ne transmet que des branches poussées) ou qu'un
+    // chunk précédent a poussé. Sert à ne stamper qu'une fois.
+    let branchStamped = run.branch_name != null;
+    /**
+     * Enregistre la branche de travail au premier push qui a VRAIMENT eu lieu :
+     * c'est ce push qui la crée sur le dépôt, donc c'est lui qui la fait exister
+     * pour l'app. Un push sauté (rien de commité) ne stampe rien.
+     */
+    const noteBranchPushed = async (pushed: { pushed: boolean } | null): Promise<void> => {
+      if (!pushed?.pushed || branchStamped) return;
+      // Best-effort : le travail est DÉJÀ sur le dépôt à ce stade — un stamp raté
+      // ne doit pas faire échouer un tour abouti. Le prochain push réessaie.
+      const stamped = await stampRun(run.id, { branch_name: workBranch }).catch((err) => {
+        console.error("[agent-execute] branch stamp failed:", (err as Error).message);
+        return null;
+      });
+      branchStamped = stamped != null;
+    };
 
     // Baseline du « diff par tour » (MIN-46, event `files_changed`) : HEAD à l'entrée
     // du chunk. `filesFromSha` est le point depuis lequel la fin de tour diffe — le
@@ -1101,11 +1127,30 @@ export async function executeAgentRun(
           : // Run carnet : la première ligne de la note fait office de titre.
             commitMessageFromReply(run.prompt ?? "", commitRef));
       const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+      let pushed: Awaited<ReturnType<typeof commitAndPush>>;
       try {
-        await commitAndPush(sb, { authUrl: fresh.authUrl, workBranch, message: prTitle });
+        pushed = await commitAndPush(sb, {
+          authUrl: fresh.authUrl,
+          workBranch,
+          baseBranch,
+          message: prTitle,
+        });
       } catch (err) {
         return { result: { error: `push failed: ${(err as Error).message}` }, success: false };
       }
+      // Rien de commité par-dessus la base : on s'arrête AVANT de toucher au dépôt
+      // (MIN-123). Pousser créerait une branche vide pour rien — et la forge
+      // refuserait la PR (422) juste après, en la laissant derrière elle.
+      if (!pushed.pushed) {
+        return {
+          result: {
+            error:
+              "Nothing to open a pull request for: this session hasn't changed any file yet. Do the work first, then call create_pr.",
+          },
+          success: false,
+        };
+      }
+      await noteBranchPushed(pushed);
       if (prState.number != null) {
         const current = await forge
           .getPullRequest({
@@ -1480,13 +1525,15 @@ export async function executeAgentRun(
       // encore vivant réécrirait des fichiers pendant le `git add -A`.
       await background.stopAll().catch(() => 0);
 
-      // Pousse ce que le tour a changé (no-op propre sans changement). Si la session
-      // suit une PR, GitHub la met à jour tout seul — aucune création ici : ouvrir
-      // une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
+      // Pousse ce que le tour a changé — et RIEN si le tour n'a rien changé : la
+      // branche n'apparaît sur le dépôt qu'au premier vrai commit (MIN-123). Si la
+      // session suit une PR, GitHub la met à jour tout seul — aucune création ici :
+      // ouvrir une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
       let pushError: string | null = null;
       const pushed = await commitAndPush(sandbox, {
         authUrl,
         workBranch,
+        baseBranch,
         message: commitMessageFromReply(reply, commitRef),
       }).catch((err) => {
         pushError = (err as Error).message;
@@ -1506,6 +1553,7 @@ export async function executeAgentRun(
         });
       }
 
+      await noteBranchPushed(pushed);
       await reopenIfRejectedWorkPushed(pushed, token);
       // Le remote a reçu du travail mais la PR a été FUSIONNÉE pendant le tour
       // (`refreshPrStateFromDb` dans le reopen vient de recaler l'état) : les
@@ -1557,12 +1605,14 @@ export async function executeAgentRun(
     const wipPushed = await commitAndPush(sandbox, {
       authUrl: target.authUrl,
       workBranch,
+      baseBranch,
       message: `wip(${commitRef}): chunk ${run.continuations + 1}`,
     }).catch((err) => {
       // Un push raté ne doit pas perdre le checkpoint (l'état repo se re-poussera au chunk suivant).
       console.error("[agent-execute] WIP push failed:", (err as Error).message);
       return null;
     });
+    await noteBranchPushed(wipPushed);
     await reopenIfRejectedWorkPushed(wipPushed, target.token);
 
     // Budget d'usage épuisé → REPOS, avec la carte qui dit pourquoi et ce qu'on peut

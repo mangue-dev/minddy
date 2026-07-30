@@ -94,7 +94,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
     ? "If a section of your patch fails, re-read the file and rebuild that hunk from the exact current text."
     : "If an `edit_file` fails because `old_string` wasn't found, re-read the file and copy the exact current text.";
 
-  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
+  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
 
   const anchorSection = notebook
     ? `## The notebook
@@ -403,7 +403,7 @@ export function buildAgentContextMessage(input: {
           .join("\n")}`
       : "";
 
-  return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns.
+  return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.
 
 # Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${attachmentsBlock}
 
@@ -421,7 +421,7 @@ export function buildNotebookContextMessage(input: {
   projectName?: string | null;
 }): string {
   const { repo } = input;
-  return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns.${input.projectName ? `\nProject: ${input.projectName}` : ""}
+  return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.${input.projectName ? `\nProject: ${input.projectName}` : ""}
 
 This session was launched from the user's NOTEBOOK: their note follows as the next message — it is your instruction, a free-form prompt rather than a formal ticket. The note is a snapshot of part of the notebook; \`read_scratchpad\` gives you its live state (all tasks with their \`task_index\` and current checkboxes) whenever it matters — and always right before \`update_scratchpad_task\`.`;
 }
