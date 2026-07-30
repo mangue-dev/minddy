@@ -31,6 +31,10 @@ export interface EventRow {
   /** True when the assignment was made by Smart Assign (actor_id null); the
       timeline then shows "Smart Assign" as the actor. */
   via_smart_assign?: boolean;
+  /** Paired with the flag above: the MODEL picked this assignee, from the
+      per-member rules. False on the deterministic paths (solo project, no rule
+      written, model call failed) — the timeline words the two differently. */
+  smart_assign_ai?: boolean;
   /** Provider ('github' | 'gitlab') when the write came from the linked repo's
       issue sync (MIN-97); the timeline then shows the forge as the actor. The
       actor_id stays set — the write needs a project member behind it. */

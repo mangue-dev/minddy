@@ -165,8 +165,13 @@ export function describeEvent(
       case "assignee_id":
         // Smart Assign writes a dedicated sentence — the actor line already
         // reads "Smart Assign", so "reassigned: — → X" would be redundant.
+        // Deux phrases, parce que les deux gestes ne sont pas le même : ou le
+        // modèle a lu les règles d'attribution, ou personne ne les a lues et le
+        // ticket est revenu au propriétaire par défaut.
         if (e.via_smart_assign)
-          return t("smartAssigned", { to: memberName(ctx, tr, e.to_value) });
+          return e.smart_assign_ai
+            ? t("smartAssignedByRules", { to: memberName(ctx, tr, e.to_value) })
+            : t("smartAssigned", { to: memberName(ctx, tr, e.to_value) });
         return t("assigneeChanged", {
           from: memberName(ctx, tr, e.from_value),
           to: memberName(ctx, tr, e.to_value),

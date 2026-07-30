@@ -31,6 +31,10 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  *   (`smart_assign_model`), fed the issue and the per-member rules; any
  *   failure falls back to the owner so the run always assigns someone.
  *
+ * L'événement écrit porte `smart_assign_ai` : seul le troisième cas le met à
+ * true, et seulement si le modèle a répondu un membre valide. C'est ce que
+ * l'activité du ticket distingue — sans ça les trois se lisaient pareil.
+ *
  * Everything runs in `after()` — never on the request's critical path — and
  * re-checks its preconditions at execution time, so a stale schedule (toggle
  * flipped, someone assigned meanwhile, status changed back) is a silent no-op.
@@ -112,20 +116,25 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
   // lui dit déjà de retomber sur le owner dans ce cas. Autant ne pas payer
   // l'appel — le résultat est le même, en moins cher et sans latence.
   let chosen: string;
+  // Le modèle a-t-il VRAIMENT choisi ? L'activité du ticket le dit, et les deux
+  // modes ne se valent pas : le repli sur le propriétaire — faute d'appel, ou
+  // faute de réponse exploitable — reste une affectation automatique.
+  let chosenByModel = false;
   if (memberIds.length === 1 || !hasAnyRule(memberIds, rules)) {
     // Seul membre, ou aucune règle : pas d'ambiguïté à lever, pas d'IA.
     chosen = ownerId;
   } else {
-    chosen =
-      (await chooseAssigneeViaAI({
-        service,
-        projectId: params.projectId,
-        projectName: (project.name as string) ?? "",
-        issue,
-        memberIds,
-        ownerId,
-        rules,
-      })) ?? ownerId; // the contract is "always assign" — owner on any failure
+    const picked = await chooseAssigneeViaAI({
+      service,
+      projectId: params.projectId,
+      projectName: (project.name as string) ?? "",
+      issue,
+      memberIds,
+      ownerId,
+      rules,
+    });
+    chosen = picked ?? ownerId; // the contract is "always assign" — owner on any failure
+    chosenByModel = picked !== null;
   }
 
   // Compare-and-set against a concurrent manual assignment: only claim the
@@ -148,6 +157,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
       from_value: null,
       to_value: chosen,
       via_smart_assign: true,
+      smart_assign_ai: chosenByModel,
     },
   ]);
 

@@ -244,6 +244,10 @@ export interface IssueEvent {
   /** True when the assignment was made by Smart Assign — the timeline shows
       "Smart Assign" as the actor. */
   via_smart_assign?: boolean;
+  /** Le modèle a choisi cet assigné d'après les règles d'attribution. False
+      quand Smart Assign a tranché sans IA (projet solo, aucune règle écrite,
+      appel en échec) : la timeline ne dit pas la même phrase. */
+  smart_assign_ai?: boolean;
   /** Provider ('github' | 'gitlab') quand l'événement vient de la synchro des
       issues du dépôt lié (MIN-97) — la timeline affiche la forge comme acteur,
       pas le membre dont l'id sert techniquement d'auteur de l'écriture. */

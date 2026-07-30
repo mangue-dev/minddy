@@ -54,6 +54,7 @@
     "effortChanged": "a changé l'effort : {from} → {to}",
     "assigneeChanged": "a changé l'assigné : {from} → {to}",
     "smartAssigned": "a assigné le ticket à {to}",
+    "smartAssignedByRules": "a choisi {to} d'après les règles d'attribution",
     "objectiveChanged": "a changé l'objectif : {from} → {to}",
     "dueDateChanged": "a changé l'échéance : {from} → {to}",
     "parentAttached": "a rattaché le ticket à {ref}",

@@ -54,6 +54,7 @@
     "effortChanged": "changed effort: {from} → {to}",
     "assigneeChanged": "changed assignee: {from} → {to}",
     "smartAssigned": "assigned the issue to {to}",
+    "smartAssignedByRules": "picked {to} from the assignment rules",
     "objectiveChanged": "changed objective: {from} → {to}",
     "dueDateChanged": "changed due date: {from} → {to}",
     "parentAttached": "linked the issue to {ref}",
