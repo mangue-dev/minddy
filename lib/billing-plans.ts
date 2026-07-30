@@ -84,6 +84,24 @@ export function billingPlanRank(id: BillingPlanId): number {
   return BILLING_PLANS.findIndex((plan) => plan.id === id);
 }
 
+/**
+ * Le plan à PROPOSER à quelqu'un qui a épuisé son budget d'usage : le premier
+ * au-dessus qui donne réellement PLUS de budget et qui autorise les agents.
+ * `null` = il n'y en a pas — l'utilisateur est au sommet de l'échelle, et la
+ * carte de budget épuisé ne doit alors proposer que d'attendre ou de passer en
+ * BYOK. Proposer un upgrade qui n'existe pas serait une impasse.
+ *
+ * Le jour où un plan « Ultra » s'ajoute à `BILLING_PLANS`, il est proposé tout
+ * seul — rien d'autre à câbler.
+ */
+export function nextBillingPlanId(current: BillingPlanId): BillingPlanId | null {
+  const budget = getBillingPlan(current).includedUsageUsd;
+  const better = BILLING_PLANS.slice(billingPlanRank(current) + 1).find(
+    (plan) => plan.allowAgents && plan.includedUsageUsd > budget,
+  );
+  return better?.id ?? null;
+}
+
 // ── Facturation annuelle ─────────────────────────────────────────────────────
 
 /** Mois offerts sur l'annuel : on facture 10 mois pour 12 (2 mois offerts). */

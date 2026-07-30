@@ -77,15 +77,18 @@ les tool-calls** du round.
 
 ## `high` et le quota minddy
 
-En mode plateforme (aucune clé BYOK, l'agent tourne sur la clé OpenRouter de
-minddy), les tokens de réflexion sont facturés sur le **budget d'usage mensuel du
-plan**, partagé avec toutes les autres features (`plan.includedUsageUsd`,
-[lib/server/agent/quota.ts](../lib/server/agent/quota.ts)). `high` y est donc
-plafonné à `medium` ; il est réservé au BYOK, où l'utilisateur paie sa propre note.
+**Les quatre niveaux sont ouverts à tous**, quota minddy compris. L'abonnement est
+payé : il doit être utilisable en entier.
 
-La borne vit **côté serveur**, dans `resolveReasoningLevel`
-([lib/server/agent/model.ts](../lib/server/agent/model.ts)). L'UI la *reflète*
-(option désactivée + tooltip) ; elle ne la garantit pas.
+Un plafond « `high` réservé au BYOK » a existé un temps, puis a été retiré — il ne
+protégeait de rien. Les tokens de réflexion sont facturés sur le budget d'usage
+mensuel du plan (`plan.includedUsageUsd`,
+[lib/server/agent/quota.ts](../lib/server/agent/quota.ts)), mais ce budget est
+**déjà** une borne dure : `checkAgentQuota` refuse le lancement quand il est
+épuisé, la boucle s'arrête d'elle-même quand il tombe à zéro en cours de run, et le
+spend-guard garde la clé OpenRouter. Un `high` consomme donc le budget plus vite —
+ce qui est l'affaire de celui qui l'a payé — sans jamais pouvoir le dépasser.
+Restreindre le niveau en plus, c'était une règle à expliquer en échange de rien.
 
 **Rien à corriger côté comptage** — constaté sur de vrais appels OpenRouter
 (2026-07-29, `anthropic/claude-sonnet-4.5`) :

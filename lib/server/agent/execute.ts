@@ -112,6 +112,7 @@ import {
   type AgentRun,
   type AgentCheckpoint,
 } from "./runs";
+import { checkAgentQuota } from "./quota";
 
 /**
  * Exécute UN chunk d'un RUN d'agent (MIN-46 + MIN-68, modèle CONVERSATIONNEL).
@@ -1358,6 +1359,13 @@ export async function executeAgentRun(
       return (await typeCheckBlock(budgetMs)) ?? (await selfReviewBlock(budgetMs));
     };
 
+    // Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
+    // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
+    // round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
+    const quotaNow = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+    const budgetUsd =
+      quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
+
     const result = await runAgentLoop({
       messages,
       tools: agentToolsFor({
@@ -1376,6 +1384,7 @@ export async function executeAgentRun(
       userId: run.created_by,
       projectId: run.project_id,
       softDeadlineMs,
+      budgetUsd,
       contextWindow,
       execTool: makeExecTool(
         sandbox,
@@ -1555,6 +1564,30 @@ export async function executeAgentRun(
       return null;
     });
     await reopenIfRejectedWorkPushed(wipPushed, target.token);
+
+    // Budget d'usage épuisé → REPOS, avec la carte qui dit pourquoi et ce qu'on peut
+    // faire. Le travail du chunk vient d'être poussé en WIP et le checkpoint est
+    // conservé : rien n'est perdu, la session repart d'ici quand le budget revient
+    // (rechargement, plan supérieur, ou clé perso).
+    //
+    // Volontairement PAS `restStamp` : celui-ci re-queue s'il reste des messages de
+    // steering en file, ce qui relancerait aussitôt un chunk sans budget. Le message
+    // en attente reste en file et sera drainé à la reprise.
+    if (result.status === "budget_exhausted") {
+      const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+      await emit("quota_exhausted", {
+        spent: quota?.spent ?? null,
+        cap: quota?.cap ?? null,
+        resetsAt: quota?.resetsAt ?? null,
+        planId: quota?.planId ?? null,
+        // null = déjà au sommet de l'échelle : il ne reste qu'attendre, ou le BYOK.
+        nextPlanId: quota?.nextPlanId ?? null,
+        byok: quota?.mode === "byok",
+      });
+      await stampRun(run.id, { status: "completed", ...restFields, checkpoint });
+      await notifyAgentRun(run, "agent_failed");
+      return "completed";
+    }
 
     // Erreur LLM fatale → REPOS reprennable. L'event d'erreur a déjà été émis par la
     // boucle ; le checkpoint (dont un éventuel steering injecté ce round) est conservé

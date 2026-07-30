@@ -293,9 +293,6 @@ export function AccountAiKeysSection() {
             <ReasoningCombobox
               value={defaultReasoningLevel}
               onChange={(v) => void onReasoningChange(v)}
-              // `high` demande un BYOK : sur le quota minddy, les tokens de
-              // réflexion se paient sur le budget mensuel partagé du plan.
-              maxLevel={activeKey ? "high" : "medium"}
             />
           </div>
         )}

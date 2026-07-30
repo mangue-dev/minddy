@@ -95,16 +95,9 @@ export function reasoningMaxTokens(
 }
 
 /**
- * Borne le niveau selon le mode de clé. En mode PLATEFORME (quota minddy, clé
- * OpenRouter de minddy), les tokens de raisonnement sont facturés sur le budget
- * d'usage mensuel du plan, partagé avec toutes les autres features : `high` y est
- * réservé au BYOK, où l'utilisateur paie sa propre note. À appliquer CÔTÉ SERVEUR
- * — l'UI ne fait que refléter la borne, elle ne la garantit pas.
+ * Les quatre niveaux sont ouverts à TOUS, quota minddy compris : l'abonnement est
+ * payé, il doit être utilisable en entier. Un `high` consomme le budget d'usage
+ * mensuel plus vite, mais ne peut pas le dépasser — `checkAgentQuota` refuse le
+ * lancement et la boucle s'arrête d'elle-même quand le budget est épuisé. Plafonner
+ * le niveau en plus n'aurait protégé de rien, au prix d'une règle à expliquer.
  */
-export function capReasoningLevel(
-  level: ReasoningLevel,
-  keyMode: "platform" | "byok",
-): ReasoningLevel {
-  if (keyMode === "byok") return level;
-  return level === "high" ? "medium" : level;
-}

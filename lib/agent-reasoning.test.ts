@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  capReasoningLevel,
   isReasoningLevel,
   reasoningMaxTokens,
   reasoningRequestFields,
@@ -87,17 +86,5 @@ describe("reasoningMaxTokens", () => {
 
   it("reste absent quand le provider n'envoie pas de max_tokens", () => {
     expect(reasoningMaxTokens(undefined, "high")).toBeUndefined();
-  });
-});
-
-describe("capReasoningLevel", () => {
-  it("laisse tout passer en BYOK (l'utilisateur paie)", () => {
-    expect(capReasoningLevel("high", "byok")).toBe("high");
-  });
-
-  it("plafonne `high` à `medium` sur le quota minddy", () => {
-    expect(capReasoningLevel("high", "platform")).toBe("medium");
-    expect(capReasoningLevel("medium", "platform")).toBe("medium");
-    expect(capReasoningLevel("off", "platform")).toBe("off");
   });
 });

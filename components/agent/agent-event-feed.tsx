@@ -24,6 +24,8 @@ import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
 import { ReasoningBlock } from "./reasoning-block";
+import { QuotaExhaustedCard } from "./quota-exhausted-card";
+import { coerceBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { unechoedMessages } from "@/lib/agent-pending";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
@@ -81,6 +83,18 @@ type FeedItem =
       createdAt: string;
     }
   | { kind: "plan"; id: string; steps: PlanStep[]; createdAt: string }
+  /** Budget d'usage épuisé en cours de run : carte de CLÔTURE du tour (le travail
+   *  est poussé, la session reprendra quand le budget revient). */
+  | {
+      kind: "quota";
+      id: string;
+      // `spent`/`cap` du payload ne sont PAS repris : l'usage se dit en pourcentage
+      // à l'utilisateur, jamais en dollars (ils restent dans l'event, pour la trace).
+      resetsAt: string | null;
+      nextPlanId: BillingPlanId | null;
+      byok: boolean;
+      createdAt: string;
+    }
   /** Phase de réflexion du modèle (MIN-122) : ligne compacte + compteur, jamais
    *  le texte en direct. `active` tant que le round n'a pas rendu la main. */
   | {
@@ -111,7 +125,9 @@ type Block =
       type: "turn";
       key: string;
       work: FeedItem[];
-      summary: MessageItem | null;
+      /** Ce qui CLÔT le tour et reste visible sous le déroulé replié : la réponse
+       *  du modèle, ou la carte de budget épuisé (le tour s'arrête là aussi). */
+      summary: TurnCloser | null;
       /** Bloc(s) « fichiers changés » du tour — rendus SOUS le résumé, hors accordéon. */
       files: FeedItem[];
       startedAt: string;
@@ -354,6 +370,20 @@ function buildFeed(
         if (steps.length > 0) items.push({ kind: "plan", id: e.id, steps, createdAt: e.created_at });
         break;
       }
+      case "quota_exhausted": {
+        // Clôt le tour : plus rien ne s'y rattache, et le déroulé se replie comme
+        // sur un `summary`.
+        current = null;
+        items.push({
+          kind: "quota",
+          id: e.id,
+          resetsAt: typeof p.resetsAt === "string" ? p.resetsAt : null,
+          nextPlanId: coerceBillingPlanId(p.nextPlanId),
+          byok: p.byok === true,
+          createdAt: e.created_at,
+        });
+        break;
+      }
       case "status": {
         // Le seul `status` rendu : le provider a REFUSÉ le niveau de raisonnement
         // demandé (MIN-122). Sans cette ligne, le niveau choisi resterait affiché
@@ -394,6 +424,13 @@ function itemKey(it: FeedItem): string {
   return it.kind === "message" ? it.message.id : it.id;
 }
 
+/** Items qui referment un tour : la réponse finale, ou l'arrêt sur budget épuisé. */
+type TurnCloser = MessageItem | Extract<FeedItem, { kind: "quota" }>;
+
+function closesTurn(it: FeedItem): it is TurnCloser {
+  return it.kind === "quota" || (it.kind === "message" && !!it.isSummary);
+}
+
 function buildBlocks(items: FeedItem[], active: boolean): Block[] {
   const blocks: Block[] = [];
   let work: FeedItem[] = [];
@@ -425,8 +462,9 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
       blocks.push({ type: "loose", item: it });
       continue;
     }
-    // Résumé final : referme le tour. Son travail se replie ; le résumé reste visible.
-    if (it.kind === "message" && it.isSummary) {
+    // Clôture du tour (réponse finale, ou budget épuisé) : le travail se replie, ce
+    // qui clôt reste visible dessous.
+    if (closesTurn(it)) {
       if (work.length > 0) {
         blocks.push({
           type: "turn",
@@ -435,7 +473,7 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
           summary: it,
           files: [],
           startedAt: work[0].createdAt || it.createdAt,
-          endedAt: it.endedAt || it.createdAt,
+          endedAt: (it.kind === "message" ? it.endedAt : null) || it.createdAt,
           active: false,
         });
         work = [];
@@ -523,6 +561,16 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
       <ReasoningBlock key={it.id} active={it.active} durationMs={it.durationMs} text={it.text} />
     );
   }
+  if (it.kind === "quota") {
+    return (
+      <QuotaExhaustedCard
+        key={it.id}
+        resetsAt={it.resetsAt}
+        nextPlanId={it.nextPlanId}
+        byok={it.byok}
+      />
+    );
+  }
   return <NoteRow key={it.id} item={it} />;
 }
 
@@ -541,7 +589,7 @@ function TurnGroup({
   ctx,
 }: {
   work: FeedItem[];
-  summary: MessageItem | null;
+  summary: TurnCloser | null;
   files: FeedItem[];
   startedAt: string;
   endedAt: string | null;

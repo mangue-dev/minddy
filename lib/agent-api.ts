@@ -220,7 +220,10 @@ export type AgentEventType =
   | "user_message"
   | "plan_update"
   | "files_changed"
-  | "question";
+  | "question"
+  /** Budget d'usage mensuel épuisé en cours de run : le fil rend la carte qui dit
+   *  où en est le budget et ce qu'on peut faire (monter de plan, attendre, BYOK). */
+  | "quota_exhausted";
 
 export interface AgentRunEvent {
   id: string;

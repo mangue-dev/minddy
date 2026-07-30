@@ -27,11 +27,9 @@ import type { MessageKey } from "@/lib/i18n-keys";
  * Comme le modèle et la branche, le niveau est choisi au lancement puis FIGÉ pour
  * la session : partout ailleurs, le picker est un chip verrouillé + tooltip.
  *
- * `high` peut être hors de portée (quota minddy : les tokens de réflexion sont
- * facturés sur le budget mensuel partagé du plan). L'option est alors montrée
- * désactivée plutôt que cachée — l'utilisateur voit qu'elle existe et pourquoi
- * elle ne s'applique pas. La borne est appliquée CÔTÉ SERVEUR
- * (`resolveReasoningLevel`) : ceci n'en est que le reflet.
+ * Les quatre niveaux sont ouverts à tous, quota minddy compris — l'abonnement est
+ * payé, il doit être utilisable en entier. Ce qui borne la dépense est le budget
+ * d'usage lui-même, pas une restriction sur le niveau.
  */
 
 const LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
@@ -53,20 +51,16 @@ export function ReasoningCombobox({
   onChange,
   disabled,
   disabledTooltip,
-  maxLevel,
 }: {
   value: ReasoningLevel;
   onChange: (value: ReasoningLevel) => void;
   disabled?: boolean;
   /** Tooltip du chip verrouillé (niveau figé pour la session). */
   disabledTooltip?: string;
-  /** Niveau le plus élevé atteignable ; au-delà l'option est désactivée. */
-  maxLevel?: ReasoningLevel;
 }) {
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
 
-  const capIndex = maxLevel ? REASONING_LEVELS.indexOf(maxLevel) : REASONING_LEVELS.length - 1;
   const label = t(LABEL_KEYS[value]);
 
   // Verrouillé : chip statique + tooltip, SANS popover — le <span> extérieur porte
@@ -109,45 +103,28 @@ export function ReasoningCombobox({
         <Command shouldFilter={false}>
           {/* mt-1.5 / px-1 : mêmes retraits que les autres pickers du composer. */}
           <CommandList className="mt-1.5 px-1">
-            {REASONING_LEVELS.map((level, i) => {
-              const outOfReach = i > capIndex;
-              const item = (
-                <CommandItem
-                  key={level}
-                  value={level}
-                  disabled={outOfReach}
-                  onSelect={() => {
-                    if (outOfReach) return;
-                    onChange(level);
-                    setOpen(false);
-                  }}
-                  className={cn("items-start gap-2", outOfReach && "opacity-50")}
-                >
-                  <div className="flex flex-1 flex-col gap-0.5">
-                    <span>{t(LABEL_KEYS[level])}</span>
-                    <span className="text-xs text-muted-foreground">{t(DESC_KEYS[level])}</span>
-                  </div>
-                  <Check
-                    className={cn(
-                      "mt-0.5 size-4 shrink-0",
-                      value === level ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                </CommandItem>
-              );
-              // Hors de portée : dire POURQUOI, sinon l'option grisée est une
-              // impasse muette.
-              return outOfReach ? (
-                <Tooltip key={level}>
-                  <TooltipTrigger asChild>
-                    <div>{item}</div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{t("reasoningHighByok")}</TooltipContent>
-                </Tooltip>
-              ) : (
-                item
-              );
-            })}
+            {REASONING_LEVELS.map((level) => (
+              <CommandItem
+                key={level}
+                value={level}
+                onSelect={() => {
+                  onChange(level);
+                  setOpen(false);
+                }}
+                className="items-start gap-2"
+              >
+                <div className="flex flex-1 flex-col gap-0.5">
+                  <span>{t(LABEL_KEYS[level])}</span>
+                  <span className="text-xs text-muted-foreground">{t(DESC_KEYS[level])}</span>
+                </div>
+                <Check
+                  className={cn(
+                    "mt-0.5 size-4 shrink-0",
+                    value === level ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </CommandItem>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>

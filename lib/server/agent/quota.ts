@@ -1,5 +1,6 @@
 import "server-only";
 
+import { nextBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUserUsage } from "@/lib/server/usage";
 import { userHasByokKey } from "./model";
@@ -23,6 +24,11 @@ export interface AgentQuota {
   spent?: number;
   cap?: number;
   remaining?: number;
+  /** ISO — fin de la fenêtre comptée : la date à laquelle le budget se recharge. */
+  resetsAt?: string;
+  /** Plan courant, et le suivant s'il en existe un au-dessus (proposition d'upgrade). */
+  planId?: BillingPlanId;
+  nextPlanId?: BillingPlanId | null;
   reason?: "agents_not_in_plan" | "usage_budget_exceeded";
 }
 
@@ -34,12 +40,14 @@ export async function checkAgentQuota(userId: string): Promise<AgentQuota> {
       allowed: false,
       unlimited: false,
       mode: "platform",
+      planId: plan.id,
+      nextPlanId: nextBillingPlanId(plan.id),
       reason: "agents_not_in_plan",
     };
   }
 
   if (await userHasByokKey(userId)) {
-    return { allowed: true, unlimited: true, mode: "byok" };
+    return { allowed: true, unlimited: true, mode: "byok", planId: plan.id };
   }
 
   const usage = await getUserUsage(userId);
@@ -53,6 +61,9 @@ export async function checkAgentQuota(userId: string): Promise<AgentQuota> {
     spent,
     cap,
     remaining: Math.max(0, cap - spent),
+    resetsAt: usage.period.end,
+    planId: plan.id,
+    nextPlanId: nextBillingPlanId(plan.id),
     ...(allowed ? {} : { reason: "usage_budget_exceeded" as const }),
   };
 }

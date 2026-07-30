@@ -156,7 +156,6 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   const reasoningLevel = await resolveReasoningLevel({
     perRunLevel: input.reasoningLevel,
     userId: input.userId,
-    keyMode: quota.mode,
   });
 
   // Héritage du TRAVAIL (MIN-68, indexé sur la branche) : tant que la lignée de

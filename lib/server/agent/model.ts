@@ -10,7 +10,6 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import {
-  capReasoningLevel,
   isReasoningLevel,
   DEFAULT_REASONING_LEVEL,
   type ReasoningLevel,
@@ -69,20 +68,17 @@ export async function getUserDefaultReasoningLevel(
  * Résout le niveau de raisonnement à FIGER sur un run (MIN-122). Cascade
  * run > user > `off` — pas de défaut racine : aucun réglage admin ici.
  *
- * Puis BORNE selon le mode de clé : en quota minddy (`platform`), les tokens de
- * réflexion sont facturés sur le budget d'usage mensuel du plan, partagé avec
- * toutes les autres features → `high` est réservé au BYOK. La borne vit ICI, pas
- * dans l'UI : celle-ci la reflète (option désactivée), elle ne la garantit pas.
+ * Les quatre niveaux sont ouverts à TOUS, quota minddy compris : l'abonnement est
+ * payé, il doit être utilisable en entier. Ce qui borne la dépense est le budget
+ * lui-même (`checkAgentQuota` au lancement, et l'arrêt en cours de run quand il
+ * est épuisé), pas une restriction sur le niveau.
  */
 export async function resolveReasoningLevel(opts: {
   perRunLevel?: string | null;
   userId: string;
-  keyMode: AgentKeyMode;
 }): Promise<ReasoningLevel> {
   const perRun = isReasoningLevel(opts.perRunLevel) ? opts.perRunLevel : null;
-  const level =
-    perRun ?? (await getUserDefaultReasoningLevel(opts.userId)) ?? DEFAULT_REASONING_LEVEL;
-  return capReasoningLevel(level, opts.keyMode);
+  return perRun ?? (await getUserDefaultReasoningLevel(opts.userId)) ?? DEFAULT_REASONING_LEVEL;
 }
 
 /** Levée quand un provider BYOK non-OpenRouter n'a aucun modèle résolu. */

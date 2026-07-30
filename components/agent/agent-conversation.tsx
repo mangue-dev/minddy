@@ -34,7 +34,6 @@ import {
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import { useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
@@ -366,11 +365,6 @@ export function AgentConversation({
   // encore touché → on suit le défaut perso, qui peut arriver après le montage.
   const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
   const reasoningLevel = reasoningOverride ?? defaultReasoningLevel;
-  // Quota minddy (aucune clé BYOK) : `high` est hors de portée — les tokens de
-  // réflexion se paient sur le budget mensuel partagé du plan. La borne est
-  // appliquée côté serveur ; ceci n'en est que le reflet.
-  const { keys: byokKeys } = useAiKeysQuery();
-  const reasoningMax: ReasoningLevel = byokKeys.length > 0 ? "high" : "medium";
   const [launching, setLaunching] = useState(false);
   // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
   const modelRequired = provider === "generic" && !defaultModel && !model;
@@ -733,7 +727,6 @@ export function AgentConversation({
                     value={reasoningLevel}
                     onChange={setReasoningOverride}
                     disabled={launching}
-                    maxLevel={reasoningMax}
                   />
                   {/* Branche que l'agent COPIE pour son espace de travail. Choix
                       possible seulement ici (au lancement) et seulement pour une

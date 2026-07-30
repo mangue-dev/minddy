@@ -129,7 +129,10 @@ export type AgentEventType =
   | "user_message"
   | "plan_update"
   | "files_changed"
-  | "question";
+  | "question"
+  /** Budget d'usage mensuel épuisé en cours de run : la session s'arrête et le fil
+   *  affiche les issues possibles (monter de plan, attendre, passer en BYOK). */
+  | "quota_exhausted";
 
 export type EmitAgentEvent = (
   type: AgentEventType,
@@ -193,6 +196,12 @@ export interface RunAgentLoopParams {
   projectId?: string | null;
   /** Budget du chunk courant, mesuré depuis l'entrée dans la boucle. */
   softDeadlineMs: number;
+  /**
+   * Budget d'usage RESTANT (USD) au moment d'entrer dans le chunk. La boucle
+   * s'arrête à la frontière de round dès que le chunk l'a consommé. `undefined` =
+   * pas de plafond (BYOK : l'utilisateur paie sa propre note).
+   */
+  budgetUsd?: number;
   /**
    * Fenêtre de contexte (tokens) du modèle, si connue → seuil de compaction =
    * 75 % de cette fenêtre. Absent = seuil par défaut `AGENT_COMPACT_TOKEN_THRESHOLD`.
@@ -262,7 +271,7 @@ const INTERRUPT_POLL_MS = 2000;
 const LIVE_FLUSH_MS = 250;
 
 export interface AgentLoopResult {
-  status: "completed" | "suspended" | "interrupted" | "error";
+  status: "completed" | "suspended" | "interrupted" | "error" | "budget_exhausted";
   messages: AgentChatMessage[];
   /** Réponse finale du tour (fin naturelle : le modèle s'arrête sans tool-call). */
   reply?: string;
@@ -836,6 +845,16 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Frontière sûre : suspend AVANT le prochain appel LLM.
     if (elapsed() >= params.softDeadlineMs || round >= MAX_ROUNDS_PER_CHUNK) {
       return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+    }
+    // Budget d'usage épuisé (quota minddy) — MÊME frontière, même raison : on ne
+    // paie pas un appel de plus. `budgetUsd` est le restant SNAPSHOTÉ à l'entrée du
+    // chunk, et `costUsd` ce que ce chunk a déjà dépensé : la comparaison est donc
+    // exacte sans relire l'usage à chaque round. Le round en cours peut dépasser
+    // légèrement (on ne coupe jamais un appel en vol) — c'est la politique assumée
+    // de lib/server/usage.ts, comme chez Claude/ChatGPT.
+    if (params.budgetUsd !== undefined && costUsd >= params.budgetUsd) {
+      clearLive();
+      return { status: "budget_exhausted", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
     round++;
 
