@@ -28,10 +28,11 @@ export async function gatherProjectPromptContext({
     { data: objectives },
     { data: categories },
   ] = await Promise.all([
-    supabase.from("issues").select("status").eq("project_id", project.id),
+    supabase.from("issues").select("status").eq("project_id", project.id).is("deleted_at", null),
     supabase
       .from("issues")
       .select("number, title, status")
+      .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("updated_at", { ascending: false })
       .limit(5),
@@ -42,6 +43,7 @@ export async function gatherProjectPromptContext({
     supabase
       .from("objectives")
       .select("id, name, status")
+      .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("created_at", { ascending: true }),
     supabase

@@ -93,6 +93,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
   const { data: issue } = await service
     .from("issues")
     .select("id, title, description, status, priority, effort, assignee_id")
+    .is("deleted_at", null)
     .eq("id", params.issueId)
     .maybeSingle();
   if (!issue || issue.assignee_id !== null) return;
@@ -143,6 +144,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
   const { data: claimed } = await service
     .from("issues")
     .update({ assignee_id: chosen })
+    .is("deleted_at", null)
     .eq("id", params.issueId)
     .is("assignee_id", null)
     .select("id")

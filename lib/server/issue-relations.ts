@@ -146,6 +146,7 @@ export async function addIssueRelation({
   const { data: issues } = await service
     .from("issues")
     .select("id")
+    .is("deleted_at", null)
     .eq("project_id", projectId)
     .in("id", [sourceId, targetId]);
   const found = new Set((issues ?? []).map((i) => i.id as string));

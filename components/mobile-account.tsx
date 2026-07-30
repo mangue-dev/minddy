@@ -17,6 +17,7 @@ import {
   Monitor,
   LogOut,
   Check,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -59,6 +60,7 @@ export function useAccountActions(): {
         key: "account",
         label: t("account"),
         items: [
+          { key: "m-trash", label: t("trash"), icon: Trash2, href: "/trash" },
           { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
           { key: "m-billing", label: t("billing"), icon: CreditCard, href: "/billing" },
           { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
@@ -88,6 +90,13 @@ export function useAccountActions(): {
     ];
 
     const commandItems: PaletteItem[] = [
+      {
+        key: "cmd-trash",
+        label: t("trash"),
+        icon: Trash2,
+        keywords: ["trash", "corbeille", "deleted", "supprimé", "supprime", "restore", "restaurer"],
+        onSelect: () => router.push("/trash"),
+      },
       {
         key: "cmd-stats",
         label: t("statistics"),

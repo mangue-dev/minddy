@@ -49,6 +49,7 @@ export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackL
   const { data } = await service
     .from("feedback_posts")
     .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
+    .is("deleted_at", null)
     .eq("project_id", projectId)
     .is("merged_into_id", null)
     .order("vote_count", { ascending: false })
@@ -79,6 +80,7 @@ async function fetchTitles(postIds: string[]): Promise<Map<string, string>> {
   const { data } = await service
     .from("feedback_posts")
     .select("id, title")
+    .is("deleted_at", null)
     .in("id", postIds);
   return new Map((data ?? []).map((p) => [p.id as string, p.title as string]));
 }
@@ -110,6 +112,7 @@ export async function getTeamFeedbackDetail(
   const { data } = await service
     .from("feedback_posts")
     .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
+    .is("deleted_at", null)
     .eq("id", postId)
     .eq("project_id", projectId)
     .maybeSingle();
@@ -124,6 +127,7 @@ export async function getTeamFeedbackDetail(
     service
       .from("feedback_posts")
       .select("id, title")
+      .is("deleted_at", null)
       .eq("merged_into_id", postId)
       .order("created_at", { ascending: true }),
     service
@@ -138,6 +142,7 @@ export async function getTeamFeedbackDetail(
       ? service
           .from("issues")
           .select("id, number, status")
+          .is("deleted_at", null)
           .eq("id", row.issue_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),

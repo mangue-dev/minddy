@@ -160,7 +160,8 @@ async function reconcileCycles({
     const { data: cycleIssues } = await service
       .from("issues")
       .select("effort, status")
-      .eq("cycle_id", cycle.id);
+      .eq("cycle_id", cycle.id)
+      .is("deleted_at", null);
     const completed = cycleCompletedPoints(
       (cycleIssues ?? []) as { effort: RecoIssue["effort"]; status: IssueStatus }[]
     );
@@ -230,7 +231,8 @@ async function reconcileCycles({
         .from("issues")
         .update({ cycle_id: current.id })
         .in("cycle_id", pastIds)
-        .in("status", CYCLE_OPEN_STATUSES as string[]);
+        .in("status", CYCLE_OPEN_STATUSES as string[])
+        .is("deleted_at", null);
     }
 
     // 4. Re-align current + future snapshots whenever the freshly computed
@@ -303,8 +305,13 @@ export async function fillCycleForUser({
       .eq("assignee_id", userId)
       .is("cycle_id", null)
       .in("status", CYCLE_OPEN_STATUSES as string[])
-      .is("projects.deleted_at", null),
-    service.from("issues").select("effort, status").eq("cycle_id", cycle.id),
+      .is("projects.deleted_at", null)
+      .is("deleted_at", null),
+    service
+      .from("issues")
+      .select("effort, status")
+      .eq("cycle_id", cycle.id)
+      .is("deleted_at", null),
   ]);
 
   const candidates: RecoIssue[] = (candidateRows ?? []).map((row) => ({
@@ -338,10 +345,13 @@ export async function fillCycleForUser({
     (id) => !statusById.has(id)
   );
   if (blockerIds.length > 0) {
+    // Un bloqueur corbeillé ne bloque plus : absent de `statusById`, il est lu
+    // comme « pas bloquant » par isBlockedIn (lib/cycle.ts), ce qu'on veut.
     const { data: blockerRows } = await service
       .from("issues")
       .select("id, status")
-      .in("id", blockerIds);
+      .in("id", blockerIds)
+      .is("deleted_at", null);
     for (const row of blockerRows ?? []) {
       statusById.set(row.id as string, row.status as IssueStatus);
     }
@@ -368,6 +378,7 @@ export async function fillCycleForUser({
     .in("id", picked)
     .is("cycle_id", null)
     .eq("assignee_id", userId)
+    .is("deleted_at", null)
     .select("id, effort, status");
   const pickedIds = (updated ?? []).map((r) => r.id as string);
 
@@ -459,6 +470,7 @@ export async function getCycleOverview({
     .from("issues")
     .select("id, project_id, number, title, status, priority, effort, projects(key)")
     .eq("cycle_id", cycle.id)
+    .is("deleted_at", null)
     .order("number", { ascending: true });
   const issues: CycleIssueSummary[] = (issueRows ?? []).map((row) => ({
     id: row.id as string,
@@ -487,7 +499,8 @@ export async function getCycleOverview({
     .eq("assignee_id", userId)
     .is("cycle_id", null)
     .in("status", CYCLE_OPEN_STATUSES as string[])
-    .is("projects.deleted_at", null);
+    .is("projects.deleted_at", null)
+    .is("deleted_at", null);
   const pool = (poolRows ?? []).map((row) => ({
     id: row.id as string,
     project_id: row.project_id as string,
@@ -584,6 +597,7 @@ export async function runCycleCapture(params: CycleCaptureParams): Promise<void>
     .from("issues")
     .select("id, assignee_id, cycle_id, status")
     .eq("id", params.issueId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!issue || issue.cycle_id !== null) return;
   if (issue.assignee_id !== params.userId) return;
@@ -605,6 +619,7 @@ export async function runCycleCapture(params: CycleCaptureParams): Promise<void>
     .update({ cycle_id: current.id })
     .eq("id", params.issueId)
     .is("cycle_id", null)
+    .is("deleted_at", null)
     .select("id")
     .maybeSingle();
   if (!claimed) return;
@@ -663,6 +678,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
     .from("issues")
     .select("id, cycle_id, status")
     .eq("id", params.blockedId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!blocked?.cycle_id) return;
 
@@ -685,6 +701,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
     .from("issues")
     .select("id, cycle_id, status, assignee_id, project_id")
     .eq("id", params.blockerId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!blocker || blocker.cycle_id !== null) return;
   if (!CYCLE_OPEN_STATUSES.includes(blocker.status as IssueStatus)) return;
@@ -697,6 +714,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
     .update({ cycle_id: cycle.id, assignee_id: cycle.user_id })
     .eq("id", params.blockerId)
     .is("cycle_id", null)
+    .is("deleted_at", null)
     .select("id")
     .maybeSingle();
   if (!claimed) return;
@@ -730,7 +748,8 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
   const { data: cycleIssueRows } = await service
     .from("issues")
     .select("id, project_id, title, status, priority, effort, issue_categories(category_id)")
-    .eq("cycle_id", cycle.id);
+    .eq("cycle_id", cycle.id)
+    .is("deleted_at", null);
   const cycleIssues: RecoIssue[] = (cycleIssueRows ?? []).map((row) => ({
     id: row.id as string,
     project_id: row.project_id as string,

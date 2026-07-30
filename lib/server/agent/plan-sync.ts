@@ -32,6 +32,7 @@ export async function syncIssuePlanStates(
       const { data } = await service
         .from("issues")
         .select("plan")
+        .is("deleted_at", null)
         .eq("id", issueId)
         .maybeSingle();
 
@@ -58,6 +59,7 @@ export async function syncIssuePlanStates(
       const { data: updated } = await service
         .from("issues")
         .update({ plan: next })
+        .is("deleted_at", null)
         .eq("id", issueId)
         .eq("plan", plan)
         .select("id");

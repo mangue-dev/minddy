@@ -862,6 +862,7 @@ async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueCo
     service
       .from("issues")
       .select("number, title, description, plan")
+      .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle(),
     service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),

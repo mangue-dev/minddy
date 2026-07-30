@@ -329,6 +329,11 @@ export interface AnalyticsEventProps {
   cheatsheet_opened: NoProps;
   undo_triggered: { action: string };
   statistics_viewed: { range: string };
+  // Corbeille (MIN-133) — `item_type` ∈ issue | project | objective | feedback.
+  trash_viewed: { items: number };
+  trash_item_restored: { item_type: string };
+  trash_item_purged: { item_type: string };
+  trash_emptied: NoProps;
   home_viewed: { has_projects: boolean; onboarding_visible: boolean };
   home_quick_action_clicked: { action: string };
   objective_created: NoProps;
@@ -570,6 +575,10 @@ const EVENT_NAMES = [
   "cheatsheet_opened",
   "undo_triggered",
   "statistics_viewed",
+  "trash_viewed",
+  "trash_item_restored",
+  "trash_item_purged",
+  "trash_emptied",
   "home_viewed",
   "home_quick_action_clicked",
   "objective_created",

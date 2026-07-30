@@ -253,6 +253,7 @@ export async function getFeedbackPost(postId: string): Promise<FeedbackPostRow |
   const { data } = await service
     .from("feedback_posts")
     .select(FEEDBACK_POST_SELECT)
+    .is("deleted_at", null)
     .eq("id", postId)
     .maybeSingle();
   return (data as FeedbackPostRow | null) ?? null;
@@ -292,6 +293,7 @@ export async function updateFeedbackPostFields(params: {
   const { data: before } = await service
     .from("feedback_posts")
     .select(FEEDBACK_POST_SELECT)
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .maybeSingle();
   if (!before) return { ok: false, status: 404, errorKey: "feedbackNotFound" };
@@ -349,6 +351,7 @@ export async function updateFeedbackPostFields(params: {
   const { data, error } = await service
     .from("feedback_posts")
     .update(updates)
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .select(FEEDBACK_POST_SELECT)
     .maybeSingle();

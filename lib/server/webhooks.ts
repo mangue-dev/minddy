@@ -144,6 +144,7 @@ export function dispatchWebhooksForEvents(
       const { data: issues } = await service
         .from("issues")
         .select("id, project_id, number, title, status, priority, effort, integration_id")
+        .is("deleted_at", null)
         .in("id", issueIds);
       if (!issues?.length) return;
       const issueById = new Map(issues.map((i) => [i.id as string, i]));

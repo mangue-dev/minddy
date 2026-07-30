@@ -41,6 +41,7 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   SettingsShell,
   SettingsSection,
@@ -229,7 +230,7 @@ export default function ProjectSettingsPage() {
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 />
-            {tc("delete")}
+            {tc("moveToTrash")}
           </Button>
         </div>
       </SettingsSection>
@@ -384,8 +385,8 @@ export default function ProjectSettingsPage() {
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("deleteProjectTitle", { name: project.name })}
-        description={t("deleteProjectDescription")}
-        confirmLabel={t("deleteProjectLabel")}
+        description={t("deleteProjectDescription", { days: TRASH_RETENTION_DAYS })}
+        confirmLabel={tc("moveToTrash")}
         onConfirm={handleDelete}
       />
     </>

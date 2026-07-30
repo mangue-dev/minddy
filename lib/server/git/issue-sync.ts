@@ -151,6 +151,7 @@ export async function applyRemoteIssue(
   const { data: existing, error } = await service
     .from("issues")
     .select("id, status")
+    .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", remote.provider)
     .eq("remote_repo_id", remote.repoId)
@@ -239,6 +240,7 @@ async function loadImportedNumbers(
   const { data, error } = await service
     .from("issues")
     .select("remote_number")
+    .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", target.provider)
     .eq("remote_repo_id", target.externalRepoId);

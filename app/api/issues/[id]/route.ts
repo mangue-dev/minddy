@@ -3,8 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { updateIssueFields } from "@/lib/server/update-issue";
-import { removeStorageObjects } from "@/lib/server/attachments";
-import { getServiceClient } from "@/lib/supabase-service";
+import { softDeleteItem } from "@/lib/server/trash";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -58,37 +57,24 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.issue);
 }
 
-/** DELETE /api/issues/[id] — hard delete (RLS enforces project access). */
+/**
+ * DELETE /api/issues/[id] — passage en corbeille (MIN-133).
+ *
+ * Rien n'est détruit : la ligne est marquée et sort des lectures par la policy
+ * `issues_select`. Ses commentaires, pièces jointes, sous-tickets et relations
+ * restent en place — c'est ce qui permet de la restaurer telle quelle. Le vrai
+ * `delete`, celui qui cascade et efface les objets du storage, n'arrive qu'à la
+ * purge (lib/server/trash.ts), manuelle ou au bout de 30 jours.
+ */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  // Snapshot the storage paths first — the rows cascade with the issue and the
-  // objects would otherwise be orphaned. Only removed once the delete succeeds.
-  const service = getServiceClient();
-  const { data: attachmentRows } = await service
-    .from("attachments")
-    .select("storage_path")
-    .eq("issue_id", id);
-
-  const { data, error } = await auth.supabase
-    .from("issues")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/issues/:id] delete failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  const result = await softDeleteItem("issue", id, auth.user.id);
+  if (!result.ok) {
+    return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
-  if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
-
-  await removeStorageObjects(
-    service,
-    (attachmentRows ?? []).map((a) => a.storage_path as string)
-  );
   return NextResponse.json({ ok: true });
 }

@@ -59,12 +59,15 @@ export async function GET(request: NextRequest) {
   ] = await Promise.all([
     issueIds.length
       ? service.from("issues").select("id, number, title").in("id", issueIds)
+      .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
     objectiveIds.length
       ? service.from("objectives").select("id, name").in("id", objectiveIds)
+      .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     feedbackPostIds.length
       ? service.from("feedback_posts").select("id, title").in("id", feedbackPostIds)
+      .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)

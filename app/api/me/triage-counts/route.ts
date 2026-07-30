@@ -41,10 +41,11 @@ export async function GET(request: NextRequest) {
   }
 
   const [triageRes, feedbackRes] = await Promise.all([
-    auth.supabase.from("issues").select("project_id").eq("status", "triage"),
+    auth.supabase.from("issues").select("project_id").eq("status", "triage").is("deleted_at", null),
     getServiceClient()
       .from("feedback_posts")
       .select("project_id")
+      .is("deleted_at", null)
       .in("project_id", projectIds)
       .is("merged_into_id", null)
       .in("status", ["open", "planned"]),

@@ -30,6 +30,7 @@ import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { ObjectiveSidePanel } from "@/components/objective-side-panel";
 import type { Objective } from "@/lib/types";
@@ -207,7 +208,7 @@ function ObjectivesInner() {
                           onSelect={() => setToDelete(obj)}
                         >
                           <Trash2 />
-                          {tCommon("delete")}
+                          {tCommon("moveToTrash")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -249,8 +250,9 @@ function ObjectivesInner() {
         title={toDelete ? t("deleteConfirmTitle", { name: toDelete.name }) : ""}
         description={t("deleteConfirmDescription", {
           issues: tIssue("entityPlural").toLowerCase(),
+          days: TRASH_RETENTION_DAYS,
         })}
-        confirmLabel={tCommon("delete")}
+        confirmLabel={tCommon("moveToTrash")}
         onConfirm={async () => {
           if (!toDelete) return;
           try {

@@ -148,6 +148,7 @@ function MobileBreadcrumb({
   isInbox,
   isAccountSettings,
   isStatistics,
+  isTrash,
   isBilling,
   isAdmin,
   isAllGlobal,
@@ -160,6 +161,7 @@ function MobileBreadcrumb({
   isInbox: boolean;
   isAccountSettings: boolean;
   isStatistics: boolean;
+  isTrash: boolean;
   isBilling: boolean;
   isAdmin: boolean;
   isAllGlobal: boolean;
@@ -188,6 +190,10 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("statistics")}</CurrentLabel>;
+  } else if (isTrash) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("trash")}</CurrentLabel>;
   } else if (isBilling) {
     backHref = "/home";
     backIcon = homeIcon;
@@ -273,6 +279,7 @@ export function AppBreadcrumb() {
   const isInbox = pathname.startsWith("/inbox");
   const isAccountSettings = pathname.startsWith("/settings");
   const isStatistics = pathname.startsWith("/statistics");
+  const isTrash = pathname.startsWith("/trash");
   const isBilling = pathname.startsWith("/billing");
   const isAdmin = pathname.startsWith("/admin");
   const isAllGlobal = pathname === "/all";
@@ -306,6 +313,12 @@ export function AppBreadcrumb() {
         <BreadcrumbLevel show={isStatistics} levelKey="statistics">
           <span className="text-sm font-medium text-foreground">
             {t("statistics")}
+          </span>
+        </BreadcrumbLevel>
+
+        <BreadcrumbLevel show={isTrash} levelKey="trash">
+          <span className="text-sm font-medium text-foreground">
+            {t("trash")}
           </span>
         </BreadcrumbLevel>
 
@@ -361,6 +374,7 @@ export function AppBreadcrumb() {
         isInbox={isInbox}
         isAccountSettings={isAccountSettings}
         isStatistics={isStatistics}
+        isTrash={isTrash}
         isBilling={isBilling}
         isAdmin={isAdmin}
         isAllGlobal={isAllGlobal}

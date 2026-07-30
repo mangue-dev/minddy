@@ -102,6 +102,7 @@ export async function listPublicCategories(projectId: string): Promise<PublicCat
   const { data: posts } = await service
     .from("feedback_posts")
     .select("id")
+    .is("deleted_at", null)
     .eq("project_id", projectId)
     .eq("is_public", true)
     .eq("review_state", "published")
@@ -152,6 +153,7 @@ export async function listPublicPosts(params: {
   let query = service
     .from("feedback_posts")
     .select(PUBLIC_POST_SELECT)
+    .is("deleted_at", null)
     .eq("project_id", params.projectId)
     .is("merged_into_id", null)
     // Les retours privés remontent à l'équipe mais ne sont jamais listés ici.
@@ -209,6 +211,7 @@ export async function getPublicPostDetail(params: {
   const { data } = await service
     .from("feedback_posts")
     .select(PUBLIC_POST_SELECT)
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .eq("project_id", params.projectId)
     .maybeSingle();
@@ -233,6 +236,7 @@ export async function getPublicPostDetail(params: {
     service
       .from("feedback_posts")
       .select("title")
+      .is("deleted_at", null)
       .eq("merged_into_id", row.id)
       .order("created_at", { ascending: true }),
     fetchPostCategories(params.projectId, [row.id], params.includeCategories ?? false),
@@ -268,6 +272,7 @@ export const getPublicPostMeta = cache(
     const { data } = await service
       .from("feedback_posts")
       .select("title, body, is_public, review_state, merged_into_id")
+      .is("deleted_at", null)
       .eq("id", postId)
       .eq("project_id", projectId)
       .maybeSingle();
@@ -300,6 +305,7 @@ export async function listMyFeedback(params: {
     service
       .from("feedback_posts")
       .select(PUBLIC_POST_SELECT)
+      .is("deleted_at", null)
       .eq("project_id", params.projectId)
       .eq("author_id", params.viewerId)
       .order("created_at", { ascending: false }),
@@ -325,6 +331,7 @@ export async function listMyFeedback(params: {
     const { data } = await service
       .from("feedback_posts")
       .select(PUBLIC_POST_SELECT)
+      .is("deleted_at", null)
       .in("id", mergedTargets);
     for (const row of (data ?? []) as unknown as PostWithAuthor[]) {
       canonicalById.set(row.id, row);

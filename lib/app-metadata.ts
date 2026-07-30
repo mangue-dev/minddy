@@ -29,6 +29,7 @@ export type MetaPageKey =
   | "agents"
   | "pullRequests"
   | "statistics"
+  | "trash"
   | "billing"
   | "settings"
   | "admin"

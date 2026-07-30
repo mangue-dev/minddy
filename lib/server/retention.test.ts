@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { RETENTION_DAYS, cutoff } from "./retention";
+import { TRASH_RETENTION_DAYS } from "../trash-retention";
 
 /**
  * MIN-119 — les durées de conservation.
@@ -37,8 +38,16 @@ describe("RETENTION_DAYS", () => {
     ["pendingInvitations", 90, "invitations en attente : 90 jours"],
     ["agentRunTrace", 30, "traces des runs d'agent : 30 jours après la fin"],
     ["stripeWebhookPayload", 90, "charge utile des webhooks Stripe : 90 jours"],
+    ["trash", 30, "corbeille : 30 jours avant suppression définitive"],
   ] as const)("%s vaut %i jours — %s", (key, days, _promise) => {
     expect(RETENTION_DAYS[key]).toBe(days);
+  });
+
+  // La durée affichée sur chaque ligne de la corbeille et celle qu'applique le
+  // balayage nocturne sont la MÊME constante. Si les deux se remettaient à
+  // vivre séparément, l'écran promettrait un délai que le cron ne tiendrait pas.
+  it("la corbeille applique la durée que l'écran annonce", () => {
+    expect(RETENTION_DAYS.trash).toBe(TRASH_RETENTION_DAYS);
   });
 
   it("ne conserve rien indéfiniment ni rétroactivement", () => {

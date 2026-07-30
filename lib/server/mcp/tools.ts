@@ -290,7 +290,7 @@ async function withNames(
       service,
       rows.map((r) => r.assignee_id).filter((v): v is string => typeof v === "string")
     ),
-    service.from("objectives").select("id, name").eq("project_id", access.project.id),
+    service.from("objectives").select("id, name").eq("project_id", access.project.id).is("deleted_at", null),
     service.from("categories").select("id, name").eq("project_id", access.project.id),
   ]);
   const objectiveNames = new Map((objectives ?? []).map((o) => [o.id, o.name]));
@@ -440,6 +440,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const { count, error } = await service
         .from("issues")
         .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
         .eq("project_id", project.id)
         .not("status", "in", "(done,canceled,duplicate)");
       if (error) return fail("database_error", error.message);
@@ -752,11 +753,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
         service
           .from("objectives")
           .select("id, name, status, lead_user_id, target_date, color")
+          .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .order("created_at", { ascending: true }),
         service
           .from("issues")
           .select("objective_id, status, effort")
+          .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null),
         // Objective-level attachments (comment_id null) — metadata only; the
@@ -1103,6 +1106,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const { data: row, error } = await getServiceClient()
         .from("issues")
         .select("plan")
+        .is("deleted_at", null)
         .eq("id", ref.issue.id)
         .maybeSingle();
       if (error) return fail("database_error", error.message);
@@ -1523,6 +1527,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const { data: obj } = await getServiceClient()
         .from("objectives")
         .select("id")
+        .is("deleted_at", null)
         .eq("id", args.objective_id)
         .eq("project_id", scope.access.project.id)
         .maybeSingle();
@@ -2088,6 +2093,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         const { data: row } = await service
           .from("issues")
           .select("cycle_id")
+          .is("deleted_at", null)
           .eq("id", resolved.issue.id)
           .maybeSingle();
         if (!row || row.cycle_id !== ensured.current.id) {

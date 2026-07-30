@@ -86,6 +86,7 @@ export async function ensureIssueLimit(projectId: string): Promise<void> {
   const { count, error: countError } = await service
     .from("issues")
     .select("id", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("project_id", projectId);
   if (countError) throw new Error(countError.message);
   if ((count ?? 0) >= plan.maxIssuesPerProject) {

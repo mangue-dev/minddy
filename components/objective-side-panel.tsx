@@ -40,6 +40,7 @@ import {
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { Issue, Member, Objective, ObjectiveUpdateInput } from "@/lib/types";
 
 // Bare (borderless) value-style trigger — matches the issue panel's property rows.
@@ -255,7 +256,7 @@ export function ObjectiveSidePanel({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={tCommon("delete")}
+                aria-label={tCommon("moveToTrash")}
                 className="rounded-full text-destructive hover:text-destructive"
                 onClick={() => setConfirmDelete(true)}
               >
@@ -383,8 +384,9 @@ export function ObjectiveSidePanel({
         title={t("deleteConfirmTitle", { name: objective.name })}
         description={t("deleteConfirmDescription", {
           issues: tIssue("entityPlural").toLowerCase(),
+          days: TRASH_RETENTION_DAYS,
         })}
-        confirmLabel={tCommon("delete")}
+        confirmLabel={tCommon("moveToTrash")}
         onConfirm={handleDelete}
       />
     </>

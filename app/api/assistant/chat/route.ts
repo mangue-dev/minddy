@@ -272,6 +272,7 @@ export async function POST(request: NextRequest) {
     const { data: ctxIssue } = await supabase
       .from("issues")
       .select("id")
+      .is("deleted_at", null)
       .eq("id", pageContext.issueId)
       .maybeSingle();
     if (!ctxIssue) pageContext = null;

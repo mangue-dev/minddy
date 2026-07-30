@@ -28,6 +28,7 @@ export const PROTECTED_PREFIXES = [
   "/agents",
   "/pull-requests",
   "/statistics",
+  "/trash",
   // `/my` est redirigée vers `/all?view=my` par next.config, mais la garder ici
   // évite qu'un jour de désactivation de la redirection l'expose.
   "/my",

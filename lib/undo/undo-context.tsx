@@ -36,6 +36,7 @@ import {
   updateIssueApi,
 } from "@/lib/issues-api";
 import { setIssueCategoriesApi } from "@/lib/categories-api";
+import { restoreTrashItemApi } from "@/lib/trash-api";
 import {
   addIssueRelationApi,
   removeIssueRelationApi,
@@ -343,13 +344,23 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           break;
         case "delete":
           if (direction === "undo") {
-            await recreate(
-              entry.projectId,
-              entry.issueId,
-              entry.snapshot,
-              entry.childIds,
-              entry.relations
-            );
+            // Depuis MIN-133, supprimer met à la corbeille : annuler, c'est
+            // restaurer LA MÊME ligne — son numéro, ses commentaires, ses
+            // pièces jointes et son historique reviennent avec elle. La
+            // re-création d'avant en fabriquait une copie appauvrie ET laissait
+            // l'originale dans la corbeille, en double. Elle reste en secours
+            // pour la ligne déjà purgée à la main entre-temps (404).
+            try {
+              await restoreTrashItemApi("issue", resolveAliased(alias, entry.issueId));
+            } catch {
+              await recreate(
+                entry.projectId,
+                entry.issueId,
+                entry.snapshot,
+                entry.childIds,
+                entry.relations
+              );
+            }
           } else {
             await deleteIssueApi(resolveAliased(alias, entry.issueId));
           }

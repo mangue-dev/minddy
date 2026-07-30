@@ -168,6 +168,7 @@ export async function runCommentMention({
     const { data: issue } = await service
       .from("issues")
       .select("*, issue_categories(category_id)")
+      .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle();
     if (!issue) return;
@@ -416,6 +417,7 @@ export async function runObjectiveCommentMention({
     const { data: objective } = await service
       .from("objectives")
       .select("*")
+      .is("deleted_at", null)
       .eq("id", objectiveId)
       .maybeSingle();
     if (!objective) return;
@@ -475,6 +477,7 @@ export async function runObjectiveCommentMention({
         service
           .from("issues")
           .select("number, title, status")
+          .is("deleted_at", null)
           .eq("objective_id", objectiveId)
           .order("number", { ascending: true }),
       ]);
@@ -646,6 +649,7 @@ export async function runFeedbackCommentMention({
     const { data: post } = await service
       .from("feedback_posts")
       .select("id, project_id, title, body, status, vote_count, is_public, issue_id")
+      .is("deleted_at", null)
       .eq("id", postId)
       .maybeSingle();
     if (!post) return;
@@ -706,6 +710,7 @@ export async function runFeedbackCommentMention({
           ? service
               .from("issues")
               .select("number, title, status")
+              .is("deleted_at", null)
               .eq("id", post.issue_id as string)
               .maybeSingle()
           : Promise.resolve({ data: null }),

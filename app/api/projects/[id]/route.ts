@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { updateProjectSettings } from "@/lib/server/update-project";
+import { softDeleteItem } from "@/lib/server/trash";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -54,27 +55,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.project);
 }
 
-/** DELETE /api/projects/[id] — owner-only soft delete. */
+/**
+ * DELETE /api/projects/[id] — passage en corbeille, propriétaire seul (MIN-133).
+ * Ses tickets, objectifs et feedbacks ne bougent pas : ils redeviennent visibles
+ * tels quels quand le projet est restauré.
+ */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("projects")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/projects/:id] delete failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  if (!data) {
-    return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
+  const result = await softDeleteItem("project", id, auth.user.id);
+  if (!result.ok) {
+    return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
   return NextResponse.json({ ok: true });
 }

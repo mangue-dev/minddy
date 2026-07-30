@@ -209,6 +209,7 @@ export async function createIssueForProject({
     const { data: parent } = await service
       .from("issues")
       .select("id, project_id, parent_id, objective_id")
+      .is("deleted_at", null)
       .eq("id", input.parent_id)
       .maybeSingle();
     if (!parent || parent.project_id !== projectId) {

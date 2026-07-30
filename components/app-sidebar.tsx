@@ -38,6 +38,7 @@ import {
   ArrowUpRight,
   Shield,
   Newspaper,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
@@ -330,6 +331,16 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
               {t("accountSettings")}
             </Link>
           </DropdownMenuItem>
+          {/* Les statistiques ont quitté le pied de la barre pour ce menu
+              (MIN-133) : elles se consultent de temps en temps, alors que la
+              corbeille se cherche dans l'urgence de ce qu'on vient d'effacer —
+              c'est elle qui mérite d'être visible en permanence. */}
+          <DropdownMenuItem asChild>
+            <Link href="/statistics">
+              <BarChart3 />
+              {t("statistics")}
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/billing">
               <CreditCard />
@@ -427,11 +438,11 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   return (
     <div className="flex flex-col gap-0.5">
       <FooterRow
-        icon={BarChart3}
-        label={t("statistics")}
+        icon={Trash2}
+        label={t("trash")}
         collapsed={collapsed}
-        active={pathname.startsWith("/statistics")}
-        onClick={() => router.push("/statistics")}
+        active={pathname.startsWith("/trash")}
+        onClick={() => router.push("/trash")}
       />
       <FooterRow
         icon={Megaphone}

@@ -156,6 +156,7 @@ export async function getUserStats(
     supabase
       .from("issues")
       .select("status")
+      .is("deleted_at", null)
       .eq("assignee_id", userId)
       .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
     // Stats de cycle (MIN-58) : cadence, tickets/cycle, durée par effort.

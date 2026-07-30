@@ -1,6 +1,9 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { attachmentPaths, type TrashType } from "@/lib/server/trash";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import { removeStorageObjects } from "@/lib/server/attachments";
 
 /**
  * Application des durées de conservation (MIN-119, RGPD art. 5.1.e).
@@ -11,11 +14,13 @@ import { getServiceClient } from "@/lib/supabase-service";
  * section « Durées de conservation » de la politique : les deux doivent dire la
  * même chose, et c'est ici que la valeur fait foi.
  *
- * Ce qui est purgé n'est JAMAIS du contenu créé par l'utilisateur : ses tickets,
- * commentaires, projets et conversations restent jusqu'à ce que lui-même ou la
- * suppression de son compte les efface. Ne partent d'eux-mêmes que les données
- * *techniques* — traces d'exécution, jetons expirés, accusés de lecture — dont
- * la conservation n'a plus d'utilité passé un délai.
+ * Le contenu créé par l'utilisateur ne part de lui-même qu'à UNE condition :
+ * l'avoir supprimé. Un ticket, un projet, un objectif ou un feedback mis à la
+ * corbeille y reste 30 jours, puis le balayage l'efface pour de bon (MIN-133) —
+ * c'est le seul cas, et la corbeille l'annonce en clair, jour par jour. Tout le
+ * reste de ce qui part ici est *technique* : traces d'exécution, jetons expirés,
+ * accusés de lecture, dont la conservation n'a plus d'utilité passé un délai.
+ * Ce à quoi l'utilisateur n'a pas touché, lui, ne bouge jamais.
  *
  * Appelé une fois par nuit par `app/api/cron/data-retention/route.ts`.
  * Les durées correspondantes sont documentées dans
@@ -44,6 +49,14 @@ export const RETENTION_DAYS = {
    * rejeu d'un événement. Seul le `payload` part.
    */
   stripeWebhookPayload: 90,
+  /**
+   * Corbeille (MIN-133). Le seul contenu utilisateur que ce balayage détruit —
+   * et seulement parce que l'utilisateur l'a déjà supprimé une fois. La durée
+   * est celle affichée sur chaque ligne de la corbeille : elle vit dans
+   * `lib/server/trash.ts`, d'où elle est réexportée ici pour que le balayage et
+   * l'écran ne puissent pas diverger.
+   */
+  trash: TRASH_RETENTION_DAYS,
 } as const;
 
 export type RetentionKey = keyof typeof RETENTION_DAYS;
@@ -183,6 +196,54 @@ async function stripPayloads(service: Service, now: Date) {
   return count ?? 0;
 }
 
+/** Les quatre tables de la corbeille, et le type qui leur correspond. */
+const TRASH_TABLES: { table: string; type: TrashType }[] = [
+  { table: "issues", type: "issue" },
+  { table: "objectives", type: "objective" },
+  { table: "feedback_posts", type: "feedback" },
+  { table: "projects", type: "project" },
+];
+
+/**
+ * Corbeille : les éléments supprimés il y a plus de `trash` jours.
+ *
+ * L'ordre compte. Les projets passent en DERNIER : supprimer un projet cascade
+ * sur ses tickets, ses objectifs et ses feedbacks, et purger un projet d'abord
+ * emporterait des lignes qu'on n'aurait pas comptées — le total rapporté au cron
+ * mentirait. Les objets du storage ne cascadent pas du tout : leurs chemins sont
+ * relevés AVANT le delete, puis effacés une fois les lignes parties.
+ *
+ * Lot borné par table : le balayage du lendemain reprend le reste, là où une
+ * purge illimitée sur un arriéré dépasserait la durée de la fonction.
+ */
+const TRASH_BATCH = 500;
+
+async function purgeTrash(service: Service, now: Date) {
+  const expired = cutoff(RETENTION_DAYS.trash, now);
+  let deleted = 0;
+
+  for (const { table, type } of TRASH_TABLES) {
+    const { data, error } = await service
+      .from(table)
+      .select("id")
+      .not("deleted_at", "is", null)
+      .lt("deleted_at", expired)
+      .limit(TRASH_BATCH);
+    if (error) throw error;
+
+    const ids = (data ?? []).map((r) => r.id as string);
+    if (ids.length === 0) continue;
+
+    const paths = await attachmentPaths(service, type, ids);
+    deleted += counted(
+      await service.from(table).delete({ count: "exact" }).in("id", ids)
+    );
+    await removeStorageObjects(service, paths);
+  }
+
+  return deleted;
+}
+
 /** Exécute toutes les purges et rend le détail par étape. */
 export async function runRetentionSweep(now: Date = new Date()): Promise<RetentionSweepResult> {
   const service = getServiceClient();
@@ -194,6 +255,7 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
     await step("oauth_authorization_codes", () => purgeExpiredOauthCodes(service, now)),
     await step("feedback_auth", () => purgeExpiredFeedbackAuth(service, now)),
     await step("stripe_webhook_payloads", () => stripPayloads(service, now)),
+    await step("trash", () => purgeTrash(service, now)),
   ];
 
   return {

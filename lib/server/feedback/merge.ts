@@ -24,6 +24,7 @@ async function recordMergeActivity(
   const { data: dup } = await service
     .from("feedback_posts")
     .select("title")
+    .is("deleted_at", null)
     .eq("id", ev.dup_id as string)
     .maybeSingle();
   await emitFeedbackMerged(service, {
@@ -97,6 +98,7 @@ export async function rejectMergeSuggestion(params: {
   const { data: post } = await service
     .from("feedback_posts")
     .select("id, project_id, suggested_merge_into_id")
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .maybeSingle();
   if (!post?.suggested_merge_into_id) return false;
@@ -115,6 +117,7 @@ export async function rejectMergeSuggestion(params: {
   const { error } = await service
     .from("feedback_posts")
     .update({ suggested_merge_into_id: null, suggested_confidence: null })
+    .is("deleted_at", null)
     .eq("id", params.postId);
   return !error;
 }

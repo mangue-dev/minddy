@@ -15,6 +15,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { count } = await service
     .from("feedback_posts")
     .select("id", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("project_id", id)
     .is("merged_into_id", null)
     .in("status", ["open", "planned"]);

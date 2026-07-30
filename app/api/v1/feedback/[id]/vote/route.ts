@@ -64,6 +64,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { data: post } = await service
     .from("feedback_posts")
     .select("id, project_id, merged_into_id, vote_count")
+    .is("deleted_at", null)
     .eq("id", id)
     .maybeSingle();
   if (!post || post.project_id !== auth.project.id) {

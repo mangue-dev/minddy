@@ -87,6 +87,7 @@ import type {
   TeamFeedbackListItem,
 } from "@/lib/server/feedback/team-queries";
 import { trackEvent } from "@/lib/analytics";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 
 /**
  * Onglet équipe du feedback (MIN-37) — deux panneaux façon triage : liste triée
@@ -1101,8 +1102,9 @@ function FeedbackDetail({
       <ConfirmDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={post.title}
-        description={t("deletePostConfirm")}
+        title={t("deletePostTitle", { title: post.title })}
+        description={t("deletePostConfirm", { days: TRASH_RETENTION_DAYS })}
+        confirmLabel={t("deletePost")}
         onConfirm={async () => {
           await api(`/api/projects/${projectId}/feedback/${postId}`, { method: "DELETE" });
           setDeleteOpen(false);

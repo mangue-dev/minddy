@@ -60,9 +60,12 @@ function one(table: string, result: QueryResult): Row | null {
   return (unwrap(table, result) as Row | null) ?? null;
 }
 
+// `deleted_at` en fait partie : l'export donne TOUT ce que le compte détient,
+// corbeille comprise (MIN-133) — la filtrer amputerait un export RGPD de données
+// encore bien présentes. La colonne dit lesquelles étaient en attente de purge.
 const ISSUE_COLUMNS =
   "id, project_id, number, title, description, plan, status, priority, effort, " +
-  "assignee_id, due_date, created_by, created_at, updated_at, completed_at";
+  "assignee_id, due_date, created_by, created_at, updated_at, completed_at, deleted_at";
 
 export interface AccountExport {
   format_version: number;

@@ -172,6 +172,8 @@ export async function updateIssueFields({
   const { data: before } = await service
     .from("issues")
     .select("*, projects(name, owner_id, deleted_at)")
+    // Un ticket en corbeille ne s'édite pas : il se restaure d'abord (MIN-133).
+    .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (!before) {
@@ -230,6 +232,7 @@ export async function updateIssueFields({
   const { data, error } = await service
     .from("issues")
     .update(updates)
+    .is("deleted_at", null)
     .eq("id", issueId)
     .select(ISSUE_SELECT)
     .maybeSingle();

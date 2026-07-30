@@ -114,6 +114,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     const { data: issue } = await service
       .from("issues")
       .select("id, project_id")
+      .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle();
     if (!issue) return { ok: false, error: "issueNotFound" };

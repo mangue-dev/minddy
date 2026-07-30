@@ -56,6 +56,7 @@ import {
   type AgentComposeIntent,
 } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import {
   agentLaunchPromptVariant,
@@ -691,7 +692,7 @@ export function IssueSidePanel({
     ...buildCycleActions(issue),
     {
       id: "delete",
-      label: tCommon("delete"),
+      label: tCommon("moveToTrash"),
       icon: <Trash2 className="size-4" />,
       separatorBefore: true,
       variant: "destructive",
@@ -1060,8 +1061,8 @@ export function IssueSidePanel({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("deleteDialogTitle")}
-        description={t("deleteDialogDescription")}
-        confirmLabel={tCommon("delete")}
+        description={t("deleteDialogDescription", { days: TRASH_RETENTION_DAYS })}
+        confirmLabel={tCommon("moveToTrash")}
         onConfirm={handleDelete}
       />
     </>

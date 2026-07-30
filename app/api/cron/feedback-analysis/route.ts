@@ -71,6 +71,7 @@ async function purgeJunk(): Promise<number> {
   const { data: candidates, error: pickError } = await service
     .from("feedback_posts")
     .select("id")
+    .is("deleted_at", null)
     .eq("review_state", "rejected")
     .is("issue_id", null)
     .is("merged_into_id", null)
@@ -90,6 +91,7 @@ async function purgeJunk(): Promise<number> {
   const { data: absorbers } = await service
     .from("feedback_posts")
     .select("merged_into_id")
+    .is("deleted_at", null)
     .in("merged_into_id", ids);
   const referenced = new Set(
     (absorbers ?? []).map((p) => p.merged_into_id as string)
@@ -100,6 +102,7 @@ async function purgeJunk(): Promise<number> {
   const { data, error } = await service
     .from("feedback_posts")
     .delete()
+    .is("deleted_at", null)
     .in("id", deletable)
     .select("id");
   if (error) {

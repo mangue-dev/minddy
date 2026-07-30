@@ -75,6 +75,7 @@ export async function assertIssueInProject(
   const { data } = await db
     .from("issues")
     .select("id")
+    .is("deleted_at", null)
     .eq("id", issueId)
     .eq("project_id", projectId)
     .maybeSingle();
@@ -125,7 +126,7 @@ export async function resolveIssueRef(
     };
   }
 
-  let query = db.from("issues").select("id, number").eq("project_id", scope.projectId);
+  let query = db.from("issues").select("id, number").eq("project_id", scope.projectId).is("deleted_at", null);
 
   const identifierMatch = raw.match(IDENTIFIER_RE);
   if (UUID_RE.test(raw)) {
@@ -187,6 +188,7 @@ export async function listIssues(
   let query = ctx.db
     .from("issues")
     .select(columns)
+    .is("deleted_at", null)
     .eq("project_id", ctx.projectId)
     .order("updated_at", { ascending: false })
     // Une ligne de plus que demandé pour savoir s'il en reste (has_more).
@@ -266,6 +268,7 @@ export async function searchIssues(
     const { data } = await ctx.db
       .from("issues")
       .select(COMPACT_ISSUE_COLUMNS)
+      .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .eq("number", number)
       .maybeSingle();
@@ -280,6 +283,7 @@ export async function searchIssues(
   const { data, error } = await ctx.db
     .from("issues")
     .select(COMPACT_ISSUE_COLUMNS)
+    .is("deleted_at", null)
     .eq("project_id", ctx.projectId)
     .or(`title.ilike.${pattern},description.ilike.${pattern}`)
     .order("updated_at", { ascending: false })
@@ -308,6 +312,7 @@ export async function getIssue(
   let issueQuery = ctx.db
     .from("issues")
     .select("*, issue_categories(category_id)")
+    .is("deleted_at", null)
     .eq("project_id", ctx.projectId);
   if (typeof args.issue_id === "string") {
     issueQuery = issueQuery.eq("id", args.issue_id);
@@ -332,6 +337,7 @@ export async function getIssue(
       ctx.db
         .from("issues")
         .select("id, number, title, status")
+        .is("deleted_at", null)
         .eq("parent_id", issue.id)
         .order("number", { ascending: true }),
       // Attachment metadata (MIN-24): comment_id null = on the issue itself.
@@ -387,6 +393,7 @@ export async function getIssue(
     const { data } = await ctx.db
       .from("issues")
       .select("id, number, title")
+      .is("deleted_at", null)
       .eq("id", issue.duplicate_of_id)
       .maybeSingle();
     if (data) {
@@ -412,6 +419,7 @@ export async function getIssue(
     ? await ctx.db
         .from("issues")
         .select("id, number, title, status")
+        .is("deleted_at", null)
         .in("id", otherIds)
     : { data: [] as Array<Record<string, unknown>> };
   const relatedMap = new Map(

@@ -13,6 +13,7 @@ export async function votePost(params: { postId: string; userId: string }): Prom
   const { data: post } = await service
     .from("feedback_posts")
     .select("id, merged_into_id")
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .maybeSingle();
   if (!post || post.merged_into_id !== null) return false;

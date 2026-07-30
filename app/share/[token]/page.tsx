@@ -105,6 +105,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
       service
         .from("issues")
         .select(ISSUE_SELECT)
+        .is("deleted_at", null)
         .eq("project_id", project.id)
         .order("position", { ascending: true })
         .order("number", { ascending: true }),
@@ -113,7 +114,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
         .select("id, source_id, target_id, type")
         .eq("project_id", project.id),
       service.from("categories").select("*").eq("project_id", project.id),
-      service.from("objectives").select("*").eq("project_id", project.id),
+      service.from("objectives").select("*").eq("project_id", project.id).is("deleted_at", null),
       service.from("project_members").select("user_id").eq("project_id", project.id),
     ]);
 

@@ -48,11 +48,13 @@ export async function syncFeedbackStatusForIssue(
   const { data: affected } = await service
     .from("feedback_posts")
     .select("id, status")
+    .is("deleted_at", null)
     .eq("issue_id", issueId)
     .neq("status", status);
   const { error } = await service
     .from("feedback_posts")
     .update({ status })
+    .is("deleted_at", null)
     .eq("issue_id", issueId);
   if (error) {
     console.error("[feedback-status-sync] update failed:", error.message);

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { updateObjective } from "@/lib/server/objectives";
+import { softDeleteItem } from "@/lib/server/trash";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -52,24 +53,24 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.objective);
 }
 
-/** DELETE /api/objectives/[id] — removes it; linked issues are detached (SET NULL). */
+/**
+ * DELETE /api/objectives/[id] — passage en corbeille (MIN-133).
+ *
+ * Les tickets liés ne sont PLUS détachés : `objective_id` reste, l'objectif
+ * disparaît simplement des lectures (policy `objectives_select`), et les cartes
+ * cessent d'afficher son nom faute de le trouver dans la liste. Restaurer le
+ * rend à ses tickets exactement comme il était — un détachement, lui, aurait
+ * été irréversible.
+ */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("objectives")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/objectives/:id] delete failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  const result = await softDeleteItem("objective", id, auth.user.id);
+  if (!result.ok) {
+    return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
-  if (!data) return NextResponse.json({ error: t("objectiveNotFound") }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

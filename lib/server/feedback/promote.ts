@@ -38,6 +38,7 @@ export async function promoteFeedbackPost(params: {
     .select(
       "id, project_id, title, body, vote_count, issue_id, merged_into_id, feedback_post_categories(category_id)"
     )
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .maybeSingle();
   // Un post mergé ou déjà promu ne se promeut pas (le canonique porte le lien).
@@ -83,6 +84,7 @@ export async function promoteFeedbackPost(params: {
   const { error } = await service
     .from("feedback_posts")
     .update({ issue_id: issueId, status: "planned" })
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .is("issue_id", null);
   if (error) {
@@ -118,6 +120,7 @@ export async function linkFeedbackIssue(params: {
   const { data: post } = await service
     .from("feedback_posts")
     .select("id, project_id, merged_into_id, issue_id")
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .maybeSingle();
   if (!post || post.merged_into_id !== null || post.issue_id !== null) {
@@ -127,6 +130,7 @@ export async function linkFeedbackIssue(params: {
   const { data: issue } = await service
     .from("issues")
     .select("id, status, project_id")
+    .is("deleted_at", null)
     .eq("id", params.issueId)
     .eq("project_id", post.project_id as string)
     .maybeSingle();
@@ -145,6 +149,7 @@ export async function linkFeedbackIssue(params: {
   const { error } = await service
     .from("feedback_posts")
     .update({ issue_id: issue.id as string, status })
+    .is("deleted_at", null)
     .eq("id", params.postId)
     .is("issue_id", null);
   if (error) {
@@ -171,11 +176,13 @@ export async function unlinkFeedbackIssue(
   const { data: before } = await service
     .from("feedback_posts")
     .select("issue_id")
+    .is("deleted_at", null)
     .eq("id", postId)
     .maybeSingle();
   const { error } = await service
     .from("feedback_posts")
     .update({ issue_id: null })
+    .is("deleted_at", null)
     .eq("id", postId);
   if (error) return false;
   await emitFeedbackUnlinked(service, {

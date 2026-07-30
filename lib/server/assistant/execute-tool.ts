@@ -250,6 +250,7 @@ async function readPlan(
   const { data, error } = await ctx.supabase
     .from("issues")
     .select("plan")
+    .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: error.message };
@@ -361,7 +362,7 @@ async function listGlobalFilterOptions(
 
   const [catsRes, objsRes] = await Promise.all([
     ctx.supabase.from("categories").select("id, name"),
-    ctx.supabase.from("objectives").select("id, name"),
+    ctx.supabase.from("objectives").select("id, name").is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
   if (objsRes.error) return toolError(objsRes.error.message);
@@ -594,6 +595,7 @@ export async function executeTool(
         const { data, error } = await ctx.supabase
           .from("objectives")
           .select("id, name, status, lead_user_id, target_date")
+          .is("deleted_at", null)
           .eq("project_id", projectId)
           .order("created_at", { ascending: true });
         if (error) return toolError(error.message);
@@ -811,6 +813,7 @@ export async function executeTool(
           const { data: row } = await ctx.supabase
             .from("issues")
             .select("number, title, plan, effort")
+            .is("deleted_at", null)
             .eq("id", issueId)
             .maybeSingle();
           if (!row) return toolError("Issue not found in this project.");
@@ -948,6 +951,7 @@ export async function executeTool(
         const { data: obj } = await ctx.supabase
           .from("objectives")
           .select("id")
+          .is("deleted_at", null)
           .eq("id", objectiveId)
           .eq("project_id", projectId)
           .maybeSingle();
@@ -985,6 +989,7 @@ export async function executeTool(
         const { data: issue } = await ctx.supabase
           .from("issues")
           .select("id, status")
+          .is("deleted_at", null)
           .eq("id", issueId)
           .eq("project_id", projectId)
           .maybeSingle();
@@ -1502,6 +1507,7 @@ async function executeCycleTool(
         const { data: row } = await ctx.service
           .from("issues")
           .select("cycle_id")
+          .is("deleted_at", null)
           .eq("id", issueId)
           .maybeSingle();
         if (!row || row.cycle_id !== current.id) {

@@ -183,6 +183,7 @@ async function publishWithoutReview(postId: string): Promise<void> {
   const { data: fresh } = await service
     .from("feedback_posts")
     .select("review_state")
+    .is("deleted_at", null)
     .eq("id", postId)
     .maybeSingle();
   if (!fresh) return;
@@ -197,6 +198,7 @@ async function publishWithoutReview(postId: string): Promise<void> {
   await service
     .from("feedback_posts")
     .update(updates)
+    .is("deleted_at", null)
     .eq("id", postId)
     .is("merged_into_id", null);
 }
@@ -314,6 +316,7 @@ async function bumpFailure(id: string, currentFailures: number): Promise<void> {
   await service
     .from("feedback_posts")
     .update({ analysis_failures: currentFailures + 1 })
+    .is("deleted_at", null)
     .eq("id", id);
 }
 
@@ -340,6 +343,7 @@ async function dropRejectedCandidates(candidates: MatchedPost[]): Promise<Matche
   const { data } = await service
     .from("feedback_posts")
     .select("id")
+    .is("deleted_at", null)
     .in("id", candidates.map((c) => c.id))
     .eq("review_state", "rejected");
   const rejected = new Set((data ?? []).map((r) => r.id as string));
@@ -373,6 +377,7 @@ async function reviewOne(
     await service
       .from("feedback_posts")
       .update({ embedding: toVectorLiteral(embedding) })
+      .is("deleted_at", null)
       .eq("id", post.id);
   }
 
@@ -413,6 +418,7 @@ async function reviewOne(
   const { data: fresh } = await service
     .from("feedback_posts")
     .select("id, merged_into_id, is_public, review_state, analyzed_at, classified_at")
+    .is("deleted_at", null)
     .eq("id", post.id)
     .maybeSingle();
   if (!fresh || fresh.merged_into_id !== null) return true;
@@ -463,6 +469,7 @@ async function reviewOne(
   const { error: updError } = await service
     .from("feedback_posts")
     .update(updates)
+    .is("deleted_at", null)
     .eq("id", post.id)
     .is("merged_into_id", null);
   if (updError) {
@@ -490,6 +497,7 @@ async function reviewOne(
           suggested_merge_into_id: decision.mergeTargetId,
           suggested_confidence: verdict.confidence,
         })
+        .is("deleted_at", null)
         .eq("id", post.id)
         .is("merged_into_id", null);
       report.posts_suggested += 1;

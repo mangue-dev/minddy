@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getServiceClient } from "@/lib/supabase-service";
+import { softDeleteItem } from "@/lib/server/trash";
 import {
   getProjectFeedbackPost,
   requireProjectMember,
@@ -72,11 +72,12 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("feedbackNotFound") }, { status: 404 });
   }
 
-  const service = getServiceClient();
-  const { error } = await service.from("feedback_posts").delete().eq("id", postId);
-  if (error) {
-    console.error("[feedback] delete failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  // Corbeille, pas destruction (MIN-133) : le post sort du board public et de la
+  // vue équipe par le filtre `deleted_at` des lectures feedback, mais ses votes,
+  // ses commentaires et son texte d'origine restent 30 jours récupérables.
+  const result = await softDeleteItem("feedback", postId, guard.userId);
+  if (!result.ok) {
+    return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
   return NextResponse.json({ ok: true });
 }

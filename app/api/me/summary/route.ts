@@ -80,6 +80,7 @@ async function loadNewFeedback(
   const { data, count, error } = await getServiceClient()
     .from("feedback_posts")
     .select(SUMMARY_FEEDBACK_COLUMNS, { count: "exact" })
+    .is("deleted_at", null)
     .in("project_id", projectIds)
     .eq("status", "open")
     .is("merged_into_id", null)
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
   // total — c'est tout l'intérêt par rapport au board, qui les comptait côté
   // client après avoir téléchargé chaque ticket.
   const countQuery = () =>
-    auth.supabase.from("issues").select("id", { count: "exact", head: true });
+    auth.supabase.from("issues").select("id", { count: "exact", head: true }).is("deleted_at", null);
 
   const [
     openRes,
@@ -170,6 +171,7 @@ export async function GET(request: NextRequest) {
         ? auth.supabase
             .from("issues")
             .select(SUMMARY_ISSUE_COLUMNS)
+            .is("deleted_at", null)
             .eq("cycle_id", currentCycleId)
         : Promise.resolve({ data: [], error: null }),
       // Échéances proches (MIN-96) : SQL préfiltre sur la fenêtre la plus large
@@ -179,6 +181,7 @@ export async function GET(request: NextRequest) {
       auth.supabase
         .from("issues")
         .select(SUMMARY_ISSUE_COLUMNS)
+        .is("deleted_at", null)
         .not("due_date", "is", null)
         .not("status", "in", `(${CLOSED_STATUSES.join(",")})`)
         .lte("due_date", dueSoonUpperBound(today))
@@ -190,6 +193,7 @@ export async function GET(request: NextRequest) {
       auth.supabase
         .from("issues")
         .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
+        .is("deleted_at", null)
         .eq("status", "triage")
         .order("created_at", { ascending: true })
         .limit(TRIAGE_LIMIT),
@@ -259,6 +263,7 @@ export async function GET(request: NextRequest) {
       const { data: statusRows } = await auth.supabase
         .from("issues")
         .select("id, status")
+        .is("deleted_at", null)
         .in("id", counterpartIds);
       for (const row of (statusRows ?? []) as { id: string; status: IssueStatus }[]) {
         blockerStatuses[row.id] = row.status;

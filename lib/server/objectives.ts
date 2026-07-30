@@ -164,6 +164,7 @@ export async function updateObjective({
   const { data: objective } = await service
     .from("objectives")
     .select("*")
+    .is("deleted_at", null)
     .eq("id", objectiveId)
     .maybeSingle();
   if (!objective) {
@@ -177,6 +178,7 @@ export async function updateObjective({
   const { data, error } = await service
     .from("objectives")
     .update(updates)
+    .is("deleted_at", null)
     .eq("id", objectiveId)
     .select("*")
     .maybeSingle();

@@ -47,6 +47,7 @@ export async function getProjectFeedbackPost(
   const { data } = await service
     .from("feedback_posts")
     .select(FEEDBACK_POST_SELECT)
+    .is("deleted_at", null)
     .eq("id", postId)
     .eq("project_id", projectId)
     .maybeSingle();

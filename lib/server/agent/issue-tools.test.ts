@@ -25,10 +25,19 @@ const ANCHOR_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ID = "77777777-7777-4777-8777-777777777777";
 const FOREIGN_ID = "22222222-2222-4222-8222-222222222222";
 
+const TRASHED_ID = "33333333-3333-4333-8333-333333333333";
+
 const ISSUE_ROWS = [
   { id: ANCHOR_ID, number: 42, project_id: "proj-1" },
   { id: OTHER_ID, number: 7, project_id: "proj-1" },
   { id: FOREIGN_ID, number: 3, project_id: "proj-2" },
+  // MIN-133 : même projet, mais à la corbeille — l'agent ne doit pas le voir.
+  {
+    id: TRASHED_ID,
+    number: 9,
+    project_id: "proj-1",
+    deleted_at: "2026-07-01T00:00:00.000Z",
+  },
 ];
 
 const attachmentBase = {
@@ -51,7 +60,10 @@ vi.mock("@/lib/supabase-service", () => {
     return (
       rows.find((row) =>
         Object.entries(filters).every(
-          ([column, value]) => (row as Record<string, unknown>)[column] === value,
+          // `?? null` : une colonne absente de la ligne vaut null, pour que
+          // `.is("deleted_at", null)` retienne bien les lignes vivantes.
+          ([column, value]) =>
+            ((row as Record<string, unknown>)[column] ?? null) === value,
         ),
       ) ?? null
     );
@@ -61,6 +73,13 @@ vi.mock("@/lib/supabase-service", () => {
     const query: Record<string, unknown> = {};
     query.select = () => query;
     query.eq = (column: string, value: unknown) => {
+      filters[column] = value;
+      return query;
+    };
+    // `.is("deleted_at", null)` — depuis MIN-133 toute lecture de ticket écarte
+    // les corbeillés ; le faux applique vraiment le filtre, sans quoi le test ne
+    // dirait rien de ce que voit l'agent.
+    query.is = (column: string, value: unknown) => {
       filters[column] = value;
       return query;
     };
@@ -285,6 +304,14 @@ describe("read_issue — cible par défaut et ciblage explicite", () => {
     const out = await executeIssueTool(ctx(), "read_issue", { issue: "ACME-3" });
     expect(out.success).toBe(false);
     expect(String((out.result as { error: string }).error)).toMatch(/doesn't match this project/);
+    expect(getIssue).not.toHaveBeenCalled();
+  });
+
+  // MIN-133 — un ticket à la corbeille est, pour l'agent, un ticket qui
+  // n'existe pas : il n'a plus à le lire, encore moins à travailler dessus.
+  it("ne résout pas un ticket mis à la corbeille", async () => {
+    const out = await executeIssueTool(ctx(), "read_issue", { issue: "MIN-9" });
+    expect(out.success).toBe(false);
     expect(getIssue).not.toHaveBeenCalled();
   });
 });

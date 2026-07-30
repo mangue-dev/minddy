@@ -76,6 +76,7 @@ export async function addCommentToIssue({
   const { data: issue } = await service
     .from("issues")
     .select("project_id, created_by, assignee_id")
+    .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (!issue) {
@@ -238,6 +239,7 @@ export async function addCommentToObjective({
   const { data: objective } = await service
     .from("objectives")
     .select("project_id, lead_user_id")
+    .is("deleted_at", null)
     .eq("id", objectiveId)
     .maybeSingle();
   if (!objective) {
@@ -398,6 +400,7 @@ export async function addCommentToFeedbackPost({
   const { data: post } = await service
     .from("feedback_posts")
     .select("project_id")
+    .is("deleted_at", null)
     .eq("id", postId)
     .maybeSingle();
   if (!post) {
