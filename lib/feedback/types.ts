@@ -51,6 +51,12 @@ export function sortFeedbackResolvedLast<T>(
 
 export type FeedbackPostSource = "board" | "api" | "internal";
 
+/** Bornes d'un post, appliquées à la création (lib/server/feedback/posts.ts) et
+    ANNONCÉES aux agents par le contrat d'intégration (lib/feedback/integration-contract.ts) :
+    elles vivent donc ici, en pur, plutôt que dans le core serveur. */
+export const FEEDBACK_TITLE_MAX = 200;
+export const FEEDBACK_BODY_MAX = 10_000;
+
 /**
  * État de PUBLICATION d'un post (MIN-54), distinct du choix de visibilité
  * `is_public` de l'auteur. `pending` = en attente de la revue IA (catégorisation

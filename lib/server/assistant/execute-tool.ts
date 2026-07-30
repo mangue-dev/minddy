@@ -22,6 +22,15 @@ import {
   updateIntegrationWebhook,
 } from "@/lib/server/integrations";
 import {
+  integrationUsage,
+  isIntegrationKind,
+} from "@/lib/feedback/integration-contract";
+import { SITE_URL } from "@/lib/site";
+import {
+  configureFeedbackBoard,
+  getFeedbackBoardConfig,
+} from "@/lib/server/feedback/board-config";
+import {
   getAccountSettings,
   updateAccountSettings,
 } from "@/lib/server/account-settings";
@@ -184,6 +193,8 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   categoryNotFound: "Category not found in this project.",
   integrationNameRequired: "An integration name is required.",
   integrationNotFound: "Integration not found.",
+  boardNotFound:
+    "This project has no feedback board yet — pass enabled: true to create it.",
   webhookInvalidUrl: "The webhook URL is invalid (must be http/https).",
   webhookInvalidConfig: "The webhook events or scope are invalid.",
   databaseError: "A database error occurred.",
@@ -600,7 +611,7 @@ export async function executeTool(
       case "list_integrations": {
         const { data, error } = await ctx.supabase
           .from("integrations")
-          .select("id, name, revoked_at")
+          .select("id, name, kind, revoked_at")
           .eq("project_id", projectId)
           .order("name", { ascending: true });
         if (error) return toolError(error.message);
@@ -1021,6 +1032,36 @@ export async function executeTool(
       // Feedback is RLS deny-all → reads/writes go through the service-client
       // cores. The post is always re-scoped to the project in scope; the
       // feedback comment mode's current post is the default target.
+
+      // The board's SETUP (public URL, custom domain, SSO), as opposed to the
+      // posts on it — what Numo needs to hand the user a working "Feedback"
+      // button for their own app. Absolute URLs: the code goes elsewhere.
+      case "get_feedback_board": {
+        return {
+          result: { board: await getFeedbackBoardConfig(projectId, SITE_URL) },
+          success: true,
+        };
+      }
+
+      case "configure_feedback_board": {
+        if (!access.isOwner) return settingsError("ownerOnly");
+        const result = await configureFeedbackBoard({
+          projectId,
+          enabled: typeof args.enabled === "boolean" ? args.enabled : undefined,
+          generateSso: args.generate_sso_secret === true,
+          origin: SITE_URL,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return {
+          result: {
+            board: result.config,
+            // Only present when asked for. A credential: Numo surfaces it once.
+            ...(result.sso_secret ? { sso_secret: result.sso_secret } : {}),
+          },
+          success: true,
+        };
+      }
+
       case "list_feedback": {
         const posts = await listTeamFeedback(projectId);
         const statuses = Array.isArray(args.status)
@@ -1274,12 +1315,13 @@ export async function executeTool(
       // ── Integrations (owner-gated) ────────────────────────────────────
       case "create_integration": {
         if (!access.isOwner) return settingsError("ownerOnly");
+        // 'issues' | 'feedback' — validé côté core, défaut 'issues'.
+        const kind = isIntegrationKind(args.kind) ? args.kind : "issues";
         const result = await createIntegration({
           projectId,
           actorId: ctx.userId,
           name: args.name,
-          // 'issues' | 'feedback' — validé côté core, défaut 'issues'.
-          kind: args.kind,
+          kind,
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {
@@ -1287,9 +1329,12 @@ export async function executeTool(
             integration: {
               id: result.integration.id,
               name: result.integration.name,
+              kind: result.integration.kind,
             },
             // The plaintext key is returned ONCE — Numo must surface it now.
             key: result.key,
+            // …and a key is useless without the format that goes with it.
+            usage: integrationUsage(kind, SITE_URL),
           },
           success: true,
         };

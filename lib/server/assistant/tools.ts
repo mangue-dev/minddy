@@ -243,7 +243,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_integrations",
       description:
-        "List the project's integrations (external tools creating issues through the API): id, name, revoked_at. Issues created by one carry its integration_id; the view filter filters.integration takes these ids.",
+        "List the project's integrations (API keys external apps push through): id, name, kind ('issues' or 'feedback'), revoked_at. Issues created by one carry its integration_id; the view filter filters.integration takes these ids. Plaintext keys are never listed — they exist only in the create_integration result.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -567,6 +567,37 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_feedback_board",
+      description:
+        "Read the project's PUBLIC feedback board setup — call this before writing any code, link or button that points users at the board. Returns whether the board exists and is enabled, its public_url (the custom domain when the project has a VERIFIED one, otherwise the /f/<token> URL), the custom domain and its status, whether SSO pre-identification is configured, and the display options. ALWAYS take public_url from here verbatim — a board URL cannot be guessed or rebuilt from the project name.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "configure_feedback_board",
+      description:
+        "Publish or unpublish the project's public feedback board, and/or get its SSO secret. OWNER ONLY. enabled true creates the board if the project has none (collection through the API keeps working when it is off — only the public page 404s). generate_sso_secret true returns the HS256 secret used to pre-identify signed-in users on the board: it NEVER rotates an existing secret (that would break a live integration), it returns the current one or creates the first. The secret is a credential — surface it once, tell the user to put it in an env var (MINDDY_SSO_SECRET), never client-side.",
+      parameters: {
+        type: "object",
+        properties: {
+          enabled: {
+            type: "boolean",
+            description: "true publishes the board, false takes the public page down.",
+          },
+          generate_sso_secret: {
+            type: "boolean",
+            description:
+              "true returns the board's SSO secret (creating it if the board has none).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_feedback",
       description:
         "List the project's feedback posts (user requests from the feedback board / API / internal entry): id, title, status, vote_count, is_public, whether a tracking issue is linked, source. Sorted by votes. Use it to find the feedback the user means before acting. Excludes merged duplicates.",
@@ -776,13 +807,19 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_integration",
       description:
-        "Create a named integration (a Feedback API key an external app uses to submit issues). OWNER ONLY. The plaintext API key is returned ONCE in the result — surface it to the user immediately and tell them it won't be shown again.",
+        "Create a named integration — an API key the user's own app uses to push into this project server-to-server. OWNER ONLY. Pick the kind from what they want to collect: 'feedback' for end-user requests (they land on the feedback board with votes and a public status), 'issues' to create issues directly in triage. The result carries a `usage` object with the exact endpoint, payload and error codes for that kind: relay it rather than describing the API from memory. The plaintext API key is returned ONCE — surface it immediately, tell them to store it server-side in an env var, and that it won't be shown again.",
       parameters: {
         type: "object",
         properties: {
           name: {
             type: "string",
             description: "A name identifying the integration (max 60 chars).",
+          },
+          kind: {
+            type: "string",
+            enum: ["issues", "feedback"],
+            description:
+              "What the key may do: 'feedback' submits user requests to the feedback board, 'issues' creates issues in triage. A key serves one endpoint family only. Defaults to 'issues'.",
           },
         },
         required: ["name"],

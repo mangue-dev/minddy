@@ -108,6 +108,20 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
+    // La limite d'issues du plan du owner (MIN-72) n'est PAS une panne : c'est
+    // un refus définitif tant que rien ne change côté compte. La renvoyer en 500
+    // disait « réessaie » à un client qui n'aurait jamais pu réussir — il
+    // retentait sans fin, et personne n'apprenait la vraie cause. Les routes de
+    // l'app la rendent en 403 localisé depuis le début ; ici c'est le même 403,
+    // avec un code stable sur lequel brancher un message ou un CTA.
+    if (result.errorKey === "issueLimitReached") {
+      const limit = result.params?.limit;
+      return publicApiError(
+        403,
+        "issue_limit_reached",
+        `This project has reached the ${limit ?? "issue"} issue limit of its owner's plan. The owner must upgrade or free up issues.`
+      );
+    }
     console.error("[api/v1/issues] create failed:", result.errorKey ?? result.rawMessage);
     return publicApiError(500, "internal_error", "Something went wrong.");
   }

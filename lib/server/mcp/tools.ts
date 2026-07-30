@@ -42,6 +42,13 @@ import {
   unlinkFeedbackIssue,
 } from "@/lib/server/feedback/promote";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
+import { integrationUsage } from "@/lib/feedback/integration-contract";
+import {
+  configureFeedbackBoard,
+  getFeedbackBoardConfig,
+} from "@/lib/server/feedback/board-config";
+import { createIntegration, listIntegrations, revokeIntegration } from "@/lib/server/integrations";
+import { SITE_URL } from "@/lib/site";
 import {
   downloadAttachment,
   signedAttachmentUrl,
@@ -2378,6 +2385,218 @@ export function registerMinddyTools(rawServer: McpServer): void {
         feedback_post_id: ref.post.id,
         team_response: result.post.team_response,
       });
+    }
+  );
+
+  // ── Setup : le board public et les clés d'intégration (MIN-106) ──────────
+  // Ce que les outils ci-dessus ne pouvaient pas faire : brancher l'app de
+  // l'utilisateur SUR minddy. L'agent qui lit ceci est dans le dépôt du client —
+  // il peut écrire un `.env` et du code, ce que Numo, dans le chat, ne peut pas.
+
+  server.registerTool(
+    "minddy_get_feedback_board",
+    {
+      title: "Get feedback board setup",
+      description:
+        "Read the project's PUBLIC feedback board setup — call this before writing " +
+        "any link, button or redirect that sends users to the board. Returns whether " +
+        "the board exists and is enabled, its public_url, the custom domain and its " +
+        "status, whether SSO pre-identification is configured, and the display " +
+        "options. public_url is the custom domain when the project has a VERIFIED " +
+        "one, otherwise the /f/<token> URL: use it VERBATIM — a board is reached by " +
+        "an opaque token and its URL cannot be derived from the project.",
+      inputSchema: { project_id: PROJECT_ID },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      return ok({ board: await getFeedbackBoardConfig(scope.access.project.id) });
+    }
+  );
+
+  server.registerTool(
+    "minddy_configure_feedback_board",
+    {
+      title: "Configure feedback board",
+      description:
+        "Publish or unpublish the project's public feedback board, and/or get its " +
+        "SSO secret. OWNER ONLY. enabled=true creates the board if the project has " +
+        "none; enabled=false only takes the public page down — collection through " +
+        "the feedback API keeps working. generate_sso_secret=true returns the HS256 " +
+        "secret used to pre-identify signed-in users: it NEVER rotates an existing " +
+        "secret (that would break a live integration), it returns the current one or " +
+        "creates the first. Put that secret in the app's server-side environment " +
+        "(e.g. MINDDY_SSO_SECRET), never in client code, never in version control.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        enabled: z
+          .boolean()
+          .optional()
+          .describe("true publishes the public board, false takes it down."),
+        generate_sso_secret: z
+          .boolean()
+          .optional()
+          .describe("true returns the SSO secret, creating it if there is none."),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      if (!scope.access.isOwner) {
+        return fail("forbidden", "Only the project owner can configure the feedback board.");
+      }
+      const result = await configureFeedbackBoard({
+        projectId: scope.access.project.id,
+        enabled: args.enabled,
+        generateSso: args.generate_sso_secret === true,
+      });
+      if (!result.ok) {
+        switch (result.errorKey) {
+          case "noFieldsToUpdate":
+            return fail("invalid_params", "Pass enabled and/or generate_sso_secret.");
+          case "boardNotFound":
+            return fail(
+              "not_found",
+              "This project has no feedback board yet — pass enabled: true to create it."
+            );
+          default:
+            return fail("database_error", "Could not configure the feedback board.");
+        }
+      }
+      return ok({
+        board: result.config,
+        ...(result.sso_secret ? { sso_secret: result.sso_secret } : {}),
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_list_integrations",
+    {
+      title: "List integrations",
+      description:
+        "List the project's integrations — the API keys an external app uses to " +
+        "push into this project server-to-server: id, name, kind ('issues' or " +
+        "'feedback'), key_prefix, when it was created, when it was last used, and " +
+        "whether it is revoked. Call it before creating one, to reuse the setup " +
+        "already in place instead of piling up keys. Plaintext keys are NEVER " +
+        "listed — a key exists in clear only in the minddy_create_integration result.",
+      inputSchema: { project_id: PROJECT_ID },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const rows = await listIntegrations(scope.access.project.id);
+      if (!rows) return fail("database_error", "Could not list integrations.");
+      return ok({
+        integrations: rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          kind: row.kind,
+          key_prefix: row.key_prefix,
+          created_at: row.created_at,
+          last_used_at: row.last_used_at,
+          revoked: row.revoked_at !== null,
+        })),
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_create_integration",
+    {
+      title: "Create integration",
+      description:
+        "Create an API key the user's own application uses to push into this " +
+        "project server-to-server, and get everything needed to wire it up. OWNER " +
+        "ONLY. Pick the kind from what the app collects: 'feedback' submits end-user " +
+        "requests to the feedback board (votes, public status, automatic " +
+        "deduplication), 'issues' creates issues straight in triage. A key serves " +
+        "one endpoint family only. The result carries the plaintext key ONCE — it is " +
+        "never readable again, so write it to the project's server-side environment " +
+        "(never client-side, never committed) before doing anything else — and a " +
+        "`usage` object with the exact endpoints, payloads and error codes for that " +
+        "kind: implement against THAT, not from memory.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        name: z
+          .string()
+          .min(1)
+          .max(60)
+          .describe("Identifies the integration in the project's settings, e.g. 'Acme web app'."),
+        kind: z
+          .enum(["issues", "feedback"])
+          .describe(
+            "'feedback' = submit user requests to the feedback board; " +
+              "'issues' = create issues in triage."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      if (!scope.access.isOwner) {
+        return fail("forbidden", "Only the project owner can create an integration.");
+      }
+      const created = await createIntegration({
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        name: args.name,
+        kind: args.kind,
+      });
+      if (!created.ok) {
+        return created.errorKey === "integrationNameRequired"
+          ? fail("invalid_params", "name must be 1 to 60 characters.")
+          : fail("database_error", "Could not create the integration.");
+      }
+      return ok({
+        integration: {
+          id: created.integration.id,
+          name: created.integration.name,
+          kind: created.integration.kind,
+        },
+        key: created.key,
+        usage: integrationUsage(args.kind, SITE_URL),
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_revoke_integration",
+    {
+      title: "Revoke integration",
+      description:
+        "Revoke an integration's API key: it stops working immediately, for every " +
+        "app still using it. OWNER ONLY and IRREVERSIBLE — there is no un-revoke, " +
+        "and a new key means redeploying whatever held the old one. Use it to clean " +
+        "up a key you just created by mistake; otherwise confirm with the user " +
+        "first. Get the id from minddy_list_integrations.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        integration_id: z.string().uuid().describe("From minddy_list_integrations."),
+      },
+      annotations: { ...WRITE, destructiveHint: true },
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      if (!scope.access.isOwner) {
+        return fail("forbidden", "Only the project owner can revoke an integration.");
+      }
+      const result = await revokeIntegration({
+        projectId: scope.access.project.id,
+        integrationId: args.integration_id,
+      });
+      if (!result.ok) {
+        return result.errorKey === "integrationNotFound"
+          ? fail("not_found", "No active integration with that id in this project.")
+          : fail("database_error", "Could not revoke the integration.");
+      }
+      return ok({ revoked: true, integration_id: args.integration_id });
     }
   );
 }

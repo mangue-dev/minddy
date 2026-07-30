@@ -55,4 +55,18 @@ export const MCP_SERVER_INSTRUCTIONS =
       "minddy_unlink_feedback wire it to an existing one (once linked, the post's " +
       "public status follows the issue); minddy_add_feedback_comment leaves an " +
       "internal note; minddy_respond_feedback publishes the team's PUBLIC reply. " +
+      "You can also WIRE THE USER'S OWN APPLICATION to minddy from their repo, " +
+      "which is something only you can do — minddy's in-app assistant has no access " +
+      "to their code. minddy_get_feedback_board reads the public board's setup: take " +
+      "its public_url verbatim for any 'Feedback' link or button (it already " +
+      "resolves the project's custom domain, and a board URL is an opaque token that " +
+      "cannot be guessed), and minddy_configure_feedback_board publishes the board " +
+      "or hands you its SSO secret. minddy_create_integration creates the API key an " +
+      "application uses to push server-to-server — kind 'feedback' to submit " +
+      "end-user requests to the board, kind 'issues' to create issues in triage — " +
+      "and returns, ONCE, the plaintext key plus a `usage` object with the exact " +
+      "endpoints, payloads and error codes: write the key into the project's " +
+      "server-side environment (never client-side, never committed) and implement " +
+      "against that `usage`, not from memory. minddy_list_integrations shows what " +
+      "already exists (never a key), minddy_revoke_integration kills one for good. " +
       "Start with minddy_list_projects to discover project ids.";

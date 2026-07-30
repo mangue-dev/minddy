@@ -375,6 +375,24 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("integrationRevoked") : t("revokeIntegrationFailed");
     },
   },
+  get_feedback_board: {
+    icon: Globe,
+    getLabel: (_args, _result, _success, status, t) => {
+      if (status === "running") return t("loadingFeedbackBoard");
+      return t("feedbackBoardLoaded");
+    },
+  },
+  configure_feedback_board: {
+    icon: Globe,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("configuringFeedbackBoard");
+      if (!success) return t("configureFeedbackBoardFailed");
+      // La publication est le seul effet qui se voit du dehors : on la nomme.
+      if (args.enabled === true) return t("feedbackBoardPublished");
+      if (args.enabled === false) return t("feedbackBoardUnpublished");
+      return t("feedbackBoardConfigured");
+    },
+  },
   get_account_settings: {
     icon: User,
     getLabel: (_args, _result, _success, status, t) => {

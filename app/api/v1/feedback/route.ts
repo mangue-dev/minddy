@@ -5,6 +5,7 @@ import {
   requireIntegrationKind,
 } from "@/lib/server/integration-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { readAnalyzeOption } from "@/lib/feedback/analyze-option";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
 import {
   createFeedbackPost,
@@ -20,7 +21,12 @@ import {
  * requis). Le post entre dans le pipeline standard (embedding à la soumission,
  * dédup IA horaire) et apparaît sur le board public s'il est activé.
  *
- * Payload : { title, body?, user: { external_id?, email?, name? } }
+ * Payload : { title, body?, user: { external_id?, email?, name? }, analyze? }
+ *
+ * `analyze` (MIN-106, défaut true) : passer false garde le post hors de la passe
+ * de revue de Numo — pour un client qui fait tourner son propre classifier. Le
+ * post est alors publié tel quel, sans modération, sans catégories et sans
+ * fusion automatique (c'est un seul appel qui fait les trois).
  */
 export async function POST(request: NextRequest) {
   const auth = await authenticateIntegration(request);
@@ -66,6 +72,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Opt-out de la revue Numo (MIN-106), pour un client qui classe lui-même.
+  const analyzeOption = readAnalyzeOption(body.analyze);
+  if (!analyzeOption.ok) {
+    return publicApiError(
+      422,
+      "invalid_analyze",
+      "analyze must be a boolean (true to let minddy's AI review the post, false to keep it out). Defaults to true."
+    );
+  }
+
   const userInput = body.user;
   if (!userInput || typeof userInput !== "object" || Array.isArray(userInput)) {
     return publicApiError(
@@ -107,6 +123,7 @@ export async function POST(request: NextRequest) {
     source: "api",
     authorId: feedbackUser.id,
     integrationId: auth.integration.id,
+    analyze: analyzeOption.analyze,
   });
   if (!result.ok) {
     console.error("[api/v1/feedback] create failed:", result.errorKey);
@@ -118,6 +135,10 @@ export async function POST(request: NextRequest) {
       id: result.post.id,
       title: result.post.title,
       status: result.post.status,
+      // Conséquence observable d'`analyze` : 'published' = déjà sur le board,
+      // 'pending' = retenu le temps de la revue. C'est ce qui dit à
+      // l'intégrateur que son drapeau a bien été pris en compte.
+      review_state: result.post.review_state,
       votes: result.post.vote_count,
       user: { pseudonym: feedbackUser.pseudonym },
     },

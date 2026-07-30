@@ -3,6 +3,10 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { generateIntegrationKey } from "@/lib/server/integration-key";
 import {
+  isIntegrationKind,
+  type IntegrationKind,
+} from "@/lib/feedback/integration-contract";
+import {
   isWebhookEvent,
   isWebhookScope,
   type WebhookEvent,
@@ -19,12 +23,9 @@ export const INTEGRATION_SUMMARY_SELECT =
   "id, name, kind, key_prefix, created_at, last_used_at, revoked_at, " +
   "webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at";
 
-/** Usage dédié d'une clé : créer des issues directement, ou déposer du feedback. */
-export type IntegrationKind = "issues" | "feedback";
-
-export function isIntegrationKind(value: unknown): value is IntegrationKind {
-  return value === "issues" || value === "feedback";
-}
+// Le kind et son garde vivent en pur avec le contrat d'API qu'ils décrivent
+// (lib/feedback/integration-contract.ts) ; réexportés ici pour les appelants.
+export { isIntegrationKind, type IntegrationKind };
 
 export interface IntegrationSummary {
   id: string;

@@ -16,6 +16,8 @@ import {
   emitFeedbackFieldChanges,
 } from "@/lib/server/feedback/events";
 import {
+  FEEDBACK_BODY_MAX,
+  FEEDBACK_TITLE_MAX,
   isFeedbackPostStatus,
   isFeedbackReviewState,
   type FeedbackPostSource,
@@ -34,8 +36,10 @@ import { lengthBucket } from "@/lib/analytics-sanitize";
  * rattrape — la réponse ne dépend jamais de l'IA.
  */
 
-export const FEEDBACK_TITLE_MAX = 200;
-export const FEEDBACK_BODY_MAX = 10_000;
+// Réexportées : les appelants historiques (app/api/v1/feedback) les prennent
+// ici, mais elles sont désormais définies en pur dans lib/feedback/types.ts.
+export { FEEDBACK_TITLE_MAX, FEEDBACK_BODY_MAX };
+
 const EMBED_TIMEOUT_MS = 2500;
 
 export interface FeedbackPostRow {
@@ -92,6 +96,16 @@ export async function createFeedbackPost(input: {
   /** false = retour privé : collecté par l'équipe mais jamais publié sur le
       board. Par défaut public (choix explicite du visiteur au composeur). */
   isPublic?: boolean;
+  /**
+   * false = ne PAS soumettre ce post à la passe de revue de Numo (MIN-106) —
+   * pour un client qui fait tourner son propre classifier. Défaut true.
+   *
+   * La revue est UNE passe (MIN-87) qui modère, catégorise et dédoublonne en un
+   * seul appel : il n'y a pas de demi-mesure, `false` les coupe toutes les
+   * trois. Le post est donc publié tel quel, et marqué comme déjà traité pour
+   * que le cron ne vienne pas le reprendre plus tard.
+   */
+  analyze?: boolean;
 }): Promise<CreateFeedbackPostResult> {
   const service = getServiceClient();
   const title = input.title.trim().slice(0, FEEDBACK_TITLE_MAX);
@@ -112,8 +126,19 @@ export async function createFeedbackPost(input: {
   // saisie interne (équipe de confiance) est publiée d'emblée. Si la revue est
   // désarmée — kill-switch d'instance ou réglage du projet — retenir les posts
   // n'aurait aucun sens : personne ne viendrait les publier.
-  const reviewEnabled = await isFeedbackReviewEnabled(input.projectId);
+  //
+  // `analyze: false` (MIN-106) rejoint ce cas par une troisième porte : le
+  // client a son propre classifier et refuse le nôtre POUR CE POST.
+  const analyze = input.analyze !== false;
+  const reviewEnabled = analyze && (await isFeedbackReviewEnabled(input.projectId));
   const heldForReview = input.source !== "internal" && reviewEnabled;
+
+  // Un post qu'on ne reverra pas doit être marqué COMME DÉJÀ TRAITÉ : le claim
+  // du cron sélectionne sur `analyzed_at is null or classified_at is null`, et
+  // un post laissé sans marqueur y remonterait à la première passe horaire —
+  // c'est-à-dire exactement l'analyse à laquelle le client a dit non.
+  const now = new Date().toISOString();
+  const reviewMarkers = analyze ? {} : { analyzed_at: now, classified_at: now };
 
   const { data, error } = await service
     .from("feedback_posts")
@@ -129,6 +154,7 @@ export async function createFeedbackPost(input: {
       review_state: heldForReview ? "pending" : "published",
       source: input.source,
       embedding: embedding ? toVectorLiteral(embedding) : null,
+      ...reviewMarkers,
     })
     .select(FEEDBACK_POST_SELECT)
     .maybeSingle();
@@ -152,6 +178,8 @@ export async function createFeedbackPost(input: {
       title_length_bucket: lengthBucket(title),
       body_length_bucket: lengthBucket(body),
       via_integration: !!input.integrationId,
+      // MIN-106 : sans ça on ne saurait jamais si l'option `analyze` sert.
+      analyze,
       project_id: input.projectId,
     },
     groups: { project: input.projectId },
@@ -170,16 +198,18 @@ export async function createFeedbackPost(input: {
   // horaire. Le cron reste le filet de sécurité (LLM en panne, budget à sec) ; le
   // claim empêche les deux de traiter le même post. Best-effort de bout en bout :
   // hors contexte de requête, `after` lève — la revue attendra simplement le cron.
-  try {
-    after(async () => {
-      try {
-        await reviewFeedbackPost(post.id, post.project_id);
-      } catch (e) {
-        console.error("[feedback-posts] inline review failed:", (e as Error).message);
-      }
-    });
-  } catch {
-    // Pas de contexte de requête (script, worker) : le cron s'en chargera.
+  if (analyze) {
+    try {
+      after(async () => {
+        try {
+          await reviewFeedbackPost(post.id, post.project_id);
+        } catch (e) {
+          console.error("[feedback-posts] inline review failed:", (e as Error).message);
+        }
+      });
+    } catch {
+      // Pas de contexte de requête (script, worker) : le cron s'en chargera.
+    }
   }
 
   // Inbox (MIN-82) : un feedback qui ARRIVE (board public / API) prévient toute
