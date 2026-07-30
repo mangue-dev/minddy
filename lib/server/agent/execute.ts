@@ -1574,7 +1574,7 @@ export async function executeAgentRun(
     /**
      * Les mains d'un sous-agent : un SECOND appel de `runAgentLoop`, dans la MÊME
      * microVM, avec un jeu de tools restreint, son propre `messages`, et le
-     * `runId`/`userId`/`projectId` du parent (facturation). Pas de nouveau moteur.
+     * `runId`/`billTo`/`projectId` du parent (facturation). Pas de nouveau moteur.
      *
      * Ce que la fille ne partage PAS avec son parent, et pourquoi :
      *  - `emitLive` : `broadcastRunStream` diffuse sur le topic du RUN — une fille

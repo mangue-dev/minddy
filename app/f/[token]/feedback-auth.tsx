@@ -15,6 +15,7 @@ import {
 } from "mangue-ui";
 import { MailCheck } from "lucide-react";
 import { requestOtpAction, verifyOtpAction } from "./actions";
+import { SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -108,15 +109,35 @@ export function FeedbackAuthDialog({
           </DialogHeader>
 
           {step === "email" ? (
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("emailPlaceholder")}
-              autoComplete="email"
-              autoFocus
-              required
-            />
+            <>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("emailPlaceholder")}
+                autoComplete="email"
+                autoFocus
+                required
+              />
+              {/* Mention d'information au point de collecte (RGPD art. 13,
+                  MIN-119). L'URL est absolue : un board peut être servi depuis
+                  le domaine personnalisé de son éditeur, où `/privacy` ne mène
+                  nulle part. */}
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t.rich("authLegalNotice", {
+                  privacy: (chunks) => (
+                    <a
+                      href={`${SITE_URL}/privacy`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-4 hover:text-foreground"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                })}
+              </p>
+            </>
           ) : (
             <Input
               type="text"

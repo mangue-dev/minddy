@@ -1,7 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Bot, GitBranch, Inbox, IterationCw, Plug, SlidersHorizontal, User } from "lucide-react";
+import {
+  Bot,
+  GitBranch,
+  Inbox,
+  IterationCw,
+  Plug,
+  ShieldCheck,
+  SlidersHorizontal,
+  User,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   SettingsShell,
@@ -15,6 +24,7 @@ import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { AccountGitConnectionsSection } from "@/components/settings/account-git-connections-section";
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
+import { AccountDataSection } from "@/components/settings/account-data-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 
 export default function AccountSettingsPage() {
@@ -71,6 +81,14 @@ export default function AccountSettingsPage() {
       label: t("agentTab"),
       icon: Bot,
       content: <AccountAiKeysSection />,
+    },
+    // Dernier onglet : l'export et la suppression du compte (MIN-119). C'est
+    // là qu'on va quand on part, pas là qu'on passe tous les jours.
+    {
+      value: "data",
+      label: t("dataTab"),
+      icon: ShieldCheck,
+      content: <AccountDataSection />,
     },
   ];
 

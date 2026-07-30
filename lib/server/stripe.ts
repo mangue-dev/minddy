@@ -177,10 +177,12 @@ export function coerceStripePlanId(value: unknown): BillingPlanId | null {
 
 async function stripeRequest<T>(
   path: string,
-  body?: URLSearchParams
+  body?: URLSearchParams,
+  /** Forcé seulement là où le verbe ne se déduit pas du corps (DELETE). */
+  method?: "GET" | "POST" | "DELETE"
 ): Promise<T> {
   const response = await fetch(`https://api.stripe.com${path}`, {
-    method: body ? "POST" : "GET",
+    method: method ?? (body ? "POST" : "GET"),
     headers: {
       Authorization: `Bearer ${getStripeSecretKey()}`,
       ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
@@ -262,6 +264,27 @@ export async function fetchStripeSubscription(
 ): Promise<StripeSubscription> {
   return stripeRequest<StripeSubscription>(
     `/v1/subscriptions/${subscriptionId}`
+  );
+}
+
+/**
+ * Résiliation IMMÉDIATE d'un abonnement (MIN-119) — pas `cancel_at_period_end`.
+ *
+ * Appelée quand quelqu'un supprime son compte : on ne peut pas laisser courir un
+ * abonnement dont le titulaire n'existe plus, ni continuer à prélever une
+ * personne qui est partie. La perte du reliquat de période est assumée, c'est
+ * l'utilisateur qui choisit le moment.
+ *
+ * Stripe conserve de son côté les pièces de facturation le temps de l'obligation
+ * comptable : la résiliation arrête le prélèvement, elle n'efface pas l'histoire.
+ */
+export async function cancelStripeSubscription(
+  subscriptionId: string
+): Promise<StripeSubscription> {
+  return stripeRequest<StripeSubscription>(
+    `/v1/subscriptions/${subscriptionId}`,
+    undefined,
+    "DELETE"
   );
 }
 

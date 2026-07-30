@@ -41,6 +41,7 @@ export default async function PrivacyPage() {
   const retention = [
     { term: t("retentionAccount"), desc: t("retentionAccountDesc") },
     { term: t("retentionContent"), desc: t("retentionContentDesc") },
+    { term: t("retentionNotifications"), desc: t("retentionNotificationsDesc") },
     { term: t("retentionAgent"), desc: t("retentionAgentDesc") },
     { term: t("retentionFeedback"), desc: t("retentionFeedbackDesc") },
     { term: t("retentionAnalytics"), desc: t("retentionAnalyticsDesc") },
@@ -109,6 +110,17 @@ export default async function PrivacyPage() {
         <P>{t("agentText")}</P>
       </Section>
 
+      {/* MIN-119 — le destinataire final n'est pas OpenRouter mais le
+          fournisseur du modèle retenu, et sa politique de conservation varie.
+          Dire « transmis à OpenRouter » et s'arrêter là nommait la passerelle en
+          taisant le destinataire ; l'article 13 demande l'inverse. On ne promet
+          donc rien sur cette étape — on la décrit. */}
+      <Section title={t("aiProvidersTitle")}>
+        <P>{t("aiProvidersGateway")}</P>
+        <P>{t("aiProvidersRetention")}</P>
+        <P>{t("aiProvidersChoice")}</P>
+      </Section>
+
       {/* Mesure d'audience (MIN-78). Section dédiée plutôt qu'une ligne dans le
           tableau des données : la collecte a trois régimes selon le choix fait
           sur le bandeau, et « avant tout choix » est le cas que personne
@@ -142,6 +154,21 @@ export default async function PrivacyPage() {
             cnil: (c) => <ExternalLink href="https://www.cnil.fr">{c}</ExternalLink>,
           })}
         </P>
+      </Section>
+
+      {/* Accès et effacement en libre-service (MIN-119). Section à part du bloc
+          « Vos droits » : celui-ci énumère ce que la loi accorde, celle-ci dit
+          où cliquer. L'avertissement sur les projets possédés y est en toutes
+          lettres — c'est la conséquence que « supprimer mon compte » ne laisse
+          pas deviner. */}
+      <Section title={t("selfServiceTitle")}>
+        <Intro>{t("selfServiceIntro")}</Intro>
+        <List>
+          <li>{t("selfServiceExport")}</li>
+          <li>{t("selfServiceDelete")}</li>
+        </List>
+        <P>{t("selfServiceWarning")}</P>
+        <P>{t("selfServiceOther")}</P>
       </Section>
 
       <Section title={t("breachTitle")}>

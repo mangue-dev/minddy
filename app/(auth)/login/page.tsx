@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button, Input, Spinner, cn } from "mangue-ui";
 import { Github } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { AuthShader } from "@/components/auth-shader";
 import { useAuth } from "@/lib/auth-context";
@@ -42,6 +44,7 @@ type OAuthProvider = "google" | "github";
 
 function LoginForm() {
   const t = useTranslations("Auth");
+  const locale = useLocale() as Locale;
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signInWithPassword, signUpWithPassword, signInWithOAuth } = useAuth();
@@ -303,6 +306,33 @@ function LoginForm() {
                 {loading && <Spinner />}
                 {isSignUp ? t("createAccount") : t("signIn")}
               </Button>
+
+              {/* Mention d'information au point de collecte (RGPD art. 13,
+                  MIN-119). Elle vit sous le bouton d'inscription et nulle part
+                  ailleurs : c'est ici que des données sont collectées pour la
+                  première fois, une connexion ne collecte rien de neuf. */}
+              {isSignUp && (
+                <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                  {t.rich("signupLegalNotice", {
+                    terms: (chunks) => (
+                      <Link
+                        href={localizedHref("/terms", locale)}
+                        className="underline underline-offset-4 hover:text-foreground"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                    privacy: (chunks) => (
+                      <Link
+                        href={localizedHref("/privacy", locale)}
+                        className="underline underline-offset-4 hover:text-foreground"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  })}
+                </p>
+              )}
             </form>
 
             {/* Bascule inscription / connexion */}
