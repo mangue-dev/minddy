@@ -134,6 +134,20 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={persistOptions}
+      onSuccess={() => {
+        // Le snapshot vient du DISQUE : sa date de fraîcheur est celle du
+        // dernier onglet ouvert, et rien ne dit ce qui a bougé depuis — les
+        // diffusions du pont ne se rejouent pas. Sans ça, un rechargement moins
+        // de cinq minutes après le snapshot ne redemandait RIEN au serveur
+        // (`staleTime` non écoulé) et réaffichait l'état d'avant, avec l'aplomb
+        // d'une donnée fraîche. Recharger doit toujours vouloir dire « redis-moi
+        // la vérité ».
+        //
+        // `refetchType: "none"` : on marque périmé sans lancer de requête ici.
+        // Les caches montés repartent d'eux-mêmes juste après, à la levée de
+        // `isRestoring` — c'est le refetch de montage, pas un second train.
+        void queryClient.invalidateQueries({ refetchType: "none" });
+      }}
     >
       {children}
     </PersistQueryClientProvider>

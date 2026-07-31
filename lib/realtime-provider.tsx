@@ -15,6 +15,7 @@ import { getSupabase } from "./supabase";
 import { useAuth } from "./auth-context";
 import { projectIdFromPath } from "./project-id-from-path";
 import { projectTopicIds } from "./realtime-topics";
+import { shouldCatchUpOnResume, wakeRealtime } from "./realtime-resume";
 import type { Project } from "./types";
 
 /**
@@ -37,6 +38,11 @@ import type { Project } from "./types";
  * project topic feeds, so scoping the subscription to the URL left every one of
  * them frozen until its staleTime expired. The set is bounded (see
  * MAX_PROJECT_CHANNELS) and reconciled, never torn down wholesale.
+ *
+ * Le pont porte aussi la REPRISE après absence (onglet caché, veille) : voir
+ * l'effet de reprise en bas de fichier et lib/realtime-resume.ts. Une socket
+ * morte met des dizaines de secondes à l'apprendre ; le rattrapage des caches,
+ * lui, part tout de suite.
  */
 
 /** Payload emitted by realtime.broadcast_changes(). */
@@ -382,6 +388,25 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     [queryClient]
   );
 
+  /**
+   * Rattrapage : tout ce qui est monté dans ces périmètres repart au serveur.
+   * Les doublons sont ignorés — deux projets partagent des clés-préfixes
+   * (["comments"], ["events"]…) et la même invalidation n'a pas à être jouée
+   * une fois par projet.
+   */
+  const catchUp = useCallback(
+    (keys: QueryKey[]) => {
+      const seen = new Set<string>();
+      for (const key of keys) {
+        const hash = JSON.stringify(key);
+        if (seen.has(hash)) continue;
+        seen.add(hash);
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    },
+    [queryClient]
+  );
+
   const openScope = useCallback(
     (
       topic: string,
@@ -411,9 +436,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           if (status === "SUBSCRIBED") {
             if (dropped) {
               dropped = false;
-              for (const key of scopeKeys) {
-                void queryClient.invalidateQueries({ queryKey: key });
-              }
+              catchUp(scopeKeys);
             }
           } else if (
             status === "CHANNEL_ERROR" ||
@@ -430,7 +453,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (channel) void getSupabase().removeChannel(channel);
       };
     },
-    [queryClient, invalidateCoalesced]
+    [catchUp, invalidateCoalesced]
   );
 
   useEffect(() => {
@@ -465,6 +488,64 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       );
     }
   }, [userId, topicIds, openScope]);
+
+  /**
+   * Reprise après une absence — l'onglet revient au premier plan, la machine
+   * sort de veille.
+   *
+   * C'est le seul chemin qui remet la page à jour dans ce cas : le refetch au
+   * focus est désactivé, et l'événement `online` que guette `refetchOnReconnect`
+   * ne part pas d'une veille. Restait la socket, qui est justement ce qui vient
+   * de mourir et qui met des dizaines de secondes à s'en apercevoir — le détail
+   * est dans lib/realtime-resume.ts. On rattrape donc les caches SANS l'attendre
+   * (c'est ce que l'utilisateur voit), et on la réveille en parallèle.
+   */
+  useEffect(() => {
+    if (!userId) return;
+    let hiddenSince: number | null =
+      document.visibilityState === "hidden" ? Date.now() : null;
+    let probe: ReturnType<typeof setTimeout> | null = null;
+
+    const resume = (hiddenForMs: number) => {
+      const realtime = getSupabase().realtime;
+      if (
+        !shouldCatchUpOnResume({
+          hiddenForMs,
+          socketConnected: realtime.isConnected(),
+        })
+      ) {
+        return;
+      }
+      catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)]);
+      if (probe) clearTimeout(probe);
+      probe = wakeRealtime(realtime);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenSince = Date.now();
+        return;
+      }
+      const hiddenForMs = hiddenSince === null ? 0 : Date.now() - hiddenSince;
+      hiddenSince = null;
+      resume(hiddenForMs);
+    };
+
+    // Retour par le cache aller-retour du navigateur (Safari surtout) : la page
+    // reparaît telle quelle, sockets mortes comprises, sans forcément repasser
+    // par `visibilitychange`. Un retour de bfcache est par nature une absence.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) resume(Number.POSITIVE_INFINITY);
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
+      if (probe) clearTimeout(probe);
+    };
+  }, [userId, topicIds, catchUp]);
 
   // Close everything on unmount (sign-out unmounts the whole app shell).
   useEffect(() => {
