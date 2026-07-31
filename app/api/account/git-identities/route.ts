@@ -19,6 +19,7 @@ import {
   signGitLinkState,
 } from "@/lib/server/git/link-state";
 import { listUserIdentities } from "@/lib/server/git/user-identities";
+import { refreshForgeAccountNames } from "@/lib/server/git/account-refresh";
 
 /**
  * Le compte git PERSONNEL de l'utilisateur (MIN-144) — celui sous lequel partent
@@ -50,6 +51,9 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
+  // Le login stocké est un instantané de la connexion du compte : on le recale
+  // avant de le lire, sinon un renommage chez la forge s'affiche à vie (MIN-154).
+  await refreshForgeAccountNames(auth.user.id);
   const identities = await listUserIdentities(auth.user.id);
   if (!identities) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });

@@ -16,29 +16,90 @@ import type { AgentRun, SyncedPrRun } from "./runs";
  */
 const ECHO_WINDOW_MS = 2 * 60_000;
 
+/** Le compte de forge d'un membre, tel que les deux tables le stockent. */
+interface ForgeAccountRow {
+  user_id?: string | null;
+  provider_account_id: string | null;
+  account_login: string | null;
+}
+
+/** L'acteur d'un hook, tel que la forge le livre. */
+interface ForgeAccountRef {
+  /** Id du compte chez la forge — la CLÉ : immuable au renommage. */
+  accountId: string | null;
+  /** Login du compte — un nom d'AFFICHAGE, gardé en repli d'ancienneté. */
+  login: string | null;
+}
+
 /**
- * Les membres minddy derrière un login de forge — le pont que MIN-144 rend
+ * Cette ligne désigne-t-elle ce compte de forge (MIN-154) ?
+ *
+ * La clé est `provider_account_id` : le login est un nom d'affichage, écrit une
+ * fois à la connexion du compte et jamais rafraîchi — un renommage chez GitHub
+ * ou GitLab suffisait à rendre son porteur inconnu de minddy.
+ *
+ * Le login reste un repli, mais seulement là où l'id ne peut pas trancher :
+ * ligne d'ancienneté dont l'id est nul (la colonne est nullable des deux côtés),
+ * ou hook qui n'en livre pas. Il ne gagne JAMAIS contre un id différent — deux
+ * personnes peuvent se succéder sur un même nom, et attribuer le geste au
+ * mauvais membre est pire que ne l'attribuer à personne.
+ */
+export function forgeAccountMatches(
+  row: ForgeAccountRow,
+  actor: ForgeAccountRef,
+): boolean {
+  if (actor.accountId && row.provider_account_id) {
+    return row.provider_account_id === actor.accountId;
+  }
+  return !!actor.login && row.account_login === actor.login;
+}
+
+/**
+ * `,` `(` `)` `"` sont les séparateurs de la syntaxe de filtre PostgREST : une
+ * valeur qui en porte casserait le `.or(...)` au lieu de le restreindre. Aucun
+ * login de forge n'en contient — le terme se saute plutôt que de se risquer.
+ */
+function isFilterSafe(value: string): boolean {
+  return !/[,()"]/.test(value);
+}
+
+/**
+ * Les membres minddy derrière un compte de forge — le pont que MIN-144 rend
  * possible : `git_user_identities` côté GitHub (le compte autorisé), la connexion
  * OAuth côté GitLab (elle EST déjà l'identité de la personne).
+ *
+ * Une seule requête sur le chemin webhook : on demande les lignes que l'id OU le
+ * login pourraient désigner, puis `forgeAccountMatches` tranche en mémoire — le
+ * `.or(...)` est un filet large, la règle est celle-là.
  *
  * Vide quand personne n'a connecté ce compte : c'est alors quelqu'un qui n'agit
  * pas depuis minddy, et rien n'est à dédoublonner.
  */
-async function minddyUsersForForgeLogin(
-  provider: ForgeProvider,
-  login: string | null,
-): Promise<string[]> {
-  if (!login) return [];
+async function minddyUsersForForgeAccount(opts: {
+  provider: ForgeProvider;
+  accountId: string | null;
+  login: string | null;
+}): Promise<string[]> {
+  const terms: string[] = [];
+  if (opts.accountId && isFilterSafe(opts.accountId)) {
+    terms.push(`provider_account_id.eq.${opts.accountId}`);
+  }
+  if (opts.login && isFilterSafe(opts.login)) {
+    terms.push(`account_login.eq."${opts.login}"`);
+  }
+  if (terms.length === 0) return [];
+
   const service = getServiceClient();
-  const table = provider === "github" ? "git_user_identities" : "git_connections";
+  const table = opts.provider === "github" ? "git_user_identities" : "git_connections";
   const { data } = await service
     .from(table)
-    .select("user_id")
-    .eq("provider", provider)
-    .eq("account_login", login);
+    .select("user_id, provider_account_id, account_login")
+    .eq("provider", opts.provider)
+    .or(terms.join(","));
   return [
     ...new Set(
-      ((data ?? []) as { user_id: string | null }[])
+      ((data ?? []) as ForgeAccountRow[])
+        .filter((row) => forgeAccountMatches(row, opts))
         .map((r) => r.user_id)
         .filter((id): id is string => !!id),
     ),
@@ -62,6 +123,13 @@ async function minddyUsersForForgeLogin(
  * écrit il y a quelques secondes PAR LE MEMBRE qui porte ce compte de forge. Un
  * autre membre qui approuve sur la forge à la même seconde garde sa ligne.
  *
+ * Ce membre se reconnaît à l'ID de son compte de forge, pas à son login
+ * (MIN-154) : le login est un nom d'affichage jamais rafraîchi, et un renommage
+ * chez GitHub ou GitLab rendait ce garde muet — pour toujours, et en silence.
+ * Deux lignes d'activité identiques sur le ticket, deux dispatchs de webhook
+ * d'intégration, et une notification d'inbox à l'auteur du run pour son propre
+ * geste.
+ *
  * Best-effort, et la course n'est pas gagnée d'avance : si le hook arrivait avant
  * l'écriture de la route, on retombe sur l'ancien comportement (un doublon) —
  * jamais sur une perte.
@@ -71,12 +139,18 @@ export async function isPrActionEcho(opts: {
   type: PrActionEventType;
   prNumber: number;
   provider: ForgeProvider;
-  /** Login de l'acteur chez la forge, tel que le hook le livre. */
+  /** Id du compte de l'acteur chez la forge — la clé d'identité (MIN-154). */
+  accountId: string | null;
+  /** Login de l'acteur chez la forge : repli quand l'id manque d'un côté. */
   login: string | null;
 }): Promise<boolean> {
   const issueIds = [...new Set(opts.issueIds.filter((id): id is string => !!id))];
   if (issueIds.length === 0) return false;
-  const actorIds = await minddyUsersForForgeLogin(opts.provider, opts.login);
+  const actorIds = await minddyUsersForForgeAccount({
+    provider: opts.provider,
+    accountId: opts.accountId,
+    login: opts.login,
+  });
   if (actorIds.length === 0) return false;
   const { data } = await getServiceClient()
     .from("issue_events")
@@ -241,6 +315,8 @@ export async function applyForgePrToIssue(opts: {
   prState: AgentRun["pr_state"] | null;
   /** Action à tracer, ou null (action non tracée, ou écho d'un geste in-app). */
   actionType: PrActionEventType | null;
+  /** Id du compte de l'acteur chez la forge — sert à reconnaître l'écho (MIN-154). */
+  accountId: string | null;
   /** Login de l'acteur chez la forge — il tient lieu d'acteur dans la timeline. */
   login: string | null;
 }): Promise<void> {
@@ -283,6 +359,7 @@ export async function applyForgePrToIssue(opts: {
       type: opts.actionType,
       prNumber: opts.prNumber,
       provider: opts.provider,
+      accountId: opts.accountId,
       login: opts.login,
     }))
   ) {

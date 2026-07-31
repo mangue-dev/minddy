@@ -24,6 +24,7 @@ import {
   signGitLinkState,
 } from "@/lib/server/git/link-state";
 import { listCandidateRepos } from "@/lib/server/git/repo-links";
+import { refreshForgeAccountNames } from "@/lib/server/git/account-refresh";
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
   return provider === "github" ? isGithubAppConfigured() : isGitlabConfigured();
@@ -60,6 +61,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Le login stocké est un instantané de la connexion du compte : on le recale
+  // avant de le lire, sinon un renommage chez la forge s'affiche à vie (MIN-154).
+  // Pas dans la branche `candidates` : elle liste des dépôts, pas des comptes.
+  await refreshForgeAccountNames(auth.user.id);
   const connections = await listUserConnections(auth.user.id);
   if (!connections) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });

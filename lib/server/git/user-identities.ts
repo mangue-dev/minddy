@@ -136,6 +136,57 @@ export async function upsertUserIdentity(params: {
 }
 
 /**
+ * Recale le compte affiché sur ce que la forge en dit aujourd'hui (MIN-154) :
+ * le login est un nom d'AFFICHAGE, écrit à la connexion et jamais rafraîchi
+ * ensuite — la rotation de token ne touche qu'aux tokens, et un token d'App non
+ * expirant ne la déclenche même jamais.
+ *
+ * Ciblé par `(user_id, provider)`, le couple unique de l'upsert. N'écrit que si
+ * une valeur a bougé : la page des réglages se recharge souvent, et un `updated_at`
+ * qui avance sans raison n'est le marqueur de rien.
+ */
+export async function updateIdentityAccount(
+  userId: string,
+  provider: RepoProviderId,
+  account: {
+    providerAccountId: string;
+    accountLogin: string | null;
+    accountAvatarUrl: string | null;
+  },
+): Promise<void> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from("git_user_identities")
+    .select("provider_account_id, account_login, account_avatar_url")
+    .eq("user_id", userId)
+    .eq("provider", provider)
+    .maybeSingle();
+  const row = data as {
+    provider_account_id: string | null;
+    account_login: string | null;
+    account_avatar_url: string | null;
+  } | null;
+  if (!row) return;
+  if (
+    row.provider_account_id === account.providerAccountId &&
+    row.account_login === account.accountLogin &&
+    row.account_avatar_url === account.accountAvatarUrl
+  ) {
+    return;
+  }
+  await supabase
+    .from("git_user_identities")
+    .update({
+      provider_account_id: account.providerAccountId,
+      account_login: account.accountLogin,
+      account_avatar_url: account.accountAvatarUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .eq("provider", provider);
+}
+
+/**
  * Déconnecte le compte git d'un provider. Renvoie false si l'utilisateur n'en
  * avait aucun — l'appelant en fait un 404.
  */

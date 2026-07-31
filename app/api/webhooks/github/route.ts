@@ -81,8 +81,15 @@ function prActionForReview(state: string): PrActionEventType | null {
 }
 
 interface GithubActor {
+  /** Id du compte — la clé d'identité, immuable au renommage (MIN-154). */
+  id?: number;
   login?: string;
   type?: string;
+}
+
+/** L'id du compte de forge de l'acteur, en texte (colonne `provider_account_id`). */
+function actorAccountId(actor: GithubActor | undefined | null): string | null {
+  return actor?.id != null ? String(actor.id) : null;
 }
 
 /** L'acteur est le bot de la GitHub App → l'action vient de Numo (écho d'une
@@ -230,6 +237,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       prNumber: number,
       prState,
       actionType: byHuman ? actionType : null,
+      accountId: actorAccountId(payload.sender),
       login: payload.sender?.login ?? null,
     });
     return;
@@ -254,6 +262,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       type: actionType,
       prNumber: number,
       provider: "github",
+      accountId: actorAccountId(payload.sender),
       login: payload.sender?.login ?? null,
     }));
   if (actionType && byHuman && !echo) {
@@ -287,6 +296,7 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
     type: actionType,
     prNumber: number,
     provider: "github",
+    accountId: actorAccountId(reviewer),
     login: reviewer?.login ?? null,
   });
   if (echo) return;

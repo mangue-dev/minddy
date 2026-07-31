@@ -106,6 +106,68 @@ export async function findReusableConnection(
 }
 
 /**
+ * Les installations GitHub de l'utilisateur (connexions portant un
+ * `installation_id`). Sert au rafraîchissement du nom affiché (MIN-154) : le
+ * compte d'une installation se renomme comme un autre, et l'App sait le dire
+ * sans token utilisateur.
+ */
+export async function listUserInstallations(
+  userId: string,
+): Promise<{ id: string; installation_id: number }[]> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from("git_connections")
+    .select("id, installation_id")
+    .eq("user_id", userId)
+    .eq("provider", "github")
+    .not("installation_id", "is", null);
+  return (data ?? []) as { id: string; installation_id: number }[];
+}
+
+/**
+ * Recale le compte affiché d'une connexion sur ce que la forge en dit
+ * aujourd'hui (MIN-154) : `account_login` est un nom d'AFFICHAGE, écrit à la
+ * connexion et jamais rafraîchi ensuite.
+ *
+ * Seuls les champs fournis bougent, et seulement s'ils diffèrent : la page des
+ * réglages se recharge souvent, et un `updated_at` qui avance sans raison n'est
+ * le marqueur de rien.
+ */
+export async function updateConnectionAccount(
+  connectionId: string,
+  account: {
+    providerAccountId?: string | null;
+    accountLogin?: string | null;
+    accountType?: string | null;
+    repositorySelection?: string | null;
+  },
+): Promise<void> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from("git_connections")
+    .select("provider_account_id, account_login, account_type, repository_selection")
+    .eq("id", connectionId)
+    .maybeSingle();
+  const row = data as Record<string, string | null> | null;
+  if (!row) return;
+
+  const patch: Record<string, string | null> = {};
+  const put = (column: string, value: string | null | undefined) => {
+    if (value !== undefined && row[column] !== value) patch[column] = value;
+  };
+  put("provider_account_id", account.providerAccountId);
+  put("account_login", account.accountLogin);
+  put("account_type", account.accountType);
+  put("repository_selection", account.repositorySelection);
+  if (Object.keys(patch).length === 0) return;
+
+  await supabase
+    .from("git_connections")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", connectionId);
+}
+
+/**
  * Charge une connexion appartenant à l'utilisateur (colonnes publiques), ou null.
  * Sert à valider qu'une connexion référencée dans un bind appartient bien à
  * l'owner du projet.

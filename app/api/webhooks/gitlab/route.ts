@@ -110,6 +110,11 @@ interface GitlabUserPayload {
   username?: string;
 }
 
+/** L'id du compte de forge de l'acteur, en texte (colonne `provider_account_id`). */
+function actorAccountId(user: GitlabUserPayload | undefined | null): string | null {
+  return user?.id != null ? String(user.id) : null;
+}
+
 interface MergeRequestAttributes {
   iid?: number;
   action?: string;
@@ -197,6 +202,11 @@ async function ingestMergeRequest(
  * minddy utilise le token) ? Comparé par id de compte (provider_account_id),
  * repli sur le login. Plusieurs projets peuvent lier le même dépôt via des
  * connexions différentes → on collecte toutes les identités liées.
+ *
+ * C'est le modèle dont `forgeAccountMatches` (lib/server/agent/pr-activity.ts,
+ * MIN-154) hérite, à une tolérance près : ici un login qui gagne contre un id
+ * DIFFÉRENT est sans conséquence — on reconnaît un compte de service, on
+ * n'attribue le geste à personne.
  */
 async function isServiceAccount(
   repoFullName: string,
@@ -265,6 +275,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
       prNumber: iid,
       prState,
       actionType: echoed ? null : actionType,
+      accountId: actorAccountId(payload.user),
       login: payload.user?.username ?? null,
     });
     return;
@@ -295,6 +306,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
       type: actionType,
       prNumber: iid,
       provider: "gitlab",
+      accountId: actorAccountId(payload.user),
       login: payload.user?.username ?? null,
     }));
   if (echo) return;
