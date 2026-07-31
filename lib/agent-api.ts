@@ -2,6 +2,7 @@
 
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import type { ReviewThreadState } from "@/lib/pr-review-threads";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
@@ -622,10 +623,30 @@ export interface PullRequestReviewComment {
   html_url: string;
 }
 
+/**
+ * Commentaires de review ET état de leurs fils (MIN-139), servis ensemble : un
+ * fil se rend avec les deux. `threads` peut être vide alors que des commentaires
+ * existent — la forge n'a pas su dire l'état, et l'UI n'offre alors pas de
+ * bouton « Résoudre » plutôt que d'annoncer « ouvert » à l'aveugle.
+ */
 export async function fetchPrReviewCommentsApi(
   endpoint: PrEndpoint,
-): Promise<{ comments: PullRequestReviewComment[] }> {
+): Promise<{ comments: PullRequestReviewComment[]; threads: ReviewThreadState[] }> {
   return parseJson(await fetch(`${endpoint}/review-comments`));
+}
+
+/** Résout / rouvre un fil de review (`threadId` vient de `threads` ci-dessus). */
+export async function setPrReviewThreadResolvedApi(
+  endpoint: PrEndpoint,
+  input: { threadId: string; resolved: boolean },
+): Promise<{ ok: true; resolved: boolean }> {
+  return parseJson(
+    await fetch(`${endpoint}/review-comments`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ thread_id: input.threadId, resolved: input.resolved }),
+    }),
+  );
 }
 
 /**

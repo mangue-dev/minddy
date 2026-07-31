@@ -11,6 +11,7 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isForgeApiError, type Forge } from "./forge";
 import {
@@ -315,9 +316,10 @@ async function loadPrConversation(
   forge: Forge,
   call: { token: string; repoFullName: string; number: number },
 ): Promise<ReviewConversation> {
-  const [reviews, reviewComments, comments] = await Promise.all([
+  const [reviews, reviewComments, reviewThreads, comments] = await Promise.all([
     forge.listReviewMessages(call).catch(unreadable("submitted reviews", [])),
     forge.listPullRequestReviewComments(call).catch(unreadable("review comments", [])),
+    forge.listReviewThreads(call).catch(unreadable("review threads", [])),
     forge.listPullRequestComments(call).catch(unreadable("comments", [])),
   ]);
 
@@ -327,14 +329,22 @@ async function loadPrConversation(
       about: r.state.replace(/_/g, " "),
       body: r.body,
     })),
-    reviewComments: reviewComments.map((c) => ({
-      author: c.user?.login ?? "someone",
-      // La ligne courante, sinon celle du commit d'origine : un commentaire
-      // devenu « outdated » vise toujours quelque chose, et le dire vaut mieux
-      // que de le donner sans adresse.
-      about: `${c.path}:${c.line ?? c.original_line ?? "?"}`,
-      body: c.body,
-    })),
+    // Regroupés en fils pour porter l'état de résolution (MIN-139) : un fil
+    // résolu est un point RÉGLÉ, et le resservir est exactement ce que cette
+    // fonction existe pour éviter. Le marqueur suit chaque message du fil —
+    // l'aplatissement d'origine, lui, ignorait jusqu'à l'existence du fil.
+    reviewComments: groupReviewThreads(reviewComments, reviewThreads).flatMap((thread) =>
+      thread.comments.map((c) => ({
+        author: c.user?.login ?? "someone",
+        // La ligne courante, sinon celle du commit d'origine : un commentaire
+        // devenu « outdated » vise toujours quelque chose, et le dire vaut mieux
+        // que de le donner sans adresse.
+        about:
+          `${c.path}:${c.line ?? c.original_line ?? "?"}` +
+          (thread.resolution?.resolved ? " — resolved thread, already dealt with" : ""),
+        body: c.body,
+      })),
+    ),
     comments: comments.map((c) => ({ author: c.user?.login ?? "someone", body: c.body })),
   };
 }

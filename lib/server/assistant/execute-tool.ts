@@ -878,11 +878,19 @@ export async function executeTool(
         if (!target) return toolError("This project has no linked repository.");
         const forge = forgeFor(target.provider);
 
-        const [pr, files, reviewComments] = await Promise.all([
+        const [pr, files, reviewComments, reviewThreads] = await Promise.all([
           forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
           forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
           forge
             .listPullRequestReviewComments({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
+          // Résolution des fils (MIN-139), best-effort comme ci-dessus.
+          forge
+            .listReviewThreads({
               token: target.token,
               repoFullName: target.repoFullName,
               number: prNumber,
@@ -940,12 +948,14 @@ export async function executeTool(
             // Commentaires ancrés au code, regroupés en fils. `line: null` = le
             // code visé a changé depuis : l'ancre ne vaut plus, seul le hunk dit
             // de quoi on parlait.
-            review_comments: groupReviewThreads(reviewComments).map((thread) => ({
+            review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
               side: thread.root.side,
               outdated: thread.root.line == null,
+              // Fil marqué résolu = point réglé (`false` couvre aussi l'inconnu).
+              resolved: !!thread.resolution?.resolved,
               diff_hunk: thread.root.diff_hunk,
               comments: thread.comments.map((c) => ({
                 author: c.user?.login ?? null,

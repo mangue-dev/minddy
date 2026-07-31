@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parseDiff, expandFromRawCode, type HunkData } from "react-diff-view";
 import type { PullRequestReviewComment } from "@/lib/agent-api";
-import { displayLineOf, groupReviewThreads } from "@/lib/pr-review-threads";
+import {
+  displayLineOf,
+  groupReviewThreads,
+  type ReviewThreadState,
+} from "@/lib/pr-review-threads";
 import {
   commentableChangeKeys,
   gutterAnchor,
@@ -89,6 +93,69 @@ describe("groupReviewThreads", () => {
     const threads = groupReviewThreads([comment({ id: 11, in_reply_to_id: 999 })]);
     expect(threads).toHaveLength(1);
     expect(threads[0].id).toBe(11);
+  });
+});
+
+/**
+ * MIN-139 : l'état de résolution vient d'un AUTRE appel que les commentaires
+ * (GraphQL côté GitHub, discussions côté GitLab). Tout tient donc à l'appariement
+ * par l'id de la RACINE — la seule clé que les deux forges donnent, et celle sur
+ * laquelle le regroupement travaille déjà.
+ */
+describe("groupReviewThreads — état de résolution", () => {
+  const state = (over: Partial<ReviewThreadState> = {}): ReviewThreadState => ({
+    rootCommentId: 10,
+    threadId: "PRRT_kwDOABC",
+    resolved: true,
+    resolvedBy: "alice",
+    ...over,
+  });
+
+  it("attache l'état au fil par l'id de sa racine, réponses comprises", () => {
+    const threads = groupReviewThreads(
+      [comment({ id: 10 }), comment({ id: 11, in_reply_to_id: 10 })],
+      [state()],
+    );
+    expect(threads).toHaveLength(1);
+    expect(threads[0].resolution).toEqual(state());
+    expect(threads[0].comments).toHaveLength(2);
+  });
+
+  it("laisse `resolution` indéfini quand l'état n'est pas connu — pas « non résolu »", () => {
+    // La nuance porte l'UI : un fil d'état inconnu n'offre pas « Résoudre »,
+    // là où un fil connu non résolu l'offre.
+    const [thread] = groupReviewThreads([comment({ id: 10 })]);
+    expect(thread.resolution).toBeUndefined();
+    const [withEmpty] = groupReviewThreads([comment({ id: 10 })], []);
+    expect(withEmpty.resolution).toBeUndefined();
+  });
+
+  it("n'applique un état résolu qu'au fil visé, pas à ses voisins", () => {
+    const threads = groupReviewThreads(
+      [comment({ id: 10 }), comment({ id: 20, created_at: "2026-07-17T11:00:00Z" })],
+      [state({ rootCommentId: 20, resolved: true })],
+    );
+    expect(threads.map((t) => !!t.resolution?.resolved)).toEqual([false, true]);
+  });
+
+  it("ignore un état dont le fil est absent (listes lues à deux instants)", () => {
+    const threads = groupReviewThreads(
+      [comment({ id: 10 })],
+      [state({ rootCommentId: 999 })],
+    );
+    expect(threads).toHaveLength(1);
+    expect(threads[0].resolution).toBeUndefined();
+  });
+
+  it("suit la racine PROMUE d'un fil tronqué par la pagination", () => {
+    // La réponse orpheline devient sa propre racine : c'est cet id-là qui
+    // s'apparie, sinon un fil coupé perdrait son état de résolution.
+    const threads = groupReviewThreads(
+      [comment({ id: 11, in_reply_to_id: 999 })],
+      [state({ rootCommentId: 11, resolved: false, resolvedBy: null })],
+    );
+    expect(threads[0].resolution?.threadId).toBe("PRRT_kwDOABC");
+    expect(threads[0].resolution?.resolved).toBe(false);
   });
 });
 

@@ -275,9 +275,11 @@ export function PrDetail({
   const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
     item.prId,
   );
-  const { comments: reviewComments, refetch: refetchReviewComments } = usePrReviewCommentsQuery(
-    prEndpoint(item.prId),
-  );
+  const {
+    comments: reviewComments,
+    threads: reviewThreads,
+    refetch: refetchReviewComments,
+  } = usePrReviewCommentsQuery(prEndpoint(item.prId));
 
   const [acting, setActing] = useState<null | "merge" | "close" | "ready_for_review">(null);
   // Le merge se confirme AVEC sa méthode : la porter dans l'état de confirmation
@@ -848,6 +850,7 @@ export function PrDetail({
                   prUrl={pr.url}
                   provider={item.provider}
                   reviewComments={reviewComments}
+                  reviewThreads={reviewThreads}
                   onCommentPosted={refetchReviewComments}
                 />
               ) : (

@@ -13,6 +13,7 @@ import type {
   PullRequestReviewMessage,
   PullRequestReviewSummary,
   ReviewSubmission,
+  ReviewThreadState,
   ReviewVerdict,
 } from "./pr";
 import type { ChecksSummary } from "./checks-core";
@@ -227,6 +228,31 @@ export interface Forge {
     commentId: number;
     body: string;
   }): Promise<PullRequestReviewComment>;
+  /**
+   * État des FILS de review (MIN-139), à part de leurs commentaires parce que
+   * les deux forges le servent ailleurs : GraphQL côté GitHub (la REST des
+   * commentaires ignore jusqu'à l'existence du fil), les discussions déjà lues
+   * côté GitLab. L'appariement se fait par `rootCommentId`, la clé de
+   * `groupReviewThreads` — aucun appelant n'a à connaître ces chemins.
+   *
+   * Un appelant qui ne lit que les commentaires reste valide : les fils sont
+   * alors d'état INCONNU, et l'UI n'y propose rien plutôt que d'annoncer
+   * « ouvert » sans le savoir.
+   */
+  listReviewThreads(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<ReviewThreadState[]>;
+  /** Résout / rouvre un fil. `threadId` vient de `listReviewThreads` et n'est
+      lisible que par la forge qui l'a émis (node id GraphQL / id de discussion). */
+  setReviewThreadResolved(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    threadId: string;
+    resolved: boolean;
+  }): Promise<void>;
 }
 
 const githubForge: Forge = {
@@ -277,6 +303,15 @@ const githubForge: Forge = {
     return github.createPullRequestReviewComment({ ...opts, commitId: pr.headSha });
   },
   replyToPullRequestReviewComment: github.replyToPullRequestReviewComment,
+  listReviewThreads: github.listPullRequestReviewThreads,
+  // Le fil s'adresse par son node id GraphQL, qui porte à lui seul le dépôt et
+  // la PR : le triplet de l'interface n'a rien à y faire.
+  setReviewThreadResolved: (opts) =>
+    github.setPullRequestReviewThreadResolved({
+      token: opts.token,
+      threadId: opts.threadId,
+      resolved: opts.resolved,
+    }),
 };
 
 const gitlabForge: Forge = {
@@ -307,6 +342,8 @@ const gitlabForge: Forge = {
   listPullRequestReviewComments: gitlab.listMergeRequestDiffComments,
   createPullRequestReviewComment: gitlab.createMergeRequestDiffComment,
   replyToPullRequestReviewComment: gitlab.replyToMergeRequestDiffComment,
+  listReviewThreads: gitlab.listMergeRequestDiffThreads,
+  setReviewThreadResolved: gitlab.setMergeRequestDiscussionResolved,
 };
 
 /** Client du provider — la valeur vient de `RepoCloneTarget.provider` (DB). */

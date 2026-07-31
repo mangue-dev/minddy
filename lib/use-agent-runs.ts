@@ -265,5 +265,13 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
     queryFn: () => fetchPrReviewCommentsApi(endpoint as PrEndpoint),
     enabled: !!endpoint,
   });
-  return { comments: data?.comments ?? [], loading: isLoading, refetch };
+  // `threads` (MIN-139) voyage avec les commentaires : c'est la même query, donc
+  // le même rafraîchissement — résoudre un fil et répondre dedans ne peuvent pas
+  // se désynchroniser.
+  return {
+    comments: data?.comments ?? [],
+    threads: data?.threads ?? [],
+    loading: isLoading,
+    refetch,
+  };
 }

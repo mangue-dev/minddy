@@ -955,7 +955,7 @@ async function buildInheritedPrContext(
   }
   const number = run.pr_number;
 
-  const [pr, comments, reviewComments, previousSummary] = await Promise.all([
+  const [pr, comments, reviewComments, reviewThreads, previousSummary] = await Promise.all([
     opts.forge
       .getPullRequest({ token: opts.token, repoFullName: opts.repoFullName, number })
       .catch(() => null),
@@ -975,6 +975,16 @@ async function buildInheritedPrContext(
         number,
       })
       .catch(() => []),
+    // Fils RÉSOLUS (MIN-139) : sans eux l'agent relirait un point déjà réglé
+    // comme une demande vivante. Best-effort — l'état manquant vaut « inconnu »,
+    // et les fils repartent alors tous non marqués, comme avant.
+    opts.forge
+      .listReviewThreads({
+        token: opts.token,
+        repoFullName: opts.repoFullName,
+        number,
+      })
+      .catch(() => []),
     previousRunSummaryForIssue(issueId, run.id).catch(() => null),
   ]);
 
@@ -987,7 +997,7 @@ async function buildInheritedPrContext(
       // PR illisible → on se rabat sur l'état figé au lancement.
       state: pr ? (pr.merged ? "merged" : pr.state) : run.pr_state,
       comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
-      lineThreads: toPrLineThreads(reviewComments),
+      lineThreads: toPrLineThreads(reviewComments, reviewThreads),
       previousSummary,
     },
   });

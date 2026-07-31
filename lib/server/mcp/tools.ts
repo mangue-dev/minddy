@@ -619,7 +619,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const forge = forgeFor(target.provider);
 
       try {
-        const [pr, files, reviewComments] = await Promise.all([
+        const [pr, files, reviewComments, reviewThreads] = await Promise.all([
           forge.getPullRequest({
             token: target.token,
             repoFullName: target.repoFullName,
@@ -632,6 +632,15 @@ export function registerMinddyTools(rawServer: McpServer): void {
           }),
           forge
             .listPullRequestReviewComments({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
+          // État de résolution des fils (MIN-139) — best-effort, comme les
+          // commentaires : illisible = fils sans état, pas d'erreur.
+          forge
+            .listReviewThreads({
               token: target.token,
               repoFullName: target.repoFullName,
               number: prNumber,
@@ -685,13 +694,16 @@ export function registerMinddyTools(rawServer: McpServer): void {
             })),
             // Fils de review ancrés au code. Un fil périmé (`outdated`) n'a plus
             // d'ancre fiable — son `diff_hunk` est la seule trace du code visé.
-            review_comments: groupReviewThreads(reviewComments).map((thread) => ({
+            review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({
               id: thread.id,
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
               side: thread.root.side,
               outdated: thread.root.line == null,
+              // `true` = le fil a été marqué résolu : le point est réglé.
+              // `false` inclut « état inconnu » — la forge ne l'a pas dit.
+              resolved: !!thread.resolution?.resolved,
               diff_hunk: thread.root.diff_hunk,
               url: thread.root.html_url,
               comments: thread.comments.map((c) => ({

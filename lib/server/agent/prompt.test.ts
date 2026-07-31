@@ -323,6 +323,38 @@ describe("buildInheritedPrMessage", () => {
     it("rend [] sur une PR sans commentaire de ligne (pas de section vide)", () => {
       expect(toPrLineThreads([])).toEqual([]);
     });
+
+    /**
+     * MIN-139 : un fil résolu est un point RÉGLÉ. Il reste dans l'amorce (il porte
+     * souvent la décision prise), mais MARQUÉ — sans quoi une session froide
+     * relirait une demande close comme une demande vivante et referait le travail.
+     */
+    it("marque RESOLVED un fil que la forge dit résolu, et laisse les autres nus", () => {
+      const threads = toPrLineThreads(
+        [raw({ id: 10 }), raw({ id: 20, path: "lib/other.ts", body: "Et ici ?" })],
+        [{ rootCommentId: 10, threadId: "PRRT_x", resolved: true, resolvedBy: "alice" }],
+      );
+      expect(threads.map((t) => t.resolved)).toEqual([true, undefined]);
+
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: threads },
+      });
+      expect(msg).toMatch(/lib\/search\.ts:42 — RESOLVED/);
+      // Le fil ouvert, lui, ne porte aucun marqueur.
+      expect(msg).toContain("lib/other.ts:42\n");
+      expect(msg).toMatch(/don't redo it/i);
+    });
+
+    it("laisse tous les fils nus quand l'état de résolution est inconnu", () => {
+      const threads = toPrLineThreads([raw({ id: 10 })]);
+      expect(threads[0].resolved).toBeUndefined();
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: threads },
+      });
+      expect(msg).not.toMatch(/RESOLVED/);
+    });
   });
 });
 

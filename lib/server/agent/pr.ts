@@ -8,6 +8,8 @@ import {
   type RawCommitStatus,
 } from "./checks-core";
 
+import type { ReviewThreadState } from "@/lib/pr-review-threads";
+
 /**
  * Opérations Pull Request GitHub pour l'agent de code (MIN-46) : ouvrir la PR
  * d'un run, la lire (metadata + fichiers/patches pour la review in-app), la
@@ -120,6 +122,13 @@ export interface PullRequestReviewComment {
   created_at: string;
   html_url: string;
 }
+
+/**
+ * L'état d'un FIL (résolution) vit dans le module pur `lib/pr-review-threads` —
+ * il est partagé avec le client, qui apparie les deux listes au rendu. Réexporté
+ * ici pour que `mr.ts` et `forge.ts` l'importent comme les autres types de PR.
+ */
+export type { ReviewThreadState } from "@/lib/pr-review-threads";
 
 /** Erreur d'API GitHub avec le status HTTP (permet de distinguer 422 « no commits »). */
 export class GithubApiError extends Error {
@@ -750,30 +759,26 @@ export async function listPullRequestReviewMessages(opts: {
 }
 
 /**
- * Bascule une PR brouillon en « prête pour la review ». La REST ne sait pas le
- * faire : c'est une mutation GraphQL, adressée par le `node_id` de la PR (d'où
- * `PullRequestRef.nodeId`). Vérifié avec un token d'installation — aucune
- * permission de plus que `pull_requests: write`.
+ * Appel GraphQL, pour ce que la REST de GitHub ne sait pas faire : basculer une
+ * PR hors brouillon (ci-dessous) et résoudre un fil de review (MIN-139).
  *
- * GraphQL répond **200 avec un tableau `errors`** quand la mutation échoue :
- * s'en remettre au status HTTP ferait passer un échec pour un succès.
+ * GraphQL répond **200 avec un tableau `errors`** quand l'opération échoue :
+ * s'en remettre au status HTTP ferait passer un échec pour un succès. Vérifié
+ * avec un token d'installation — aucune permission de plus que celles de la REST
+ * équivalente (`pull_requests: read`/`write`).
  */
-export async function markPullRequestReadyForReview(opts: {
-  token: string;
-  nodeId: string;
-}): Promise<void> {
+async function ghGraphql<T>(
+  token: string,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
   const res = await fetch(`${GITHUB_API_BASE}/graphql`, {
     method: "POST",
-    headers: { ...githubHeaders(opts.token), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query:
-        "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id})" +
-        "{pullRequest{number isDraft}}}",
-      variables: { id: opts.nodeId },
-    }),
+    headers: { ...githubHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables }),
   });
   const text = await res.text();
-  type GraphqlBody = { errors?: Array<{ message?: string }> };
+  type GraphqlBody = { data?: T; errors?: Array<{ message?: string }> };
   let data: GraphqlBody | null = null;
   try {
     data = text ? (JSON.parse(text) as GraphqlBody) : null;
@@ -789,6 +794,25 @@ export async function markPullRequestReadyForReview(opts: {
   if (data?.errors?.length) {
     throw new GithubApiError(data.errors[0].message ?? "GraphQL error", 422);
   }
+  if (!data?.data) throw new GithubApiError("GitHub returned no data", 502);
+  return data.data;
+}
+
+/**
+ * Bascule une PR brouillon en « prête pour la review ». La REST ne sait pas le
+ * faire : c'est une mutation GraphQL, adressée par le `node_id` de la PR (d'où
+ * `PullRequestRef.nodeId`).
+ */
+export async function markPullRequestReadyForReview(opts: {
+  token: string;
+  nodeId: string;
+}): Promise<void> {
+  await ghGraphql<unknown>(
+    opts.token,
+    "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id})" +
+      "{pullRequest{number isDraft}}}",
+    { id: opts.nodeId },
+  );
 }
 
 /**
@@ -977,6 +1001,103 @@ export async function replyToPullRequestReviewComment(opts: {
     },
   );
   return toReviewComment(created);
+}
+
+// ── Résolution des fils de review (MIN-139) ──────────────────────────────────
+
+/** Même garde-fou que la pagination des commentaires : 10 × 100 fils. */
+const REVIEW_THREADS_MAX_PAGES = 10;
+
+interface RawReviewThreads {
+  repository?: {
+    pullRequest?: {
+      reviewThreads?: {
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+        nodes?: Array<{
+          id?: string;
+          isResolved?: boolean;
+          resolvedBy?: { login?: string } | null;
+          comments?: { nodes?: Array<{ databaseId?: number | null }> };
+        } | null>;
+      };
+    } | null;
+  } | null;
+}
+
+/**
+ * État de résolution des fils de review — **le seul endroit où GitHub le dit**.
+ *
+ * L'API REST des commentaires (`listPullRequestReviewComments`) ne connaît que
+ * des commentaires : ni l'id du FIL, ni sa résolution. Plutôt que de basculer
+ * toute la lecture sur GraphQL, on ajoute CETTE requête à côté : elle rend, par
+ * fil, son node id (seule clé des mutations) et l'id REST de son commentaire
+ * racine (`databaseId`) — c'est-à-dire exactement la clé sur laquelle
+ * `groupReviewThreads` regroupe déjà. Les deux listes s'apparient donc sans
+ * heuristique.
+ *
+ * `comments(first:1)` suffit : GitHub sert les commentaires d'un fil du plus
+ * ancien au plus récent, et le premier EST la racine (celui dont la REST dit
+ * `in_reply_to_id: null`).
+ */
+export async function listPullRequestReviewThreads(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<ReviewThreadState[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const query = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+    repository(owner:$owner,name:$name){
+      pullRequest(number:$number){
+        reviewThreads(first:100,after:$cursor){
+          pageInfo{hasNextPage endCursor}
+          nodes{id isResolved resolvedBy{login} comments(first:1){nodes{databaseId}}}
+        }
+      }
+    }
+  }`;
+
+  const states: ReviewThreadState[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < REVIEW_THREADS_MAX_PAGES; page++) {
+    const data: RawReviewThreads = await ghGraphql<RawReviewThreads>(opts.token, query, {
+      owner,
+      name: repo,
+      number: opts.number,
+      cursor,
+    });
+    const threads = data.repository?.pullRequest?.reviewThreads;
+    for (const node of threads?.nodes ?? []) {
+      const rootCommentId = node?.comments?.nodes?.[0]?.databaseId;
+      // Un fil sans node id ou sans racine lisible n'est appariable à rien : on
+      // le laisse tomber plutôt que d'inventer une clé.
+      if (!node?.id || rootCommentId == null) continue;
+      states.push({
+        rootCommentId,
+        threadId: node.id,
+        resolved: !!node.isResolved,
+        resolvedBy: node.resolvedBy?.login ?? null,
+      });
+    }
+    if (!threads?.pageInfo?.hasNextPage || !threads.pageInfo.endCursor) break;
+    cursor = threads.pageInfo.endCursor;
+  }
+  return states;
+}
+
+/**
+ * Résout (ou rouvre) un fil de review. GraphQL SEULEMENT : la REST n'expose
+ * aucune de ces deux opérations, et le fil s'adresse par son node id — celui que
+ * `listPullRequestReviewThreads` vient de rendre, jamais un id de commentaire.
+ */
+export async function setPullRequestReviewThreadResolved(opts: {
+  token: string;
+  threadId: string;
+  resolved: boolean;
+}): Promise<void> {
+  const mutation = opts.resolved
+    ? "mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{id isResolved}}}"
+    : "mutation($id:ID!){unresolveReviewThread(input:{threadId:$id}){thread{id isResolved}}}";
+  await ghGraphql<unknown>(opts.token, mutation, { id: opts.threadId });
 }
 
 /** Ajoute un commentaire à la conversation de la PR (auteur = la GitHub App minddy). */

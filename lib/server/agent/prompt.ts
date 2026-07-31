@@ -2,7 +2,11 @@
 // node/vitest, comme prune.ts / caching.ts. Ne rien y mettre qui touche aux secrets
 // ou à la base — l'appelant fournit déjà tout le contexte.
 
-import { groupReviewThreads, type ReviewCommentLike } from "@/lib/pr-review-threads";
+import {
+  groupReviewThreads,
+  type ReviewCommentLike,
+  type ReviewThreadState,
+} from "@/lib/pr-review-threads";
 import { describeTemplates } from "./subagent-templates";
 import type { FavoriteSubagentModel, SubagentMode } from "./subagent";
 
@@ -356,6 +360,8 @@ export interface InheritedPrLineThread {
   side: "LEFT" | "RIGHT";
   /** Le code commenté, tel qu'il était au moment du commentaire. */
   diffHunk: string;
+  /** Fil marqué RÉSOLU sur la forge (MIN-139) : le point a été traité. */
+  resolved?: boolean;
   comments: Array<{ author: string | null; body: string }>;
 }
 
@@ -380,12 +386,16 @@ export interface PrReviewCommentLike extends ReviewCommentLike {
  * maillon entre « GitHub a des commentaires de ligne » et « l'agent les lit », et
  * il doit être testable sans sandbox ni base.
  */
-export function toPrLineThreads(comments: PrReviewCommentLike[]): InheritedPrLineThread[] {
-  return groupReviewThreads(comments).map((thread) => ({
+export function toPrLineThreads(
+  comments: PrReviewCommentLike[],
+  states?: ReviewThreadState[],
+): InheritedPrLineThread[] {
+  return groupReviewThreads(comments, states).map((thread) => ({
     path: thread.root.path,
     line: thread.root.line,
     side: thread.root.side,
     diffHunk: thread.root.diff_hunk,
+    resolved: thread.resolution?.resolved,
     comments: thread.comments.map((c) => ({
       author: c.user?.login ?? null,
       body: c.body,
@@ -435,13 +445,19 @@ function buildLineThreadsBlock(threads: InheritedPrLineThread[]): string {
       thread.line != null
         ? `${thread.path}:${thread.line}${thread.side === "LEFT" ? " (removed line)" : ""}`
         : `${thread.path} — OUTDATED: the code it was written against has changed, so it no longer maps to a line; judge from the snippet below whether it still applies`;
+    // Fil résolu (MIN-139) : gardé, pas effacé — il porte souvent la DÉCISION
+    // prise (« on laisse comme ça »), que retirer ferait reposer la question.
+    // C'est le marqueur, pas l'absence, qui dit à l'agent de passer son chemin.
+    const settled = thread.resolved
+      ? " — RESOLVED: this thread was marked resolved; it has been dealt with, so don't redo it (read it for the decision it records)"
+      : "";
     const snippet = thread.diffHunk.trim()
       ? `\n\`\`\`diff\n${capHunkTail(thread.diffHunk, PR_DIFF_HUNK_MAX_LINES)}\n\`\`\``
       : "";
     const body = thread.comments
       .map((c) => `@${c.author ?? "unknown"}: ${cap(c.body.trim(), PR_COMMENT_MAX_CHARS)}`)
       .join("\n\n");
-    return `### ${anchor}${snippet}\n${body}`;
+    return `### ${anchor}${settled}${snippet}\n${body}`;
   });
 
   return `\n\n## Line comments on the pull request (anchored to specific code, oldest first)

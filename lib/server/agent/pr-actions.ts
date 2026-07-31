@@ -212,10 +212,61 @@ export async function createPrCommentResponse(
 
 // ── Commentaires de review (ancrés à une ligne) ──────────────────────────────
 
+/**
+ * Les commentaires de review ET l'état de résolution de leurs fils (MIN-139),
+ * en un seul aller-retour : le client a besoin des deux pour rendre un fil.
+ *
+ * Les fils sont best-effort — un échec (GraphQL indisponible, tier GitLab
+ * inattendu) rend `threads: []`, donc des fils d'état INCONNU : les commentaires
+ * s'affichent, seule l'affordance « Résoudre » disparaît. L'inverse — faire
+ * tomber toute la vue parce qu'un état de résolution manque — coûterait bien
+ * plus que ce qu'il protège.
+ */
 export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const comments = await scope.forge.listPullRequestReviewComments(scope.call);
-    return NextResponse.json({ comments });
+    const [comments, threads] = await Promise.all([
+      scope.forge.listPullRequestReviewComments(scope.call),
+      scope.forge.listReviewThreads(scope.call).catch((err) => {
+        console.error("[pr-actions] review threads unreadable:", (err as Error).message);
+        return [];
+      }),
+    ]);
+    return NextResponse.json({ comments, threads });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Valide un PATCH de résolution de fil. `thread_id` est un identifiant OPAQUE
+ * qui finit interpolé dans une URL (GitLab) ou dans une variable GraphQL
+ * (GitHub) : même vigilance que `in_reply_to`, on le contraint à l'alphabet des
+ * deux forges (hexadécimal GitLab, node id GitHub) plutôt que de faire confiance
+ * au type. Un `..` n'y passe pas.
+ */
+export function parseReviewThreadPayload(
+  raw: unknown,
+): { ok: true; payload: { threadId: string; resolved: boolean } } | { ok: false; response: NextResponse } {
+  const p = (raw ?? {}) as { thread_id?: unknown; resolved?: unknown };
+  const bad = (error: string) => ({
+    ok: false as const,
+    response: NextResponse.json({ error }, { status: 400 }),
+  });
+
+  if (typeof p.thread_id !== "string" || !/^[A-Za-z0-9_=-]{1,255}$/.test(p.thread_id)) {
+    return bad("Invalid thread_id");
+  }
+  if (typeof p.resolved !== "boolean") return bad("Invalid resolved");
+  return { ok: true, payload: { threadId: p.thread_id, resolved: p.resolved } };
+}
+
+export async function setPrReviewThreadResolvedResponse(
+  scope: PrScope,
+  payload: { threadId: string; resolved: boolean },
+): Promise<NextResponse> {
+  try {
+    await scope.forge.setReviewThreadResolved({ ...scope.call, ...payload });
+    return NextResponse.json({ ok: true, resolved: payload.resolved });
   } catch (err) {
     return forgeErrorResponse(err);
   }

@@ -28,7 +28,7 @@ import {
   type PullRequestFile,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
-import { groupReviewThreads } from "@/lib/pr-review-threads";
+import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import {
   commentableChangeKeys,
@@ -43,6 +43,7 @@ import {
   ReviewThreadCard,
   StaleThreads,
   useReviewReplies,
+  useThreadResolution,
 } from "@/components/pull-requests/pr-review-comments";
 
 /**
@@ -223,6 +224,7 @@ function PrDiffFile({
   collapsed,
   onToggle,
   reviewComments,
+  reviewThreads,
   onCommentPosted,
 }: {
   file: PullRequestFile;
@@ -237,6 +239,9 @@ function PrDiffFile({
   onToggle: () => void;
   /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
   reviewComments: PullRequestReviewComment[];
+  /** État des fils de la PR, TOUS fichiers confondus : l'appariement se fait par
+      id de racine, pas par chemin — inutile de le filtrer en amont. */
+  reviewThreads: ReviewThreadState[];
   onCommentPosted: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
@@ -254,6 +259,7 @@ function PrDiffFile({
   >({});
   const [postingKey, setPostingKey] = useState<string | null>(null);
   const replies = useReviewReplies(endpoint, onCommentPosted);
+  const resolution = useThreadResolution(endpoint, onCommentPosted);
 
   // Un fichier ajouté n'a pas de version de base : son patch EST déjà le fichier
   // entier, il n'y a rien à déplier.
@@ -306,7 +312,10 @@ function PrDiffFile({
     return map;
   }, [hunks]);
 
-  const threads = useMemo(() => groupReviewThreads(reviewComments), [reviewComments]);
+  const threads = useMemo(
+    () => groupReviewThreads(reviewComments, reviewThreads),
+    [reviewComments, reviewThreads],
+  );
 
   // Répartit les fils : ancrés sous leur ligne, ou périmés (repliés en bas). Le
   // départage se fait sur les hunks RENDUS — déplier du contexte peut ramener un
@@ -379,7 +388,12 @@ function PrDiffFile({
       map[key] = (
         <LineWidget anchor={anchorOf(change)}>
           {list.map((thread) => (
-            <ReviewThreadCard key={thread.id} thread={thread} replies={replies} />
+            <ReviewThreadCard
+              key={thread.id}
+              thread={thread}
+              replies={replies}
+              resolution={readOnly ? undefined : resolution}
+            />
           ))}
           {openAnchors[key] ? (
             <LineComposer
@@ -401,6 +415,8 @@ function PrDiffFile({
     drafts,
     postingKey,
     replies,
+    resolution,
+    readOnly,
     submitComment,
     closeComposer,
   ]);
@@ -541,7 +557,11 @@ function PrDiffFile({
           {/* Hors du `parsed ?` : un fichier binaire ou trop gros n'a pas de diff,
               donc AUCUN de ses fils ne s'ancre — ils vivent tous ici plutôt que de
               disparaître avec le diff qu'on ne sait pas rendre. */}
-          <StaleThreads threads={staleThreads} replies={replies} />
+          <StaleThreads
+            threads={staleThreads}
+            replies={replies}
+            resolution={readOnly ? undefined : resolution}
+          />
         </>
       )}
     </div>
@@ -550,6 +570,7 @@ function PrDiffFile({
 
 /** Références stables : `?? []` / `?? () => {}` en ligne casseraient les mémos. */
 const NO_COMMENTS: PullRequestReviewComment[] = [];
+const NO_THREADS: ReviewThreadState[] = [];
 const noop = () => {};
 
 export function PrDiff({
@@ -559,6 +580,7 @@ export function PrDiff({
   provider,
   readOnly = false,
   reviewComments = NO_COMMENTS,
+  reviewThreads = NO_THREADS,
   onCommentPosted = noop,
   className,
 }: {
@@ -573,6 +595,9 @@ export function PrDiff({
   readOnly?: boolean;
   /** Commentaires de review de la PR, tous fichiers confondus. */
   reviewComments?: PullRequestReviewComment[];
+  /** État de résolution des fils (MIN-139). Vide = état INCONNU : les fils se
+      lisent et se répondent, mais aucun ne s'annonce résolu ni ne se résout. */
+  reviewThreads?: ReviewThreadState[];
   /** Rafraîchit les commentaires après un envoi réussi. */
   onCommentPosted?: () => unknown;
   className?: string;
@@ -596,8 +621,11 @@ export function PrDiff({
   // sans laisser de trace.
   const orphanThreads = useMemo(() => {
     const known = new Set(files.map((f) => f.filename));
-    return groupReviewThreads(reviewComments.filter((c) => !known.has(c.path)));
-  }, [reviewComments, files]);
+    return groupReviewThreads(
+      reviewComments.filter((c) => !known.has(c.path)),
+      reviewThreads,
+    );
+  }, [reviewComments, reviewThreads, files]);
 
   // Parse une fois puis indexe par chemin (nouveau chemin, ou ancien pour une suppression).
   const parsedByPath = useMemo(() => {
@@ -612,6 +640,7 @@ export function PrDiff({
   }, [files]);
 
   const orphanReplies = useReviewReplies(endpoint, onCommentPosted);
+  const orphanResolution = useThreadResolution(endpoint, onCommentPosted);
 
   if (files.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noDiff")}</p>;
@@ -663,6 +692,7 @@ export function PrDiff({
             collapsed={collapsed.has(f.filename)}
             onToggle={() => toggle(f.filename)}
             reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
+            reviewThreads={reviewThreads}
             onCommentPosted={onCommentPosted}
           />
         ))}
@@ -671,6 +701,7 @@ export function PrDiff({
             <StaleThreads
               threads={orphanThreads}
               replies={orphanReplies}
+              resolution={readOnly ? undefined : orphanResolution}
               label={(count) => t("orphanComments", { count })}
             />
           </div>

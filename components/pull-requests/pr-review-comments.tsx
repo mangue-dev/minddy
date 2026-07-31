@@ -8,12 +8,13 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ChevronDown, ChevronRight, CornerDownRight } from "lucide-react";
+import { ChevronDown, ChevronRight, CircleCheck, CornerDownRight } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   replyPrReviewCommentApi,
+  setPrReviewThreadResolvedApi,
   type PrEndpoint,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
@@ -70,6 +71,41 @@ export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) 
 }
 
 export type ReviewReplies = ReturnType<typeof useReviewReplies>;
+
+/**
+ * Bascule « résolu / rouvert » d'un fil (MIN-139). Un seul fil en vol à la fois,
+ * comme les réponses : la liste se recharge après coup, deux bascules simultanées
+ * se marcheraient dessus.
+ */
+export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unknown) {
+  const [pendingId, setPendingId] = useState<number | null>(null);
+
+  const toggle = useCallback(
+    async (thread: PrReviewThread) => {
+      const state = thread.resolution;
+      // Sans état connu il n'y a pas d'id de fil à donner à la forge — l'appelant
+      // ne rend d'ailleurs pas le bouton dans ce cas.
+      if (!state || pendingId != null) return;
+      setPendingId(thread.id);
+      try {
+        await setPrReviewThreadResolvedApi(endpoint, {
+          threadId: state.threadId,
+          resolved: !state.resolved,
+        });
+        await onChanged();
+      } catch (err) {
+        toast.error((err as Error).message);
+      } finally {
+        setPendingId(null);
+      }
+    },
+    [endpoint, onChanged, pendingId],
+  );
+
+  return { pendingId, toggle };
+}
+
+export type ThreadResolution = ReturnType<typeof useThreadResolution>;
 
 /** Corps d'un commentaire : avatar, auteur, heure, markdown. */
 function CommentBody({ comment }: { comment: PullRequestReviewComment }) {
@@ -183,17 +219,63 @@ export function LineComposer({
   );
 }
 
-/** Un fil : les commentaires empilés, puis « Répondre ». */
+/**
+ * Un fil : les commentaires empilés, puis « Répondre » et « Résoudre ».
+ *
+ * Un fil RÉSOLU se rend REPLIÉ — une seule ligne « ✓ Résolu par X », dépliable.
+ * C'est tout l'objet de MIN-139 : tant qu'un fil traité s'affichait exactement
+ * comme un fil ouvert, le résoudre n'aurait rien changé à l'écran. Le repli est
+ * local et non persistant : rouvrir la page replie de nouveau, ce qui est bien la
+ * lecture voulue (« ce point est réglé, passe au suivant »).
+ *
+ * `resolution` peut manquer sur le fil (`thread.resolution === undefined`) quand
+ * la forge n'a pas su dire l'état : on n'affiche alors AUCUNE affordance, plutôt
+ * qu'un bouton qui prétendrait savoir.
+ */
 export function ReviewThreadCard({
   thread,
   replies,
+  resolution,
 }: {
   thread: PrReviewThread;
   replies: ReviewReplies;
+  /** Absent en lecture seule : le fil se lit, il ne se résout pas. */
+  resolution?: ThreadResolution;
 }) {
   const t = useTranslations("PullRequests");
+  const [expanded, setExpanded] = useState(false);
+  const state = thread.resolution;
+  const resolved = !!state?.resolved;
+  const pending = resolution?.pendingId === thread.id;
+
+  const resolvedLabel = state?.resolvedBy
+    ? t("threadResolvedBy", { name: state.resolvedBy })
+    : t("threadResolved");
+
+  if (resolved && !expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/70"
+      >
+        <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+        <span className="min-w-0 flex-1 truncate">{resolvedLabel}</span>
+        <span className="shrink-0 text-[11px] text-muted-foreground/80">
+          {t("showResolvedThread", { count: thread.comments.length })}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-md border border-border bg-card px-3 py-2.5">
+      {resolved ? (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="min-w-0 truncate">{resolvedLabel}</span>
+        </div>
+      ) : null}
       {thread.comments.map((c) => (
         <CommentBody key={c.id} comment={c} />
       ))}
@@ -209,10 +291,21 @@ export function ReviewThreadCard({
           submitLabel={t("postReply")}
         />
       ) : (
-        <div>
+        <div className="flex items-center gap-1.5">
           <Button variant="outline" size="sm" onClick={() => replies.start(thread.id)}>
             {t("reply")}
           </Button>
+          {resolution && state ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() => void resolution.toggle(thread)}
+            >
+              {pending ? <Spinner /> : null}
+              {resolved ? t("unresolveThread") : t("resolveThread")}
+            </Button>
+          ) : null}
         </div>
       )}
     </div>
@@ -263,10 +356,12 @@ export function LineWidget({
 export function StaleThreads({
   threads,
   replies,
+  resolution,
   label,
 }: {
   threads: PrReviewThread[];
   replies: ReviewReplies;
+  resolution?: ThreadResolution;
   /** Intitulé du repli — le cas orphelin ne se raconte pas comme un périmé. */
   label?: (count: number) => string;
 }) {
@@ -308,7 +403,7 @@ export function StaleThreads({
                     {thread.root.diff_hunk}
                   </pre>
                 ) : null}
-                <ReviewThreadCard thread={thread} replies={replies} />
+                <ReviewThreadCard thread={thread} replies={replies} resolution={resolution} />
               </div>
             );
           })}

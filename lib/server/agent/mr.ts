@@ -16,6 +16,7 @@ import type {
   PullRequestReviewMessage,
   PullRequestReviewSummary,
   ReviewSubmission,
+  ReviewThreadState,
   ReviewVerdict,
 } from "./pr";
 
@@ -739,6 +740,10 @@ interface RawNote {
   created_at: string;
   position?: RawPosition | null;
   original_position?: RawPosition | null;
+  /** Résolution du FIL, portée par chaque note résolvable (MIN-139). */
+  resolved?: boolean;
+  resolvable?: boolean;
+  resolved_by?: { username?: string } | null;
 }
 
 interface RawPosition {
@@ -891,6 +896,62 @@ export async function listMergeRequestDiffComments(opts: {
     });
   }
   return all;
+}
+
+/**
+ * État de résolution des fils de review (MIN-139) — le pendant GitLab de la
+ * requête GraphQL de `pr.ts`, mais SANS appel supplémentaire : les discussions
+ * portent déjà tout, `listMergeRequestDiffComments` ne fait que le jeter en
+ * aplatissant. `threadId` est l'id de discussion (une chaîne, à la différence des
+ * ids de notes), `rootCommentId` la première DiffNote — la même racine que côté
+ * GitHub, donc la même clé d'appariement.
+ *
+ * `resolved` est porté par CHAQUE note du fil (GitLab résout le fil, pas la
+ * note) : lire la racine suffit. Une discussion non résolvable (rare sur une
+ * DiffNote) est signalée `resolved: false` — l'appelant n'a pas à en faire un
+ * cas particulier, la forge refusera la bascule si elle n'est pas permise.
+ */
+export async function listMergeRequestDiffThreads(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<ReviewThreadState[]> {
+  const discussions = await listRawDiscussions(opts);
+  const states: ReviewThreadState[] = [];
+  for (const d of discussions) {
+    const root = (d.notes ?? []).find((n) => !n.system && n.type === "DiffNote");
+    if (!root) continue;
+    states.push({
+      rootCommentId: root.id,
+      threadId: d.id,
+      resolved: !!root.resolved,
+      resolvedBy: root.resolved_by?.username ?? null,
+    });
+  }
+  return states;
+}
+
+/**
+ * Résout (ou rouvre) un fil de review. Natif en REST ici, là où GitHub exige
+ * GraphQL : la discussion est l'objet, et `resolved` un de ses champs.
+ */
+export async function setMergeRequestDiscussionResolved(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  threadId: string;
+  resolved: boolean;
+}): Promise<void> {
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}` +
+      `/discussions/${encodeURIComponent(opts.threadId)}`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resolved: opts.resolved }),
+    },
+  );
 }
 
 /**
