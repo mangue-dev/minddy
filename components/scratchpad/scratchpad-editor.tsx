@@ -18,6 +18,7 @@ import {
   splitScratchpadSections,
   stripScratchpadSpacers,
 } from "@/lib/scratchpad";
+import { AgentBeam } from "@/components/agent-beam";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import {
@@ -378,36 +379,49 @@ export function ScratchpadEditor({
 
       {dictating && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-          <div className="flex w-64 flex-col items-center gap-4 rounded-2xl border border-border bg-popover px-6 py-5 text-center shadow-xl">
-            {dictation.status === "processing" ||
-            dictation.status === "polishing" ? (
-              <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
-                <Spinner />
-                {dictation.status === "polishing"
-                  ? t("dictationPolishing")
-                  : t("dictationProcessing")}
-              </div>
-            ) : dictation.status === "starting" ? (
-              <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
-                <Spinner />
-                {tDictate("starting")}
-              </div>
-            ) : (
-              <>
-                {/* The timer alone, centred: dictation is no longer time-boxed,
-                    so there is no ceiling left to show opposite it. */}
-                <div className="flex w-full items-center justify-center text-xs">
-                  <span className="font-medium tabular-nums text-foreground">
-                    {formatTime(dictation.elapsedMs)}
-                  </span>
+          {/* Le liseré n'accompagne QUE « Numo met au propre » : l'étape
+              `processing` juste avant, c'est la transcription de l'audio, pas
+              Numo. Le wrapper est en `overflow: hidden`, d'où le `shadow-xl`
+              qui passe de la carte à lui ; `keepMounted` garde la carte — et
+              le canvas de la waveform — montée d'un bout à l'autre de la
+              dictée, au lieu de la remonter quand le liseré s'allume. */}
+          <AgentBeam
+            active={dictation.status === "polishing"}
+            keepMounted
+            className="rounded-2xl shadow-xl"
+          >
+            <div className="flex w-64 flex-col items-center gap-4 rounded-2xl border border-border bg-popover px-6 py-5 text-center">
+              {dictation.status === "processing" ||
+              dictation.status === "polishing" ? (
+                <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
+                  <Spinner />
+                  {dictation.status === "polishing"
+                    ? t("dictationPolishing")
+                    : t("dictationProcessing")}
                 </div>
-                <DictateWaveform stream={dictation.stream} />
-                <p className="text-xs text-muted-foreground">
-                  {t("dictationHint")}
-                </p>
-              </>
-            )}
-          </div>
+              ) : dictation.status === "starting" ? (
+                <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
+                  <Spinner />
+                  {tDictate("starting")}
+                </div>
+              ) : (
+                <>
+                  {/* The timer alone, centred: dictation is no longer
+                      time-boxed, so there is no ceiling left to show opposite
+                      it. */}
+                  <div className="flex w-full items-center justify-center text-xs">
+                    <span className="font-medium tabular-nums text-foreground">
+                      {formatTime(dictation.elapsedMs)}
+                    </span>
+                  </div>
+                  <DictateWaveform stream={dictation.stream} />
+                  <p className="text-xs text-muted-foreground">
+                    {t("dictationHint")}
+                  </p>
+                </>
+              )}
+            </div>
+          </AgentBeam>
         </div>
       )}
     </div>

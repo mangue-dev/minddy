@@ -85,6 +85,7 @@ import { IssuePlan } from "@/components/issue-plan";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
+import { AgentBeamOverlay } from "@/components/agent-beam";
 import { hasPlanTasks, planProgress } from "@/lib/plan";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { useAuth } from "@/lib/auth-context";
@@ -1032,6 +1033,11 @@ export function IssueSidePanel({
               }
             />
           </SidePanelFooter>
+
+          {/* Numo reprend la dictée : le liseré souligne le bord du panneau
+            pendant qu'il travaille — même signal que l'icône Numo « thinking »
+            qui remplace le micro dans l'en-tête. */}
+          <AgentBeamOverlay active={numoBusy} />
         </SidePanelContent>
       </SidePanel>
 

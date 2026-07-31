@@ -1,8 +1,11 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { BorderBeam, type BorderBeamSize } from "border-beam";
 import { useTheme } from "mangue-ui";
+
+/** Réglages communs aux deux formes du liseré (enveloppe et calque). */
+const BEAM_TUNING = { duration: 4, colorVariant: "colorful" } as const;
 
 /**
  * Liseré animé « agent en cours » (MIN-46) — la source unique des réglages du
@@ -48,14 +51,71 @@ export function AgentBeam({
   if (!active && !keepMounted) return <>{children}</>;
   return (
     <BorderBeam
+      {...BEAM_TUNING}
       active={active}
       size={size}
-      duration={4}
-      colorVariant="colorful"
       theme={resolvedTheme}
       className={className}
     >
       {children}
+    </BorderBeam>
+  );
+}
+
+/**
+ * Même liseré, posé en SURIMPRESSION dans un container au lieu de l'envelopper :
+ * `absolute inset-0`, sans enfant, `pointer-events: none`. C'est la seule forme
+ * possible sur une surface PORTALISÉE en `position: fixed` — le modal, le
+ * panneau latéral : le portail téléporte l'élément hors de l'`AgentBeam`, qui
+ * s'effondre alors à 0×0 dans le flux de la page et ne peint plus rien. À rendre
+ * en DERNIER enfant du container (il passe ainsi au-dessus du contenu), lequel
+ * doit être positionné — `fixed` pour les deux surfaces de mangue-ui.
+ *
+ * Le positionnement passe par `style` et non par des classes : la feuille de
+ * style que `border-beam` génère (`[data-beam] { position: relative }`) est HORS
+ * cascade layer, et bat donc les utilitaires Tailwind quel que soit leur ordre.
+ *
+ * Le rayon est MESURÉ sur le container plutôt que passé par le site d'appel :
+ * l'auto-détection de `border-beam` lit le premier enfant, et il n'y en a pas
+ * ici. Le mesurer suit aussi le vrai container — mangue-ui n'expose pas ses
+ * rayons (`rounded-[2rem]` du modal, `rounded-2xl` du panneau) ni le basculement
+ * en bottom sheet, où ils changent.
+ */
+export function AgentBeamOverlay({
+  active,
+  size = "pulse-inner",
+}: {
+  active: boolean;
+  size?: BorderBeamSize;
+}) {
+  const { resolvedTheme } = useTheme();
+  const [radius, setRadius] = useState<number>();
+  // Ref de rappel plutôt qu'un effet de layout : elle ne s'exécute qu'au commit
+  // client, et donc jamais au rendu serveur.
+  const measureParent = useCallback((node: HTMLDivElement | null) => {
+    // `offsetParent`, pas `parentElement` : c'est l'élément sur lequel
+    // `inset: 0` se règle vraiment, donc celui dont il faut copier le rayon. Les
+    // deux coïncident sur le panneau latéral, mais pas sur le modal en bottom
+    // sheet, où mangue-ui glisse un div de défilement sans rayon ni position.
+    const box = node?.offsetParent ?? node?.parentElement;
+    if (!box) return;
+    const r = Number.parseFloat(getComputedStyle(box).borderTopLeftRadius);
+    setRadius(Number.isFinite(r) ? r : undefined);
+  }, []);
+  // Toujours monté : c'est ce qui donne au liseré son fondu de SORTIE quand
+  // `active` retombe. Éteint, il ne peint rien (le halo est en `display: none`).
+  return (
+    <BorderBeam
+      {...BEAM_TUNING}
+      ref={measureParent}
+      active={active}
+      size={size}
+      theme={resolvedTheme}
+      borderRadius={radius}
+      aria-hidden
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+    >
+      {null}
     </BorderBeam>
   );
 }

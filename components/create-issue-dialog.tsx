@@ -27,6 +27,7 @@ import {
 } from "@/components/attachments";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { NumoIcon } from "@/components/numo-icon";
+import { AgentBeamOverlay } from "@/components/agent-beam";
 import { ProjectOrb } from "@/components/project-orb";
 import {
   AssigneeCompact,
@@ -663,6 +664,11 @@ export function CreateIssueDialog({
               </div>
             </div>
           </form>
+
+          {/* Numo reprend la dictée : le liseré souligne le bord du modal
+            pendant qu'il travaille — même signal que l'icône Numo « thinking »
+            qui remplace le micro plus haut. */}
+          <AgentBeamOverlay active={numoBusy} />
         </DialogContent>
       </Dialog>
 
