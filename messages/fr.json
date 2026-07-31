@@ -50,7 +50,7 @@
     "titleChanged": "a renommé le ticket",
     "descriptionChanged": "a modifié la description",
     "statusChanged": "a changé le statut : {from} → {to}",
-    "forgeStatusSynced": "a passé le ticket en {to}, comme l'issue distante",
+    "forgeStatusSynced": "a passé le ticket en {to}, d'après le dépôt lié",
     "priorityChanged": "a changé la priorité : {from} → {to}",
     "effortChanged": "a changé l'effort : {from} → {to}",
     "assigneeChanged": "a changé l'assigné : {from} → {to}",

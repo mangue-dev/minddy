@@ -2,7 +2,11 @@ import { timingSafeEqual } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { recordForgePrActionEvents, notifyForgePrAction } from "@/lib/server/agent/pr-activity";
+import {
+  applyForgePrToIssue,
+  recordForgePrActionEvents,
+  notifyForgePrAction,
+} from "@/lib/server/agent/pr-activity";
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
@@ -235,9 +239,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const actionType = prActionFor(action);
   if (!prState && !actionType) return;
 
-  // Runs concernés : le webhook du dépôt reçoit toutes les MR humaines, qui ne
-  // matchent aucun run d'agent — on s'arrête là avant toute autre requête
-  // (l'anti-écho compris). merge/close/reopen/open recalent pr_state au passage.
+  // Runs concernés. merge/close/reopen/open recalent pr_state au passage.
   const runs: SyncedPrRun[] = prState
     ? await syncPrState({
         repoFullName,
@@ -247,7 +249,25 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
         provider: "gitlab",
       })
     : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
-  if (runs.length === 0) return;
+
+  // AUCUN run : c'est une MR humaine (MIN-143). Ce garde renvoyait sec — c'est
+  // lui qui les rendait sans effet sur les tickets. Elle peut pourtant en porter
+  // un, par sa branche, son titre ou une ligne de fermeture : la fusionner sur
+  // GitLab doit produire ce que la fusionner depuis minddy produit.
+  if (runs.length === 0) {
+    const echoed =
+      (actionType === "pr_accepted" || actionType === "pr_rejected") &&
+      (await isServiceAccount(repoFullName, payload.user));
+    await applyForgePrToIssue({
+      provider: "gitlab",
+      repoFullName,
+      prNumber: iid,
+      prState,
+      actionType: echoed ? null : actionType,
+      login: payload.user?.username ?? null,
+    });
+    return;
+  }
 
   // Aligne le statut des issues sur le nouvel état MR (MIN-46) :
   // merged→done, closed→todo, open/reopen→in_review.

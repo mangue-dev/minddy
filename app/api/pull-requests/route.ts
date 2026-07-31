@@ -99,19 +99,20 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
  * part dans `after()` : la réponse ne fait pas attendre l'utilisateur pour un
  * webhook perdu, et le prochain affichage sera juste.
  */
-async function sweepRepo(userId: string, repo: VisibleRepo): Promise<void> {
+async function sweepRepo(userId: string, repo: VisibleRepo): Promise<boolean> {
   try {
     const target = await resolveRepoCloneTargetForRepo({
       userId,
       provider: repo.provider,
       repoFullName: repo.repoFullName,
     });
-    if (!target) return;
-    await syncRepoPullRequests({
+    if (!target) return false;
+    const { truncated } = await syncRepoPullRequests({
       provider: repo.provider,
       repoFullName: repo.repoFullName,
       token: target.token,
     });
+    return truncated;
   } catch (err) {
     console.error(
       `[pull-requests] sweep ${repo.repoFullName} failed:`,
@@ -121,6 +122,7 @@ async function sweepRepo(userId: string, repo: VisibleRepo): Promise<void> {
     // balayage à CHAQUE affichage de la page. La liste reste celle d'avant, et
     // la prochaine fenêtre réessaiera.
     await stampRepoSync(repo.provider, repo.repoFullName);
+    return false;
   }
 }
 
@@ -188,6 +190,11 @@ export async function GET(request: NextRequest) {
   // ── Rattrapage ────────────────────────────────────────────────────────────
   const syncs = await readRepoSyncStates(repos);
   const seen = new Set<string>();
+  // Coupure vue par un balayage BLOQUANT de cette requête : `syncs` a été lu
+  // AVANT lui et dit encore « jamais balayé » pour ce dépôt. Sans ce report, le
+  // tout premier affichage d'un dépôt de plus de MAX_PR_PAGES × 100 PR se
+  // tairait sur la coupure — précisément le mensonge par omission qu'on corrige.
+  let sweptTruncated = false;
   for (const repo of repos) {
     const key = repoSyncKey(repo.provider, repo.repoFullName);
     if (seen.has(key)) continue;
@@ -195,7 +202,7 @@ export async function GET(request: NextRequest) {
     const state = syncs.get(key);
     if (!needsRepoSync(state)) continue;
     if (state) after(() => sweepRepo(auth.user.id, repo));
-    else await sweepRepo(auth.user.id, repo);
+    else if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
   }
 
   // ── Les PR ────────────────────────────────────────────────────────────────
@@ -281,7 +288,7 @@ export async function GET(request: NextRequest) {
 
   // Une pagination de forge coupée doit se VOIR : la liste n'est pas exhaustive,
   // et le taire, c'est mentir par omission — exactement ce que MIN-143 corrige.
-  const truncated = [...seen].some((key) => syncs.get(key)?.truncated);
+  const truncated = sweptTruncated || [...seen].some((key) => syncs.get(key)?.truncated);
 
   return NextResponse.json({ pullRequests, hasMore, truncated });
 }

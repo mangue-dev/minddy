@@ -187,6 +187,13 @@ export function allPullRequestsQueryKey(
  * jamais la PR qu'on vient de créer. On expose aussi `fetching` : la page PR
  * attend qu'un refetch en vol atterrisse avant de retomber sur la 1re PR de la
  * liste, sinon le deep-link ouvrirait la dernière PR au lieu de la bonne.
+ *
+ * `placeholderData` = la page PRÉCÉDENTE. La pagination met `limit` dans la clé
+ * de cache : sans ça, « en voir plus » ouvre une clé vierge, donc `isLoading`
+ * repasse à vrai — la liste entière retombe en squelettes, le bouton disparaît
+ * et le panneau de détail se vide, pour revenir une seconde plus tard. C'est un
+ * AGRANDISSEMENT de la liste, pas un changement d'écran : elle reste affichée, et
+ * `fetching` (que le bouton lit déjà : spinner + désactivé) porte l'attente.
  */
 export function useAllPullRequestsQuery(
   state: PullRequestStateFilter = "open",
@@ -196,6 +203,7 @@ export function useAllPullRequestsQuery(
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: allPullRequestsQueryKey(state, limit, pin),
     queryFn: () => fetchAllPullRequestsApi({ state, limit, pin }),
+    placeholderData: (previous) => previous,
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const prs = query.state.data?.pullRequests ?? [];

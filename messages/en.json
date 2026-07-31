@@ -50,7 +50,7 @@
     "titleChanged": "renamed the issue",
     "descriptionChanged": "edited the description",
     "statusChanged": "changed status: {from} → {to}",
-    "forgeStatusSynced": "moved the issue to {to}, following the remote issue",
+    "forgeStatusSynced": "moved the issue to {to}, following the linked repository",
     "priorityChanged": "changed priority: {from} → {to}",
     "effortChanged": "changed effort: {from} → {to}",
     "assigneeChanged": "changed assignee: {from} → {to}",

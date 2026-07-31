@@ -2,7 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { recordForgePrActionEvents, notifyForgePrAction } from "@/lib/server/agent/pr-activity";
+import {
+  applyForgePrToIssue,
+  recordForgePrActionEvents,
+  notifyForgePrAction,
+} from "@/lib/server/agent/pr-activity";
 import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
@@ -203,6 +207,28 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
     prUrl: payload.pull_request?.html_url ?? null,
     provider: "github",
   });
+
+  // Activité : accepter (merge) / refuser (close) faits par un HUMAIN sur GitHub.
+  // Le merge/close in-app passe par le bot de l'App → ignoré (déjà tracé).
+  const actionType = prActionForPullRequest(action, merged);
+  const byHuman = !isBot(payload.sender);
+
+  // AUCUN run derrière cette PR : c'est une PR humaine (MIN-143). Elle peut
+  // porter un ticket quand même — par son nom de branche, son titre ou une ligne
+  // de fermeture. Le fusionner sur GitHub doit produire ce que le fusionner
+  // depuis minddy produit, sinon le même geste a deux effets selon l'endroit.
+  if (runs.length === 0) {
+    await applyForgePrToIssue({
+      provider: "github",
+      repoFullName,
+      prNumber: number,
+      prState,
+      actionType: byHuman ? actionType : null,
+      login: payload.sender?.login ?? null,
+    });
+    return;
+  }
+
   // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
   // merged→done, closed→todo, reopened/ready_for_review→in_review.
   for (const run of runs) {
@@ -211,10 +237,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
     }
   }
-  // Activité : accepter (merge) / refuser (close) faits par un HUMAIN sur GitHub.
-  // Le merge/close in-app passe par le bot de l'App → ignoré (déjà tracé).
-  const actionType = prActionForPullRequest(action, merged);
-  if (actionType && !isBot(payload.sender)) {
+  if (actionType && byHuman) {
     await recordForgePrActionEvents({
       runs,
       type: actionType,

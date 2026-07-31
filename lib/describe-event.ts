@@ -148,8 +148,11 @@ export function describeEvent(
       case "plan":
         return t("planChanged");
       case "status":
-        // Synchro du dépôt lié (MIN-97) : la ligne d'acteur dit déjà « GitHub »,
+        // Écriture venue du dépôt lié : la ligne d'acteur dit déjà « GitHub »,
         // la phrase dit donc d'où vient le changement plutôt que le seul diff.
+        // Deux causes possibles — l'issue distante qui se ferme (MIN-97) ou la
+        // pull request qui se fusionne (MIN-143) — d'où la formule qui nomme le
+        // DÉPÔT et pas l'une des deux.
         if (e.forge_sync)
           return t("forgeStatusSynced", {
             to: e.to_value ? tStatus(e.to_value) : emptyDash,

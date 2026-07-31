@@ -1,6 +1,7 @@
 import "server-only";
 
 import { updateIssueFields } from "@/lib/server/update-issue";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentRun } from "./runs";
 
 /**
@@ -43,18 +44,28 @@ export function issueStatusForPrState(
   }
 }
 
-/** Écrit le statut sur l'issue (best-effort, via Numo). Point de passage unique. */
+/**
+ * Écrit le statut sur l'issue (best-effort, via Numo). Point de passage unique.
+ *
+ * `forgeSync` bascule l'attribution : l'écriture porte toujours techniquement un
+ * membre (elle traverse le garde d'accès de `updateIssueFields`), mais la
+ * timeline crédite la FORGE. C'est la convention de MIN-97, reprise ici pour les
+ * PR sans run — personne dans minddy n'a fait ce geste (MIN-143).
+ */
 async function applyIssueStatus(
   issueId: string,
   actorId: string,
   status: SyncableIssueStatus,
+  forgeSync: RepoProviderId | null = null,
 ): Promise<void> {
   try {
     const result = await updateIssueFields({
       issueId,
       actorId,
       input: { status },
-      viaAssistant: true,
+      // Une PR humaine ne passe pas par Numo : le crédit va à la forge, pas à lui.
+      viaAssistant: !forgeSync,
+      forgeSync,
     });
     if (!result.ok) {
       console.error(
@@ -84,8 +95,10 @@ export async function syncIssueStatusFromPr(opts: {
   /** Acteur du changement (auteur du run pour l'agent/webhook, user pour merge/close in-app). */
   actorId: string;
   prState: AgentRun["pr_state"];
+  /** Forge à créditer à la place de l'acteur — une PR sans run (MIN-143). */
+  forgeSync?: RepoProviderId | null;
 }): Promise<void> {
   const status = issueStatusForPrState(opts.prState);
   if (!status) return;
-  await applyIssueStatus(opts.issueId, opts.actorId, status);
+  await applyIssueStatus(opts.issueId, opts.actorId, status, opts.forgeSync ?? null);
 }
