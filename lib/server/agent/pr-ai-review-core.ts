@@ -102,7 +102,9 @@ export const AI_REVIEW_TOOL_PARAMETERS: Record<string, unknown> = {
         properties: {
           path: {
             type: "string",
-            description: "File path exactly as written in the diff header above the hunks.",
+            description:
+              "The file path ALONE, as written at the start of the diff heading — without the " +
+              "` — modified · +2 −1` that follows it, and without any `(renamed from …)`.",
           },
           line: {
             type: "integer",
@@ -356,6 +358,28 @@ export interface SelectedFindings {
 }
 
 /**
+ * Le chemin tel que le modèle l'a écrit, ramené à un chemin de fichier.
+ *
+ * L'en-tête qu'on lui montre est `lib/demo.ts (renamed from lib/vieux.ts) — modified · +2 −1`,
+ * et la consigne dit de n'en recopier que le chemin — mais un modèle recopie
+ * volontiers la ligne entière. Ce qui suit ` — ` ou ` (` n'a jamais fait partie
+ * d'un chemin : sans ce nettoyage, l'ancre est perdue pour une raison purement
+ * typographique, et le point redescend en synthèse alors qu'il visait juste.
+ *
+ * N'est essayé qu'en SECOND, après l'égalité stricte : un vrai fichier dont le
+ * nom contient une parenthèse (`app/(marketing)/page.tsx` — ils sont légion dans
+ * ce dépôt) est trouvé par le premier passage et ne voit jamais ce nettoyage.
+ */
+export function normalizeFindingPath(raw: string): string {
+  const unquoted = raw.trim().replace(/^[`"']+/, "").replace(/[`"']+$/, "").trim();
+  const cut = [" — ", " ("].reduce((min, marker) => {
+    const at = unquoted.indexOf(marker);
+    return at === -1 ? min : Math.min(min, at);
+  }, unquoted.length);
+  return unquoted.slice(0, cut).trim().replace(/^\.\//, "");
+}
+
+/**
  * Trie les points en « postables en ligne » et « à replier dans la synthèse ».
  *
  * L'ancre est revalidée contre le patch avec `resolveDiffPosition` — la fonction
@@ -378,33 +402,45 @@ export function selectFindings(
     byOldPath.set(file.previous_filename ?? file.filename, file);
   }
 
+  // Une ligne LEFT s'adresse par le chemin d'AVANT la PR ; un renommage fait
+  // diverger les deux, et le modèle peut nommer l'un ou l'autre.
+  const lookup = (path: string, side: "LEFT" | "RIGHT") =>
+    (side === "LEFT" ? byOldPath.get(path) : byNewPath.get(path)) ??
+    byNewPath.get(path) ??
+    byOldPath.get(path);
+
   const anchored: ReviewFinding[] = [];
   const loose: ReviewFinding[] = [];
   const seen = new Set<string>();
 
-  for (const finding of findings) {
-    const key = `${finding.side}:${finding.path}:${finding.line}`;
+  for (const raw of findings) {
+    // Tel quel d'abord, nettoyé ensuite : voir `normalizeFindingPath`.
+    const file =
+      lookup(raw.path, raw.side) ?? lookup(normalizeFindingPath(raw.path), raw.side);
+    // Le chemin retenu est celui de la forge, pas celui que le modèle a écrit —
+    // y compris pour un point qui finira en synthèse, où il se lira en clair.
+    const finding: ReviewFinding = {
+      ...raw,
+      path: !file
+        ? normalizeFindingPath(raw.path) || raw.path
+        : raw.side === "LEFT"
+          ? (file.previous_filename ?? file.filename)
+          : file.filename,
+    };
+
     // Deux points sur la même ligne : le premier gagne (il est aussi le plus
-    // grave, la liste arrive triée par le modèle).
+    // grave, la liste arrive triée par le modèle). Dédoublonné sur l'ancre
+    // RÉSOLUE, pour que deux façons d'écrire un même chemin ne comptent pas deux.
+    const key = `${finding.side}:${finding.path}:${finding.line}`;
     if (seen.has(key)) continue;
     seen.add(key);
 
-    // Une ligne LEFT s'adresse par le chemin d'AVANT la PR ; un renommage fait
-    // diverger les deux, et le modèle peut nommer l'un ou l'autre.
-    const file =
-      (finding.side === "LEFT" ? byOldPath.get(finding.path) : byNewPath.get(finding.path)) ??
-      byNewPath.get(finding.path) ??
-      byOldPath.get(finding.path);
     const patch = file?.patch;
     if (!patch || !resolveDiffPosition(patch, finding.line, finding.side)) {
       loose.push(finding);
       continue;
     }
-    // Le chemin posté est celui de la forge, pas celui que le modèle a écrit.
-    anchored.push({
-      ...finding,
-      path: finding.side === "LEFT" ? (file.previous_filename ?? file.filename) : file.filename,
-    });
+    anchored.push(finding);
   }
 
   const sorted = [...anchored].sort(
@@ -461,6 +497,11 @@ const SUMMARY_STRINGS: Record<string, SummaryStrings> = {
  * qui exige une approbation — du code fusionné sans qu'aucun humain l'ait lu —
  * et un `REQUEST_CHANGES` d'app bloquerait la PR jusqu'à ce que quelqu'un aille
  * le lever à la main. Les deux gestes restent ceux du menu Review, aux humains.
+ *
+ * Ce corps part donc en commentaire du FIL de la PR, pas en événement de review :
+ * un verdict qui n'est qu'un texte doit atterrir là où minddy sait le relire
+ * (cf. `runPrAiReview` — le fil vient de `issues/{n}/comments`, qui ignore les
+ * corps de review).
  */
 export function formatReviewBody(input: {
   review: AiReview;

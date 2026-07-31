@@ -8,6 +8,7 @@ import {
   buildReviewSystemPrompt,
   buildReviewUserMessage,
   formatReviewBody,
+  normalizeFindingPath,
   parseAiReview,
   selectFindings,
   type ReviewFinding,
@@ -190,6 +191,49 @@ describe("selectFindings", () => {
     expect(inSummary).toHaveLength(0);
   });
 
+  /**
+   * Le modèle a recopié l'en-tête entier (`### lib/demo.ts — modified · +1 −1`)
+   * au lieu du seul chemin. L'ancre visait juste : elle ne doit pas se perdre
+   * pour une raison typographique.
+   */
+  it("retrouve le fichier quand le modèle a recopié tout l'en-tête", () => {
+    const { inline } = selectFindings(
+      [finding({ path: "`lib/demo.ts (renamed from lib/vieux.ts) — modified · +1 −1`" })],
+      FILES,
+    );
+    expect(inline).toHaveLength(1);
+    expect(inline[0].path).toBe("lib/demo.ts");
+  });
+
+  it("dédoublonne les deux écritures d'un même chemin", () => {
+    const { inline, inSummary } = selectFindings(
+      [finding(), finding({ path: "lib/demo.ts — modified", body: "Encore." })],
+      FILES,
+    );
+    expect(inline).toHaveLength(1);
+    expect(inSummary).toHaveLength(0);
+  });
+
+  /**
+   * Un vrai chemin à parenthèses — ce dépôt en est plein (`app/(app)/…`) — passe
+   * par l'égalité stricte et ne voit jamais le nettoyage qui le couperait.
+   */
+  it("ne coupe pas un vrai chemin à parenthèses", () => {
+    const files: ReviewableFile[] = [
+      { filename: "app/(marketing)/page.tsx", status: "modified", patch: PATCH },
+    ];
+    const { inline } = selectFindings([finding({ path: "app/(marketing)/page.tsx" })], files);
+    expect(inline[0].path).toBe("app/(marketing)/page.tsx");
+  });
+
+  it("nettoie aussi le chemin d'un point non ancré, qui se lira en synthèse", () => {
+    const { inSummary } = selectFindings(
+      [finding({ path: "lib/ailleurs.ts — added · +9 −0", line: 900 })],
+      FILES,
+    );
+    expect(inSummary[0].path).toBe("lib/ailleurs.ts");
+  });
+
   it("quand le plafond coupe, il coupe dans les broutilles", () => {
     const patch = ["@@ -1,0 +1,10 @@", ...Array.from({ length: 10 }, (_, i) => `+l${i}`)].join("\n");
     const files: ReviewableFile[] = [{ filename: "a.ts", status: "modified", patch }];
@@ -204,6 +248,22 @@ describe("selectFindings", () => {
 
   it("le plafond par défaut tient la décision de cadrage (3 à 5 points)", () => {
     expect(AI_REVIEW_MAX_INLINE_COMMENTS).toBe(5);
+  });
+});
+
+describe("normalizeFindingPath", () => {
+  it("retire ce qui n'a jamais fait partie d'un chemin", () => {
+    expect(normalizeFindingPath("lib/demo.ts — modified · +1 −1")).toBe("lib/demo.ts");
+    expect(normalizeFindingPath("lib/neuf.ts (renamed from lib/vieux.ts) — renamed")).toBe(
+      "lib/neuf.ts",
+    );
+    expect(normalizeFindingPath("`lib/demo.ts`")).toBe("lib/demo.ts");
+    expect(normalizeFindingPath("./lib/demo.ts")).toBe("lib/demo.ts");
+  });
+
+  it("laisse intact un chemin déjà propre", () => {
+    expect(normalizeFindingPath("app/(marketing)/page.tsx")).toBe("app/(marketing)/page.tsx");
+    expect(normalizeFindingPath("lib/demo.ts")).toBe("lib/demo.ts");
   });
 });
 

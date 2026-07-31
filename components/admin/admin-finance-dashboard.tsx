@@ -68,6 +68,9 @@ const FEATURES = [
   // Recherche web (plugin OpenRouter) : le coût inclut le forfait de recherche
   // en plus des tokens du sous-appel.
   "web_search",
+  // Review d'une PR par Numo (MIN-141) : un appel, sur un modèle plus cher que
+  // celui de l'agent — c'est la ligne qui répond à « combien coûte une review ? ».
+  "pr_review",
 ] as const;
 type Feature = (typeof FEATURES)[number];
 

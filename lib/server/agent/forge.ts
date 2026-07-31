@@ -134,6 +134,11 @@ export interface Forge {
    * refusé de publier le verdict (auto-review) et il est parti en commentaire :
    * l'appelant doit le dire à l'utilisateur, et enregistrer le verdict RÉEL de
    * son côté. C'est le cas normal des PR de Numo, pas un cas dégradé.
+   *
+   * Un texte SANS verdict à porter — le verdict « commenter », ou le repli
+   * ci-dessus — atterrit dans le FIL de la PR chez les deux providers, jamais
+   * dans un événement de review : c'est le seul endroit que `listPullRequestComments`
+   * relit, donc le seul où minddy saura le montrer (cf. `submitPullRequestReview`).
    */
   submitReview(opts: {
     token: string;

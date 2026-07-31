@@ -612,12 +612,23 @@ function isSelfReviewRefusal(err: unknown): boolean {
 }
 
 /**
- * Soumet une review sur la PR. `comment` part toujours tel quel ; `approve` et
- * `request_changes` sont TENTÉS puis repliés en commentaire si GitHub refuse
- * l'auto-review (le cas normal des PR de Numo : elles sont ouvertes par le bot
- * de la GitHub App). On tente quand même plutôt que de replier d'emblée : sur un
- * GitHub Enterprise, ou le jour où une PR portera un autre auteur, le verdict
- * doit atterrir pour de vrai — le coût est un aller-retour de plus sur un clic.
+ * Soumet une review sur la PR. `approve` et `request_changes` sont TENTÉS en
+ * événement de review puis repliés en commentaire si GitHub refuse l'auto-review
+ * (le cas normal des PR de Numo : elles sont ouvertes par le bot de la GitHub
+ * App). On tente quand même plutôt que de replier d'emblée : sur un GitHub
+ * Enterprise, ou le jour où une PR portera un autre auteur, le verdict doit
+ * atterrir pour de vrai — le coût est un aller-retour de plus sur un clic.
+ *
+ * **Tout ce qui n'est pas un verdict part dans le FIL** (`issues/{n}/comments`),
+ * jamais en review `COMMENT`. VÉRIFIÉ contre l'API : le corps d'une review
+ * `COMMENT` ne ressort que de `pulls/{n}/reviews` — il est absent de
+ * `issues/{n}/comments`, le seul endpoint dont minddy peuple le fil de la PR
+ * (`listPullRequestComments`). Un texte posté en review `COMMENT` est donc
+ * lisible sur github.com et invisible DANS minddy, ce qui touchait les deux
+ * chemins les plus courants : le verdict « commenter » du menu Review, et le
+ * repli d'auto-review — c'est-à-dire toute approbation d'une PR de Numo.
+ * GitLab faisait déjà ainsi (`submitMergeRequestReview` → `createMergeRequestNote`) :
+ * les deux forges disent désormais la même chose.
  */
 export async function submitPullRequestReview(opts: {
   token: string;
@@ -627,7 +638,7 @@ export async function submitPullRequestReview(opts: {
   body: string;
 }): Promise<ReviewSubmission> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const post = (event: string, body: string) =>
+  const postReview = (event: string, body: string) =>
     ghJson<unknown>(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews`,
       opts.token,
@@ -638,19 +649,21 @@ export async function submitPullRequestReview(opts: {
       },
     );
 
+  // Rien à publier comme verdict : le texte va là où il sera lu. `published`
+  // reste « review » — aucune forge n'a rien refusé.
   if (opts.verdict === "comment") {
-    await post("COMMENT", opts.body);
+    await createPullRequestComment(opts);
     return { published: "review" };
   }
   try {
-    await post(GITHUB_REVIEW_EVENT[opts.verdict], opts.body);
+    await postReview(GITHUB_REVIEW_EVENT[opts.verdict], opts.body);
     return { published: "review" };
   } catch (err) {
     if (!isSelfReviewRefusal(err)) throw err;
     // Le préfixe garantit aussi un corps NON VIDE : GitHub accepte un `APPROVE`
-    // sans message, mais refuse un `COMMENT` qui n'en a pas.
+    // sans message, mais refuse un commentaire qui n'en a pas.
     const body = `${FALLBACK_VERDICT_PREFIX[opts.verdict]}\n\n${opts.body}`.trim();
-    await post("COMMENT", body);
+    await createPullRequestComment({ ...opts, body });
     return { published: "comment" };
   }
 }

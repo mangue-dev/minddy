@@ -2488,7 +2488,8 @@
         "embedding": "Embeddings",
         "agent_code": "Agent Numo",
         "sandbox_compute": "Sandbox des agents",
-        "web_search": "Recherche web"
+        "web_search": "Recherche web",
+        "pr_review": "Review d'une PR par Numo"
       }
     },
     "quotas": {
