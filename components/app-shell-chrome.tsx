@@ -24,6 +24,8 @@ import {
   IterationCw,
   Brush,
   TriangleAlert,
+  Focus,
+  PanelsTopLeft,
 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -62,6 +64,7 @@ import {
   type AppNavSection,
 } from "@/components/app-sidebar";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
+import { useZenMode } from "@/lib/zen-mode-context";
 import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
 import { BranchCleanupDialog } from "@/components/settings/git-branch-cleanup";
 import type {
@@ -195,6 +198,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { invitations } = useMyInvitations();
   const inboxCount = unreadCount + invitations.length;
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
+  // Mode zen (MIN-134) : la palette est le seul interrupteur, et la seule sortie
+  // avec le rechargement — elle reste donc montée, quoi qu'on masque autour.
+  const { zen, toggle: toggleZen } = useZenMode();
 
   // Command palette open state — shared by the header search pill and the
   // global shortcuts (⌘K / ⌘P / F, handled inside <CommandPalette>).
@@ -448,7 +454,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: tScratch("open"),
           icon: NotebookPen,
           keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
-          onSelect: openScratchpad,
+          onSelect: () => openScratchpad("palette"),
         },
         ...(agentsAllowed
           ? [
@@ -503,6 +509,27 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           icon: Keyboard,
           keywords: ["keyboard", "shortcuts", "raccourcis", "clavier", "cheatsheet", "help", "aide"],
           onSelect: () => setCheatsheetOpen(true),
+        },
+        {
+          // Mode zen (MIN-134) : entrée unique, dans les deux sens. Sans bouton
+          // ailleurs, cette ligne est aussi la porte de sortie — d'où le libellé
+          // qui bascule plutôt qu'un « Mode zen » ambigu une fois dedans.
+          key: "toggle-zen",
+          label: zen ? t("zenModeExit") : t("zenMode"),
+          icon: zen ? PanelsTopLeft : Focus,
+          keywords: [
+            "zen",
+            "focus",
+            "concentration",
+            "distraction",
+            "épuré",
+            "epure",
+            "minimal",
+            "plein écran",
+            "plein ecran",
+            "fullscreen",
+          ],
+          onSelect: toggleZen,
         },
       ],
     });
@@ -621,7 +648,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, t, ti, tk, tScratch, tSettings, setCheatsheetOpen]);
+  }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, zen, toggleZen, t, ti, tk, tScratch, tSettings, setCheatsheetOpen]);
 
   // ── Data groups: tickets + objectifs, tous projets confondus (MIN-91) ────
   // Séparés des groupes de commandes ci-dessus parce qu'ils sont les seuls à
@@ -945,24 +972,32 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      sidebar={<AppSidebar sections={sections} modeKey={modeKey} />}
+      // Mode zen (MIN-134) : on ne CACHE pas la sidebar et le header, on ne les
+      // donne pas. AppShell ne rend alors aucune de leurs boîtes, et le contenu
+      // occupe toute la fenêtre — pas de gouttière vide là où était la sidebar.
+      sidebar={zen ? undefined : <AppSidebar sections={sections} modeKey={modeKey} />}
       header={
-        <Header
-          className="bg-sidebar backdrop-blur-none"
-          left={<AppBreadcrumb />}
-          right={
-            // Desktop only — on mobile, Search moves to the navbar Search button
-            // and "Nouveau" to the navbar "+", so the header collapses to the
-            // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
-            <div className="hidden items-center gap-2 desktop:flex">
-              <UsageIndicator />
-              <ScratchpadTrigger />
-              <HeaderSearchPill onOpen={() => handlePaletteOpenChange(true)} />
-              <NewMenu />
-            </div>
-          }
-        />
+        zen ? undefined : (
+          <Header
+            className="bg-sidebar backdrop-blur-none"
+            left={<AppBreadcrumb />}
+            right={
+              // Desktop only — on mobile, Search moves to the navbar Search button
+              // and "Nouveau" to the navbar "+", so the header collapses to the
+              // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
+              <div className="hidden items-center gap-2 desktop:flex">
+                <UsageIndicator />
+                <ScratchpadTrigger />
+                <HeaderSearchPill onOpen={() => handlePaletteOpenChange(true)} />
+                <NewMenu />
+              </div>
+            }
+          />
+        )
       }
+      // Le nav mobile RESTE, lui : c'est par son bouton de recherche qu'on ouvre
+      // la palette sur mobile, donc le masquer enfermerait dans le mode zen tous
+      // ceux qui n'ont pas de ⌘K sous la main.
       mobileNav={
         <MobileNav
           sections={mobileMenuSections}

@@ -28,7 +28,7 @@ export function ScratchpadTrigger() {
               ? `${t("openAria")} — ${t("tasksLeft", { count: left })}`
               : t("openAria")
           }
-          onClick={open}
+          onClick={() => open("click")}
           className={cn(
             "rounded-full border border-border bg-card text-muted-foreground shadow-xs hover:bg-card hover:text-foreground",
             left > 0 && "gap-1.5 px-2.5"

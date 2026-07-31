@@ -176,7 +176,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           toggleAssistantRef.current();
           return true;
         case "n":
-          openScratchpadRef.current();
+          openScratchpadRef.current("shortcut");
           return true;
         // B reaches the cross-project tickets board from anywhere, a project
         // included — the project's own board is G P. M is that same /all board

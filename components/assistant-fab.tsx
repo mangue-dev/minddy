@@ -18,6 +18,7 @@ import { AgentBeam } from "@/components/agent-beam";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
+import { useZenMode } from "@/lib/zen-mode-context";
 
 /**
  * Minimal circular FAB that opens the global assistant panel. Hover reveals a
@@ -39,10 +40,13 @@ export function AssistantFab() {
   // ferait doublon → on le masque uniquement là (l'anim de sortie joue au passage).
   const pathname = usePathname();
   const hiddenForRoute = pathname.startsWith("/agents");
+  // Mode zen (MIN-134) : le FAB part avec le reste du chrome. Numo reste
+  // joignable au clavier (G puis A), et son panneau s'ouvre par-dessus.
+  const { zen } = useZenMode();
 
   return (
     <AnimatePresence>
-      {!isOpen && !hiddenForRoute && (
+      {!isOpen && !hiddenForRoute && !zen && (
         <motion.div
           key="assistant-fab"
           initial={{ opacity: 0, y: 14, scale: 0.92 }}

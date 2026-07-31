@@ -11,6 +11,7 @@ import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { AssistantChatProvider } from "@/lib/assistant-chat-context";
 import { ScratchpadProvider } from "@/lib/scratchpad-context";
 import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
+import { ZenModeProvider } from "@/lib/zen-mode-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
@@ -51,20 +52,24 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                   panneau démonte sa coquille, pas le tour en cours. */}
               <AssistantChatProvider>
                 <ScratchpadProvider>
-                  <KeyboardProvider>
-                    <UndoProvider>
-                      <CreateProvider>
-                        <BulkActionsProvider>
-                          <AppShellChrome>{children}</AppShellChrome>
-                        </BulkActionsProvider>
-                      </CreateProvider>
-                      <AssistantPanel />
-                      <AssistantFab />
-                      <ScratchpadModal />
-                      <KeyboardCheatsheet />
-                      <AnalyticsProjectGroup />
-                    </UndoProvider>
-                  </KeyboardProvider>
+                  {/* Le mode zen (MIN-134) enveloppe le shell ET le FAB : c'est
+                      le chrome des deux qu'il masque, et ils sont frères. */}
+                  <ZenModeProvider>
+                    <KeyboardProvider>
+                      <UndoProvider>
+                        <CreateProvider>
+                          <BulkActionsProvider>
+                            <AppShellChrome>{children}</AppShellChrome>
+                          </BulkActionsProvider>
+                        </CreateProvider>
+                        <AssistantPanel />
+                        <AssistantFab />
+                        <ScratchpadModal />
+                        <KeyboardCheatsheet />
+                        <AnalyticsProjectGroup />
+                      </UndoProvider>
+                    </KeyboardProvider>
+                  </ZenModeProvider>
                 </ScratchpadProvider>
               </AssistantChatProvider>
             </AssistantPanelProvider>
