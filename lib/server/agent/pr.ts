@@ -670,8 +670,24 @@ export async function submitPullRequestReview(opts: {
 
 interface RawReview {
   state?: string; // APPROVED | CHANGES_REQUESTED | COMMENTED | DISMISSED | PENDING
+  body?: string | null;
   user?: { login?: string } | null;
   submitted_at?: string | null;
+}
+
+/**
+ * Le TEXTE d'une review déjà soumise, avec son verdict — ce que le décompte
+ * d'approbations ne dit pas. Lu par la passe de relecture de Numo (MIN-141) :
+ * un point déjà soulevé par quelqu'un n'a pas à l'être une seconde fois, et le
+ * corps d'une review vit ailleurs que le fil (`pulls/{n}/reviews`, jamais
+ * `issues/{n}/comments`).
+ */
+export interface PullRequestReviewMessage {
+  author: string | null;
+  /** `approved` | `changes_requested` | `commented` | `dismissed`. */
+  state: string;
+  body: string;
+  submittedAt: string | null;
 }
 
 /**
@@ -705,6 +721,32 @@ export async function listPullRequestReviews(opts: {
     approvals: verdicts.filter((v) => v === "approved").length,
     changesRequested: verdicts.filter((v) => v === "changes_requested").length,
   };
+}
+
+/**
+ * Les reviews déjà soumises, AVEC leur texte (du plus ancien au plus récent).
+ * Même endpoint que le décompte ci-dessus, autre lecture : ici on garde ce qui a
+ * été ÉCRIT. Les reviews sans corps sont écartées — une approbation nue n'apporte
+ * rien à qui relit, son existence se lit déjà dans le décompte.
+ */
+export async function listPullRequestReviewMessages(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PullRequestReviewMessage[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const reviews = await ghJson<RawReview[]>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100`,
+    opts.token,
+  );
+  return reviews
+    .filter((r) => (r.body ?? "").trim())
+    .map((r) => ({
+      author: r.user?.login ?? null,
+      state: (r.state ?? "commented").toLowerCase(),
+      body: (r.body ?? "").trim(),
+      submittedAt: r.submitted_at ?? null,
+    }));
 }
 
 /**

@@ -13,6 +13,7 @@ import type {
   PullRequestFile,
   PullRequestComment,
   PullRequestReviewComment,
+  PullRequestReviewMessage,
   PullRequestReviewSummary,
   ReviewSubmission,
   ReviewVerdict,
@@ -664,6 +665,17 @@ export async function listMergeRequestApprovals(opts: {
     opts.token,
   );
   return { approvals: (data.approved_by ?? []).length, changesRequested: 0 };
+}
+
+/**
+ * Les reviews déjà soumises, avec leur texte — TOUJOURS VIDE côté GitLab, et
+ * c'est la bonne réponse plutôt qu'un manque : GitLab n'a pas d'objet « review ».
+ * Une approbation y est une signature sans texte (`/approvals`, décomptée
+ * ci-dessus), et tout ce qui s'écrit sur une MR est une NOTE — donc déjà servi
+ * par `listMergeRequestNotes`. Rendre les notes ici les compterait deux fois.
+ */
+export async function listMergeRequestReviewMessages(): Promise<PullRequestReviewMessage[]> {
+  return [];
 }
 
 /**

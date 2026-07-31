@@ -23,6 +23,18 @@ import { resolveDiffPosition } from "./mr-position";
  * points en ligne** (`AI_REVIEW_MAX_INLINE_COMMENTS`). Quinze commentaires de
  * ligne sur une PR, ce n'est plus une review, c'est du bruit — les points au-delà
  * du plafond descendent dans la synthèse, par ordre de gravité.
+ *
+ * Enfin, une review ne lit pas qu'un diff : elle lit ce qui a DÉJÀ été écrit.
+ * `buildReviewUserMessage` porte donc, en plus du code, le **plan** du ticket
+ * (ce qui avait été décidé avant d'écrire) et **tous les messages** qui
+ * l'entourent — commentaires du ticket, fil de la PR, reviews déjà soumises,
+ * commentaires déjà ancrés au diff. Deux raisons, et ce sont les deux moitiés de
+ * ce qui sépare une relecture utile d'un avis hors-sol :
+ *  - un écart entre le plan et le code n'est une faute que si personne ne l'a
+ *    argumenté ; c'est dans les commentaires du ticket que ça se dit ;
+ *  - un point déjà soulevé par quelqu'un n'a pas à l'être une seconde fois.
+ * Tout ça vit sous un budget partagé (`AI_REVIEW_NOTES_MAX_CHARS`), servi aux
+ * messages les plus RÉCENTS, et ce qui ne rentre pas est COMPTÉ dans le message.
  */
 
 /** Un fichier du diff, réduit à ce que la review lit (`PullRequestFile` le satisfait). */
@@ -65,6 +77,24 @@ export const AI_REVIEW_FILE_MAX_CHARS = 12_000;
 
 /** Commentaires de ligne réellement déposés. Le reste descend dans la synthèse. */
 export const AI_REVIEW_MAX_INLINE_COMMENTS = 5;
+
+/** Budget du PLAN du ticket. Tronqué par le milieu comme un fichier : le plan est
+ *  la référence contre laquelle le diff se lit, pas le sujet de la lecture. */
+export const AI_REVIEW_PLAN_MAX_CHARS = 4_000;
+
+/** Budget d'UN message déjà écrit (commentaire, corps de review). Un pavé de
+ *  10 000 signes ne doit pas coûter aux dix messages qui le suivent. */
+export const AI_REVIEW_NOTE_MAX_CHARS = 1_200;
+
+/**
+ * Budget TOTAL de tout ce qui a déjà été écrit : commentaires du ticket, fil de
+ * la PR, reviews soumises, commentaires ancrés au diff. PARTAGÉ — chaque liste
+ * reçoit une part égale de ce qui reste quand vient son tour, et lui rend ce
+ * qu'elle n'utilise pas. Aucune liste ne peut donc affamer les autres : trente
+ * commentaires de ligne ne font pas disparaître les commentaires du ticket, qui
+ * sont précisément là où les écarts au plan s'expliquent.
+ */
+export const AI_REVIEW_NOTES_MAX_CHARS = 16_000;
 
 /** Nom du tool à sortie forcée. */
 export const AI_REVIEW_TOOL_NAME = "submit_review";
@@ -154,6 +184,12 @@ What you are looking for, in this order:
 - **Security and data.** A user-controlled value interpolated into a path, a URL or a query; a permission check that moved or vanished; a secret that ends up in a log.
 - **Leftovers.** Debug output, commented-out code, a scratch file, a change unrelated to what the PR says it does.
 
+You are not given only the diff. You are also given the issue this pull request implements, its implementation plan, and everything already written — on the issue and on the pull request itself. Read them, and use them:
+- **The plan is what was decided before the code was written.** Check the diff against it: a task marked \`[x]\` whose code is nowhere in the diff, a decision reversed without a word, a step quietly dropped. Task states read \`[ ]\` not started, \`[~]\` in progress, \`[x]\` done, \`[-]\` dropped.
+- **Departing from the plan is not a defect in itself** — the plan is not sacred, and the code is sometimes the better answer. The comments on the issue are where a departure gets argued: if it is explained there and it holds, say nothing. A departure nobody ever mentioned is worth a finding.
+- **Do not say again what has already been said.** A point already raised in the pull request thread, in a review, or in a comment anchored to the diff belongs to whoever raised it. Come back to it only if the code still contradicts it — and then say that it was already raised.
+- What you were not shown, you have not read: never treat an absence as a fact.
+
 What you do NOT do:
 - Do not restate the diff, do not summarize each file one by one, do not congratulate.
 - Do not report a problem you cannot point at: every finding is anchored to one line.
@@ -223,26 +259,121 @@ export function annotatePatch(patch: string): string {
   return out.join("\n");
 }
 
+/**
+ * Un message déjà écrit quelque part : commentaire du ticket, du fil de la PR,
+ * corps d'une review soumise, ou commentaire ancré à une ligne du diff. Toujours
+ * le même triplet — qui parle, à propos de quoi, ce qui est dit.
+ */
+export interface ReviewNote {
+  author: string;
+  /** Ce à quoi le message se rattache : `lib/x.ts:42` pour une ancre, l'état
+   *  d'une review soumise (« changes requested »). Rendu entre parenthèses. */
+  about?: string | null;
+  body: string;
+}
+
+/** Tout ce qui a déjà été dit SUR LA PR — ce qu'une relecture ne doit pas redire. */
+export interface ReviewConversation {
+  /** Reviews formelles déjà soumises, avec leur texte. */
+  reviews: ReviewNote[];
+  /** Commentaires déjà ancrés à une ligne du diff. */
+  reviewComments: ReviewNote[];
+  /** Fil de la PR — les commentaires qui ne visent aucune ligne. */
+  comments: ReviewNote[];
+}
+
 /** Le ticket que la PR met en œuvre, quand elle en porte un. */
 export interface ReviewIssueContext {
   identifier: string;
   title: string;
   description?: string | null;
+  /** Le plan d'implémentation (markdown de `issues.plan`) : ce qui avait été
+   *  décidé AVANT d'écrire le code, donc la référence de lecture du diff. */
+  plan?: string | null;
+  /** Les commentaires du ticket, du plus ancien au plus récent — l'endroit où
+   *  s'argumentent les écarts entre le plan et ce qui a fini par être écrit. */
+  comments?: ReviewNote[];
 }
 
 const ISSUE_DESCRIPTION_MAX_CHARS = 2000;
 const PR_BODY_MAX_CHARS = 2000;
 
+/** Une liste de messages à rendre sous un intitulé, adressable par son `id`. */
+interface NoteSection {
+  id: "issue" | "reviews" | "anchored" | "thread";
+  heading: string;
+  notes: ReviewNote[];
+}
+
 /**
- * Le message utilisateur : ce que la PR dit faire, le ticket qu'elle sert, puis
- * le diff annoté. Les fichiers entrent dans l'ordre du diff jusqu'à épuisement du
- * budget ; ceux qui restent sont NOMMÉS — un modèle qui sait qu'il n'a pas tout vu
- * nuance ses conclusions, un modèle à qui l'on cache la troncature ne le sait pas.
+ * Rend une liste de messages sous un budget, en gardant les PLUS RÉCENTS — la
+ * liste arrive du plus ancien au plus récent, et c'est la fin d'une discussion
+ * qui dit où elle en est. Ce qui ne rentre pas est COMPTÉ en tête : un modèle
+ * qui sait qu'il n'a pas tout lu nuance ses conclusions.
+ */
+function renderNotes(notes: ReviewNote[], budget: number): { text: string; used: number } {
+  const usable = notes
+    .map((n) => ({ ...n, body: headTail(n.body.trim(), AI_REVIEW_NOTE_MAX_CHARS) }))
+    .filter((n) => n.body);
+
+  const kept: string[] = [];
+  let used = 0;
+  for (let i = usable.length - 1; i >= 0; i--) {
+    const note = usable[i];
+    const about = note.about?.trim() ? ` (${note.about.trim()})` : "";
+    // Le corps est indenté sous sa puce : un message de plusieurs lignes doit
+    // rester UN message, pas se lire comme plusieurs.
+    const line = `- **${note.author.trim() || "someone"}**${about} — ${note.body.split("\n").join("\n  ")}`;
+    // Le premier (le plus récent) entre toujours : une part de budget trop
+    // petite doit rendre un message, pas rien.
+    if (kept.length > 0 && used + line.length > budget) break;
+    kept.unshift(line);
+    used += line.length;
+  }
+
+  const omitted = usable.length - kept.length;
+  const header = omitted > 0 ? [`- (${omitted} older not shown)`] : [];
+  return { text: kept.length > 0 ? [...header, ...kept].join("\n") : "", used };
+}
+
+/**
+ * Rend les listes de messages sous un budget PARTAGÉ : chacune reçoit une part
+ * égale de ce qui reste quand vient son tour, et rend ce qu'elle n'a pas pris à
+ * celles d'après. Une PR à trente commentaires de ligne ne fait donc pas
+ * disparaître les commentaires du ticket, qui sont ce qui explique les écarts.
+ */
+function renderNoteSections(sections: NoteSection[], total: number): Map<string, string> {
+  const rendered = new Map<string, string>();
+  const present = sections.filter((s) => s.notes.length > 0);
+  let budget = total;
+  let left = present.length;
+  for (const section of present) {
+    const { text, used } = renderNotes(section.notes, Math.max(1, Math.floor(budget / left)));
+    left--;
+    if (!text) continue;
+    budget -= used;
+    rendered.set(section.id, `### ${section.heading}\n\n${text}`);
+  }
+  return rendered;
+}
+
+/**
+ * Le message utilisateur : ce que la PR dit faire, le ticket qu'elle sert (avec
+ * son PLAN et ses commentaires), ce qui a déjà été dit sur la PR, puis le diff
+ * annoté — le code en dernier, juste avant que le modèle réponde.
+ *
+ * Les fichiers entrent dans l'ordre du diff jusqu'à épuisement du budget ; ceux
+ * qui restent sont NOMMÉS — un modèle qui sait qu'il n'a pas tout vu nuance ses
+ * conclusions, un modèle à qui l'on cache la troncature ne le sait pas. Les
+ * messages déjà écrits suivent la même règle : les plus récents, et le compte de
+ * ceux qui manquent.
  */
 export function buildReviewUserMessage(input: {
   title: string;
   body?: string | null;
   issue?: ReviewIssueContext | null;
+  /** Ce qui a déjà été écrit sur la PR elle-même (fil, reviews, ancres). */
+  conversation?: ReviewConversation | null;
   files: ReviewableFile[];
 }): string {
   const parts: string[] = [`# Pull request\n\n${input.title.trim() || "(untitled)"}`];
@@ -252,11 +383,66 @@ export function buildReviewUserMessage(input: {
     parts.push(`## What the pull request says it does\n\n${headTail(body, PR_BODY_MAX_CHARS)}`);
   }
 
+  // Le budget des messages est partagé par les QUATRE listes, dans cet ordre de
+  // service : le ticket d'abord (c'est là que se disent les écarts au plan),
+  // puis ce qui a déjà été dit sur la PR, du plus tranchant au plus bavard.
+  const conversation = input.conversation;
+  const noteSections = renderNoteSections(
+    [
+      {
+        id: "issue",
+        heading: "What was said on the issue",
+        notes: input.issue?.comments ?? [],
+      },
+      {
+        id: "reviews",
+        heading: "Reviews already submitted on this pull request",
+        notes: conversation?.reviews ?? [],
+      },
+      {
+        id: "anchored",
+        heading: "Comments already anchored to the diff",
+        notes: conversation?.reviewComments ?? [],
+      },
+      { id: "thread", heading: "The pull request thread", notes: conversation?.comments ?? [] },
+    ],
+    AI_REVIEW_NOTES_MAX_CHARS,
+  );
+
   if (input.issue) {
     const description = (input.issue.description ?? "").trim();
     parts.push(
       `## The issue it implements — ${input.issue.identifier}: ${input.issue.title}` +
         (description ? `\n\n${headTail(description, ISSUE_DESCRIPTION_MAX_CHARS)}` : ""),
+    );
+
+    const plan = (input.issue.plan ?? "").trim();
+    if (plan) {
+      // Le plan est CLÔTURÉ dans un bloc : c'est un document en markdown, et ses
+      // propres `##` sortiraient sinon de la section qui les contient — un plan
+      // qui commence par « ## Contexte » se lirait comme une section du message.
+      parts.push(
+        `### Its implementation plan\n\n` +
+          "Written BEFORE the code. Task states: `[ ]` not started, `[~]` in progress, " +
+          "`[x]` done, `[-]` dropped.\n\n" +
+          "```markdown\n" +
+          headTail(plan, AI_REVIEW_PLAN_MAX_CHARS) +
+          "\n```",
+      );
+    }
+
+    const said = noteSections.get("issue");
+    if (said) parts.push(said);
+  }
+
+  const onThePr = (["reviews", "anchored", "thread"] as const)
+    .map((id) => noteSections.get(id))
+    .filter((section): section is string => !!section);
+  if (onThePr.length > 0) {
+    parts.push(
+      `## What has already been said on this pull request\n\n` +
+        `These points are taken — do not raise them again as if they were yours.\n\n` +
+        onThePr.join("\n\n"),
     );
   }
 
@@ -402,8 +588,9 @@ export function selectFindings(
     byOldPath.set(file.previous_filename ?? file.filename, file);
   }
 
-  // Une ligne LEFT s'adresse par le chemin d'AVANT la PR ; un renommage fait
-  // diverger les deux, et le modèle peut nommer l'un ou l'autre.
+  // Un renommage fait diverger les deux chemins, et le modèle peut nommer l'un
+  // ou l'autre — le diff lui montre les deux. On RETROUVE donc le fichier par
+  // n'importe lequel ; c'est le chemin RETENU qui est normalisé plus bas.
   const lookup = (path: string, side: "LEFT" | "RIGHT") =>
     (side === "LEFT" ? byOldPath.get(path) : byNewPath.get(path)) ??
     byNewPath.get(path) ??
@@ -419,13 +606,17 @@ export function selectFindings(
       lookup(raw.path, raw.side) ?? lookup(normalizeFindingPath(raw.path), raw.side);
     // Le chemin retenu est celui de la forge, pas celui que le modèle a écrit —
     // y compris pour un point qui finira en synthèse, où il se lira en clair.
+    //
+    // C'est le chemin ACTUEL du fichier des DEUX côtés du diff, renommage
+    // compris : un commentaire de review s'adresse au fichier tel qu'il est dans
+    // la PR, jamais à son nom d'avant (même convention que le composer humain,
+    // `pr-diff.tsx`, qui poste `file.filename` quel que soit le côté). Une ancre
+    // LEFT posée sur l'ancien nom se ferait refuser par la forge — le fichier du
+    // diff porte le nouveau — et, si elle passait, atterrirait dans les fils
+    // ORPHELINS de la vue diff, qui indexe sur `files[].filename`.
     const finding: ReviewFinding = {
       ...raw,
-      path: !file
-        ? normalizeFindingPath(raw.path) || raw.path
-        : raw.side === "LEFT"
-          ? (file.previous_filename ?? file.filename)
-          : file.filename,
+      path: file ? file.filename : normalizeFindingPath(raw.path) || raw.path,
     };
 
     // Deux points sur la même ligne : le premier gagne (il est aussi le plus

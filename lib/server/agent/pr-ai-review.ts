@@ -1,6 +1,7 @@
 import "server-only";
 
 import { aiModelFallback } from "@/lib/ai-model-config";
+import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import {
@@ -9,6 +10,7 @@ import {
   recordAiUsage,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isForgeApiError, type Forge } from "./forge";
 import {
@@ -20,7 +22,9 @@ import {
   parseAiReview,
   selectFindings,
   type AiReview,
+  type ReviewConversation,
   type ReviewIssueContext,
+  type ReviewNote,
 } from "./pr-ai-review-core";
 import type { PullRequestRow } from "./pull-requests";
 
@@ -43,6 +47,15 @@ import type { PullRequestRow } from "./pull-requests";
  *     donne un second avis identique. C'est la raison d'être de la passe.
  *  3. **Synthèse + 3 à 5 points en ligne** (`selectFindings`), le reste replié
  *     dans la synthèse — quinze commentaires de ligne, c'est du bruit.
+ *
+ * Ce que la passe LIT avant de juger, et qui vient d'autant de sources : le
+ * diff, le ticket avec son PLAN et ses commentaires (`loadIssueContext`), et
+ * tout ce qui a déjà été écrit sur la PR (`loadPrConversation` — fil, reviews
+ * soumises, commentaires ancrés). Sans le plan, un écart d'implémentation ne se
+ * voit pas ; sans les commentaires du ticket, un écart ASSUMÉ se lit comme une
+ * faute ; sans le fil de la PR, Numo redit ce qu'un humain a déjà écrit. Chaque
+ * lecture est best-effort : ce qui n'est pas lisible manque au contexte, il
+ * n'arrête pas la review.
  *
  * L'écriture passe par l'outillage de MIN-138 : `createPullRequestReviewComment`
  * pour les ancres, `createPullRequestComment` pour la synthèse — le verdict est
@@ -104,7 +117,13 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
     (await getAppConfigValue(PR_REVIEW_MODEL_CONFIG_KEY))?.trim() ||
     aiModelFallback(PR_REVIEW_MODEL_CONFIG_KEY);
 
-  const issue = await loadIssueContext(input.pr.issue_id);
+  // Le ticket (plan + commentaires) et la discussion de la PR se lisent en
+  // parallèle : ni l'un ni l'autre ne dépend de l'autre, et les deux sont du
+  // contexte, pas des prérequis.
+  const [issue, conversation] = await Promise.all([
+    loadIssueContext(input.pr.issue_id),
+    loadPrConversation(forge, call),
+  ]);
   const raw = await callReviewModel({
     model,
     system: buildReviewSystemPrompt(input.locale),
@@ -112,6 +131,7 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
       title: pr.title ?? input.pr.title ?? "",
       body: pr.body,
       issue: issue?.context ?? null,
+      conversation,
       files,
     }),
     userId: input.userId,
@@ -191,23 +211,43 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
   return { ok: true, verdict: review.verdict, inlineComments: posted.length, model };
 }
 
+/** Derniers commentaires du ticket remontés. Au-delà, `renderNotes` ne garderait
+ *  de toute façon que les plus récents — autant ne pas les transporter. */
+const ISSUE_COMMENTS_LIMIT = 40;
+
 /**
  * Le ticket que la PR met en œuvre — le contexte qui distingue « ce code est
  * correct » de « ce code fait ce qu'on lui demandait », et le PROJET auquel
  * rattacher la ligne de ledger. Best-effort : une PR sans ticket (le cas normal
  * d'une PR humaine, MIN-143) se relit très bien sans, et sa dépense se lira
  * simplement sans nom de projet.
+ *
+ * Le PLAN et les COMMENTAIRES viennent avec, et ils vont ensemble : le plan dit
+ * ce qui avait été décidé, les commentaires disent ce dont on s'est écarté et
+ * pourquoi. Le plan seul ferait signaler comme des fautes des écarts assumés et
+ * argumentés — c'est-à-dire le contraire d'une relecture utile.
  */
 async function loadIssueContext(
   issueId: string | null,
 ): Promise<{ context: ReviewIssueContext; projectId: string | null } | null> {
   if (!issueId) return null;
   try {
-    const { data } = await getServiceClient()
-      .from("issues")
-      .select("number, title, description, project_id, projects(key)")
-      .eq("id", issueId)
-      .maybeSingle();
+    const service = getServiceClient();
+    const [{ data }, { data: commentRows }] = await Promise.all([
+      service
+        .from("issues")
+        .select("number, title, description, plan, project_id, projects(key)")
+        .eq("id", issueId)
+        .maybeSingle(),
+      // Les PLUS RÉCENTS d'abord côté SQL, remis dans l'ordre de lecture ensuite :
+      // un `limit` ascendant garderait le début d'une discussion, jamais sa fin.
+      service
+        .from("comments")
+        .select("body, author_id, via_assistant")
+        .eq("issue_id", issueId)
+        .order("created_at", { ascending: false })
+        .limit(ISSUE_COMMENTS_LIMIT),
+    ]);
     if (!data) return null;
     const key = ((data.projects as { key?: string } | null)?.key ?? "").toString();
     return {
@@ -215,6 +255,8 @@ async function loadIssueContext(
         identifier: issueIdentifier(key, data.number as number),
         title: (data.title as string) ?? "",
         description: (data.description as string | null) ?? null,
+        plan: (data.plan as string | null) ?? null,
+        comments: await issueNotes(service, commentRows ?? []),
       },
       projectId: (data.project_id as string | null) ?? null,
     };
@@ -222,6 +264,79 @@ async function loadIssueContext(
     console.error("[pr-ai-review] issue context failed:", (err as Error).message);
     return null;
   }
+}
+
+/** Type minimal d'une ligne de `comments` telle que lue ci-dessus. */
+type IssueCommentRow = { body: unknown; author_id: unknown; via_assistant: unknown };
+
+/**
+ * Les commentaires du ticket, nommés. Un commentaire de Numo se signe « Numo »
+ * (son `author_id` est celui de la personne qui l'a déclenché — l'afficher
+ * ferait dire à un humain ce que l'assistant a écrit) ; les autres passent par
+ * la résolution de nom commune (`displayName`), jamais par l'e-mail brut.
+ */
+async function issueNotes(
+  service: ReturnType<typeof getServiceClient>,
+  rows: IssueCommentRow[],
+): Promise<ReviewNote[]> {
+  const ordered = [...rows].reverse();
+  const users = await fetchAuthUsersById(
+    service,
+    ordered.map((r) => r.author_id as string).filter(Boolean),
+  );
+  return ordered.map((row) => ({
+    author: row.via_assistant
+      ? "Numo"
+      : displayName(toNamed(users.get(row.author_id as string)), "User"),
+    body: (row.body as string | null) ?? "",
+  }));
+}
+
+/** Repli journalisé d'une lecture de contexte : ce qui manque manque, la review a lieu. */
+function unreadable<T>(what: string, fallback: T): (err: unknown) => T {
+  return (err) => {
+    console.error(`[pr-ai-review] ${what} unreadable:`, (err as Error).message);
+    return fallback;
+  };
+}
+
+/**
+ * Tout ce qui a déjà été écrit SUR la PR : les reviews soumises (avec leur
+ * texte), les commentaires ancrés au diff, et le fil. Les trois ensemble sont ce
+ * qui empêche Numo de resservir un point qu'un humain a déjà fait — et lui
+ * donnent les décisions déjà prises sur cette PR.
+ *
+ * Best-effort liste par liste : une permission manquante sur l'une (les reviews
+ * n'ont pas la même garde que les commentaires selon les installations) prive la
+ * passe de cette liste-là, pas des deux autres, et ne fait pas échouer un geste
+ * que l'utilisateur paye.
+ */
+async function loadPrConversation(
+  forge: Forge,
+  call: { token: string; repoFullName: string; number: number },
+): Promise<ReviewConversation> {
+  const [reviews, reviewComments, comments] = await Promise.all([
+    forge.listReviewMessages(call).catch(unreadable("submitted reviews", [])),
+    forge.listPullRequestReviewComments(call).catch(unreadable("review comments", [])),
+    forge.listPullRequestComments(call).catch(unreadable("comments", [])),
+  ]);
+
+  return {
+    reviews: reviews.map((r) => ({
+      author: r.author ?? "someone",
+      about: r.state.replace(/_/g, " "),
+      body: r.body,
+    })),
+    reviewComments: reviewComments.map((c) => ({
+      author: c.user?.login ?? "someone",
+      // La ligne courante, sinon celle du commit d'origine : un commentaire
+      // devenu « outdated » vise toujours quelque chose, et le dire vaut mieux
+      // que de le donner sans adresse.
+      about: `${c.path}:${c.line ?? c.original_line ?? "?"}`,
+      body: c.body,
+    })),
+    comments: comments.map((c) => ({ author: c.user?.login ?? "someone", body: c.body })),
+  };
 }
 
 /**

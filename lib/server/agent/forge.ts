@@ -10,6 +10,7 @@ import type {
   PullRequestFile,
   PullRequestComment,
   PullRequestReviewComment,
+  PullRequestReviewMessage,
   PullRequestReviewSummary,
   ReviewSubmission,
   ReviewVerdict,
@@ -155,6 +156,15 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestReviewSummary>;
+  /** Le TEXTE des reviews déjà soumises (MIN-141) — ce que le décompte ne dit
+      pas, et que le fil de la PR ne porte pas (`pulls/{n}/reviews`). Vide côté
+      GitLab, où il n'existe pas d'objet review : tout ce qui s'y écrit est une
+      note, déjà servie par `listPullRequestComments`. */
+  listReviewMessages(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<PullRequestReviewMessage[]>;
   /** Checks CI. `number` ET `sha` sont demandés parce que les deux forges
       n'adressent pas la même chose : GitHub interroge le COMMIT de tête, GitLab
       les pipelines de la MR. Chaque implémentation ignore le champ qu'elle
@@ -237,6 +247,7 @@ const githubForge: Forge = {
   mergePullRequest: github.mergePullRequest,
   submitReview: github.submitPullRequestReview,
   listReviews: github.listPullRequestReviews,
+  listReviewMessages: github.listPullRequestReviewMessages,
   listChecks: github.listPullRequestChecks,
   // La mutation GraphQL n'adresse la PR que par son `node_id` : sans lui (une PR
   // lue par l'endpoint *list*, qui ne le sert pas), on refuse net plutôt que de
@@ -286,6 +297,7 @@ const gitlabForge: Forge = {
   mergePullRequest: gitlab.mergeMergeRequest,
   submitReview: gitlab.submitMergeRequestReview,
   listReviews: gitlab.listMergeRequestApprovals,
+  listReviewMessages: gitlab.listMergeRequestReviewMessages,
   listChecks: gitlab.listMergeRequestChecks,
   markReadyForReview: gitlab.markMergeRequestReadyForReview,
   closePullRequest: gitlab.closeMergeRequest,

@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
+import { ensureAgentsAllowed } from "@/lib/server/entitlements";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
@@ -612,10 +613,16 @@ export async function prReviewResponse(
  * relire est un geste de forge (comme approuver ou commenter), pas un geste
  * d'agent — il ne demande ni branche à hériter ni run précédent, juste un diff.
  *
- * Le budget d'usage est vérifié EN PRÉ-VOL, comme partout où un clic déclenche
- * un appel LLM : c'est le déclencheur qui paye. Les erreurs du modèle (clé
- * absente, réponse hors format) sortent en 502 avec un code — la review n'a
- * simplement pas eu lieu, rien n'a été posté.
+ * Deux gardes EN PRÉ-VOL, dans cet ordre :
+ *  1. **le plan** — faire relire du code par Numo est un geste d'agent, vendu à
+ *     partir de Go comme le lancement d'un run (`checkAgentQuota` refuse sans
+ *     `allowAgents`). La page Pull requests est déjà derrière `AgentsPlanGate`,
+ *     mais une garde d'UI n'est pas une garde : c'est ici que ça se refuse ;
+ *  2. **le budget d'usage** — comme partout où un clic déclenche un appel LLM :
+ *     c'est le déclencheur qui paye.
+ *
+ * Les erreurs du modèle (clé absente, réponse hors format) sortent en 502 avec
+ * un code — la review n'a simplement pas eu lieu, rien n'a été posté.
  */
 export async function prAiReviewResponse(
   scope: PrScope,
@@ -623,6 +630,7 @@ export async function prAiReviewResponse(
   locale: string,
 ): Promise<Response> {
   try {
+    await ensureAgentsAllowed(userId);
     await ensureUsageBudget(userId);
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);

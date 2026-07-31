@@ -4,6 +4,7 @@ import { resolveDiffPosition } from "./mr-position";
 import {
   AI_REVIEW_DIFF_MAX_CHARS,
   AI_REVIEW_MAX_INLINE_COMMENTS,
+  AI_REVIEW_NOTE_MAX_CHARS,
   annotatePatch,
   buildReviewSystemPrompt,
   buildReviewUserMessage,
@@ -12,6 +13,7 @@ import {
   parseAiReview,
   selectFindings,
   type ReviewFinding,
+  type ReviewNote,
   type ReviewableFile,
 } from "./pr-ai-review-core";
 
@@ -109,6 +111,99 @@ describe("buildReviewUserMessage", () => {
     expect(message).toContain("+11│added");
   });
 
+  /**
+   * Le plan est la référence contre laquelle le diff se lit, et les commentaires
+   * du ticket sont l'endroit où un écart au plan s'argumente : sans les deux, un
+   * écart ASSUMÉ se lit comme une faute.
+   */
+  it("porte le plan du ticket et ce qui s'est dit dessus", () => {
+    const message = buildReviewUserMessage({
+      title: "Corrige le compteur",
+      issue: {
+        identifier: "MIN-1",
+        title: "Le compteur déraille",
+        plan: "## Contexte\n\n- [x] Réparer `count()`\n- [ ] Tester",
+        comments: [
+          { author: "Clément G", body: "Finalement on garde l'ancien nom." },
+          { author: "Numo", body: "Noté, la tâche 2 tombe." },
+        ],
+      },
+      files: FILES,
+    });
+    expect(message).toContain("Its implementation plan");
+    expect(message).toContain("- [x] Réparer `count()`");
+    // L'état des cases est expliqué : « fait » sans code dans le diff est le
+    // signalement que le plan sert à rendre possible.
+    expect(message).toContain("`[x]` done");
+    expect(message).toContain("What was said on the issue");
+    expect(message).toContain("**Clément G** — Finalement on garde l'ancien nom.");
+    expect(message).toContain("**Numo** — Noté, la tâche 2 tombe.");
+  });
+
+  it("porte ce qui a déjà été dit sur la PR, ancres comprises", () => {
+    const message = buildReviewUserMessage({
+      title: "Corrige le compteur",
+      conversation: {
+        reviews: [
+          { author: "alice", about: "changes requested", body: "Il manque un test." },
+        ],
+        reviewComments: [
+          { author: "bob", about: "lib/demo.ts:11", body: "Ce nom est trompeur." },
+        ],
+        comments: [{ author: "carol", body: "Je regarde ce soir." }],
+      },
+      files: FILES,
+    });
+    expect(message).toContain("What has already been said on this pull request");
+    expect(message).toContain("**alice** (changes requested) — Il manque un test.");
+    expect(message).toContain("**bob** (lib/demo.ts:11) — Ce nom est trompeur.");
+    expect(message).toContain("**carol** — Je regarde ce soir.");
+  });
+
+  it("garde les messages les plus RÉCENTS et compte ceux qu'il tait", () => {
+    const many: ReviewNote[] = Array.from({ length: 40 }, (_, i) => ({
+      author: "bob",
+      body: `message ${i} ${"x".repeat(AI_REVIEW_NOTE_MAX_CHARS)}`,
+    }));
+    const message = buildReviewUserMessage({
+      title: "PR bavarde",
+      conversation: { reviews: [], reviewComments: [], comments: many },
+      files: FILES,
+    });
+    expect(message).toContain("message 39");
+    expect(message).not.toContain("message 0 ");
+    expect(message).toMatch(/\(\d+ older not shown\)/);
+    // Un pavé est élidé par le milieu, pas jeté.
+    expect(message).toContain("chars elided");
+  });
+
+  /**
+   * Le budget des messages est PARTAGÉ : une PR très commentée ne doit pas faire
+   * disparaître les commentaires du ticket — ce sont eux qui expliquent les
+   * écarts au plan, et l'inverse serait exactement la mauvaise coupe.
+   */
+  it("aucune liste n'affame les autres", () => {
+    const long = (n: number): ReviewNote[] =>
+      Array.from({ length: n }, (_, i) => ({
+        author: "bob",
+        body: `bruit ${i} ${"x".repeat(AI_REVIEW_NOTE_MAX_CHARS)}`,
+      }));
+    const message = buildReviewUserMessage({
+      title: "PR bavarde",
+      issue: { identifier: "MIN-1", title: "T", comments: long(40) },
+      conversation: {
+        reviews: [{ author: "alice", about: "approved", body: "LE verdict." }],
+        reviewComments: [{ author: "bob", about: "lib/demo.ts:11", body: "LE point." }],
+        comments: long(40),
+      },
+      files: FILES,
+    });
+    expect(message).toContain("LE verdict.");
+    expect(message).toContain("LE point.");
+    expect(message).toContain("What was said on the issue");
+    expect(message).toContain("The pull request thread");
+  });
+
   it("nomme les fichiers qu'il n'a pas montrés au lieu de les taire", () => {
     const big = "x".repeat(AI_REVIEW_DIFF_MAX_CHARS * 2);
     const message = buildReviewUserMessage({
@@ -172,17 +267,24 @@ describe("selectFindings", () => {
     expect(inline[0].side).toBe("LEFT");
   });
 
-  it("réécrit le chemin d'un renommage côté base pour une ancre LEFT", () => {
+  /**
+   * Un renommage s'adresse par son chemin ACTUEL, des deux côtés du diff — y
+   * compris sur une ligne supprimée (la convention du composer humain,
+   * `pr-diff.tsx`). L'ancien nom n'existe pas dans le diff de la forge, et la vue
+   * diff de minddy indexe les fils sur `files[].filename`. Le modèle, lui, peut
+   * nommer l'un ou l'autre : les deux doivent atterrir sur le nouveau.
+   */
+  it("adresse un renommage par son chemin actuel, des deux côtés", () => {
     const renamed: ReviewableFile[] = [
       { filename: "lib/neuf.ts", previous_filename: "lib/ancien.ts", status: "renamed", patch: PATCH },
     ];
-    // Le modèle a nommé le fichier tel qu'il le lit dans le diff (le nouveau nom),
-    // mais une ligne supprimée s'adresse par l'ancien.
-    const { inline } = selectFindings(
-      [finding({ path: "lib/neuf.ts", line: 11, side: "LEFT" })],
-      renamed,
-    );
-    expect(inline[0].path).toBe("lib/ancien.ts");
+    for (const named of ["lib/neuf.ts", "lib/ancien.ts"]) {
+      const { inline } = selectFindings(
+        [finding({ path: named, line: 11, side: "LEFT" })],
+        renamed,
+      );
+      expect(inline[0].path).toBe("lib/neuf.ts");
+    }
   });
 
   it("dédoublonne deux points sur la même ligne", () => {
@@ -312,5 +414,14 @@ describe("buildReviewSystemPrompt", () => {
     // Locale inconnue → l'anglais, jamais une consigne vide.
     expect(buildReviewSystemPrompt("de")).toContain("in English");
     expect(buildReviewSystemPrompt("en")).toContain("`+` = a line this PR adds");
+  });
+
+  it("dit quoi faire du plan et de ce qui a déjà été écrit", () => {
+    const prompt = buildReviewSystemPrompt("fr");
+    // Le plan est une référence de lecture, pas une loi : un écart argumenté
+    // dans les commentaires n'est pas une faute.
+    expect(prompt).toContain("decided before the code was written");
+    expect(prompt).toContain("Departing from the plan is not a defect in itself");
+    expect(prompt).toContain("Do not say again what has already been said");
   });
 });
