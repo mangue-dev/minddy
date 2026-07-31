@@ -10,6 +10,87 @@ import type { NotificationType } from "@/lib/types";
 import type { AgentRun, SyncedPrRun } from "./runs";
 
 /**
+ * Fenêtre pendant laquelle un geste identique DÉJÀ tracé vaut écho. Le hook
+ * arrive dans la seconde qui suit l'appel de forge ; deux gestes identiques
+ * espacés de plus que ça sont deux faits distincts, et se tracent tous les deux.
+ */
+const ECHO_WINDOW_MS = 2 * 60_000;
+
+/**
+ * Les membres minddy derrière un login de forge — le pont que MIN-144 rend
+ * possible : `git_user_identities` côté GitHub (le compte autorisé), la connexion
+ * OAuth côté GitLab (elle EST déjà l'identité de la personne).
+ *
+ * Vide quand personne n'a connecté ce compte : c'est alors quelqu'un qui n'agit
+ * pas depuis minddy, et rien n'est à dédoublonner.
+ */
+async function minddyUsersForForgeLogin(
+  provider: ForgeProvider,
+  login: string | null,
+): Promise<string[]> {
+  if (!login) return [];
+  const service = getServiceClient();
+  const table = provider === "github" ? "git_user_identities" : "git_connections";
+  const { data } = await service
+    .from(table)
+    .select("user_id")
+    .eq("provider", provider)
+    .eq("account_login", login);
+  return [
+    ...new Set(
+      ((data ?? []) as { user_id: string | null }[])
+        .map((r) => r.user_id)
+        .filter((id): id is string => !!id),
+    ),
+  ];
+}
+
+/**
+ * Ce (ticket, geste, PR) vient-il d'être tracé par la route, c'est-à-dire fait
+ * DEPUIS minddy (MIN-144) ?
+ *
+ * Jusqu'à MIN-144, l'anti-écho se lisait sur l'ACTEUR : merger depuis minddy
+ * partait du bot de la GitHub App (ou du compte qui a lié le dépôt côté GitLab),
+ * donc « acteur = nous » suffisait. Depuis, un geste humain part du compte git de
+ * la PERSONNE : l'acteur du hook est le même qu'elle ait cliqué dans minddy ou
+ * sur la forge, et l'identité seule ne discrimine plus rien — sans ce garde,
+ * chaque merge fait depuis minddy produit DEUX lignes d'activité (celle de la
+ * route, puis celle du hook), deux dispatchs de webhook d'intégration, et une
+ * notification d'inbox à l'auteur du run pour son propre geste.
+ *
+ * Ce qu'on cherche est donc précis : un événement du MÊME type, sur la MÊME PR,
+ * écrit il y a quelques secondes PAR LE MEMBRE qui porte ce compte de forge. Un
+ * autre membre qui approuve sur la forge à la même seconde garde sa ligne.
+ *
+ * Best-effort, et la course n'est pas gagnée d'avance : si le hook arrivait avant
+ * l'écriture de la route, on retombe sur l'ancien comportement (un doublon) —
+ * jamais sur une perte.
+ */
+export async function isPrActionEcho(opts: {
+  issueIds: (string | null | undefined)[];
+  type: PrActionEventType;
+  prNumber: number;
+  provider: ForgeProvider;
+  /** Login de l'acteur chez la forge, tel que le hook le livre. */
+  login: string | null;
+}): Promise<boolean> {
+  const issueIds = [...new Set(opts.issueIds.filter((id): id is string => !!id))];
+  if (issueIds.length === 0) return false;
+  const actorIds = await minddyUsersForForgeLogin(opts.provider, opts.login);
+  if (actorIds.length === 0) return false;
+  const { data } = await getServiceClient()
+    .from("issue_events")
+    .select("id")
+    .in("issue_id", issueIds)
+    .in("actor_id", actorIds)
+    .eq("type", opts.type)
+    .eq("to_value", String(opts.prNumber))
+    .gte("created_at", new Date(Date.now() - ECHO_WINDOW_MS).toISOString())
+    .limit(1);
+  return !!data?.length;
+}
+
+/**
  * Émetteur d'activité des actions PR/MR faites DIRECTEMENT sur le provider
  * (webhooks GitHub ET GitLab — MIN-69, extrait du webhook GitHub). Un seul event
  * par issue (plusieurs runs peuvent partager la même PR). Acteur = l'utilisateur
@@ -192,7 +273,19 @@ export async function applyForgePrToIssue(opts: {
 
   // L'activité, elle, n'a jamais eu besoin d'acteur minddy : `actor_id` est null
   // et le login de la forge voyage dans `from_value` (cf. forgeActorValue).
-  if (opts.actionType) {
+  // Sauf écho : depuis MIN-144, fusionner une PR humaine DEPUIS minddy porte le
+  // compte git de la personne, et l'appelant ne peut plus le distinguer d'un
+  // merge fait sur la forge — la route l'a déjà tracé.
+  if (
+    opts.actionType &&
+    !(await isPrActionEcho({
+      issueIds: [issueId],
+      type: opts.actionType,
+      prNumber: opts.prNumber,
+      provider: opts.provider,
+      login: opts.login,
+    }))
+  ) {
     await insertEvents(getServiceClient(), [
       {
         issue_id: issueId,

@@ -185,9 +185,10 @@ const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">>
  * sous chaque message coûterait sa hauteur à tous les commentaires du monde pour
  * n'afficher qu'un bouton.
  *
- * Un chip allumé = « minddy a réagi », pas « moi ». Sur GitHub la réaction part
- * du bot de l'App, donc elle est partagée par tous les membres du projet ; le
- * titre du chip le dit plutôt que de laisser croire à une signature personnelle.
+ * Un chip allumé = « MOI j'ai réagi » (MIN-145) : la réaction part du compte git
+ * de la personne sur les deux forges, et le serveur ne l'allume que pour elle.
+ * Sans compte git connecté, aucun chip n'est allumé — les compteurs, eux,
+ * restent justes : ils disent ce que les autres ont posé.
  */
 function CommentReactionChips({
   commentId,

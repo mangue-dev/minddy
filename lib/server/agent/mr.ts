@@ -1017,12 +1017,18 @@ function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
  *
  * Une note dont la lecture échoue rend simplement zéro réaction : une réaction
  * illisible ne doit pas emporter la vue de review.
+ *
+ * `viewerIsActor` (MIN-145) : à faux, le token est celui du LIEN de projet et
+ * non celui de la personne qui regarde — « la mienne » n'aurait alors aucun
+ * sens. On ne demande même pas `GET /user` (un aller-retour économisé) et tout
+ * sort en `mine: false`.
  */
 export async function listMergeRequestNoteAwards(opts: {
   token: string;
   repoFullName: string;
   number: number;
   commentIds: number[];
+  viewerIsActor: boolean;
 }): Promise<ReviewCommentReaction[]> {
   const ids = opts.commentIds.slice(0, AWARDS_MAX_NOTES);
   if (ids.length === 0) return [];
@@ -1031,7 +1037,9 @@ export async function listMergeRequestNoteAwards(opts: {
       `[mr] awards read capped at ${AWARDS_MAX_NOTES} notes (${opts.commentIds.length} asked)`,
     );
   }
-  const me = await gitlabCurrentUsername(opts.token).catch(() => null);
+  const me = opts.viewerIsActor
+    ? await gitlabCurrentUsername(opts.token).catch(() => null)
+    : null;
 
   const perNote = await mapLimited(ids, AWARDS_CONCURRENCY, async (noteId) => {
     const awards = await glJson<RawAward[]>(
@@ -1059,6 +1067,12 @@ export async function listMergeRequestNoteAwards(opts: {
  * Pose ou retire une réaction sur une note. GitLab refuse un award en double
  * (404 « has already been taken ») et ne laisse retirer que le SIEN : les deux
  * chemins passent donc par la liste, comme côté GitHub.
+ *
+ * `login` est celui de l'acteur (MIN-145) et il est **ignoré ici** : GitLab
+ * décerne l'award sous le compte du token, et `GET /user` en donne le nom — rien
+ * n'est à passer de l'extérieur. Il n'existe dans la signature que parce que
+ * GitHub, lui, en a besoin pour retrouver la réaction à supprimer (même
+ * arrangement que `commentIds`, que GitHub ignore).
  */
 export async function setMergeRequestNoteAward(opts: {
   token: string;
@@ -1067,6 +1081,7 @@ export async function setMergeRequestNoteAward(opts: {
   commentId: number;
   content: ReviewReactionContent;
   on: boolean;
+  login: string | null;
 }): Promise<void> {
   const url = awardsUrl(opts.repoFullName, opts.number, opts.commentId);
   const name = GITLAB_AWARD_NAMES[opts.content];

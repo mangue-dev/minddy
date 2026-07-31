@@ -361,23 +361,41 @@ export async function createPrCommentResponse(
  * s'affichent, seule l'affordance « Résoudre » disparaît. L'inverse — faire
  * tomber toute la vue parce qu'un état de résolution manque — coûterait bien
  * plus que ce qu'il protège.
+ *
+ * Seules les RÉACTIONS se lisent sous le compte de la personne (MIN-145) : leur
+ * `mine` dépend de qui regarde, ce qui fait de cette route la seconde à résoudre
+ * l'acteur après le détail — assumé, le cache de capability est déjà chaud. Les
+ * commentaires et les fils, eux, restent sur le token d'installation : ils ne
+ * dépendent d'aucune identité, et tout membre du projet minddy doit continuer de
+ * VOIR la review sans compte git connecté.
  */
 export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const [comments, threads] = await Promise.all([
+    const [comments, threads, actor] = await Promise.all([
       scope.forge.listPullRequestReviewComments(scope.call),
       scope.forge.listReviewThreads(scope.call).catch((err) => {
         console.error("[pr-actions] review threads unreadable:", (err as Error).message);
         return [];
       }),
+      scope.actor(),
     ]);
     // Les réactions viennent APRÈS : côté GitLab elles s'interrogent note par
     // note, donc il faut d'abord savoir quelles notes existent. Sans commentaire,
     // rien à demander — une PR sans review ne doit rien coûter. Best-effort au
     // même titre que les fils : une réaction illisible ne vaut pas une vue vide.
+    //
+    // Sans acteur, on lit quand même — masquer les compteurs ferait croire qu'il
+    // n'y a pas de réaction — mais avec `viewerIsActor: false` : le « j'ai
+    // réagi » du token d'installation est celui du BOT, et le rendre tel quel
+    // allumerait chez tout le monde une réaction que personne n'a posée.
+    const viewerIsActor = actor.kind === "actor";
     const reactions = comments.length
       ? await scope.forge
-          .listReviewCommentReactions({ ...scope.call, commentIds: comments.map((c) => c.id) })
+          .listReviewCommentReactions({
+            ...(viewerIsActor ? actorCall(actor, scope) : scope.call),
+            commentIds: comments.map((c) => c.id),
+            viewerIsActor,
+          })
           .catch((err) => {
             console.error("[pr-actions] review reactions unreadable:", (err as Error).message);
             return [];
@@ -463,8 +481,18 @@ export async function setPrReviewCommentReactionResponse(
   scope: PrScope,
   payload: { commentId: number; content: ReviewReactionContent; on: boolean },
 ): Promise<NextResponse> {
+  // `read` et non « connecté » (MIN-145) : le RETRAIT relit la liste des
+  // réactions du commentaire avec ce même token pour y retrouver la sienne. Un
+  // compte qui ne sait pas lire le dépôt échouerait là — même raisonnement que
+  // le commentaire de ligne, et même niveau exigé.
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
   try {
-    await scope.forge.setReviewCommentReaction({ ...scope.call, ...payload });
+    await scope.forge.setReviewCommentReaction({
+      ...actorCall(actor.actor, scope),
+      ...payload,
+      login: actor.actor.login,
+    });
     return NextResponse.json({ ok: true, on: payload.on });
   } catch (err) {
     return forgeErrorResponse(err);

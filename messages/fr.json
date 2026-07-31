@@ -2209,7 +2209,7 @@
     "threadResolvedBy": "Résolu par {name}",
     "showResolvedThread": "{count, plural, one {# message} other {# messages}}",
     "addReaction": "Ajouter une réaction",
-    "reactionMine": "minddy a réagi — cliquer pour retirer",
+    "reactionMine": "Vous avez réagi — cliquer pour retirer",
     "reactionThumbsUp": "Pouce levé",
     "reactionThumbsDown": "Pouce baissé",
     "reactionLaugh": "Rire",

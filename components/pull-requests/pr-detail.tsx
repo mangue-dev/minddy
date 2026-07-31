@@ -201,7 +201,9 @@ function ThreadComment({
   user: { login: string; avatar_url: string | null } | null;
   createdAt: string | null;
   body: string;
-  onQuoteReply: () => void;
+  /** Absent quand il n'y a pas de composer où citer : citer sans pouvoir
+      répondre ne mène nulle part (MIN-144). */
+  onQuoteReply?: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
@@ -224,20 +226,22 @@ function ThreadComment({
           </span>
         ) : null}
         <span className="min-w-0 flex-1" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("quoteReply")}
-              className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
-              onClick={onQuoteReply}
-            >
-              <Reply className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">{t("quoteReply")}</TooltipContent>
-        </Tooltip>
+        {onQuoteReply ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("quoteReply")}
+                className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+                onClick={onQuoteReply}
+              >
+                <Reply className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{t("quoteReply")}</TooltipContent>
+          </Tooltip>
+        ) : null}
       </div>
       <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
         {body}
@@ -815,7 +819,13 @@ export function PrDetail({
                       user={pr?.user ?? null}
                       createdAt={pr?.createdAt ?? null}
                       body={prDescription}
-                      onQuoteReply={() => quoteReply(prDescription, pr?.user?.login)}
+                      // Citer alimente le composer du bas : sans compte git il
+                      // n'y en a pas, et le geste ne mènerait nulle part.
+                      onQuoteReply={
+                        canComment
+                          ? () => quoteReply(prDescription, pr?.user?.login)
+                          : undefined
+                      }
                     />
                   ) : null}
                   {comments.map((c) => (
@@ -824,7 +834,11 @@ export function PrDetail({
                       user={c.user}
                       createdAt={c.created_at}
                       body={c.body}
-                      onQuoteReply={() => quoteReply(c.body ?? "", c.user?.login)}
+                      onQuoteReply={
+                        canComment
+                          ? () => quoteReply(c.body ?? "", c.user?.login)
+                          : undefined
+                      }
                     />
                   ))}
                 </ul>

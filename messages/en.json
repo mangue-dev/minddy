@@ -2209,7 +2209,7 @@
     "threadResolvedBy": "Resolved by {name}",
     "showResolvedThread": "{count, plural, one {# message} other {# messages}}",
     "addReaction": "Add reaction",
-    "reactionMine": "minddy has reacted — click to undo",
+    "reactionMine": "You reacted — click to undo",
     "reactionThumbsUp": "Thumbs up",
     "reactionThumbsDown": "Thumbs down",
     "reactionLaugh": "Laugh",

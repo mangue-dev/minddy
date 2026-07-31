@@ -4,6 +4,7 @@ import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
   applyForgePrToIssue,
+  isPrActionEcho,
   recordForgePrActionEvents,
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
@@ -84,8 +85,13 @@ interface GithubActor {
   type?: string;
 }
 
-/** L'acteur est le bot de la GitHub App → l'action vient de minddy (écho d'une
-    action in-app déjà tracée avec l'acteur humain) : on ne re-trace pas. */
+/** L'acteur est le bot de la GitHub App → l'action vient de Numo (écho d'une
+    action d'agent déjà tracée) : on ne re-trace pas.
+
+    Ne suffit PLUS à reconnaître un geste HUMAIN fait depuis minddy : depuis
+    MIN-144 il part du compte git de la personne, donc l'acteur du hook est le
+    même que si elle avait cliqué sur github.com. C'est `isPrActionEcho` qui
+    tranche ce cas-là, sur l'événement déjà tracé par la route. */
 function isBot(actor: GithubActor | undefined | null): boolean {
   return actor?.type === "Bot";
 }
@@ -237,7 +243,20 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
     }
   }
-  if (actionType && byHuman) {
+  // `byHuman` ne dit plus « fait sur GitHub » depuis MIN-144 : un merge/close
+  // lancé depuis minddy porte lui aussi un compte humain. L'écho se lit donc sur
+  // l'événement que la route vient d'écrire.
+  const echo =
+    !!actionType &&
+    byHuman &&
+    (await isPrActionEcho({
+      issueIds: runs.map((r) => r.issueId),
+      type: actionType,
+      prNumber: number,
+      provider: "github",
+      login: payload.sender?.login ?? null,
+    }));
+  if (actionType && byHuman && !echo) {
     await recordForgePrActionEvents({
       runs,
       type: actionType,
@@ -259,6 +278,19 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
   if (!actionType || number == null || !repoFullName || isBot(reviewer)) return;
 
   const runs = await findRunsForPr({ repoFullName, prNumber: number, provider: "github" });
+  // Approuver depuis minddy part maintenant du compte de la personne (MIN-144) :
+  // la review arrive donc ici comme si elle avait été soumise sur github.com.
+  // La route l'a déjà tracée — sans ce garde, l'auteur du run reçoit deux fois
+  // « votre PR a été relue » et le ticket porte deux fois la même ligne.
+  const echo = await isPrActionEcho({
+    issueIds: runs.map((r) => r.issueId),
+    type: actionType,
+    prNumber: number,
+    provider: "github",
+    login: reviewer?.login ?? null,
+  });
+  if (echo) return;
+
   await recordForgePrActionEvents({
     runs,
     type: actionType,

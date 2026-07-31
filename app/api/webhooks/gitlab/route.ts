@@ -4,6 +4,7 @@ import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
   applyForgePrToIssue,
+  isPrActionEcho,
   recordForgePrActionEvents,
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
@@ -281,11 +282,21 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   }
 
   if (!actionType) return;
-  // Écho d'une action in-app (faite avec le token du compte connecté) → déjà
-  // tracée par la route avec l'acteur humain : on ne re-trace pas.
+  // Écho d'une action in-app → déjà tracée par la route avec l'acteur humain : on
+  // ne re-trace pas. Deux lectures nécessaires : le compte de service (le geste
+  // d'un AGENT part encore du compte qui a lié le dépôt) et l'événement déjà
+  // écrit — depuis MIN-144 un geste humain part du compte git de la personne,
+  // qui n'est celui du lien que pour qui a lié le dépôt.
   const echo =
-    (actionType === "pr_accepted" || actionType === "pr_rejected") &&
-    (await isServiceAccount(repoFullName, payload.user));
+    ((actionType === "pr_accepted" || actionType === "pr_rejected") &&
+      (await isServiceAccount(repoFullName, payload.user))) ||
+    (await isPrActionEcho({
+      issueIds: runs.map((r) => r.issueId),
+      type: actionType,
+      prNumber: iid,
+      provider: "gitlab",
+      login: payload.user?.username ?? null,
+    }));
   if (echo) return;
 
   await recordForgePrActionEvents({

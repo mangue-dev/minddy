@@ -53,6 +53,33 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  * La méthode de merge, elle, a rejoint la surface (MIN-138) : elle a désormais
  * une implémentation réelle des deux côtés — mais pas le même MENU, d'où
  * `mergeMethods`, que l'UI lit pour ne proposer que ce que la forge sait faire.
+ *
+ * ## Qui signe quoi (MIN-144, MIN-145)
+ *
+ * **Un geste d'humain porte le nom de l'humain, un geste automatisé de minddy
+ * porte le nom de minddy.** La forge ne tranche pas : elle écrit sous le `token`
+ * qu'on lui passe. C'est donc l'APPELANT qui porte la règle, et cette table dit
+ * laquelle des deux identités chaque geste doit lui donner — le garde-fou qui
+ * manquait quand la réaction emoji est restée un an sur le mauvais compte.
+ *
+ * | Geste | Identité | Porteur |
+ * | --- | --- | --- |
+ * | `ensurePullRequest`, `reopenPullRequest` (execute.ts) | agent | `target.token` |
+ * | `deleteBranch` (branch-cleanup.ts) | agent | `target.token` |
+ * | commentaires de la review de Numo (pr-ai-review.ts) | agent | `scope.call` |
+ * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | humain | `actorCall` |
+ * | `submitReview` (le verdict de la personne) | humain | `actorCall` |
+ * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` depuis l'UI PR | humain | `actorCall` |
+ * | `setReviewThreadResolved` | humain | `actorCall` |
+ * | `setReviewCommentReaction` | humain | `actorCall` + `login` |
+ *
+ * Les trois méthodes de commentaire servent les DEUX identités : c'est le geste
+ * qui décide, pas la méthode. Numo relit sous le bot ; la même méthode, appelée
+ * depuis le panneau PR, part du compte de la personne.
+ *
+ * Les LECTURES, elles, restent toutes sur le token d'installation : tout membre
+ * du projet minddy doit voir la PR sans compte git connecté. La seule exception
+ * est `listReviewCommentReactions`, dont le résultat dépend de qui regarde.
  */
 export interface Forge {
   provider: RepoProviderId;
@@ -265,17 +292,31 @@ export interface Forge {
    * Les lui redemander évite à l'implémentation GitLab une troisième traversée
    * des discussions.
    *
-   * ⚠️ `mine` ne dit pas la même chose des deux côtés : le bot de l'App sur
-   * GitHub (donc partagé par tous les membres du projet), le compte connecté sur
-   * GitLab. C'est une limite de la forge, pas du code.
+   * C'est la seule LECTURE dont le résultat dépend de qui regarde (MIN-145) :
+   * `mine` veut dire « MOI, l'humain connecté, j'ai réagi » des deux côtés. Il ne
+   * se lit pas dans les données, il se déduit du token qui lit — d'où
+   * `viewerIsActor`, que l'appelant met à faux quand il retombe sur le token
+   * d'installation. `mine` vaut alors false partout : le « viewer » est le bot,
+   * et allumer ses chips ferait croire à chacun qu'il a posé une réaction que
+   * personne n'a posée. Les COMPTES, eux, restent justes dans les deux cas.
    */
   listReviewCommentReactions(opts: {
     token: string;
     repoFullName: string;
     number: number;
     commentIds: number[];
+    /** Le `token` ci-dessus est-il celui de l'acteur humain ? Sinon, `mine: false`. */
+    viewerIsActor: boolean;
   }): Promise<ReviewCommentReaction[]>;
-  /** Pose (`on`) ou retire une réaction sur UN commentaire de review. */
+  /**
+   * Pose (`on`) ou retire une réaction sur UN commentaire de review — geste
+   * HUMAIN, donc token de l'acteur (cf. la table d'identité plus haut).
+   *
+   * `login` est le compte de cet acteur, et **GitLab l'ignore** : le retrait
+   * GitHub doit retrouver LA réaction à supprimer parmi celles du commentaire
+   * (la REST ne sait pas retirer « la mienne »), là où GitLab dérive la sienne du
+   * token. Même arrangement que `commentIds`, que GitHub ignore.
+   */
   setReviewCommentReaction(opts: {
     token: string;
     repoFullName: string;
@@ -283,6 +324,7 @@ export interface Forge {
     commentId: number;
     content: ReviewReactionContent;
     on: boolean;
+    login: string | null;
   }): Promise<void>;
 }
 
@@ -352,6 +394,7 @@ const githubForge: Forge = {
       commentId: opts.commentId,
       content: opts.content,
       on: opts.on,
+      login: opts.login,
     }),
 };
 

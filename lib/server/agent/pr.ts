@@ -1,7 +1,6 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
-import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import {
   summarizeGithubChecks,
   type ChecksSummary,
@@ -1156,7 +1155,13 @@ interface RawReactionThreads {
  * `reactions`) mais ne dit PAS si l'identité courante a déjà réagi — or c'est
  * exactement ce qui décide l'état du bouton. Le savoir en REST demanderait un
  * appel par commentaire ; `reactionGroups` le donne pour toute la PR d'un coup,
- * avec `viewerHasReacted` — « le viewer », ici, étant le bot de l'App.
+ * avec `viewerHasReacted` — « le viewer » étant, littéralement, le porteur du
+ * token qui lit.
+ *
+ * D'où `viewerIsActor` (MIN-145) : à faux, le token est celui de l'installation
+ * et `viewerHasReacted` parle du BOT. On force alors `mine: false` plutôt que de
+ * rendre tel quel un « j'ai réagi » qui n'est celui de personne. Les comptes,
+ * eux, sont les mêmes pour tout le monde.
  *
  * `commentIds` est ignoré : la requête part de la PR, pas des commentaires. Il
  * n'est là que parce que GitLab, lui, n'a rien d'équivalent et doit interroger
@@ -1166,6 +1171,7 @@ export async function listPullRequestReviewCommentReactions(opts: {
   token: string;
   repoFullName: string;
   number: number;
+  viewerIsActor: boolean;
 }): Promise<ReviewCommentReaction[]> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const query = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
@@ -1199,7 +1205,12 @@ export async function listPullRequestReviewCommentReactions(opts: {
           // Un groupe à zéro survit un instant au retrait de sa dernière
           // réaction : le rendre ferait apparaître un emoji que personne n'a posé.
           if (!content || count <= 0) continue;
-          reactions.push({ commentId, content, count, mine: !!group?.viewerHasReacted });
+          reactions.push({
+            commentId,
+            content,
+            count,
+            mine: opts.viewerIsActor && !!group?.viewerHasReacted,
+          });
         }
       }
     }
@@ -1220,9 +1231,12 @@ interface RawReaction {
  * de la bascule : la mutation GraphQL équivalente s'adresse par node id, que la
  * palette n'a pas pour un commentaire encore SANS réaction.
  *
- * Retirer demande l'id de la réaction, que seule la liste rend. Le token est
- * celui de l'App : la réaction à retirer est donc celle de son bot,
- * `<slug>[bot]` — la même identité que le `viewerHasReacted` de la lecture.
+ * Geste humain (MIN-145) : le token est celui de l'ACTEUR, et `login` son compte
+ * — la réaction à retirer se cherche par ce nom, parce que la REST ne sait pas
+ * supprimer « la mienne » sans son id, et que la liste ne les distingue que par
+ * leur auteur. Sans `login`, on lève : retomber sur le bot ferait exactement le
+ * bug que ce ticket corrige, et poser une réaction qu'on ne saura jamais retirer
+ * n'est pas mieux.
  */
 export async function setPullRequestReviewCommentReaction(opts: {
   token: string;
@@ -1230,7 +1244,9 @@ export async function setPullRequestReviewCommentReaction(opts: {
   commentId: number;
   content: ReviewReactionContent;
   on: boolean;
+  login: string | null;
 }): Promise<void> {
+  if (!opts.login) throw new Error("Reaction requires the actor's GitHub login");
   const { owner, repo } = splitRepo(opts.repoFullName);
   const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/comments/${opts.commentId}/reactions`;
 
@@ -1244,13 +1260,12 @@ export async function setPullRequestReviewCommentReaction(opts: {
     return;
   }
 
-  const login = `${getGithubAppSlug()}[bot]`;
   const existing = await ghJson<RawReaction[]>(
     `${base}?content=${encodeURIComponent(opts.content)}&per_page=100`,
     opts.token,
   );
   const mine = (existing ?? []).find(
-    (r) => r.user?.login === login && r.content === opts.content,
+    (r) => r.user?.login === opts.login && r.content === opts.content,
   );
   // Rien à retirer : la bascule a déjà l'effet demandé, ce n'est pas une panne.
   if (mine?.id == null) return;
