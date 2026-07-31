@@ -393,6 +393,22 @@ export interface PullRequestReviewSummary {
  * = permission GitHub que l'installation n'a pas acceptée), `checks.total === 0`
  * = le dépôt n'a pas de CI. Même chose pour `reviews: null`.
  */
+/**
+ * Ce que l'utilisateur courant peut faire sur cette PR (MIN-144). Sur GitHub
+ * comme sur GitLab, un geste humain part de SON compte git : sans compte
+ * connecté, ou sans droit sur le dépôt, minddy le dit au lieu d'offrir un bouton
+ * qui mentirait sur l'auteur.
+ */
+export interface PrViewer {
+  provider: RepoProviderId;
+  /** Le provider a-t-il de quoi autoriser un compte (self-host sans env) ? */
+  configured: boolean;
+  connected: boolean;
+  login: string | null;
+  /** `write` = merger/résoudre, `read` = reviewer/commenter, `none` = rien. */
+  capability: "write" | "read" | "none";
+}
+
 export interface AgentRunPrResponse {
   pr: PullRequestRef | null;
   files: PullRequestFile[];
@@ -400,6 +416,7 @@ export interface AgentRunPrResponse {
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
   reviews?: PullRequestReviewSummary | null;
+  viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
 }
 

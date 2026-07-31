@@ -119,6 +119,10 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,
     reviews: data?.reviews ?? null,
+    // Qui je suis pour cette PR (MIN-144). `null` tant que le GET n'a pas
+    // répondu : l'UI n'offre alors aucun geste d'écriture, plutôt que d'en
+    // proposer un qu'elle retirerait une seconde plus tard.
+    viewer: data?.viewer ?? null,
     mergeMethods: data?.mergeMethods ?? [],
     loading: isLoading,
     refetch,

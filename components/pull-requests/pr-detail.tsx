@@ -48,6 +48,7 @@ import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
@@ -268,6 +269,7 @@ export function PrDetail({
     checks,
     checksError,
     reviews,
+    viewer,
     mergeMethods,
     loading,
     refetch: refetchPr,
@@ -304,6 +306,11 @@ export function PrDetail({
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
+  // Ce que CE compte git peut faire sur ce dépôt (MIN-144). Un geste humain part
+  // du compte de la personne : sans compte, ou sans droit, l'affordance
+  // DISPARAÎT — c'est le bandeau qui explique, une fois, en haut.
+  const canWrite = viewer?.capability === "write";
+  const canComment = canWrite || viewer?.capability === "read";
   // « Et relancer Numo » n'existe que si un run porte déjà cette PR : c'est de
   // SES runs que la nouvelle hérite la branche (MIN-143). Une PR humaine, ou un
   // ticket dont la PR n'a jamais été ouverte par Numo, n'a rien à hériter.
@@ -553,47 +560,67 @@ export function PrDetail({
 
             {/* Review — les trois verdicts, chacun ouvrant le même dialogue,
                 puis la review de Numo (MIN-141), séparée parce qu'elle ne
-                demande rien et part au clic. */}
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={aiReviewing}>
-                  {aiReviewing ? <Spinner /> : null}
-                  {t("review")}
-                  <ChevronDown className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => openReview("approve")}>
-                  <Check />
-                  {t("reviewApprove")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => openReview("request_changes")}>
-                  <NumoIcon animated={false} />
-                  {t("reviewRequestChanges")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => openReview("comment")}>
-                  <MessageSquare />
-                  {t("reviewComment")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => void requestAiReview()}>
-                  <NumoIcon animated={false} />
-                  {t("aiReview")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                demande rien et part au clic.
 
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setConfirmAction({ kind: "close" })}
-              disabled={!!acting || isWorking}
-            >
-              {acting === "close" ? <Spinner /> : <X />}
-              {t("reject")}
-            </Button>
+                « Faire vérifier par Numo » RESTE quel que soit le compte git :
+                c'est un geste d'AGENT, il ne dépend d'aucune identité humaine.
+                Quand c'est la seule entrée qui survit, le menu à une entrée
+                devient un bouton simple — un chevron qui n'ouvre qu'une ligne
+                est une fausse promesse. */}
+            {canComment ? (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={aiReviewing}>
+                    {aiReviewing ? <Spinner /> : null}
+                    {t("review")}
+                    <ChevronDown className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => openReview("approve")}>
+                    <Check />
+                    {t("reviewApprove")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openReview("request_changes")}>
+                    <NumoIcon animated={false} />
+                    {t("reviewRequestChanges")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openReview("comment")}>
+                    <MessageSquare />
+                    {t("reviewComment")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => void requestAiReview()}>
+                    <NumoIcon animated={false} />
+                    {t("aiReview")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={aiReviewing}
+                onClick={() => void requestAiReview()}
+              >
+                {aiReviewing ? <Spinner /> : <NumoIcon animated={false} />}
+                {t("aiReview")}
+              </Button>
+            )}
 
-            {isDraft ? (
+            {canWrite ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmAction({ kind: "close" })}
+                disabled={!!acting || isWorking}
+              >
+                {acting === "close" ? <Spinner /> : <X />}
+                {t("reject")}
+              </Button>
+            ) : null}
+
+            {!canWrite ? null : isDraft ? (
               // Une PR brouillon ne se fusionne pas : le geste qu'elle appelle est
               // de la proposer.
               <Button
@@ -751,6 +778,10 @@ export function PrDetail({
               avant de décider de fusionner. */}
           {!loading ? <ChecksBanner checks={checks} error={checksError} /> : null}
 
+          {/* L'unique endroit où se dit « sous quel compte git vous agissez »
+              (MIN-144). Muet quand tout va bien. */}
+          {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
+
           {/* Onglets façon GitHub : le fil d'un côté, le code de l'autre. */}
           <Tabs value={tab} onValueChange={(v) => setTab(v as "conversation" | "files")}>
             <TabsList variant="line" className="justify-start p-0">
@@ -801,7 +832,9 @@ export function PrDetail({
 
               {/* Composer — même carte que le composer d'issue (CommentComposer),
                   sans mentions ni pièces jointes : un commentaire part sur GitHub,
-                  où ni l'un ni l'autre n'a de sens. */}
+                  où ni l'un ni l'autre n'a de sens. ABSENT sans compte git : il
+                  partirait sous l'identité du bot (MIN-144). */}
+              {canComment ? (
               <div className="relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring">
                 <AutoTextarea
                   ref={composerRef}
@@ -836,6 +869,7 @@ export function PrDetail({
                   ) : null}
                 </div>
               </div>
+              ) : null}
             </TabsContent>
 
             <TabsContent value="files" className="mt-4">
@@ -850,6 +884,11 @@ export function PrDetail({
                   endpoint={prEndpoint(item.prId)}
                   prUrl={pr.url}
                   provider={item.provider}
+                  // Deux droits distincts (MIN-144) : commenter une ligne
+                  // demande `read`, résoudre un fil est une écriture sur le
+                  // dépôt. Les confondre offrirait « Résoudre » pour un 403.
+                  readOnly={!canComment}
+                  canResolve={canWrite}
                   reviewComments={reviewComments}
                   reviewThreads={reviewThreads}
                   reviewReactions={reviewReactions}

@@ -1,7 +1,11 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { decryptGitlabToken, encryptGitlabToken } from "./gitlab-credentials";
+import {
+  decryptForgeToken,
+  encryptForgeToken,
+  isForgeTokenCryptoConfigured,
+} from "./token-crypto";
 import { SITE_URL } from "@/lib/site";
 import {
   GITLAB_API_BASE,
@@ -52,7 +56,9 @@ export function isGitlabConfigured(): boolean {
   return !!(
     process.env.GITLAB_OAUTH_CLIENT_ID &&
     process.env.GITLAB_OAUTH_CLIENT_SECRET &&
-    process.env.GITLAB_TOKEN_ENCRYPTION_SECRET
+    // Le secret de chiffrement accepte ses DEUX noms (MIN-144) : une prod qui ne
+    // pose que `GITLAB_TOKEN_ENCRYPTION_SECRET` reste configurée à l'identique.
+    isForgeTokenCryptoConfigured()
   );
 }
 
@@ -203,12 +209,12 @@ export async function getGitlabAccessToken(connectionId: string): Promise<string
   const nowMs = Date.now();
   const expiresAtMs = row.token_expires_at ? Date.parse(row.token_expires_at) : 0;
   if (expiresAtMs - nowMs > REFRESH_SKEW_MS) {
-    const token = decryptGitlabToken(row.access_token_encrypted);
+    const token = decryptForgeToken(row.access_token_encrypted);
     if (token) return token;
     // Déchiffrement échoué (secret tourné / corruption) → on tombe sur un refresh.
   }
 
-  const refreshToken = decryptGitlabToken(row.refresh_token_encrypted);
+  const refreshToken = decryptForgeToken(row.refresh_token_encrypted);
   if (!refreshToken) {
     throw new Error(
       `GitLab connection ${connectionId} has no refresh token; reconnect required`,
@@ -231,7 +237,7 @@ export async function getGitlabAccessToken(connectionId: string): Promise<string
       recovered.token_expires_at != null &&
       recovered.token_expires_at !== row.token_expires_at
     ) {
-      const token = decryptGitlabToken(recovered.access_token_encrypted);
+      const token = decryptForgeToken(recovered.access_token_encrypted);
       if (token) return token;
     }
     throw err;
@@ -244,8 +250,8 @@ export async function getGitlabAccessToken(connectionId: string): Promise<string
   const persist = supabase
     .from("git_connections")
     .update({
-      access_token_encrypted: encryptGitlabToken(refreshed.accessToken),
-      refresh_token_encrypted: encryptGitlabToken(refreshed.refreshToken),
+      access_token_encrypted: encryptForgeToken(refreshed.accessToken),
+      refresh_token_encrypted: encryptForgeToken(refreshed.refreshToken),
       token_expires_at: refreshed.expiresAt,
       updated_at: new Date().toISOString(),
     })

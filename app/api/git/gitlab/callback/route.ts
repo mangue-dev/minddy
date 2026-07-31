@@ -26,14 +26,17 @@ export async function GET(request: NextRequest) {
   const isAccount = state.projectId === ACCOUNT_CONNECT_PROJECT;
   // Une autorisation initiée depuis le wizard de création (MIN-62) revient sur
   // /home : à ce stade le projet n'existe pas encore, c'est le brouillon en
-  // session qui rouvre le wizard là où il en était. Sinon, retour aux
-  // paramètres git du projet (ou du compte).
+  // session qui rouvre le wizard là où il en était. Depuis le panneau d'une PR
+  // (MIN-144), retour à la page Pull requests. Sinon, paramètres git du projet
+  // (ou du compte).
   const isWizard = isAccount && state.origin === "wizard";
   const base = isWizard
     ? "/home?setup=git"
-    : isAccount
-      ? "/settings?tab=git"
-      : `/projects/${state.projectId}/settings?tab=git`;
+    : isAccount && state.origin === "pr"
+      ? "/pull-requests?connected=git"
+      : isAccount
+        ? "/settings?tab=git"
+        : `/projects/${state.projectId}/settings?tab=git`;
 
   if (!code) {
     return NextResponse.redirect(new URL(`${base}&git=error`, origin));

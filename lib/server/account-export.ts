@@ -91,6 +91,7 @@ export interface AccountExport {
   api_keys: Row[];
   connected_apps: Row[];
   git_connections: Row[];
+  git_user_identities: Row[];
   model_keys: Row[];
 }
 
@@ -139,6 +140,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     apiKeys,
     grants,
     gitConnections,
+    gitIdentities,
     modelKeys,
   ] = await Promise.all([
     service.from("user_agent_preferences").select("*").eq("user_id", userId).maybeSingle(),
@@ -218,6 +220,13 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     service
       .from("git_connections")
       .select("provider, account_login, account_type, repository_selection, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    // Compte git personnel (MIN-144) : le login et le fournisseur, jamais les
+    // tokens — mêmes règles que la ligne au-dessus.
+    service
+      .from("git_user_identities")
+      .select("provider, account_login, provider_account_id, created_at")
       .eq("user_id", userId)
       .order("created_at"),
     service
@@ -310,6 +319,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     api_keys: list("api_keys", apiKeys),
     connected_apps: list("oauth_grants", grants),
     git_connections: list("git_connections", gitConnections),
+    git_user_identities: list("git_user_identities", gitIdentities),
     model_keys: list("user_ai_keys", modelKeys),
   };
 }

@@ -13,6 +13,9 @@ import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { runPrAiReview } from "./pr-ai-review";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
+import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
+import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
+import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
 import { findRunsForPr, syncPrState } from "./runs";
 import {
@@ -52,6 +55,15 @@ export interface PrScope {
   forge: Forge;
   /** Raccourci du triplet que chaque appel de forge redemande. */
   call: { token: string; repoFullName: string; number: number };
+  /**
+   * Le compte git de l'utilisateur, sous lequel partent les gestes HUMAINS
+   * (MIN-144). PARESSEUX et mémoïsé pour la requête : `resolvePrScope` est
+   * traversé par TOUTES les routes PR — `/comments`, `/review-comments`,
+   * `/file`, et le détail qui re-poll toutes les 15 s pendant une CI — et y
+   * résoudre l'acteur d'office ajouterait un aller-retour de forge (plus,
+   * parfois, un refresh de token) à chacune.
+   */
+  actor: () => Promise<ForgeActor>;
 }
 
 /**
@@ -69,11 +81,81 @@ export async function resolvePrScope(
     repoFullName: pr.repo_full_name,
   });
   if (!target) return null;
+
+  let pending: Promise<ForgeActor> | null = null;
   return {
     pr,
     target,
     forge: forgeFor(target.provider),
     call: { token: target.token, repoFullName: target.repoFullName, number: pr.number },
+    // Ne rejette JAMAIS : une panne de résolution vaut « aucun compte » (donc
+    // une 403 qui invite à reconnecter, ou un bandeau), jamais une 500 qui
+    // ferait tomber la vue PR entière.
+    actor: () =>
+      (pending ??= resolveForgeActor({
+        userId,
+        provider: target.provider,
+        repoFullName: target.repoFullName,
+      }).catch((err) => {
+        console.error("[pr-actions] actor unresolved:", (err as Error).message);
+        return { kind: "none", reason: "noAccount" } as ForgeActor;
+      })),
+  };
+}
+
+/** Le triplet d'appel de forge, mais signé par l'utilisateur au lieu de l'App. */
+export function actorCall(
+  actor: Extract<ForgeActor, { kind: "actor" }>,
+  scope: PrScope,
+): { token: string; repoFullName: string; number: number } {
+  return {
+    token: actor.token,
+    repoFullName: scope.target.repoFullName,
+    number: scope.pr.number,
+  };
+}
+
+/** Réponses de refus d'identité, dans l'ordre où l'utilisateur les rencontre. */
+const ACTOR_ERROR_KEYS = {
+  noAccount: "gitAccountRequired",
+  noRepoAccess: "gitRepoAccessRequired",
+  noWriteAccess: "gitWriteAccessRequired",
+} as const;
+
+/**
+ * L'acteur, ou la 403 qui explique pourquoi il n'y en a pas. Le message est
+ * traduit ICI (serveur) : c'est `err.message` que le client affiche en toast,
+ * comme pour `prAiReviewResponse`.
+ *
+ * Les POST/PATCH refont ce contrôle même si l'UI l'a déjà fait : le cache est
+ * chaud, le coût est nul, et l'UI n'est jamais la garde.
+ */
+export async function requireActor(
+  scope: PrScope,
+  need: "read" | "write",
+): Promise<
+  | { ok: true; actor: Extract<ForgeActor, { kind: "actor" }> }
+  | { ok: false; response: NextResponse }
+> {
+  const actor = await scope.actor();
+  const reason =
+    actor.kind === "none"
+      ? actor.reason
+      : need === "write" && actor.capability !== "write"
+        ? "noWriteAccess"
+        : null;
+  if (!reason) {
+    return { ok: true, actor: actor as Extract<ForgeActor, { kind: "actor" }> };
+  }
+
+  const code = ACTOR_ERROR_KEYS[reason];
+  const t = await getTranslations("ApiErrors");
+  return {
+    ok: false,
+    response: NextResponse.json(
+      { error: t(code, { repo: scope.target.repoFullName }), code },
+      { status: 403 },
+    ),
   };
 }
 
@@ -147,8 +229,54 @@ export function forgeErrorResponse(err: unknown): NextResponse {
 // ── Détail ───────────────────────────────────────────────────────────────────
 
 /**
+ * Ce que l'utilisateur COURANT peut faire sur cette PR (MIN-144) — la seule
+ * lecture qui résout l'acteur, pour que « vous n'êtes pas membre » se découvre à
+ * l'ouverture du panneau et non au premier clic.
+ */
+export interface PrViewer {
+  provider: "github" | "gitlab";
+  /** Le provider a-t-il de quoi autoriser un compte (env posées) ? */
+  configured: boolean;
+  connected: boolean;
+  login: string | null;
+  capability: "write" | "read" | "none";
+}
+
+async function resolveViewer(scope: PrScope): Promise<PrViewer> {
+  const provider = scope.target.provider;
+  const configured =
+    provider === "github" ? isGithubUserAuthConfigured() : isGitlabConfigured();
+  // `scope.actor()` ne rejette jamais : un échec de résolution vaut
+  // `capability: "none"`, exactement comme `reviews` vaut null.
+  const actor = await scope.actor();
+  if (actor.kind === "actor") {
+    return {
+      provider,
+      configured,
+      connected: true,
+      login: actor.login,
+      capability: actor.capability,
+    };
+  }
+  return {
+    provider,
+    configured,
+    // « Pas membre du dépôt » suppose un compte connecté — le distinguer de
+    // « aucun compte » est tout l'objet des deux états d'UI.
+    connected: actor.reason === "noRepoAccess",
+    login: actor.login ?? null,
+    capability: "none",
+  };
+}
+
+/**
  * GET du détail : metadata PR + fichiers/patches + checks CI + approbations +
- * méthodes de merge offertes par la forge.
+ * méthodes de merge offertes par la forge, et ce que le lecteur a le droit d'y
+ * faire (`viewer`).
+ *
+ * Les lectures restent sur le token d'INSTALLATION : tout membre du projet
+ * minddy continue de VOIR la PR même sans compte git connecté. Seules les
+ * écritures humaines changent de porteur.
  */
 export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
   const { forge, call } = scope;
@@ -157,10 +285,11 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     // ont besoin du SHA de tête, donc d'un deuxième temps. Une lecture
     // d'approbations en échec (tier GitLab sans l'API, permission retirée) ne
     // doit pas faire tomber la vue PR : elle vaut null, pas zéro.
-    const [pr, files, reviews] = await Promise.all([
+    const [pr, files, reviews, viewer] = await Promise.all([
       forge.getPullRequest(call),
       forge.listPullRequestFiles(call),
       forge.listReviews(call).catch(() => null),
+      resolveViewer(scope),
     ]);
 
     // `checks: null` = INCONNU (permission refusée, appel en échec), distinct de
@@ -184,6 +313,7 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       checks,
       checksError,
       reviews,
+      viewer,
       mergeMethods: forge.mergeMethods,
     });
   } catch (err) {
@@ -206,8 +336,14 @@ export async function createPrCommentResponse(
   scope: PrScope,
   body: string,
 ): Promise<NextResponse> {
+  // Geste humain : il part du compte git de la personne, pas de `minddy-app[bot]`.
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
   try {
-    const comment = await scope.forge.createPullRequestComment({ ...scope.call, body });
+    const comment = await scope.forge.createPullRequestComment({
+      ...actorCall(actor.actor, scope),
+      body,
+    });
     return NextResponse.json({ comment });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -280,8 +416,15 @@ export async function setPrReviewThreadResolvedResponse(
   scope: PrScope,
   payload: { threadId: string; resolved: boolean },
 ): Promise<NextResponse> {
+  // Résoudre un fil est le symptôme MESURÉ en MIN-139 (`resolvedBy:
+  // "minddy-app[bot]"`). C'est un geste d'écriture sur le dépôt : `write`.
+  const actor = await requireActor(scope, "write");
+  if (!actor.ok) return actor.response;
   try {
-    await scope.forge.setReviewThreadResolved({ ...scope.call, ...payload });
+    await scope.forge.setReviewThreadResolved({
+      ...actorCall(actor.actor, scope),
+      ...payload,
+    });
     return NextResponse.json({ ok: true, resolved: payload.resolved });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -386,10 +529,16 @@ export async function createPrReviewCommentResponse(
   scope: PrScope,
   payload: ReviewCommentPayload,
 ): Promise<NextResponse> {
+  // `read` et non « connecté » : côté GitHub, `createPullRequestReviewComment`
+  // relit la PR à chaud pour son `commitId` AVEC le token qu'on lui passe. Un
+  // compte qui ne sait pas lire le dépôt échouerait là, pas à l'écriture.
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
+  const call = actorCall(actor.actor, scope);
   try {
     if (payload.inReplyTo != null) {
       const comment = await scope.forge.replyToPullRequestReviewComment({
-        ...scope.call,
+        ...call,
         commentId: payload.inReplyTo,
         body: payload.body,
       });
@@ -398,7 +547,7 @@ export async function createPrReviewCommentResponse(
     // L'ancre du commentaire est résolue PAR le provider (tête de PR relue à
     // chaud sur GitHub, diff_refs sur GitLab) — l'appelant n'a rien à pré-lire.
     const comment = await scope.forge.createPullRequestReviewComment({
-      ...scope.call,
+      ...call,
       body: payload.body,
       path: payload.path as string,
       line: payload.line as number,
@@ -564,6 +713,13 @@ export async function prStateActionResponse(
   userId: string,
 ): Promise<NextResponse> {
   const { forge, call } = scope;
+  // Merger, refuser ou proposer une PR change l'ÉTAT du dépôt : `write`, et
+  // rien d'autre. La protection de branche coûterait une permission GitHub hors
+  // périmètre, la forge refuse le reste toute seule, et `mergeableState ===
+  // "blocked"` le dit déjà dans l'UI.
+  const actor = await requireActor(scope, "write");
+  if (!actor.ok) return actor.response;
+  const myCall = actorCall(actor.actor, scope);
   try {
     if (action === "merge") {
       // La méthode vient de l'UI, qui n'offre que `forge.mergeMethods` : on la
@@ -575,7 +731,7 @@ export async function prStateActionResponse(
           { status: 400 },
         );
       }
-      await forge.mergePullRequest({ ...call, method });
+      await forge.mergePullRequest({ ...myCall, method });
       await propagatePrState(scope, "merged", userId);
       // Trace « a accepté la PR » dans l'activité du ticket lié.
       if (scope.pr.issue_id) {
@@ -586,16 +742,18 @@ export async function prStateActionResponse(
 
     if (action === "ready_for_review") {
       // Le `nodeId` (clé de la mutation GraphQL GitHub) n'existe que sur le GET
-      // d'UNE PR : on relit donc la PR avant de basculer.
+      // d'UNE PR : on relit donc la PR avant de basculer. Cette PRÉ-LECTURE
+      // reste sur le token d'installation — c'est une lecture, et elle marche
+      // même si l'acteur n'a qu'un accès étroit au dépôt.
       const pr = await forge.getPullRequest(call);
-      await forge.markReadyForReview({ ...call, nodeId: pr.nodeId });
+      await forge.markReadyForReview({ ...myCall, nodeId: pr.nodeId });
       // Une PR qui devient prête est prête à être RELUE → le ticket passe en
       // revue (il était en cours tant que la PR restait brouillon).
       await propagatePrState(scope, "open", userId);
       return NextResponse.json({ ok: true, pr_state: "open" });
     }
 
-    await forge.closePullRequest(call);
+    await forge.closePullRequest(myCall);
     // PR refusée → le ticket retourne « à faire » (todo, jamais annulé) — MIN-46.
     await propagatePrState(scope, "closed", userId);
     if (scope.pr.issue_id) {
@@ -643,6 +801,14 @@ export async function prReviewResponse(
   // une consigne, et approuver ne demande rien.
   const relaunch = !!body.relaunch && verdict === "request_changes";
 
+  // AVANT `launchAgentRun` : un refus d'identité qui arriverait après laisserait
+  // une run lancée sans review — même raisonnement que l'ordre lancement-puis-
+  // review plus bas. Le verdict part du compte de la personne : c'est ce qui
+  // fait que la case verte de GitHub se coche enfin pour de vrai (une App ne
+  // peut pas approuver sa propre PR — 422, d'où le repli de MIN-138).
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
+
   let launchedRunId: string | null = null;
   if (relaunch) {
     if (!scope.pr.issue_id) {
@@ -684,7 +850,7 @@ export async function prReviewResponse(
   let published: "review" | "comment" = "review";
   try {
     const result = await scope.forge.submitReview({
-      ...scope.call,
+      ...actorCall(actor.actor, scope),
       verdict,
       body: message,
     });

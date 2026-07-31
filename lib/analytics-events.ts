@@ -268,6 +268,10 @@ export interface AnalyticsEventProps {
   /** `provider` peut valoir "unknown" : la déconnexion se fait par id de
    *  connexion, sans que l'appelant sache de quel fournisseur il s'agit. */
   git_connection_removed: { provider: string };
+  /** Compte git PERSONNEL, sous lequel partent les gestes de PR (MIN-144) —
+   *  distinct de l'installation de l'App ci-dessus. */
+  git_identity_connect_started: { provider: "github" | "gitlab" };
+  git_identity_removed: { provider: string };
   project_git_linked: { provider: string };
   project_git_unlinked: { provider: string };
   /** Synchro unidirectionnelle des issues du dépôt lié (MIN-97). */
@@ -537,6 +541,8 @@ const EVENT_NAMES = [
   "git_connection_started",
   "git_connection_completed",
   "git_connection_removed",
+  "git_identity_connect_started",
+  "git_identity_removed",
   "project_git_linked",
   "project_git_unlinked",
   "project_git_issue_sync_toggled",

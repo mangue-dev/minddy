@@ -223,6 +223,7 @@ function PrDiffFile({
   prUrl,
   provider,
   readOnly,
+  canResolve,
   collapsed,
   onToggle,
   reviewComments,
@@ -236,8 +237,10 @@ function PrDiffFile({
   endpoint: PrEndpoint;
   prUrl?: string | null;
   provider?: RepoProviderId;
-  /** Lecture seule : pas de bouton « + » de commentaire dans la gouttière. */
+  /** Lecture seule : ni bouton « + » de gouttière, ni « Répondre ». */
   readOnly?: boolean;
+  /** Résoudre un fil, séparément : c'est une écriture sur le dépôt (MIN-144). */
+  canResolve?: boolean;
   collapsed: boolean;
   onToggle: () => void;
   /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
@@ -399,8 +402,9 @@ function PrDiffFile({
               key={thread.id}
               thread={thread}
               replies={replies}
-              resolution={readOnly ? undefined : resolution}
+              resolution={canResolve ? resolution : undefined}
               reactions={reactions}
+              readOnly={readOnly}
             />
           ))}
           {openAnchors[key] ? (
@@ -426,6 +430,7 @@ function PrDiffFile({
     resolution,
     reactions,
     readOnly,
+    canResolve,
     submitComment,
     closeComposer,
   ]);
@@ -569,8 +574,9 @@ function PrDiffFile({
           <StaleThreads
             threads={staleThreads}
             replies={replies}
-            resolution={readOnly ? undefined : resolution}
+            resolution={canResolve ? resolution : undefined}
             reactions={reactions}
+            readOnly={readOnly}
           />
         </>
       )}
@@ -590,6 +596,7 @@ export function PrDiff({
   prUrl,
   provider,
   readOnly = false,
+  canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
   reviewThreads = NO_THREADS,
   reviewReactions = NO_REACTIONS,
@@ -605,6 +612,10 @@ export function PrDiff({
   /** Lecture seule : pas de commentaires de review (vue diff sans PR — la
       conversation de l'agent ; la review vit sur la page Pull requests). */
   readOnly?: boolean;
+  /** Résoudre un fil, gouverné À PART (MIN-144) : commenter demande `read` sur
+      le dépôt, résoudre demande `write`. Défaut `!readOnly` — les appelants qui
+      ne connaissent pas la distinction (agent-diff-sheet) ne changent pas. */
+  canResolve?: boolean;
   /** Commentaires de review de la PR, tous fichiers confondus. */
   reviewComments?: PullRequestReviewComment[];
   /** État de résolution des fils (MIN-139). Vide = état INCONNU : les fils se
@@ -709,6 +720,7 @@ export function PrDiff({
             prUrl={prUrl}
             provider={provider}
             readOnly={readOnly}
+            canResolve={canResolve}
             collapsed={collapsed.has(f.filename)}
             onToggle={() => toggle(f.filename)}
             reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
@@ -722,8 +734,9 @@ export function PrDiff({
             <StaleThreads
               threads={orphanThreads}
               replies={orphanReplies}
-              resolution={readOnly ? undefined : orphanResolution}
+              resolution={canResolve ? orphanResolution : undefined}
               reactions={orphanReactions}
+              readOnly={readOnly}
               label={(count) => t("orphanComments", { count })}
             />
           </div>

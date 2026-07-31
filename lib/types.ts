@@ -908,6 +908,27 @@ export interface GitConnection {
   projects: GitConnectionProjectRef[];
 }
 
+/**
+ * Le compte git PERSONNEL d'un utilisateur (git_user_identities), SANITISÉ —
+ * MIN-144. C'est lui qui signe les gestes humains sur une pull request, là où
+ * `GitConnection` dit « l'App est installée sur ce compte ». Aucune colonne de
+ * token n'est jamais exposée au client.
+ */
+export interface GitIdentity {
+  id: string;
+  provider: RepoProviderId;
+  account_login: string | null;
+  account_avatar_url: string | null;
+  created_at: string;
+  /**
+   * D'où vient ce compte. `identity` = sa propre ligne, qui se déconnecte ici
+   * (GitHub). `connection` = la connexion OAuth du compte, qui EST déjà
+   * l'identité (GitLab) : la déconnecter délierait les dépôts des projets, donc
+   * ça se fait dans « Comptes git connectés », pas ici.
+   */
+  source: "identity" | "connection";
+}
+
 /** La liaison projet ↔ dépôt (project_git_links), telle que renvoyée à l'UI. */
 export interface ProjectGitLink {
   id: string;

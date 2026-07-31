@@ -436,13 +436,18 @@ export function ReviewThreadCard({
   replies,
   resolution,
   reactions,
+  readOnly,
 }: {
   thread: PrReviewThread;
   replies: ReviewReplies;
-  /** Absent en lecture seule : le fil se lit, il ne se résout pas. */
+  /** Absent quand le fil ne se résout pas : soit la forge n'en dit rien, soit le
+      compte git n'a pas le droit d'écrire sur le dépôt (MIN-144). */
   resolution?: ThreadResolution;
   /** Réactions de la PR (MIN-139) — chaque commentaire y prend les siennes. */
   reactions?: CommentReactions;
+  /** Le fil se lit mais ne se répond pas — pas de compte git, ou aucun accès au
+      dépôt : la réponse partirait sous l'identité du bot (MIN-144). */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("PullRequests");
   const [expanded, setExpanded] = useState(false);
@@ -505,9 +510,11 @@ export function ReviewThreadCard({
         />
       ) : (
         <div className="flex items-center gap-1.5">
-          <Button variant="outline" size="sm" onClick={() => replies.start(thread.id)}>
-            {t("reply")}
-          </Button>
+          {readOnly ? null : (
+            <Button variant="outline" size="sm" onClick={() => replies.start(thread.id)}>
+              {t("reply")}
+            </Button>
+          )}
           {resolution && state ? (
             <Button
               variant="ghost"
@@ -579,12 +586,15 @@ export function StaleThreads({
   replies,
   resolution,
   reactions,
+  readOnly,
   label,
 }: {
   threads: PrReviewThread[];
   replies: ReviewReplies;
   resolution?: ThreadResolution;
   reactions?: CommentReactions;
+  /** Propagé aux cartes : sans compte git, ces fils se lisent seulement. */
+  readOnly?: boolean;
   /** Intitulé du repli — le cas orphelin ne se raconte pas comme un périmé. */
   label?: (count: number) => string;
 }) {
@@ -631,6 +641,7 @@ export function StaleThreads({
                   replies={replies}
                   resolution={resolution}
                   reactions={reactions}
+                  readOnly={readOnly}
                 />
               </div>
             );

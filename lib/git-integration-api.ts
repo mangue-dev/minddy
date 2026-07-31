@@ -6,6 +6,7 @@ import type {
   BranchDeletionResult,
   CandidateRepo,
   GitConnection,
+  GitIdentity,
   ProjectGitLink,
 } from "./types";
 import { trackEvent } from "./analytics";
@@ -198,6 +199,48 @@ export async function disconnectGitConnectionApi(id: string): Promise<void> {
   trackEvent("git_connection_removed", { provider: "unknown" });
   await parseJson(
     await fetch(`/api/account/git-connections/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+  );
+}
+
+// ── Compte git personnel (identité des gestes de PR, MIN-144) ───────────────
+
+export interface GitIdentitiesResponse {
+  identities: GitIdentity[];
+  providers: { id: RepoProviderId; configured: boolean }[];
+}
+
+export async function fetchGitIdentitiesApi(): Promise<GitIdentitiesResponse> {
+  return parseJson(await fetch("/api/account/git-identities"));
+}
+
+/**
+ * Démarre l'autorisation du compte git personnel. Toujours une sortie de page
+ * (l'utilisateur autorise chez la forge) : l'appelant suit `url`. `origin` dit
+ * d'où il part, et donc où le callback le ramène — table close côté serveur.
+ */
+export async function startGitIdentityConnectApi(
+  provider: RepoProviderId,
+  origin?: "settings" | "pr",
+): Promise<{ url: string }> {
+  trackEvent("git_identity_connect_started", { provider });
+  return parseJson(
+    await fetch("/api/account/git-identities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "start", provider, origin }),
+    }),
+  );
+}
+
+export async function disconnectGitIdentityApi(
+  id: string,
+  provider: RepoProviderId,
+): Promise<void> {
+  trackEvent("git_identity_removed", { provider });
+  await parseJson(
+    await fetch(`/api/account/git-identities/${encodeURIComponent(id)}`, {
       method: "DELETE",
     }),
   );

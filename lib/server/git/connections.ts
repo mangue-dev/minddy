@@ -3,7 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { GitConnection } from "@/lib/types";
-import { encryptGitlabToken } from "./gitlab-credentials";
+import { encryptForgeToken } from "./token-crypto";
 import type { GitlabTokenSet } from "./gitlab-app";
 
 /**
@@ -198,8 +198,8 @@ export async function upsertGitlabConnection(params: {
   const supabase = getServiceClient();
   const nowIso = new Date().toISOString();
   const tokenFields = {
-    access_token_encrypted: encryptGitlabToken(params.tokens.accessToken),
-    refresh_token_encrypted: encryptGitlabToken(params.tokens.refreshToken),
+    access_token_encrypted: encryptForgeToken(params.tokens.accessToken),
+    refresh_token_encrypted: encryptForgeToken(params.tokens.refreshToken),
     token_expires_at: params.tokens.expiresAt,
     oauth_scopes: params.tokens.scope,
   };
