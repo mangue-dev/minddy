@@ -7,11 +7,15 @@ import {
   gitlabNextPage,
 } from "@/lib/server/git/gitlab-rest";
 import { resolveDiffPosition } from "./mr-position";
+import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
 import type {
   PullRequestRef,
   PullRequestFile,
   PullRequestComment,
   PullRequestReviewComment,
+  PullRequestReviewSummary,
+  ReviewSubmission,
+  ReviewVerdict,
 } from "./pr";
 
 /**
@@ -118,6 +122,42 @@ interface RawMr {
   diff_refs?: { base_sha?: string; start_sha?: string; head_sha?: string } | null;
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at?: string;
+  /** État de fusionnabilité détaillé (GitLab 15.6+). */
+  detailed_merge_status?: string | null;
+  /** L'API historique : can_be_merged | cannot_be_merged | unchecked | checking. */
+  merge_status?: string | null;
+}
+
+/**
+ * Fusionnabilité GitLab → le vocabulaire GitHub que porte `PullRequestRef`, pour
+ * que l'UI n'ait qu'une langue à lire. `undefined` = inconnu (GitLab calcule lui
+ * aussi en asynchrone : `unchecked` / `checking` à la première lecture).
+ */
+function toMergeable(mr: RawMr): { mergeable?: boolean | null; mergeableState?: string | null } {
+  const detailed = mr.detailed_merge_status;
+  if (!detailed) {
+    // Repli sur l'API historique quand l'instance est antérieure à 15.6.
+    if (mr.merge_status === "can_be_merged") return { mergeable: true, mergeableState: "clean" };
+    if (mr.merge_status === "cannot_be_merged") {
+      return { mergeable: false, mergeableState: "dirty" };
+    }
+    return { mergeable: null, mergeableState: "unknown" };
+  }
+  if (detailed === "mergeable") return { mergeable: true, mergeableState: "clean" };
+  switch (detailed) {
+    case "broken_status":
+    case "conflict":
+      return { mergeable: false, mergeableState: "dirty" };
+    case "checking":
+    case "unchecked":
+    case "preparing":
+      return { mergeable: null, mergeableState: "unknown" };
+    default:
+      // `not_approved`, `blocked_status`, `ci_must_pass`, `discussions_not_resolved`,
+      // `need_rebase`, `draft_status`, `requested_changes`… : autant de refus du
+      // dépôt lui-même, que l'UI dit tous de la même façon (« merge bloqué »).
+      return { mergeable: false, mergeableState: "blocked" };
+  }
 }
 
 function toRef(mr: RawMr): PullRequestRef {
@@ -139,6 +179,9 @@ function toRef(mr: RawMr): PullRequestRef {
       ? { login: mr.author.username ?? "", avatar_url: mr.author.avatar_url ?? null }
       : null,
     createdAt: mr.created_at,
+    // `nodeId` reste vide : c'est une clé GraphQL GitHub, sans équivalent utile
+    // ici (la bascule brouillon GitLab se fait par le titre — cf. plus bas).
+    ...toMergeable(mr),
   };
 }
 
@@ -465,20 +508,176 @@ export async function getFileAtRef(opts: {
 }
 
 /**
- * Merge la MR. Pas de `squash` forcé : contrairement à GitHub (méthode choisie
- * par requête), la méthode de merge GitLab est un réglage du projet (merge
- * commit / fast-forward, option squash) — on respecte sa configuration.
+ * Merge la MR. La STRATÉGIE (merge commit / fast-forward) est un réglage du
+ * projet chez GitLab, pas un paramètre d'appel comme chez GitHub : le seul
+ * levier par MR est `squash`. D'où `mergeMethods` réduit à `["merge","squash"]`
+ * côté `forge.ts` — « merge » veut dire ici « la stratégie du projet, sans
+ * écrasement des commits ».
  */
 export async function mergeMergeRequest(opts: {
   token: string;
   repoFullName: string;
   number: number;
+  method?: "merge" | "squash" | "rebase";
 }): Promise<void> {
   await glJson<unknown>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
     opts.token,
-    { method: "PUT", headers: { "Content-Type": "application/json" }, body: "{}" },
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ squash: opts.method === "squash" }),
+    },
   );
+}
+
+/** Préfixes de titre par lesquels GitLab marque une MR brouillon (`WIP:` est
+    l'ancienne forme, encore acceptée par les instances anciennes). */
+const DRAFT_TITLE_PREFIX = /^\s*(?:\[?draft\]?|\[?wip\]?)\s*:?\s*/i;
+
+/**
+ * Bascule une MR brouillon en « prête pour la review ». GitLab n'a pas de champ
+ * ni d'action dédiée : le brouillon EST le préfixe `Draft:` du titre — on relit
+ * donc le titre et on le renvoie sans son préfixe. Le pendant de la mutation
+ * GraphQL de GitHub (`markPullRequestReadyForReview`).
+ */
+export async function markMergeRequestReadyForReview(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<void> {
+  const path = `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`;
+  const mr = await glJson<RawMr>(path, opts.token);
+  const title = (mr.title ?? "").replace(DRAFT_TITLE_PREFIX, "").trim();
+  if (!title) throw new GitlabApiError("Merge request has no title to restore", 422);
+  await glJson<unknown>(path, opts.token, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+}
+
+// ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
+
+/** Comme `pr.ts` : le verdict écrit en toutes lettres en tête de la note de repli. */
+const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
+  approve: "**Approuvé depuis minddy.**",
+  request_changes: "**Changements demandés depuis minddy.**",
+  comment: "",
+};
+
+/** GitLab refuse-t-il l'approbation (auteur de la MR, ou tier sans l'API) ?
+    Contrairement au 422 de GitHub, c'est un 401 — et un 403/404 sur les
+    instances où l'endpoint d'approbation n'est pas servi. */
+function isApprovalRefusal(err: unknown): boolean {
+  return (
+    err instanceof GitlabApiError &&
+    (err.status === 401 || err.status === 403 || err.status === 404)
+  );
+}
+
+export async function approveMergeRequest(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<void> {
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/approve`,
+    opts.token,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+  );
+}
+
+export async function unapproveMergeRequest(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<void> {
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/unapprove`,
+    opts.token,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+  );
+}
+
+/**
+ * Soumet une review sur la MR — le pendant de `submitPullRequestReview`, avec
+ * deux écarts que GitLab impose :
+ *  • il n'y a pas de review composite : l'approbation et le message sont deux
+ *    appels (`/approve` puis une note), et le message ne doit pas se perdre si
+ *    l'approbation échoue ;
+ *  • il n'y a **pas** de `REQUEST_CHANGES` natif → une note préfixée du verdict,
+ *    comme le documente déjà le webhook (`app/api/webhooks/gitlab/route.ts`).
+ * Comme sur GitHub, l'auto-approbation est refusée (réglage projet
+ * `merge_requests_author_approval`, interdit par défaut) : on retombe alors sur
+ * la note seule, et c'est minddy qui garde la trace du verdict.
+ */
+export async function submitMergeRequestReview(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  verdict: ReviewVerdict;
+  body: string;
+}): Promise<ReviewSubmission> {
+  let published: ReviewSubmission["published"] =
+    opts.verdict === "request_changes" ? "comment" : "review";
+
+  if (opts.verdict === "approve") {
+    try {
+      await approveMergeRequest(opts);
+    } catch (err) {
+      if (!isApprovalRefusal(err)) throw err;
+      published = "comment";
+    }
+  }
+
+  const prefix = published === "comment" ? FALLBACK_VERDICT_PREFIX[opts.verdict] : "";
+  const body = `${prefix}\n\n${opts.body}`.trim();
+  // Une approbation nue sans message n'a rien à dire de plus : la note ne part
+  // que si elle porte quelque chose (le préfixe compte comme un contenu).
+  if (body) {
+    await createMergeRequestNote({ ...opts, body });
+  }
+  return { published };
+}
+
+interface RawApprovals {
+  approved_by?: Array<{ user?: { username?: string } | null }> | null;
+}
+
+/**
+ * Décompte des approbations de la MR. GitLab tient la liste courante des
+ * approbateurs (pas un historique de reviews comme GitHub) : il n'y a donc rien
+ * à réduire, et `changesRequested` vaut toujours 0 — l'état « changements
+ * demandés » n'existe pas côté GitLab (minddy le porte en note + événement).
+ */
+export async function listMergeRequestApprovals(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PullRequestReviewSummary> {
+  const data = await glJson<RawApprovals>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/approvals`,
+    opts.token,
+  );
+  return { approvals: (data.approved_by ?? []).length, changesRequested: 0 };
+}
+
+/**
+ * Checks CI de la MR : ses pipelines, du plus récent au plus ancien — seul le
+ * dernier décrit l'état courant (cf. `checks-core`). Le scope OAuth `api` déjà
+ * acquis suffit : aucune permission à faire accepter, contrairement à GitHub.
+ */
+export async function listMergeRequestChecks(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<ChecksSummary> {
+  const pipelines = await glJson<RawPipeline[]>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/pipelines`,
+    opts.token,
+  );
+  return summarizeGitlabPipelines(pipelines ?? []);
 }
 
 export async function closeMergeRequest(opts: {

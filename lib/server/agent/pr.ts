@@ -1,6 +1,12 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
+import {
+  summarizeGithubChecks,
+  type ChecksSummary,
+  type RawCheckRun,
+  type RawCommitStatus,
+} from "./checks-core";
 
 /**
  * Opérations Pull Request GitHub pour l'agent de code (MIN-46) : ouvrir la PR
@@ -24,6 +30,42 @@ export interface PullRequestRef {
   /** Auteur et date d'ouverture : le `body` ouvre le fil comme un commentaire, il lui faut son en-tête. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
+  /** Identifiant GraphQL de la PR — seule clé acceptée par les mutations (MIN-138 :
+      la bascule brouillon → prête n'existe QUE en GraphQL). GitLab : jamais rempli. */
+  nodeId?: string;
+  /** La PR peut-elle être fusionnée ? `null`/`undefined` = INCONNU, pas « non » :
+      GitHub calcule la fusionnabilité en asynchrone (vérifié — une PR fraîche
+      répond `mergeable: null` + `mergeable_state: "unknown"` pendant quelques
+      secondes), et l'endpoint *list* ne renvoie pas du tout ces deux champs. */
+  mergeable?: boolean | null;
+  /** État de fusionnabilité détaillé : `clean`, `blocked` (le dépôt exige des
+      approbations / des checks), `dirty` (conflit), `unstable` (checks non
+      requis en échec), `unknown`. */
+  mergeableState?: string | null;
+}
+
+/** Verdict d'une review, en vocabulaire neutre (GitHub : APPROVE / REQUEST_CHANGES / COMMENT). */
+export type ReviewVerdict = "approve" | "request_changes" | "comment";
+
+/**
+ * Ce qui est RÉELLEMENT arrivé chez la forge quand minddy soumet une review.
+ *
+ * `"review"` : le verdict est publié tel quel. `"comment"` : la forge a refusé
+ * l'auto-review — les PR de Numo sont ouvertes par le bot de la GitHub App, et
+ * GitHub répond 422 « Can not approve your own pull request » (mesuré, cf. le
+ * spike de MIN-138). Le verdict part alors en commentaire, préfixé de sa valeur,
+ * et c'est minddy qui garde la trace du verdict réel (événement `pr_approved` /
+ * `pr_changes_requested`). L'appelant le dit à l'utilisateur : approuver depuis
+ * minddy ne coche pas la case verte de GitHub.
+ */
+export interface ReviewSubmission {
+  published: "review" | "comment";
+}
+
+/** Décompte d'approbations d'une PR — tout ce que minddy en affiche. */
+export interface PullRequestReviewSummary {
+  approvals: number;
+  changesRequested: number;
 }
 
 export interface PullRequestFile {
@@ -90,6 +132,29 @@ function splitRepo(repoFullName: string): { owner: string; repo: string } {
   return { owner, repo };
 }
 
+/**
+ * Message d'erreur GitHub, DÉTAIL COMPRIS.
+ *
+ * Sur un 422, `message` ne vaut que « Unprocessable Entity » : le motif réel est
+ * dans `errors[]` — et c'est lui qui distingue « ne peut pas approuver sa propre
+ * pull request » d'un corps invalide (vérifié contre l'API, MIN-138). Les
+ * entrées y sont tantôt des chaînes nues, tantôt des objets `{message}` ou
+ * `{resource, field, code}` : les trois formes existent selon l'endpoint.
+ */
+function githubErrorMessage(data: unknown, status: number): string {
+  const body = (data ?? {}) as { message?: string; errors?: unknown };
+  const base = body.message ?? `GitHub API error (${status})`;
+  if (!Array.isArray(body.errors)) return base;
+  const details = body.errors
+    .map((e) => {
+      if (typeof e === "string") return e;
+      const o = (e ?? {}) as { message?: string; field?: string; code?: string };
+      return o.message ?? [o.field, o.code].filter(Boolean).join(" ");
+    })
+    .filter(Boolean);
+  return details.length > 0 ? `${base}: ${details.join(", ")}` : base;
+}
+
 async function ghJson<T>(
   url: string,
   token: string,
@@ -101,11 +166,7 @@ async function ghJson<T>(
   });
   const text = await res.text();
   const data = text ? (JSON.parse(text) as unknown) : null;
-  if (!res.ok) {
-    const message =
-      (data as { message?: string } | null)?.message ?? `GitHub API error (${res.status})`;
-    throw new GithubApiError(message, res.status);
-  }
+  if (!res.ok) throw new GithubApiError(githubErrorMessage(data, res.status), res.status);
   return data as T;
 }
 
@@ -133,10 +194,13 @@ async function ghRawText(url: string, token: string): Promise<string | null> {
 interface RawPull {
   number: number;
   html_url: string;
+  node_id?: string;
   state: string;
   draft?: boolean;
   merged?: boolean;
   merged_at?: string | null;
+  mergeable?: boolean | null;
+  mergeable_state?: string | null;
   title?: string;
   body?: string | null;
   head?: { ref?: string; sha?: string };
@@ -145,6 +209,13 @@ interface RawPull {
   created_at?: string;
 }
 
+/**
+ * `toRef` sert le GET d'UNE PR **et** `listPullRequests`. L'endpoint *list* ne
+ * renvoie ni `mergeable`, ni `mergeable_state`, ni `merged` : ces champs y
+ * restent `undefined`. C'est voulu et ça ne gêne pas le ménage de branches (qui
+ * ne les lit pas), mais tout lecteur doit distinguer `undefined` (« pas
+ * l'information ») de `false` (« vraiment pas fusionnable »).
+ */
 function toRef(pr: RawPull): PullRequestRef {
   return {
     number: pr.number,
@@ -159,6 +230,9 @@ function toRef(pr: RawPull): PullRequestRef {
     headSha: pr.head?.sha,
     user: pr.user ? { login: pr.user.login ?? "", avatar_url: pr.user.avatar_url ?? null } : null,
     createdAt: pr.created_at,
+    nodeId: pr.node_id,
+    mergeable: pr.mergeable,
+    mergeableState: pr.mergeable_state,
   };
 }
 
@@ -498,6 +572,185 @@ export async function reopenPullRequest(opts: {
     },
   );
   return toRef(pr);
+}
+
+// ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
+
+const GITHUB_REVIEW_EVENT: Record<ReviewVerdict, "APPROVE" | "REQUEST_CHANGES" | "COMMENT"> = {
+  approve: "APPROVE",
+  request_changes: "REQUEST_CHANGES",
+  comment: "COMMENT",
+};
+
+/**
+ * Le verdict, écrit en toutes lettres en tête du commentaire de repli — sans lui,
+ * un lecteur de la PR sur GitHub ne verrait qu'un commentaire nu là où minddy
+ * affiche « approuvé ». En français, comme le corps de PR que l'agent rédige
+ * (`execute.ts`).
+ */
+const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
+  approve: "**Approuvé depuis minddy.**",
+  request_changes: "**Changements demandés depuis minddy.**",
+  comment: "",
+};
+
+/** GitHub refuse-t-il parce que l'auteur ne peut pas se relire lui-même ?
+    Mesuré : 422 « Review Can not approve your own pull request ». */
+function isSelfReviewRefusal(err: unknown): boolean {
+  return (
+    err instanceof GithubApiError &&
+    err.status === 422 &&
+    /own pull request/i.test(err.message)
+  );
+}
+
+/**
+ * Soumet une review sur la PR. `comment` part toujours tel quel ; `approve` et
+ * `request_changes` sont TENTÉS puis repliés en commentaire si GitHub refuse
+ * l'auto-review (le cas normal des PR de Numo : elles sont ouvertes par le bot
+ * de la GitHub App). On tente quand même plutôt que de replier d'emblée : sur un
+ * GitHub Enterprise, ou le jour où une PR portera un autre auteur, le verdict
+ * doit atterrir pour de vrai — le coût est un aller-retour de plus sur un clic.
+ */
+export async function submitPullRequestReview(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  verdict: ReviewVerdict;
+  body: string;
+}): Promise<ReviewSubmission> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const post = (event: string, body: string) =>
+    ghJson<unknown>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews`,
+      opts.token,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event, body }),
+      },
+    );
+
+  if (opts.verdict === "comment") {
+    await post("COMMENT", opts.body);
+    return { published: "review" };
+  }
+  try {
+    await post(GITHUB_REVIEW_EVENT[opts.verdict], opts.body);
+    return { published: "review" };
+  } catch (err) {
+    if (!isSelfReviewRefusal(err)) throw err;
+    // Le préfixe garantit aussi un corps NON VIDE : GitHub accepte un `APPROVE`
+    // sans message, mais refuse un `COMMENT` qui n'en a pas.
+    const body = `${FALLBACK_VERDICT_PREFIX[opts.verdict]}\n\n${opts.body}`.trim();
+    await post("COMMENT", body);
+    return { published: "comment" };
+  }
+}
+
+interface RawReview {
+  state?: string; // APPROVED | CHANGES_REQUESTED | COMMENTED | DISMISSED | PENDING
+  user?: { login?: string } | null;
+  submitted_at?: string | null;
+}
+
+/**
+ * Décompte des approbations de la PR. GitHub garde TOUT l'historique des reviews
+ * (approuver, puis demander des changements, laisse les deux lignes) : seule la
+ * DERNIÈRE review tranchante de chaque utilisateur compte, exactement comme la
+ * règle d'approbation du dépôt. Les `COMMENTED` et `DISMISSED` ne tranchent rien
+ * et sont donc ignorées, sans effacer un verdict antérieur.
+ */
+export async function listPullRequestReviews(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PullRequestReviewSummary> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const reviews = await ghJson<RawReview[]>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100`,
+    opts.token,
+  );
+  // L'endpoint renvoie du plus ancien au plus récent : la dernière écriture par
+  // login gagne naturellement.
+  const verdictByUser = new Map<string, "approved" | "changes_requested">();
+  for (const r of reviews) {
+    const login = r.user?.login;
+    if (!login) continue;
+    if (r.state === "APPROVED") verdictByUser.set(login, "approved");
+    else if (r.state === "CHANGES_REQUESTED") verdictByUser.set(login, "changes_requested");
+  }
+  const verdicts = [...verdictByUser.values()];
+  return {
+    approvals: verdicts.filter((v) => v === "approved").length,
+    changesRequested: verdicts.filter((v) => v === "changes_requested").length,
+  };
+}
+
+/**
+ * Bascule une PR brouillon en « prête pour la review ». La REST ne sait pas le
+ * faire : c'est une mutation GraphQL, adressée par le `node_id` de la PR (d'où
+ * `PullRequestRef.nodeId`). Vérifié avec un token d'installation — aucune
+ * permission de plus que `pull_requests: write`.
+ *
+ * GraphQL répond **200 avec un tableau `errors`** quand la mutation échoue :
+ * s'en remettre au status HTTP ferait passer un échec pour un succès.
+ */
+export async function markPullRequestReadyForReview(opts: {
+  token: string;
+  nodeId: string;
+}): Promise<void> {
+  const res = await fetch(`${GITHUB_API_BASE}/graphql`, {
+    method: "POST",
+    headers: { ...githubHeaders(opts.token), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query:
+        "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id})" +
+        "{pullRequest{number isDraft}}}",
+      variables: { id: opts.nodeId },
+    }),
+  });
+  const text = await res.text();
+  type GraphqlBody = { errors?: Array<{ message?: string }> };
+  let data: GraphqlBody | null = null;
+  try {
+    data = text ? (JSON.parse(text) as GraphqlBody) : null;
+  } catch {
+    // Corps non-JSON : le status seul décidera.
+  }
+  if (!res.ok) {
+    throw new GithubApiError(
+      data?.errors?.[0]?.message ?? `GitHub API error (${res.status})`,
+      res.status,
+    );
+  }
+  if (data?.errors?.length) {
+    throw new GithubApiError(data.errors[0].message ?? "GraphQL error", 422);
+  }
+}
+
+/**
+ * Checks CI de la tête de la PR : les check runs (GitHub Actions & co) ET les
+ * commit statuses (l'API historique), fusionnés par `checks-core`.
+ *
+ * Demande les permissions `checks: read` et `statuses: read` de la GitHub App.
+ * Une App qui les gagne ne les obtient PAS rétroactivement — chaque installation
+ * existante doit les accepter (même piège que `hasIssuesPermission`). Tant que ce
+ * n'est pas fait, GitHub répond **403 « Resource not accessible by integration »**
+ * (mesuré) : l'appelant dégrade en « checks indisponibles », il ne casse pas.
+ */
+export async function listPullRequestChecks(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<ChecksSummary> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${opts.sha}`;
+  const [runs, statuses] = await Promise.all([
+    ghJson<{ check_runs?: RawCheckRun[] }>(`${base}/check-runs?per_page=100`, opts.token),
+    ghJson<{ statuses?: RawCommitStatus[] }>(`${base}/status?per_page=100`, opts.token),
+  ]);
+  return summarizeGithubChecks(runs.check_runs ?? [], statuses.statuses ?? []);
 }
 
 interface RawComment {

@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { recordForgePrActionEvents } from "@/lib/server/agent/pr-activity";
+import { recordForgePrActionEvents, notifyForgePrAction } from "@/lib/server/agent/pr-activity";
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -18,7 +18,8 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *  - action `merge` / `close` / `reopen` / `open` → met à jour `agent_runs.pr_state`
  *    (la review in-app reflète le vrai état côté GitLab) ET, pour un merge/close
  *    fait DIRECTEMENT sur GitLab, trace « accepté / refusé la MR » dans l'activité
- *    de l'issue liée.
+ *    de l'issue liée. L'action `update` sert la bascule BROUILLON (MIN-138) —
+ *    GitLab n'a pas d'action dédiée, cf. `mapMrState`.
  *  - action `approved` / `approval` → trace « approuvé la MR ». GitLab n'a PAS de
  *    review « request changes » native : `pr_changes_requested` ne vient que de
  *    l'action in-app. `unapproved`/`unapproval` sont IGNORÉS (aucun événement
@@ -41,16 +42,34 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * SANS traitement (ce récepteur mute l'état, il n'accepte rien d'invérifiable).
  */
 
-/** action GitLab → pr_state minddy (null = pas de changement d'état à écrire). */
-function mapMrState(action: string): AgentRun["pr_state"] | null {
-  switch (action) {
+/**
+ * action GitLab → pr_state minddy (null = pas de changement d'état à écrire).
+ *
+ * Le BROUILLON n'a pas d'action dédiée chez GitLab, contrairement aux
+ * `converted_to_draft` / `ready_for_review` de GitHub : il est porté par le
+ * préfixe `Draft:` du titre, et sa bascule arrive en `action: "update"` avec
+ * `object_attributes.draft`. On ne lit donc ce booléen que sur un `update` qui
+ * TOUCHE au titre ou au brouillon — sinon une simple retouche de description
+ * réécrirait `pr_state` (et, en cascade, le statut du ticket) à chaque édition.
+ * Le garde `state === opened` protège en plus les MR déjà fermées ou fusionnées.
+ */
+function mapMrState(payload: MergeRequestEvent): AgentRun["pr_state"] | null {
+  const attrs = payload.object_attributes ?? {};
+  switch (attrs.action) {
     case "merge":
       return "merged";
     case "close":
       return "closed";
     case "open":
     case "reopen":
-      return "open";
+      return attrs.draft ? "draft" : "open";
+    case "update": {
+      const changes = payload.changes ?? {};
+      const touchesDraft = changes.draft !== undefined || changes.title !== undefined;
+      if (!touchesDraft) return null;
+      if (attrs.state !== "opened" && attrs.state !== "locked") return null;
+      return attrs.draft ? "draft" : "open";
+    }
     default:
       return null;
   }
@@ -88,7 +107,11 @@ interface MergeRequestEvent {
     action?: string;
     state?: string;
     url?: string;
+    /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
+    draft?: boolean;
   };
+  /** Champs modifiés par un `update` (présents seulement sur cette action). */
+  changes?: { title?: unknown; draft?: unknown };
 }
 
 /**
@@ -127,7 +150,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const repoFullName = payload.project?.path_with_namespace;
   if (iid == null || !repoFullName) return;
 
-  const prState = mapMrState(action);
+  const prState = mapMrState(payload);
   const actionType = prActionFor(action);
   if (!prState && !actionType) return;
 
@@ -171,6 +194,8 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     provider: "gitlab",
     login: payload.user?.username ?? null,
   });
+  // Inbox : l'auteur du run apprend qu'on a approuvé ou fusionné sa MR (MIN-138).
+  await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.user?.username ?? null });
 }
 
 /** Actions `issue` synchronisées (MIN-97) — les éditions (`update`) et les

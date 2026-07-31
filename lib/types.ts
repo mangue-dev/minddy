@@ -86,7 +86,11 @@ export type NotificationType =
   /** The code agent failed to start or died on an error. */
   | "agent_failed"
   /** A new feedback post arrived on the project's board. */
-  | "feedback_new";
+  | "feedback_new"
+  /** Someone reviewed (approved / requested changes on) a PR the agent opened for me. */
+  | "pr_reviewed"
+  /** A PR the agent opened for me was merged on the forge. */
+  | "pr_merged";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {

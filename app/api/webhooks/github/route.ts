@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { recordForgePrActionEvents } from "@/lib/server/agent/pr-activity";
+import { recordForgePrActionEvents, notifyForgePrAction } from "@/lib/server/agent/pr-activity";
 import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import type { PrActionEventType } from "@/lib/pr-events";
@@ -128,6 +128,8 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       provider: "github",
       login: payload.sender?.login ?? null,
     });
+    // Inbox : l'auteur du run apprend que sa PR a été fusionnée (MIN-138).
+    await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.sender?.login ?? null });
   }
 }
 
@@ -147,6 +149,8 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
     provider: "github",
     login: reviewer?.login ?? null,
   });
+  // Inbox : l'auteur du run apprend qu'on a relu sa PR (MIN-138).
+  await notifyForgePrAction({ runs, type: actionType, actorLogin: reviewer?.login ?? null });
 }
 
 /** Actions `issues` synchronisées (MIN-97) — les éditions de titre/corps, les

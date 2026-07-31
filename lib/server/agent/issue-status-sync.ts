@@ -6,7 +6,8 @@ import type { AgentRun } from "./runs";
 /**
  * Aligne le statut de l'issue sur le cycle de vie de l'agent de code (MIN-46) :
  *  - agent lancé, aucune PR encore disponible → `in_progress`
- *  - PR ouverte / draft (disponible en revue)  → `in_review`
+ *  - PR BROUILLON (pas encore proposée)        → `in_progress`
+ *  - PR ouverte (disponible en revue)          → `in_review`
  *  - PR mergée (acceptée)                       → `done`
  *  - PR fermée (refusée)                        → `todo` (retour à faire, PAS annulée)
  *
@@ -25,8 +26,12 @@ export function issueStatusForPrState(
 ): SyncableIssueStatus | null {
   switch (prState) {
     case "open":
-    case "draft":
       return "in_review";
+    case "draft":
+      // Une PR brouillon n'est PAS prête à être relue : son auteur la travaille
+      // encore. La pousser en revue ferait apparaître dans la file de relecture
+      // un travail que personne n'a proposé (MIN-138).
+      return "in_progress";
     case "merged":
       return "done";
     case "closed":

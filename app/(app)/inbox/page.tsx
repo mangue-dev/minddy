@@ -11,6 +11,8 @@ import {
   AtSign,
   MessageSquare,
   Megaphone,
+  GitPullRequest,
+  GitMerge,
   Mail,
   MailOpen,
   Settings,
@@ -43,6 +45,8 @@ const LINE_KEYS: Record<NotificationType, string> = {
   agent_question: "lineAgentQuestion",
   agent_failed: "lineAgentFailed",
   feedback_new: "lineFeedbackNew",
+  pr_reviewed: "linePrReviewed",
+  pr_merged: "linePrMerged",
 };
 
 type InboxFilter = "all" | "unread" | "mentions";
@@ -114,6 +118,8 @@ function RowAvatar({
       />
     );
   }
+  // Une action de PR vient d'un compte de la forge, pas d'un utilisateur minddy :
+  // aucun portrait à dessiner, l'icône du type dit ce qui est arrivé (MIN-138).
   const Icon =
     n.type === "assigned"
       ? UserPlus
@@ -121,7 +127,11 @@ function RowAvatar({
         ? AtSign
         : n.type === "feedback_new"
           ? Megaphone
-          : MessageSquare;
+          : n.type === "pr_merged"
+            ? GitMerge
+            : n.type === "pr_reviewed"
+              ? GitPullRequest
+              : MessageSquare;
   return (
     <span
       className={cn(

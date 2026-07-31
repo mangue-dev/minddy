@@ -567,9 +567,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Get pull request",
       description:
         "Read the pull request the code agent opened for an issue: its number, url, " +
-        "state (open/merged/closed), title, description, head/base branches, the " +
+        "state (open/merged/closed), whether it is still a draft, its CI checks " +
+        "(aggregate state, how many pass, and the failing ones by name), " +
+        "title, description, head/base branches, the " +
         "per-file diffs (patches, truncated past ~4000 chars), and the review comments " +
-        "anchored to lines of code. Each review comment thread carries its file, its " +
+        "anchored to lines of code. 'checks: null' means they could not be read, not " +
+        "that they pass. Each review comment thread carries its file, its " +
         "line and side (RIGHT = the new file, LEFT = the old one), the diff snippet it " +
         "was written against, and its replies; 'outdated: true' means the code it " +
         "pointed at has since changed, so only the snippet says what it referred to. " +
@@ -635,6 +638,18 @@ export function registerMinddyTools(rawServer: McpServer): void {
             })
             .catch(() => []),
         ]);
+        // Checks CI (MIN-138) — `null` = illisible (permission de l'App non
+        // acceptée) ou dépôt sans CI ; jamais bloquant pour la lecture de la PR.
+        const checks = pr.headSha
+          ? await forge
+              .listChecks({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+                sha: pr.headSha,
+              })
+              .catch(() => null)
+          : null;
         return ok({
           pull_request: {
             number: pr.number,
@@ -644,6 +659,17 @@ export function registerMinddyTools(rawServer: McpServer): void {
             body: pr.body,
             head: pr.head,
             base: pr.base,
+            draft: !!pr.draft,
+            checks: checks
+              ? {
+                  state: checks.state,
+                  passing: checks.passing,
+                  total: checks.total,
+                  failing: checks.checks
+                    .filter((c) => c.state === "failure")
+                    .map((c) => ({ name: c.name, url: c.url })),
+                }
+              : null,
             repository: target.repoFullName,
             issue: { id: ref.issue.id, identifier: ref.issue.identifier },
             files: files.map((f) => ({

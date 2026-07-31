@@ -5,11 +5,17 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Skeleton,
   Spinner,
   Tabs,
@@ -23,7 +29,18 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, ExternalLink, GitPullRequest, Reply, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  GitPullRequest,
+  MessageSquare,
+  Reply,
+  Send,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -43,16 +60,26 @@ import {
 import {
   actOnAgentPrApi,
   postPrCommentApi,
-  requestAgentPrChangesApi,
+  submitPrReviewApi,
+  type ChecksSummary,
+  type CheckState,
+  type MergeMethod,
   type PullRequestListItem,
+  type ReviewVerdict,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 
 /**
- * Panneau de détail d'une PR (MIN-66) : en-tête (issue + état + lien GitHub),
- * barre d'actions (accepter/refuser/demander des changements), puis deux onglets
- * façon GitHub — le fil de conversation (description de la PR + commentaires) et
- * les fichiers modifiés. Tout est piloté par le run canonique `item.runId`.
+ * Panneau de détail d'une PR (MIN-66 + MIN-138) : en-tête (issue + état + actions),
+ * bandeau de checks CI, puis deux onglets façon GitHub — le fil de conversation
+ * (description de la PR + commentaires) et les fichiers modifiés. Tout est piloté
+ * par le run canonique `item.runId`.
+ *
+ * Trois gestes dans la barre d'actions : **Review** (approuver / demander des
+ * changements / commenter, avec la case « et relancer Numo » qui n'existe que
+ * chez minddy), **Refuser** (ferme la PR), **Fusionner** (split button : la
+ * méthode principale est le squash, le chevron donne les autres méthodes que la
+ * forge accepte).
  */
 
 function stateBadgeVariant(
@@ -60,7 +87,95 @@ function stateBadgeVariant(
 ): "default" | "secondary" | "destructive" | "outline" {
   if (state === "merged") return "default";
   if (state === "closed") return "destructive";
+  if (state === "draft") return "outline";
   return "secondary";
+}
+
+/** Pastille d'état d'un check. `pending` pulse : c'est le seul état qui bouge. */
+function CheckDot({ state, className }: { state: CheckState; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "size-2 shrink-0 rounded-full",
+        state === "success" && "bg-emerald-500",
+        state === "failure" && "bg-destructive",
+        state === "pending" && "animate-pulse bg-amber-500",
+        state === "neutral" && "bg-muted-foreground/50",
+        className,
+      )}
+    />
+  );
+}
+
+/**
+ * Bandeau de checks CI. Replié il tient en une ligne (« 3/4 réussis ») ; déplié
+ * il liste chaque check avec son lien chez la forge.
+ *
+ * Trois « pas de checks » différents, et ils ne se disent pas pareil :
+ * `error` = on n'a pas pu lire (permission de la GitHub App non acceptée par
+ * l'installation), `total === 0` = ce dépôt n'a pas de CI, et le cas normal.
+ */
+function ChecksBanner({
+  checks,
+  error,
+}: {
+  checks: ChecksSummary | null;
+  error: "forbidden" | "unknown" | null;
+}) {
+  const t = useTranslations("PullRequests");
+  const [open, setOpen] = useState(false);
+
+  if (error) {
+    return (
+      <p className="text-xs text-muted-foreground">{t("checksUnavailable")}</p>
+    );
+  }
+  if (!checks || checks.total === 0) return null;
+
+  const label =
+    checks.state === "failure"
+      ? t("checksFailing", { passing: checks.passing, total: checks.total })
+      : checks.state === "pending"
+        ? t("checksPending", { passing: checks.passing, total: checks.total })
+        : t("checksPassing", { total: checks.total });
+
+  return (
+    <div className="rounded-lg border border-border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left outline-none"
+      >
+        <CheckDot state={checks.state ?? "neutral"} />
+        <span className="text-sm font-medium">{label}</span>
+        {open ? (
+          <ChevronDown className="ml-auto size-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+        )}
+      </button>
+      {open ? (
+        <ul className="flex flex-col border-t border-border">
+          {checks.checks.map((c) => (
+            <li key={c.name} className="flex items-center gap-2 px-3.5 py-2 text-sm">
+              <CheckDot state={c.state} />
+              <span className="min-w-0 truncate">{c.name}</span>
+              {c.url ? (
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto shrink-0 text-brand hover:underline"
+                >
+                  <ExternalLink className="size-3.5" />
+                </a>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 /**
@@ -140,7 +255,16 @@ export function PrDetail({
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
 
-  const { pr, files, loading, refetch: refetchPr } = useAgentRunPrQuery(item.runId, true);
+  const {
+    pr,
+    files,
+    checks,
+    checksError,
+    reviews,
+    mergeMethods,
+    loading,
+    refetch: refetchPr,
+  } = useAgentRunPrQuery(item.runId, true);
   const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
     item.runId,
   );
@@ -148,13 +272,18 @@ export function PrDetail({
     item.runId,
   );
 
-  const [acting, setActing] = useState<null | "merge" | "close">(null);
-  const [confirmAction, setConfirmAction] = useState<null | "merge" | "close">(null);
-  const [requesting, setRequesting] = useState(false);
-  const [changeOpen, setChangeOpen] = useState(false);
-  const [changeMessage, setChangeMessage] = useState("");
-  // Modèle de la run à lancer — vide = le défaut du compte (MIN-68 : une demande de
-  // changements est un lancement à froid, elle a donc son propre choix de modèle).
+  const [acting, setActing] = useState<null | "merge" | "close" | "ready_for_review">(null);
+  // Le merge se confirme AVEC sa méthode : la porter dans l'état de confirmation
+  // évite qu'un clic sur « fusionner quand même » retombe sur le squash par défaut.
+  const [confirmAction, setConfirmAction] = useState<
+    null | { kind: "merge"; method?: MergeMethod } | { kind: "close" }
+  >(null);
+  const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [relaunch, setRelaunch] = useState(true);
+  // Modèle de la run à lancer — vide = le défaut du compte (MIN-68 : relancer Numo
+  // est un lancement à froid, il a donc son propre choix de modèle).
   const [model, setModel] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
@@ -162,9 +291,26 @@ export function PrDetail({
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
+  // `item` vient de la liste (valeur DB, éventuellement en retard d'un webhook),
+  // `pr` du GET de la forge (la vérité) : la forge gagne dès qu'elle a répondu.
+  const isDraft = pr?.draft ?? item.pr_state === "draft";
   const stateKey =
-    item.pr_state === "merged" ? "stateMerged" : item.pr_state === "closed" ? "stateClosed" : "stateOpen";
+    item.pr_state === "merged"
+      ? "stateMerged"
+      : item.pr_state === "closed"
+        ? "stateClosed"
+        : isDraft
+          ? "stateDraft"
+          : "stateOpen";
   const isTerminal = item.pr_state === "merged" || item.pr_state === "closed";
+  const badgeState = isDraft && !isTerminal ? "draft" : item.pr_state;
+  // Une CI rouge ne bloque le merge que dans minddy : GitHub le laisse passer si
+  // la branche n'est pas protégée, d'où l'échappatoire « fusionner quand même ».
+  const checksFailing = checks?.state === "failure";
+  const mergeBlockedByRepo = pr?.mergeableState === "blocked";
+  // Le squash reste l'action principale (c'est ce que minddy fait depuis MIN-46) ;
+  // le chevron n'offre que ce que la forge accepte réellement.
+  const otherMethods = mergeMethods.filter((m) => m !== "squash");
 
   // Quand Numo termine (le run actif disparaît de la liste), rafraîchir diff +
   // commentaires. Les commentaires de ligne en font partie : Numo peut y avoir
@@ -179,13 +325,19 @@ export function PrDetail({
     prevWorking.current = isWorking;
   }, [isWorking, refetchPr, refetchComments, refetchReviewComments]);
 
-  const act = async (action: "merge" | "close") => {
+  const act = async (action: "merge" | "close" | "ready_for_review", method?: MergeMethod) => {
     if (acting) return;
     setActing(action);
     setConfirmAction(null);
     try {
-      await actOnAgentPrApi(item.runId, action);
-      toast.success(action === "merge" ? t("mergedToast") : t("closedToast"));
+      await actOnAgentPrApi(item.runId, action, method);
+      toast.success(
+        action === "merge"
+          ? t("mergedToast")
+          : action === "close"
+            ? t("closedToast")
+            : t("readyForReviewToast"),
+      );
       onRefetchList();
       await refetchPr();
     } catch (err) {
@@ -195,23 +347,42 @@ export function PrDetail({
     }
   };
 
-  const submitChangeRequest = async () => {
-    const message = changeMessage.trim();
-    if (!message || requesting) return;
-    setRequesting(true);
+  const openReview = (verdict: ReviewVerdict) => {
+    setReviewVerdict(verdict);
+    setReviewMessage("");
+    // La relance n'a de sens que sur une demande de changements, et c'est là son
+    // comportement attendu : cochée d'office.
+    setRelaunch(verdict === "request_changes");
+  };
+
+  const submitReview = async () => {
+    if (!reviewVerdict || submitting) return;
+    const message = reviewMessage.trim();
+    // Approuver sans un mot est légitime ; commenter ou demander des changements
+    // sans rien dire ne l'est pas (et les deux forges refusent un corps vide).
+    if (!message && reviewVerdict !== "approve") return;
+    setSubmitting(true);
     try {
-      // MIN-68 : poste la review sur la PR puis lance une run NEUVE (le modèle est
-      // choisi ici, comme à un premier lancement) qui hérite de cette PR.
-      await requestAgentPrChangesApi(item.runId, message, model || undefined);
-      toast.success(t("changesRequestedToast"));
-      setChangeOpen(false);
-      setChangeMessage("");
-      onRefetchList(); // fait apparaître le nouveau run actif → active le polling de la liste.
-      await refetchComments();
+      const result = await submitPrReviewApi(item.runId, {
+        verdict: reviewVerdict,
+        message,
+        relaunch: relaunch && reviewVerdict === "request_changes",
+        model: model || undefined,
+      });
+      // La forge a refusé de publier le verdict (une App ne peut pas approuver sa
+      // propre PR) : il est parti en commentaire, et minddy le garde de son côté.
+      // Le dire, plutôt que de laisser croire à une pastille verte sur GitHub.
+      toast.success(
+        result.published === "comment" ? t("selfReviewBlocked") : t("reviewSubmittedToast"),
+      );
+      setReviewVerdict(null);
+      setReviewMessage("");
+      onRefetchList(); // fait apparaître un éventuel nouveau run actif → polling de la liste.
+      await Promise.all([refetchComments(), refetchPr()]);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setRequesting(false);
+      setSubmitting(false);
     }
   };
 
@@ -289,12 +460,26 @@ export function PrDetail({
             occupaient à droite, là où l'œil cherchait le bouton. Tant qu'elle est
             ouverte il reste à gauche, contre l'identifiant. */}
         <Badge
-          variant={stateBadgeVariant(item.pr_state)}
+          variant={stateBadgeVariant(badgeState)}
           icon={<GitPullRequest />}
           className={cn(isTerminal && "ml-auto")}
         >
           {t(stateKey)}
         </Badge>
+        {/* Approbations : « n approbations », et la mention du blocage à côté du
+            bouton Fusionner. Pas de « n/N » — le N vient de la protection de
+            branche, qui coûte une permission GitHub hors périmètre. */}
+        {reviews && reviews.approvals > 0 ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-500">
+            <Check className="size-3.5" />
+            {t("approvals", { count: reviews.approvals })}
+          </span>
+        ) : null}
+        {reviews && reviews.changesRequested > 0 ? (
+          <span className="text-xs text-amber-600 dark:text-amber-500">
+            {t("changesRequestedCount", { count: reviews.changesRequested })}
+          </span>
+        ) : null}
         {isWorking ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
@@ -304,46 +489,131 @@ export function PrDetail({
 
         {!isTerminal ? (
           <div className="ml-auto flex items-center gap-1.5">
-            {/* Une demande de changements LANCE une run : impossible tant qu'une run
-                occupe l'issue (le serveur renvoie 409). Merger/refuser reste permis,
-                d'où `busyRunId` plutôt que `isWorking`. */}
-            {item.busyRunId ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0}>
-                    <Button variant="outline" size="sm" disabled>
-                      <NumoIcon animated={false} />
-                      {t("requestChanges")}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {tAgent("errorAlreadyRunning")}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setChangeOpen(true)}>
-                <NumoIcon animated={false} />
-                {t("requestChanges")}
-              </Button>
-            )}
+            {mergeBlockedByRepo ? (
+              <span className="text-xs text-muted-foreground">{t("mergeBlockedByRepo")}</span>
+            ) : null}
+
+            {/* Review — les trois verdicts, chacun ouvrant le même dialogue. */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {t("review")}
+                  <ChevronDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => openReview("approve")}>
+                  <Check />
+                  {t("reviewApprove")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => openReview("request_changes")}>
+                  <NumoIcon animated={false} />
+                  {t("reviewRequestChanges")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => openReview("comment")}>
+                  <MessageSquare />
+                  {t("reviewComment")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => setConfirmAction("close")}
+              onClick={() => setConfirmAction({ kind: "close" })}
               disabled={!!acting || isWorking}
             >
               {acting === "close" ? <Spinner /> : <X />}
               {t("reject")}
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setConfirmAction("merge")}
-              disabled={!!acting || isWorking}
-            >
-              {acting === "merge" ? <Spinner /> : <Check />}
-              {t("accept")}
-            </Button>
+
+            {isDraft ? (
+              // Une PR brouillon ne se fusionne pas : le geste qu'elle appelle est
+              // de la proposer.
+              <Button
+                size="sm"
+                onClick={() => void act("ready_for_review")}
+                disabled={!!acting || isWorking}
+              >
+                {acting === "ready_for_review" ? <Spinner /> : <Send />}
+                {t("readyForReview")}
+              </Button>
+            ) : (
+              <div className="flex items-center">
+                {checksFailing ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button size="sm" className="rounded-r-none" disabled>
+                          <Check />
+                          {t("merge")}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">{t("mergeBlockedByChecks")}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    size="sm"
+                    className={cn(
+                      (otherMethods.length > 0 || checksFailing) && "rounded-r-none",
+                    )}
+                    onClick={() => setConfirmAction({ kind: "merge", method: "squash" })}
+                    disabled={!!acting || isWorking}
+                  >
+                    {acting === "merge" ? <Spinner /> : <Check />}
+                    {t("merge")}
+                  </Button>
+                )}
+                {otherMethods.length > 0 || checksFailing ? (
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        aria-label={t("mergeMethodMenu")}
+                        className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                        disabled={!!acting || isWorking}
+                      >
+                        <ChevronDown className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {mergeMethods.map((m) => (
+                        <DropdownMenuItem
+                          key={m}
+                          // Sur CI rouge, seule l'entrée explicite « fusionner
+                          // quand même » passe : choisir une méthode ne doit pas
+                          // devenir un contournement discret du garde-fou.
+                          disabled={checksFailing}
+                          onSelect={() => setConfirmAction({ kind: "merge", method: m })}
+                        >
+                          {t(
+                            m === "squash"
+                              ? "mergeMethodSquash"
+                              : m === "rebase"
+                                ? "mergeMethodRebase"
+                                : "mergeMethodMerge",
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                      {checksFailing ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              setConfirmAction({ kind: "merge", method: "squash" })
+                            }
+                          >
+                            {t("mergeAnyway")}
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+            )}
           </div>
         ) : null}
       </div>
@@ -394,6 +664,10 @@ export function PrDetail({
               ) : null}
             </div>
           </div>
+
+          {/* Checks CI — sous l'en-tête, avant le fil : c'est ce qu'on regarde
+              avant de décider de fusionner. */}
+          {!loading ? <ChecksBanner checks={checks} error={checksError} /> : null}
 
           {/* Onglets façon GitHub : le fil d'un côté, le code de l'autre. */}
           <Tabs value={tab} onValueChange={(v) => setTab(v as "conversation" | "files")}>
@@ -505,7 +779,7 @@ export function PrDetail({
         </div>
       </div>
 
-      {/* Confirmation accepter / refuser */}
+      {/* Confirmation fusionner / refuser */}
       <Dialog
         open={!!confirmAction}
         onOpenChange={(next) => {
@@ -515,12 +789,12 @@ export function PrDetail({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmAction === "merge" ? t("confirmAcceptTitle") : t("confirmRejectTitle")}
+              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmRejectTitle")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {confirmAction === "merge"
-              ? t("confirmAcceptDescription")
+            {confirmAction?.kind === "merge"
+              ? t("confirmMergeDescription")
               : t("confirmRejectDescription")}
           </p>
           <DialogFooter>
@@ -528,62 +802,116 @@ export function PrDetail({
               {t("cancel")}
             </Button>
             <Button
-              variant={confirmAction === "close" ? "destructive" : "default"}
+              variant={confirmAction?.kind === "close" ? "destructive" : "default"}
               disabled={!!acting}
-              onClick={() => confirmAction && void act(confirmAction)}
+              onClick={() => {
+                if (!confirmAction) return;
+                if (confirmAction.kind === "merge") void act("merge", confirmAction.method);
+                else void act("close");
+              }}
             >
               {acting ? <Spinner /> : null}
-              {confirmAction === "merge" ? t("accept") : t("reject")}
+              {confirmAction?.kind === "merge" ? t("merge") : t("reject")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialogue « demander des changements » */}
+      {/* Dialogue de review — les trois verdicts partagent le même formulaire ;
+          seule la case « et relancer Numo » distingue la demande de changements. */}
       <Dialog
-        open={changeOpen}
+        open={!!reviewVerdict}
         onOpenChange={(next) => {
-          if (!next && !requesting) setChangeOpen(false);
+          if (!next && !submitting) setReviewVerdict(null);
         }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("requestChangesTitle")}</DialogTitle>
+            <DialogTitle>
+              {t(
+                reviewVerdict === "approve"
+                  ? "reviewApproveTitle"
+                  : reviewVerdict === "comment"
+                    ? "reviewCommentTitle"
+                    : "reviewRequestChangesTitle",
+              )}
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">{t("requestChangesDescription")}</p>
           <Textarea
-            value={changeMessage}
-            onChange={(e) => setChangeMessage(e.target.value)}
-            placeholder={t("requestChangesPlaceholder")}
+            value={reviewMessage}
+            onChange={(e) => setReviewMessage(e.target.value)}
+            placeholder={t(
+              reviewVerdict === "approve" ? "reviewApprovePlaceholder" : "reviewPlaceholder",
+            )}
             rows={4}
             autoFocus
             className="resize-none bg-card"
           />
+
+          {/* Le geste que minddy a et que GitHub n'a pas : la demande de
+              changements peut relancer Numo sur cette même PR (MIN-68). */}
+          {reviewVerdict === "request_changes" ? (
+            item.busyRunId ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="flex items-center gap-2">
+                    <Checkbox checked={false} disabled />
+                    <span className="text-sm text-muted-foreground">
+                      {t("reviewRelaunchNumo")}
+                    </span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{tAgent("errorAlreadyRunning")}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={relaunch}
+                  onCheckedChange={(v) => setRelaunch(v === true)}
+                  disabled={submitting}
+                />
+                <span className="text-sm">{t("reviewRelaunchNumo")}</span>
+              </label>
+            )
+          ) : null}
+
           <DialogFooter className="sm:justify-between">
             {/* Nouvelle run = nouveau choix de modèle (identique à un premier
                 lancement) ; vide = le modèle par défaut du compte. */}
-            <ModelCombobox
-              variant="compact"
-              value={model}
-              onChange={setModel}
-              defaultLabel={tAgent("modelDefault")}
-              defaultModelId={defaultModel ?? providerDefaultModel}
-              placeholder={tAgent("modelSearchPlaceholder")}
-              emptyLabel={tAgent("modelSearchEmpty")}
-              loadingLabel={tAgent("modelSearchLoading")}
-              freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
-              disabled={requesting}
-            />
+            {reviewVerdict === "request_changes" && relaunch && !item.busyRunId ? (
+              <ModelCombobox
+                variant="compact"
+                value={model}
+                onChange={setModel}
+                defaultLabel={tAgent("modelDefault")}
+                defaultModelId={defaultModel ?? providerDefaultModel}
+                placeholder={tAgent("modelSearchPlaceholder")}
+                emptyLabel={tAgent("modelSearchEmpty")}
+                loadingLabel={tAgent("modelSearchLoading")}
+                freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+                disabled={submitting}
+              />
+            ) : (
+              <span />
+            )}
             <div className="flex items-center gap-2">
-              <Button variant="outline" disabled={requesting} onClick={() => setChangeOpen(false)}>
+              <Button
+                variant="outline"
+                disabled={submitting}
+                onClick={() => setReviewVerdict(null)}
+              >
                 {t("cancel")}
               </Button>
               <Button
-                disabled={requesting || !changeMessage.trim()}
-                onClick={() => void submitChangeRequest()}
+                disabled={
+                  submitting || (!reviewMessage.trim() && reviewVerdict !== "approve")
+                }
+                onClick={() => void submitReview()}
               >
-                {requesting ? <Spinner /> : null}
-                {t("sendToNumo")}
+                {submitting ? <Spinner /> : null}
+                {reviewVerdict === "request_changes" && relaunch && !item.busyRunId
+                  ? t("sendToNumo")
+                  : t("reviewSubmit")}
               </Button>
             </div>
           </DialogFooter>

@@ -559,6 +559,28 @@ export interface SyncedPrRun {
   id: string;
   issueId: string | null;
   createdBy: string | null;
+  /** Projet porteur — la notification d'inbox en a besoin pour ranger la ligne. */
+  projectId: string;
+}
+
+/** Colonnes lues par les deux résolutions de runs d'une PR (`findRunsForPr` et
+    `syncPrState`) — à garder alignées sur `SyncedPrRun`. */
+const SYNCED_PR_RUN_COLUMNS = "id, issue_id, created_by, project_id";
+
+interface RawSyncedPrRun {
+  id: string;
+  issue_id: string | null;
+  created_by: string | null;
+  project_id: string;
+}
+
+function toSyncedPrRun(r: RawSyncedPrRun): SyncedPrRun {
+  return {
+    id: r.id,
+    issueId: r.issue_id,
+    createdBy: r.created_by,
+    projectId: r.project_id,
+  };
 }
 
 /** Ids des liaisons projet↔dépôt pour `repoFullName` (un numéro de PR est unique
@@ -594,12 +616,10 @@ export async function findRunsForPr(opts: {
   if (linkIds.length === 0) return [];
   const { data: runs } = await service
     .from("agent_runs")
-    .select("id, issue_id, created_by")
+    .select(SYNCED_PR_RUN_COLUMNS)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
-  return ((runs ?? []) as Array<{ id: string; issue_id: string | null; created_by: string | null }>).map(
-    (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
-  );
+  return ((runs ?? []) as RawSyncedPrRun[]).map(toSyncedPrRun);
 }
 
 /**
@@ -620,7 +640,7 @@ export async function syncPrState(opts: {
   if (linkIds.length === 0) return [];
   const { data: runs } = await service
     .from("agent_runs")
-    .select("id, issue_id, created_by")
+    .select(SYNCED_PR_RUN_COLUMNS)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
   const update: Record<string, unknown> = { pr_state: opts.prState };
@@ -630,9 +650,7 @@ export async function syncPrState(opts: {
     .update(update)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
-  return ((runs ?? []) as Array<{ id: string; issue_id: string | null; created_by: string | null }>).map(
-    (r) => ({ id: r.id, issueId: r.issue_id, createdBy: r.created_by }),
-  );
+  return ((runs ?? []) as RawSyncedPrRun[]).map(toSyncedPrRun);
 }
 
 /**

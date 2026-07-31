@@ -10,7 +10,11 @@ import type {
   PullRequestFile,
   PullRequestComment,
   PullRequestReviewComment,
+  PullRequestReviewSummary,
+  ReviewSubmission,
+  ReviewVerdict,
 } from "./pr";
+import type { ChecksSummary } from "./checks-core";
 
 /**
  * Abstraction provider des opérations PR/MR de l'agent (MIN-69). Chaque provider
@@ -32,15 +36,25 @@ export function isForgeApiError(err: unknown): err is ForgeApiError {
   return err instanceof GithubApiError || err instanceof GitlabApiError;
 }
 
+/** Méthodes de merge offertes par une forge (MIN-138). */
+export type MergeMethod = "merge" | "squash" | "rebase";
+
 /**
  * Surface commune des opérations PR/MR. Volontairement PLUS ÉTROITE que les
  * modules concrets : pas de `commitId` (chaque provider résout sa propre ancre
- * de review), pas de méthode de merge ni de commentaire multi-lignes (options
- * GitHub que GitLab ignorerait en silence), pas de `findOpen*` (détail interne
- * des `ensure*`). N'élargir qu'avec une implémentation réelle des deux côtés.
+ * de review), pas de commentaire multi-lignes (option GitHub que GitLab
+ * ignorerait en silence), pas de `findOpen*` (détail interne des `ensure*`).
+ * N'élargir qu'avec une implémentation réelle des deux côtés.
+ *
+ * La méthode de merge, elle, a rejoint la surface (MIN-138) : elle a désormais
+ * une implémentation réelle des deux côtés — mais pas le même MENU, d'où
+ * `mergeMethods`, que l'UI lit pour ne proposer que ce que la forge sait faire.
  */
 export interface Forge {
   provider: RepoProviderId;
+  /** Méthodes de merge réellement offertes — GitLab fixe sa stratégie au niveau
+      du projet, seul `squash` y est un paramètre de l'appel merge. */
+  mergeMethods: readonly MergeMethod[];
   /** Noms des branches du dépôt (picker de branche de base au lancement). */
   listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
   /** TOUTES les PR/MR du dépôt, tous états — le ménage des branches d'agent
@@ -112,6 +126,47 @@ export interface Forge {
     token: string;
     repoFullName: string;
     number: number;
+    /** Doit appartenir à `mergeMethods` — l'appelant valide, la forge n'invente pas. */
+    method?: MergeMethod;
+  }): Promise<void>;
+  /**
+   * Soumet une review formelle. `published: "comment"` en retour = la forge a
+   * refusé de publier le verdict (auto-review) et il est parti en commentaire :
+   * l'appelant doit le dire à l'utilisateur, et enregistrer le verdict RÉEL de
+   * son côté. C'est le cas normal des PR de Numo, pas un cas dégradé.
+   */
+  submitReview(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    verdict: ReviewVerdict;
+    body: string;
+  }): Promise<ReviewSubmission>;
+  /** Décompte d'approbations, déjà réduit : la règle « dernier verdict par
+      utilisateur » est un détail GitHub (GitLab tient la liste courante), elle
+      n'a pas à remonter jusqu'aux appelants. */
+  listReviews(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<PullRequestReviewSummary>;
+  /** Checks CI. `number` ET `sha` sont demandés parce que les deux forges
+      n'adressent pas la même chose : GitHub interroge le COMMIT de tête, GitLab
+      les pipelines de la MR. Chaque implémentation ignore le champ qu'elle
+      n'utilise pas (même arrangement que `getBranchesMergeBaseSha`). */
+  listChecks(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    sha: string;
+  }): Promise<ChecksSummary>;
+  /** Brouillon → prêt pour la review. `nodeId` n'est lu que par GitHub (clé de
+      la mutation GraphQL) ; GitLab retire le préfixe `Draft:` du titre. */
+  markReadyForReview(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    nodeId?: string;
   }): Promise<void>;
   closePullRequest(opts: {
     token: string;
@@ -161,6 +216,7 @@ export interface Forge {
 
 const githubForge: Forge = {
   provider: "github",
+  mergeMethods: ["squash", "merge", "rebase"],
   listBranches: github.listBranches,
   listPullRequests: github.listPullRequests,
   deleteBranch: github.deleteBranch,
@@ -174,6 +230,18 @@ const githubForge: Forge = {
   getMergeBaseSha: github.getMergeBaseSha,
   getFileAtRef: github.getFileAtRef,
   mergePullRequest: github.mergePullRequest,
+  submitReview: github.submitPullRequestReview,
+  listReviews: github.listPullRequestReviews,
+  listChecks: github.listPullRequestChecks,
+  // La mutation GraphQL n'adresse la PR que par son `node_id` : sans lui (une PR
+  // lue par l'endpoint *list*, qui ne le sert pas), on refuse net plutôt que de
+  // laisser GitHub répondre une erreur GraphQL opaque.
+  markReadyForReview: async (opts) => {
+    if (!opts.nodeId) {
+      throw new GithubApiError("Pull request has no GraphQL id", 409);
+    }
+    return github.markPullRequestReadyForReview({ token: opts.token, nodeId: opts.nodeId });
+  },
   closePullRequest: github.closePullRequest,
   reopenPullRequest: github.reopenPullRequest,
   listPullRequestComments: github.listPullRequestComments,
@@ -197,6 +265,9 @@ const githubForge: Forge = {
 
 const gitlabForge: Forge = {
   provider: "gitlab",
+  // Pas de `rebase` : GitLab règle la stratégie au niveau du projet, seul le
+  // squash est un paramètre de l'appel merge.
+  mergeMethods: ["squash", "merge"],
   listBranches: gitlab.listBranches,
   listPullRequests: gitlab.listPullRequests,
   deleteBranch: gitlab.deleteBranch,
@@ -208,6 +279,10 @@ const gitlabForge: Forge = {
   getMergeBaseSha: gitlab.getMergeBaseSha,
   getFileAtRef: gitlab.getFileAtRef,
   mergePullRequest: gitlab.mergeMergeRequest,
+  submitReview: gitlab.submitMergeRequestReview,
+  listReviews: gitlab.listMergeRequestApprovals,
+  listChecks: gitlab.listMergeRequestChecks,
+  markReadyForReview: gitlab.markMergeRequestReadyForReview,
   closePullRequest: gitlab.closeMergeRequest,
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,

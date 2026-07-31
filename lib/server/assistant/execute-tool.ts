@@ -890,6 +890,21 @@ export async function executeTool(
             .catch(() => []),
         ]);
 
+        // Checks CI (MIN-138) : demander des changements sur une CI rouge n'a
+        // d'intérêt que si l'agent voit CE qui casse. `null` = illisible
+        // (permission de l'App non acceptée, dépôt sans CI) — jamais bloquant,
+        // comme les commentaires de review juste au-dessus.
+        const checks = pr.headSha
+          ? await forge
+              .listChecks({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+                sha: pr.headSha,
+              })
+              .catch(() => null)
+          : null;
+
         // Cap patch size so a huge diff doesn't blow the context window.
         const PATCH_CAP = 4000;
         return {
@@ -901,6 +916,17 @@ export async function executeTool(
             body: pr.body,
             head: pr.head,
             base: pr.base,
+            draft: !!pr.draft,
+            checks: checks
+              ? {
+                  state: checks.state,
+                  passing: checks.passing,
+                  total: checks.total,
+                  failing: checks.checks
+                    .filter((c) => c.state === "failure")
+                    .map((c) => ({ name: c.name, url: c.url })),
+                }
+              : null,
             files: files.map((f) => ({
               filename: f.filename,
               status: f.status,

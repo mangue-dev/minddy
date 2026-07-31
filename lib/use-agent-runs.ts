@@ -91,14 +91,36 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   return { events: data?.events ?? [], loading: isLoading };
 }
 
-/** PR d'un run (metadata + fichiers/patches) pour la review in-app. */
+/** Cadence de suivi d'une CI en cours — une CI se compte en minutes, pas en
+    secondes : plus lent que le diff (7 s) qui, lui, suit un agent qui écrit. */
+const CHECKS_POLL_MS = 15_000;
+
+/**
+ * PR d'un run pour la review in-app : metadata, fichiers/patches, checks CI,
+ * approbations et méthodes de merge offertes par la forge (MIN-138).
+ *
+ * Tant qu'un check est `pending`, on re-poll : sans ça le bandeau CI resterait
+ * figé sur « en cours » jusqu'à un rechargement de page, alors que c'est
+ * précisément le moment où l'utilisateur regarde.
+ */
 export function useAgentRunPrQuery(runId: string, enabled: boolean) {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["agent-run-pr", runId],
     queryFn: () => fetchAgentRunPrApi(runId),
     enabled,
+    refetchInterval: (query) =>
+      query.state.data?.checks?.state === "pending" ? CHECKS_POLL_MS : false,
   });
-  return { pr: data?.pr ?? null, files: data?.files ?? [], loading: isLoading, refetch };
+  return {
+    pr: data?.pr ?? null,
+    files: data?.files ?? [],
+    checks: data?.checks ?? null,
+    checksError: data?.checksError ?? null,
+    reviews: data?.reviews ?? null,
+    mergeMethods: data?.mergeMethods ?? [],
+    loading: isLoading,
+    refetch,
+  };
 }
 
 /** Clé de cache du diff vivant d'un run (vue diff dans la conversation). */

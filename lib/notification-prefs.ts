@@ -65,6 +65,10 @@ export function categoryOfNotificationType(
     case "agent_done":
     case "agent_question":
     case "agent_failed":
+    // Les PR notifiées SONT celles de Numo : elles suivent la bascule « agent »
+    // plutôt qu'une sixième, qui serait un réglage de plus à gérer pour rien.
+    case "pr_reviewed":
+    case "pr_merged":
       return "agent";
     case "feedback_new":
       return "feedback";

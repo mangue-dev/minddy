@@ -348,6 +348,54 @@ export interface PullRequestRef {
   /** Auteur et date d'ouverture : le `body` ouvre le fil de conversation comme un commentaire. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
+  /** `null`/absent = fusionnabilité INCONNUE (les forges la calculent en
+      asynchrone), à ne jamais afficher comme « bloqué » — MIN-138. */
+  mergeable?: boolean | null;
+  /** `clean` · `blocked` (le dépôt exige approbations/checks) · `dirty` (conflit)
+      · `unstable` (checks non requis en échec) · `unknown`. */
+  mergeableState?: string | null;
+}
+
+/** État normalisé d'un check CI (MIN-138) — miroir de `lib/server/agent/checks-core.ts`. */
+export type CheckState = "pending" | "success" | "failure" | "neutral";
+
+export interface PullRequestCheck {
+  name: string;
+  state: CheckState;
+  url: string | null;
+}
+
+export interface ChecksSummary {
+  checks: PullRequestCheck[];
+  /** Agrégat : un échec l'emporte, puis « en cours ». `null` = aucun check. */
+  state: CheckState | null;
+  /** Checks non bloquants (réussis ou neutres) — le `n` de « n/m réussis ». */
+  passing: number;
+  total: number;
+}
+
+/** Méthodes de merge offertes par la forge du dépôt lié. */
+export type MergeMethod = "merge" | "squash" | "rebase";
+
+export interface PullRequestReviewSummary {
+  approvals: number;
+  changesRequested: number;
+}
+
+/**
+ * Réponse du GET de la PR d'un run. Deux nuances de « pas de checks » :
+ * `checks: null` = on n'a pas pu lire (`checksError` dit pourquoi — `forbidden`
+ * = permission GitHub que l'installation n'a pas acceptée), `checks.total === 0`
+ * = le dépôt n'a pas de CI. Même chose pour `reviews: null`.
+ */
+export interface AgentRunPrResponse {
+  pr: PullRequestRef | null;
+  files: PullRequestFile[];
+  provider?: RepoProviderId;
+  checks?: ChecksSummary | null;
+  checksError?: "forbidden" | "unknown" | null;
+  reviews?: PullRequestReviewSummary | null;
+  mergeMethods?: MergeMethod[];
 }
 
 export interface PullRequestFile {
@@ -360,9 +408,7 @@ export interface PullRequestFile {
   previous_filename?: string;
 }
 
-export async function fetchAgentRunPrApi(
-  runId: string,
-): Promise<{ pr: PullRequestRef | null; files: PullRequestFile[] }> {
+export async function fetchAgentRunPrApi(runId: string): Promise<AgentRunPrResponse> {
   return parseJson(await fetch(`/api/agent-runs/${runId}/pr`));
 }
 
@@ -395,33 +441,41 @@ export async function fetchPrFileSourceApi(
 
 export async function actOnAgentPrApi(
   runId: string,
-  action: "merge" | "close",
+  action: "merge" | "close" | "ready_for_review",
+  method?: MergeMethod,
 ): Promise<{ ok: true; pr_state: string }> {
   trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/pr`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, method }),
     }),
   );
 }
 
+/** Verdict d'une review soumise depuis minddy (MIN-138). */
+export type ReviewVerdict = "approve" | "request_changes" | "comment";
+
 /**
- * Demande des changements à Numo (MIN-66 + MIN-68) : poste la review sur la PR, puis
- * lance une NOUVELLE run froide (modèle au choix) qui itère sur cette même PR.
+ * Soumet une review sur la PR (MIN-138). `relaunch` (sur `request_changes`
+ * seulement) lance EN PLUS une run froide de Numo qui itère sur cette même PR,
+ * avec son propre modèle (MIN-68).
+ *
+ * `published: "comment"` en retour = la forge a refusé de publier le verdict —
+ * une App ne peut pas approuver sa propre pull request. Le verdict est enregistré
+ * côté minddy quand même ; l'appelant doit le dire à l'utilisateur.
  */
-export async function requestAgentPrChangesApi(
+export async function submitPrReviewApi(
   runId: string,
-  message: string,
-  model?: string,
-): Promise<{ ok: true; run: { id: string } }> {
-  trackEvent("pr_review_submitted", { verdict: "request_changes" });
+  input: { verdict: ReviewVerdict; message: string; relaunch?: boolean; model?: string },
+): Promise<{ ok: true; published: "review" | "comment"; run?: { id: string } }> {
+  trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/pr`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "request_changes", message, model }),
+      body: JSON.stringify({ action: "review", ...input }),
     }),
   );
 }

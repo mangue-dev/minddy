@@ -46,6 +46,9 @@ function stateVariant(
 ): "default" | "secondary" | "destructive" | "outline" {
   if (state === "merged") return "default";
   if (state === "closed") return "destructive";
+  // Un brouillon est rangé dans « ouvertes » par le filtre — c'en est une — mais
+  // il ne se lit pas comme une PR proposée : le badge creux le distingue.
+  if (state === "draft") return "outline";
   return "secondary";
 }
 
@@ -126,7 +129,15 @@ export function PullRequestsPage() {
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
   const stateLabel = (state: PullRequestListItem["pr_state"]): string =>
-    t(state === "merged" ? "stateMerged" : state === "closed" ? "stateClosed" : "stateOpen");
+    t(
+      state === "merged"
+        ? "stateMerged"
+        : state === "closed"
+          ? "stateClosed"
+          : state === "draft"
+            ? "stateDraft"
+            : "stateOpen",
+    );
 
   return (
     <div className="flex h-full min-h-0">
