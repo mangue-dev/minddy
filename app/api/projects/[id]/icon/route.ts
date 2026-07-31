@@ -2,14 +2,25 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { clearProjectIcon, FaviconError, importProjectIcon } from "@/lib/server/favicon";
+import { FaviconError } from "@/lib/server/favicon";
+import {
+  clearProjectIcon,
+  IconFileError,
+  importProjectIcon,
+  MAX_ICON_UPLOAD_BYTES,
+  uploadProjectIcon,
+} from "@/lib/server/project-icon";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * Icône de projet (MIN-62) — owner uniquement.
- *  - POST { site_url } → importe le favicon du site live, renvoie { icon_url }.
+ *  - POST multipart `file` → compresse et stocke l'image envoyée.
+ *  - POST { site_url } → importe le favicon du site live.
  *  - DELETE → retire l'icône (retour à l'orbe générée).
+ *
+ * Deux sources pour une même ressource — « l'icône du projet » — donc une seule
+ * route, qui se branche sur le content-type et répond toujours { icon_url }.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -23,6 +34,42 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
   if (!access.isOwner) {
     return NextResponse.json({ error: t("ownerOnly") }, { status: 403 });
+  }
+
+  const isUpload = (request.headers.get("content-type") ?? "").includes(
+    "multipart/form-data"
+  );
+
+  if (isUpload) {
+    let file: unknown;
+    try {
+      file = (await request.formData()).get("file");
+    } catch {
+      return NextResponse.json({ error: t("iconInvalidFile") }, { status: 400 });
+    }
+    if (!(file instanceof File) || file.size === 0) {
+      return NextResponse.json({ error: t("iconInvalidFile") }, { status: 400 });
+    }
+    if (file.size > MAX_ICON_UPLOAD_BYTES) {
+      return NextResponse.json({ error: t("iconFileTooLarge") }, { status: 413 });
+    }
+    try {
+      const iconUrl = await uploadProjectIcon(
+        id,
+        Buffer.from(await file.arrayBuffer())
+      );
+      return NextResponse.json({ icon_url: iconUrl });
+    } catch (err) {
+      if (err instanceof IconFileError) {
+        const key = err.key === "tooLarge" ? "iconFileTooLarge" : "iconInvalidFile";
+        return NextResponse.json(
+          { error: t(key) },
+          { status: err.key === "tooLarge" ? 413 : 400 }
+        );
+      }
+      console.error("[api/projects/icon] upload failed:", err);
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
   }
 
   let body: unknown;

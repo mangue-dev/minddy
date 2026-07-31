@@ -2,17 +2,16 @@ import "server-only";
 
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Import d'icône de projet depuis le favicon d'un site live (MIN-62), porté du
- * pattern AutoKap (favicon-resolver.ts + refetch-icon).
+ * Résolution du favicon d'un site live (MIN-62), portée du pattern AutoKap
+ * (favicon-resolver.ts + refetch-icon). Le stockage de l'icône côté projet vit
+ * à côté, dans [project-icon.ts](./project-icon.ts) — ici on ne fait que
+ * trouver et télécharger l'image.
  *
  * Le serveur fetch une URL fournie par l'utilisateur : tout passe par
  * `guardedFetch`, qui n'accepte que http(s) vers des IP publiques (résolution
  * DNS vérifiée à chaque hop de redirect), avec timeout et plafond de taille.
- * L'image retenue est copiée dans le bucket public `project-icons` (une entrée
- * par projet, upsert) plutôt que hotlinkée — les favicons distants bougent.
  */
 
 const MAX_ICON_BYTES = 512 * 1024; // 512 Ko
@@ -21,7 +20,7 @@ const MAX_REDIRECTS = 3;
 const FETCH_TIMEOUT_MS = 10_000;
 
 /** MIME acceptés → extension stockée. Pas de SVG (script-capable). */
-const ICON_MIME_EXT: Record<string, string> = {
+export const ICON_MIME_EXT: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/jpg": "jpg",
@@ -38,7 +37,7 @@ export class FaviconError extends Error {
   }
 }
 
-function iconExtFromContentType(contentType: string | null): string | null {
+export function iconExtFromContentType(contentType: string | null): string | null {
   if (!contentType) return null;
   const mime = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
   return ICON_MIME_EXT[mime] ?? null;
@@ -176,7 +175,7 @@ function parseIconLinks(html: string): IconCandidate[] {
   return candidates.sort((a, b) => b.priority - a.priority || b.size - a.size);
 }
 
-interface ResolvedIcon {
+export interface ResolvedIcon {
   url: string;
   contentType: string;
   bytes: Buffer;
@@ -245,60 +244,4 @@ export async function resolveFavicon(siteUrl: string): Promise<ResolvedIcon> {
     if (fallback) return fallback;
   }
   throw new FaviconError("notFound");
-}
-
-/**
- * Importe le favicon de `siteUrl` comme icône du projet : téléchargement guardé,
- * upload upsert dans `project-icons/{projectId}.{ext}`, update de
- * `projects.icon_url` (URL publique + cache-buster). Renvoie l'URL stockée.
- * L'appelant a déjà vérifié que l'utilisateur est owner du projet.
- */
-export async function importProjectIcon(
-  projectId: string,
-  siteUrl: string
-): Promise<string> {
-  const icon = await resolveFavicon(siteUrl);
-  const ext = iconExtFromContentType(icon.contentType) as string;
-  const path = `${projectId}.${ext}`;
-
-  const service = getServiceClient();
-  await removeProjectIconObjects(projectId); // une seule extension à la fois
-  const { error: uploadError } = await service.storage
-    .from("project-icons")
-    .upload(path, icon.bytes, {
-      contentType: icon.contentType.split(";")[0].trim(),
-      upsert: true,
-    });
-  if (uploadError) throw new Error(uploadError.message);
-
-  const { data } = service.storage.from("project-icons").getPublicUrl(path);
-  const iconUrl = `${data.publicUrl}?v=${Date.now()}`;
-
-  const { error: updateError } = await service
-    .from("projects")
-    .update({ icon_url: iconUrl })
-    .eq("id", projectId);
-  if (updateError) throw new Error(updateError.message);
-
-  return iconUrl;
-}
-
-/** Supprime les objets storage possibles de l'icône (toutes extensions). */
-async function removeProjectIconObjects(projectId: string): Promise<void> {
-  const service = getServiceClient();
-  const exts = [...new Set(Object.values(ICON_MIME_EXT))];
-  await service.storage
-    .from("project-icons")
-    .remove(exts.map((ext) => `${projectId}.${ext}`));
-}
-
-/** Efface l'icône du projet (colonne + objets storage). */
-export async function clearProjectIcon(projectId: string): Promise<void> {
-  const service = getServiceClient();
-  const { error } = await service
-    .from("projects")
-    .update({ icon_url: null })
-    .eq("id", projectId);
-  if (error) throw new Error(error.message);
-  await removeProjectIconObjects(projectId);
 }

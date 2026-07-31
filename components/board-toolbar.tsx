@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -67,6 +67,10 @@ import {
   StatusIndicator,
   PriorityIndicator,
 } from "@/components/issue-indicators";
+import {
+  IssueContextMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { ShareViewDialog } from "@/components/share-view-dialog";
@@ -529,17 +533,17 @@ function ViewNameDialog({
   const tc = useTranslations("Common");
   const t = useTranslations("Board");
 
+  // Repartir de `initialName` à chaque ouverture. `open` est piloté depuis le
+  // parent (poser `renameTarget` suffit à ouvrir) : Radix n'appelle alors PAS
+  // `onOpenChange`, donc le semer là laissait le champ « Renommer » vide.
+  useEffect(() => {
+    if (!open) return;
+    setName(initialName);
+    setDescription("");
+  }, [open, initialName]);
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (next) {
-          setName(initialName);
-          setDescription("");
-        }
-        onOpenChange(next);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -663,6 +667,14 @@ export function BoardToolbar({
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
   const [shareTarget, setShareTarget] = useState<View | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<View | null>(null);
+  // Clic droit sur une pill (MIN-135) : la vue visée + le point d'ancrage du
+  // menu. C'est la vue CLIQUÉE, pas l'active — le menu « ⋯ », lui, reste sur
+  // l'active. `view: null` = la pill « Cycle », qui n'est pas une vue.
+  const [viewMenu, setViewMenu] = useState<{
+    view: View | null;
+    x: number;
+    y: number;
+  } | null>(null);
   const t = useTranslations("Board");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
@@ -714,6 +726,54 @@ export function BoardToolbar({
     });
   };
 
+  // ── Menu contextuel d'une pill (MIN-135) ────────────────────────────────
+  // Les mêmes entrées que le bouton « ⋯ », mais portées par la vue cliquée.
+  // Les dialogs (renommer / partager / supprimer) plus bas acceptent déjà
+  // n'importe quelle vue, comme les handlers de useBoardViews.
+  // Toute pill ouvre le menu, y compris « Mes tickets » et « Cycle » : la liste
+  // d'actions est la même partout, ce qui ne s'applique pas y est grisé. Un
+  // menu qui apparaît parfois seulement se lit comme un bug.
+  const openViewMenu = (view: View | null, e: React.MouseEvent) => {
+    e.preventDefault();
+    setViewMenu({ view, x: e.clientX, y: e.clientY });
+  };
+  const viewMenuActions = useMemo<ContextMenuAction[]>(() => {
+    if (!viewMenu) return [];
+    const view = viewMenu.view;
+    // Ni la pill « Cycle » (pas une vue) ni la vue système ne se renomment ou
+    // ne se suppriment ; la vue système se partage, la pill « Cycle » non.
+    const editable = view !== null && view.kind !== "my";
+    const actions: ContextMenuAction[] = [
+      {
+        id: "rename",
+        label: t("renameView"),
+        icon: <Pencil className="size-4" />,
+        disabled: !editable,
+        onSelect: () => view && setRenameTarget(view),
+      },
+    ];
+    if (withShare) {
+      actions.push({
+        id: "share",
+        label: t("shareView"),
+        icon: <Share2 className="size-4" />,
+        disabled: view === null,
+        onSelect: () => view && setShareTarget(view),
+      });
+    }
+    actions.push({
+      id: "delete",
+      label: t("deleteView"),
+      icon: <Trash2 className="size-4" />,
+      variant: "destructive",
+      separatorBefore: true,
+      // Un board garde au moins une vue custom (même règle que le « ⋯ »).
+      disabled: !editable || customCount <= 1,
+      onSelect: () => view && setDeleteTarget(view),
+    });
+    return actions;
+  }, [viewMenu, withShare, customCount, t]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -741,6 +801,7 @@ export function BoardToolbar({
                       active={cycleTab.active}
                       external={cycleTab.external}
                       onSelect={cycleTab.onSelect}
+                      onContextMenu={(e) => openViewMenu(null, e)}
                     />
                   ) : null;
                 }
@@ -753,6 +814,7 @@ export function BoardToolbar({
                     active={v.id === activeViewId}
                     generating={generatingViewIds.has(v.id)}
                     onSelect={() => onSelectView(v.id)}
+                    onContextMenu={(e) => openViewMenu(v, e)}
                   />
                 );
               })}
@@ -990,6 +1052,12 @@ export function BoardToolbar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <IssueContextMenu
+        position={viewMenu ? { x: viewMenu.x, y: viewMenu.y } : null}
+        onClose={() => setViewMenu(null)}
+        actions={viewMenuActions}
+        searchable={false}
+      />
       <ShareViewDialog
         view={shareTarget}
         open={shareTarget !== null}
@@ -1021,11 +1089,16 @@ function ViewChip({
   active,
   generating,
   onSelect,
+  onContextMenu,
 }: {
   view: View;
   active: boolean;
   generating: boolean;
   onSelect: () => void;
+  /** Clic droit sur la pill : ouvre le menu d'actions de CETTE vue (MIN-135).
+      Le MouseSensor de dnd-kit ignore le bouton droit, la réorganisation par
+      glissement n'est donc pas concernée. */
+  onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const t = useTranslations("Board");
   // The system view's label follows the viewer's language (the stored name is
@@ -1042,6 +1115,7 @@ function ViewChip({
       {...attributes}
       {...listeners}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       title={generating ? t("viewGenerating") : undefined}
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
@@ -1062,10 +1136,13 @@ function CycleTab({
   active,
   external,
   onSelect,
+  onContextMenu,
 }: {
   active: boolean;
   external?: boolean;
   onSelect: () => void;
+  /** Clic droit : le même menu que les vues, entièrement grisé (MIN-135). */
+  onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const t = useTranslations("Board");
   const { setNodeRef, style, attributes, listeners, isDragging } =
@@ -1078,6 +1155,7 @@ function CycleTab({
       {...attributes}
       {...listeners}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       <IterationCw className="size-3 shrink-0" aria-hidden />

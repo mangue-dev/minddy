@@ -192,6 +192,8 @@ export default function ProjectSettingsPage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t("iconLabel")}</span>
+            {/* Le projet existe : chaque geste écrit tout de suite et le cache
+                `projects` rafraîchi rend la nouvelle icône — rien à retenir ici. */}
             <ProjectIconPicker
               projectId={project.id}
               seed={project.id}

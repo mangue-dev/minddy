@@ -1,5 +1,6 @@
 "use client";
 
+import type { ProjectIconChoice } from "@/components/project-icon-picker";
 import type { RepoProviderId } from "./repo-providers";
 
 /**
@@ -35,10 +36,12 @@ export interface ProjectDraft {
   name: string;
   key: string;
   keyTouched: boolean;
-  /** Site dont on importera le favicon à la création (null = orbe générée). */
-  iconSiteUrl: string | null;
-  /** URL distante du favicon, pour l'aperçu seulement. */
-  iconPreviewUrl: string | null;
+  /**
+   * L'icône choisie, à rejouer à la création. Un fichier y voyage en data URL
+   * WebP déjà compressée par le serveur — quelques dizaines de Ko, largement
+   * dans ce que sessionStorage accepte.
+   */
+  icon: ProjectIconChoice;
   repo: DraftRepo | null;
   feedbackEnabled: boolean;
   smartAssignEnabled: boolean;
@@ -85,7 +88,16 @@ export function readProjectDraft(): ProjectDraft | null {
   ) {
     return null;
   }
-  return draft;
+  // Un brouillon écrit par une version précédente n'a pas ce champ : le projet
+  // vaut mieux sans icône qu'un wizard qui plante en le relisant.
+  return { ...draft, icon: normalizeIconChoice(draft.icon) };
+}
+
+function normalizeIconChoice(value: unknown): ProjectIconChoice {
+  const choice = value as ProjectIconChoice | undefined;
+  if (choice?.kind === "site" && typeof choice.siteUrl === "string") return choice;
+  if (choice?.kind === "file" && typeof choice.previewUrl === "string") return choice;
+  return { kind: "none" };
 }
 
 export function clearProjectDraft(): void {

@@ -54,12 +54,29 @@ export async function importProjectIconApi(
   id: string,
   siteUrl: string
 ): Promise<{ icon_url: string }> {
+  trackEvent("project_icon_changed", { kind: "favicon" });
   return parseJson<{ icon_url: string }>(
     await fetch(`/api/projects/${id}/icon`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ site_url: siteUrl }),
     })
+  );
+}
+
+/**
+ * Envoie une image comme icône du projet (owner). Aucun redimensionnement côté
+ * client : le serveur compresse, et lui seul décide du format stocké.
+ */
+export async function uploadProjectIconApi(
+  id: string,
+  file: Blob
+): Promise<{ icon_url: string }> {
+  trackEvent("project_icon_changed", { kind: "upload" });
+  const body = new FormData();
+  body.append("file", file, "icon");
+  return parseJson<{ icon_url: string }>(
+    await fetch(`/api/projects/${id}/icon`, { method: "POST", body })
   );
 }
 
@@ -78,6 +95,30 @@ export async function previewProjectIconApi(
       body: JSON.stringify({ site_url: siteUrl }),
     })
   );
+}
+
+/**
+ * Même aperçu, pour un fichier : renvoie l'image compressée en data URL. Le
+ * wizard la garde en brouillon et {@link uploadProjectIconDataUrlApi} la rejoue
+ * une fois le projet créé.
+ */
+export async function previewProjectIconFileApi(
+  file: Blob
+): Promise<{ icon_url: string }> {
+  const body = new FormData();
+  body.append("file", file, "icon");
+  return parseJson<{ icon_url: string }>(
+    await fetch("/api/account/project-icon", { method: "POST", body })
+  );
+}
+
+/** Rejoue une data URL d'aperçu comme icône du projet fraîchement créé. */
+export async function uploadProjectIconDataUrlApi(
+  id: string,
+  dataUrl: string
+): Promise<{ icon_url: string }> {
+  const blob = await (await fetch(dataUrl)).blob();
+  return uploadProjectIconApi(id, blob);
 }
 
 /** Retire l'icône du projet — retour à l'orbe générée (owner). */

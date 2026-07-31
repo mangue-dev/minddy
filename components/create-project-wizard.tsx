@@ -29,7 +29,10 @@ import {
   startAccountGitConnectApi,
 } from "@/lib/git-integration-api";
 import { useGitConnectionsQuery } from "@/lib/use-git-connections-query";
-import { importProjectIconApi } from "@/lib/projects-api";
+import {
+  importProjectIconApi,
+  uploadProjectIconDataUrlApi,
+} from "@/lib/projects-api";
 import {
   clearProjectDraft,
   saveProjectDraft,
@@ -40,7 +43,10 @@ import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { SearchSelect } from "@/components/search-select";
 import { ProjectOrb } from "@/components/project-orb";
-import { ProjectIconPicker } from "@/components/project-icon-picker";
+import {
+  ProjectIconPicker,
+  type ProjectIconChoice,
+} from "@/components/project-icon-picker";
 import { WizardStepper } from "@/components/wizard-stepper";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
@@ -116,9 +122,11 @@ export function CreateProjectWizard({
   const [key, setKey] = useState("");
   const [keyTouched, setKeyTouched] = useState(false);
 
-  // Étape « Icône » : favicon résolu pour l'aperçu, site à ré-importer après.
-  const [iconPreviewUrl, setIconPreviewUrl] = useState<string | null>(null);
-  const [iconSiteUrl, setIconSiteUrl] = useState<string | null>(null);
+  // Étape « Icône » : rien n'est stocké tant que le projet n'existe pas — on
+  // garde de quoi rejouer le choix à la création (favicon à ré-importer, ou
+  // image déjà compressée à envoyer).
+  const [icon, setIcon] = useState<ProjectIconChoice>({ kind: "none" });
+  const iconPreviewUrl = icon.kind === "none" ? null : icon.previewUrl;
 
   // Étape « Dépôt git » — tout au niveau compte, aucun projet en jeu.
   const { connections, providers } = useGitConnectionsQuery(open);
@@ -145,8 +153,7 @@ export function CreateProjectWizard({
     setName("");
     setKey("");
     setKeyTouched(false);
-    setIconPreviewUrl(null);
-    setIconSiteUrl(null);
+    setIcon({ kind: "none" });
     setConnecting(null);
     setActiveConnectionId(null);
     setCandidates(null);
@@ -165,8 +172,7 @@ export function CreateProjectWizard({
     setName(draft.name);
     setKey(draft.key);
     setKeyTouched(draft.keyTouched);
-    setIconPreviewUrl(draft.iconPreviewUrl);
-    setIconSiteUrl(draft.iconSiteUrl);
+    setIcon(draft.icon);
     setRepo(draft.repo);
     setFeedbackEnabled(draft.feedbackEnabled);
     setSmartAssignEnabled(draft.smartAssignEnabled);
@@ -267,8 +273,7 @@ export function CreateProjectWizard({
     name,
     key,
     keyTouched,
-    iconSiteUrl,
-    iconPreviewUrl,
+    icon,
     repo,
     feedbackEnabled,
     smartAssignEnabled,
@@ -331,7 +336,7 @@ export function CreateProjectWizard({
 
     clearProjectDraft();
     track("project_created", {
-      has_icon: !!iconSiteUrl,
+      has_icon: icon.kind !== "none",
       has_git_link: !!repo,
     });
 
@@ -348,8 +353,14 @@ export function CreateProjectWizard({
       }
     };
 
-    if (iconSiteUrl) {
-      await enrich("icon", () => importProjectIconApi(created.id, iconSiteUrl));
+    if (icon.kind === "site") {
+      await enrich("icon", () => importProjectIconApi(created.id, icon.siteUrl));
+    } else if (icon.kind === "file") {
+      // L'aperçu est l'image compressée elle-même : la poser sur le projet ne
+      // demande rien de plus que de la renvoyer telle quelle.
+      await enrich("icon", () =>
+        uploadProjectIconDataUrlApi(created.id, icon.previewUrl)
+      );
     }
     if (repo) {
       const linked = await enrich("git bind", () =>
@@ -550,10 +561,7 @@ export function CreateProjectWizard({
                       projectId={null}
                       seed={draftId}
                       iconUrl={iconPreviewUrl}
-                      onChanged={(previewUrl, site) => {
-                        setIconPreviewUrl(previewUrl);
-                        setIconSiteUrl(site);
-                      }}
+                      onChanged={setIcon}
                     />
                   )}
 

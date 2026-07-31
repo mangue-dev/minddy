@@ -2,23 +2,68 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { FaviconError, resolveFavicon } from "@/lib/server/favicon";
+import {
+  compressIconFile,
+  IconFileError,
+  MAX_ICON_UPLOAD_BYTES,
+} from "@/lib/server/project-icon";
 
 /**
- * POST /api/account/project-icon — { site_url } → { icon_url }
+ * POST /api/account/project-icon → { icon_url }
+ *  - multipart `file` → compresse l'image et renvoie une data URL WebP.
+ *  - { site_url } → résout le favicon et renvoie son URL distante.
  *
- * Aperçu du favicon d'un site, SANS projet et SANS rien stocker : le wizard de
- * création (MIN-62) montre l'icône à l'étape « Icône » alors que le projet
- * n'existe pas encore, et c'est seulement à la création que l'import réel
- * (`/api/projects/[id]/icon`) copie le fichier dans le bucket.
+ * Aperçu, SANS projet et SANS rien stocker : le wizard de création (MIN-62)
+ * montre l'icône à l'étape « Icône » alors que le projet n'existe pas encore,
+ * et c'est seulement à la création que l'écriture réelle
+ * (`/api/projects/[id]/icon`) la pose dans le bucket.
  *
- * `icon_url` est donc l'URL distante résolue, bonne pour un <img> d'aperçu et
- * assez courte pour tenir dans le brouillon de session — pas une URL stockée.
- * Le fetch passe par les mêmes gardes anti-SSRF que l'import.
+ * `icon_url` est donc bon pour un <img> d'aperçu et assez court pour tenir dans
+ * le brouillon de session — pas une URL stockée. Une image compressée pèse
+ * quelques dizaines de Ko : la porter en data URL évite d'écrire dans le bucket
+ * un fichier que l'abandon du wizard laisserait orphelin.
+ *
+ * Le fetch d'un site passe par les mêmes gardes anti-SSRF que l'import.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+
+  const isUpload = (request.headers.get("content-type") ?? "").includes(
+    "multipart/form-data"
+  );
+
+  if (isUpload) {
+    let file: unknown;
+    try {
+      file = (await request.formData()).get("file");
+    } catch {
+      return NextResponse.json({ error: t("iconInvalidFile") }, { status: 400 });
+    }
+    if (!(file instanceof File) || file.size === 0) {
+      return NextResponse.json({ error: t("iconInvalidFile") }, { status: 400 });
+    }
+    if (file.size > MAX_ICON_UPLOAD_BYTES) {
+      return NextResponse.json({ error: t("iconFileTooLarge") }, { status: 413 });
+    }
+    try {
+      const webp = await compressIconFile(Buffer.from(await file.arrayBuffer()));
+      return NextResponse.json({
+        icon_url: `data:image/webp;base64,${webp.toString("base64")}`,
+      });
+    } catch (err) {
+      if (err instanceof IconFileError) {
+        const key = err.key === "tooLarge" ? "iconFileTooLarge" : "iconInvalidFile";
+        return NextResponse.json(
+          { error: t(key) },
+          { status: err.key === "tooLarge" ? 413 : 400 }
+        );
+      }
+      console.error("[api/account/project-icon] compress failed:", err);
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+  }
 
   let body: unknown;
   try {

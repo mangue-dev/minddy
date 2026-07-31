@@ -2,8 +2,9 @@
 
 // Menu d'actions d'un ticket : un vrai dropdown Radix (le même que les dropdowns
 // classiques de l'app), décliné en deux ancrages qui partagent le même corps —
-//   • IssueContextMenu — ancré à la position du pointeur (clic droit sur une carte),
-//     avec un champ de recherche en tête pour filtrer les actions ;
+//   • IssueContextMenu — ancré à la position du pointeur (clic droit sur une carte,
+//     ou sur une pill de vue du board), avec un champ de recherche en tête pour
+//     filtrer les actions (désactivable sur les menus courts) ;
 //   • IssueActionsMenu — ancré à un trigger (le bouton « ⋯ » du panneau d'issue).
 // Une action portant des `children` devient un sous-menu en flyout latéral
 // (accordéon inline sur mobile, géré par mangue-ui).
@@ -41,6 +42,9 @@ export interface ContextMenuAction {
   separatorBefore?: boolean;
   /** `destructive` = rouge, pour les actions irréversibles (supprimer). */
   variant?: "default" | "destructive";
+  /** Entrée montrée mais inerte (l'action existe, elle n'est juste pas
+      possible ici — ex. supprimer la dernière vue d'un board). */
+  disabled?: boolean;
   /** Sous-actions : quand présentes, l'action devient un sous-menu en flyout
       au lieu de déclencher `onSelect`. */
   children?: ContextMenuAction[];
@@ -61,6 +65,7 @@ function LeafItem({ action }: { action: ContextMenuAction }) {
   return (
     <DropdownMenuItem
       variant={action.variant}
+      disabled={action.disabled}
       onSelect={() => action.onSelect?.()}
     >
       {action.icon}
@@ -200,11 +205,15 @@ export function IssueContextMenu({
   position,
   onClose,
   actions,
+  searchable = true,
 }: {
   /** Coordonnées viewport du clic droit ; null = menu fermé. */
   position: { x: number; y: number } | null;
   onClose: () => void;
   actions: ContextMenuAction[];
+  /** Champ de recherche en tête. À couper sur les menus de deux ou trois
+      entrées (pills de vues), où il ne ferait que du bruit. */
+  searchable?: boolean;
 }) {
   return (
     <DropdownMenu
@@ -238,7 +247,11 @@ export function IssueContextMenu({
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
-        <ActionMenuBody actions={actions} open={!!position} searchable />
+        <ActionMenuBody
+          actions={actions}
+          open={!!position}
+          searchable={searchable}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

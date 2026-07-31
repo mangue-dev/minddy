@@ -81,7 +81,7 @@ export interface AnalyticsEventProps {
   project_opened: { project_id: string };
   project_deleted: { project_id: string };
   project_updated: { field: string };
-  project_icon_changed: { kind: "emoji" | "upload" | "orb" };
+  project_icon_changed: { kind: "favicon" | "upload" | "orb" };
   project_setup_resumed: { step: string };
 
   // ── Tickets : création ──
