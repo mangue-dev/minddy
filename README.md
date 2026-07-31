@@ -72,3 +72,5 @@ npm run deploy -- patch   # non-interactive: bump patch (or minor/major/none)
    it can't be set from `vercel.json`. **Until you change it, pushes to `main`
    still deploy to production**, so do this before (or with) your first
    `npm run deploy`.
+
+PR humaine sans référence de ticket.
