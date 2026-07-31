@@ -1218,7 +1218,12 @@
     "createdInProjectToast": "Objective created in {project}.",
     "entity": "Objective",
     "leadFieldLabel": "Lead",
-    "viewLinkedIssues": "View {issues}"
+    "viewLinkedIssues": "View {issues}",
+    "dictateFailed": "Numo couldn't process the dictation.",
+    "numoWorking": "Numo is filling the objective…",
+    "numoUpdating": "Numo is updating the objective…",
+    "dictationInFlight": "Dictation in progress — one moment.",
+    "dictateEditTooltip": "Edit the objective by voice"
   },
   "Drafts": {
     "recent": "Recent drafts",
@@ -2282,8 +2287,8 @@
         "desc": "Reads the search results and writes the answer. A small model is enough."
       },
       "dictate_model": {
-        "label": "Dictation → issue",
-        "desc": "Turns the voice transcript into an issue draft."
+        "label": "Dictation → draft",
+        "desc": "Turns the voice transcript into an issue, objective or task draft."
       },
       "transcription_model": {
         "label": "Speech-to-text",

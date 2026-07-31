@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -30,8 +30,13 @@ import {
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ObjectiveAttachmentsSection } from "@/components/objective-attachments-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { NumoIcon } from "@/components/numo-icon";
+import { AgentBeamOverlay } from "@/components/agent-beam";
 import { useAuth } from "@/lib/auth-context";
 import { useObjectiveTimeline } from "@/lib/use-objective-timeline";
+import { useObjectiveDictation } from "@/lib/use-objective-dictation";
+import { useAnalytics } from "@/lib/use-analytics";
 import { objectiveProgress } from "@/lib/use-objectives-query";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import {
@@ -41,7 +46,13 @@ import {
 } from "@/lib/objective-constants";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import type { Issue, Member, Objective, ObjectiveUpdateInput } from "@/lib/types";
+import type {
+  Issue,
+  Member,
+  Objective,
+  ObjectiveDraftPatch,
+  ObjectiveUpdateInput,
+} from "@/lib/types";
 
 // Bare (borderless) value-style trigger — matches the issue panel's property rows.
 const TRIGGER =
@@ -178,19 +189,106 @@ export function ObjectiveSidePanel({
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
+  const { track } = useAnalytics();
   const [name, setName] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // Remount the markdown editor when a different objective opens (it reads
-  // `value` only on mount and commits on blur).
+  // Remount the markdown editor when the description is rewritten under it
+  // (la dictée) — il ne lit `value` qu'au montage et ne commite qu'au blur.
   const [editorKey, setEditorKey] = useState(0);
+  /** Conteneur de l'éditeur : sert de repère de focus (voir l'effet ci-dessous). */
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  /** Dernière version de la description déjà reflétée à l'écran : distingue une
+      réécriture par Numo (à adopter) de l'écho de notre propre commit. */
+  const shownDescription = useRef("");
+  /** Retouché à la main depuis la dernière synchro : sans ce drapeau, un simple
+      aller-retour du focus recommiterait le reflet périmé du champ — autrement
+      dit annulerait ce que la dictée vient d'écrire. */
+  const descriptionEdited = useRef(false);
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
     useObjectiveTimeline(objective?.id ?? null);
 
   useEffect(() => {
     if (objective) setName(objective.name);
+    shownDescription.current = objective?.description ?? "";
+    descriptionEdited.current = false;
     setEditorKey((k) => k + 1);
   }, [objective?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // La dictée réécrit la description sous l'éditeur, qui ne relit pas `value` :
+  // l'adopter, c'est le remonter. Jamais pendant qu'on y écrit — une version
+  // refusée n'est PAS notée, elle reste « en attente » et le blur du conteneur
+  // la prend.
+  useEffect(() => {
+    const next = objective?.description ?? "";
+    if (
+      next !== shownDescription.current &&
+      !descriptionEdited.current &&
+      !descriptionRef.current?.contains(document.activeElement)
+    ) {
+      shownDescription.current = next;
+      setEditorKey((k) => k + 1);
+    }
+  }, [objective?.id, objective?.description]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply a dictated patch: one immediate objective update. The local name is
+  // synced here; the description comes back through the prop, and the effect
+  // above remounts the editor on it.
+  const applyDictated = (patch: ObjectiveDraftPatch) => {
+    if (!objective) return;
+    const updates: ObjectiveUpdateInput = {
+      ...patch,
+      ...(patch.description !== undefined
+        ? { description: patch.description.trim() || null }
+        : {}),
+    };
+    if (Object.keys(updates).length === 0) return;
+    void onUpdate(objective.id, updates).catch((err) =>
+      toast.error((err as Error).message)
+    );
+    if (patch.name !== undefined) setName(patch.name);
+  };
+
+  // Voice editing (Numo): dictated commands become immediate field updates.
+  // The draft fallbacks are for type-safety only — the mic lives inside the
+  // panel, so dictation never runs without an open objective.
+  const {
+    busy: numoBusy,
+    onTranscript,
+    reset: resetDictation,
+  } = useObjectiveDictation({
+    projectId,
+    mode: "edit",
+    getDraft: () => ({
+      name: objective?.name ?? "",
+      description: objective?.description ?? "",
+      status: objective?.status ?? "planned",
+      lead_user_id: objective?.lead_user_id ?? null,
+      target_date: objective?.target_date ?? null,
+      color: objective?.color ?? null,
+    }),
+    applyPatch: applyDictated,
+  });
+
+  // A different objective (or a closed panel) = a fresh dictation session: drop
+  // the history and abort any in-flight request.
+  useEffect(() => {
+    resetDictation();
+  }, [objective?.id, resetDictation]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
+  // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
+  const [transcribing, setTranscribing] = useState(false);
+  const handleOpenChange = (next: boolean) => {
+    // La dictée édite CET objectif : le transcript, puis le patch de Numo, vont
+    // y atterrir. Fermer maintenant les jetterait — on refuse, en le disant (une
+    // Échap sans effet passerait pour une panne).
+    if (!next && (transcribing || numoBusy)) {
+      toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
+      return;
+    }
+    onOpenChange(next);
+  };
 
   const progress = useMemo(
     () => (objective ? objectiveProgress(objective.id, issues) : null),
@@ -222,7 +320,12 @@ export function ObjectiveSidePanel({
 
   const commitDescription = (markdown: string) => {
     const next = markdown.trim() || null;
-    if (next !== (objective.description ?? null)) void patch({ description: next });
+    descriptionEdited.current = false;
+    if (next === (objective.description ?? null)) return;
+    // Ce qu'on vient d'écrire est déjà à l'écran : le noter évite que son écho
+    // par la prop passe pour une réécriture distante et remonte l'éditeur.
+    shownDescription.current = next ?? "";
+    void patch({ description: next });
   };
 
   const handleDelete = async () => {
@@ -233,25 +336,54 @@ export function ObjectiveSidePanel({
 
   return (
     <>
-      <SidePanel open={open} onOpenChange={onOpenChange}>
+      <SidePanel open={open} onOpenChange={handleOpenChange}>
         <SidePanelContent
           onInteractOutside={keepOverlayOpenForPopper}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {/* Header: color dot · delete · close */}
+          {/* Header: color dot · dictate · delete · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
-            <SidePanelTitle asChild>
-              <span className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight">
-                <span
-                  className="size-3 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: objective.color ?? "var(--muted-foreground)",
+            <div className="flex min-w-0 items-center gap-1">
+              <SidePanelTitle asChild>
+                <span className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight">
+                  <span
+                    className="size-3 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: objective.color ?? "var(--muted-foreground)",
+                    }}
+                    aria-hidden
+                  />
+                  <span className="truncate text-muted-foreground">{t("entity")}</span>
+                </span>
+              </SidePanelTitle>
+              {/* Voice editing — Numo turns dictated commands into field updates */}
+              {numoBusy ? (
+                <>
+                  <span
+                    className="inline-flex size-8 shrink-0 items-center justify-center"
+                    aria-hidden
+                  >
+                    <NumoIcon
+                      state="thinking"
+                      className="size-5 text-primary animate-in fade-in duration-300"
+                    />
+                  </span>
+                  <span className="sr-only" role="status">
+                    {t("numoUpdating")}
+                  </span>
+                </>
+              ) : (
+                <DictateButton
+                  onTranscription={(text) => {
+                    track("objective_dictation_used", { surface: "side_panel" });
+                    onTranscript(text);
                   }}
-                  aria-hidden
+                  tooltipLabel={t("dictateEditTooltip")}
+                  shortcutKey="mod+shift+d"
+                  onProcessingChange={setTranscribing}
                 />
-                <span className="truncate text-muted-foreground">{t("entity")}</span>
-              </span>
-            </SidePanelTitle>
+              )}
+            </div>
             <div className="-mr-1.5 flex items-center gap-0.5">
               <Button
                 variant="ghost"
@@ -290,12 +422,34 @@ export function ObjectiveSidePanel({
               placeholder={t("namePlaceholder")}
             />
 
-            <MarkdownEditor
-              key={`${objective.id}:${editorKey}`}
-              value={objective.description ?? ""}
-              onCommit={commitDescription}
-              placeholder={t("descriptionPlaceholder")}
-            />
+            {/* Le conteneur sert de repère de focus : tant que le curseur est
+              DANS l'éditeur, une réécriture par Numo ne le remonte pas — et au
+              moment où il en sort, l'éditeur prend la version en attente (sans
+              frappe, le blur ne commite rien, donc rien ne rejouerait l'effet). */}
+            <div
+              ref={descriptionRef}
+              onBlur={() => {
+                const description = objective.description ?? "";
+                if (
+                  descriptionEdited.current ||
+                  description === shownDescription.current
+                ) {
+                  return;
+                }
+                shownDescription.current = description;
+                setEditorKey((k) => k + 1);
+              }}
+            >
+              <MarkdownEditor
+                key={`${objective.id}:${editorKey}`}
+                value={objective.description ?? ""}
+                onCommit={commitDescription}
+                onEdit={() => {
+                  descriptionEdited.current = true;
+                }}
+                placeholder={t("descriptionPlaceholder")}
+              />
+            </div>
 
             <ObjectiveAttachmentsSection
               objectiveId={objective.id}
@@ -375,6 +529,11 @@ export function ObjectiveSidePanel({
               }
             />
           </SidePanelFooter>
+
+          {/* Numo reprend la dictée : le liseré souligne le bord du panneau
+            pendant qu'il travaille — même signal que l'icône Numo « thinking »
+            qui remplace le micro dans l'en-tête. */}
+          <AgentBeamOverlay active={numoBusy} />
         </SidePanelContent>
       </SidePanel>
 

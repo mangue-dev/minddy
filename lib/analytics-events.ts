@@ -340,6 +340,7 @@ export interface AnalyticsEventProps {
   objective_opened: NoProps;
   objective_updated: { field: string };
   objective_deleted: NoProps;
+  objective_dictation_used: { surface: "create_dialog" | "side_panel" };
   admin_dashboard_viewed: { tab: string };
   external_link_clicked: { destination: string };
 }
@@ -585,6 +586,7 @@ const EVENT_NAMES = [
   "objective_opened",
   "objective_updated",
   "objective_deleted",
+  "objective_dictation_used",
   "admin_dashboard_viewed",
   "external_link_clicked",
 ] as const satisfies readonly AnalyticsEventName[];

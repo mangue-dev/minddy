@@ -262,6 +262,23 @@ export interface CreateObjectiveInput {
   lead_user_id?: string | null;
   target_date?: string | null;
   color?: string | null;
+  attachments?: AttachmentInput[];
+  /** Cross-project creation: files the browser uploaded under the SOURCE
+      project's storage prefix. Same rule as issues — a storage object can't be
+      referenced across projects, so the server COPIES each into the target. */
+  copy_attachments?: AttachmentInput[];
+}
+
+/** Field changes Numo applies to an objective from a voice transcript — the
+ *  objective twin of {@link IssueDraftPatch}. In the create dialog it patches
+ *  the client-side form; in the side panel the client saves it right away. */
+export interface ObjectiveDraftPatch {
+  name?: string;
+  description?: string;
+  status?: ObjectiveStatus;
+  lead_user_id?: string | null;
+  target_date?: string | null;
+  color?: string | null;
 }
 
 export interface ObjectiveUpdateInput {

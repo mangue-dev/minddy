@@ -220,11 +220,15 @@ function ObjectivesInner() {
         </div>
       </div>
 
+      {/* `projectId` n'est pas seulement l'étiquette du bouton : c'est le préfixe
+        de stockage des pièces jointes, la portée des brouillons locaux et le
+        projet que la route de dictée interroge. */}
       <ObjectiveDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         members={members}
         objective={null}
+        projectId={projectId}
         onCreate={createObjective}
         onUpdate={updateObjective}
       />

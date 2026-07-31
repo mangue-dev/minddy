@@ -50,6 +50,9 @@ export interface ObjectiveDraft extends DraftBase {
   lead_user_id: string | null;
   target_date: string | null;
   color: string | null;
+  /** Already-uploaded storage references (the bucket keeps them). Absent from
+      drafts saved before objectives took attachments — read it defensively. */
+  attachments?: AttachmentInput[];
 }
 
 export type DraftFor<K extends DraftKind> = K extends "issue"

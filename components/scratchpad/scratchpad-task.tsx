@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -15,6 +15,8 @@ import {
   CommandGroup,
   CommandItem,
   CommandSeparator,
+  CommandShortcut,
+  Kbd,
   cn,
   toast,
 } from "mangue-ui";
@@ -37,6 +39,7 @@ import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown"
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
+import { eventKey } from "@/lib/keyboard/event-key";
 
 /**
  * Ligne de titre markdown (niveau compris) de la SECTION dans laquelle vit le
@@ -182,12 +185,60 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   const CurrentStateIcon =
     STATE_CHOICES.find((c) => c.value === state)?.icon ?? Circle;
 
+  // Raccourcis au survol, comme sur une carte de ticket : ⇧A lance l'agent,
+  // ⇧P copie la ligne en prompt. Ils sont posés sur la TÂCHE seule — les
+  // sections gardent leurs boutons de survol, le carnet entier ses boutons
+  // d'en-tête, et aucun des deux n'a de raccourci.
+  //
+  // Le carnet est une surface éditable, où ⇧A c'est aussi « écrire un A ». La
+  // règle : la frappe l'emporte tant qu'on édite LA tâche survolée (caret
+  // dedans, éditeur au focus) — écrire « Ajouter » sur sa propre ligne ne lance
+  // donc jamais rien.
+  const wrapperRef = useRef<HTMLLIElement>(null);
+  const [hovered, setHovered] = useState(false);
+  // Tout ce qui bouge d'un rendu à l'autre (les actions relisent le contenu du
+  // nœud, `getPos` sa position) passe par une ref : le listener reste alors
+  // abonné d'un bout à l'autre du survol au lieu de se réabonner à chaque frappe.
+  const liveRef = useRef({ copyLine, launchAgent, getPos });
+  liveRef.current = { copyLine, launchAgent, getPos };
+
+  useEffect(() => {
+    // Menu ouvert = on tape dans son champ de recherche : la lettre lui revient.
+    if (!hovered || menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = eventKey(e);
+      if (key !== "a" && key !== "p") return;
+      // Tâches imbriquées : entrer dans l'enfant ne fait pas sortir du parent,
+      // les deux se croient survolés. La cible, c'est la plus intérieure.
+      if (wrapperRef.current?.querySelector('li[data-type="taskItem"]:hover'))
+        return;
+      // On écrit DANS cette tâche-là : la lettre l'emporte sur le raccourci.
+      const pos = liveRef.current.getPos();
+      if (pos != null && editor.isFocused) {
+        const self = editor.state.doc.nodeAt(pos);
+        const { from, to } = editor.state.selection;
+        if (self && to >= pos && from <= pos + self.nodeSize) return;
+      }
+      // Le survol possède la combinaison : ni l'éditeur ni le dialog ne la voit.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (key === "a") liveRef.current.launchAgent();
+      else liveRef.current.copyLine();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [hovered, menuOpen, editor]);
+
   return (
     <NodeViewWrapper
+      ref={wrapperRef}
       as="li"
       data-type="taskItem"
       data-state={state}
       className="group/task flex items-start gap-2.5 rounded-[3px] px-1 hover:bg-muted/50"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onContextMenu={(e: MouseEvent) => {
         e.preventDefault();
         setMenuOpen(true);
@@ -302,6 +353,10 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
               >
                 <Bot />
                 {tScratch("launchAgent")}
+                {/* Mêmes touches que sur un ticket, affichées au même endroit. */}
+                <CommandShortcut>
+                  <Kbd size="sm">⇧A</Kbd>
+                </CommandShortcut>
               </CommandItem>
               <CommandItem
                 value={tScratch("promoteToIssue")}
@@ -326,6 +381,9 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
               >
                 <Copy />
                 {tScratch("copyLine")}
+                <CommandShortcut>
+                  <Kbd size="sm">⇧P</Kbd>
+                </CommandShortcut>
               </CommandItem>
             </CommandGroup>
           )}
@@ -341,6 +399,11 @@ export const ScratchpadTaskItem = TaskItem.extend({
       ...this.parent?.(),
       state: {
         default: "pending" as PlanTaskState,
+        // Entrée en bout de tâche = une tâche NEUVE, donc « à faire » : sans
+        // ça, `splitListItem` recopie les attributs de la ligne coupée et la
+        // suivante naît déjà cochée (barrée, comptée comme faite). C'est le
+        // même réglage que l'attribut `checked` de TaskItem en amont.
+        keepOnSplit: false,
         parseHTML: (element: HTMLElement) =>
           element.getAttribute("data-state") ?? "pending",
         renderHTML: (attributes: { state?: string }) => ({

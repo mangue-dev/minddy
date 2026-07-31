@@ -5,6 +5,11 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
 import {
+  copyAttachmentsToProject,
+  insertAttachments,
+  parseAttachmentsInput,
+} from "@/lib/server/attachments";
+import {
   buildObjectiveFieldChangeEvents,
   insertEvents,
   stampMcpKey,
@@ -30,6 +35,7 @@ export type ObjectiveResult =
         | "nameRequired"
         | "invalidStatus"
         | "invalidDate"
+        | "attachmentInvalid"
         | "noFieldsToUpdate"
         | "projectNotFound"
         | "objectiveNotFound"
@@ -74,6 +80,24 @@ export async function createObjective({
     row.color = input.color ?? null;
   }
 
+  // Files the client already uploaded under this project's storage prefix, and
+  // — for cross-project creation — those uploaded under another project's,
+  // which get copied here first (same two-list scheme as create-issue).
+  const parsedAttachments = parseAttachmentsInput(
+    input.attachments,
+    `projects/${projectId}/`
+  );
+  if (parsedAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  }
+  const parsedCopyAttachments = parseAttachmentsInput(
+    input.copy_attachments,
+    "projects/"
+  );
+  if (parsedCopyAttachments === null) {
+    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  }
+
   const access = await getProjectAccess(actorId, projectId);
   if (!access) {
     return { ok: false, status: 404, errorKey: "projectNotFound" };
@@ -89,6 +113,25 @@ export async function createObjective({
   if (error) {
     console.error("[objectives] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  // Attachment rows — the objective exists from here on, so a failure must not
+  // fail the request (the files just don't get registered).
+  try {
+    const copied = await copyAttachmentsToProject(service, {
+      targetProjectId: projectId,
+      actorId,
+      attachments: parsedCopyAttachments,
+    });
+    await insertAttachments(service, {
+      projectId,
+      objectiveId: data.id as string,
+      commentId: null,
+      createdBy: actorId,
+      attachments: [...parsedAttachments, ...copied],
+    });
+  } catch (e) {
+    console.error("[objectives] attachments failed:", (e as Error).message);
   }
 
   const created: EventRow[] = [

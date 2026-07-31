@@ -1218,7 +1218,12 @@
     "createdInProjectToast": "Objectif créé dans {project}.",
     "entity": "Objectif",
     "leadFieldLabel": "Responsable",
-    "viewLinkedIssues": "Voir les {issues}"
+    "viewLinkedIssues": "Voir les {issues}",
+    "dictateFailed": "Numo n'a pas pu traiter la dictée.",
+    "numoWorking": "Numo remplit l'objectif…",
+    "numoUpdating": "Numo met à jour l'objectif…",
+    "dictationInFlight": "Dictée en cours — un instant.",
+    "dictateEditTooltip": "Modifier l'objectif à la voix"
   },
   "Drafts": {
     "recent": "Brouillons récents",
@@ -2282,8 +2287,8 @@
         "desc": "Lit les résultats de recherche et en tire la réponse. Un petit modèle suffit."
       },
       "dictate_model": {
-        "label": "Dictée → ticket",
-        "desc": "Transforme la transcription vocale en brouillon de ticket."
+        "label": "Dictée → brouillon",
+        "desc": "Transforme la transcription vocale en brouillon de ticket, d'objectif ou de tâche."
       },
       "transcription_model": {
         "label": "Transcription vocale",
