@@ -54,6 +54,12 @@ export interface ChangelogEntry {
 
 /** Du plus récent au plus ancien — c'est l'ordre d'affichage ET celui du flux. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
+  { id: "trash", date: "2026-07-31" },
+  { id: "import-issues", date: "2026-07-31" },
+  { id: "home-attention", date: "2026-07-31" },
+  { id: "zen-mode", date: "2026-07-31" },
+  { id: "account-data", date: "2026-07-31" },
+  { id: "agent-brief", date: "2026-07-31" },
   { id: "mcp-page", date: "2026-07-27" },
   { id: "localised-site", date: "2026-07-27" },
   { id: "search-everywhere", date: "2026-07-26" },
