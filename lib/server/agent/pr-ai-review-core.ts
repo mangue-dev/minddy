@@ -70,9 +70,10 @@ export interface AiReview {
  *  review confiante sur 200 fichiers survolés. */
 export const AI_REVIEW_DIFF_MAX_CHARS = 60_000;
 
-/** Budget d'UN fichier. Élision par le milieu : un lockfile de 30 000 lignes ne
- *  doit pas manger le budget des fichiers qui portent la logique. Les numéros de
- *  ligne survivent à l'élision — ils sont écrits ligne par ligne, pas déduits. */
+/** Budget d'UN fichier. Élision par le milieu, sur une FRONTIÈRE DE LIGNE
+ *  (`elideAnnotatedPatch`) : un lockfile de 30 000 lignes ne doit pas manger le
+ *  budget des fichiers qui portent la logique, et un numéro de ligne coupé en
+ *  deux vaut pire que pas de ligne du tout. */
 export const AI_REVIEW_FILE_MAX_CHARS = 12_000;
 
 /** Commentaires de ligne réellement déposés. Le reste descend dans la synthèse. */
@@ -257,6 +258,54 @@ export function annotatePatch(patch: string): string {
     }
   }
   return out.join("\n");
+}
+
+/**
+ * Élide un patch annoté en gardant des LIGNES ENTIÈRES — tête, marqueur, queue.
+ *
+ * `headTail` coupe au caractère : la queue reprend alors au milieu d'une ligne,
+ * et `+456│const x = compute();` se présente au modèle comme `56│const x = …`.
+ * Or le prompt lui demande précisément de RECOPIER le numéro imprimé plutôt que
+ * de compter — il recopierait 56, qui est un numéro parfaitement valide ailleurs
+ * dans le même diff : `resolveDiffPosition` l'accepterait, et le commentaire
+ * atterrirait sur une AUTRE ligne, sans que rien ne le signale. C'est exactement
+ * ce que tout le travail d'ancrage de ce module sert à éviter, donc la coupe se
+ * fait ici sur une frontière de ligne.
+ *
+ * Une ligne à elle seule plus longue que le budget (un fichier minifié, une data
+ * URL) est coupée par la FIN : son préfixe `+456│`, qui est en tête, survit —
+ * seul le code qui suit se perd, et le `…` le dit.
+ */
+export function elideAnnotatedPatch(patch: string, max: number): string {
+  if (patch.length <= max) return patch;
+  const lines = patch.split("\n");
+  const half = Math.max(1, Math.floor((max - 40) / 2));
+  const clip = (l: string) => (l.length <= half ? l : `${l.slice(0, half)} …`);
+
+  // La première ligne de chaque moitié entre toujours : un budget trop petit
+  // doit rendre une ligne lisible, pas rien.
+  const head: string[] = [];
+  let used = 0;
+  for (const line of lines) {
+    const kept = clip(line);
+    if (head.length > 0 && used + kept.length + 1 > half) break;
+    head.push(kept);
+    used += kept.length + 1;
+  }
+
+  const tail: string[] = [];
+  used = 0;
+  for (let i = lines.length - 1; i >= head.length; i--) {
+    const kept = clip(lines[i]);
+    if (tail.length > 0 && used + kept.length + 1 > half) break;
+    tail.unshift(kept);
+    used += kept.length + 1;
+  }
+
+  const elided = lines.length - head.length - tail.length;
+  return elided > 0
+    ? [...head, `… [${elided} lines elided] …`, ...tail].join("\n")
+    : [...head, ...tail].join("\n");
 }
 
 /**
@@ -458,7 +507,9 @@ export function buildReviewUserMessage(input: {
       skipped.push(`${fileHeading(file)} (no diff available)`);
       continue;
     }
-    const annotated = headTail(annotatePatch(patch), AI_REVIEW_FILE_MAX_CHARS);
+    // L'annotation D'ABORD, l'élision ensuite : les numéros sont calculés sur le
+    // patch complet, et la coupe tombe entre deux lignes — jamais dedans.
+    const annotated = elideAnnotatedPatch(annotatePatch(patch), AI_REVIEW_FILE_MAX_CHARS);
     const block = `### ${fileHeading(file)}\n\n\`\`\`diff\n${annotated}\n\`\`\``;
     if (block.length > budget && rendered.length > 0) {
       skipped.push(`${fileHeading(file)} (not shown — the diff is too large)`);

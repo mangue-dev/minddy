@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { resolveDiffPosition } from "./mr-position";
 import {
   AI_REVIEW_DIFF_MAX_CHARS,
+  AI_REVIEW_FILE_MAX_CHARS,
   AI_REVIEW_MAX_INLINE_COMMENTS,
   AI_REVIEW_NOTE_MAX_CHARS,
   annotatePatch,
   buildReviewSystemPrompt,
   buildReviewUserMessage,
+  elideAnnotatedPatch,
   formatReviewBody,
   normalizeFindingPath,
   parseAiReview,
@@ -98,7 +100,74 @@ describe("annotatePatch", () => {
   });
 });
 
+describe("elideAnnotatedPatch", () => {
+  /** Un patch d'un seul hunk, largement au-dessus du budget d'un fichier. */
+  const bigPatch = (count: number) =>
+    [
+      `@@ -1,${count} +1,${count} @@`,
+      ...Array.from({ length: count }, (_, i) => `+const value${i} = compute(${i}, "padding");`),
+    ].join("\n");
+
+  it("laisse un patch sous le budget exactement tel quel", () => {
+    expect(elideAnnotatedPatch(annotatePatch(PATCH), AI_REVIEW_FILE_MAX_CHARS)).toBe(
+      annotatePatch(PATCH),
+    );
+  });
+
+  /**
+   * LE test de cette fonction. Une coupe au caractère fait reprendre la queue au
+   * milieu d'une ligne : `+456│const x = …` devient `56│const x = …`, et le
+   * prompt demande au modèle de RECOPIER le numéro imprimé — 56 est valide
+   * ailleurs dans le diff, le commentaire atterrirait sur une autre ligne.
+   * Chaque ligne rendue doit donc porter son signe ET son numéro entier.
+   */
+  it("ne coupe jamais au milieu d'une ligne : tout numéro rendu est une ancre valide", () => {
+    const patch = bigPatch(600);
+    const elided = elideAnnotatedPatch(annotatePatch(patch), AI_REVIEW_FILE_MAX_CHARS);
+    expect(elided.length).toBeLessThanOrEqual(AI_REVIEW_FILE_MAX_CHARS);
+    expect(elided).toMatch(/\[\d+ lines elided\]/);
+
+    for (const line of elided.split("\n")) {
+      if (line.startsWith("@@") || line.startsWith("…")) continue;
+      const m = /^([ +-])(\d+)│/.exec(line);
+      // Un fragment (`56│…`, `│const …`) ne matche pas — c'est la faute cherchée.
+      expect(m, `ligne tronquée : ${JSON.stringify(line)}`).not.toBeNull();
+      const side = m![1] === "-" ? "LEFT" : "RIGHT";
+      expect(resolveDiffPosition(patch, Number(m![2]), side)).not.toBeNull();
+    }
+  });
+
+  /**
+   * Une ligne à elle seule plus longue que le budget (fichier minifié, data URL)
+   * ne peut pas entrer entière. Coupée par la FIN : le préfixe `+2│` survit, donc
+   * l'ancre reste juste — c'est le code qui manque, et le `…` le dit.
+   */
+  it("coupe une ligne trop longue par la fin, son numéro en tête", () => {
+    const patch = ["@@ -1,2 +1,2 @@", "+court", `+${"x".repeat(40_000)}`].join("\n");
+    const elided = elideAnnotatedPatch(annotatePatch(patch), AI_REVIEW_FILE_MAX_CHARS);
+    const lines = elided.split("\n");
+    expect(lines[lines.length - 1]).toMatch(/^\+2│x+ …$/);
+    expect(elided.length).toBeLessThanOrEqual(AI_REVIEW_FILE_MAX_CHARS);
+  });
+});
+
 describe("buildReviewUserMessage", () => {
+  it("montre un gros fichier sans jamais tronquer un numéro de ligne", () => {
+    const patch = [
+      "@@ -1,600 +1,600 @@",
+      ...Array.from({ length: 600 }, (_, i) => `+const value${i} = compute(${i}, "padding");`),
+    ].join("\n");
+    const message = buildReviewUserMessage({
+      title: "Gros fichier",
+      files: [{ filename: "lib/gros.ts", status: "modified", patch }],
+    });
+    const block = message.slice(message.indexOf("```diff") + 8, message.lastIndexOf("```"));
+    for (const line of block.split("\n")) {
+      if (!line || line.startsWith("@@") || line.startsWith("…")) continue;
+      expect(line, `ligne tronquée : ${JSON.stringify(line)}`).toMatch(/^[ +-]\d+│/);
+    }
+  });
+
   it("porte le titre, le ticket et le diff annoté", () => {
     const message = buildReviewUserMessage({
       title: "Corrige le compteur",
