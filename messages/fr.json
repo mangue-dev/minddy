@@ -2140,7 +2140,7 @@
   },
   "PullRequests": {
     "title": "Pull requests",
-    "emptyState": "L'agent Numo n'a encore ouvert aucune pull request.",
+    "emptyState": "Aucune pull request sur les dépôts liés pour l'instant.",
     "noSelection": "Sélectionnez une pull request.",
     "backToList": "Retour à la liste",
     "filterOpen": "Ouvertes",
@@ -2224,7 +2224,14 @@
     "checksPending": "Checks en cours · {passing}/{total} réussis",
     "checksUnavailable": "Checks CI indisponibles — l'app minddy n'a pas la permission de les lire.",
     "approvals": "{count, plural, one {# approbation} other {# approbations}}",
-    "changesRequestedCount": "{count, plural, one {# demande de changements} other {# demandes de changements}}"
+    "changesRequestedCount": "{count, plural, one {# demande de changements} other {# demandes de changements}}",
+    "filterByAuthor": "Tous les auteurs",
+    "filterNumoOnly": "Ouvertes par l'agent Numo",
+    "openedBy": "Ouverte par {login}",
+    "numoAuthor": "Agent Numo",
+    "noLinkedIssue": "Aucun ticket lié",
+    "loadMore": "En voir plus",
+    "listTruncated": "Le dépôt a plus de pull requests que minddy n'en liste d'un coup — les plus anciennes manquent."
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",

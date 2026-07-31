@@ -24,6 +24,7 @@ import {
   fetchPrFileSourceApi,
   postPrReviewCommentApi,
   type ApiError,
+  type PrEndpoint,
   type PullRequestFile,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
@@ -215,7 +216,7 @@ function PrDiffFile({
   file,
   parsed,
   viewType,
-  runId,
+  endpoint,
   prUrl,
   provider,
   readOnly,
@@ -227,7 +228,7 @@ function PrDiffFile({
   file: PullRequestFile;
   parsed?: FileData;
   viewType: ViewType;
-  runId: string;
+  endpoint: PrEndpoint;
   prUrl?: string | null;
   provider?: RepoProviderId;
   /** Lecture seule : pas de bouton « + » de commentaire dans la gouttière. */
@@ -252,7 +253,7 @@ function PrDiffFile({
     Record<string, { line: number; side: "LEFT" | "RIGHT" }>
   >({});
   const [postingKey, setPostingKey] = useState<string | null>(null);
-  const replies = useReviewReplies(runId, onCommentPosted);
+  const replies = useReviewReplies(endpoint, onCommentPosted);
 
   // Un fichier ajouté n'a pas de version de base : son patch EST déjà le fichier
   // entier, il n'y a rien à déplier.
@@ -272,7 +273,7 @@ function PrDiffFile({
       if (loading) return;
       setLoading(true);
       setFailed(false);
-      fetchPrFileSourceApi(runId, basePathOf(file))
+      fetchPrFileSourceApi(endpoint, basePathOf(file))
         .then(({ content }) => {
           setSource(splitLines(content));
           setRanges((prev) => [...prev, range]);
@@ -280,7 +281,7 @@ function PrDiffFile({
         .catch(() => setFailed(true))
         .finally(() => setLoading(false));
     },
-    [source, loading, runId, file],
+    [source, loading, endpoint, file],
   );
 
   const hunks = useMemo(() => {
@@ -338,7 +339,7 @@ function PrDiffFile({
       if (!anchor || !body || postingKey) return;
       setPostingKey(key);
       try {
-        await postPrReviewCommentApi(runId, {
+        await postPrReviewCommentApi(endpoint, {
           body,
           // Un commentaire de review s'adresse au chemin ACTUEL du fichier, même
           // renommé (contrairement au dépliage, qui lit la version de base).
@@ -359,7 +360,7 @@ function PrDiffFile({
         setPostingKey(null);
       }
     },
-    [openAnchors, drafts, postingKey, runId, file.filename, closeComposer, onCommentPosted, t],
+    [openAnchors, drafts, postingKey, endpoint, file.filename, closeComposer, onCommentPosted, t],
   );
 
   /**
@@ -553,7 +554,7 @@ const noop = () => {};
 
 export function PrDiff({
   files,
-  runId,
+  endpoint,
   prUrl,
   provider,
   readOnly = false,
@@ -563,7 +564,7 @@ export function PrDiff({
 }: {
   files: PullRequestFile[];
   /** Run porteur du diff — sert à charger la version base d'un fichier au dépliage. */
-  runId: string;
+  endpoint: PrEndpoint;
   prUrl?: string | null;
   /** Provider du dépôt (vocabulaire des liens « Voir sur … ») — défaut GitHub. */
   provider?: RepoProviderId;
@@ -610,7 +611,7 @@ export function PrDiff({
     return map;
   }, [files]);
 
-  const orphanReplies = useReviewReplies(runId, onCommentPosted);
+  const orphanReplies = useReviewReplies(endpoint, onCommentPosted);
 
   if (files.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noDiff")}</p>;
@@ -655,7 +656,7 @@ export function PrDiff({
             file={f}
             parsed={f.patch ? parsedByPath.get(f.filename) : undefined}
             viewType={viewType}
-            runId={runId}
+            endpoint={endpoint}
             prUrl={prUrl}
             provider={provider}
             readOnly={readOnly}

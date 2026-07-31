@@ -110,6 +110,7 @@ import {
 } from "./prompt";
 import { resolveAgentApiKey, getModelContextWindow, supportsImageInput } from "./model";
 import { forgeFor, isForgeApiError, type Forge } from "./forge";
+import { prStateFromRef, upsertPullRequest } from "./pull-requests";
 import type { PullRequestRef } from "./pr";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
@@ -1331,6 +1332,28 @@ export async function executeAgentRun(
         pr_number: pr.number,
         pr_url: pr.url,
         pr_state: prState.state,
+      });
+      // La PR est une ENTITÉ (MIN-143) : elle entre dans `pull_requests` ici,
+      // sans attendre l'écho du webhook — qui n'arrive jamais en dev, et que la
+      // page Pull Requests lit désormais au lieu d'`agent_runs`. Le run, lui, est
+      // la meilleure source du ticket : il le SAIT, là où l'ingestion webhook
+      // doit le déduire du nom de branche.
+      await upsertPullRequest({
+        provider: target.provider,
+        repoFullName: target.repoFullName,
+        number: pr.number,
+        state: prStateFromRef(pr),
+        url: pr.url,
+        title: pr.title ?? null,
+        authorLogin: pr.user?.login ?? null,
+        authorAvatarUrl: pr.user?.avatar_url ?? null,
+        headBranch: pr.head ?? workBranch,
+        baseBranch: pr.base ?? baseBranch,
+        headSha: pr.headSha ?? null,
+        openedAt: pr.createdAt ?? null,
+        mergedAt: pr.mergedAt ?? null,
+        updatedAt: pr.updatedAt,
+        issueId: run.issue_id,
       });
       // Run CARNET : aucun ticket à synchroniser ni à commenter — la PR vit dans
       // la conversation de la session (et sur la page Pull requests).

@@ -10,6 +10,7 @@ import {
   Spinner,
 } from "mangue-ui";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { runPrEndpoint } from "@/lib/agent-api";
 import { useAgentRunDiffQuery } from "@/lib/use-agent-runs";
 
 /**
@@ -73,7 +74,16 @@ export function AgentDiffSheet({
           ) : files.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("diffEmpty")}</p>
           ) : (
-            <PrDiff files={files} runId={runId} prUrl={url} provider={provider} readOnly />
+            // Vue diff de la CONVERSATION : elle n'a qu'un run à donner — sa
+            // session n'a parfois aucune PR (compare base…branche). Elle passe
+            // donc par la façade indexée par le run (MIN-143).
+            <PrDiff
+              files={files}
+              endpoint={runPrEndpoint(runId)}
+              prUrl={url}
+              provider={provider}
+              readOnly
+            />
           )}
         </div>
       </SheetContent>

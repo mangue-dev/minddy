@@ -12,7 +12,11 @@ import { ChevronDown, ChevronRight, CornerDownRight } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
-import { replyPrReviewCommentApi, type PullRequestReviewComment } from "@/lib/agent-api";
+import {
+  replyPrReviewCommentApi,
+  type PrEndpoint,
+  type PullRequestReviewComment,
+} from "@/lib/agent-api";
 import { displayLineOf } from "@/lib/pr-review-threads";
 import type { PrReviewThread } from "@/lib/pr-review-diff";
 
@@ -28,7 +32,7 @@ import type { PrReviewThread } from "@/lib/pr-review-diff";
  * fois, mais un brouillon PAR fil (changer de fil, ou rater un envoi, ne coûte
  * jamais le texte).
  */
-export function useReviewReplies(runId: string, onPosted: () => unknown) {
+export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) {
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [postingId, setPostingId] = useState<number | null>(null);
@@ -40,7 +44,7 @@ export function useReviewReplies(runId: string, onPosted: () => unknown) {
       setPostingId(threadId);
       try {
         // N'importe quel id du fil convient : GitHub rattache à la racine.
-        await replyPrReviewCommentApi(runId, { body, inReplyTo: threadId });
+        await replyPrReviewCommentApi(endpoint, { body, inReplyTo: threadId });
         setReplyingId(null);
         setDrafts(({ [threadId]: _cleared, ...rest }) => rest);
         await onPosted();
@@ -50,7 +54,7 @@ export function useReviewReplies(runId: string, onPosted: () => unknown) {
         setPostingId(null);
       }
     },
-    [drafts, postingId, runId, onPosted],
+    [drafts, postingId, endpoint, onPosted],
   );
 
   return {

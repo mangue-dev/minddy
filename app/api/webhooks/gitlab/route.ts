@@ -5,6 +5,11 @@ import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { recordForgePrActionEvents, notifyForgePrAction } from "@/lib/server/agent/pr-activity";
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
+import {
+  resolveIssueForPr,
+  upsertPullRequest,
+  type PullRequestState,
+} from "@/lib/server/agent/pull-requests";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { PrActionEventType } from "@/lib/pr-events";
 import type { AgentRun } from "@/lib/server/agent/runs";
@@ -15,6 +20,8 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *
  * On vérifie le secret (`X-Gitlab-Token`, comparaison à temps constant) puis on
  * traite le hook `Merge Request Hook` (object_kind `merge_request`) :
+ *  - toute action utile → INGÈRE la MR dans `pull_requests` (MIN-143 : de Numo
+ *    ou d'un humain, c'est le même fait du dépôt).
  *  - action `merge` / `close` / `reopen` / `open` → met à jour `agent_runs.pr_state`
  *    (la review in-app reflète le vrai état côté GitLab) ET, pour un merge/close
  *    fait DIRECTEMENT sur GitLab, trace « accepté / refusé la MR » dans l'activité
@@ -98,20 +105,86 @@ interface GitlabUserPayload {
   username?: string;
 }
 
+interface MergeRequestAttributes {
+  iid?: number;
+  action?: string;
+  state?: string;
+  url?: string;
+  /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
+  draft?: boolean;
+  work_in_progress?: boolean;
+  title?: string;
+  description?: string | null;
+  source_branch?: string;
+  target_branch?: string;
+  last_commit?: { id?: string } | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface MergeRequestEvent {
   object_kind?: string;
   user?: GitlabUserPayload;
   project?: { path_with_namespace?: string };
-  object_attributes?: {
-    iid?: number;
-    action?: string;
-    state?: string;
-    url?: string;
-    /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
-    draft?: boolean;
-  };
+  object_attributes?: MergeRequestAttributes;
   /** Champs modifiés par un `update` (présents seulement sur cette action). */
   changes?: { title?: unknown; draft?: unknown };
+}
+
+/**
+ * Actions qui décrivent un état de MR à INGÉRER (MIN-143) — plus large que
+ * `mapMrState`, qui ne pilote que le cycle de vie des runs et du ticket. `update`
+ * en fait partie : chez GitLab c'est aussi ce qui porte un nouveau push, un
+ * changement de titre ou la bascule brouillon.
+ */
+const INGESTED_MR_ACTIONS = new Set(["open", "reopen", "close", "merge", "update"]);
+
+/** État minddy de la MR telle que le payload la décrit. */
+function payloadMrState(attrs: MergeRequestAttributes): PullRequestState {
+  if (attrs.state === "merged") return "merged";
+  if (attrs.state === "closed") return "closed";
+  return attrs.draft || attrs.work_in_progress ? "draft" : "open";
+}
+
+/**
+ * Enregistre la MR chez minddy — de Numo ou d'un humain, c'est le même fait du
+ * dépôt (MIN-143).
+ *
+ * L'AUTEUR n'est renseigné que sur `open` : le `user` d'un hook GitLab est celui
+ * qui a DÉCLENCHÉ l'événement, pas l'auteur de la MR (`object_attributes` ne
+ * porte qu'un `author_id` numérique, sans login). Le laisser `undefined` sur les
+ * autres actions préserve ce qu'un balayage a déjà lu chez l'API plutôt que de
+ * l'écraser par le nom du dernier passant.
+ */
+async function ingestMergeRequest(
+  repoFullName: string,
+  iid: number,
+  attrs: MergeRequestAttributes,
+  actor: GitlabUserPayload | undefined,
+): Promise<void> {
+  const issueId = await resolveIssueForPr({
+    provider: "gitlab",
+    repoFullName,
+    branch: attrs.source_branch,
+    title: attrs.title,
+    body: attrs.description,
+  });
+  const isOpen = attrs.action === "open";
+  await upsertPullRequest({
+    provider: "gitlab",
+    repoFullName,
+    number: iid,
+    state: payloadMrState(attrs),
+    url: attrs.url ?? null,
+    title: attrs.title ?? null,
+    authorLogin: isOpen ? (actor?.username ?? null) : undefined,
+    headBranch: attrs.source_branch ?? null,
+    baseBranch: attrs.target_branch ?? null,
+    headSha: attrs.last_commit?.id ?? null,
+    openedAt: attrs.created_at ?? null,
+    updatedAt: attrs.updated_at,
+    issueId: issueId ?? undefined,
+  });
 }
 
 /**
@@ -150,12 +223,20 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const repoFullName = payload.project?.path_with_namespace;
   if (iid == null || !repoFullName) return;
 
+  // Ingestion D'ABORD (MIN-143) : la MR existe chez minddy, de Numo ou d'un
+  // humain. Elle doit passer AVANT le garde `runs.length === 0` plus bas, qui
+  // existe précisément pour ignorer les MR humaines — c'est ce garde qui les
+  // rendait invisibles.
+  if (INGESTED_MR_ACTIONS.has(action)) {
+    await ingestMergeRequest(repoFullName, iid, attrs, payload.user);
+  }
+
   const prState = mapMrState(payload);
   const actionType = prActionFor(action);
   if (!prState && !actionType) return;
 
-  // Runs concernés D'ABORD : le webhook du dépôt reçoit toutes les MR humaines,
-  // qui ne matchent aucun run d'agent — on s'arrête là avant toute autre requête
+  // Runs concernés : le webhook du dépôt reçoit toutes les MR humaines, qui ne
+  // matchent aucun run d'agent — on s'arrête là avant toute autre requête
   // (l'anti-écho compris). merge/close/reopen/open recalent pr_state au passage.
   const runs: SyncedPrRun[] = prState
     ? await syncPrState({

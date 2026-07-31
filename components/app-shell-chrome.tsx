@@ -312,14 +312,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   });
   const feedbackCount = feedbackCountData?.count ?? 0;
 
-  // Pull Requests (MIN-66) : compteur des PR ouvertes de Numo. La liste est
-  // globale (l'onglet pointe vers /pull-requests), donc on dérive le compte de
-  // la même query que la page — même « ouverte » que son filtre : open, draft,
-  // ou état pas encore synchronisé.
+  // Pull Requests (MIN-66) : compteur des PR ouvertes. La liste est globale
+  // (l'onglet pointe vers /pull-requests), donc on dérive le compte de la même
+  // query que la page, dans son état par défaut — le serveur ne renvoie déjà que
+  // les ouvertes (open + draft).
+  //
+  // Depuis MIN-143 il compte TOUTES les PR ouvertes du dépôt, pas seulement
+  // celles de Numo. C'est voulu : la pastille annonce ce que l'onglet contient,
+  // et la restreindre aux PR rattachées à un ticket rouvrirait exactement le
+  // problème que MIN-143 ferme — un écran qui montre la moitié du dépôt.
   const { pullRequests } = useAllPullRequestsQuery();
-  const openPrCount = pullRequests.filter(
-    (p) => p.pr_state === "open" || p.pr_state === "draft" || p.pr_state == null
-  ).length;
+  const openPrCount = pullRequests.length;
 
   // Smart Assign actif mais sans règles sur un de mes projets (MIN-31) : la
   // sidebar en porte la marque, et c'est l'accueil qui l'explique — l'entrée

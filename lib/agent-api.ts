@@ -408,8 +408,8 @@ export interface PullRequestFile {
   previous_filename?: string;
 }
 
-export async function fetchAgentRunPrApi(runId: string): Promise<AgentRunPrResponse> {
-  return parseJson(await fetch(`/api/agent-runs/${runId}/pr`));
+export async function fetchPullRequestApi(prId: string): Promise<AgentRunPrResponse> {
+  return parseJson(await fetch(`/api/pull-requests/${prId}`));
 }
 
 /**
@@ -427,26 +427,41 @@ export async function fetchAgentRunDiffApi(runId: string): Promise<{
 }
 
 /**
+ * Base des routes d'une pull request (MIN-143). Deux familles servent les mêmes
+ * gestes : celle indexée par la PR — la page Pull Requests, qui montre aussi les
+ * PR humaines — et la façade indexée par le run, que la vue diff de la
+ * conversation d'agent est seule à utiliser (elle n'a qu'un run à donner, sa
+ * session n'ayant parfois aucune PR).
+ */
+export type PrEndpoint = string;
+
+export function prEndpoint(prId: string): PrEndpoint {
+  return `/api/pull-requests/${prId}`;
+}
+
+export function runPrEndpoint(runId: string): PrEndpoint {
+  return `/api/agent-runs/${runId}/pr`;
+}
+
+/**
  * Version base d'un fichier de la PR (texte brut au merge base) — la source du
  * dépliage de contexte dans la vue diff. `path` = chemin côté base.
  */
 export async function fetchPrFileSourceApi(
-  runId: string,
+  endpoint: PrEndpoint,
   path: string,
 ): Promise<{ content: string }> {
-  return parseJson(
-    await fetch(`/api/agent-runs/${runId}/pr/file?path=${encodeURIComponent(path)}`),
-  );
+  return parseJson(await fetch(`${endpoint}/file?path=${encodeURIComponent(path)}`));
 }
 
-export async function actOnAgentPrApi(
-  runId: string,
+export async function actOnPullRequestApi(
+  prId: string,
   action: "merge" | "close" | "ready_for_review",
   method?: MergeMethod,
 ): Promise<{ ok: true; pr_state: string }> {
   trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
-    await fetch(`/api/agent-runs/${runId}/pr`, {
+    await fetch(prEndpoint(prId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, method }),
@@ -466,13 +481,13 @@ export type ReviewVerdict = "approve" | "request_changes" | "comment";
  * une App ne peut pas approuver sa propre pull request. Le verdict est enregistré
  * côté minddy quand même ; l'appelant doit le dire à l'utilisateur.
  */
-export async function submitPrReviewApi(
-  runId: string,
+export async function submitPullRequestReviewApi(
+  prId: string,
   input: { verdict: ReviewVerdict; message: string; relaunch?: boolean; model?: string },
 ): Promise<{ ok: true; published: "review" | "comment"; run?: { id: string } }> {
   trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
-    await fetch(`/api/agent-runs/${runId}/pr`, {
+    await fetch(prEndpoint(prId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "review", ...input }),
@@ -480,20 +495,29 @@ export async function submitPrReviewApi(
   );
 }
 
-// ── Page Pull Requests globale (MIN-66) ──────────────────────────────────────
+// ── Page Pull Requests globale (MIN-66, élargie par MIN-143) ─────────────────
+
+/** État de filtrage de la liste — servi par le SERVEUR (`?state=`). */
+export type PullRequestStateFilter = "open" | "merged" | "closed" | "all";
 
 export interface PullRequestListItem {
-  runId: string;
+  /** L'item EST la PR. Le run n'en est plus le porteur, juste une décoration. */
+  prId: string;
   pr_number: number;
   pr_url: string | null;
-  pr_state: "draft" | "open" | "merged" | "closed" | null;
+  pr_state: "draft" | "open" | "merged" | "closed";
   /** Provider du dépôt lié — pilote le vocabulaire PR/MR et les liens (MIN-69). */
   provider: RepoProviderId;
-  model: string | null;
+  title: string | null;
+  /** Qui l'a ouverte — ce qui distingue une PR de Numo d'une PR humaine. */
+  author: { login: string; avatar_url: string | null } | null;
+  head_branch: string | null;
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string } | null;
+  /** Run canonique de la PR, ou null : une PR humaine n'en a aucun. */
+  runId: string | null;
   /** Un run TRAVAILLE sur cette PR (queued/running) = « Numo retravaille ». */
   activeRunId: string | null;
   /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */
@@ -510,16 +534,35 @@ export interface PullRequestComment {
   html_url: string;
 }
 
-export async function fetchAllPullRequestsApi(): Promise<{
+export interface PullRequestListResponse {
   pullRequests: PullRequestListItem[];
-}> {
-  return parseJson(await fetch(`/api/pull-requests`));
+  /** Il en reste au-delà de `limit` — le bouton « en voir plus » de la page. */
+  hasMore: boolean;
+  /** La pagination d'une forge a été coupée : la liste n'est pas exhaustive. */
+  truncated: boolean;
 }
 
-export async function fetchPrCommentsApi(
-  runId: string,
+/**
+ * `pin` ÉPINGLE une PR dans la réponse même si elle tombe hors de la page — un
+ * deep-link vers une vieille PR ne doit pas dépendre de la profondeur du
+ * défilement. `{ pr }` pour un lien direct, `{ run }` pour les liens historiques
+ * de l'app (la sidebar d'issue et /agents parlent en run).
+ */
+export async function fetchAllPullRequestsApi(input: {
+  state: PullRequestStateFilter;
+  limit: number;
+  pin?: { pr?: string | null; run?: string | null };
+}): Promise<PullRequestListResponse> {
+  const params = new URLSearchParams({ state: input.state, limit: String(input.limit) });
+  if (input.pin?.pr) params.set("pr", input.pin.pr);
+  if (input.pin?.run) params.set("run", input.pin.run);
+  return parseJson(await fetch(`/api/pull-requests?${params}`));
+}
+
+export async function fetchPullRequestCommentsApi(
+  prId: string,
 ): Promise<{ comments: PullRequestComment[] }> {
-  return parseJson(await fetch(`/api/agent-runs/${runId}/comments`));
+  return parseJson(await fetch(`${prEndpoint(prId)}/comments`));
 }
 
 /**
@@ -547,9 +590,9 @@ export interface PullRequestReviewComment {
 }
 
 export async function fetchPrReviewCommentsApi(
-  runId: string,
+  endpoint: PrEndpoint,
 ): Promise<{ comments: PullRequestReviewComment[] }> {
-  return parseJson(await fetch(`/api/agent-runs/${runId}/pr/review-comments`));
+  return parseJson(await fetch(`${endpoint}/review-comments`));
 }
 
 /**
@@ -557,11 +600,11 @@ export async function fetchPrReviewCommentsApi(
  * Lève une `ApiError` de code `lineNotInDiff` si GitHub refuse d'ancrer la ligne.
  */
 export async function postPrReviewCommentApi(
-  runId: string,
+  endpoint: PrEndpoint,
   input: { body: string; path: string; line: number; side: "LEFT" | "RIGHT" },
 ): Promise<{ comment: PullRequestReviewComment }> {
   return parseJson(
-    await fetch(`/api/agent-runs/${runId}/pr/review-comments`, {
+    await fetch(`${endpoint}/review-comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -571,11 +614,11 @@ export async function postPrReviewCommentApi(
 
 /** Répond dans un fil de review (`inReplyTo` = n'importe quel id du fil). */
 export async function replyPrReviewCommentApi(
-  runId: string,
+  endpoint: PrEndpoint,
   input: { body: string; inReplyTo: number },
 ): Promise<{ comment: PullRequestReviewComment }> {
   return parseJson(
-    await fetch(`/api/agent-runs/${runId}/pr/review-comments`, {
+    await fetch(`${endpoint}/review-comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: input.body, in_reply_to: input.inReplyTo }),
@@ -695,12 +738,12 @@ export function isAgentRunAwaitingInput(
   return run.status === "completed" && run.awaiting_input === true;
 }
 
-export async function postPrCommentApi(
-  runId: string,
+export async function postPullRequestCommentApi(
+  prId: string,
   body: string,
 ): Promise<{ comment: PullRequestComment }> {
   return parseJson(
-    await fetch(`/api/agent-runs/${runId}/comments`, {
+    await fetch(`${prEndpoint(prId)}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body }),

@@ -5,13 +5,15 @@ import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
   fetchAgentRunEventsApi,
-  fetchAgentRunPrApi,
   fetchAgentSessionsApi,
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
-  fetchPrCommentsApi,
+  fetchPullRequestApi,
+  fetchPullRequestCommentsApi,
   fetchPrReviewCommentsApi,
   isAgentRunWorking,
+  type PrEndpoint,
+  type PullRequestStateFilter,
 } from "./agent-api";
 
 /** Clé de cache des runs d'agent d'une issue. */
@@ -103,10 +105,10 @@ const CHECKS_POLL_MS = 15_000;
  * figé sur « en cours » jusqu'à un rechargement de page, alors que c'est
  * précisément le moment où l'utilisateur regarde.
  */
-export function useAgentRunPrQuery(runId: string, enabled: boolean) {
+export function usePullRequestQuery(prId: string, enabled: boolean) {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["agent-run-pr", runId],
-    queryFn: () => fetchAgentRunPrApi(runId),
+    queryKey: ["pull-request", prId],
+    queryFn: () => fetchPullRequestApi(prId),
     enabled,
     refetchInterval: (query) =>
       query.state.data?.checks?.state === "pending" ? CHECKS_POLL_MS : false,
@@ -152,12 +154,32 @@ export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: b
   };
 }
 
-/** Clé de cache de la liste globale des PR (MIN-66). */
-export const allPullRequestsQueryKey = ["pull-requests", "all"] as const;
+/** Page de liste par défaut — le serveur borne à 500 (un dépôt actif a des
+    centaines de PR ; les charger toutes n'a jamais servi personne). */
+export const PULL_REQUESTS_PAGE = 100;
+
+/** PR à garantir dans la réponse malgré la pagination (deep-link). */
+export interface PullRequestPin {
+  pr?: string | null;
+  run?: string | null;
+}
+
+/** Clé de cache de la liste globale des PR (MIN-66) — variable par filtre/page. */
+export function allPullRequestsQueryKey(
+  state: PullRequestStateFilter = "open",
+  limit: number = PULL_REQUESTS_PAGE,
+  pin?: PullRequestPin,
+) {
+  return ["pull-requests", "all", state, limit, pin?.pr ?? null, pin?.run ?? null] as const;
+}
 
 /**
- * Liste globale des PR de Numo (page Pull Requests). Polling ~5 s tant qu'une PR
- * a un run actif (Numo retravaille dessus), sinon pas de polling.
+ * Liste globale des PR des dépôts liés (page Pull Requests). Polling ~5 s tant
+ * qu'une PR a un run actif (Numo retravaille dessus), sinon pas de polling.
+ *
+ * Le filtre d'ÉTAT est servi par le serveur (MIN-143) : depuis que la liste
+ * montre tout le dépôt et plus seulement les PR de Numo, « toutes » veut dire
+ * des centaines de lignes, dont personne ne regarde les fermées.
  *
  * `refetchOnMount: always` (même raison que useAgentSessionsQuery) : au repos la
  * liste ne poll plus ET l'app-shell garde ce cache chaud, donc un deep-link
@@ -166,10 +188,14 @@ export const allPullRequestsQueryKey = ["pull-requests", "all"] as const;
  * attend qu'un refetch en vol atterrisse avant de retomber sur la 1re PR de la
  * liste, sinon le deep-link ouvrirait la dernière PR au lieu de la bonne.
  */
-export function useAllPullRequestsQuery() {
+export function useAllPullRequestsQuery(
+  state: PullRequestStateFilter = "open",
+  limit: number = PULL_REQUESTS_PAGE,
+  pin?: PullRequestPin,
+) {
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: allPullRequestsQueryKey,
-    queryFn: fetchAllPullRequestsApi,
+    queryKey: allPullRequestsQueryKey(state, limit, pin),
+    queryFn: () => fetchAllPullRequestsApi({ state, limit, pin }),
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const prs = query.state.data?.pullRequests ?? [];
@@ -178,6 +204,8 @@ export function useAllPullRequestsQuery() {
   });
   return {
     pullRequests: data?.pullRequests ?? [],
+    hasMore: data?.hasMore ?? false,
+    truncated: data?.truncated ?? false,
     loading: isLoading,
     fetching: isFetching,
     refetch,
@@ -209,21 +237,25 @@ export function useAgentSessionsQuery() {
 }
 
 /** Fil de conversation d'une PR (commentaires GitHub). */
-export function usePrCommentsQuery(runId: string | null) {
+export function usePrCommentsQuery(prId: string | null) {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["pr-comments", runId],
-    queryFn: () => fetchPrCommentsApi(runId as string),
-    enabled: !!runId,
+    queryKey: ["pr-comments", prId],
+    queryFn: () => fetchPullRequestCommentsApi(prId as string),
+    enabled: !!prId,
   });
   return { comments: data?.comments ?? [], loading: isLoading, refetch };
 }
 
-/** Commentaires de review d'une PR (ceux ancrés à une ligne du diff). */
-export function usePrReviewCommentsQuery(runId: string | null) {
+/**
+ * Commentaires de review d'une PR (ceux ancrés à une ligne du diff). Prend une
+ * BASE de route et non un id : la vue diff sert la page Pull Requests (indexée
+ * par PR) comme la conversation d'agent (indexée par run) — cf. `PrEndpoint`.
+ */
+export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["pr-review-comments", runId],
-    queryFn: () => fetchPrReviewCommentsApi(runId as string),
-    enabled: !!runId,
+    queryKey: ["pr-review-comments", endpoint],
+    queryFn: () => fetchPrReviewCommentsApi(endpoint as PrEndpoint),
+    enabled: !!endpoint,
   });
   return { comments: data?.comments ?? [], loading: isLoading, refetch };
 }

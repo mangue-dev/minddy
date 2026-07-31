@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { getInstallationToken } from "@/lib/server/git/github-app";
 import { getGitlabAccessToken } from "@/lib/server/git/gitlab-app";
 import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
@@ -41,7 +42,11 @@ interface GitLinkRow {
   installation_id: number | null;
   repo_full_name: string | null;
   default_branch: string | null;
+  project_id?: string;
 }
+
+const GIT_LINK_COLUMNS =
+  "id, provider, connection_id, installation_id, repo_full_name, default_branch";
 
 /**
  * Cible de clone du projet, ou null s'il n'a aucun dépôt lié. Lève si le lien
@@ -53,13 +58,50 @@ export async function resolveRepoCloneTarget(
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("project_git_links")
-    .select("id, provider, connection_id, installation_id, repo_full_name, default_branch")
+    .select(GIT_LINK_COLUMNS)
     .eq("project_id", projectId)
     .maybeSingle();
 
   if (!data) return null;
-  const row = data as GitLinkRow;
+  return targetFromLink(data as GitLinkRow);
+}
 
+/**
+ * Cible de clone d'un DÉPÔT, pour un utilisateur donné (MIN-143).
+ *
+ * Une pull request n'appartient pas à un projet : elle appartient à un dépôt,
+ * que plusieurs projets peuvent lier. Il faut donc choisir un lien — et pas
+ * n'importe lequel : un lien dont le projet est ACCESSIBLE À CET UTILISATEUR.
+ * Sans ce filtre, on minterait un token au nom d'un projet qu'il ne peut pas
+ * voir : le membre d'un projet suffirait à agir sur un dépôt lié ailleurs.
+ *
+ * Renvoie null quand aucun projet accessible ne lie ce dépôt — l'appelant en
+ * fait un 404, comme partout ailleurs.
+ */
+export async function resolveRepoCloneTargetForRepo(opts: {
+  userId: string;
+  provider: RepoProvider;
+  repoFullName: string;
+}): Promise<RepoCloneTarget | null> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from("project_git_links")
+    .select(`${GIT_LINK_COLUMNS}, project_id`)
+    .eq("provider", opts.provider)
+    .eq("repo_full_name", opts.repoFullName);
+
+  const rows = (data ?? []) as GitLinkRow[];
+  for (const row of rows) {
+    if (!row.project_id) continue;
+    const access = await getProjectAccess(opts.userId, row.project_id);
+    if (!access) continue;
+    return targetFromLink(row);
+  }
+  return null;
+}
+
+/** Mint du token + URL de clone pour une ligne `project_git_links` déjà résolue. */
+async function targetFromLink(row: GitLinkRow): Promise<RepoCloneTarget> {
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
   }

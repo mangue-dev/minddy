@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Badge,
+  Button,
   Select,
   SelectContent,
   SelectItem,
@@ -16,30 +17,32 @@ import {
 } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { NumoIcon } from "@/components/numo-icon";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
-import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
+import { UserAvatar } from "@/components/user-avatar";
+import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { PullRequestListItem } from "@/lib/agent-api";
+import type { PullRequestListItem, PullRequestStateFilter } from "@/lib/agent-api";
 
 /**
- * Page Pull Requests (MIN-66) — vue liste/détail façon triage : à gauche toutes
- * les PR de Numo (tous projets accessibles), à droite le diff + commentaires +
- * actions. Alimentée par /api/pull-requests (dédoublonné par PR). La PR
- * sélectionnée est publiée dans le contexte de Numo (il peut la lire / agir).
+ * Page Pull Requests (MIN-66, élargie par MIN-143) — vue liste/détail façon
+ * triage : à gauche TOUTES les PR des dépôts liés (de Numo comme des humains,
+ * tous projets accessibles), à droite le diff + commentaires + actions.
+ *
+ * Deux filtres, et pas un de plus. L'ÉTAT, servi par le serveur — « toutes »
+ * veut maintenant dire des centaines de lignes. L'AUTEUR, appliqué sur la page
+ * chargée, avec l'entrée « ouvertes par Numo » qui est la question qu'on se pose
+ * vraiment souvent. Ce qui MANQUE volontairement, c'est « à relire par moi » : il
+ * faudrait savoir quel compte de forge est quel membre minddy, et `git_connections`
+ * ne le dit que du compte qui a lié le dépôt.
  */
 
-type Filter = "open" | "merged" | "closed" | "all";
-
-function matchesFilter(state: PullRequestListItem["pr_state"], filter: Filter): boolean {
-  if (filter === "all") return true;
-  if (filter === "merged") return state === "merged";
-  if (filter === "closed") return state === "closed";
-  // open : open, draft, ou état non encore synchronisé.
-  return state === "open" || state === "draft" || state == null;
-}
+/** Valeur du filtre d'auteur : tous, Numo, ou un login de forge précis. */
+const AUTHOR_ALL = "__all__";
+const AUTHOR_NUMO = "__numo__";
 
 function stateVariant(
   state: PullRequestListItem["pr_state"],
@@ -55,41 +58,88 @@ function stateVariant(
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const { pullRequests, loading, fetching, refetch } = useAllPullRequestsQuery();
 
-  // Deep-link depuis la sidebar d'issue (« Voir la pull request ») : ?run=<id>
-  // présélectionne la PR de ce run et bascule le filtre sur « tous » pour qu'elle
-  // soit toujours visible quel que soit son état.
+  // Deep-links : `?pr=<id>` (direct, MIN-143) et `?run=<id>` (historique — la
+  // sidebar d'issue et tous les liens déjà en circulation parlent en run).
+  // Les deux présélectionnent la PR et basculent le filtre sur « tous » pour
+  // qu'elle soit visible quel que soit son état.
   const searchParams = useSearchParams();
   const runParam = searchParams.get("run");
+  const prParam = searchParams.get("pr");
+  const deepLink = prParam ?? runParam;
 
-  const [filter, setFilter] = useState<Filter>(runParam ? "all" : "open");
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(runParam);
-  const [mobileDetail, setMobileDetail] = useState(!!runParam);
+  const [filter, setFilter] = useState<PullRequestStateFilter>(deepLink ? "all" : "open");
+  const [author, setAuthor] = useState<string>(AUTHOR_ALL);
+  const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
+  const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
+  const [mobileDetail, setMobileDetail] = useState(!!deepLink);
   // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
 
-  // Suit les changements de param (navigation client vers un autre run).
+  // Le deep-link est ÉPINGLÉ côté serveur : la PR visée entre dans la réponse
+  // même si elle tombe hors de la page (une PR d'il y a six mois). Sans ça, le
+  // lien retomberait sur la première de la liste — la PR d'un autre ticket.
+  const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
+  const { pullRequests, hasMore, truncated, loading, fetching, refetch } =
+    useAllPullRequestsQuery(filter, limit, pin);
+
+  // Suit les changements de param (navigation client vers une autre PR).
   useEffect(() => {
-    if (!runParam) return;
-    setSelectedRunId(runParam);
+    if (!deepLink) return;
+    if (prParam) setSelectedPrId(prParam);
     setFilter("all");
     setMobileDetail(true);
-  }, [runParam]);
+  }, [deepLink, prParam]);
 
-  const filtered = useMemo(
-    () => pullRequests.filter((p) => matchesFilter(p.pr_state, filter)),
-    [pullRequests, filter],
+  // Le deep-link HISTORIQUE parle en `run` (les liens « voir la pull request »
+  // portent le run le plus récent) : on le résout en `prId` dès que la liste
+  // arrive. Une PR est partagée par TOUS les runs successifs de son ticket
+  // (MIN-68) — on matche donc sur n'importe lequel, sinon le lien tomberait à
+  // côté et l'effet de garde plus bas ouvrirait la PR d'un autre ticket.
+  const deepLinkedByRun = useMemo(
+    () =>
+      runParam && !prParam
+        ? (pullRequests.find((p) => p.runIds.includes(runParam)) ?? null)
+        : null,
+    [runParam, prParam, pullRequests],
   );
+  // Auteurs présents dans la page chargée — le menu ne propose que ce qu'on a.
+  const authors = useMemo(() => {
+    const seen = new Map<string, { login: string; avatar_url: string | null }>();
+    for (const pr of pullRequests) {
+      if (pr.author && !seen.has(pr.author.login)) seen.set(pr.author.login, pr.author);
+    }
+    return [...seen.values()].sort((a, b) => a.login.localeCompare(b.login));
+  }, [pullRequests]);
 
-  // Une PR est partagée par TOUS les runs successifs de son issue (MIN-68) : les
-  // liens « voir la pull request » portent le run le plus récent, alors que l'item
-  // est identifié par le run canonique (le plus ancien). On matche donc sur
-  // n'importe quel run de la PR — sinon le deep-link tombe à côté et l'effet de
-  // garde ci-dessous ouvrirait la PR d'un autre ticket sans rien signaler.
-  const holdsRun = (p: PullRequestListItem, runId: string | null): boolean =>
-    !!runId && (p.runIds?.includes(runId) ?? p.runId === runId);
-  const selected = filtered.find((p) => holdsRun(p, selectedRunId)) ?? null;
+  const filtered = useMemo(() => {
+    if (author === AUTHOR_ALL) return pullRequests;
+    // « Ouvertes par Numo » se lit sur le RUN, pas sur le login : selon la forge
+    // et l'installation, l'auteur d'une PR de Numo est tantôt l'app, tantôt le
+    // compte connecté. Le run, lui, ne ment pas.
+    if (author === AUTHOR_NUMO) return pullRequests.filter((p) => !!p.runId);
+    return pullRequests.filter((p) => p.author?.login === author);
+  }, [pullRequests, author]);
+
+  /**
+   * La sélection est DÉRIVÉE, pas gardée par un effet.
+   *
+   * Elle l'était : un effet résolvait le deep-link, un second remettait la
+   * sélection dans le filtre. Les deux se déclenchaient au même rendu — celui où
+   * la liste arrive — et le second écrasait le premier, ouvrant la PREMIÈRE PR
+   * de la liste au lieu de celle du lien. Mesuré : `?run=<run de la PR #1>`
+   * ouvrait la PR #17.
+   *
+   * L'ordre ci-dessous DIT la règle, au lieu de la faire émerger d'une course :
+   * le clic de l'utilisateur d'abord (tant qu'il est dans le filtre), puis le
+   * deep-link, puis la première de la liste — et rien tant qu'un fetch est en
+   * vol, sinon on ouvrirait un défaut juste avant que la bonne PR arrive.
+   */
+  const clicked =
+    selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
+  const selectedId =
+    clicked ?? deepLinkedByRun?.prId ?? (fetching ? null : (filtered[0]?.prId ?? null));
+  const selected = filtered.find((p) => p.prId === selectedId) ?? null;
 
   // Publie la PR sélectionnée à Numo : il résout « cette PR », la lit
   // (read_pull_request) et peut lancer des changements sur l'issue liée.
@@ -101,29 +151,11 @@ export function PullRequestsPage() {
           issueIdentifier: issueIdentifier(selected.project.key, selected.issue.number),
           issueTitle: selected.issue.title,
           prNumber: selected.pr_number,
-          prState: selected.pr_state ?? undefined,
-          prRunId: selected.runId,
+          prState: selected.pr_state,
+          prRunId: selected.runId ?? undefined,
         }
       : null,
   );
-
-  // Garde une sélection valide : défaut = 1re PR, avance quand elle quitte le
-  // filtre. On ne remet PAS à null sur liste vide : pendant le chargement la
-  // liste est vide et cela écraserait une présélection deep-link (?run=) avant
-  // que les données arrivent. `selected` renvoie null tout seul si l'id n'existe pas.
-  useEffect(() => {
-    if (filtered.length === 0) return;
-    if (selectedRunId && filtered.some((p) => holdsRun(p, selectedRunId))) return;
-    // Sélection absente de la liste. Si un fetch est en vol (à la montée,
-    // `refetchOnMount: always` en déclenche toujours un), on ATTEND qu'il
-    // atterrisse : la PR qu'on vient de créer et qu'un deep-link `?run=` cible
-    // peut encore arriver. Retomber sur filtered[0] maintenant ouvrirait la
-    // DERNIÈRE PR au lieu de la bonne. Fetch terminé + toujours absente = run
-    // sans PR (vieux lien) → on prend la 1re par défaut.
-    if (fetching) return;
-    setSelectedRunId(filtered[0].runId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, selectedRunId, fetching]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
@@ -153,7 +185,13 @@ export function PullRequestsPage() {
           <span className="text-sm tabular-nums text-muted-foreground">{filtered.length}</span>
           {/* Pas de classe de largeur : le trigger est `w-fit`, il se cale donc
               sur son libellé et tient sur la ligne du titre. */}
-          <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+          <Select
+            value={filter}
+            onValueChange={(v) => {
+              setFilter(v as PullRequestStateFilter);
+              setLimit(PULL_REQUESTS_PAGE);
+            }}
+          >
             <SelectTrigger size="sm" className="ml-auto">
               <SelectValue />
             </SelectTrigger>
@@ -165,6 +203,28 @@ export function PullRequestsPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Filtre d'auteur — la seconde question qu'on se pose devant une liste
+            où Numo et les humains cohabitent. Masqué tant qu'il n'y a qu'un seul
+            auteur : il n'aurait rien à trancher. */}
+        {authors.length > 1 ? (
+          <div className="px-4 pb-3">
+            <Select value={author} onValueChange={setAuthor}>
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={AUTHOR_ALL}>{t("filterByAuthor")}</SelectItem>
+                <SelectItem value={AUTHOR_NUMO}>{t("filterNumoOnly")}</SelectItem>
+                {authors.map((a) => (
+                  <SelectItem key={a.login} value={a.login}>
+                    {a.login}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="flex flex-col gap-2 p-4">
@@ -185,18 +245,20 @@ export function PullRequestsPage() {
               const identifier =
                 pr.issue && pr.project
                   ? issueIdentifier(pr.project.key, pr.issue.number)
-                  : `#${pr.pr_number}`;
+                  : pr.provider === "gitlab"
+                    ? `!${pr.pr_number}`
+                    : `#${pr.pr_number}`;
               return (
                 <button
-                  key={pr.runId}
+                  key={pr.prId}
                   type="button"
                   onClick={() => {
-                    setSelectedRunId(pr.runId);
+                    setSelectedPrId(pr.prId);
                     setMobileDetail(true);
                   }}
                   className={cn(
                     "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-                    pr.runId === selectedRunId
+                    pr.prId === selectedPrId
                       ? "bg-muted"
                       : "hover:bg-muted/60 focus-visible:bg-muted/60",
                   )}
@@ -214,17 +276,54 @@ export function PullRequestsPage() {
                     </span>
                   </div>
                   <span className="line-clamp-2 text-sm font-medium">
-                    {pr.issue?.title ?? identifier}
+                    {pr.title ?? pr.issue?.title ?? identifier}
                   </span>
-                  {pr.project ? (
-                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                      <ProjectOrb seed={pr.project.id} className="size-3.5 shrink-0" />
-                      <span className="truncate">{pr.project.name}</span>
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                    {/* L'AUTEUR distingue une PR de Numo d'une PR humaine, maintenant
+                        qu'elles cohabitent. Le run tranche : il ne ment pas, là où le
+                        login de la forge dépend de l'installation. */}
+                    {pr.runId ? (
+                      <NumoIcon animated={false} className="size-3.5 shrink-0" />
+                    ) : pr.author ? (
+                      <UserAvatar
+                        url={pr.author.avatar_url}
+                        seed={pr.author.login}
+                        className="size-3.5 shrink-0"
+                      />
+                    ) : null}
+                    <span className="truncate">
+                      {pr.runId ? t("numoAuthor") : (pr.author?.login ?? "—")}
                     </span>
-                  ) : null}
+                    {pr.project ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <ProjectOrb seed={pr.project.id} className="size-3.5 shrink-0" />
+                        <span className="truncate">{pr.project.name}</span>
+                      </>
+                    ) : null}
+                  </span>
                 </button>
               );
             })}
+
+            {hasMore ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 self-center"
+                disabled={fetching}
+                onClick={() => setLimit((n) => n + PULL_REQUESTS_PAGE)}
+              >
+                {fetching ? <Spinner /> : null}
+                {t("loadMore")}
+              </Button>
+            ) : null}
+
+            {/* La pagination d'une forge a été coupée : le dire, plutôt que de
+                laisser croire que la liste est complète. */}
+            {truncated ? (
+              <p className="px-3 pt-3 text-xs text-muted-foreground">{t("listTruncated")}</p>
+            ) : null}
           </div>
         )}
       </div>
@@ -238,7 +337,7 @@ export function PullRequestsPage() {
       >
         {selected ? (
           <PrDetail
-            key={selected.runId}
+            key={selected.prId}
             item={selected}
             onBack={() => setMobileDetail(false)}
             onRefetchList={() => void refetch()}

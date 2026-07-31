@@ -53,14 +53,15 @@ import { ModelCombobox } from "@/components/agent/model-combobox";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import {
-  useAgentRunPrQuery,
+  usePullRequestQuery,
   usePrCommentsQuery,
   usePrReviewCommentsQuery,
 } from "@/lib/use-agent-runs";
 import {
-  actOnAgentPrApi,
-  postPrCommentApi,
-  submitPrReviewApi,
+  actOnPullRequestApi,
+  postPullRequestCommentApi,
+  prEndpoint,
+  submitPullRequestReviewApi,
   type ChecksSummary,
   type CheckState,
   type MergeMethod,
@@ -70,10 +71,15 @@ import {
 import { issueIdentifier } from "@/lib/issue-constants";
 
 /**
- * Panneau de détail d'une PR (MIN-66 + MIN-138) : en-tête (issue + état + actions),
- * bandeau de checks CI, puis deux onglets façon GitHub — le fil de conversation
- * (description de la PR + commentaires) et les fichiers modifiés. Tout est piloté
- * par le run canonique `item.runId`.
+ * Panneau de détail d'une PR (MIN-66 + MIN-138 + MIN-143) : en-tête (ticket +
+ * état + actions), bandeau de checks CI, puis deux onglets façon GitHub — le fil
+ * de conversation (description de la PR + commentaires) et les fichiers modifiés.
+ * Tout est piloté par `item.prId` : depuis MIN-143 la PR n'appartient plus au run
+ * qui l'a ouverte, et une PR humaine n'en a aucun.
+ *
+ * Ce que le run décide encore : le badge « Généré par Numo » et la case « et
+ * relancer Numo ». Sans run, tous les autres gestes restent — merge, refus,
+ * review, commentaires sont des gestes de forge, pas des gestes d'agent.
  *
  * Trois gestes dans la barre d'actions : **Review** (approuver / demander des
  * changements / commenter, avec la case « et relancer Numo » qui n'existe que
@@ -264,12 +270,12 @@ export function PrDetail({
     mergeMethods,
     loading,
     refetch: refetchPr,
-  } = useAgentRunPrQuery(item.runId, true);
+  } = usePullRequestQuery(item.prId, true);
   const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
-    item.runId,
+    item.prId,
   );
   const { comments: reviewComments, refetch: refetchReviewComments } = usePrReviewCommentsQuery(
-    item.runId,
+    prEndpoint(item.prId),
   );
 
   const [acting, setActing] = useState<null | "merge" | "close" | "ready_for_review">(null);
@@ -291,6 +297,10 @@ export function PrDetail({
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
+  // « Et relancer Numo » n'existe que si un run porte déjà cette PR : c'est de
+  // SES runs que la nouvelle hérite la branche (MIN-143). Une PR humaine, ou un
+  // ticket dont la PR n'a jamais été ouverte par Numo, n'a rien à hériter.
+  const canRelaunch = !!item.runId && !!item.issue;
   // `item` vient de la liste (valeur DB, éventuellement en retard d'un webhook),
   // `pr` du GET de la forge (la vérité) : la forge gagne dès qu'elle a répondu.
   const isDraft = pr?.draft ?? item.pr_state === "draft";
@@ -330,7 +340,7 @@ export function PrDetail({
     setActing(action);
     setConfirmAction(null);
     try {
-      await actOnAgentPrApi(item.runId, action, method);
+      await actOnPullRequestApi(item.prId, action, method);
       toast.success(
         action === "merge"
           ? t("mergedToast")
@@ -352,7 +362,7 @@ export function PrDetail({
     setReviewMessage("");
     // La relance n'a de sens que sur une demande de changements, et c'est là son
     // comportement attendu : cochée d'office.
-    setRelaunch(verdict === "request_changes");
+    setRelaunch(verdict === "request_changes" && canRelaunch);
   };
 
   const submitReview = async () => {
@@ -363,10 +373,10 @@ export function PrDetail({
     if (!message && reviewVerdict !== "approve") return;
     setSubmitting(true);
     try {
-      const result = await submitPrReviewApi(item.runId, {
+      const result = await submitPullRequestReviewApi(item.prId, {
         verdict: reviewVerdict,
         message,
-        relaunch: relaunch && reviewVerdict === "request_changes",
+        relaunch: canRelaunch && relaunch && reviewVerdict === "request_changes",
         model: model || undefined,
       });
       // La forge a refusé de publier le verdict (une App ne peut pas approuver sa
@@ -412,7 +422,7 @@ export function PrDetail({
     if (!body || posting) return;
     setPosting(true);
     try {
-      await postPrCommentApi(item.runId, body);
+      await postPullRequestCommentApi(item.prId, body);
       setCommentBody("");
       await refetchComments();
     } catch (err) {
@@ -425,6 +435,10 @@ export function PrDetail({
   const identifier = item.issue && item.project
     ? issueIdentifier(item.project.key, item.issue.number)
     : `#${item.pr_number}`;
+
+  // La liste connaît l'auteur (colonne `author_login`) ; la forge le confirme.
+  // Elle gagne dès qu'elle a répondu — même arbitrage que pour l'état.
+  const author = pr?.user ?? item.author;
 
   // Corps GitHub de la PR, sans le suffixe auto « 🤖 Généré par l'agent numo… »
   // (redondant avec le badge « Généré par Numo »).
@@ -454,7 +468,14 @@ export function PrDetail({
             {identifier}
           </button>
         ) : (
-          <span className="font-mono text-sm text-muted-foreground">{identifier}</span>
+          <>
+            <span className="font-mono text-sm text-muted-foreground">{identifier}</span>
+            {/* Non rattachée : c'est un ÉTAT NORMAL depuis MIN-143 (le lien vient
+                d'une convention `MIN-42` dans la branche, le titre ou une ligne
+                Fixes — pas d'une devinette), mais il vaut mieux le dire que
+                laisser un blanc là où l'œil cherche un ticket. */}
+            <span className="text-xs text-muted-foreground/70">{t("noLinkedIssue")}</span>
+          </>
         )}
         {/* Une PR terminale n'a plus d'actions : le badge prend la place qu'elles
             occupaient à droite, là où l'œil cherchait le bouton. Tant qu'elle est
@@ -620,29 +641,45 @@ export function PrDetail({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
-          {/* Titre issue + méta PR */}
+          {/* Titre de la PR + méta. Le TITRE de la pull request, et non celui du
+              ticket : depuis MIN-143 elles ne vont plus par paires, et une PR
+              humaine peut n'en avoir aucun. (Numo nomme les siennes
+              « MIN-42: <titre du ticket> » — l'affichage ne change pas pour elles.) */}
           <div className="flex flex-col gap-2">
             <h1 className="font-display text-2xl leading-tight font-semibold">
-              {item.issue?.title ?? pr?.title ?? identifier}
+              {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-              {/* La session Numo est celle de l'issue liée (/agents est indexé par
-                  issue, tous les runs successifs y vivent) → le badge y mène. */}
-              {item.issue ? (
-                <Link href={`/agents?issue=${item.issue.id}`}>
-                  <Badge
-                    variant="secondary"
-                    icon={<NumoIcon animated={false} />}
-                    className="h-6 transition-colors hover:bg-muted"
-                  >
+              {/* Badge « généré par Numo » : seulement si un run porte VRAIMENT
+                  cette PR. La session est celle du ticket lié (/agents est indexé
+                  par issue, tous les runs successifs y vivent) → le badge y mène.
+                  Sur une PR humaine, c'est l'auteur qui prend cette place. */}
+              {item.runId ? (
+                item.issue ? (
+                  <Link href={`/agents?issue=${item.issue.id}`}>
+                    <Badge
+                      variant="secondary"
+                      icon={<NumoIcon animated={false} />}
+                      className="h-6 transition-colors hover:bg-muted"
+                    >
+                      {t("generatedByNumo")}
+                    </Badge>
+                  </Link>
+                ) : (
+                  <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
                     {t("generatedByNumo")}
                   </Badge>
-                </Link>
-              ) : (
-                <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
-                  {t("generatedByNumo")}
-                </Badge>
-              )}
+                )
+              ) : author ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <UserAvatar
+                    url={author.avatar_url}
+                    seed={author.login}
+                    className="size-4"
+                  />
+                  {t("openedBy", { login: author.login })}
+                </span>
+              ) : null}
               {item.project ? (
                 <span className="inline-flex items-center gap-1.5">
                   <ProjectOrb seed={item.project.id} className="size-3.5" />
@@ -765,7 +802,7 @@ export function PrDetail({
               ) : pr ? (
                 <PrDiff
                   files={files}
-                  runId={item.runId}
+                  endpoint={prEndpoint(item.prId)}
                   prUrl={pr.url}
                   provider={item.provider}
                   reviewComments={reviewComments}
@@ -849,8 +886,12 @@ export function PrDetail({
           />
 
           {/* Le geste que minddy a et que GitHub n'a pas : la demande de
-              changements peut relancer Numo sur cette même PR (MIN-68). */}
-          {reviewVerdict === "request_changes" ? (
+              changements peut relancer Numo sur cette même PR (MIN-68).
+              ABSENT sur une PR sans run (MIN-143) : Numo hérite du travail par
+              les runs PRÉCÉDENTS du ticket, et une PR humaine n'en a aucun — il
+              repartirait d'une branche neuve au lieu de reprendre celle-ci. Le
+              geste est masqué plutôt que cassé. */}
+          {reviewVerdict === "request_changes" && canRelaunch ? (
             item.busyRunId ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -878,7 +919,7 @@ export function PrDetail({
           <DialogFooter className="sm:justify-between">
             {/* Nouvelle run = nouveau choix de modèle (identique à un premier
                 lancement) ; vide = le modèle par défaut du compte. */}
-            {reviewVerdict === "request_changes" && relaunch && !item.busyRunId ? (
+            {reviewVerdict === "request_changes" && canRelaunch && relaunch && !item.busyRunId ? (
               <ModelCombobox
                 variant="compact"
                 value={model}
@@ -909,7 +950,7 @@ export function PrDetail({
                 onClick={() => void submitReview()}
               >
                 {submitting ? <Spinner /> : null}
-                {reviewVerdict === "request_changes" && relaunch && !item.busyRunId
+                {reviewVerdict === "request_changes" && canRelaunch && relaunch && !item.busyRunId
                   ? t("sendToNumo")
                   : t("reviewSubmit")}
               </Button>

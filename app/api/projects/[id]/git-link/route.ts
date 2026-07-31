@@ -34,6 +34,8 @@ import {
   listCandidateRepos,
   unlinkProject,
 } from "@/lib/server/git/repo-links";
+import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import { syncRepoPullRequests } from "@/lib/server/agent/pull-requests";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -43,6 +45,30 @@ export const maxDuration = 120;
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
   return provider === "github" ? isGithubAppConfigured() : isGitlabConfigured();
+}
+
+/**
+ * Balaye les pull requests du dépôt qu'on vient de lier (MIN-143). Best-effort :
+ * la liaison, elle, a réussi — et le rattrapage paresseux de
+ * `/api/pull-requests` repassera de toute façon.
+ */
+async function backfillRepoPullRequests(projectId: string): Promise<void> {
+  try {
+    const target = await resolveRepoCloneTarget(projectId);
+    if (!target) return;
+    const { count, truncated } = await syncRepoPullRequests({
+      provider: target.provider,
+      repoFullName: target.repoFullName,
+      token: target.token,
+    });
+    if (truncated) {
+      console.warn(
+        `[git-link] ${target.repoFullName}: ${count} PR ingérées, pagination coupée`,
+      );
+    }
+  } catch (err) {
+    console.error("[git-link] pull request backfill failed:", (err as Error).message);
+  }
 }
 
 /**
@@ -187,6 +213,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             : "gitRepoNotFound";
         return NextResponse.json({ error: t(key) }, { status: result.status });
       }
+      // Rattrapage des pull requests du dépôt (MIN-143) : il faut bien un point
+      // de départ — le webhook n'annonce que ce qui bouge APRÈS la liaison, et
+      // sans ce balayage la page Pull Requests s'ouvrirait vide sur un dépôt qui
+      // en a des dizaines. Hors du chemin critique : la réponse part tout de
+      // suite, et la liste se remplit derrière.
+      after(() => backfillRepoPullRequests(id));
       return NextResponse.json({ link: result.link });
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 502 });

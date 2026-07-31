@@ -122,6 +122,7 @@ interface RawMr {
   diff_refs?: { base_sha?: string; start_sha?: string; head_sha?: string } | null;
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at?: string;
+  updated_at?: string;
   /** État de fusionnabilité détaillé (GitLab 15.6+). */
   detailed_merge_status?: string | null;
   /** L'API historique : can_be_merged | cannot_be_merged | unchecked | checking. */
@@ -179,6 +180,8 @@ function toRef(mr: RawMr): PullRequestRef {
       ? { login: mr.author.username ?? "", avatar_url: mr.author.avatar_url ?? null }
       : null,
     createdAt: mr.created_at,
+    updatedAt: mr.updated_at,
+    mergedAt: mr.merged_at ?? null,
     // `nodeId` reste vide : c'est une clé GraphQL GitHub, sans équivalent utile
     // ici (la bascule brouillon GitLab se fait par le titre — cf. plus bas).
     ...toMergeable(mr),

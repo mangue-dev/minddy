@@ -127,22 +127,20 @@ export function HomeWaitingCard() {
       });
     }
 
-    // PR ouvertes : même définition d'« ouverte » que la page et que le badge —
-    // open, draft, ou état pas encore synchronisé avec le dépôt.
+    // PR ouvertes : la query est déjà filtrée côté serveur (open + draft), même
+    // défaut que la page et que le badge de la sidebar.
     for (const pr of pullRequests) {
-      if (pr.pr_state !== "open" && pr.pr_state !== "draft" && pr.pr_state != null)
-        continue;
       // Numo est en train de la retravailler : elle n'attend pas après nous.
       if (pr.activeRunId) continue;
       list.push({
-        id: `pr-${pr.runId}`,
+        id: `pr-${pr.prId}`,
         kind: "pr",
-        href: `/pull-requests?run=${pr.runId}`,
+        href: `/pull-requests?pr=${pr.prId}`,
         icon: <GitPullRequest className="size-4 text-muted-foreground" />,
         lead: (
           <Mono>{pr.provider === "gitlab" ? `!${pr.pr_number}` : `#${pr.pr_number}`}</Mono>
         ),
-        title: pr.issue?.title ?? "",
+        title: pr.title ?? pr.issue?.title ?? "",
         at: pr.updated_at,
       });
     }

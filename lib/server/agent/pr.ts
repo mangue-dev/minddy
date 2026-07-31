@@ -30,6 +30,10 @@ export interface PullRequestRef {
   /** Auteur et date d'ouverture : le `body` ouvre le fil comme un commentaire, il lui faut son en-tête. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
+  /** Dernière activité CHEZ LA FORGE — le tri de la liste des PR (MIN-143). */
+  updatedAt?: string;
+  /** Date de fusion, quand il y en a une (MIN-143 : la table la garde). */
+  mergedAt?: string | null;
   /** Identifiant GraphQL de la PR — seule clé acceptée par les mutations (MIN-138 :
       la bascule brouillon → prête n'existe QUE en GraphQL). GitLab : jamais rempli. */
   nodeId?: string;
@@ -207,6 +211,7 @@ interface RawPull {
   base?: { ref?: string };
   user?: { login?: string; avatar_url?: string } | null;
   created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -230,6 +235,8 @@ function toRef(pr: RawPull): PullRequestRef {
     headSha: pr.head?.sha,
     user: pr.user ? { login: pr.user.login ?? "", avatar_url: pr.user.avatar_url ?? null } : null,
     createdAt: pr.created_at,
+    updatedAt: pr.updated_at,
+    mergedAt: pr.merged_at ?? null,
     nodeId: pr.node_id,
     mergeable: pr.mergeable,
     mergeableState: pr.mergeable_state,
