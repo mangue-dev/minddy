@@ -41,12 +41,21 @@ export function splitCycleSelection(
 
 /**
  * The right-click "Add to / Remove from cycle" action (MIN-32), shared by the
- * global and project boards. Adding assigns the issue to the cycle's owner as
- * a side-effect and never bumps the status — the caller's `onSetCycle` mirrors
- * that in its optimistic patch.
+ * global and project boards and the issue panel's "⋯" menu. Adding assigns the
+ * issue to the cycle's owner as a side-effect and never bumps the status — the
+ * caller's `onSetCycle` mirrors that in its optimistic patch.
+ *
+ * Adding opens a submenu (MIN-137): the current cycle, or the next one — so a
+ * ticket can be planned for the coming fortnight without waiting for it, and
+ * without going through the cycle board. Two rules keep the entry honest:
+ *   - no next window created (`upcomingCount` at 0) → the plain leaf of before,
+ *     rather than a submenu with a single child;
+ *   - an issue sitting in EITHER window offers "remove" — otherwise a ticket
+ *     just added to the next cycle would be offered "add" all over again.
  */
 export function useCycleMenuActions(
   currentCycleId: string | null,
+  nextCycleId: string | null,
   onSetCycle: (issue: Issue, cycleId: string | null) => void
 ): (issue: Issue) => ContextMenuAction[] {
   const t = useTranslations("Cycles");
@@ -54,18 +63,46 @@ export function useCycleMenuActions(
   return useCallback(
     (issue: Issue): ContextMenuAction[] => {
       if (!currentCycleId) return [];
-      const inCurrent = issue.cycle_id === currentCycleId;
-      if (!inCurrent && CYCLE_INELIGIBLE_STATUSES.includes(issue.status)) return [];
+      const inCycle =
+        issue.cycle_id === currentCycleId ||
+        (nextCycleId !== null && issue.cycle_id === nextCycleId);
+      if (inCycle) {
+        return [
+          {
+            id: "cycle-remove",
+            label: t("removeFromCycle"),
+            keywords: ["cycle", "semaine", "week", "sprint"],
+            icon: <IterationCw className="size-4" />,
+            onSelect: () => onSetCycle(issue, null),
+          },
+        ];
+      }
+      if (CYCLE_INELIGIBLE_STATUSES.includes(issue.status)) return [];
       return [
         {
-          id: inCurrent ? "cycle-remove" : "cycle-add",
-          label: inCurrent ? t("removeFromCycle") : t("addToCycle"),
-          keywords: ["cycle", "semaine", "week", "sprint"],
+          id: "cycle-add",
+          label: t("addToCycle"),
+          keywords: ["cycle", "semaine", "week", "sprint", "suivant", "next"],
           icon: <IterationCw className="size-4" />,
-          onSelect: () => onSetCycle(issue, inCurrent ? null : currentCycleId),
+          ...(nextCycleId
+            ? {
+                children: [
+                  {
+                    id: "cycle-add-current",
+                    label: t("currentCycle"),
+                    onSelect: () => onSetCycle(issue, currentCycleId),
+                  },
+                  {
+                    id: "cycle-add-next",
+                    label: t("nextCycle"),
+                    onSelect: () => onSetCycle(issue, nextCycleId),
+                  },
+                ],
+              }
+            : { onSelect: () => onSetCycle(issue, currentCycleId) }),
         },
       ];
     },
-    [currentCycleId, onSetCycle, t]
+    [currentCycleId, nextCycleId, onSetCycle, t]
   );
 }

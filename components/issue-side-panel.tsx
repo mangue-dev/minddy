@@ -228,7 +228,7 @@ export function IssueSidePanel({
   // Cycle (MIN-32) : le panneau lit le cycle courant lui-même plutôt que de le
   // faire descendre par ses quatre appelants — le hook est déjà gaté par les
   // préférences utilisateur, donc ne coûte rien quand les cycles sont éteints.
-  const { currentCycle } = useMyCycleQuery();
+  const { currentCycle, nextCycle } = useMyCycleQuery();
   const onSetIssueCycle = useCallback(
     (target: Issue, cycleId: string | null) =>
       void onUpdate(
@@ -242,6 +242,7 @@ export function IssueSidePanel({
   );
   const buildCycleActions = useCycleMenuActions(
     currentCycle?.id ?? null,
+    nextCycle?.id ?? null,
     onSetIssueCycle
   );
 

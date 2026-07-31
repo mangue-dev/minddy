@@ -85,7 +85,7 @@ function ProjectBoard() {
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
   // mirrors the server side-effect: adding assigns to me, never a status bump.
-  const { currentCycle } = useMyCycleQuery();
+  const { currentCycle, nextCycle } = useMyCycleQuery();
   const onSetIssueCycle = useCallback(
     (issue: Issue, cycleId: string | null) =>
       void updateIssue(
@@ -98,6 +98,7 @@ function ProjectBoard() {
   );
   const buildCycleMenuActions = useCycleMenuActions(
     currentCycle?.id ?? null,
+    nextCycle?.id ?? null,
     onSetIssueCycle
   );
 

@@ -2206,6 +2206,7 @@
     "captureStartedLabel": "Quand un ticket démarre",
     "captureCompletedLabel": "Quand un ticket est terminé",
     "currentCycle": "Cycle en cours",
+    "nextCycle": "Cycle suivant",
     "upcomingCycle": "Cycle à venir",
     "pastCycle": "Cycle passé",
     "pastCycles": "Cycles passés",

@@ -2206,6 +2206,7 @@
     "captureStartedLabel": "When an issue is started",
     "captureCompletedLabel": "When an issue is completed",
     "currentCycle": "Current cycle",
+    "nextCycle": "Next cycle",
     "upcomingCycle": "Upcoming cycle",
     "pastCycle": "Past cycle",
     "pastCycles": "Past cycles",

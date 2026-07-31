@@ -390,6 +390,7 @@ function GlobalBoardInner() {
   );
   const buildCycleMenuActions = useCycleMenuActions(
     cycles?.enabled ? (cycles.current?.id ?? null) : null,
+    cycles?.enabled ? (cycles.upcoming[0]?.id ?? null) : null,
     onSetIssueCycle
   );
 
