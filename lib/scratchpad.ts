@@ -6,7 +6,12 @@
 // sections, and appending new tasks (used by the WYSIWYG editor and the MCP).
 
 import { diff3Merge } from "node-diff3";
-import { diffPlanTasks, parsePlan, type PlanTaskState } from "@/lib/plan";
+import {
+  diffPlanTasks,
+  parsePlan,
+  type PlanTask,
+  type PlanTaskState,
+} from "@/lib/plan";
 
 /** Hard cap on the stored scratchpad markdown (aligned with plans). */
 export const MAX_SCRATCHPAD_LENGTH = 65_536;
@@ -134,6 +139,49 @@ export function splitScratchpadSections(content: string): ScratchpadSection[] {
   push(lines.length);
 
   return sections.filter((s) => s.markdown.trim() !== "");
+}
+
+export interface ScratchpadPreviewSection {
+  /** Titre de la section, ou null pour ce qui précède le premier titre. */
+  title: string | null;
+  /** Ses tâches encore à faire, dans l'ordre du carnet. */
+  tasks: PlanTask[];
+}
+
+/**
+ * Ce qui RESTE à faire dans la note, groupé par section — l'aperçu que l'accueil
+ * affiche du carnet (components/home/home-scratchpad-section.tsx).
+ *
+ * « Reste » = ni terminé, ni annulé, ni une question : sous un titre
+ * `## Questions`, une case cochée répond à une question, elle ne livre pas un
+ * travail, et `parsePlan` la marque comme telle (lib/plan.ts). Les sections
+ * vidées de leurs tâches tombent : un titre seul ne dit rien à qui passe.
+ *
+ * La note est parsée UNE fois, entière, puis les tâches sont rangées dans leur
+ * section par numéro de ligne — et non chaque section parsée pour elle-même.
+ * C'est ce qui garde le compte de l'aperçu égal à celui de la pastille du header
+ * (`planProgress`) : une section `## Questions` porte jusqu'à ses sous-titres, et
+ * un `### Détail` parsé isolément aurait recompté ses questions comme du travail.
+ */
+export function scratchpadPreview(content: string): ScratchpadPreviewSection[] {
+  const left = parsePlan(content).tasks.filter(
+    (task) =>
+      !task.question && (task.state === "pending" || task.state === "in_progress")
+  );
+  if (left.length === 0) return [];
+
+  const sections = splitScratchpadSections(content);
+  return sections
+    .map((section, i) => {
+      const end = sections[i + 1]?.startLine ?? Number.POSITIVE_INFINITY;
+      return {
+        title: section.title,
+        tasks: left.filter(
+          (task) => task.line >= section.startLine && task.line < end
+        ),
+      };
+    })
+    .filter((section) => section.tasks.length > 0);
 }
 
 /**

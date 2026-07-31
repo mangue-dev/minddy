@@ -1,45 +1,58 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Skeleton } from "mangue-ui";
 import { Plus } from "lucide-react";
-import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
-import { usePlanGates } from "@/lib/use-billing-query";
 import { useAuth } from "@/lib/auth-context";
 import { useOnboarding } from "@/lib/use-onboarding";
 import { displayName } from "@/lib/display-name";
-import { ProjectCard, NewProjectCard } from "@/components/project-card";
+import { pickGreeting } from "@/lib/home-greeting";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { HomeCycleCard } from "@/components/home/home-cycle-card";
-import { HomeGlobalCard } from "@/components/home/home-global-card";
+import { HomeWaitingCard } from "@/components/home/home-waiting-card";
 import { HomeDueSoonSection } from "@/components/home/home-due-soon-section";
+import { HomeScratchpadSection } from "@/components/home/home-scratchpad-section";
 import { HomeTriageSection } from "@/components/home/home-triage-section";
 import { OnboardingCard } from "@/components/home/onboarding-card";
-
-// auto-fit + 1fr: empty trailing tracks collapse and the remaining cards share
-// all the space, so the grid always spans the full row width (matching the
-// dashboard's focus cards above) instead of leaving a gap on the right.
-const GRID_STYLE = {
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
-  gridAutoRows: "1fr",
-} as const;
 
 /** Display name from Supabase auth metadata (display_name → full_name → name),
     never the raw email — mirrors the sidebar account button. */
 type AuthMeta = { display_name?: string; full_name?: string; name?: string };
 
+/**
+ * Le titre de l'accueil : « Bonjour » à la première visite, autre chose aux
+ * suivantes. Le vivier dépend de l'heure LOCALE et du jour (lib/home-greeting.ts),
+ * deux choses que le rendu serveur ne connaît pas — il est en UTC, et le tirage
+ * au sort donnerait de toute façon deux phrases différentes de part et d'autre
+ * de l'hydratation. La graine ne se pose donc qu'au montage : jusque-là le titre
+ * reste le « Bonjour » neutre, qui est aussi ce que le serveur a rendu.
+ *
+ * Une seule graine pour toute la vie de la page : la phrase ne doit pas changer
+ * sous les yeux parce que le nom vient d'arriver ou qu'un cache s'est rafraîchi.
+ */
+function useGreeting(name: string): string {
+  const t = useTranslations("Home");
+  const [seed, setSeed] = useState<number | null>(null);
+  useEffect(() => {
+    setSeed(Math.floor(Math.random() * 1_000_000));
+  }, []);
+
+  if (seed === null) return name ? t("greeting", { name }) : t("greetingNoName");
+  const variant = pickGreeting(new Date(), seed);
+  return t(name ? variant.key : variant.keyNoName, { name });
+}
+
 export default function HomePage() {
   const t = useTranslations("Home");
-  const { projects, loading, openCreateProject } = useProjects();
   const { openCreateIssue, canCreate } = useCreate();
-  const { projectLimitReached } = usePlanGates();
   const { user } = useAuth();
   // Onboarding (MIN-74) : tant qu'il n'est pas terminé ni passé, il prend la
-  // place du corps de la home — pour un compte neuf, cycle, board agrégé,
-  // feedback et grille de projets n'ont rien à montrer.
+  // place du corps de la home — pour un compte neuf, cycle, échéances, carnet et
+  // file de triage n'ont rien à montrer.
   const onboarding = useOnboarding();
 
   const meta = user?.user_metadata as AuthMeta | undefined;
@@ -53,6 +66,8 @@ export default function HomePage() {
     "",
   );
 
+  const greeting = useGreeting(name);
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <PendingInvitationsBanner />
@@ -63,7 +78,8 @@ export default function HomePage() {
       {/* Greeting + a clearly-accessible "new ticket" button (MIN-38). During
           onboarding the button is hidden: with no project it would only render
           disabled next to the step's own call to action — and the greeting
-          welcomes rather than says hello, because it is a first visit. */}
+          welcomes rather than says hello, because it is a first visit. A first
+          visit gets no wisecrack either: the offbeat pool waits for the second. */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-semibold tracking-tight">
@@ -71,9 +87,7 @@ export default function HomePage() {
               ? name
                 ? t("welcome", { name })
                 : t("welcomeNoName")
-              : name
-                ? t("greeting", { name })
-                : t("greetingNoName")}
+              : greeting}
           </h1>
           {onboarding.showCard && (
             <p className="mt-1 text-sm text-muted-foreground">
@@ -116,13 +130,20 @@ export default function HomePage() {
             <HomeDueSoonSection />
           </div>
 
-          {/* Focus: the current cycle + a global pulse. Stacked full-width until
-              lg — two narrow columns cram the cycle card's rings on
-              tablet/mobile. Explicit grid-cols give minmax(0,1fr) tracks so a
-              card's content can't blow the column past the viewport. */}
+          {/* Focus: le cycle en cours + ce qui est arrêté en attendant une
+              décision de ma part. Stacked full-width until lg — two narrow
+              columns cram the cycle card's rings on tablet/mobile. Explicit
+              grid-cols give minmax(0,1fr) tracks so a card's content can't blow
+              the column past the viewport. */}
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <HomeCycleCard />
-            <HomeGlobalCard />
+            <HomeWaitingCard />
+          </div>
+
+          {/* Le carnet de tâches, en clair : personnel et cross-projet comme
+              cette page. Carnet vide → rien du tout. */}
+          <div className="mt-6">
+            <HomeScratchpadSection />
           </div>
 
           {/* À trier (MIN-104) — tickets en triage et retours non tranchés, le
@@ -132,27 +153,10 @@ export default function HomePage() {
             <HomeTriageSection />
           </div>
 
-          {/* Projects grid — still the launcher. */}
-          <h2 className="mb-4 mt-10 text-sm font-semibold tracking-tight text-muted-foreground">
-            {t("yourProjects")}
-          </h2>
-          {loading ? (
-            <div className="grid gap-4" style={GRID_STYLE}>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-[160px] rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-4" style={GRID_STYLE}>
-              {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-              <NewProjectCard
-                onClick={openCreateProject}
-                disabled={projectLimitReached}
-              />
-            </div>
-          )}
+          {/* Plus de grille de projets ici : la sidebar les liste tous, en
+              permanence et sur toutes les pages, « Nouveau projet » compris. La
+              même chose une deuxième fois, deux écrans plus bas, poussait le
+              travail du jour hors de vue pour un lanceur qu'on n'utilisait pas. */}
         </>
       )}
     </div>

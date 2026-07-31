@@ -388,6 +388,10 @@ export interface HomeSummaryIssue {
   /** Depuis combien de temps le ticket attend — affiché et trié par la section
       « À trier » (MIN-104), qui met en haut ce qui a le plus patienté. */
   created_at: string;
+  /** Dernier mouvement du ticket. C'est lui, et non `created_at`, que lit la
+      carte « En attente de moi » : un ticket en relecture attend depuis qu'il y
+      est entré, pas depuis qu'il a été écrit. */
+  updated_at: string;
 }
 
 /**
@@ -449,11 +453,11 @@ export interface TriageCountsResponse {
 /** Réponse de GET /api/me/summary — la charge utile du tableau de bord. */
 export interface HomeSummaryResponse {
   /**
-   * Compteurs agrégés, calculés en SQL : aucune ligne ne traverse le réseau.
-   * `open` exclut triage ET les statuts clos ; `total` compte tout (l'onboarding
-   * demande « as-tu déjà créé un ticket ? », pas « en as-tu un ouvert ? »).
+   * Compteur agrégé, calculé en SQL : aucune ligne ne traverse le réseau. Tous
+   * statuts confondus — l'onboarding demande « as-tu déjà créé un ticket ? »,
+   * pas « en as-tu un ouvert ? ».
    */
-  counts: { open: number; inProgress: number; mine: number; total: number };
+  counts: { total: number };
   cycles: BoardCycles;
   /** Tickets du cycle courant (vide quand il n'y a pas de cycle en cours). */
   cycleIssues: HomeSummaryIssue[];
@@ -479,6 +483,16 @@ export interface HomeSummaryResponse {
    */
   newFeedback: HomeSummaryFeedback[];
   newFeedbackTotal: number;
+  /**
+   * Tickets en relecture, le plus anciennement bougé d'abord — la part
+   * « tickets » de la carte « En attente de moi ». Un ticket en `in_review` ne
+   * bouge plus tant qu'un humain ne l'a pas relu : c'est exactement ce que la
+   * carte réunit, avec les PR ouvertes et les sessions d'agent non lues (celles-là
+   * lues côté client, elles ne passent pas par cette route). Tronquée —
+   * `inReviewTotal` donne le compte réel.
+   */
+  inReview: HomeSummaryIssue[];
+  inReviewTotal: number;
   /** Relations touchant un ticket du cycle — l'ordre reco tient compte des blocages. */
   relations: IssueRelation[];
   /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */

@@ -18,17 +18,10 @@ import type { IssueStatus } from "@/lib/issue-constants";
 /** Combien de cycles clos le sélecteur de dates liste (aligné sur /api/me/board). */
 const PAST_CYCLES_SHOWN = 8;
 
-/**
- * Statuts « en jeu », miroir exact du seau `open` de HomeGlobalCard : ni les
- * statuts clos (done/canceled/duplicate), ni triage — qui précède le board et
- * n'entre dans aucun des deux compteurs.
- */
-const OPEN_STATUSES: IssueStatus[] = ["backlog", "todo", "in_progress", "in_review"];
-
 /** Colonnes d'un ticket du tableau de bord : ce que les cartes affichent ou
     ordonnent, rien de plus. */
 const SUMMARY_ISSUE_COLUMNS =
-  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, created_at, issue_categories(category_id)";
+  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, created_at, updated_at, issue_categories(category_id)";
 
 /**
  * Combien d'échéances proches remontent au plus. La section n'en affiche qu'une
@@ -48,6 +41,14 @@ const DUE_SOON_LIMIT = 50;
  */
 const TRIAGE_LIMIT = 30;
 const NEW_FEEDBACK_LIMIT = 30;
+
+/**
+ * Plafond de la relecture en attente : la carte « En attente de moi » en montre
+ * une poignée à côté des PR et des sessions d'agent. Le `+N autres` reste exact
+ * (`count: "exact"` compte tout l'ensemble filtré, `limit` ne borne que les
+ * lignes rapatriées).
+ */
+const IN_REVIEW_LIMIT = 20;
 
 /** Colonnes d'un retour de la file « À trier » — cf. HomeSummaryFeedback. */
 const SUMMARY_FEEDBACK_COLUMNS = "id, project_id, title, vote_count, created_at";
@@ -145,28 +146,25 @@ export async function GET(request: NextRequest) {
 
   const currentCycleId = cycles.current?.id ?? null;
 
-  // Compteurs : `head: true` + `count: "exact"` ne renvoie AUCUNE ligne, juste le
-  // total — c'est tout l'intérêt par rapport au board, qui les comptait côté
-  // client après avoir téléchargé chaque ticket.
-  const countQuery = () =>
-    auth.supabase.from("issues").select("id", { count: "exact", head: true }).is("deleted_at", null);
-
+  // `head: true` + `count: "exact"` ne renvoie AUCUNE ligne, juste le total —
+  // c'est tout l'intérêt par rapport au board, qui comptait côté client après
+  // avoir téléchargé chaque ticket. Il n'en reste qu'un : la carte qui alignait
+  // « ouverts / en cours / à moi » a cédé la place à « En attente de moi », qui
+  // montre des lignes sur lesquelles agir plutôt que des nombres.
   const [
-    openRes,
-    inProgressRes,
-    mineRes,
     totalRes,
     cycleIssuesRes,
     dueSoonRes,
     triageRes,
+    inReviewRes,
     myProjectsRes,
   ] = await Promise.all([
-      countQuery().in("status", OPEN_STATUSES),
-      countQuery().eq("status", "in_progress"),
-      countQuery().in("status", OPEN_STATUSES).eq("assignee_id", auth.user.id),
       // Tous statuts confondus : l'onboarding demande « as-tu déjà créé un
       // ticket ? », auquel un ticket terminé répond oui (lib/use-onboarding.ts).
-      countQuery(),
+      auth.supabase
+        .from("issues")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null),
       currentCycleId
         ? auth.supabase
             .from("issues")
@@ -197,19 +195,28 @@ export async function GET(request: NextRequest) {
         .eq("status", "triage")
         .order("created_at", { ascending: true })
         .limit(TRIAGE_LIMIT),
+      // Relecture en attente, part « tickets » de la carte « En attente de moi ».
+      // Trié sur `updated_at` et non `created_at` : ce qui compte n'est pas l'âge
+      // du ticket mais depuis quand il ne bouge plus, et c'est le passage en
+      // relecture qui a posé cette date.
+      auth.supabase
+        .from("issues")
+        .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
+        .is("deleted_at", null)
+        .eq("status", "in_review")
+        .order("updated_at", { ascending: true })
+        .limit(IN_REVIEW_LIMIT),
       // Mes projets, à seule fin de borner la lecture service-role du feedback
       // (loadNewFeedback) : RLS `projects_select` = owner ∪ membre.
       auth.supabase.from("projects").select("id").is("deleted_at", null),
     ]);
 
   const firstError =
-    openRes.error ||
-    inProgressRes.error ||
-    mineRes.error ||
     totalRes.error ||
     cycleIssuesRes.error ||
     dueSoonRes.error ||
     triageRes.error ||
+    inReviewRes.error ||
     myProjectsRes.error;
   if (firstError) {
     console.error("[api/me/summary] load failed:", firstError.message);
@@ -230,6 +237,11 @@ export async function GET(request: NextRequest) {
     toSummaryIssue
   );
   const triageTotal = triageRes.count ?? triage.length;
+
+  const inReview: HomeSummaryIssue[] = ((inReviewRes.data ?? []) as SummaryRow[]).map(
+    toSummaryIssue
+  );
+  const inReviewTotal = inReviewRes.count ?? inReview.length;
 
   const dueSoon: HomeSummaryIssue[] = ((dueSoonRes.data ?? []) as SummaryRow[])
     .map(toSummaryIssue)
@@ -274,12 +286,7 @@ export async function GET(request: NextRequest) {
   const newFeedback = await newFeedbackPromise;
 
   const body: HomeSummaryResponse = {
-    counts: {
-      open: openRes.count ?? 0,
-      inProgress: inProgressRes.count ?? 0,
-      mine: mineRes.count ?? 0,
-      total: totalRes.count ?? 0,
-    },
+    counts: { total: totalRes.count ?? 0 },
     cycles,
     cycleIssues,
     dueSoon,
@@ -287,6 +294,8 @@ export async function GET(request: NextRequest) {
     triageTotal,
     newFeedback: newFeedback.posts,
     newFeedbackTotal: newFeedback.total,
+    inReview,
+    inReviewTotal,
     relations,
     blockerStatuses,
   };

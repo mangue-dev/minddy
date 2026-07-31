@@ -88,12 +88,26 @@ async function putScratchpad(content: string, rev: number): Promise<PutResult> {
  * cached note while it revalidates.
  */
 export function useScratchpadProgress(): PlanProgress {
+  return useScratchpadSummary().progress;
+}
+
+/**
+ * La note ELLE-MÊME, depuis ce même cache toujours chaud : l'aperçu de l'accueil
+ * (components/home/home-scratchpad-section.tsx) montre les tâches qui restent,
+ * groupées par section, et n'a donc pas que le compte à lire. Le GET est le même
+ * que celui du badge — une seule requête pour les deux, et le pont temps réel
+ * les rafraîchit ensemble.
+ */
+export function useScratchpadSummary(): { content: string; progress: PlanProgress } {
   const { data } = useQuery({
     queryKey: SCRATCHPAD_KEY,
     queryFn: fetchScratchpad,
     staleTime: 60_000,
   });
-  return data?.progress ?? EMPTY.progress;
+  return {
+    content: data?.content ?? EMPTY.content,
+    progress: data?.progress ?? EMPTY.progress,
+  };
 }
 
 const responseOf = (content: string, updatedAt: string | null, rev: number): ScratchpadResponse => ({

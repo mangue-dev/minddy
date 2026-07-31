@@ -4,10 +4,11 @@ import {
   cleanDictatedTaskLine,
   mergeScratchpad,
   removeCompletedTasks,
+  scratchpadPreview,
   splitScratchpadSections,
   tasksCheckedOff,
 } from "@/lib/scratchpad";
-import { parsePlan, setTaskState } from "@/lib/plan";
+import { parsePlan, planProgress, setTaskState } from "@/lib/plan";
 
 describe("splitScratchpadSections", () => {
   it("returns nothing for blank content", () => {
@@ -45,6 +46,73 @@ describe("splitScratchpadSections", () => {
     const sections = splitScratchpadSections(note);
     expect(sections).toHaveLength(1);
     expect(sections[0].title).toBe("Real");
+  });
+});
+
+describe("scratchpadPreview", () => {
+  it("returns nothing for a blank or task-less note", () => {
+    expect(scratchpadPreview("")).toEqual([]);
+    expect(scratchpadPreview("# Titre\n\nJuste de la prose.")).toEqual([]);
+  });
+
+  it("keeps what's left to do, grouped by section, in document order", () => {
+    const note = [
+      "# Page d'accueil",
+      "",
+      "- [x] Retirer les project cards",
+      "- [ ] Greeting adapté à l'heure",
+      "- [~] Carte « En attente de moi »",
+      "",
+      "# Objectifs",
+      "",
+      "- [ ] Pièces jointes à la création",
+    ].join("\n");
+
+    const preview = scratchpadPreview(note);
+    expect(preview.map((s) => s.title)).toEqual(["Page d'accueil", "Objectifs"]);
+    expect(preview[0].tasks.map((t) => t.text)).toEqual([
+      "Greeting adapté à l'heure",
+      "Carte « En attente de moi »",
+    ]);
+    expect(preview[1].tasks.map((t) => t.text)).toEqual([
+      "Pièces jointes à la création",
+    ]);
+  });
+
+  it("drops a section whose tasks are all done or cancelled", () => {
+    const note = "## Fini\n- [x] a\n- [-] b\n## Reste\n- [ ] c";
+    expect(scratchpadPreview(note).map((s) => s.title)).toEqual(["Reste"]);
+  });
+
+  it("ne montre pas les questions ouvertes comme du travail", () => {
+    const note = "## Questions\n- [ ] Faut-il garder la grille ?\n## Travail\n- [ ] Coder";
+    const preview = scratchpadPreview(note);
+    expect(preview.map((s) => s.title)).toEqual(["Travail"]);
+  });
+
+  it("compte comme la pastille du header, sous-titres de Questions compris", () => {
+    // `### Détail` nichant SOUS `## Questions` : le titre plus profond ne ferme
+    // pas la section, ses cases restent des questions. Parsée pour elle-même,
+    // cette sous-section les aurait recomptées comme du travail à faire.
+    const note = [
+      "## Questions",
+      "- [ ] Garder la grille ?",
+      "### Détail",
+      "- [ ] Et la carte globale ?",
+      "## Travail",
+      "- [ ] Coder",
+    ].join("\n");
+
+    expect(planProgress(note)).toEqual({ done: 0, total: 1 });
+    const preview = scratchpadPreview(note);
+    expect(preview.map((s) => s.title)).toEqual(["Travail"]);
+    expect(preview.flatMap((s) => s.tasks)).toHaveLength(1);
+  });
+
+  it("garde les tâches d'avant le premier titre, sans titre", () => {
+    const preview = scratchpadPreview("- [ ] a\n## Après\n- [ ] b");
+    expect(preview.map((s) => s.title)).toEqual([null, "Après"]);
+    expect(preview[0].tasks.map((t) => t.text)).toEqual(["a"]);
   });
 });
 
