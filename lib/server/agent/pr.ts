@@ -1227,6 +1227,20 @@ interface RawReaction {
 }
 
 /**
+ * Le compte à qui APPARTIENT ce token (`GET /user`) — le pendant GitHub de
+ * `gitlabCurrentUsername` de `mr.ts`. Il n'est demandé qu'en dernier recours :
+ * le login de l'acteur voyage déjà avec l'appel, et cet aller-retour n'existe
+ * que pour le rattraper quand il est PÉRIMÉ. Rend null si la question échoue —
+ * un token d'installation, par exemple, n'a pas de porteur à nommer.
+ */
+async function githubCurrentLogin(token: string): Promise<string | null> {
+  const me = await ghJson<{ login?: string }>(`${GITHUB_API_BASE}/user`, token).catch(
+    () => null,
+  );
+  return me?.login ?? null;
+}
+
+/**
  * Pose ou retire une réaction sur un commentaire de review. REST des deux côtés
  * de la bascule : la mutation GraphQL équivalente s'adresse par node id, que la
  * palette n'a pas pour un commentaire encore SANS réaction.
@@ -1237,6 +1251,10 @@ interface RawReaction {
  * leur auteur. Sans `login`, on lève : retomber sur le bot ferait exactement le
  * bug que ce ticket corrige, et poser une réaction qu'on ne saura jamais retirer
  * n'est pas mieux.
+ *
+ * Ce nom n'est qu'un RACCOURCI, jamais l'autorité : quand il ne désigne aucune
+ * réaction du commentaire, c'est au token qu'on demande son porteur (cf. le
+ * retrait plus bas). L'autorité, c'est lui — le nom stocké peut avoir vieilli.
  */
 export async function setPullRequestReviewCommentReaction(opts: {
   token: string;
@@ -1264,9 +1282,24 @@ export async function setPullRequestReviewCommentReaction(opts: {
     `${base}?content=${encodeURIComponent(opts.content)}&per_page=100`,
     opts.token,
   );
-  const mine = (existing ?? []).find(
-    (r) => r.user?.login === opts.login && r.content === opts.content,
-  );
+  const reactionOf = (login: string | null) =>
+    login
+      ? (existing ?? []).find((r) => r.user?.login === login && r.content === opts.content)
+      : undefined;
+
+  let mine = reactionOf(opts.login);
+  // `login` est un CACHE : il vient de `git_user_identities`, écrit à la
+  // connexion du compte et jamais rafraîchi. Qui renomme son compte GitHub garde
+  // un token valide et un `viewerHasReacted` juste — sa réaction s'allume donc —
+  // mais ce nom-là ne désigne plus personne, et le retrait sortirait par le
+  // `return` ci-dessous : chip toujours allumé, aucun message, un clic sans
+  // effet à répéter indéfiniment. Le token, lui, ne périme pas son porteur : on
+  // le lui demande. Seulement s'il reste un candidat — une liste vide n'a aucun
+  // nom à départager, et c'est le cas courant du « déjà retiré ».
+  if (!mine && (existing?.length ?? 0) > 0) {
+    const current = await githubCurrentLogin(opts.token);
+    if (current && current !== opts.login) mine = reactionOf(current);
+  }
   // Rien à retirer : la bascule a déjà l'effet demandé, ce n'est pas une panne.
   if (mine?.id == null) return;
   await ghJson<unknown>(`${base}/${mine.id}`, opts.token, { method: "DELETE" });

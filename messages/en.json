@@ -1361,9 +1361,9 @@
   "Profile": {
     "newAvatar": "New avatar",
     "avatarHint": "Your avatar is generated from your account. Reroll it as many times as you like.",
-    "nameLabel": "Name",
-    "namePlaceholder": "Your name",
-    "nameEmpty": "Name can't be empty.",
+    "nameLabel": "Username",
+    "namePlaceholder": "Your username",
+    "nameEmpty": "Username can't be empty.",
     "updated": "Profile updated."
   },
   "Account": {
@@ -1372,7 +1372,7 @@
     "profileTab": "Profile",
     "preferencesTab": "Preferences",
     "profileSectionTitle": "Profile",
-    "profileSectionDesc": "Your photo and name, visible to other members.",
+    "profileSectionDesc": "Your photo and username, visible to other members.",
     "emailLabel": "Email",
     "emailHint": "Your address can't be changed.",
     "themeTitle": "Theme",
@@ -1749,6 +1749,8 @@
     "gitUnlink": "Unlink",
     "gitUnlinkTitle": "Unlink this repository?",
     "gitUnlinkDescription": "Your account connection is kept.",
+    "gitAgentActsAs": "GitLab has no bot identity: on the repository, the agent acts as {login}. Merge requests it opens, its review comments and its pushes are recorded under that account.",
+    "gitAgentActsAsUnknown": "GitLab has no bot identity: on the repository, the agent acts as the account that linked it. Merge requests it opens, its review comments and its pushes are recorded under that account.",
     "gitIssueSyncLabel": "Import {provider} issues",
     "gitIssueSyncHint": "Every issue in the repository becomes an issue here, in triage. Its status follows the remote one: closed → Done, reopened → Backlog.",
     "gitIssueSyncOwnerOnlyHint": "Only the owner can turn on issue import.",

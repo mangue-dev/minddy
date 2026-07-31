@@ -77,10 +77,13 @@ export function isReviewReactionContent(value: unknown): value is ReviewReaction
  * forges ne nomment pas leurs réacteurs de la même façon, et c'est le COMPTE que
  * l'UI affiche.
  *
- * `mine` = l'identité avec laquelle minddy parle a déjà réagi. Cette identité
- * n'est pas la même des deux côtés — le bot de l'App GitHub, le compte connecté
- * côté GitLab — et c'est une vraie limite, pas un détail : sur GitHub, deux
- * membres du même projet partagent une seule réaction. C'est ce booléen que la
+ * `mine` = MOI, l'humain connecté, j'ai déjà réagi (MIN-145) : la réaction part
+ * du compte git de la personne sur les DEUX forges, et le serveur n'allume ce
+ * booléen que pour elle. Il ne se lit pas dans les données, il se déduit du
+ * token qui LIT — d'où `viewerIsActor` côté forge : sans compte git connecté la
+ * lecture retombe sur le token d'installation, et `mine` vaut alors `false`
+ * partout plutôt que d'allumer chez chacun une réaction que personne n'a posée.
+ * Le `count`, lui, est le même pour tout le monde. C'est ce booléen que la
  * bascule inverse, et c'est lui que le bouton reflète.
  */
 export interface ReviewCommentReaction {

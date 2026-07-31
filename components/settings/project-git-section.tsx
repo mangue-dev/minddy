@@ -256,6 +256,20 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
           )}
         </div>
 
+        {/* Sous quel compte Numo agit sur la forge (MIN-146). GitHub a une
+            identité de bot (le token d'installation de l'App) : rien à dire.
+            GitLab n'en a pas — l'agent part de la connexion OAuth du LIEN,
+            donc du compte de qui a lié le dépôt. Tant qu'une identité de
+            service n'existe pas, on le DIT plutôt que de le laisser
+            découvrir dans l'historique du dépôt. */}
+        {link.provider === "gitlab" && (
+          <p className="text-xs text-muted-foreground">
+            {link.account_login
+              ? t("gitAgentActsAs", { login: link.account_login })
+              : t("gitAgentActsAsUnknown")}
+          </p>
+        )}
+
         {/* Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3">

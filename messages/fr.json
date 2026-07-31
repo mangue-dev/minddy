@@ -1361,9 +1361,9 @@
   "Profile": {
     "newAvatar": "Nouvel avatar",
     "avatarHint": "Votre avatar est généré à partir de votre compte. Relancez le tirage autant de fois que vous voulez.",
-    "nameLabel": "Nom",
-    "namePlaceholder": "Votre nom",
-    "nameEmpty": "Le nom ne peut pas être vide.",
+    "nameLabel": "Nom d'utilisateur",
+    "namePlaceholder": "Votre nom d'utilisateur",
+    "nameEmpty": "Le nom d'utilisateur ne peut pas être vide.",
     "updated": "Profil mis à jour."
   },
   "Account": {
@@ -1372,7 +1372,7 @@
     "profileTab": "Profil",
     "preferencesTab": "Préférences",
     "profileSectionTitle": "Profil",
-    "profileSectionDesc": "Votre photo et votre nom, visibles par les autres membres.",
+    "profileSectionDesc": "Votre photo et votre nom d'utilisateur, visibles par les autres membres.",
     "emailLabel": "E-mail",
     "emailHint": "Votre adresse ne peut pas être modifiée.",
     "themeTitle": "Thème",
@@ -1749,6 +1749,8 @@
     "gitUnlink": "Délier",
     "gitUnlinkTitle": "Délier ce dépôt ?",
     "gitUnlinkDescription": "Votre connexion au compte est conservée.",
+    "gitAgentActsAs": "GitLab n'a pas d'identité de bot : sur le dépôt, l'agent agit avec le compte {login}. Les merge requests qu'il ouvre, ses commentaires de review et ses pushs portent ce compte.",
+    "gitAgentActsAsUnknown": "GitLab n'a pas d'identité de bot : sur le dépôt, l'agent agit avec le compte qui l'a lié. Les merge requests qu'il ouvre, ses commentaires de review et ses pushs portent ce compte.",
     "gitIssueSyncLabel": "Importer les issues {provider}",
     "gitIssueSyncHint": "Chaque issue du dépôt devient un ticket, en triage. Son statut suit l'issue distante : fermée → Terminé, rouverte → Backlog.",
     "gitIssueSyncOwnerOnlyHint": "Seul le propriétaire peut activer l'import des issues.",

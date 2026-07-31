@@ -100,7 +100,31 @@ export async function resolveRepoCloneTargetForRepo(opts: {
   return null;
 }
 
-/** Mint du token + URL de clone pour une ligne `project_git_links` déjà résolue. */
+/**
+ * Mint du token + URL de clone pour une ligne `project_git_links` déjà résolue.
+ *
+ * **C'est ici que se décide QUI agit sur la forge** — et il n'y a que deux
+ * porteurs possibles dans minddy :
+ *
+ * - **L'agent, c'est minddy.** Ce que fait Numo (ouvrir la MR, pousser la
+ *   branche, poser les commentaires de sa review, faire le ménage des branches)
+ *   doit porter le nom de minddy, jamais celui d'un humain. C'est le token minté
+ *   ici. Sur GitHub, le token d'installation donne `minddy-app[bot]` : juste.
+ * - **Un geste humain porte le nom de l'humain** (MIN-144) : approuver,
+ *   commenter, réagir, merger passent par `resolveForgeActor`
+ *   ([lib/server/git/forge-actor.ts](lib/server/git/forge-actor.ts)) et le token
+ *   du compte git de qui clique. Jamais par le token d'ici.
+ *
+ * **La transgression connue (MIN-146).** GitLab n'a aucune identité de bot : le
+ * token ci-dessous est l'access token OAuth de la connexion portée par le LIEN,
+ * c'est-à-dire du compte de la personne qui a lié le dépôt. Sur la forge, c'est
+ * donc elle qui ouvre la MR de Numo et qui poste ses commentaires — un geste
+ * automatisé sous un nom humain, le miroir exact du bug corrigé par MIN-144.
+ * Les COMMITS, eux, sont corrects (`resolveCommitterIdentity` dans execute.ts
+ * configure `minddy agent <agent@minddy.app>`) : c'est l'auteur au niveau de
+ * l'API qui est faux. En attendant une identité de service GitLab, la liaison
+ * le dit dans l'UI (`gitAgentActsAs`) plutôt que de le taire.
+ */
 async function targetFromLink(row: GitLinkRow): Promise<RepoCloneTarget> {
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
