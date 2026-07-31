@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { CopyButton } from "@/components/marketing/copy-button";
 import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
@@ -93,6 +94,15 @@ const LanguageSwitcher = dynamic(
   { ssr: false },
 );
 
+/**
+ * Les infobulles de l'adresse de contact, sous le même verrou et pour la même
+ * raison : Radix y tire le positionneur flottant. Voir
+ * [footer-hint.tsx](footer-hint.tsx).
+ */
+const FooterHint = dynamic(() => import("./footer-hint").then((m) => m.FooterHint), {
+  ssr: false,
+});
+
 export function MarketingFooter() {
   const t = useTranslations("Landing");
   const locale = useLocale() as Locale;
@@ -120,6 +130,13 @@ export function MarketingFooter() {
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  // L'élément est écrit une seule fois : nu tant que l'infobulle n'est pas
+  // arrivée, enveloppé ensuite. C'est ce qui garde le lien `mailto:` dans le
+  // HTML rendu côté serveur, alors que l'infobulle, elle, est chargée en
+  // différé.
+  const withHint = (label: string, child: ReactElement) =>
+    reached ? <FooterHint label={label}>{child}</FooterHint> : child;
 
   return (
     <footer className="relative overflow-hidden border-t border-border">
@@ -196,12 +213,39 @@ export function MarketingFooter() {
               })}
             </span>
           </div>
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="transition-colors hover:text-foreground"
-          >
-            {CONTACT_EMAIL}
-          </a>
+          {/* L'adresse de contact, et son bouton « copier » posé à gauche. Il ne
+              se montre qu'au survol, mais sa boîte est là en permanence
+              (opacité, pas affichage) : l'adresse ne bouge pas d'un pixel quand
+              il apparaît. Là où il n'y a pas de survol — un écran tactile — il
+              reste visible, d'où l'`opacity-100` de base que seul
+              `@media (hover: hover)` efface.
+
+              Les deux gestes se ressemblent trop pour se passer d'étiquette :
+              une icône « copier » collée à une adresse cliquable, sans rien qui
+              dise laquelle fait quoi. D'où une infobulle sur chacun. */}
+          <span className="group inline-flex items-center gap-1">
+            <span className="inline-flex size-[22px] items-center justify-center">
+              {withHint(
+                t("footerCopyEmail"),
+                <CopyButton
+                  text={CONTACT_EMAIL}
+                  label={t("footerCopyEmail")}
+                  copiedLabel={t("footerEmailCopied")}
+                  iconOnly
+                  className="opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
+                />,
+              )}
+            </span>
+            {withHint(
+              t("footerSendEmail"),
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="transition-colors hover:text-foreground"
+              >
+                {CONTACT_EMAIL}
+              </a>,
+            )}
+          </span>
         </div>
       </div>
 

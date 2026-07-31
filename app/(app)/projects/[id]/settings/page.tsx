@@ -389,6 +389,7 @@ export default function ProjectSettingsPage() {
         title={t("deleteProjectTitle", { name: project.name })}
         description={t("deleteProjectDescription", { days: TRASH_RETENTION_DAYS })}
         confirmLabel={tc("moveToTrash")}
+        cancelLabel={tc("cancel")}
         onConfirm={handleDelete}
       />
     </>

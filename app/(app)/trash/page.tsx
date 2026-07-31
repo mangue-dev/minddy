@@ -145,6 +145,7 @@ function TrashRow({
 
 export default function TrashPage() {
   const t = useTranslations("Trash");
+  const tc = useTranslations("Common");
   const { items, retentionDays, loading, restore, purge, empty } = useTrashQuery();
   const [pending, setPending] = useState<TrashItem | null>(null);
   const [emptyOpen, setEmptyOpen] = useState(false);
@@ -237,6 +238,7 @@ export default function TrashPage() {
         title={t("purgeTitle", { title: pending?.title ?? "" })}
         description={t("purgeConfirm")}
         confirmLabel={t("purge")}
+        cancelLabel={tc("cancel")}
         onConfirm={async () => {
           if (!pending) return;
           try {
@@ -255,6 +257,7 @@ export default function TrashPage() {
         title={t("emptyTrashTitle")}
         description={t("emptyTrashConfirm", { count: items.length })}
         confirmLabel={t("emptyTrash")}
+        cancelLabel={tc("cancel")}
         onConfirm={async () => {
           try {
             await empty();

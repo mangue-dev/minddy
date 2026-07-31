@@ -253,6 +253,7 @@ function ObjectivesInner() {
           days: TRASH_RETENTION_DAYS,
         })}
         confirmLabel={tCommon("moveToTrash")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           if (!toDelete) return;
           try {

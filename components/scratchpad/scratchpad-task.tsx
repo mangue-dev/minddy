@@ -64,9 +64,42 @@ function sectionHeadingAt(
   return null;
 }
 
+/** Les quatre états d'une tâche, dans l'ordre du cycle de vie. */
+const STATE_CHOICES = [
+  {
+    value: "pending",
+    icon: Circle,
+    label: "markPending",
+    keywords: ["pending", "todo", "à faire", "a faire"],
+  },
+  {
+    value: "in_progress",
+    icon: Play,
+    label: "markInProgress",
+    keywords: ["in progress", "en cours", "wip"],
+  },
+  {
+    value: "completed",
+    icon: Check,
+    label: "markCompleted",
+    keywords: ["completed", "done", "terminé", "termine", "fait"],
+  },
+  {
+    value: "cancelled",
+    icon: CircleSlash,
+    label: "cancelTask",
+    keywords: ["cancelled", "annulé", "annule", "drop"],
+  },
+] as const satisfies readonly {
+  value: PlanTaskState;
+  icon: typeof Circle;
+  label: string;
+  keywords: readonly string[];
+}[];
+
 /**
  * Scratchpad tasks with the plan's FOUR states inside the WYSIWYG editor. The
- * checkbox and the per-line ⋯ menu (set state, promote the note to an issue,
+ * checkbox and the per-line ⋯ menu (change state, promote the note to an issue,
  * copy the line as a prompt) come from a React NodeView; the state persists as
  * the node attribute `state` and round-trips to markdown markers
  * ([ ]/[~]/[x]/[-]) via task-markdown.ts.
@@ -134,10 +167,20 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   // or by right-clicking the task; anchored to the ⋯ trigger (Radix positions it
   // transform-aware, unlike a fixed-point anchor inside the dialog).
   const [menuOpen, setMenuOpen] = useState(false);
+  // Les quatre états tiennent derrière une seule entrée « Changer l'état » : le
+  // menu avance d'une étape sans se fermer, comme le sélecteur de relations. La
+  // recherche est contrôlée pour repartir vide à l'étape 2 — sans quoi le texte
+  // tapé pour trouver l'entrée filtrerait ensuite les états.
+  const [statePage, setStatePage] = useState(false);
+  const [query, setQuery] = useState("");
   const pick = (fn: () => void) => {
     fn();
     setMenuOpen(false);
+    setStatePage(false);
+    setQuery("");
   };
+  const CurrentStateIcon =
+    STATE_CHOICES.find((c) => c.value === state)?.icon ?? Circle;
 
   return (
     <NodeViewWrapper
@@ -194,7 +237,15 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
       >
         <SearchMenu
           open={menuOpen}
-          onOpenChange={setMenuOpen}
+          onOpenChange={(next) => {
+            setMenuOpen(next);
+            if (!next) {
+              setStatePage(false);
+              setQuery("");
+            }
+          }}
+          searchValue={query}
+          onSearchValueChange={setQuery}
           tooltip={t("taskMenuAria")}
           align="end"
           trigger={
@@ -209,81 +260,75 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
             </Button>
           }
         >
-          <CommandGroup>
-          {state !== "pending" && (
-            <CommandItem
-              value={t("markPending")}
-              keywords={["pending", "todo", "à faire", "a faire"]}
-              onSelect={() => pick(() => set("pending"))}
-            >
-              <Circle />
-              {t("markPending")}
-            </CommandItem>
+          {statePage ? (
+            // Étape 2 : les états, l'état courant en moins — le proposer
+            // reviendrait à proposer de ne rien faire.
+            <CommandGroup heading={t("changeState")}>
+              {STATE_CHOICES.filter((c) => c.value !== state).map(
+                ({ value, icon: Icon, label, keywords }) => (
+                  <CommandItem
+                    key={value}
+                    value={t(label)}
+                    keywords={[...keywords]}
+                    onSelect={() => pick(() => set(value))}
+                  >
+                    <Icon />
+                    {t(label)}
+                  </CommandItem>
+                )
+              )}
+            </CommandGroup>
+          ) : (
+            <CommandGroup>
+              {/* Une seule entrée pour les quatre états, mais elle garde tous
+                  leurs mots-clés : taper « terminé » depuis la première page la
+                  trouve toujours, au lieu de ne plus rien trouver. */}
+              <CommandItem
+                value={t("changeState")}
+                keywords={STATE_CHOICES.flatMap((c) => [...c.keywords])}
+                onSelect={() => {
+                  setStatePage(true);
+                  setQuery("");
+                }}
+              >
+                <CurrentStateIcon />
+                {t("changeState")}
+              </CommandItem>
+              <CommandSeparator className="my-1" />
+              <CommandItem
+                value={tScratch("launchAgent")}
+                keywords={["agent", "numo", "launch", "lancer", "run", "coder"]}
+                onSelect={() => pick(launchAgent)}
+              >
+                <Bot />
+                {tScratch("launchAgent")}
+              </CommandItem>
+              <CommandItem
+                value={tScratch("promoteToIssue")}
+                keywords={[
+                  "ticket",
+                  "issue",
+                  "promote",
+                  "promouvoir",
+                  "convertir",
+                  "convert",
+                  "numo",
+                ]}
+                onSelect={() => pick(promoteToIssue)}
+              >
+                <NumoIcon animated={false} className="size-4" />
+                {tScratch("promoteToIssue")}
+              </CommandItem>
+              <CommandItem
+                value={tScratch("copyLine")}
+                keywords={["copy", "copier", "prompt", "agent"]}
+                onSelect={() => pick(copyLine)}
+              >
+                <Copy />
+                {tScratch("copyLine")}
+              </CommandItem>
+            </CommandGroup>
           )}
-          {state !== "in_progress" && (
-            <CommandItem
-              value={t("markInProgress")}
-              keywords={["in progress", "en cours", "wip"]}
-              onSelect={() => pick(() => set("in_progress"))}
-            >
-              <Play />
-              {t("markInProgress")}
-            </CommandItem>
-          )}
-          {state !== "completed" && (
-            <CommandItem
-              value={t("markCompleted")}
-              keywords={["completed", "done", "terminé", "termine", "fait"]}
-              onSelect={() => pick(() => set("completed"))}
-            >
-              <Check />
-              {t("markCompleted")}
-            </CommandItem>
-          )}
-          {state !== "cancelled" && (
-            <CommandItem
-              value={t("cancelTask")}
-              keywords={["cancelled", "annulé", "annule", "drop"]}
-              onSelect={() => pick(() => set("cancelled"))}
-            >
-              <CircleSlash />
-              {t("cancelTask")}
-            </CommandItem>
-          )}
-          <CommandSeparator className="my-1" />
-          <CommandItem
-            value={tScratch("launchAgent")}
-            keywords={["agent", "numo", "launch", "lancer", "run", "coder"]}
-            onSelect={() => pick(launchAgent)}
-          >
-            <Bot />
-            {tScratch("launchAgent")}
-          </CommandItem>
-          <CommandItem
-            value={tScratch("promoteToIssue")}
-            keywords={[
-              "ticket",
-              "issue",
-              "promote",
-              "promouvoir",
-              "convertir",
-              "convert",
-              "numo",
-            ]}
-            onSelect={() => pick(promoteToIssue)}
-          >
-            <NumoIcon animated={false} className="size-4" />
-            {tScratch("promoteToIssue")}
-          </CommandItem>
-          <CommandItem
-            value={tScratch("copyLine")}
-            keywords={["copy", "copier", "prompt", "agent"]}
-            onSelect={() => pick(copyLine)}
-          >
-            <Copy />
-            {tScratch("copyLine")}
-          </CommandItem>
-        </CommandGroup>
         </SearchMenu>
       </span>
     </NodeViewWrapper>

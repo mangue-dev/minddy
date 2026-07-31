@@ -523,6 +523,7 @@ function FeedbackDetail({
   const t = useTranslations("FeedbackBoard");
   const tStatus = useTranslations("PublicFeedback");
   const tField = useTranslations("Field");
+  const tCommon = useTranslations("Common");
   const format = useFormatter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -1105,6 +1106,7 @@ function FeedbackDetail({
         title={t("deletePostTitle", { title: post.title })}
         description={t("deletePostConfirm", { days: TRASH_RETENTION_DAYS })}
         confirmLabel={t("deletePost")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           await api(`/api/projects/${projectId}/feedback/${postId}`, { method: "DELETE" });
           setDeleteOpen(false);

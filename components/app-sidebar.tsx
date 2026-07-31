@@ -12,6 +12,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   Tooltip,
   TooltipTrigger,
   TooltipContent,
@@ -86,32 +89,48 @@ const MotionLink = motion.create(Link);
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
 function SidebarBrand() {
+  const t = useTranslations("Nav");
   const env = getAppEnv();
   const label = ENV_LABEL[env];
+  // Hors production, le nom de l'environnement se pose comme un logotype :
+  // même teinte que le brandmark, Inter (la police du produit, `font-sans`),
+  // casse basse et chasse resserrée pour qu'il se lise comme la suite du logo
+  // et non comme une étiquette rapportée. Repliée, la barre n'a que 56 px : le
+  // mot n'y tiendrait pas, et la teinte du mark suffit à dire l'environnement.
+  const labelClass = cn(
+    "font-sans text-[15px] font-semibold leading-none tracking-[-0.02em]",
+    ENV_LOGO_TINT[env],
+  );
   return (
-    <Link
-      href="/home"
-      aria-label={label ? `minddy ${label}` : "minddy"}
-      className="inline-flex items-center gap-1.5 px-1 text-sidebar-foreground"
-    >
-      <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[env])} />
-      {/* Hors production, le nom de l'environnement se pose comme un logotype :
-          même teinte que le brandmark, Inter (la police du produit, `font-sans`),
-          casse basse et chasse resserrée pour qu'il se lise comme la suite du
-          logo et non comme une étiquette rapportée. Repliée, la barre n'a que
-          56 px : le mot n'y tiendrait pas, et la teinte du mark suffit à dire
-          l'environnement. */}
-      {label ? (
-        <span
-          className={cn(
-            "font-sans text-[15px] font-semibold leading-none tracking-[-0.02em]",
-            ENV_LOGO_TINT[env],
-          )}
-        >
-          {label}
-        </span>
-      ) : null}
-    </Link>
+    // Le mot vit à CÔTÉ du lien, pas dedans : en preview il porte sa propre
+    // infobulle, et une cible de survol imbriquée dans le lien de retour à
+    // l'accueil n'aurait ni focus clavier ni sémantique tenable.
+    <div className="flex items-center gap-1.5 px-1 text-sidebar-foreground">
+      <Link href="/home" aria-label="minddy" className="inline-flex items-center">
+        <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[env])} />
+      </Link>
+      {label == null ? null : env === "preview" ? (
+        // « preview » ne dit pas de lui-même à quoi cet environnement sert :
+        // l'infobulle le dit — les nouveautés en avance, pas le travail du jour.
+        // En local (« dev ») le mot n'a personne à renseigner : pas d'infobulle.
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" className={cn(labelClass, "cursor-default")}>
+              {label}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            align="start"
+            className="max-w-[260px] text-xs leading-snug"
+          >
+            {t("envPreviewHint")}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <span className={labelClass}>{label}</span>
+      )}
+    </div>
   );
 }
 
@@ -271,22 +290,37 @@ function SidebarNav({
 
 /* ─── Footer ───────────────────────────────────────────────────────── */
 
-function ThemeItem({
-  value,
-  icon: Icon,
-  label,
-}: {
-  value: "light" | "dark" | "system";
-  icon: typeof Sun;
-  label: string;
-}) {
+const THEME_CHOICES = [
+  { value: "light", icon: Sun, label: "themeLight" },
+  { value: "dark", icon: Moon, label: "themeDark" },
+  { value: "system", icon: Monitor, label: "themeSystem" },
+] as const;
+
+/** Le thème se change rarement : il tient dans un sous-menu plutôt que
+    d'occuper trois lignes du menu de compte. L'icône du déclencheur montre le
+    réglage courant, pour ne pas avoir à ouvrir le sous-menu pour le lire. */
+function ThemeSubmenu() {
+  const t = useTranslations("Nav");
   const { theme, setTheme } = useTheme();
+  const CurrentIcon =
+    THEME_CHOICES.find((c) => c.value === theme)?.icon ?? Monitor;
+
   return (
-    <DropdownMenuItem onSelect={() => setTheme(value)}>
-      <Icon />
-      {label}
-      {theme === value && <Check className="ml-auto size-4" />}
-    </DropdownMenuItem>
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <CurrentIcon />
+        {t("changeTheme")}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        {THEME_CHOICES.map(({ value, icon: Icon, label }) => (
+          <DropdownMenuItem key={value} onSelect={() => setTheme(value)}>
+            <Icon />
+            {t(label)}
+            {theme === value && <Check className="ml-auto size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -356,9 +390,7 @@ function AccountButton({ collapsed }: { collapsed: boolean }) {
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <ThemeItem value="light" icon={Sun} label={t("themeLight")} />
-          <ThemeItem value="dark" icon={Moon} label={t("themeDark")} />
-          <ThemeItem value="system" icon={Monitor} label={t("themeSystem")} />
+          <ThemeSubmenu />
           <DropdownMenuSeparator />
           {/* Le changelog public, dans un modal : on lit ce qui vient de sortir
               sans quitter l'app. Pastille bleue tant que la dernière livraison a

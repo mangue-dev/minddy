@@ -532,6 +532,7 @@ function CommentBlock({
         title={t("deleteCommentTitle")}
         description={deletesReplies ? t("deleteThreadDescription") : t("deleteCommentDescription")}
         confirmLabel={tCommon("delete")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           try {
             await onDelete(comment.id);

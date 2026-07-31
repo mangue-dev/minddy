@@ -106,6 +106,7 @@ export function AccountGitConnectionsSection() {
             : t("gitDisconnectDescription")
         }
         confirmLabel={t("gitDisconnect")}
+        cancelLabel={tc("cancel")}
         onConfirm={handleDisconnect}
       />
     </SettingsSection>

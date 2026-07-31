@@ -387,6 +387,7 @@ export function ObjectiveSidePanel({
           days: TRASH_RETENTION_DAYS,
         })}
         confirmLabel={tCommon("moveToTrash")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={handleDelete}
       />
     </>

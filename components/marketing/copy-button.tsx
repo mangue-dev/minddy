@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 
@@ -21,14 +21,27 @@ export function CopyButton({
   text,
   label,
   copiedLabel,
+  iconOnly = false,
   className,
+  onClick,
+  ...rest
 }: {
   /** Ce qui part dans le presse-papiers. */
   text: string;
   label: string;
   copiedLabel: string;
+  /**
+   * Icône seule, sans cadre : le libellé devient le nom accessible du bouton au
+   * lieu d'être écrit à côté. Pour les endroits où le bouton se pose CONTRE la
+   * valeur qu'il copie — l'adresse de contact du pied de page — et où un bouton
+   * bordé volerait la vedette au texte qu'il accompagne.
+   */
+  iconOnly?: boolean;
   className?: string;
-}) {
+  // Le reste part sur le `<button>`, `ref` comprise : c'est ce qui permet de
+  // l'envelopper dans un `TooltipTrigger asChild`, qui lui passe ses écouteurs
+  // et son `aria-describedby`.
+} & ComponentProps<"button">) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
 
@@ -56,9 +69,22 @@ export function CopyButton({
   return (
     <button
       type="button"
-      onClick={() => void copy()}
+      // Le libellé change en « copié » : lu à côté de l'icône, ou annoncé par le
+      // nom accessible quand il n'y a que l'icône. Le retour est le même dans les
+      // deux cas, il change juste de canal.
+      aria-label={iconOnly ? (copied ? copiedLabel : label) : undefined}
+      {...rest}
+      // Le clic de l'appelant d'abord — celui d'un `TooltipTrigger` referme
+      // l'infobulle, et l'écraser la laisserait ouverte sur le bouton cliqué.
+      onClick={(event) => {
+        onClick?.(event);
+        void copy();
+      }}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "inline-flex shrink-0 items-center transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        iconOnly
+          ? "rounded-md p-1 text-muted-foreground"
+          : "gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
         className,
       )}
     >
@@ -67,7 +93,7 @@ export function CopyButton({
       ) : (
         <Copy className="h-3.5 w-3.5" aria-hidden />
       )}
-      {copied ? copiedLabel : label}
+      {!iconOnly && (copied ? copiedLabel : label)}
     </button>
   );
 }

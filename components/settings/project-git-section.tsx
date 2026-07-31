@@ -34,6 +34,7 @@ const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
  */
 export function ProjectGitSection({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
+  const tc = useTranslations("Common");
   const format = useFormatter();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -305,6 +306,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
           title={t("gitUnlinkTitle")}
           description={t("gitUnlinkDescription")}
           confirmLabel={t("gitUnlink")}
+          cancelLabel={tc("cancel")}
           onConfirm={handleUnlink}
         />
       </div>

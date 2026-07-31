@@ -536,6 +536,7 @@ export function ProjectIntegrations({
         title={t("integrationRevokeTitle", { name: toRevoke?.name ?? "" })}
         description={t("integrationRevokeDescription")}
         confirmLabel={t("integrationRevoke")}
+        cancelLabel={tc("cancel")}
         onConfirm={handleRevoke}
       />
     </div>

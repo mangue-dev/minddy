@@ -91,6 +91,7 @@ export function AccountConnectedAppsSection() {
         title={t("connectedAppRevokeTitle", { name: toRevoke?.client_name ?? "" })}
         description={t("connectedAppRevokeDescription")}
         confirmLabel={t("apiKeyRevoke")}
+        cancelLabel={tc("cancel")}
         onConfirm={handleRevoke}
       />
     </SettingsSection>

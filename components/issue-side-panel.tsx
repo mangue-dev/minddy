@@ -1063,6 +1063,7 @@ export function IssueSidePanel({
         title={t("deleteDialogTitle")}
         description={t("deleteDialogDescription", { days: TRASH_RETENTION_DAYS })}
         confirmLabel={tCommon("moveToTrash")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={handleDelete}
       />
     </>

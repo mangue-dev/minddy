@@ -195,6 +195,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
         title={toDelete ? t("deleteCategoryTitle", { name: toDelete.name }) : ""}
         description={t("deleteCategoryDescription")}
         confirmLabel={tc("delete")}
+        cancelLabel={tc("cancel")}
         onConfirm={async () => {
           if (!toDelete) return;
           try {
