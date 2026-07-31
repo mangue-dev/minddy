@@ -68,6 +68,46 @@ describe("sections de questions", () => {
     ).toEqual([["q1", true]]);
   });
 
+  // MIN-146 : un titre de travail qui PARLE d'une question n'en ouvre pas une.
+  // C'est un rôle, pas un mot-clé — sans quoi « La bascule (à écrire une fois la
+  // question tranchée) » emportait silencieusement tout le reste du plan.
+  it("n'ouvre pas de section sur un titre qui mentionne une question", () => {
+    expect(
+      questionFlags(`## La bascule (à écrire une fois la question tranchée)
+
+- [ ] t1`)
+    ).toEqual([["t1", false]]);
+  });
+
+  it("compte le plan de MIN-146 comme son auteur le lit", () => {
+    const plan = `## Contexte
+
+Prose.
+
+## Questions tranchées
+
+- [x] Quelle identité de service GitLab ?
+- [x] Que faire des liaisons existantes ?
+
+## 1. Le repli honnête
+
+- [x] Dire dans l'UI sous quel compte Numo agit
+- [x] Écrire la règle en tête de targetFromLink
+
+## 2. La bascule (à écrire une fois la question tranchée)
+
+- [ ] Stockage de l'identité de service
+
+## 3. Vérification
+
+- [x] i18n-contract + tsc verts
+- [-] Run d'agent sur un projet GitLab`;
+
+    // 3/4 : les deux décisions ne comptent pas, le run annulé non plus — mais le
+    // stockage, si. C'est lui que le titre de la section 2 escamotait.
+    expect(planProgress(plan)).toEqual({ done: 3, total: 4 });
+  });
+
   it("reconnaît les intitulés FR et EN", () => {
     for (const heading of [
       "## Questions",

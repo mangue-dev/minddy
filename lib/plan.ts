@@ -8,6 +8,17 @@
 // stay tasks (same indices, same interactions — ticking one means "answered")
 // but count for nothing, so a plan waiting on three decisions doesn't read as
 // 0/8 when it holds 5 real steps.
+//
+// That exclusion is the one thing here that can silently swallow real work, so
+// the heading has to BE about questions, not merely mention the word: a work
+// section called "La bascule (à écrire une fois la question tranchée)" used to
+// open one (MIN-146), and every task under it stopped counting.
+//
+// The section still runs until a heading of the same or higher rank — a deeper
+// one nests inside it, which is what lets a scratchpad hang "### Détail" under
+// its questions. The corollary is worth knowing when WRITING a plan: put the
+// sections that follow "## Questions" at that same rank, or they nest inside it
+// and the whole plan counts for nothing.
 // Known v1 limitation: a checkbox inside a blockquote or an ordered list is
 // still parsed as a task (rendered without its surrounding decoration).
 
@@ -57,8 +68,27 @@ const TASK_LINE = /^(\s*)([-*+] \[)([ ~xX-])(\]\s+)(.*)$/;
 const FENCE_LINE = /^\s{0,3}(`{3,}|~{3,})/;
 // Groups: 1 = hashes (rank), 2 = heading text.
 const HEADING_LINE = /^\s{0,3}(#{1,6})\s+(.*)$/;
-/** Opens a questions section — "Questions", "Open questions", "Questions ouvertes". */
-const QUESTION_HEADING = /\bquestions?\b/i;
+/** Heading text without its numbering, emoji or emphasis: "2. **Questions**" → "questions". */
+const headingKey = (text: string): string =>
+  text
+    .replace(/[*_`~]/g, "")
+    .replace(/^[^\p{L}]+/u, "")
+    .trim()
+    .toLowerCase();
+
+/**
+ * Opens a questions section — "Questions", "Open questions", "Questions
+ * ouvertes", "Question pour toi", "## 2. Questions".
+ *
+ * Anchored on purpose: the heading has to START with the word (bar one
+ * qualifier), so a work section that merely mentions a question in passing
+ * stays work.
+ */
+const QUESTION_HEADING =
+  /^(?:open|remaining|unresolved|outstanding|pending)?\s*questions?\b/i;
+
+const isQuestionHeading = (text: string): boolean =>
+  QUESTION_HEADING.test(headingKey(text));
 
 const STATE_BY_MARKER: Record<string, PlanTaskState> = {
   " ": "pending",
@@ -122,7 +152,7 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
       if (heading) {
         const rank = heading[1].length;
         if (questionRank !== null && rank <= questionRank) questionRank = null;
-        if (QUESTION_HEADING.test(heading[2])) questionRank = rank;
+        if (isQuestionHeading(heading[2])) questionRank = rank;
       }
     }
 
@@ -246,9 +276,7 @@ export function appendToPlan(
     const nextHeading = findHeadingLine(lines, () => true, headingIdx + 1);
     if (nextHeading !== -1) insertAt = nextHeading;
   } else {
-    const questions = findHeadingLine(lines, (text) =>
-      QUESTION_HEADING.test(text)
-    );
+    const questions = findHeadingLine(lines, isQuestionHeading);
     if (questions !== -1) insertAt = questions;
   }
 
