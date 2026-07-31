@@ -25,6 +25,8 @@ const ISSUE: Issue = {
   parent_id: null,
   duplicate_of_id: null,
   due_date: null,
+  recurrence: null,
+  recurrence_series_id: null,
   position: 1000,
   created_by: "user-1",
   created_at: "2026-01-01T00:00:00Z",

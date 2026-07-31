@@ -110,6 +110,7 @@ function useEventTranslators(): EventTranslators {
   const tPriority = useTranslations("Priority");
   const tObjectiveStatus = useTranslations("ObjectiveStatus");
   const tFeedback = useTranslations("PublicFeedback");
+  const tRecurrence = useTranslations("Recurrence");
   const format = useFormatter();
   return {
     t: (key, values) =>
@@ -120,6 +121,7 @@ function useEventTranslators(): EventTranslators {
       tObjectiveStatus(v as Parameters<typeof tObjectiveStatus>[0]),
     tFeedbackStatus: (v) =>
       tFeedback(`status.${v}` as Parameters<typeof tFeedback>[0]),
+    tRecurrence: (v) => tRecurrence(v as Parameters<typeof tRecurrence>[0]),
     formatDue: (value) => {
       const d = parseDueDate(value);
       return d ? format.dateTime(d, dueDateFormat(d)) : "—";

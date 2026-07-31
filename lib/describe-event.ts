@@ -29,6 +29,8 @@ export interface EventTranslators {
   tObjectiveStatus?: LabelT;
   /** "PublicFeedback" status namespace (value → label) — for feedback events. */
   tFeedbackStatus?: LabelT;
+  /** "Recurrence" namespace (cadence → label) — for the recurrence events. */
+  tRecurrence?: LabelT;
   /** Render a stored due-date value (ISO datetime or legacy date) for display. */
   formatDue: (value: string | null) => string;
 }
@@ -85,7 +87,7 @@ export function describeEvent(
   ctx: EventContext,
   tr: EventTranslators
 ): string {
-  const { t, tStatus, tPriority, formatDue } = tr;
+  const { t, tStatus, tPriority, tRecurrence, formatDue } = tr;
   if (e.type === "created") return t("created");
   // CSV importers (MIN-45): to_value carries the source.
   if (e.type === "imported")
@@ -96,6 +98,10 @@ export function describeEvent(
     return t("categoryAdded", { name: categoryName(ctx, tr, e.to_value) });
   if (e.type === "category_removed")
     return t("categoryRemoved", { name: categoryName(ctx, tr, e.from_value) });
+  // Récurrence (MIN-136) : le ticket terminé dit ce qu'il a engendré —
+  // `to_value` porte l'occurrence suivante, `from_value` la cadence.
+  if (e.type === "recurrence_spawned")
+    return t("recurrenceSpawned", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_added")
     return t("subIssueAdded", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_removed")
@@ -186,6 +192,12 @@ export function describeEvent(
           from: formatDue(e.from_value),
           to: formatDue(e.to_value),
         });
+      // La cadence se dit en toutes lettres (« Toutes les semaines ») ; le
+      // retrait n'a rien à montrer d'autre que lui-même.
+      case "recurrence":
+        return e.to_value
+          ? t("recurrenceSet", { to: tRecurrence?.(e.to_value) ?? e.to_value })
+          : t("recurrenceCleared");
       case "parent":
         return e.to_value
           ? t("parentAttached", { ref: issueRef(ctx, tr, e.to_value) })

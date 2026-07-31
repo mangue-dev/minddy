@@ -3,6 +3,12 @@ import "server-only";
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
+import {
+  isRecurrenceCadence,
+  isRecurrenceOrNull,
+  startDueDateISO,
+} from "@/lib/recurrence";
+import { spawnNextOccurrence } from "@/lib/server/recurrence";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import {
   buildFieldChangeEvents,
@@ -49,6 +55,8 @@ export type UpdateIssueResult =
         | "invalidPriority"
         | "invalidEffort"
         | "invalidDate"
+        | "invalidRecurrence"
+        | "recurrenceNeedsDueDate"
         | "invalidPosition"
         | "invalidCycle"
         | "triageCannotJoinCycle"
@@ -144,6 +152,12 @@ export async function updateIssueFields({
     }
     updates.due_date = input.due_date;
   }
+  if ("recurrence" in input) {
+    if (!isRecurrenceOrNull(input.recurrence)) {
+      return { ok: false, status: 400, errorKey: "invalidRecurrence" };
+    }
+    updates.recurrence = input.recurrence;
+  }
   if ("position" in input) {
     if (typeof input.position !== "number" || !Number.isFinite(input.position)) {
       return { ok: false, status: 400, errorKey: "invalidPosition" };
@@ -196,6 +210,48 @@ export async function updateIssueFields({
   }
   if (!hasAccess) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+
+  // Récurrence et échéance vont ensemble (MIN-136) : une cadence dit « et
+  // après ? » d'une date qui doit exister — c'est elle qui porte la prochaine
+  // occurrence. Poser une cadence sans échéance se refuse ; effacer l'échéance
+  // d'un ticket récurrent coupe la récurrence (et l'événement d'activité le
+  // dit), plutôt que de laisser une série sans point de départ.
+  const dueDateAfter = ("due_date" in updates ? updates.due_date : before.due_date) as
+    | string
+    | null;
+  const recurrenceAfter = (
+    "recurrence" in updates ? updates.recurrence : before.recurrence
+  ) as string | null;
+  if (recurrenceAfter && !dueDateAfter) {
+    if (updates.recurrence) {
+      return { ok: false, status: 400, errorKey: "recurrenceNeedsDueDate" };
+    }
+    updates.recurrence = null;
+  }
+  // La date qu'on donne à une récurrence est un DÉBUT, pas une date figée :
+  // « toutes les semaines à partir de lundi dernier » veut dire lundi prochain.
+  // On la recale donc au moment où l'horaire est (re)défini — pose ou changement
+  // de cadence, choix d'une échéance sur un ticket récurrent — et seulement là :
+  // un ticket récurrent en retard doit continuer de s'afficher en retard tant
+  // qu'on ne l'a pas coché, et une édition de titre n'a pas à déplacer sa date.
+  if (
+    isRecurrenceCadence(recurrenceAfter) &&
+    dueDateAfter &&
+    ("recurrence" in updates || "due_date" in updates)
+  ) {
+    const start = startDueDateISO(dueDateAfter, recurrenceAfter);
+    if (start && start !== before.due_date) updates.due_date = start;
+  }
+  // Annuler (ou dédoublonner) un ticket récurrent arrête la récurrence : seul
+  // le passage en `done` engendre l'occurrence suivante, une série laissée sur
+  // un ticket annulé ne produirait plus jamais rien — juste une ligne fantôme
+  // dans la page « Récurrences » du projet.
+  if (
+    (updates.status === "canceled" || updates.status === "duplicate") &&
+    before.recurrence
+  ) {
+    updates.recurrence = null;
   }
 
   // Triage and cycle exclude each other (MIN-32): moving an issue to triage
@@ -336,6 +392,18 @@ export async function updateIssueFields({
         issue_title: (before.title as string) ?? null,
       };
       await insertStatEvents(service, [statRow]);
+    }
+
+    // Ticket récurrent terminé (MIN-136) : l'occurrence suivante naît ici, en
+    // backlog, à l'échéance décalée d'une cadence. Après la réponse comme les
+    // autres effets — le realtime la fait apparaître sur les tableaux ouverts.
+    if (updates.status === "done" && before.status !== "done" && before.recurrence) {
+      await spawnNextOccurrence({
+        service,
+        completed: before,
+        actorId,
+        projectName: (before.projects as { name?: string | null } | null)?.name ?? null,
+      });
     }
 
     // Notify a newly-assigned user (never on self-assign).

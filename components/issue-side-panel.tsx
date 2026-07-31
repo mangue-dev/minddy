@@ -952,6 +952,8 @@ export function IssueSidePanel({
                     <DueDateValue
                       value={issue.due_date}
                       onChange={(due_date) => void patch({ due_date })}
+                      recurrence={issue.recurrence}
+                      onRecurrenceChange={(next) => void patch(next)}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("objectiveLinked")}>

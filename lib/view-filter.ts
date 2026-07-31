@@ -28,7 +28,12 @@ export function isDefaultConfig(config: ViewConfig): boolean {
     !f.priority?.length &&
     !f.assignee?.length &&
     !f.effort?.length;
-  return empty && config.sort === "manual" && !config.display.hideDone;
+  return (
+    empty &&
+    config.sort === "manual" &&
+    !config.display.hideDone &&
+    !config.display.hideRecurring
+  );
 }
 
 /** The config a saved view encodes. */
@@ -60,6 +65,7 @@ export function normalizeConfig(c: ViewConfig): string {
     project: norm(f.project),
     sort: c.sort,
     hideDone: !!c.display.hideDone,
+    hideRecurring: !!c.display.hideRecurring,
   });
 }
 
@@ -80,6 +86,7 @@ export function activeFilterCount(config: ViewConfig): number {
   if (f.integration?.length) n++;
   if (f.project?.length) n++;
   if (config.display.hideDone) n++;
+  if (config.display.hideRecurring) n++;
   return n;
 }
 
@@ -104,6 +111,10 @@ export function filterIssues(
   );
   return issues.filter((i) => {
     if (config.display.hideDone && i.status === "done") return false;
+    // MIN-136 : la maintenance qui revient chaque semaine n'est pas ce qu'on
+    // vient lire sur un tableau. Seul le ticket VIVANT d'une série porte la
+    // cadence — les occurrences passées restent visibles.
+    if (config.display.hideRecurring && i.recurrence) return false;
     if (f.status?.length && !f.status.includes(i.status)) return false;
     if (f.priority?.length && !f.priority.includes(i.priority)) return false;
     if (assignee?.length && !assignee.includes(i.assignee_id)) return false;

@@ -57,6 +57,7 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
+import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
   CreateIssueInput,
@@ -73,6 +74,7 @@ const DEFAULTS = {
   assignee_id: null as string | null,
   objective_id: null as string | null,
   due_date: null as string | null,
+  recurrence: null as RecurrenceCadence | null,
 };
 
 export function CreateIssueDialog({
@@ -264,6 +266,7 @@ export function CreateIssueDialog({
       assignee_id: fields.assignee_id,
       objective_id: fields.objective_id,
       due_date: fields.due_date,
+      recurrence: fields.recurrence,
       category_ids: categoryIds,
       attachments: uploads.inputs,
     });
@@ -327,6 +330,7 @@ export function CreateIssueDialog({
       assignee_id: draft.assignee_id,
       objective_id: draft.objective_id,
       due_date: draft.due_date,
+      recurrence: draft.recurrence ?? null,
     });
     setCategoryIds(draft.category_ids);
     uploads.restore(draft.attachments);
@@ -358,6 +362,7 @@ export function CreateIssueDialog({
           priority: fields.priority,
           effort: fields.effort,
           due_date: fields.due_date,
+          recurrence: fields.recurrence,
           assignee_id: fields.assignee_id,
           category_names: categoryNames,
           copy_attachments: uploads.inputs,
@@ -571,6 +576,8 @@ export function CreateIssueDialog({
               <DueDateCompact
                 value={fields.due_date}
                 onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
+                recurrence={fields.recurrence}
+                onRecurrenceChange={(next) => setFields((f) => ({ ...f, ...next }))}
                 open={openPicker === "dueDate"}
                 onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
                 shortcutHint={KEY_FOR_FIELD.dueDate}

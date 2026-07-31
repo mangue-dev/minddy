@@ -425,7 +425,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           display: {
             type: "object",
-            properties: { hideDone: { type: "boolean" } },
+            properties: {
+              hideDone: { type: "boolean" },
+              hideRecurring: { type: "boolean" },
+            },
             description: "Display options.",
           },
         },
@@ -456,7 +459,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           display: {
             type: "object",
-            properties: { hideDone: { type: "boolean" } },
+            properties: {
+              hideDone: { type: "boolean" },
+              hideRecurring: { type: "boolean" },
+            },
           },
         },
         required: ["view_id"],

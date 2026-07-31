@@ -87,6 +87,7 @@ const SCALAR_FIELDS = [
   "assignee_id",
   "objective_id",
   "due_date",
+  "recurrence",
   "cycle_id",
 ] as const;
 

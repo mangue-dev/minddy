@@ -504,6 +504,20 @@ function FiltersPopover({
         >
           {t("hideDone")}
         </ToggleRow>
+        <ToggleRow
+          active={!!config.display.hideRecurring}
+          onClick={() =>
+            onChange({
+              ...config,
+              display: {
+                ...config.display,
+                hideRecurring: !config.display.hideRecurring,
+              },
+            })
+          }
+        >
+          {t("hideRecurring")}
+        </ToggleRow>
       </PopoverContent>
     </Popover>
   );

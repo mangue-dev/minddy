@@ -16,6 +16,7 @@ import type {
   IssueEffort,
 } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
+import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { AttachmentInput } from "@/lib/types";
 
 export type DraftKind = "issue" | "objective";
@@ -38,6 +39,8 @@ export interface IssueDraft extends DraftBase {
   assignee_id: string | null;
   objective_id: string | null;
   due_date: string | null;
+  /** Cadence de répétition (MIN-136). Absente des brouillons écrits avant. */
+  recurrence?: RecurrenceCadence | null;
   category_ids: string[];
   /** Already-uploaded storage references (the bucket keeps them). */
   attachments: AttachmentInput[];

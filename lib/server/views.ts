@@ -211,6 +211,7 @@ export function sanitizeViewConfig(input: {
     if (typeof input.display === "object" && !Array.isArray(input.display)) {
       for (const [key, value] of Object.entries(input.display as Record<string, unknown>)) {
         if (key === "hideDone") display.hideDone = Boolean(value);
+        else if (key === "hideRecurring") display.hideRecurring = Boolean(value);
         else invalid.push(`display.${key}: unknown key, dropped`);
       }
     } else {

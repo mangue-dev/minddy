@@ -23,6 +23,7 @@ import {
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { KEY_FOR_FIELD } from "@/components/issue-field-shortcuts";
+import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { Category, Member, Objective } from "@/lib/types";
 
 /* Borderless key/value fields for the issue panel — the value control has no
@@ -260,9 +261,18 @@ export function CategoryValue({
 export function DueDateValue({
   value,
   onChange,
+  recurrence,
+  onRecurrenceChange,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
+  /** Passer ces deux-là ouvre le mode récurrent (MIN-136) — les tickets l'ont,
+      la date cible d'un objectif non. */
+  recurrence?: RecurrenceCadence | null;
+  onRecurrenceChange?: (next: {
+    due_date: string | null;
+    recurrence: RecurrenceCadence | null;
+  }) => void;
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -271,6 +281,8 @@ export function DueDateValue({
       variant="value"
       value={value}
       onChange={onChange}
+      recurrence={recurrence}
+      onRecurrenceChange={onRecurrenceChange}
       placeholder={t("noneFem")}
       ariaLabel={t("changeDueDateAria")}
       tooltip={tField("dueDate")}

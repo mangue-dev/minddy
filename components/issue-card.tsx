@@ -22,6 +22,7 @@ import {
   IterationCw,
   Link2,
   ListChecks,
+  Repeat,
   Target,
   Trash2,
   Triangle,
@@ -114,6 +115,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
+import type { RecurrenceCadence } from "@/lib/recurrence";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 
@@ -403,9 +405,16 @@ function AssigneePick({
 function DueDatePick({
   value,
   onChange,
+  recurrence,
+  onRecurrenceChange,
 }: {
   value: string;
   onChange?: (v: string | null) => void;
+  recurrence: RecurrenceCadence | null;
+  onRecurrenceChange?: (next: {
+    due_date: string | null;
+    recurrence: RecurrenceCadence | null;
+  }) => void;
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -417,7 +426,11 @@ function DueDatePick({
   if (!onChange) {
     return (
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-        <Calendar className="size-3 shrink-0" />
+        {recurrence ? (
+          <Repeat className="size-3 shrink-0" />
+        ) : (
+          <Calendar className="size-3 shrink-0" />
+        )}
         {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
       </span>
     );
@@ -428,6 +441,8 @@ function DueDatePick({
       variant="chip"
       value={value}
       onChange={onChange}
+      recurrence={recurrence}
+      onRecurrenceChange={onRecurrenceChange}
       ariaLabel={t("changeDueDateAria")}
       tooltip={tField("dueDate")}
       shortcutHint={KEY_FOR_FIELD.dueDate}
@@ -627,6 +642,11 @@ export function IssueCardBody({
   const setDueDate = onUpdate
     ? (date: string | null) => onUpdate({ due_date: date })
     : undefined;
+  // Récurrence et échéance partent ensemble, en une seule écriture (MIN-136).
+  const setRecurrence = onUpdate
+    ? (next: { due_date: string | null; recurrence: RecurrenceCadence | null }) =>
+        onUpdate(next)
+    : undefined;
 
   return (
     <div
@@ -743,7 +763,12 @@ export function IssueCardBody({
           </div>
           {issue.due_date && (
             <div className="shrink-0">
-              <DueDatePick value={issue.due_date} onChange={setDueDate} />
+              <DueDatePick
+                value={issue.due_date}
+                onChange={setDueDate}
+                recurrence={issue.recurrence}
+                onRecurrenceChange={setRecurrence}
+              />
             </div>
           )}
         </div>

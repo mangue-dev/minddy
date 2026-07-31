@@ -20,6 +20,7 @@ import {
   LogOut,
   MessagesSquare,
   Plug,
+  Repeat,
   Settings2,
   Tags,
   Trash2,
@@ -39,6 +40,7 @@ import { ProjectIntegrations } from "@/components/project-integrations";
 import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
 import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
+import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
@@ -51,6 +53,7 @@ import {
 export default function ProjectSettingsPage() {
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
+  const tRecurrence = useTranslations("Recurrence");
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -308,6 +311,16 @@ export default function ProjectSettingsPage() {
           description={t("membersSectionDesc")}
         >
           <ProjectMembers projectId={project.id} enabled />
+        </SettingsSection>
+      ),
+    },
+    {
+      value: "recurrences",
+      label: t("recurrencesTab"),
+      icon: Repeat,
+      content: (
+        <SettingsSection title={tRecurrence("title")} description={tRecurrence("description")}>
+          <ProjectRecurrencesSection projectId={project.id} projectKey={project.key} />
         </SettingsSection>
       ),
     },

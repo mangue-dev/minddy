@@ -58,8 +58,8 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - The kanban ALWAYS groups by status. A view only FILTERS (status, priority, effort,
   assignee, category, objective, integration — plus project on the global cross-project
   board), SORTS (manual | priority | created | updated | due) and can hide done issues
-  (display.hideDone). Those are exactly the facets the user has in their toolbar: if they
-  can filter on it there, you can set it here.
+  (display.hideDone) or recurring ones (display.hideRecurring). Those are exactly the facets
+  the user has in their toolbar: if they can filter on it there, you can set it here.
 - update_view REPLACES the whole filters object. To add or remove one facet, read the
   view with list_views first and resend the other keys — otherwise you silently drop them.
 - Filters take IDS only — resolve names with list_members / list_categories / list_objectives /

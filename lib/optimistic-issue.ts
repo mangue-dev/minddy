@@ -34,6 +34,10 @@ export function buildOptimisticIssue(
     parent_id: input.parent_id ?? null,
     duplicate_of_id: null,
     due_date: input.due_date ?? null,
+    recurrence: input.recurrence ?? null,
+    // Posée par le serveur à la première activation (elle vaut l'id de la ligne,
+    // qu'on n'a pas encore) : la carte optimiste s'en passe.
+    recurrence_series_id: null,
     position: Date.now(),
     created_by: userId,
     integration_id: null,

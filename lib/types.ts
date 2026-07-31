@@ -2,6 +2,7 @@ import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants"
 import type { ObjectiveStatus } from "./objective-constants";
 import type { CycleIntensity } from "./cycle-prefs";
 import type { RepoProviderId } from "./repo-providers";
+import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 
 export interface Objective {
@@ -619,6 +620,13 @@ export interface Issue {
   parent_id: string | null;
   duplicate_of_id: string | null;
   due_date: string | null;
+  /** Cadence de répétition (MIN-136), null pour un ticket ordinaire. Quand elle
+      est posée, `due_date` porte la PROCHAINE occurrence : le ticket passé en
+      `done` recrée son successeur et lui transmet la cadence. */
+  recurrence: RecurrenceCadence | null;
+  /** Id du premier ticket de la série, hérité par chaque occurrence — de quoi
+      retrouver l'historique d'une récurrence. Null hors série. */
+  recurrence_series_id: string | null;
   position: number;
   created_by: string | null;
   /** Set when the issue was created through a project integration (Feedback API). */
@@ -641,6 +649,22 @@ export interface Issue {
       board list endpoint populates it; undefined elsewhere. Used by « copier le
       prompt » to flag attachments in the XML without a per-card fetch. */
   attachment_count?: number;
+}
+
+/**
+ * Une récurrence active du projet, telle que la page « Récurrences » des
+ * paramètres en a besoin (MIN-136) : de quoi la nommer, dire sa cadence, sa
+ * prochaine échéance et qui la porte. Un seul ticket vivant par série porte
+ * une `recurrence` — c'est donc bien une ligne par récurrence.
+ */
+export interface RecurringIssue {
+  id: string;
+  number: number;
+  title: string;
+  status: IssueStatus;
+  assignee_id: string | null;
+  due_date: string | null;
+  recurrence: RecurrenceCadence;
 }
 
 /** A cycle as the board consumes it (MIN-32): the user's personal
@@ -735,6 +759,9 @@ export interface CreateIssueInput {
   objective_id?: string | null;
   parent_id?: string | null;
   due_date?: string | null;
+  /** Cadence de répétition (MIN-136) — exige une `due_date`, qui porte alors la
+      première occurrence. */
+  recurrence?: RecurrenceCadence | null;
   category_ids?: string[];
   /** Cross-project creation carries category NAMES, not IDs (a category ID is
       scoped to one project). The server matches them against the target
@@ -774,6 +801,9 @@ export interface IssueUpdateInput {
   parent_id?: string | null;
   duplicate_of_id?: string | null;
   due_date?: string | null;
+  /** Cadence de répétition (MIN-136). Poser une cadence exige une échéance ;
+      effacer l'échéance coupe la récurrence. */
+  recurrence?: RecurrenceCadence | null;
   position?: number;
   /** Setting a cycle assigns the issue to the cycle's owner as a side-effect
       (never bumps status); null removes it from its cycle. */
@@ -798,6 +828,9 @@ export interface ViewFilters {
 
 export interface ViewDisplay {
   hideDone?: boolean;
+  /** Sortir les tickets récurrents du tableau (MIN-136) : la maintenance qui
+      revient toutes les semaines n'est pas ce qu'on vient y lire. */
+  hideRecurring?: boolean;
 }
 
 /** The filter/sort/display triple a view applies (also the live "working" state). */

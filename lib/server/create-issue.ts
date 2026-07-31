@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
+import { isRecurrenceCadence, startDueDateISO } from "@/lib/recurrence";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
   copyAttachmentsToProject,
@@ -48,6 +49,8 @@ export type CreateIssueResult =
         | "parentIssueNotFound"
         | "nestingLimitedToOneLevel"
         | "planTooLong"
+        | "invalidRecurrence"
+        | "recurrenceNeedsDueDate"
         | "databaseError"
         | "attachmentInvalid"
         | "issueLimitReached"
@@ -99,6 +102,7 @@ export async function createIssueForProject({
   mcpKeyId = null,
   integrationId = null,
   remote = null,
+  recurrenceSeriesId = null,
 }: {
   projectId: string;
   /** Project name snapshot for the stats ledger (survives project deletion). */
@@ -115,6 +119,10 @@ export async function createIssueForProject({
   /** Issue distante que ce ticket reflète (MIN-97) : pose l'identité `remote_*`
       et estampille les événements au nom de la forge. */
   remote?: RemoteIssueRef | null;
+  /** Série de récurrence à laquelle rattacher le ticket (MIN-136) — posé par
+      lib/server/recurrence.ts sur l'occurrence qu'il crée, jamais par un
+      payload client. Null = ce ticket ouvre sa propre série (voir seriesIdOf). */
+  recurrenceSeriesId?: string | null;
 }): Promise<CreateIssueResult> {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (!title) {
@@ -191,6 +199,24 @@ export async function createIssueForProject({
     row.objective_id = input.objective_id ?? null;
   }
   if (isDateOrNull(input.due_date)) row.due_date = input.due_date;
+
+  // Récurrence (MIN-136) : une cadence exige une échéance, qui porte alors la
+  // PREMIÈRE occurrence. Même règle que la mise à jour — un ticket récurrent
+  // sans date n'aurait rien à décaler à sa clôture.
+  if ("recurrence" in input && input.recurrence !== null) {
+    if (!isRecurrenceCadence(input.recurrence)) {
+      return { ok: false, status: 400, errorKey: "invalidRecurrence" };
+    }
+    if (!row.due_date) {
+      return { ok: false, status: 400, errorKey: "recurrenceNeedsDueDate" };
+    }
+    row.recurrence = input.recurrence;
+    // La date d'une récurrence est un DÉBUT : si elle est déjà passée, le
+    // ticket naît sur la première occurrence à venir plutôt qu'en retard.
+    row.due_date =
+      startDueDateISO(row.due_date as string, input.recurrence) ?? row.due_date;
+    if (recurrenceSeriesId) row.recurrence_series_id = recurrenceSeriesId;
+  }
 
   const service = getServiceClient();
 

@@ -3,7 +3,12 @@
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import { rememberCreateProject } from "./last-create-project";
-import type { CreateIssueInput, Issue, IssueUpdateInput } from "./types";
+import type {
+  CreateIssueInput,
+  Issue,
+  IssueUpdateInput,
+  RecurringIssue,
+} from "./types";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -24,6 +29,16 @@ async function parseJson<T>(response: Response): Promise<T> {
 
 export async function fetchIssuesApi(projectId: string): Promise<Issue[]> {
   return parseJson<Issue[]>(await fetch(`/api/projects/${projectId}/issues`));
+}
+
+/** Les récurrences actives d'un projet (MIN-136) — un ticket vivant par série,
+    lu par l'onglet « Récurrences » de ses paramètres. */
+export async function fetchRecurrencesApi(
+  projectId: string
+): Promise<RecurringIssue[]> {
+  return parseJson<RecurringIssue[]>(
+    await fetch(`/api/projects/${projectId}/recurrences`)
+  );
 }
 
 /** One issue, in full. Used where only a light row is at hand — the command

@@ -30,6 +30,7 @@ import {
 import { Dot } from "@/components/issue-property-fields";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { Category, Member, Objective } from "@/lib/types";
 
 const BARE =
@@ -270,12 +271,20 @@ export function AssigneeCompact({
 export function DueDateCompact({
   value,
   onChange,
+  recurrence,
+  onRecurrenceChange,
   open,
   onOpenChange,
   shortcutHint,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
+  /** Ouvre le mode récurrent du popover (MIN-136). */
+  recurrence?: RecurrenceCadence | null;
+  onRecurrenceChange?: (next: {
+    due_date: string | null;
+    recurrence: RecurrenceCadence | null;
+  }) => void;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -284,6 +293,8 @@ export function DueDateCompact({
       variant="field"
       value={value}
       onChange={onChange}
+      recurrence={recurrence}
+      onRecurrenceChange={onRecurrenceChange}
       placeholder={tField("dueDate")}
       ariaLabel={t("changeDueDateAria")}
       className="h-8 rounded-full"

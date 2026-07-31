@@ -91,6 +91,11 @@ function CalendarDayButton({
 
   const selected = modifiers.selected;
   const today = modifiers.today && !selected;
+  // Modificateur maison, générique : un jour SIGNALÉ, en retrait du jour
+  // sélectionné. Le picker d'échéance s'en sert pour montrer les prochaines
+  // occurrences d'un ticket récurrent (MIN-136) — on voit d'un coup d'œil sur
+  // quels jours le ticket va retomber.
+  const highlighted = modifiers.highlighted && !selected;
 
   return (
     <button
@@ -101,6 +106,8 @@ function CalendarDayButton({
         "inline-flex size-9 items-center justify-center rounded-md text-sm font-normal outline-none transition-colors",
         "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
         today && "bg-accent font-medium text-accent-foreground",
+        highlighted &&
+          "bg-blue-500/15 text-blue-700 dark:bg-blue-400/20 dark:text-blue-200",
         selected &&
           "bg-primary font-medium text-primary-foreground hover:bg-primary",
         className,

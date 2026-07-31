@@ -228,6 +228,8 @@ export function IssueShortcutMenu({
         anchor={position}
         value={issue.due_date}
         onChange={(due_date) => onUpdate({ due_date })}
+        recurrence={issue.recurrence}
+        onRecurrenceChange={(next) => onUpdate(next)}
         ariaLabel={tIssue("changeDueDateAria")}
       />
     );
