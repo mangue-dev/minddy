@@ -62,22 +62,36 @@ export function groupReviewThreads<T extends ReviewCommentLike>(
   states?: ReviewThreadState[],
 ): Array<ReviewThread<T>> {
   const byId = new Map(comments.map((c) => [c.id, c]));
-  const groups = new Map<number, T[]>();
+  const olderFirst = (a: T, b: T) => a.created_at.localeCompare(b.created_at) || a.id - b.id;
 
+  // Premier regroupement sur la racine DÉCLARÉE, même quand ce commentaire-là
+  // n'est plus dans la liste : c'est `in_reply_to_id` qui dit « ces réponses sont
+  // UN fil », et lui seul. Promouvoir commentaire par commentaire (l'ancien
+  // découpage) éclatait un fil dont la racine avait été supprimée en autant de
+  // fils que de réponses survivantes.
+  const declared = new Map<number, T[]>();
   for (const c of comments) {
-    // Une réponse dont la racine manque (fil tronqué par la pagination) devient
-    // sa propre racine — mieux vaut un fil orphelin qu'un commentaire escamoté.
-    const rootId = c.in_reply_to_id != null && byId.has(c.in_reply_to_id) ? c.in_reply_to_id : c.id;
-    const group = groups.get(rootId);
+    const key = c.in_reply_to_id ?? c.id;
+    const group = declared.get(key);
     if (group) group.push(c);
-    else groups.set(rootId, [c]);
+    else declared.set(key, [c]);
+  }
+
+  // Puis promotion, une fois par fil : racine absente → la plus ancienne réponse
+  // SURVIVANTE en tient lieu. C'est aussi ce que rendent les deux forges dans ce
+  // cas (premier commentaire restant du fil : `comments(first:1)` côté GitHub, la
+  // première DiffNote côté GitLab), donc l'état de résolution s'apparie encore.
+  const groups = new Map<number, T[]>();
+  for (const [key, group] of declared) {
+    const rootId = byId.has(key) ? key : group.reduce((a, b) => (olderFirst(a, b) <= 0 ? a : b)).id;
+    const existing = groups.get(rootId);
+    if (existing) existing.push(...group);
+    else groups.set(rootId, [...group]);
   }
 
   const stateByRoot = new Map((states ?? []).map((s) => [s.rootCommentId, s]));
   const threads = [...groups.entries()].map(([rootId, group]) => {
-    const sorted = [...group].sort(
-      (a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id,
-    );
+    const sorted = [...group].sort(olderFirst);
     return {
       id: rootId,
       root: byId.get(rootId) ?? sorted[0],

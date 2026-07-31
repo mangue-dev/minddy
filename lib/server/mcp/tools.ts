@@ -576,6 +576,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "line and side (RIGHT = the new file, LEFT = the old one), the diff snippet it " +
         "was written against, and its replies; 'outdated: true' means the code it " +
         "pointed at has since changed, so only the snippet says what it referred to. " +
+        "'resolved: true' means the thread was marked resolved on the forge — the " +
+        "point is settled, read it for the decision it records rather than acting on " +
+        "it again; 'resolved: false' also covers 'the forge did not say'. " +
         "Use it to review a PR, explain what it changes, or act on the review feedback. " +
         "Fails if the issue has no agent-opened PR, or if the project has no linked " +
         "GitHub repo.",

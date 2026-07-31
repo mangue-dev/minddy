@@ -3,6 +3,10 @@
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
+import type {
+  ReviewCommentReaction,
+  ReviewReactionContent,
+} from "@/lib/pr-review-reactions";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
@@ -631,8 +635,34 @@ export interface PullRequestReviewComment {
  */
 export async function fetchPrReviewCommentsApi(
   endpoint: PrEndpoint,
-): Promise<{ comments: PullRequestReviewComment[]; threads: ReviewThreadState[] }> {
+): Promise<{
+  comments: PullRequestReviewComment[];
+  threads: ReviewThreadState[];
+  reactions: ReviewCommentReaction[];
+}> {
   return parseJson(await fetch(`${endpoint}/review-comments`));
+}
+
+/**
+ * Pose ou retire une réaction sur un commentaire de review. `on` porte l'état
+ * VOULU, pas une bascule : deux clics concurrents convergent au lieu de
+ * s'annuler, et un renvoi après échec réseau ne défait pas ce qui avait abouti.
+ */
+export async function setPrReviewCommentReactionApi(
+  endpoint: PrEndpoint,
+  input: { commentId: number; content: ReviewReactionContent; on: boolean },
+): Promise<{ ok: true; on: boolean }> {
+  return parseJson(
+    await fetch(`${endpoint}/review-comments/reactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        comment_id: input.commentId,
+        content: input.content,
+        on: input.on,
+      }),
+    }),
+  );
 }
 
 /** Résout / rouvre un fil de review (`threadId` vient de `threads` ci-dessus). */

@@ -25,6 +25,10 @@ import {
 } from "./pull-requests";
 import { getRun } from "./runs";
 import type { PullRequestFile, ReviewVerdict } from "./pr";
+import {
+  isReviewReactionContent,
+  type ReviewReactionContent,
+} from "@/lib/pr-review-reactions";
 
 /**
  * Gestes de review d'une pull request (MIN-143), indexés par PR et non par run.
@@ -231,7 +235,19 @@ export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResp
         return [];
       }),
     ]);
-    return NextResponse.json({ comments, threads });
+    // Les réactions viennent APRÈS : côté GitLab elles s'interrogent note par
+    // note, donc il faut d'abord savoir quelles notes existent. Sans commentaire,
+    // rien à demander — une PR sans review ne doit rien coûter. Best-effort au
+    // même titre que les fils : une réaction illisible ne vaut pas une vue vide.
+    const reactions = comments.length
+      ? await scope.forge
+          .listReviewCommentReactions({ ...scope.call, commentIds: comments.map((c) => c.id) })
+          .catch((err) => {
+            console.error("[pr-actions] review reactions unreadable:", (err as Error).message);
+            return [];
+          })
+      : [];
+    return NextResponse.json({ comments, threads, reactions });
   } catch (err) {
     return forgeErrorResponse(err);
   }
@@ -267,6 +283,46 @@ export async function setPrReviewThreadResolvedResponse(
   try {
     await scope.forge.setReviewThreadResolved({ ...scope.call, ...payload });
     return NextResponse.json({ ok: true, resolved: payload.resolved });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Valide un POST de réaction (MIN-139). `comment_id` finit interpolé dans une URL
+ * de forge — même vigilance que `in_reply_to` : un ENTIER, vérifié comme tel.
+ * `content` est refermé sur les huit valeurs du vocabulaire canonique.
+ */
+export function parseReactionPayload(
+  raw: unknown,
+):
+  | { ok: true; payload: { commentId: number; content: ReviewReactionContent; on: boolean } }
+  | { ok: false; response: NextResponse } {
+  const p = (raw ?? {}) as { comment_id?: unknown; content?: unknown; on?: unknown };
+  const bad = (error: string) => ({
+    ok: false as const,
+    response: NextResponse.json({ error }, { status: 400 }),
+  });
+
+  if (
+    typeof p.comment_id !== "number" ||
+    !Number.isInteger(p.comment_id) ||
+    p.comment_id < 1
+  ) {
+    return bad("Invalid comment_id");
+  }
+  if (!isReviewReactionContent(p.content)) return bad("Invalid content");
+  if (typeof p.on !== "boolean") return bad("Invalid on");
+  return { ok: true, payload: { commentId: p.comment_id, content: p.content, on: p.on } };
+}
+
+export async function setPrReviewCommentReactionResponse(
+  scope: PrScope,
+  payload: { commentId: number; content: ReviewReactionContent; on: boolean },
+): Promise<NextResponse> {
+  try {
+    await scope.forge.setReviewCommentReaction({ ...scope.call, ...payload });
+    return NextResponse.json({ ok: true, on: payload.on });
   } catch (err) {
     return forgeErrorResponse(err);
   }

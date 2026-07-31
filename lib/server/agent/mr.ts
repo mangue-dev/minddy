@@ -6,6 +6,12 @@ import {
   gitlabHeaders,
   gitlabNextPage,
 } from "@/lib/server/git/gitlab-rest";
+import {
+  GITLAB_AWARD_NAMES,
+  reactionFromGitlabName,
+  type ReviewCommentReaction,
+  type ReviewReactionContent,
+} from "@/lib/pr-review-reactions";
 import { resolveDiffPosition } from "./mr-position";
 import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
 import type {
@@ -900,11 +906,18 @@ export async function listMergeRequestDiffComments(opts: {
 
 /**
  * État de résolution des fils de review (MIN-139) — le pendant GitLab de la
- * requête GraphQL de `pr.ts`, mais SANS appel supplémentaire : les discussions
- * portent déjà tout, `listMergeRequestDiffComments` ne fait que le jeter en
- * aplatissant. `threadId` est l'id de discussion (une chaîne, à la différence des
- * ids de notes), `rootCommentId` la première DiffNote — la même racine que côté
- * GitHub, donc la même clé d'appariement.
+ * requête GraphQL de `pr.ts`, mais sans autre ENDPOINT à interroger : les
+ * discussions portent déjà tout, `listMergeRequestDiffComments` ne fait que le
+ * jeter en aplatissant. `threadId` est l'id de discussion (une chaîne, à la
+ * différence des ids de notes), `rootCommentId` la première DiffNote — la même
+ * racine que côté GitHub, donc la même clé d'appariement.
+ *
+ * Prix à payer, à ne pas se cacher : c'est une SECONDE passe paginée sur
+ * `/discussions`, lancée en parallèle de la première par `prReviewCommentsResponse`.
+ * Les deux lectures coûtent donc deux fois les mêmes pages. Les fusionner
+ * demanderait de changer la forme de `Forge` (un appel rendant commentaires ET
+ * fils), ce que la lecture REST + GraphQL de GitHub ne permet pas de servir aussi
+ * simplement — d'où ce doublon, borné par `DISCUSSIONS_MAX_PAGES`.
  *
  * `resolved` est porté par CHAQUE note du fil (GitLab résout le fil, pas la
  * note) : lire la racine suffit. Une discussion non résolvable (rare sur une
@@ -952,6 +965,128 @@ export async function setMergeRequestDiscussionResolved(opts: {
       body: JSON.stringify({ resolved: opts.resolved }),
     },
   );
+}
+
+// ── Réactions emoji des commentaires de review (MIN-139) ─────────────────────
+
+interface RawAward {
+  id: number;
+  name?: string;
+  user?: { username?: string } | null;
+}
+
+/** Notes interrogées au plus, et combien à la fois : GitLab n'a pas d'appel
+    groupé pour les awards, donc c'est un N+1 — borné, jamais illimité. */
+const AWARDS_MAX_NOTES = 120;
+const AWARDS_CONCURRENCY = 8;
+
+/** `Promise.all` par tranches : cent notes ne doivent pas partir d'un coup. */
+async function mapLimited<A, B>(
+  items: A[],
+  limit: number,
+  fn: (item: A) => Promise<B>,
+): Promise<B[]> {
+  const out: B[] = [];
+  for (let i = 0; i < items.length; i += limit) {
+    out.push(...(await Promise.all(items.slice(i, i + limit).map(fn))));
+  }
+  return out;
+}
+
+/** Login du compte connecté — GitLab décerne les awards SOUS SON NOM, et c'est
+    la seule façon de savoir lesquels sont les nôtres (pas de `viewerHasReacted`
+    ici, contrairement au GraphQL de GitHub). */
+async function gitlabCurrentUsername(token: string): Promise<string | null> {
+  const me = await glJson<{ username?: string }>(`${GITLAB_API_BASE}/user`, token);
+  return me?.username ?? null;
+}
+
+function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
+  return (
+    `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${iid}` +
+    `/notes/${noteId}/award_emoji`
+  );
+}
+
+/**
+ * Réactions des commentaires de review — le pendant GitLab de la requête
+ * `reactionGroups` de `pr.ts`, mais **note par note** : l'API des awards n'existe
+ * que par note, et rien dans la réponse des discussions ne les porte. C'est donc
+ * le N+1 que le cadrage du ticket redoutait, rendu supportable par un plafond
+ * (`AWARDS_MAX_NOTES`) et une concurrence bornée plutôt que par un pari.
+ *
+ * Une note dont la lecture échoue rend simplement zéro réaction : une réaction
+ * illisible ne doit pas emporter la vue de review.
+ */
+export async function listMergeRequestNoteAwards(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentIds: number[];
+}): Promise<ReviewCommentReaction[]> {
+  const ids = opts.commentIds.slice(0, AWARDS_MAX_NOTES);
+  if (ids.length === 0) return [];
+  if (opts.commentIds.length > ids.length) {
+    console.warn(
+      `[mr] awards read capped at ${AWARDS_MAX_NOTES} notes (${opts.commentIds.length} asked)`,
+    );
+  }
+  const me = await gitlabCurrentUsername(opts.token).catch(() => null);
+
+  const perNote = await mapLimited(ids, AWARDS_CONCURRENCY, async (noteId) => {
+    const awards = await glJson<RawAward[]>(
+      awardsUrl(opts.repoFullName, opts.number, noteId),
+      opts.token,
+    ).catch(() => [] as RawAward[]);
+
+    // Agrégé par emoji : l'API rend une ligne PAR personne, l'UI un compte.
+    const byContent = new Map<ReviewReactionContent, ReviewCommentReaction>();
+    for (const award of awards ?? []) {
+      const content = award.name ? reactionFromGitlabName(award.name) : null;
+      if (!content) continue;
+      const entry = byContent.get(content) ?? { commentId: noteId, content, count: 0, mine: false };
+      entry.count += 1;
+      if (me && award.user?.username === me) entry.mine = true;
+      byContent.set(content, entry);
+    }
+    return [...byContent.values()];
+  });
+
+  return perNote.flat();
+}
+
+/**
+ * Pose ou retire une réaction sur une note. GitLab refuse un award en double
+ * (404 « has already been taken ») et ne laisse retirer que le SIEN : les deux
+ * chemins passent donc par la liste, comme côté GitHub.
+ */
+export async function setMergeRequestNoteAward(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  content: ReviewReactionContent;
+  on: boolean;
+}): Promise<void> {
+  const url = awardsUrl(opts.repoFullName, opts.number, opts.commentId);
+  const name = GITLAB_AWARD_NAMES[opts.content];
+  const me = await gitlabCurrentUsername(opts.token);
+  const awards = await glJson<RawAward[]>(url, opts.token);
+  const mine = (awards ?? []).find((a) => a.name === name && a.user?.username === me);
+
+  if (opts.on) {
+    // Déjà décernée : ne pas la reposter, GitLab répondrait par une erreur là où
+    // l'état demandé est déjà atteint.
+    if (mine) return;
+    await glJson<unknown>(url, opts.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    return;
+  }
+  if (!mine) return;
+  await glJson<unknown>(`${url}/${mine.id}`, opts.token, { method: "DELETE" });
 }
 
 /**

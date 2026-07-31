@@ -94,6 +94,32 @@ describe("groupReviewThreads", () => {
     expect(threads).toHaveLength(1);
     expect(threads[0].id).toBe(11);
   });
+
+  it("garde UN fil quand la racine supprimée laisse plusieurs réponses", () => {
+    // Racine 999 effacée sur la forge : ses réponses gardent `in_reply_to_id:999`.
+    // Les promouvoir une par une donnait autant de fils que de réponses — et la
+    // seconde perdait aussi son état de résolution, apparié sur la seule racine.
+    const threads = groupReviewThreads(
+      [
+        comment({ id: 12, in_reply_to_id: 999, created_at: "2026-07-17T10:05:00Z" }),
+        comment({ id: 11, in_reply_to_id: 999, created_at: "2026-07-17T10:01:00Z" }),
+      ],
+      [{ rootCommentId: 11, threadId: "PRRT_kwDOABC", resolved: true, resolvedBy: "alice" }],
+    );
+    expect(threads).toHaveLength(1);
+    // La plus ANCIENNE survivante fait racine — la même que rend la forge.
+    expect(threads[0].id).toBe(11);
+    expect(threads[0].comments.map((c) => c.id)).toEqual([11, 12]);
+    expect(threads[0].resolution?.resolved).toBe(true);
+  });
+
+  it("ne fusionne pas deux fils distincts dont les racines ont disparu", () => {
+    const threads = groupReviewThreads([
+      comment({ id: 11, in_reply_to_id: 998, created_at: "2026-07-17T10:01:00Z" }),
+      comment({ id: 21, in_reply_to_id: 999, created_at: "2026-07-17T11:01:00Z" }),
+    ]);
+    expect(threads.map((t) => t.id)).toEqual([11, 21]);
+  });
 });
 
 /**

@@ -29,6 +29,7 @@ import {
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
 import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
+import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import {
   commentableChangeKeys,
@@ -42,6 +43,7 @@ import {
   LineWidget,
   ReviewThreadCard,
   StaleThreads,
+  useCommentReactions,
   useReviewReplies,
   useThreadResolution,
 } from "@/components/pull-requests/pr-review-comments";
@@ -225,6 +227,7 @@ function PrDiffFile({
   onToggle,
   reviewComments,
   reviewThreads,
+  reviewReactions,
   onCommentPosted,
 }: {
   file: PullRequestFile;
@@ -242,6 +245,9 @@ function PrDiffFile({
   /** État des fils de la PR, TOUS fichiers confondus : l'appariement se fait par
       id de racine, pas par chemin — inutile de le filtrer en amont. */
   reviewThreads: ReviewThreadState[];
+  /** Réactions de la PR, tous fichiers confondus : appariées par id de
+      commentaire, comme les fils le sont par id de racine. */
+  reviewReactions: ReviewCommentReaction[];
   onCommentPosted: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
@@ -260,6 +266,7 @@ function PrDiffFile({
   const [postingKey, setPostingKey] = useState<string | null>(null);
   const replies = useReviewReplies(endpoint, onCommentPosted);
   const resolution = useThreadResolution(endpoint, onCommentPosted);
+  const reactions = useCommentReactions(endpoint, onCommentPosted, reviewReactions, !readOnly);
 
   // Un fichier ajouté n'a pas de version de base : son patch EST déjà le fichier
   // entier, il n'y a rien à déplier.
@@ -393,6 +400,7 @@ function PrDiffFile({
               thread={thread}
               replies={replies}
               resolution={readOnly ? undefined : resolution}
+              reactions={reactions}
             />
           ))}
           {openAnchors[key] ? (
@@ -416,6 +424,7 @@ function PrDiffFile({
     postingKey,
     replies,
     resolution,
+    reactions,
     readOnly,
     submitComment,
     closeComposer,
@@ -561,6 +570,7 @@ function PrDiffFile({
             threads={staleThreads}
             replies={replies}
             resolution={readOnly ? undefined : resolution}
+            reactions={reactions}
           />
         </>
       )}
@@ -571,6 +581,7 @@ function PrDiffFile({
 /** Références stables : `?? []` / `?? () => {}` en ligne casseraient les mémos. */
 const NO_COMMENTS: PullRequestReviewComment[] = [];
 const NO_THREADS: ReviewThreadState[] = [];
+const NO_REACTIONS: ReviewCommentReaction[] = [];
 const noop = () => {};
 
 export function PrDiff({
@@ -581,6 +592,7 @@ export function PrDiff({
   readOnly = false,
   reviewComments = NO_COMMENTS,
   reviewThreads = NO_THREADS,
+  reviewReactions = NO_REACTIONS,
   onCommentPosted = noop,
   className,
 }: {
@@ -598,6 +610,8 @@ export function PrDiff({
   /** État de résolution des fils (MIN-139). Vide = état INCONNU : les fils se
       lisent et se répondent, mais aucun ne s'annonce résolu ni ne se résout. */
   reviewThreads?: ReviewThreadState[];
+  /** Réactions emoji des commentaires (MIN-139). Vide = aucune à afficher. */
+  reviewReactions?: ReviewCommentReaction[];
   /** Rafraîchit les commentaires après un envoi réussi. */
   onCommentPosted?: () => unknown;
   className?: string;
@@ -641,6 +655,12 @@ export function PrDiff({
 
   const orphanReplies = useReviewReplies(endpoint, onCommentPosted);
   const orphanResolution = useThreadResolution(endpoint, onCommentPosted);
+  const orphanReactions = useCommentReactions(
+    endpoint,
+    onCommentPosted,
+    reviewReactions,
+    !readOnly,
+  );
 
   if (files.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noDiff")}</p>;
@@ -693,6 +713,7 @@ export function PrDiff({
             onToggle={() => toggle(f.filename)}
             reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
             reviewThreads={reviewThreads}
+            reviewReactions={reviewReactions}
             onCommentPosted={onCommentPosted}
           />
         ))}
@@ -702,6 +723,7 @@ export function PrDiff({
               threads={orphanThreads}
               replies={orphanReplies}
               resolution={readOnly ? undefined : orphanResolution}
+              reactions={orphanReactions}
               label={(count) => t("orphanComments", { count })}
             />
           </div>

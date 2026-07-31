@@ -271,6 +271,9 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   return {
     comments: data?.comments ?? [],
     threads: data?.threads ?? [],
+    // Les réactions (MIN-139) voyagent avec, pour la même raison : elles se
+    // rendent SOUS un commentaire, jamais séparément.
+    reactions: data?.reactions ?? [],
     loading: isLoading,
     refetch,
   };

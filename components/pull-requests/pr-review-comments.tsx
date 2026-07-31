@@ -1,24 +1,42 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Spinner,
   cn,
   toast,
 } from "mangue-ui";
-import { ChevronDown, ChevronRight, CircleCheck, CornerDownRight } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  CornerDownRight,
+  SmilePlus,
+} from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   replyPrReviewCommentApi,
+  setPrReviewCommentReactionApi,
   setPrReviewThreadResolvedApi,
   type PrEndpoint,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
 import { displayLineOf } from "@/lib/pr-review-threads";
+import {
+  groupReactionsByComment,
+  REVIEW_REACTIONS,
+  REVIEW_REACTION_EMOJI,
+  type ReviewCommentReaction,
+  type ReviewReactionContent,
+} from "@/lib/pr-review-reactions";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { PrReviewThread } from "@/lib/pr-review-diff";
 
 /**
@@ -107,12 +125,174 @@ export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unkno
 
 export type ThreadResolution = ReturnType<typeof useThreadResolution>;
 
-/** Corps d'un commentaire : avatar, auteur, heure, markdown. */
-function CommentBody({ comment }: { comment: PullRequestReviewComment }) {
+/**
+ * Réactions emoji des commentaires d'une PR (MIN-139) : la table indexée par
+ * commentaire, l'état voulu à poser, et le fil en vol.
+ *
+ * `canReact` sépare LIRE de POSER — une vue en lecture seule affiche les
+ * réactions des autres sans en offrir : les masquer ferait croire qu'il n'y en a
+ * pas.
+ *
+ * La bascule envoie l'ÉTAT VOULU (`!mine`), pas un « inverse ce que tu as » :
+ * c'est le serveur qui tranche, et un renvoi après un échec réseau ne défait
+ * alors pas ce qui avait abouti.
+ */
+export function useCommentReactions(
+  endpoint: PrEndpoint,
+  onChanged: () => unknown,
+  reactions: ReviewCommentReaction[],
+  canReact: boolean,
+) {
+  const [pending, setPending] = useState<string | null>(null);
+  const byComment = useMemo(() => groupReactionsByComment(reactions), [reactions]);
+
+  const toggle = useCallback(
+    async (commentId: number, content: ReviewReactionContent, on: boolean) => {
+      if (pending) return;
+      setPending(`${commentId}:${content}`);
+      try {
+        await setPrReviewCommentReactionApi(endpoint, { commentId, content, on });
+        await onChanged();
+      } catch (err) {
+        toast.error((err as Error).message);
+      } finally {
+        setPending(null);
+      }
+    },
+    [endpoint, onChanged, pending],
+  );
+
+  return { byComment, pending, canReact, toggle };
+}
+
+export type CommentReactions = ReturnType<typeof useCommentReactions>;
+
+/** Clé de libellé de chaque réaction — typée, sinon `t()` ne vérifie plus rien. */
+const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">> = {
+  "+1": "reactionThumbsUp",
+  "-1": "reactionThumbsDown",
+  laugh: "reactionLaugh",
+  hooray: "reactionHooray",
+  confused: "reactionConfused",
+  heart: "reactionHeart",
+  rocket: "reactionRocket",
+  eyes: "reactionEyes",
+};
+
+/**
+ * Les emoji déjà posés sur un commentaire, avec leur compte. La palette qui en
+ * ajoute vit dans l'EN-TÊTE du commentaire, pas ici : une ligne de réactions vide
+ * sous chaque message coûterait sa hauteur à tous les commentaires du monde pour
+ * n'afficher qu'un bouton.
+ *
+ * Un chip allumé = « minddy a réagi », pas « moi ». Sur GitHub la réaction part
+ * du bot de l'App, donc elle est partagée par tous les membres du projet ; le
+ * titre du chip le dit plutôt que de laisser croire à une signature personnelle.
+ */
+function CommentReactionChips({
+  commentId,
+  reactions,
+  list,
+}: {
+  commentId: number;
+  reactions: CommentReactions;
+  list: ReviewCommentReaction[];
+}) {
+  const t = useTranslations("PullRequests");
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {list.map((reaction) => {
+        const busy = reactions.pending === `${commentId}:${reaction.content}`;
+        return (
+          <button
+            key={reaction.content}
+            type="button"
+            aria-pressed={reaction.mine}
+            aria-label={t(REACTION_LABELS[reaction.content])}
+            title={reaction.mine ? t("reactionMine") : t(REACTION_LABELS[reaction.content])}
+            disabled={!reactions.canReact || busy}
+            onClick={() => void reactions.toggle(commentId, reaction.content, !reaction.mine)}
+            className={cn(
+              "flex h-6 items-center gap-1 rounded-full border px-2 text-xs tabular-nums transition-colors",
+              reaction.mine
+                ? "border-primary/60 bg-primary/10 text-foreground"
+                : "border-border text-muted-foreground hover:bg-muted",
+              (!reactions.canReact || busy) && "cursor-default opacity-70",
+            )}
+          >
+            <span className="text-[13px] leading-none">
+              {REVIEW_REACTION_EMOJI[reaction.content]}
+            </span>
+            {reaction.count}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** La palette : les huit réactions que GitHub accepte, pas une de plus. */
+function ReactionPicker({
+  onPick,
+  className,
+}: {
+  onPick: (content: ReviewReactionContent) => void;
+  className?: string;
+}) {
+  const t = useTranslations("PullRequests");
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("addReaction")}
+          title={t("addReaction")}
+          className={cn(
+            "flex h-6 items-center rounded-full border border-dashed border-border px-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+            className,
+          )}
+        >
+          <SmilePlus className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={6} className="flex w-auto gap-0.5 p-1">
+        {REVIEW_REACTIONS.map((content) => (
+          <button
+            key={content}
+            type="button"
+            aria-label={t(REACTION_LABELS[content])}
+            title={t(REACTION_LABELS[content])}
+            onClick={() => {
+              setOpen(false);
+              onPick(content);
+            }}
+            className="rounded-md px-1.5 py-1 text-base leading-none transition-colors hover:bg-muted"
+          >
+            {REVIEW_REACTION_EMOJI[content]}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Corps d'un commentaire : avatar, auteur, heure, markdown, réactions. */
+function CommentBody({
+  comment,
+  reactions,
+}: {
+  comment: PullRequestReviewComment;
+  /** Absentes quand la forge n'a pas su les lire : on n'affiche alors rien. */
+  reactions?: CommentReactions;
+}) {
   const format = useFormatter();
   const now = useNow();
+  const list = reactions?.byComment.get(comment.id) ?? [];
   return (
-    <div className="flex flex-col gap-1">
+    <div className="group flex flex-col gap-1">
       <div className="flex items-center gap-2">
         <UserAvatar
           url={comment.user?.avatar_url}
@@ -125,8 +305,27 @@ function CommentBody({ comment }: { comment: PullRequestReviewComment }) {
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {format.relativeTime(new Date(comment.created_at), now)}
         </span>
+        {/* Révélée au survol, comme le « + » de la gouttière juste à côté : une
+            palette permanente sous chaque message ferait un damier de boutons.
+            Rendue quand même (et non montée au survol) pour rester atteignable
+            au clavier — `focus-visible` la rallume. */}
+        {reactions?.canReact ? (
+          <ReactionPicker
+            className="ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            onPick={(content) =>
+              void reactions.toggle(
+                comment.id,
+                content,
+                !list.find((r) => r.content === content)?.mine,
+              )
+            }
+          />
+        ) : null}
       </div>
       <Markdown className="text-sm text-foreground">{comment.body}</Markdown>
+      {reactions && list.length > 0 ? (
+        <CommentReactionChips commentId={comment.id} reactions={reactions} list={list} />
+      ) : null}
     </div>
   );
 }
@@ -236,11 +435,14 @@ export function ReviewThreadCard({
   thread,
   replies,
   resolution,
+  reactions,
 }: {
   thread: PrReviewThread;
   replies: ReviewReplies;
   /** Absent en lecture seule : le fil se lit, il ne se résout pas. */
   resolution?: ThreadResolution;
+  /** Réactions de la PR (MIN-139) — chaque commentaire y prend les siennes. */
+  reactions?: CommentReactions;
 }) {
   const t = useTranslations("PullRequests");
   const [expanded, setExpanded] = useState(false);
@@ -259,6 +461,10 @@ export function ReviewThreadCard({
         onClick={() => setExpanded(true)}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/70"
       >
+        {/* Le chevron dit que la ligne se DÉPLIE — le même signal que le repli des
+            fils périmés juste en dessous. Sans lui, la carte résolue se lit comme
+            une étiquette morte et le fil semble perdu. */}
+        <ChevronRight className="size-3.5 shrink-0" />
         <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <span className="min-w-0 flex-1 truncate">{resolvedLabel}</span>
         <span className="shrink-0 text-[11px] text-muted-foreground/80">
@@ -270,14 +476,21 @@ export function ReviewThreadCard({
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-border bg-card px-3 py-2.5">
+      {/* Déplié, l'en-tête REPLIE : le geste doit être réversible là où il a été
+          fait, sinon le seul retour en arrière est de recharger la page. */}
       {resolved ? (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="flex items-center gap-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronDown className="size-3.5 shrink-0" />
           <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="min-w-0 truncate">{resolvedLabel}</span>
-        </div>
+        </button>
       ) : null}
       {thread.comments.map((c) => (
-        <CommentBody key={c.id} comment={c} />
+        <CommentBody key={c.id} comment={c} reactions={reactions} />
       ))}
       {replies.replyingId === thread.id ? (
         <Composer
@@ -300,7 +513,15 @@ export function ReviewThreadCard({
               variant="ghost"
               size="sm"
               disabled={pending}
-              onClick={() => void resolution.toggle(thread)}
+              // Le dépli est LOCAL, donc il survit à la bascule : sans ce reset,
+              // un fil déplié puis rouvert puis re-résolu resterait déplié — or
+              // c'est le repli qui fait qu'un fil traité cesse de ressembler à un
+              // fil ouvert. Rouvrir n'en souffre pas : `resolved` repasse à false,
+              // la carte est pleine de toute façon.
+              onClick={() => {
+                setExpanded(false);
+                void resolution.toggle(thread);
+              }}
             >
               {pending ? <Spinner /> : null}
               {resolved ? t("unresolveThread") : t("resolveThread")}
@@ -357,11 +578,13 @@ export function StaleThreads({
   threads,
   replies,
   resolution,
+  reactions,
   label,
 }: {
   threads: PrReviewThread[];
   replies: ReviewReplies;
   resolution?: ThreadResolution;
+  reactions?: CommentReactions;
   /** Intitulé du repli — le cas orphelin ne se raconte pas comme un périmé. */
   label?: (count: number) => string;
 }) {
@@ -403,7 +626,12 @@ export function StaleThreads({
                     {thread.root.diff_hunk}
                   </pre>
                 ) : null}
-                <ReviewThreadCard thread={thread} replies={replies} resolution={resolution} />
+                <ReviewThreadCard
+                  thread={thread}
+                  replies={replies}
+                  resolution={resolution}
+                  reactions={reactions}
+                />
               </div>
             );
           })}

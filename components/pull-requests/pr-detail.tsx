@@ -278,6 +278,7 @@ export function PrDetail({
   const {
     comments: reviewComments,
     threads: reviewThreads,
+    reactions: reviewReactions,
     refetch: refetchReviewComments,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
 
@@ -851,6 +852,7 @@ export function PrDetail({
                   provider={item.provider}
                   reviewComments={reviewComments}
                   reviewThreads={reviewThreads}
+                  reviewReactions={reviewReactions}
                   onCommentPosted={refetchReviewComments}
                 />
               ) : (

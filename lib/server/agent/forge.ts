@@ -12,6 +12,8 @@ import type {
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
+  ReviewCommentReaction,
+  ReviewReactionContent,
   ReviewSubmission,
   ReviewThreadState,
   ReviewVerdict,
@@ -253,6 +255,35 @@ export interface Forge {
     threadId: string;
     resolved: boolean;
   }): Promise<void>;
+  /**
+   * Réactions emoji des commentaires de review (MIN-139), à part elles aussi :
+   * GitHub les rend pour toute la PR d'un coup (GraphQL `reactionGroups`, avec le
+   * « ai-je déjà réagi » que la REST tait), GitLab seulement note par note.
+   *
+   * D'où `commentIds`, que **GitHub ignore** : c'est GitLab qui en a besoin, et
+   * l'appelant les a déjà sous la main puisqu'il vient de lire les commentaires.
+   * Les lui redemander évite à l'implémentation GitLab une troisième traversée
+   * des discussions.
+   *
+   * ⚠️ `mine` ne dit pas la même chose des deux côtés : le bot de l'App sur
+   * GitHub (donc partagé par tous les membres du projet), le compte connecté sur
+   * GitLab. C'est une limite de la forge, pas du code.
+   */
+  listReviewCommentReactions(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    commentIds: number[];
+  }): Promise<ReviewCommentReaction[]>;
+  /** Pose (`on`) ou retire une réaction sur UN commentaire de review. */
+  setReviewCommentReaction(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    commentId: number;
+    content: ReviewReactionContent;
+    on: boolean;
+  }): Promise<void>;
 }
 
 const githubForge: Forge = {
@@ -312,6 +343,16 @@ const githubForge: Forge = {
       threadId: opts.threadId,
       resolved: opts.resolved,
     }),
+  // La requête part de la PR : les ids de commentaires ne lui servent à rien.
+  listReviewCommentReactions: github.listPullRequestReviewCommentReactions,
+  setReviewCommentReaction: (opts) =>
+    github.setPullRequestReviewCommentReaction({
+      token: opts.token,
+      repoFullName: opts.repoFullName,
+      commentId: opts.commentId,
+      content: opts.content,
+      on: opts.on,
+    }),
 };
 
 const gitlabForge: Forge = {
@@ -344,6 +385,8 @@ const gitlabForge: Forge = {
   replyToPullRequestReviewComment: gitlab.replyToMergeRequestDiffComment,
   listReviewThreads: gitlab.listMergeRequestDiffThreads,
   setReviewThreadResolved: gitlab.setMergeRequestDiscussionResolved,
+  listReviewCommentReactions: gitlab.listMergeRequestNoteAwards,
+  setReviewCommentReaction: gitlab.setMergeRequestNoteAward,
 };
 
 /** Client du provider — la valeur vient de `RepoCloneTarget.provider` (DB). */

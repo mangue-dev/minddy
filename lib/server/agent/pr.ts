@@ -1,6 +1,7 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
+import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import {
   summarizeGithubChecks,
   type ChecksSummary,
@@ -9,6 +10,10 @@ import {
 } from "./checks-core";
 
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
+import type {
+  ReviewCommentReaction,
+  ReviewReactionContent,
+} from "@/lib/pr-review-reactions";
 
 /**
  * Opérations Pull Request GitHub pour l'agent de code (MIN-46) : ouvrir la PR
@@ -129,6 +134,10 @@ export interface PullRequestReviewComment {
  * ici pour que `mr.ts` et `forge.ts` l'importent comme les autres types de PR.
  */
 export type { ReviewThreadState } from "@/lib/pr-review-threads";
+export type {
+  ReviewCommentReaction,
+  ReviewReactionContent,
+} from "@/lib/pr-review-reactions";
 
 /** Erreur d'API GitHub avec le status HTTP (permet de distinguer 422 « no commits »). */
 export class GithubApiError extends Error {
@@ -1098,6 +1107,154 @@ export async function setPullRequestReviewThreadResolved(opts: {
     ? "mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{id isResolved}}}"
     : "mutation($id:ID!){unresolveReviewThread(input:{threadId:$id}){thread{id isResolved}}}";
   await ghGraphql<unknown>(opts.token, mutation, { id: opts.threadId });
+}
+
+// ── Réactions emoji des commentaires de review (MIN-139) ─────────────────────
+
+/** Enum GraphQL des réactions → vocabulaire canonique (`pr-review-reactions`). */
+const GH_REACTION_BY_ENUM: Record<string, ReviewReactionContent> = {
+  THUMBS_UP: "+1",
+  THUMBS_DOWN: "-1",
+  LAUGH: "laugh",
+  HOORAY: "hooray",
+  CONFUSED: "confused",
+  HEART: "heart",
+  ROCKET: "rocket",
+  EYES: "eyes",
+};
+
+/** Commentaires lus par fil : un fil de review qui dépasse est rarissime, et ce
+    qui déborde ne perd que ses réactions — jamais son texte, servi par la REST. */
+const REACTIONS_COMMENTS_PER_THREAD = 50;
+
+interface RawReactionThreads {
+  repository?: {
+    pullRequest?: {
+      reviewThreads?: {
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+        nodes?: Array<{
+          comments?: {
+            nodes?: Array<{
+              databaseId?: number | null;
+              reactionGroups?: Array<{
+                content?: string;
+                viewerHasReacted?: boolean;
+                reactors?: { totalCount?: number } | null;
+              } | null> | null;
+            } | null>;
+          } | null;
+        } | null>;
+      };
+    } | null;
+  } | null;
+}
+
+/**
+ * Réactions de TOUS les commentaires de review, en une requête GraphQL.
+ *
+ * La REST sait les compter (le payload d'un commentaire porte un objet
+ * `reactions`) mais ne dit PAS si l'identité courante a déjà réagi — or c'est
+ * exactement ce qui décide l'état du bouton. Le savoir en REST demanderait un
+ * appel par commentaire ; `reactionGroups` le donne pour toute la PR d'un coup,
+ * avec `viewerHasReacted` — « le viewer », ici, étant le bot de l'App.
+ *
+ * `commentIds` est ignoré : la requête part de la PR, pas des commentaires. Il
+ * n'est là que parce que GitLab, lui, n'a rien d'équivalent et doit interroger
+ * note par note.
+ */
+export async function listPullRequestReviewCommentReactions(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<ReviewCommentReaction[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const query = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+    repository(owner:$owner,name:$name){
+      pullRequest(number:$number){
+        reviewThreads(first:100,after:$cursor){
+          pageInfo{hasNextPage endCursor}
+          nodes{comments(first:${REACTIONS_COMMENTS_PER_THREAD}){nodes{databaseId reactionGroups{content viewerHasReacted reactors{totalCount}}}}}
+        }
+      }
+    }
+  }`;
+
+  const reactions: ReviewCommentReaction[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < REVIEW_THREADS_MAX_PAGES; page++) {
+    const data: RawReactionThreads = await ghGraphql<RawReactionThreads>(opts.token, query, {
+      owner,
+      name: repo,
+      number: opts.number,
+      cursor,
+    });
+    const threads = data.repository?.pullRequest?.reviewThreads;
+    for (const thread of threads?.nodes ?? []) {
+      for (const comment of thread?.comments?.nodes ?? []) {
+        const commentId = comment?.databaseId;
+        if (comment == null || commentId == null) continue;
+        for (const group of comment.reactionGroups ?? []) {
+          const content = group?.content ? GH_REACTION_BY_ENUM[group.content] : undefined;
+          const count = group?.reactors?.totalCount ?? 0;
+          // Un groupe à zéro survit un instant au retrait de sa dernière
+          // réaction : le rendre ferait apparaître un emoji que personne n'a posé.
+          if (!content || count <= 0) continue;
+          reactions.push({ commentId, content, count, mine: !!group?.viewerHasReacted });
+        }
+      }
+    }
+    if (!threads?.pageInfo?.hasNextPage || !threads.pageInfo.endCursor) break;
+    cursor = threads.pageInfo.endCursor;
+  }
+  return reactions;
+}
+
+interface RawReaction {
+  id?: number;
+  content?: string;
+  user?: { login?: string } | null;
+}
+
+/**
+ * Pose ou retire une réaction sur un commentaire de review. REST des deux côtés
+ * de la bascule : la mutation GraphQL équivalente s'adresse par node id, que la
+ * palette n'a pas pour un commentaire encore SANS réaction.
+ *
+ * Retirer demande l'id de la réaction, que seule la liste rend. Le token est
+ * celui de l'App : la réaction à retirer est donc celle de son bot,
+ * `<slug>[bot]` — la même identité que le `viewerHasReacted` de la lecture.
+ */
+export async function setPullRequestReviewCommentReaction(opts: {
+  token: string;
+  repoFullName: string;
+  commentId: number;
+  content: ReviewReactionContent;
+  on: boolean;
+}): Promise<void> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/comments/${opts.commentId}/reactions`;
+
+  if (opts.on) {
+    // Idempotent : GitHub rend 200 (et non 201) quand la réaction existait déjà.
+    await ghJson<unknown>(base, opts.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: opts.content }),
+    });
+    return;
+  }
+
+  const login = `${getGithubAppSlug()}[bot]`;
+  const existing = await ghJson<RawReaction[]>(
+    `${base}?content=${encodeURIComponent(opts.content)}&per_page=100`,
+    opts.token,
+  );
+  const mine = (existing ?? []).find(
+    (r) => r.user?.login === login && r.content === opts.content,
+  );
+  // Rien à retirer : la bascule a déjà l'effet demandé, ce n'est pas une panne.
+  if (mine?.id == null) return;
+  await ghJson<unknown>(`${base}/${mine.id}`, opts.token, { method: "DELETE" });
 }
 
 /** Ajoute un commentaire à la conversation de la PR (auteur = la GitHub App minddy). */
