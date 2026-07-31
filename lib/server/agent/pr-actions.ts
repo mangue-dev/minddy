@@ -1,12 +1,16 @@
 import "server-only";
 
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
+import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
+import { ensureUsageBudget } from "@/lib/server/usage";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
+import { runPrAiReview } from "./pr-ai-review";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
 import { findRunsForPr, syncPrState } from "./runs";
@@ -598,4 +602,57 @@ export async function prReviewResponse(
     published,
     ...(launchedRunId ? { run: { id: launchedRunId } } : {}),
   });
+}
+
+/**
+ * « Faire vérifier par Numo » (MIN-141) : une passe de review sur le diff, qui
+ * dépose des commentaires de ligne et une synthèse sur la PR.
+ *
+ * Offerte sur TOUTE pull request, pas seulement sur celles que Numo a ouvertes :
+ * relire est un geste de forge (comme approuver ou commenter), pas un geste
+ * d'agent — il ne demande ni branche à hériter ni run précédent, juste un diff.
+ *
+ * Le budget d'usage est vérifié EN PRÉ-VOL, comme partout où un clic déclenche
+ * un appel LLM : c'est le déclencheur qui paye. Les erreurs du modèle (clé
+ * absente, réponse hors format) sortent en 502 avec un code — la review n'a
+ * simplement pas eu lieu, rien n'a été posté.
+ */
+export async function prAiReviewResponse(
+  scope: PrScope,
+  userId: string,
+  locale: string,
+): Promise<Response> {
+  try {
+    await ensureUsageBudget(userId);
+  } catch (err) {
+    if (isPlanLimitError(err)) return planLimitResponse(err);
+    throw err;
+  }
+
+  try {
+    const result = await runPrAiReview({
+      forge: scope.forge,
+      call: scope.call,
+      pr: scope.pr,
+      userId,
+      locale,
+    });
+    if (!result.ok) {
+      // « Rien à relire » n'est pas une panne (409) ; un modèle absent ou hors
+      // format en est une, et elle vient d'en face (502). Dans les deux cas rien
+      // n'a été posté sur la PR — le message le dit, le code le laisse brancher.
+      const t = await getTranslations("ApiErrors");
+      const noDiff = result.error === "noDiff";
+      return NextResponse.json(
+        {
+          error: t(noDiff ? "aiReviewNoDiff" : "aiReviewFailed"),
+          code: result.error,
+        },
+        { status: noDiff ? 409 : 502 },
+      );
+    }
+    return NextResponse.json(result);
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
 }

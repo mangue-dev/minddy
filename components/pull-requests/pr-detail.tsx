@@ -61,6 +61,7 @@ import {
   actOnPullRequestApi,
   postPullRequestCommentApi,
   prEndpoint,
+  requestPullRequestAiReviewApi,
   submitPullRequestReviewApi,
   type ChecksSummary,
   type CheckState,
@@ -293,6 +294,9 @@ export function PrDetail({
   const [model, setModel] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
+  // Numo relit la PR (MIN-141) : un appel modèle, donc long — le bouton Review
+  // porte le spinner, comme les autres gestes de la barre.
+  const [aiReviewing, setAiReviewing] = useState(false);
   const [tab, setTab] = useState<"conversation" | "files">("conversation");
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -393,6 +397,36 @@ export function PrDetail({
       toast.error((err as Error).message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /**
+   * « Faire vérifier par Numo » (MIN-141) — offerte sur TOUTE PR, y compris
+   * celles que Numo n'a pas ouvertes : relire ne demande qu'un diff, là où
+   * « relancer Numo » a besoin d'une branche à hériter.
+   *
+   * Une fois la passe finie, les deux surfaces où elle atterrit sont
+   * rafraîchies : la synthèse est un commentaire du fil, les points sont des
+   * commentaires de ligne dans l'onglet Fichiers.
+   */
+  const requestAiReview = async () => {
+    if (aiReviewing) return;
+    setAiReviewing(true);
+    // Un tour de modèle sur un diff entier prend de longues secondes : le
+    // spinner du bouton dit qu'il se passe quelque chose, le toast dit QUOI.
+    toast.info(t("aiReviewStarted"));
+    try {
+      const result = await requestPullRequestAiReviewApi(item.prId);
+      toast.success(
+        result.inlineComments > 0
+          ? t("aiReviewDoneWithComments", { count: result.inlineComments })
+          : t("aiReviewDone"),
+      );
+      await Promise.all([refetchComments(), refetchReviewComments(), refetchPr()]);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setAiReviewing(false);
     }
   };
 
@@ -514,10 +548,13 @@ export function PrDetail({
               <span className="text-xs text-muted-foreground">{t("mergeBlockedByRepo")}</span>
             ) : null}
 
-            {/* Review — les trois verdicts, chacun ouvrant le même dialogue. */}
+            {/* Review — les trois verdicts, chacun ouvrant le même dialogue,
+                puis la review de Numo (MIN-141), séparée parce qu'elle ne
+                demande rien et part au clic. */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" disabled={aiReviewing}>
+                  {aiReviewing ? <Spinner /> : null}
                   {t("review")}
                   <ChevronDown className="size-3.5" />
                 </Button>
@@ -534,6 +571,11 @@ export function PrDetail({
                 <DropdownMenuItem onSelect={() => openReview("comment")}>
                   <MessageSquare />
                   {t("reviewComment")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void requestAiReview()}>
+                  <NumoIcon animated={false} />
+                  {t("aiReview")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

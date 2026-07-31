@@ -190,6 +190,8 @@ export interface AnalyticsEventProps {
   pr_diff_file_opened: NoProps;
   pr_review_comment_added: { length_bucket: string };
   pr_review_submitted: { verdict: string };
+  /** « Faire vérifier par Numo » (MIN-141) — la review déclenchée à la main. */
+  pr_ai_review_requested: NoProps;
   pr_external_link_clicked: { provider: string };
 
   // ── Cycles ──
@@ -471,6 +473,7 @@ const EVENT_NAMES = [
   "pr_diff_file_opened",
   "pr_review_comment_added",
   "pr_review_submitted",
+  "pr_ai_review_requested",
   "pr_external_link_clicked",
   // Cycles
   "cycle_viewed",

@@ -495,6 +495,39 @@ export async function submitPullRequestReviewApi(
   );
 }
 
+/** Ce que Numo a fait de la PR qu'on lui a donnée à relire (MIN-141). */
+export interface PrAiReviewResult {
+  ok: true;
+  /** Ce que Numo pense de la PR — écrit dans sa synthèse. La review est toujours
+   *  postée en simple commentaire : Numo donne un avis, il n'approuve ni ne
+   *  bloque, ces deux gestes-là restent ceux du menu Review. */
+  verdict: ReviewVerdict;
+  /** Commentaires de ligne réellement déposés sur le diff (0 à 5). */
+  inlineComments: number;
+  model: string;
+}
+
+/**
+ * « Faire vérifier par Numo » (MIN-141) : une passe de review sur le diff, qui
+ * dépose une synthèse et jusqu'à cinq commentaires de ligne sur la PR.
+ *
+ * Disponible sur TOUTE pull request — relire ne demande rien d'autre qu'un diff,
+ * contrairement à « relancer Numo », qui a besoin d'une branche à hériter.
+ * Manuel par construction : rien ne le déclenche à l'ouverture d'une PR.
+ */
+export async function requestPullRequestAiReviewApi(
+  prId: string,
+): Promise<PrAiReviewResult> {
+  trackEvent("pr_ai_review_requested");
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ai_review" }),
+    }),
+  );
+}
+
 // ── Page Pull Requests globale (MIN-66, élargie par MIN-143) ─────────────────
 
 /** État de filtrage de la liste — servi par le SERVEUR (`?state=`). */

@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 
 import {
   authorizePrRequest,
+  prAiReviewResponse,
   prDetailResponse,
   prReviewResponse,
   prStateActionResponse,
@@ -16,6 +18,7 @@ import {
  *       | { action: 'close' }
  *       | { action: 'ready_for_review' }                     → brouillon → prête
  *       | { action: 'review', verdict, message, relaunch?, model? }
+ *       | { action: 'ai_review' }                            → Numo relit (MIN-141)
  *
  * Les anciennes routes `agent-runs/[runId]/pr/*` sont devenues des façades de
  * celles-ci : le corps de chaque geste vit dans `lib/server/agent/pr-actions`,
@@ -50,6 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "merge" &&
     action !== "close" &&
     action !== "review" &&
+    action !== "ai_review" &&
     action !== "ready_for_review"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
@@ -60,6 +64,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   if (action === "review") {
     return prReviewResponse(auth.scope, body, auth.userId);
+  }
+  if (action === "ai_review") {
+    // La review est écrite dans la langue du demandeur — celle du cookie de
+    // locale, comme tout le reste de ce que minddy lui rend.
+    return prAiReviewResponse(auth.scope, auth.userId, await getLocale());
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }

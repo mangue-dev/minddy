@@ -141,7 +141,8 @@ export type BillableFeature =
   | "embedding"
   | "agent_code"
   | "sandbox_compute"
-  | "web_search";
+  | "web_search"
+  | "pr_review";
 
 export type UsageSegmentId = "agents" | "numo" | "dictation" | "feedback";
 
@@ -159,9 +160,12 @@ export interface UsageSegment {
  */
 export const USAGE_SEGMENTS: UsageSegment[] = [
   // LLM + compute sandbox d'un même run : pour l'utilisateur, c'est UN agent.
+  // La review d'une PR par Numo (MIN-141) les rejoint : c'est le même Numo qui
+  // lit du code, et la ranger ailleurs ferait chercher sa dépense dans la
+  // mauvaise ligne — même si le tour se paye sans microVM.
   {
     id: "agents",
-    features: ["agent_code", "sandbox_compute"],
+    features: ["agent_code", "sandbox_compute", "pr_review"],
     barClass: "bg-violet-500",
   },
   // La recherche web est un tool de Numo (chat, commentaires) ET des agents,

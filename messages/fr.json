@@ -217,7 +217,9 @@
     "tooManyAttempts": "Trop de tentatives. Réessayez dans {seconds} s.",
     "unexpected": "Une erreur inattendue est survenue.",
     "mfaRequired": "Ce compte demande une authentification à deux facteurs.",
-    "invalidRecoveryCode": "Ce code de récupération est invalide, ou a déjà servi."
+    "invalidRecoveryCode": "Ce code de récupération est invalide, ou a déjà servi.",
+    "aiReviewNoDiff": "Cette pull request n'a rien à relire.",
+    "aiReviewFailed": "Numo n'a pas pu relire cette pull request. Rien n'a été publié — réessayez dans un instant."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -2231,7 +2233,11 @@
     "numoAuthor": "Agent Numo",
     "noLinkedIssue": "Aucun ticket lié",
     "loadMore": "En voir plus",
-    "listTruncated": "Le dépôt a plus de pull requests que minddy n'en liste d'un coup — les plus anciennes manquent."
+    "listTruncated": "Le dépôt a plus de pull requests que minddy n'en liste d'un coup — les plus anciennes manquent.",
+    "aiReview": "Faire vérifier par Numo",
+    "aiReviewDone": "Numo a relu la pull request.",
+    "aiReviewDoneWithComments": "{count, plural, one {Numo a relu la pull request et laissé # commentaire.} other {Numo a relu la pull request et laissé # commentaires.}}",
+    "aiReviewStarted": "Numo relit la pull request…"
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",
@@ -2407,6 +2413,10 @@
       "feedback_embedding_model": {
         "label": "Embeddings des retours",
         "desc": "Vectorise les retours pour mesurer leur similarité."
+      },
+      "pr_review_model": {
+        "label": "Review d'une PR par Numo",
+        "desc": "Relit le diff d'une pull request au clic, dépose une synthèse et jusqu'à cinq commentaires de ligne. À garder différent du modèle de l'agent : relire du code avec le modèle qui vient de l'écrire ne donne qu'un second avis identique."
       }
     },
     "finance": {

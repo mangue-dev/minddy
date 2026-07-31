@@ -217,7 +217,9 @@
     "tooManyAttempts": "Too many attempts. Try again in {seconds}s.",
     "unexpected": "An unexpected error occurred.",
     "mfaRequired": "Two-factor authentication is required for this account.",
-    "invalidRecoveryCode": "That recovery code isn't valid, or has already been used."
+    "invalidRecoveryCode": "That recovery code isn't valid, or has already been used.",
+    "aiReviewNoDiff": "This pull request has nothing to review.",
+    "aiReviewFailed": "Numo could not review this pull request. Nothing was posted — try again in a moment."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -2231,7 +2233,11 @@
     "numoAuthor": "Numo agent",
     "noLinkedIssue": "No linked issue",
     "loadMore": "Load more",
-    "listTruncated": "The repository has more pull requests than minddy can list at once — the oldest are missing."
+    "listTruncated": "The repository has more pull requests than minddy can list at once — the oldest are missing.",
+    "aiReview": "Have Numo check it",
+    "aiReviewDone": "Numo reviewed the pull request.",
+    "aiReviewDoneWithComments": "{count, plural, one {Numo reviewed the pull request and left # comment.} other {Numo reviewed the pull request and left # comments.}}",
+    "aiReviewStarted": "Numo is reviewing the pull request…"
   },
   "Triage": {
     "projectNotFound": "Project not found",
@@ -2407,6 +2413,10 @@
       "feedback_embedding_model": {
         "label": "Feedback embeddings",
         "desc": "Vectorizes feedback to measure similarity."
+      },
+      "pr_review_model": {
+        "label": "Numo's PR review",
+        "desc": "Reads a pull request's diff on demand, then posts a summary and up to five line comments. Keep it different from the agent model: reviewing code with the model that just wrote it only yields the same opinion twice."
       }
     },
     "finance": {

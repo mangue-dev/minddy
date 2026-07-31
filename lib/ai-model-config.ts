@@ -49,6 +49,11 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Agent de code cloud (MIN-46) — défaut racine, surchargé par user puis par run
   { key: "agent_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "agent" },
+  // Review d'une PR par Numo (MIN-141). DÉLIBÉRÉMENT plus cher que `agent_model` :
+  // relire du code avec le modèle qui vient de l'écrire ne produit qu'un second
+  // avis identique — la valeur d'une review vient d'un autre regard. Un appel par
+  // clic, jamais automatique : c'est ce qui rend le tarif tenable.
+  { key: "pr_review_model", kind: "model", fallback: "anthropic/claude-sonnet-5", group: "agent" },
   // Favoris servis au prompt du parent pour `spawn_agent` (MIN-112).
   {
     key: "agent_subagent_favorites",
