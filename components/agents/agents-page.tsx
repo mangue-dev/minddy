@@ -132,7 +132,15 @@ export function AgentsPage() {
           created_at: "",
           updated_at: "",
           issue: { id: draft.issueId, number: draft.issueNumber, title: draft.issueTitle },
-          project: { id: draft.projectId, key: draft.projectKey, name: draft.projectKey },
+          // `icon_url` null : le brouillon ne paraît pas dans la liste (aucune orbe
+          // à peindre), seuls son id et sa clé servent — au contexte de Numo et à
+          // l'identifiant du ticket.
+          project: {
+            id: draft.projectId,
+            key: draft.projectKey,
+            name: draft.projectKey,
+            icon_url: null,
+          },
           working: false,
           runCount: 0,
           lastCompletedAt: null,
@@ -380,7 +388,11 @@ export function AgentsPage() {
                   </span>
                   {s.project ? (
                     <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                      <ProjectOrb seed={s.project.id} className="size-3.5 shrink-0" />
+                      <ProjectOrb
+                        seed={s.project.id}
+                        iconUrl={s.project.icon_url}
+                        className="size-3.5 shrink-0"
+                      />
                       <span className="truncate">{s.project.name}</span>
                     </span>
                   ) : null}

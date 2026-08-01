@@ -10,11 +10,16 @@
 //
 // `useIssueFieldShortcuts` owns the hover gate + pointer tracking + open state;
 // `IssueShortcutMenu` renders the picker for the active field.
+//
+// The hover gate itself lives in `useHoverKeys` (lib/keyboard/hover-keys.ts):
+// the target card is resolved from the DOM at keystroke time, never from React
+// state — see MIN-158 for why that distinction is the whole bug.
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { useChordPrefix } from "@/lib/keyboard/keyboard-context";
+import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { CommandAnchor } from "@/components/command-anchor";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { Dot } from "@/components/issue-property-fields";
@@ -79,8 +84,9 @@ export interface ShortcutMenuState {
 
 /**
  * Wires up the field shortcuts for one hoverable region (a card or the panel).
- * Spread `containerProps` on the element that should react to hover; render
- * `<IssueShortcutMenu state={menuState} onClose={closeMenu} … />` inside it.
+ * Spread `containerProps` on the element that should react to hover — it
+ * carries a `ref`, so an element that already has one must merge them — and
+ * render `<IssueShortcutMenu state={menuState} onClose={closeMenu} … />` inside it.
  *
  * @param enabled Extra gate on top of hover (e.g. the panel being open).
  * @param actions Extra key → callback shortcuts that fire the callback directly
@@ -107,58 +113,52 @@ export function useIssueFieldShortcuts(
   // routes to navigation instead of opening a field picker on the hovered card.
   const chordArmedRef = React.useRef(false);
   chordArmedRef.current = useChordPrefix() !== null;
-  const [hovered, setHovered] = React.useState(false);
   const [menuState, setMenuState] = React.useState<ShortcutMenuState | null>(null);
 
-  React.useEffect(() => {
-    if (!enabled || !hovered) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (chordArmedRef.current) return;
-      const el = e.target as HTMLElement | null;
-      // Never hijack keys while the user is typing (title, description, search…).
-      if (
-        el &&
-        (el.tagName === "INPUT" ||
-          el.tagName === "TEXTAREA" ||
-          el.isContentEditable)
-      )
-        return;
-      const key = eventKey(e);
-      const action =
-        actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
-      if (action) {
-        // Capture phase + stopImmediatePropagation: while hovering, this owns
-        // the combo — e.g. Shift+P copies here without touching the P picker.
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        action();
-        return;
-      }
-      // Field pickers are unmodified single keys only.
-      if (e.shiftKey) return;
-      // A key handed off to another handler in this context: don't map it and
-      // don't swallow it, so that handler still receives the event.
-      if (disabledKeysRef.current?.includes(key)) return;
-      const field = SHORTCUT_KEYS[key];
-      if (!field || !posRef.current) return;
+  const hoverRef = useHoverKeys((e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (chordArmedRef.current) return;
+    const el = e.target as HTMLElement | null;
+    // Never hijack keys while the user is typing (title, description, search…).
+    if (
+      el &&
+      (el.tagName === "INPUT" ||
+        el.tagName === "TEXTAREA" ||
+        el.isContentEditable)
+    )
+      return;
+    const key = eventKey(e);
+    const action = actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
+    if (action) {
+      // Capture phase + stopImmediatePropagation: while hovering, this owns
+      // the combo — e.g. Shift+P copies here without touching the P picker.
       e.preventDefault();
       e.stopImmediatePropagation();
-      setMenuState({ field, position: posRef.current });
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [enabled, hovered]);
+      action();
+      return;
+    }
+    // Field pickers are unmodified single keys only.
+    if (e.shiftKey) return;
+    // A key handed off to another handler in this context: don't map it and
+    // don't swallow it, so that handler still receives the event.
+    if (disabledKeysRef.current?.includes(key)) return;
+    const field = SHORTCUT_KEYS[key];
+    if (!field || !posRef.current) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    setMenuState({ field, position: posRef.current });
+  }, enabled);
 
+  // Le survol ne s'enregistre plus nulle part : ces deux handlers ne servent
+  // qu'à retenir OÙ ancrer le picker (le dernier point du curseur sur la zone).
   const track = (e: React.MouseEvent) => {
     posRef.current = { x: e.clientX, y: e.clientY };
-    if (!hovered) setHovered(true);
   };
 
   const containerProps = {
+    ref: hoverRef,
     onMouseEnter: track,
     onMouseMove: track,
-    onMouseLeave: () => setHovered(false),
   };
 
   return {

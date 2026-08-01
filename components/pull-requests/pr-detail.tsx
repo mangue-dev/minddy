@@ -758,7 +758,11 @@ export function PrDetail({
               ) : null}
               {item.project ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <ProjectOrb seed={item.project.id} className="size-3.5" />
+                  <ProjectOrb
+                    seed={item.project.id}
+                    iconUrl={item.project.icon_url}
+                    className="size-3.5"
+                  />
                   {item.project.name}
                 </span>
               ) : null}

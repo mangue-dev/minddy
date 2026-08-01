@@ -49,7 +49,7 @@ interface RunRow {
   completed_at: string | null;
   awaiting_input: boolean;
   issue: { id: string; number: number; title: string } | null;
-  project: { id: string; key: string; name: string } | null;
+  project: { id: string; key: string; name: string; icon_url: string | null } | null;
 }
 
 /** Cap de l'excerpt de note renvoyé comme titre d'une session carnet. */
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, status, model, triggered_by, prompt, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name)",
+      "id, issue_id, status, model, triggered_by, prompt, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url)",
     )
     .order("created_at", { ascending: false });
 

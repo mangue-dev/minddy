@@ -98,7 +98,11 @@ function ProjectCombobox({
           className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
         >
           {selected ? (
-            <ProjectOrb seed={selected.id} className="size-3.5 shrink-0" />
+            <ProjectOrb
+              seed={selected.id}
+              iconUrl={selected.icon_url}
+              className="size-3.5 shrink-0"
+            />
           ) : null}
           <span className="max-w-[9rem] truncate">{selected?.name ?? placeholder}</span>
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
@@ -118,7 +122,7 @@ function ProjectCombobox({
                   setOpen(false);
                 }}
               >
-                <ProjectOrb seed={p.id} className="size-3.5 shrink-0" />
+                <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-3.5 shrink-0" />
                 <span className="flex-1 truncate">{p.name}</span>
                 <span className="shrink-0 font-mono text-xs text-muted-foreground/70">
                   {p.key}

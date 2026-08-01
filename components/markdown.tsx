@@ -4,15 +4,9 @@ import type { ElementType, JSX } from "react";
 import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "mangue-ui";
-import { displayName } from "@/lib/display-name";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { memberLabel, mentionScanner } from "@/lib/mention-scan";
 import type { Member } from "@/lib/types";
-
-function memberLabel(m: Member): string {
-  return displayName(m);
-}
-
-const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
 type HastNode = {
@@ -23,62 +17,33 @@ type HastNode = {
   children?: HastNode[];
 };
 
-/* « @numo » s'écrit comme on veut : c'est ainsi que le serveur le reconnaît
-   (mentionsNumo, lib/server/assistant/comment-agent.ts). Un nom de membre, lui,
-   se reconnaît à sa casse EXACTE — c'est ce que extractMentions notifie, et une
-   pilule doit dire vrai sur qui a été prévenu. Deux règles, une seule passe :
-   comme JS n'a pas de drapeau par branche, la casse libre de « numo » s'écrit
-   lettre par lettre. */
-const NUMO_PATTERN = "[Nn][Uu][Mm][Oo]";
-
 /** Rehype plugin: turn "@Display Name" / "@numo" tokens into
     <span data-mention-*> so the renderer can swap in a MentionChip. Runs on the
-    HTML AST, so surrounding markdown formatting is preserved. */
+    HTML AST, so surrounding markdown formatting is preserved. La règle de ce
+    qui EST une mention vient de lib/mention-scan — la même qu'applique le
+    composer pendant qu'on écrit. */
 function rehypeMentions(members: Member[]) {
-  const byLength = [...members].sort(
-    (a, b) => memberLabel(b).length - memberLabel(a).length
-  );
-  const byName = new Map(byLength.map((m) => [memberLabel(m), m]));
-  const names = byLength.map((m) => escapeRegExp(memberLabel(m)));
-  // Sans membre, pas de branche de noms : un « (|) » vide matcherait la chaîne
-  // vide, et chaque « @ » du texte deviendrait une pilule.
-  const re = new RegExp(
-    names.length
-      ? `@(?:(${NUMO_PATTERN})\\b|(${names.join("|")}))`
-      : `@(${NUMO_PATTERN})\\b`,
-    "g"
-  );
+  const scan = mentionScanner(members);
 
-  const split = (value: string): HastNode[] => {
-    const out: HastNode[] = [];
-    let last = 0;
-    let m: RegExpExecArray | null;
-    re.lastIndex = 0;
-    while ((m = re.exec(value)) !== null) {
-      const numo = !!m[1];
-      // Même garde que côté serveur : « clement@numo.dev » ne cite personne.
-      if (numo && m.index > 0 && !/[\s(>]/.test(value[m.index - 1])) continue;
-      const member = numo ? null : byName.get(m[2]);
-      if (!numo && !member) continue;
-      if (m.index > last) out.push({ type: "text", value: value.slice(last, m.index) });
-      out.push({
-        type: "element",
-        tagName: "span",
-        properties: numo
-          ? { "data-mention-type": "numo" }
-          : {
-              "data-mention-type": "member",
-              "data-mention-id": member!.user_id,
-              "data-mention-label": memberLabel(member!),
-              "data-mention-seed": member!.avatar_seed,
-            },
-        children: [],
-      });
-      last = m.index + m[0].length;
-    }
-    if (last < value.length) out.push({ type: "text", value: value.slice(last) });
-    return out;
-  };
+  const split = (value: string): HastNode[] =>
+    scan(value).map((seg) =>
+      seg.mention === undefined
+        ? { type: "text", value: seg.text }
+        : {
+            type: "element",
+            tagName: "span",
+            properties:
+              seg.mention.type === "numo"
+                ? { "data-mention-type": "numo" }
+                : {
+                    "data-mention-type": "member",
+                    "data-mention-id": seg.mention.member.user_id,
+                    "data-mention-label": memberLabel(seg.mention.member),
+                    "data-mention-seed": seg.mention.member.avatar_seed,
+                  },
+            children: [],
+          },
+    );
 
   const walk = (node: HastNode) => {
     if (!node.children) return;

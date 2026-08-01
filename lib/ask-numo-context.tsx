@@ -7,10 +7,15 @@
 // contexte au-dessus du composer.
 //
 // L'écoute clavier est UNIQUE et vit ici, chez le board ; les cartes se
-// contentent de publier « je suis sous le pointeur » via `useAskNumoTarget`.
-// Un écouteur par carte (comme les raccourcis de champ) PLUS un écouteur
-// global pour le cas « sélection sans survol » se marcheraient dessus : deux
-// ouvertures pour une seule frappe.
+// contentent de s'inscrire via `useAskNumoTarget`. Un écouteur par carte
+// (comme les raccourcis de champ) PLUS un écouteur global pour le cas
+// « sélection sans survol » se marcheraient dessus : deux ouvertures pour une
+// seule frappe.
+//
+// Quelle carte est sous le pointeur se lit dans le DOM AU MOMENT de la frappe
+// (`innermostHovered`), jamais dans un état mémorisé au survol : celui-ci
+// retarde d'un effet passif sur le pointeur et désigne encore la carte
+// précédente (MIN-158).
 
 import {
   createContext,
@@ -19,18 +24,16 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
+import { innermostHovered } from "@/lib/keyboard/hover-keys";
 import type { Issue } from "@/lib/types";
 
 interface AskNumoContextValue {
-  /** La carte sous le pointeur devient la cible du raccourci. */
-  setTarget: (issue: Issue) => void;
-  /** Retire la cible — sans effet si une autre carte a déjà pris la main. */
-  clearTarget: (issueId: string) => void;
+  /** Inscrit une carte comme cible possible ; rend sa désinscription. */
+  register: (el: Element, getIssue: () => Issue) => () => void;
 }
 
 const AskNumoContext = createContext<AskNumoContextValue | null>(null);
@@ -61,7 +64,9 @@ export function AskNumoProvider({
   onAskNumo: (issues: Issue[]) => void;
   children: ReactNode;
 }) {
-  const targetRef = useRef<Issue | null>(null);
+  // Les cartes montées, chacune sachant rendre sa version fraîche de l'issue
+  // (une carte modifiée sous le pointeur n'envoie donc jamais un titre périmé).
+  const targetsRef = useRef(new Map<Element, () => Issue>());
   // Refs miroir : l'écouteur est posé une seule fois et lit toujours l'état
   // courant, sans se réabonner à chaque changement de sélection.
   const selectionRef = useRef(selectedIssues);
@@ -69,11 +74,12 @@ export function AskNumoProvider({
   const askRef = useRef(onAskNumo);
   askRef.current = onAskNumo;
 
-  const setTarget = useCallback((issue: Issue) => {
-    targetRef.current = issue;
-  }, []);
-  const clearTarget = useCallback((issueId: string) => {
-    if (targetRef.current?.id === issueId) targetRef.current = null;
+  const register = useCallback((el: Element, getIssue: () => Issue) => {
+    const targets = targetsRef.current;
+    targets.set(el, getIssue);
+    return () => {
+      targets.delete(el);
+    };
   }, []);
 
   useEffect(() => {
@@ -83,12 +89,9 @@ export function AskNumoProvider({
       // adresse e-mail), pas un raccourci.
       if (isTypingTarget(e.target)) return;
       const selection = selectionRef.current;
+      const hovered = innermostHovered(targetsRef.current)?.();
       const issues =
-        selection.length > 0
-          ? selection
-          : targetRef.current
-            ? [targetRef.current]
-            : [];
+        selection.length > 0 ? selection : hovered ? [hovered] : [];
       if (issues.length === 0) return;
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -98,10 +101,7 @@ export function AskNumoProvider({
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
-  const value = useMemo(
-    () => ({ setTarget, clearTarget }),
-    [setTarget, clearTarget]
-  );
+  const value = useMemo(() => ({ register }), [register]);
 
   return (
     <AskNumoContext.Provider value={value}>{children}</AskNumoContext.Provider>
@@ -109,31 +109,24 @@ export function AskNumoProvider({
 }
 
 /**
- * Déclare une carte comme cible de « @ » tant que le pointeur est dessus.
- * Rend les handlers de survol à poser sur la carte. Hors board (aucun
- * provider), c'est un no-op : le raccourci n'existe simplement pas là.
+ * Déclare une carte comme cible possible de « @ ». Rend un callback ref à
+ * poser sur la carte (fusionné avec ses autres refs, sans rien renvoyer depuis
+ * la fusion : c'est le rappel avec `null` qui désinscrit au démontage — filtre
+ * de vue, drag). Hors board (aucun provider), c'est un no-op : le raccourci
+ * n'existe simplement pas là.
  */
-export function useAskNumoTarget(issue: Issue): {
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-} {
-  const ctx = useContext(AskNumoContext);
-  const [hovered, setHovered] = useState(false);
+export function useAskNumoTarget(issue: Issue): (el: Element | null) => void {
+  const register = useContext(AskNumoContext)?.register;
+  const issueRef = useRef(issue);
+  issueRef.current = issue;
+  const unregister = useRef<(() => void) | null>(null);
 
-  // `issue` en dépendance : une carte modifiée pendant qu'on la survole
-  // republie sa version fraîche, donc le titre envoyé à Numo n'est jamais
-  // périmé. Le nettoyage couvre aussi le démontage (filtre de vue, drag).
-  useEffect(() => {
-    if (!ctx || !hovered) return;
-    ctx.setTarget(issue);
-    return () => ctx.clearTarget(issue.id);
-  }, [ctx, hovered, issue]);
-
-  return useMemo(
-    () => ({
-      onMouseEnter: () => setHovered(true),
-      onMouseLeave: () => setHovered(false),
-    }),
-    []
+  return useCallback(
+    (el: Element | null) => {
+      unregister.current?.();
+      unregister.current =
+        el && register ? register(el, () => issueRef.current) : null;
+    },
+    [register]
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -1126,6 +1126,7 @@ export function IssueCard({
       "shift+p": () => void copyPrompt(),
       "shift+a": launchAgent,
     });
+  const { ref: shortcutsRef, ...hoverProps } = containerProps;
 
   // Ouvre le picker d'un champ au point du dernier clic droit — là où le menu
   // qui vient de le proposer était affiché, comme pour le picker de relation.
@@ -1144,10 +1145,22 @@ export function IssueCard({
     }
   };
 
-  // « @ » (MIN-105) : la carte se déclare cible du raccourci pendant le survol,
-  // le board écoute la touche. Les deux jeux de handlers vivent sur la même
-  // div racine — d'où la fusion explicite plus bas.
-  const askNumoHover = useAskNumoTarget(issue);
+  // « @ » (MIN-105) : la carte s'inscrit auprès du board, qui écoute la touche
+  // et retrouve au moment de la frappe celle qui est sous le pointeur.
+  const askNumoRef = useAskNumoTarget(issue);
+
+  // dnd-kit, les raccourcis de champ et « @ » veulent tous les trois la div
+  // racine. Fusion mémoïsée (les trois refs sont stables) : une nouvelle
+  // identité à chaque rendu ferait détacher puis rattacher les trois. Ne rien
+  // renvoyer, pour que React reste sur le rappel `null` au démontage.
+  const setCardRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      setNodeRef(el);
+      shortcutsRef(el);
+      askNumoRef(el);
+    },
+    [setNodeRef, shortcutsRef, askNumoRef]
+  );
 
   const menuActions: ContextMenuAction[] = [
     // Prompt et agent : deux sous-menus « Générer un plan » / « Implémenter le
@@ -1246,19 +1259,11 @@ export function IssueCard({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setCardRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
-      {...containerProps}
-      onMouseEnter={(e) => {
-        containerProps.onMouseEnter(e);
-        askNumoHover.onMouseEnter();
-      }}
-      onMouseLeave={() => {
-        containerProps.onMouseLeave();
-        askNumoHover.onMouseLeave();
-      }}
+      {...hoverProps}
       onClick={(e) => {
         if (e.shiftKey && onSelect) {
           e.preventDefault();

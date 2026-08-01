@@ -468,7 +468,7 @@ export async function syncRepoPullRequests(opts: {
 export interface VisibleRepo {
   provider: RepoProviderId;
   repoFullName: string;
-  project: { id: string; key: string; name: string };
+  project: { id: string; key: string; name: string; icon_url: string | null };
 }
 
 /**
@@ -483,17 +483,17 @@ export async function listVisibleRepos(
 ): Promise<VisibleRepo[]> {
   const { data } = await supabase
     .from("project_git_links")
-    .select("provider, repo_full_name, project:projects(id, key, name)");
+    .select("provider, repo_full_name, project:projects(id, key, name, icon_url)");
   return ((data ?? []) as unknown as Array<{
     provider: string;
     repo_full_name: string | null;
-    project: { id: string; key: string; name: string } | null;
+    project: VisibleRepo["project"] | null;
   }>)
     .filter((r) => !!r.repo_full_name && !!r.project && isRepoProviderId(r.provider))
     .map((r) => ({
       provider: r.provider as RepoProviderId,
       repoFullName: r.repo_full_name as string,
-      project: r.project as { id: string; key: string; name: string },
+      project: r.project as VisibleRepo["project"],
     }));
 }
 

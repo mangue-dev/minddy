@@ -297,7 +297,11 @@ export function PullRequestsPage() {
                     {pr.project ? (
                       <>
                         <span aria-hidden>·</span>
-                        <ProjectOrb seed={pr.project.id} className="size-3.5 shrink-0" />
+                        <ProjectOrb
+                          seed={pr.project.id}
+                          iconUrl={pr.project.icon_url}
+                          className="size-3.5 shrink-0"
+                        />
                         <span className="truncate">{pr.project.name}</span>
                       </>
                     ) : null}

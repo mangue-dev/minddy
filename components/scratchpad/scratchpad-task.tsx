@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -45,6 +45,7 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 
 /**
  * Ligne de titre markdown (niveau compris) de la SECTION dans laquelle vit le
@@ -229,51 +230,44 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   // règle : la frappe l'emporte tant qu'on édite LA tâche survolée (caret
   // dedans, éditeur au focus) — écrire « Ajouter » sur sa propre ligne ne lance
   // donc jamais rien.
-  const wrapperRef = useRef<HTMLLIElement>(null);
-  const [hovered, setHovered] = useState(false);
   // Tout ce qui bouge d'un rendu à l'autre (les actions relisent le contenu du
   // nœud, `getPos` sa position) passe par une ref : le listener reste alors
   // abonné d'un bout à l'autre du survol au lieu de se réabonner à chaque frappe.
   const liveRef = useRef({ copyLine, launchAgent, getPos });
   liveRef.current = { copyLine, launchAgent, getPos };
 
-  useEffect(() => {
-    // Menu ouvert = on tape dans son champ de recherche : la lettre lui revient.
-    if (!hovered || menuOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = eventKey(e);
-      if (key !== "a" && key !== "p") return;
-      // Tâches imbriquées : entrer dans l'enfant ne fait pas sortir du parent,
-      // les deux se croient survolés. La cible, c'est la plus intérieure.
-      if (wrapperRef.current?.querySelector('li[data-type="taskItem"]:hover'))
-        return;
-      // On écrit DANS cette tâche-là : la lettre l'emporte sur le raccourci.
-      const pos = liveRef.current.getPos();
-      if (pos != null && editor.isFocused) {
-        const self = editor.state.doc.nodeAt(pos);
-        const { from, to } = editor.state.selection;
-        if (self && to >= pos && from <= pos + self.nodeSize) return;
-      }
-      // Le survol possède la combinaison : ni l'éditeur ni le dialog ne la voit.
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      if (key === "a") liveRef.current.launchAgent();
-      else liveRef.current.copyLine();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [hovered, menuOpen, editor]);
+  // La tâche visée se lit dans le DOM au moment de la frappe : passer d'une
+  // ligne à l'autre puis taper aussitôt ne peut plus lancer l'agent sur la
+  // précédente (MIN-158). `useHoverKeys` désigne aussi la tâche la plus
+  // INTÉRIEURE, ce qui règle les tâches imbriquées — entrer dans l'enfant ne
+  // fait pas sortir du parent, les deux sont survolés, l'enfant gagne.
+  //
+  // Menu ouvert = on tape dans son champ de recherche : la lettre lui revient.
+  const hoverRef = useHoverKeys((e) => {
+    if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+    const key = eventKey(e);
+    if (key !== "a" && key !== "p") return;
+    // On écrit DANS cette tâche-là : la lettre l'emporte sur le raccourci.
+    const pos = liveRef.current.getPos();
+    if (pos != null && editor.isFocused) {
+      const self = editor.state.doc.nodeAt(pos);
+      const { from, to } = editor.state.selection;
+      if (self && to >= pos && from <= pos + self.nodeSize) return;
+    }
+    // Le survol possède la combinaison : ni l'éditeur ni le dialog ne la voit.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (key === "a") liveRef.current.launchAgent();
+    else liveRef.current.copyLine();
+  }, !menuOpen);
 
   return (
     <NodeViewWrapper
-      ref={wrapperRef}
+      ref={hoverRef}
       as="li"
       data-type="taskItem"
       data-state={state}
       className="group/task flex items-start gap-2.5 rounded-[3px] px-1 hover:bg-muted/50"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onContextMenu={(e: MouseEvent) => {
         e.preventDefault();
         setMenuOpen(true);

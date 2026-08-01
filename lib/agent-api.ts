@@ -570,7 +570,7 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
-  project: { id: string; key: string; name: string } | null;
+  project: { id: string; key: string; name: string; icon_url: string | null } | null;
   /** Run canonique de la PR, ou null : une PR humaine n'en a aucun. */
   runId: string | null;
   /** Un run TRAVAILLE sur cette PR (queued/running) = « Numo retravaille ». */
@@ -750,7 +750,7 @@ export interface AgentSessionListItem {
   updated_at: string;
   /** Null = session CARNET (MIN-84) : le run est sa propre session. */
   issue: { id: string; number: number; title: string } | null;
-  project: { id: string; key: string; name: string } | null;
+  project: { id: string; key: string; name: string; icon_url: string | null } | null;
   /** Un run de l'issue TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
   /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique. */
