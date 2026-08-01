@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { issueStatusForPrState } from "./issue-status-sync";
+import { issueStatusForPrState } from "./pr-issue-status";
 
 // La règle PURE qui aligne le statut d'un ticket sur l'état de sa PR (MIN-46,
 // corrigée par MIN-138 pour le brouillon). L'écriture en base (`applyIssueStatus`)
-// n'est pas testable en node (server-only).
+// n'est pas testable en node (server-only) et reste dans
+// `lib/server/agent/issue-status-sync`, qui n'applique plus que cette table.
 
 describe("issueStatusForPrState", () => {
   it("une PR ouverte met le ticket en revue", () => {

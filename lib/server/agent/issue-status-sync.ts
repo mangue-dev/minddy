@@ -1,6 +1,10 @@
 import "server-only";
 
 import { updateIssueFields } from "@/lib/server/update-issue";
+import {
+  issueStatusForPrState,
+  type SyncableIssueStatus,
+} from "@/lib/pr-issue-status";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentRun } from "./runs";
 
@@ -19,30 +23,11 @@ import type { AgentRun } from "./runs";
  * échouer le flux appelant.
  */
 
-type SyncableIssueStatus = "in_progress" | "in_review" | "done" | "todo";
-
-/** pr_state → statut d'issue à appliquer, ou null si l'état n'implique rien. */
-export function issueStatusForPrState(
-  prState: AgentRun["pr_state"],
-): SyncableIssueStatus | null {
-  switch (prState) {
-    case "open":
-      return "in_review";
-    case "draft":
-      // Une PR brouillon n'est PAS prête à être relue : son auteur la travaille
-      // encore. La pousser en revue ferait apparaître dans la file de relecture
-      // un travail que personne n'a proposé (MIN-138).
-      return "in_progress";
-    case "merged":
-      return "done";
-    case "closed":
-      // PR refusée → l'issue retourne « à faire » (jamais annulée) : le travail
-      // reste à reprendre, contrairement à un abandon explicite (MIN-46).
-      return "todo";
-    default:
-      return null;
-  }
-}
+// La TABLE, elle, vit en pur dans `lib/pr-issue-status` : le dialog qui lie un
+// ticket à une PR à la main (MIN-163) l'annonce avant de faire le geste, et un
+// module `server-only` ne se lit pas depuis le navigateur. Ré-exportée ici, où
+// tous ses appelants serveur la cherchent déjà.
+export { issueStatusForPrState } from "@/lib/pr-issue-status";
 
 /**
  * Écrit le statut sur l'issue (best-effort, via Numo). Point de passage unique.

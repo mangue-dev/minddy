@@ -231,7 +231,10 @@
     "invalidRecoveryCode": "Ce code de récupération est invalide, ou a déjà servi.",
     "gitAccountRequired": "Connectez votre compte git pour agir sur cette pull request en votre nom.",
     "gitRepoAccessRequired": "Votre compte git n'a pas accès à {repo}.",
-    "gitWriteAccessRequired": "Votre compte git ne peut pas écrire sur ce dépôt."
+    "gitWriteAccessRequired": "Votre compte git ne peut pas écrire sur ce dépôt.",
+    "prAlreadyLinked": "Cette pull request est déjà liée à un ticket.",
+    "issueAlreadyLinked": "Ce ticket est déjà lié à une pull request en cours.",
+    "issueOutsideRepo": "Ce ticket appartient à un projet qui ne lie pas ce dépôt."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -2338,6 +2341,15 @@
     "numoAuthor": "Agent Numo",
     "noLinkedIssue": "Aucun ticket lié",
     "linkedIssue": "Ouvrir le ticket lié",
+    "linkIssue": "Lier un ticket",
+    "linkIssueSearchPlaceholder": "Chercher un ticket…",
+    "linkIssueLoading": "Chargement des tickets…",
+    "linkIssueEmpty": "Aucun ticket dans ce projet.",
+    "linkIssueTitle": "Lier ce ticket à la pull request ?",
+    "linkIssueDescription": "{identifier} sera rattaché à cette pull request. Le rattachement est définitif : il ne pourra pas être annulé.",
+    "linkIssueStatusNote": "Son statut passera à « {status} ».",
+    "linkIssueConfirm": "Lier le ticket",
+    "linkIssueDone": "{identifier} est lié à cette pull request.",
     "loadMore": "En voir plus",
     "listTruncated": "Le dépôt a plus de pull requests que minddy n'en liste d'un coup — les plus anciennes manquent.",
     "aiReview": "Faire vérifier par Numo",

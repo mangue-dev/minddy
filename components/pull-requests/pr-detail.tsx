@@ -51,6 +51,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
   CommentReactionChips,
   ReactionPicker,
@@ -836,11 +837,25 @@ export function PrDetail({
               </TooltipTrigger>
               <TooltipContent side="bottom">{t("linkedIssue")}</TooltipContent>
             </Tooltip>
-          ) : (
+          ) : item.project ? (
             // Non rattachée : c'est un ÉTAT NORMAL depuis MIN-143 (le lien vient
             // d'une convention `MIN-42` dans la branche, le titre ou une ligne
-            // Fixes — pas d'une devinette), mais il vaut mieux le dire que
-            // laisser un blanc là où l'œil cherche un ticket.
+            // Fixes — pas d'une devinette). Reste que la convention se rate, et
+            // que rien ne savait alors poser le lien après coup : le sélecteur
+            // prend la place exacte du ticket manquant (MIN-163).
+            <PrLinkIssue
+              prId={item.prId}
+              prState={item.pr_state}
+              projectId={item.project.id}
+              projectKey={item.project.key}
+              onLinked={() => {
+                onRefetchList();
+                void refetchPr();
+              }}
+            />
+          ) : (
+            // Aucun projet résolu pour ce dépôt : il n'y a pas de périmètre de
+            // tickets à proposer. On dit l'état plutôt que d'offrir un menu vide.
             <span className="font-sans text-xs text-muted-foreground/70">
               {t("noLinkedIssue")}
             </span>

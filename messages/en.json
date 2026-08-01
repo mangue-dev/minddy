@@ -231,7 +231,10 @@
     "invalidRecoveryCode": "That recovery code isn't valid, or has already been used.",
     "gitAccountRequired": "Connect your git account to act on this pull request under your own name.",
     "gitRepoAccessRequired": "Your git account has no access to {repo}.",
-    "gitWriteAccessRequired": "Your git account can't write to this repository."
+    "gitWriteAccessRequired": "Your git account can't write to this repository.",
+    "prAlreadyLinked": "This pull request is already linked to an issue.",
+    "issueAlreadyLinked": "This issue is already linked to an open pull request.",
+    "issueOutsideRepo": "This issue belongs to a project that doesn't link this repository."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -2338,6 +2341,15 @@
     "numoAuthor": "Numo agent",
     "noLinkedIssue": "No linked issue",
     "linkedIssue": "Open the linked issue",
+    "linkIssue": "Link an issue",
+    "linkIssueSearchPlaceholder": "Search for an issue…",
+    "linkIssueLoading": "Loading issues…",
+    "linkIssueEmpty": "No issue in this project.",
+    "linkIssueTitle": "Link this issue to the pull request?",
+    "linkIssueDescription": "{identifier} will be attached to this pull request. The link is permanent — it can't be undone.",
+    "linkIssueStatusNote": "Its status will move to “{status}”.",
+    "linkIssueConfirm": "Link the issue",
+    "linkIssueDone": "{identifier} is linked to this pull request.",
     "loadMore": "Load more",
     "listTruncated": "The repository has more pull requests than minddy can list at once — the oldest are missing.",
     "aiReview": "Have Numo check it",

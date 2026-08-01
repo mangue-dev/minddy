@@ -518,6 +518,32 @@ export async function actOnPullRequestApi(
   );
 }
 
+/**
+ * Rattache un ticket à une PR qui n'en a pas (MIN-163). DÉFINITIF : le serveur
+ * refuse une PR déjà rattachée, comme un ticket qui porte déjà une PR vivante —
+ * l'appelant montre donc son `error` tel quel (il est traduit côté serveur).
+ *
+ * Rend le statut que le ticket vient de prendre, aligné sur l'état de la PR.
+ */
+export async function linkPullRequestIssueApi(
+  prId: string,
+  issueId: string,
+  prState: string,
+): Promise<{
+  ok: true;
+  issue: { id: string; number: number; title: string };
+  status: string | null;
+}> {
+  trackEvent("pr_issue_linked", { pr_state: prState });
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "link_issue", issueId }),
+    }),
+  );
+}
+
 /** Verdict d'une review soumise depuis minddy (MIN-138). */
 export type ReviewVerdict = "approve" | "request_changes" | "comment";
 

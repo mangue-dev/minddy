@@ -192,6 +192,12 @@ export interface AnalyticsEventProps {
   pr_review_submitted: { verdict: string };
   /** « Faire vérifier par Numo » (MIN-141) — la review déclenchée à la main. */
   pr_ai_review_requested: NoProps;
+  /**
+   * Ticket rattaché À LA MAIN à une PR qui n'en avait pas (MIN-163). `pr_state`
+   * dit à quel moment de la vie de la PR on rattrape le lien manquant — c'est ce
+   * qu'on veut savoir pour juger si la convention de nommage suffit.
+   */
+  pr_issue_linked: { pr_state: string };
   pr_external_link_clicked: { provider: string };
 
   // ── Cycles ──
@@ -478,6 +484,7 @@ const EVENT_NAMES = [
   "pr_review_comment_added",
   "pr_review_submitted",
   "pr_ai_review_requested",
+  "pr_issue_linked",
   "pr_external_link_clicked",
   // Cycles
   "cycle_viewed",

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { after, NextResponse, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -16,7 +17,10 @@ import { ensureAgentsAllowed } from "@/lib/server/entitlements";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
-import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
+import {
+  issueStatusForPrState,
+  syncIssueStatusFromPr,
+} from "@/lib/server/agent/issue-status-sync";
 import { runPrAiReview } from "./pr-ai-review";
 import {
   activePrReviewRun,
@@ -40,8 +44,11 @@ import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge
 import { findRunsForPr, syncPrState } from "./runs";
 import {
   findPullRequest,
+  hasLivePullRequest,
+  projectsForRepo,
   resolvePrForRun,
   rowProvider,
+  setPullRequestIssue,
   upsertPullRequest,
   type PullRequestRow,
   type PullRequestState,
@@ -192,7 +199,7 @@ export async function requireActor(
 }
 
 export type PrRequestAuth =
-  | { ok: true; scope: PrScope; userId: string }
+  | { ok: true; scope: PrScope; userId: string; supabase: SupabaseClient }
   | { ok: false; response: NextResponse };
 
 /** 404 unique des deux familles de routes : « cette PR n'existe pas pour vous ». */
@@ -216,7 +223,11 @@ export async function authorizePrRequest(
 
   const scope = await resolvePrScope(auth.user.id, pr);
   if (!scope) return { ok: false, response: prNotFound() };
-  return { ok: true, scope, userId: auth.user.id };
+  // Le client AUTHENTIFIÉ voyage avec : c'est lui, et sa RLS, qui servent de
+  // garde quand un geste touche une autre table que la PR — le rattachement
+  // manuel d'un ticket (MIN-163) relit l'issue avec, plutôt que de recoder à la
+  // main un contrôle d'appartenance au projet.
+  return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
 }
 
 /**
@@ -249,7 +260,7 @@ export async function authorizeRunPrRequest(
 
   const scope = await resolvePrScope(auth.user.id, pr);
   if (!scope) return { ok: false, response: prNotFound() };
-  return { ok: true, scope, userId: auth.user.id };
+  return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
 }
 
 /** Erreur de forge → status HTTP (502 = la forge a répondu non, 500 = nous). */
@@ -1224,6 +1235,99 @@ export interface PrActionBody {
   verdict?: string;
   relaunch?: boolean;
   method?: string;
+  /** `link_issue` : le ticket à rattacher à cette PR (MIN-163). */
+  issueId?: string;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Refus traduit d'un rattachement, avec son `code` pour l'appelant. */
+async function linkRefusal(
+  code: "prAlreadyLinked" | "issueAlreadyLinked" | "issueOutsideRepo",
+  status: number,
+): Promise<NextResponse> {
+  const t = await getTranslations("ApiErrors");
+  return NextResponse.json({ error: t(code), code }, { status });
+}
+
+/**
+ * `link_issue` — rattacher À LA MAIN un ticket à une PR qui n'en a pas (MIN-163).
+ *
+ * Le rattachement normal est CONVENTIONNEL (clé de projet dans la branche, le
+ * titre, ou une ligne `Fixes:`) et se pose à l'ingestion. Quand la convention
+ * n'a pas été suivie, la PR restait orpheline pour toujours : rien, ni dans
+ * l'UI ni dans l'API, ne savait poser ce lien après coup.
+ *
+ * Il est DÉFINITIF, et c'est ce qui dicte la forme :
+ *  - une PR déjà rattachée est refusée (409) — le lien ne se remplace pas ;
+ *  - l'écriture est conditionnelle en base, donc atomique : deux onglets qui
+ *   choisissent deux tickets ne peuvent pas se recouvrir en silence ;
+ *  - un ticket qui porte déjà une PR VIVANTE est refusé (409). C'est l'unicité
+ *   « un ticket, une PR » telle qu'elle tient : plusieurs PR TERMINALES sur un
+ *   même ticket sont la vie normale d'un ticket que Numo a repris plusieurs fois.
+ *
+ * Aucun appel de forge : le rattachement est un fait minddy. Pas de
+ * `requireActor` donc — mais l'issue se relit avec le client AUTHENTIFIÉ, dont
+ * la RLS est le garde d'accès, et son projet doit lier CE dépôt (le périmètre
+ * exact de `resolveIssueForPr`, la voie conventionnelle).
+ *
+ * Le statut du ticket s'aligne ensuite sur l'état de la PR, par le même point de
+ * passage que partout ailleurs : PR ouverte → `in_review`, brouillon →
+ * `in_progress`, fusionnée → `done`, fermée → `todo`.
+ */
+export async function prLinkIssueResponse(
+  scope: PrScope,
+  supabase: SupabaseClient,
+  body: PrActionBody,
+  userId: string,
+): Promise<NextResponse> {
+  const issueId = typeof body.issueId === "string" ? body.issueId.trim() : "";
+  if (!UUID_RE.test(issueId)) {
+    return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
+  }
+  if (scope.pr.issue_id) return linkRefusal("prAlreadyLinked", 409);
+
+  // Client AUTHENTIFIÉ : sa RLS répond « rien » sur un ticket qu'il ne voit pas,
+  // ce qui vaut 404 — on ne dit pas à quelqu'un qu'un ticket existe ailleurs.
+  const { data } = await supabase
+    .from("issues")
+    .select("id, number, title, project_id, deleted_at")
+    .eq("id", issueId)
+    .maybeSingle();
+  const issue = data as {
+    id: string;
+    number: number;
+    title: string;
+    project_id: string;
+    deleted_at: string | null;
+  } | null;
+  if (!issue || issue.deleted_at) {
+    return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+  }
+
+  const provider = rowProvider(scope.pr);
+  const projects = await projectsForRepo(provider, scope.pr.repo_full_name);
+  if (!projects.some((p) => p.id === issue.project_id)) {
+    return linkRefusal("issueOutsideRepo", 400);
+  }
+
+  if (await hasLivePullRequest(issueId)) {
+    return linkRefusal("issueAlreadyLinked", 409);
+  }
+
+  // C'est la base qui tranche : `false` = la PR a été rattachée entre-temps.
+  if (!(await setPullRequestIssue(scope.pr.id, issueId))) {
+    return linkRefusal("prAlreadyLinked", 409);
+  }
+
+  const status = issueStatusForPrState(scope.pr.state);
+  await syncIssueStatusFromPr({ issueId, actorId: userId, prState: scope.pr.state });
+
+  return NextResponse.json({
+    ok: true,
+    issue: { id: issue.id, number: issue.number, title: issue.title },
+    status,
+  });
 }
 
 /** merge / close / ready_for_review — les gestes qui changent l'état de la PR. */

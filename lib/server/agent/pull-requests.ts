@@ -229,28 +229,68 @@ export async function resolvePrForRun(run: {
   });
 }
 
-/** Rattache une PR à un ticket (ou l'en détache). Best-effort. */
+/**
+ * Rattache une PR ENCORE LIBRE à un ticket. Rend faux si elle ne l'était plus.
+ *
+ * Le `is("issue_id", null)` n'est pas une précaution de style : c'est ce qui rend
+ * le geste manuel (MIN-163) ATOMIQUE. Le contrôler avant d'écrire laisserait une
+ * fenêtre entre la lecture et l'écriture — deux onglets, deux tickets, et la
+ * seconde écriture écraserait la première sans que personne ne le voie. La base
+ * tranche, l'appelant lit le verdict.
+ *
+ * Le sens est volontairement UNIQUE : on lie, on ne délie pas. La liaison est
+ * définitive côté produit, et un détachement serait de toute façon rétabli au
+ * prochain balayage si la branche porte encore la référence au ticket.
+ */
 export async function setPullRequestIssue(
   prId: string,
-  issueId: string | null,
-): Promise<void> {
+  issueId: string,
+): Promise<boolean> {
   const service = getServiceClient();
-  const { error } = await service
+  const { data, error } = await service
     .from("pull_requests")
     .update({ issue_id: issueId })
-    .eq("id", prId);
-  if (error) console.error("[pull-requests] issue link failed:", error.message);
+    .eq("id", prId)
+    .is("issue_id", null)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[pull-requests] issue link failed:", error.message);
+    return false;
+  }
+  return !!data;
+}
+
+/**
+ * Ce ticket porte-t-il déjà une PR VIVANTE (brouillon ou ouverte) ?
+ *
+ * C'est l'unicité « un ticket, une PR » telle qu'elle tient debout. Un index
+ * unique sur `issue_id` serait faux : un ticket enchaîne légitimement plusieurs
+ * PR au fil des runs (mesuré — des tickets portent trois PR terminales), et il
+ * ferait tomber l'upsert EN LOT du balayage sur un dépôt où deux branches
+ * ouvertes citent le même ticket. Ce qui n'a pas de sens, c'est DEUX PR en vol
+ * sur un même ticket : c'est ce qu'on refuse au moment du geste manuel.
+ */
+export async function hasLivePullRequest(issueId: string): Promise<boolean> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("pull_requests")
+    .select("id")
+    .eq("issue_id", issueId)
+    .in("state", ["draft", "open"])
+    .limit(1);
+  return (data ?? []).length > 0;
 }
 
 // ── Rattachement au ticket ───────────────────────────────────────────────────
 
-interface RepoProject {
+export interface RepoProject {
   id: string;
   key: string;
 }
 
 /** Projets (id + clé) qui lient ce dépôt — le périmètre des références valides. */
-async function projectsForRepo(
+export async function projectsForRepo(
   provider: RepoProviderId,
   repoFullName: string,
 ): Promise<RepoProject[]> {

@@ -5,6 +5,7 @@ import {
   authorizePrRequest,
   prAiReviewResponse,
   prDetailResponse,
+  prLinkIssueResponse,
   prReviewResponse,
   prStateActionResponse,
   type PrActionBody,
@@ -19,6 +20,7 @@ import {
  *       | { action: 'ready_for_review' }                     → brouillon → prête
  *       | { action: 'review', verdict, message, relaunch?, model? }
  *       | { action: 'ai_review', model? }                    → Numo relit (MIN-141)
+ *       | { action: 'link_issue', issueId }                  → rattache un ticket (MIN-163)
  *
  * `ai_review` rend un 202 avec la SESSION de review (`pr_review_runs`) : la
  * passe se joue en tâche de fond et se regarde en direct sur `./ai-review`.
@@ -60,7 +62,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "close" &&
     action !== "review" &&
     action !== "ai_review" &&
-    action !== "ready_for_review"
+    action !== "ready_for_review" &&
+    action !== "link_issue"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
@@ -70,6 +73,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   if (action === "review") {
     return prReviewResponse(auth.scope, body, auth.userId);
+  }
+  if (action === "link_issue") {
+    return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
   }
   if (action === "ai_review") {
     // La review est écrite dans la langue du demandeur — celle du cookie de
