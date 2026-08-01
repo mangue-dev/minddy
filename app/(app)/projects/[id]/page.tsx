@@ -39,6 +39,12 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveSidePanel } from "@/components/objective-side-panel";
 import { createIssueApi } from "@/lib/issues-api";
+import {
+  insertIssueEverywhere,
+  issueWrites,
+  removeIssueEverywhere,
+  replaceIssueEverywhere,
+} from "@/lib/optimistic/issue-writes";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
@@ -161,21 +167,21 @@ function ProjectBoard() {
   // remplacée par la ligne serveur au succès, retirée + toast à l'échec.
   const createIssueInProject = useCallback(
     async (targetProjectId: string, input: CreateIssueInput) => {
-      const key = ["issues", targetProjectId] as const;
       const optimistic = buildOptimisticIssue(
         input,
         targetProjectId,
         myUserId,
-        queryClient.getQueryData<Issue[]>(key) ?? [],
+        queryClient.getQueryData<Issue[]>(["issues", targetProjectId]) ?? [],
       );
-      queryClient.setQueryData<Issue[]>(key, (old) =>
-        old ? [...old, optimistic] : old,
-      );
+      // Inscrite au registre AVANT le patch (MIN-156) : une réponse de GET
+      // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
+      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
+      insertIssueEverywhere(queryClient, targetProjectId, optimistic);
       void createIssueApi(targetProjectId, input).then(
         (issue) => {
-          queryClient.setQueryData<Issue[]>(key, (old) =>
-            old?.map((i) => (i.id === optimistic.id ? issue : i)),
-          );
+          replaceIssueEverywhere(queryClient, targetProjectId, optimistic.id, issue);
+          insertIssueEverywhere(queryClient, targetProjectId, issue);
+          issueWrites.settle(handle, issue);
           record({
             kind: "create",
             projectId: targetProjectId,
@@ -184,9 +190,8 @@ function ProjectBoard() {
           });
         },
         (err) => {
-          queryClient.setQueryData<Issue[]>(key, (old) =>
-            old?.filter((i) => i.id !== optimistic.id),
-          );
+          issueWrites.fail(handle);
+          removeIssueEverywhere(queryClient, targetProjectId, optimistic.id);
           toast.error((err as Error).message);
         },
       );

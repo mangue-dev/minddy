@@ -19,7 +19,12 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { createIssueApi } from "@/lib/issues-api";
 import { createObjectiveApi } from "@/lib/objectives-api";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import {
+  insertIssueEverywhere,
+  issueWrites,
+  removeIssueEverywhere,
+  replaceIssueEverywhere,
+} from "@/lib/optimistic/issue-writes";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
@@ -33,7 +38,6 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type {
   CreateIssueInput,
   CreateObjectiveInput,
-  GlobalBoardResponse,
   Issue,
 } from "@/lib/types";
 
@@ -86,9 +90,10 @@ function activeObjectiveIdFromUrl(): string | null {
  * anywhere — the home page, the cross-project board, the header, the mobile "+"
  * — not just inside a project. The target project defaults to the current route,
  * else the last project a ticket was created in (see {@link lastCreateProjectId}),
- * else the first; both dialogs let the user retarget via their split button. Writes go through the by-project APIs + cache invalidation (the same
- * non-optimistic path the project board already uses), so a project board
- * sharing the `["issues", projectId]` cache reflects the new row on refetch.
+ * else the first; both dialogs let the user retarget via their split button.
+ * La création de ticket est optimiste et passe par le registre d'écritures en
+ * attente + les helpers de cache partagés (MIN-156), comme `createIssue` des
+ * deux hooks de board.
  *
  * The per-project board keeps its own local dialog for column-scoped presets
  * (a column's "+", objective mode, assigned-to-me) and the `C` shortcut.
@@ -121,26 +126,21 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // au succès, retiré + toast à l'échec. Le realtime propage aux autres clients.
   const createIssueGlobal = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
-      const projectKey = ["issues", projectId] as const;
       const optimistic = buildOptimisticIssue(
         input,
         projectId,
         user?.id ?? null,
-        queryClient.getQueryData<Issue[]>(projectKey) ?? []
+        queryClient.getQueryData<Issue[]>(["issues", projectId]) ?? []
       );
-      queryClient.setQueryData<Issue[]>(projectKey, (old) =>
-        old ? [...old, optimistic] : old
-      );
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old ? { ...old, issues: [...old.issues, optimistic] } : old
-      );
+      // Inscrite au registre AVANT le patch (MIN-156) : une réponse de GET
+      // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
+      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
+      insertIssueEverywhere(queryClient, projectId, optimistic);
       void createIssueApi(projectId, input).then(
         (issue) => {
-          const swap = (i: Issue) => (i.id === optimistic.id ? issue : i);
-          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.map(swap));
-          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-            old ? { ...old, issues: old.issues.map(swap) } : old
-          );
+          replaceIssueEverywhere(queryClient, projectId, optimistic.id, issue);
+          insertIssueEverywhere(queryClient, projectId, issue);
+          issueWrites.settle(handle, issue);
           record({
             kind: "create",
             projectId,
@@ -149,11 +149,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           });
         },
         (err) => {
-          const drop = (i: Issue) => i.id !== optimistic.id;
-          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.filter(drop));
-          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-            old ? { ...old, issues: old.issues.filter(drop) } : old
-          );
+          issueWrites.fail(handle);
+          removeIssueEverywhere(queryClient, projectId, optimistic.id);
           toast.error((err as Error).message);
         }
       );
