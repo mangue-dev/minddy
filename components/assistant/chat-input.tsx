@@ -29,10 +29,15 @@ import {
   filterMentions,
   type MentionOption,
 } from "@/components/assistant/mention-suggest";
+import {
+  SlashMenu,
+  filterCommands,
+  type SlashCommandOption,
+} from "@/components/assistant/slash-menu";
 import { AttachmentPills, DropOverlay, useFileDrop } from "@/components/attachments";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
-import type { AssistantMention } from "@/lib/assistant-types";
+import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
 import type { AttachmentInput } from "@/lib/types";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
@@ -44,6 +49,12 @@ const ACCEPT =
     lequel React porte la vraie pilule (MentionChip). Le composer ne redessine
     donc pas une pilule « comme » celle du contexte — c'est la même. */
 const MENTION_SLOT_CLASS = "inline-flex align-middle";
+
+/** La pilule d'une commande « / » posée en tête du message : même géométrie que
+    la pilule de mention, sans figure — le « / » suffit à dire ce qu'elle est.
+    Elle porte son texte directement (pas de portail : rien à re-rendre). */
+const COMMAND_PILL_CLASS =
+  "mx-0.5 inline-flex items-center rounded-full bg-(--mention-chip) px-2 py-[3px] align-middle text-[0.95em] font-medium leading-4 text-primary";
 
 /** Ce qu'une enveloppe sait dire d'elle-même : de quoi la re-rendre sans rien
     d'autre que le DOM (une annulation ⌘Z peut la restituer bien après coup). */
@@ -66,6 +77,8 @@ interface ChatInputProps {
     message: string,
     attachments: AttachmentInput[],
     mentions: AssistantMention[],
+    /** La commande « / » posée en tête du message, quand il y en a une. */
+    command?: AssistantCommandId,
   ) => void;
   onAbort?: () => void;
   disabled?: boolean;
@@ -94,6 +107,13 @@ interface ChatInputProps {
    */
   mentionables?: MentionOption[];
   onMentionQuery?: (active: boolean) => void;
+  /**
+   * Les commandes « / » proposées quand le message COMMENCE par un slash.
+   * Vide/absent = pas de menu slash du tout (les composers hors du shell Numo).
+   * Choisir une commande la pose en pilule non éditable en tête du message ;
+   * son id canonique part avec l'envoi (4e argument d'`onSend`).
+   */
+  commands?: SlashCommandOption[];
   /**
    * Text to seed the editor with on mount (caret placed at the end, ready to
    * edit). Used by the agent launch composer to pre-write "Work on MIN-42".
@@ -144,6 +164,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       contextSlot,
       mentionables,
       onMentionQuery,
+      commands,
       initialValue,
       leadingControls,
       beam,
@@ -187,6 +208,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             return;
           }
 
+          // Une commande s'écrit « /libellé » — le texte que la pilule montre
+          // déjà, mais lu depuis sa donnée : le rendu peut évoluer sans changer
+          // ce qui part dans le message.
+          if (element.dataset.commandLabel) {
+            parts.push(`/${element.dataset.commandLabel}`);
+            return;
+          }
+
           if (element.tagName === "BR") {
             parts.push("\n");
             return;
@@ -213,6 +242,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         editorRef.current.innerHTML = "";
         setIsEmpty(true);
         setMentionSlots([]);
+        setSlashQuery(null);
       }
     }, []);
 
@@ -365,10 +395,93 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return out;
     }, []);
 
+    // ── Commandes « / » ─────────────────────────────────────────────
+    // Le menu ne vit que tant que le message ENTIER est « /requête » : une
+    // seule ligne de texte nu, pas de pilule déjà posée. La détection se relit
+    // donc depuis l'éditeur complet — pas depuis le caret comme les mentions :
+    // une commande n'existe qu'en tête de message.
+    const [slashQuery, setSlashQuery] = useState<string | null>(null);
+    const [slashIndex, setSlashIndex] = useState(0);
+
+    const readSlash = useCallback((): string | null => {
+      if (!commands?.length) return null;
+      const el = editorRef.current;
+      if (!el) return null;
+      // Que des nœuds texte — pas de pilule déjà posée, pas de retour à la
+      // ligne. Le <br> que le navigateur laisse parfois traîner en fin
+      // d'éditeur ne compte pas ; ailleurs, c'est un vrai saut de ligne.
+      const nodes = [...el.childNodes];
+      const last = nodes[nodes.length - 1];
+      if (last instanceof HTMLElement && last.tagName === "BR") nodes.pop();
+      if (nodes.some((n) => n.nodeType !== Node.TEXT_NODE)) return null;
+      const text = nodes.map((n) => n.textContent ?? "").join("");
+      return text.startsWith("/") ? text.slice(1) : null;
+    }, [commands]);
+
+    // Relue sur la frappe uniquement : Échap ferme le menu, et il ne se rouvre
+    // qu'au prochain caractère tapé — pas au moindre déplacement du caret.
+    const refreshSlash = useCallback(() => {
+      const next = readSlash();
+      setSlashQuery((prev) => (prev === next ? prev : next));
+    }, [readSlash]);
+
+    const slashOptions = useMemo(
+      () =>
+        slashQuery === null || !commands?.length
+          ? []
+          : filterCommands(commands, slashQuery),
+      [slashQuery, commands],
+    );
+    const slashOpen = slashOptions.length > 0;
+    const activeSlash = Math.min(
+      slashIndex,
+      Math.max(0, slashOptions.length - 1),
+    );
+
+    // La requête change → on repart de la première commande.
+    useEffect(() => setSlashIndex(0), [slashQuery]);
+
+    const insertCommand = useCallback((option: SlashCommandOption) => {
+      const el = editorRef.current;
+      if (!el) return;
+      // Le composer ne contient que « /requête » (condition d'ouverture du
+      // menu) : tout est remplacé par la pilule, suivie de l'espace insécable
+      // qui rend un nœud éditable au caret — même geste que les mentions.
+      el.innerHTML = "";
+      const pill = document.createElement("span");
+      pill.contentEditable = "false";
+      pill.dataset.commandId = option.id;
+      pill.dataset.commandLabel = option.label;
+      pill.className = COMMAND_PILL_CLASS;
+      pill.textContent = `/${option.label}`;
+      el.appendChild(pill);
+      const space = document.createTextNode(" ");
+      pill.after(space);
+
+      const sel = window.getSelection();
+      if (sel) {
+        const after = document.createRange();
+        after.setStart(space, 1);
+        after.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(after);
+      }
+      el.focus();
+      setSlashQuery(null);
+      setIsEmpty(false);
+    }, []);
+
+    /** La commande réellement posée en tête du message, s'il y en a une. */
+    const collectCommand = useCallback((): AssistantCommandId | undefined => {
+      const node =
+        editorRef.current?.querySelector<HTMLElement>("[data-command-id]");
+      return (node?.dataset.commandId as AssistantCommandId | undefined) ?? undefined;
+    }, []);
+
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
       if (!value || disabled || sendDisabled || uploads.uploading) return;
-      onSend(value, uploads.inputs, collectMentions());
+      onSend(value, uploads.inputs, collectMentions(), collectCommand());
       clearEditor();
       uploads.clear();
       // Le caret reste dans le composer après l'envoi. Sans ça le focus s'échappe
@@ -385,10 +498,33 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       clearEditor,
       uploads,
       collectMentions,
+      collectCommand,
     ]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
+        // Menu slash ouvert : même contrat clavier que la liste de mentions.
+        if (slashOpen) {
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            const n = slashOptions.length;
+            setSlashIndex((i) => {
+              const from = Math.min(i, n - 1);
+              return e.key === "ArrowDown" ? (from + 1) % n : (from - 1 + n) % n;
+            });
+            return;
+          }
+          if (e.key === "Enter" || e.key === "Tab") {
+            e.preventDefault();
+            insertCommand(slashOptions[activeSlash]);
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setSlashQuery(null);
+            return;
+          }
+        }
         // Liste de mentions ouverte : les flèches et Entrée lui appartiennent —
         // sinon le caret sortirait de la requête (ou le message partirait).
         if (mentionOpen) {
@@ -426,6 +562,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         activeMention,
         insertMention,
         onMentionQuery,
+        slashOpen,
+        slashOptions,
+        activeSlash,
+        insertCommand,
       ]
     );
 
@@ -439,8 +579,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         el.innerHTML = "";
       }
       refreshMention();
+      refreshSlash();
       syncMentionSlots();
-    }, [refreshMention, syncMentionSlots]);
+    }, [refreshMention, refreshSlash, syncMentionSlots]);
 
     // Dictated text is additive: appended after the existing content, caret at
     // the end (same behavior as AutoKap's composer).
@@ -574,6 +715,19 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             className="left-3"
           />
         )}
+        {/* Le menu slash partage la place (et les raisons d'être hors de la
+            surface) de la liste de mentions ; les deux ne peuvent pas être
+            ouverts en même temps — l'un exige un « / » en tête de message nu,
+            l'autre un « @ » en cours de frappe. */}
+        {slashOpen && (
+          <SlashMenu
+            options={slashOptions}
+            activeIndex={activeSlash}
+            onPick={insertCommand}
+            onHover={setSlashIndex}
+            className="left-3"
+          />
+        )}
         {/* `keepMounted` : le composer ne doit JAMAIS être remonté quand le liseré
             s'allume ou s'éteint — sinon l'éditeur perd le focus (le FocusScope du
             Sheet le repose alors sur la coquille) et le texte tapé pendant la
@@ -648,6 +802,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 // Léger différé : le clic sur une suggestion se joue avant.
                 setTimeout(() => {
                   setMentionQuery(null);
+                  setSlashQuery(null);
                   mentionActiveRef.current = false;
                   onMentionQuery?.(false);
                 }, 120);

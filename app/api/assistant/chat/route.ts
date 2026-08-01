@@ -17,6 +17,7 @@ import type {
   AssistantPinnedContext,
 } from "@/lib/assistant-types";
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
+import { commandNote, parseCommand } from "@/lib/server/assistant/commands";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   ASSISTANT_TOOLS,
@@ -208,6 +209,7 @@ export async function POST(request: NextRequest) {
   const { projectId, message, conversationId } = body;
   let pageContext = parsePageContext(body.pageContext);
   const mentions = parseMentions(body.mentions);
+  const command = parseCommand(body.command);
   if (!message?.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
@@ -384,6 +386,7 @@ export async function POST(request: NextRequest) {
     metadata: {
       ...(attachments.length > 0 ? { attachments } : {}),
       ...(mentions.length > 0 ? { mentions } : {}),
+      ...(command ? { command } : {}),
     },
   });
 
@@ -477,7 +480,9 @@ export async function POST(request: NextRequest) {
     for (const [i, msg] of history.entries()) {
       const sanitized =
         sanitizeAssistantMessageContent(msg.content) +
-        (msg.role === "user" ? mentionsNote(msg.metadata) : "");
+        (msg.role === "user"
+          ? mentionsNote(msg.metadata) + commandNote(msg.metadata)
+          : "");
       const atts = rowAttachments(msg);
       let content: string | ChatContentPart[] = sanitized;
       if (atts.length > 0 && modalities) {

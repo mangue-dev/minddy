@@ -87,6 +87,14 @@ export interface AssistantPinnedContext {
 }
 
 /**
+ * Une commande « / » choisie dans le menu slash du composer. L'id est canonique
+ * (le libellé, lui, est localisé — « /create issue » / « /créer ticket ») :
+ * c'est lui qui voyage dans la requête et se persiste sur `metadata.command`
+ * du message utilisateur, où le serveur le déplie en instructions pour Numo.
+ */
+export type AssistantCommandId = "create-issue";
+
+/**
  * Une mention « @ » écrite DANS le message (membre de l'équipe ou projet),
  * résolue au moment de la frappe. Persistée sur `metadata.mentions` du message
  * utilisateur : elle sert à re-rendre la pilule dans la bulle, et à dire à Numo
@@ -177,4 +185,10 @@ export interface AssistantChatRequest {
    * ligne de résolution nom → id.
    */
   mentions?: AssistantMention[];
+  /**
+   * La commande « / » posée en tête du message, quand il y en a une. Validée
+   * serveur, persistée sur la métadonnée du message et dépliée en bloc
+   * d'instructions accroché à ce message (même mécanique que les mentions).
+   */
+  command?: AssistantCommandId;
 }

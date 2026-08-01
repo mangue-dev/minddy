@@ -3,6 +3,7 @@
 import { useCallback, useReducer, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type {
+  AssistantCommandId,
   AssistantMention,
   AssistantMessage,
   AssistantToolCall,
@@ -413,6 +414,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         attachments?: AttachmentInput[];
         /** Les « @ » écrits dans le message (membres, projets). */
         mentions?: AssistantMention[];
+        /** La commande « / » posée en tête du message (menu slash). */
+        command?: AssistantCommandId;
       },
     ) => {
       if (!message.trim()) return;
@@ -425,6 +428,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         is_first_of_conversation: !state.conversationId,
         has_project_scope: projectId !== null,
         attachment_count: options?.attachments?.length ?? 0,
+        has_command: !!options?.command,
       });
       const startedAt = performance.now();
       let toolCalls = 0;
@@ -454,6 +458,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             ? { attachments: options.attachments }
             : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
+          ...(options?.command ? { command: options.command } : {}),
         };
 
         const response = await fetch("/api/assistant/chat", {

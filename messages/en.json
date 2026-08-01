@@ -379,7 +379,9 @@
     "addContextMemberSearch": "Search a member…",
     "addContextProjectSearch": "Search a project…",
     "addContextIssueSearch": "Search an issue…",
-    "addContextLoading": "Loading…"
+    "addContextLoading": "Loading…",
+    "slashCreateIssueLabel": "create issue",
+    "slashCreateIssueDescription": "Numo gathers the context, then creates the issue"
   },
   "Auth": {
     "callbackFailed": "This sign-in link is no longer valid. Try signing in again.",

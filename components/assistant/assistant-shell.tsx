@@ -10,7 +10,7 @@ import {
   forwardRef,
 } from "react";
 import { useTranslations } from "next-intl";
-import { History, Maximize2, Minimize2, Plus, X } from "lucide-react";
+import { History, Maximize2, Minimize2, Plus, SquarePen, X } from "lucide-react";
 import {
   Button,
   cn,
@@ -58,7 +58,9 @@ import { useNumoMembers } from "@/lib/use-numo-mentionables";
 import { useProjects } from "@/lib/projects-context";
 import { displayName } from "@/lib/display-name";
 import type { MentionOption } from "@/components/assistant/mention-suggest";
+import type { SlashCommandOption } from "@/components/assistant/slash-menu";
 import type {
+  AssistantCommandId,
   AssistantMention,
   AssistantMessage,
   AssistantPageContext,
@@ -265,14 +267,32 @@ export const AssistantShell = forwardRef<
       message: string,
       attachments: AttachmentInput[] = [],
       mentions: AssistantMention[] = [],
+      command?: AssistantCommandId,
     ) => {
       sendMessage(projectId, message, {
         pageContext: effectiveContextRef.current,
         attachments,
         mentions,
+        command,
       });
     },
     [projectId, sendMessage]
+  );
+
+  // Les commandes « / » du composer (MIN-159) — ids canoniques, libellés
+  // localisés. Les keywords portent les deux langues : « /create » trouve la
+  // commande même quand l'interface est en français, et inversement.
+  const slashCommands = useMemo<SlashCommandOption[]>(
+    () => [
+      {
+        id: "create-issue",
+        label: t("slashCreateIssueLabel"),
+        description: t("slashCreateIssueDescription"),
+        icon: SquarePen,
+        keywords: ["create issue", "créer ticket"],
+      },
+    ],
+    [t],
   );
 
   // Réponse envoyée depuis une carte de questions ask_user (MIN-86) : part comme
@@ -742,6 +762,7 @@ export const AssistantShell = forwardRef<
                   onMentionQuery={(active) => {
                     if (active) setMentionsWanted(true);
                   }}
+                  commands={slashCommands}
                   contextSlot={
                     <AssistantContextBar
                       chips={chips}

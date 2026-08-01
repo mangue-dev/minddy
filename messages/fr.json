@@ -379,7 +379,9 @@
     "addContextMemberSearch": "Chercher un membre…",
     "addContextProjectSearch": "Chercher un projet…",
     "addContextIssueSearch": "Chercher un ticket…",
-    "addContextLoading": "Chargement…"
+    "addContextLoading": "Chargement…",
+    "slashCreateIssueLabel": "créer ticket",
+    "slashCreateIssueDescription": "Numo réunit le contexte, puis crée le ticket"
   },
   "Auth": {
     "callbackFailed": "Ce lien de connexion n'est plus valide. Réessayez de vous connecter.",
