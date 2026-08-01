@@ -443,6 +443,11 @@ export interface PrViewer {
   login: string | null;
   /** `write` = merger/résoudre, `read` = reviewer/commenter, `none` = rien. */
   capability: "write" | "read" | "none";
+  /** Le compte sous lequel Numo écrit chez la forge — de quoi reconnaître SES
+      messages dans le fil (MIN-162). `null` côté GitLab, où rien ne les
+      distingue (MIN-146), et sur un onglet resté ouvert depuis une version
+      d'avant ce champ. */
+  numoLogin?: string | null;
 }
 
 export interface AgentRunPrResponse {
@@ -785,9 +790,9 @@ export interface RepoMember {
  * simplement aucune.
  */
 export async function fetchPullRequestMembersApi(
-  prId: string,
+  endpoint: PrEndpoint,
 ): Promise<{ members: RepoMember[] }> {
-  return parseJson(await fetch(`${prEndpoint(prId)}/members`));
+  return parseJson(await fetch(`${endpoint}/members`));
 }
 
 /** Base des routes d'UN commit : son diff, et — comme une PR — ses fichiers. */
@@ -1066,15 +1071,26 @@ export function isAgentRunAwaitingInput(
   return run.status === "completed" && run.awaiting_input === true;
 }
 
+/**
+ * Publie un message dans le fil de la PR.
+ *
+ * `review` accompagne la réponse quand le message MENTIONNAIT `@numo`
+ * (MIN-162) : la passe est déjà ouverte côté serveur quand celle-ci revient, et
+ * c'est ce champ qui permet à l'écran de la montrer TOUT DE SUITE. Sans lui, il
+ * ne la découvrirait qu'au prochain rafraîchissement fortuit.
+ */
 export async function postPullRequestCommentApi(
   prId: string,
   body: string,
-): Promise<{ comment: PullRequestComment }> {
+  /** Le message auquel celui-ci répond, quand il a été écrit en le CITANT. Sert
+      de contexte à Numo quand la réponse le rappelle (MIN-162). */
+  replyTo?: number,
+): Promise<{ comment: PullRequestComment; review?: PrReviewSession["review"] }> {
   return parseJson(
     await fetch(`${prEndpoint(prId)}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, ...(replyTo !== undefined ? { replyTo } : {}) }),
     }),
   );
 }

@@ -574,7 +574,9 @@ function PrDiffFile({
           {openAnchors[key] ? (
             <LineComposer
               value={drafts[key] ?? ""}
-              onChange={(next) => setDrafts((prev) => ({ ...prev, [key]: next }))}
+              onChange={(transform) =>
+                setDrafts((prev) => ({ ...prev, [key]: transform(prev[key] ?? "") }))
+              }
               onSubmit={() => void submitComment(key)}
               onCancel={() => closeComposer(key)}
               submitting={postingKey === key}

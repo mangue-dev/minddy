@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/ai-usage";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
+import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isForgeApiError, type Forge } from "./forge";
 import {
@@ -126,8 +127,16 @@ interface PrAiReviewInput {
    * Le commentaire qui a appelé Numo (MIN-162), quand la passe vient d'une
    * mention `@numo` et non du bouton. La synthèse lui répond d'abord ; le reste
    * de la review ne change pas.
+   *
+   * `replyToCommentId` : le message qu'il CITAIT, quand la réponse est née d'un
+   * « Citer ». Il se résout dans le fil qu'on charge de toute façon — aucun
+   * aller-retour de plus.
    */
-  question?: { author: string | null; body: string } | null;
+  question?: {
+    author: string | null;
+    body: string;
+    replyToCommentId?: number | null;
+  } | null;
 }
 
 /**
@@ -182,6 +191,11 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
     reviewComments: conversation.reviewComments.length,
   });
 
+  // Le message auquel on répond, retrouvé dans le fil déjà chargé. Le corps de
+  // la PR se cite comme un message (`PR_BODY_COMMENT_ID`), et il est ailleurs
+  // que dans la liste — d'où les deux cas.
+  const replyTo = resolveRepliedMessage(input, pr.body ?? null, conversation);
+
   await recorder.status("analyzing");
   const raw = await callReviewModel({
     model,
@@ -192,7 +206,9 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
       issue: issue?.context ?? null,
       conversation,
       files,
-      question: input.question ?? null,
+      question: input.question
+        ? { author: input.question.author, body: input.question.body, replyTo }
+        : null,
     }),
     userId: input.userId,
     // Le projet de la ligne de ledger est celui du TICKET, ou rien : un dépôt
@@ -420,6 +436,42 @@ function unreadable<T>(what: string, fallback: T): (err: unknown) => T {
  * passe de cette liste-là, pas des deux autres, et ne fait pas échouer un geste
  * que l'utilisateur paye.
  */
+/**
+ * Le message CITÉ par la réponse qui a appelé Numo (MIN-162), retrouvé dans ce
+ * qu'on a déjà chargé — jamais un aller-retour de plus.
+ *
+ * `mine` : ce message est-il de Numo ? Il l'est quand son auteur est le compte
+ * de l'App. On le reconnaît sans connaître ce compte : c'est celui SOUS LEQUEL
+ * la passe écrit, donc celui de la synthèse de toute session précédente. Plutôt
+ * que de le déduire, on lit le suffixe `[bot]` — la seule convention que GitHub
+ * garantisse. Côté GitLab il n'y a pas de bot (MIN-146) : `mine` y est toujours
+ * faux, et le message est simplement présenté comme celui de son auteur.
+ *
+ * Ce n'est pas une garde de sécurité : le pire d'un faux positif est un
+ * paragraphe de prompt qui dit « celui-ci est de toi » à propos du message d'un
+ * autre bot (dependabot, la CI). Le contenu, lui, reste exact.
+ */
+function resolveRepliedMessage(
+  input: PrAiReviewInput,
+  prBody: string | null,
+  conversation: ReviewConversation,
+): { author: string | null; body: string; mine: boolean } | null {
+  const id = input.question?.replyToCommentId;
+  if (id == null) return null;
+
+  // Le corps de la PR se cite comme un message, sous l'id réservé du fil.
+  if (id === PR_BODY_COMMENT_ID) {
+    return prBody?.trim() ? { author: null, body: prBody, mine: false } : null;
+  }
+  const found = conversation.comments.find((c) => c.id === id);
+  if (!found?.body.trim()) return null;
+  return {
+    author: found.author,
+    body: found.body,
+    mine: found.author.toLowerCase().endsWith("[bot]"),
+  };
+}
+
 async function loadPrConversation(
   forge: Forge,
   call: { token: string; repoFullName: string; number: number },
@@ -453,7 +505,11 @@ async function loadPrConversation(
         body: c.body,
       })),
     ),
-    comments: comments.map((c) => ({ author: c.user?.login ?? "someone", body: c.body })),
+    comments: comments.map((c) => ({
+      author: c.user?.login ?? "someone",
+      body: c.body,
+      id: c.id,
+    })),
   };
 }
 

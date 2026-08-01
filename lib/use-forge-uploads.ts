@@ -27,7 +27,8 @@ import { MAX_ATTACHMENT_BYTES } from "@/lib/use-attachment-uploads";
  * d'accès à la PR qui empêche d'en faire un hébergeur ouvert.
  */
 export function useForgeUploads(
-  prId: string,
+  /** Base de la PR : `/api/pull-requests/{id}` ou la façade `/api/agent-runs/{id}/pr`. */
+  endpoint: string,
   /** Le composer applique la transformation à son brouillon — c'est lui qui le
       détient, et l'insertion doit respecter ce qui a été tapé entre-temps. */
   edit: (transform: (draft: string) => string) => void,
@@ -71,7 +72,7 @@ export function useForgeUploads(
 
             const form = new FormData();
             form.append("file", blob, name);
-            const res = await fetch(`/api/pull-requests/${prId}/attachments`, {
+            const res = await fetch(`${endpoint}/attachments`, {
               method: "POST",
               body: form,
             });
@@ -98,7 +99,7 @@ export function useForgeUploads(
         })();
       }
     },
-    [prId, t],
+    [endpoint, t],
   );
 
   return { addFiles, uploading: uploading > 0 };

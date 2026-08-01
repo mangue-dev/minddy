@@ -30,16 +30,22 @@ import { useZenMode } from "@/lib/zen-mode-context";
  * signal — pas de pastille de contexte : ce que Numo regarde se lit dans le
  * panneau, au-dessus du composer, pas sur le bouton qui l'ouvre.
  */
+/** Les pages où Numo est déjà joignable sans lui — cf. `hiddenForRoute`. */
+const HIDDEN_ROUTES = ["/agents", "/pull-requests"];
+
 export function AssistantFab() {
   const { isOpen, toggle } = useAssistantPanel();
   const { isBusy } = useAssistantChatContext();
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
-  // La page Agents A DÉJÀ la conversation de Numo en plein écran : le FAB flottant y
-  // ferait doublon → on le masque uniquement là (l'anim de sortie joue au passage).
+  // Deux pages ont déjà Numo sous la main, et le FAB y ferait doublon (l'anim de
+  // sortie joue au passage) :
+  //  · Agents — sa conversation y est en plein écran ;
+  //  · Pull requests — le composer du fil est épinglé en bas, avec `@Numo` dans
+  //    ses suggestions, et le FAB tombe pile sur son bouton d'envoi (MIN-162).
   const pathname = usePathname();
-  const hiddenForRoute = pathname.startsWith("/agents");
+  const hiddenForRoute = HIDDEN_ROUTES.some((route) => pathname.startsWith(route));
   // Mode zen (MIN-134) : le FAB part avec le reste du chrome. Numo reste
   // joignable au clavier (G puis A), et son panneau s'ouvre par-dessus.
   const { zen } = useZenMode();

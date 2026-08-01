@@ -36,10 +36,12 @@ import {
   rememberPrReviewModel,
   resolvePrReviewModel,
 } from "./pr-review-runs";
+import type { PrReviewRun } from "@/lib/pr-review-run";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
 import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
+import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
 import { findRunsForPr, syncPrState } from "./runs";
@@ -289,6 +291,19 @@ export interface PrViewer {
   connected: boolean;
   login: string | null;
   capability: "write" | "read" | "none";
+  /**
+   * Le compte sous lequel NUMO écrit chez la forge (MIN-162) — `minddy-app[bot]`
+   * côté GitHub. C'est ce qui permet à l'écran de reconnaître un message de Numo
+   * dans le fil, et donc de proposer de lui RÉPONDRE plutôt que de mentionner un
+   * compte de bot qui ne déclencherait rien.
+   *
+   * **null côté GitLab**, et c'est la conséquence assumée de MIN-146 : il n'y a
+   * pas d'identité de bot gratuite là-bas, les gestes de Numo partent du compte
+   * de la personne qui a lié le dépôt. Aucun login ne les distingue, donc on
+   * n'en invente pas — l'écran retombe sur le seul repère sûr, le message de
+   * synthèse de la session courante.
+   */
+  numoLogin: string | null;
 }
 
 async function resolveViewer(scope: PrScope): Promise<PrViewer> {
@@ -297,6 +312,18 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
     provider === "github" ? isGithubUserAuthConfigured() : isGitlabConfigured();
   // `scope.actor()` ne rejette jamais : un échec de résolution vaut
   // `capability: "none"`, exactement comme `reviews` vaut null.
+  // Le login du bot est une donnée de CONFIGURATION, pas d'identité : il ne
+  // dépend ni du lecteur ni du dépôt. Il ne lève pas quand l'App n'est pas
+  // configurée — la vue PR doit se rendre quand même.
+  let numoLogin: string | null = null;
+  if (provider === "github") {
+    try {
+      numoLogin = `${getGithubAppSlug()}[bot]`;
+    } catch {
+      numoLogin = null;
+    }
+  }
+
   const actor = await scope.actor();
   if (actor.kind === "actor") {
     return {
@@ -305,6 +332,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
       connected: true,
       login: actor.login,
       capability: actor.capability,
+      numoLogin,
     };
   }
   return {
@@ -315,6 +343,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
     connected: actor.reason === "noRepoAccess",
     login: actor.login ?? null,
     capability: "none",
+    numoLogin,
   };
 }
 
@@ -658,6 +687,10 @@ export async function createPrCommentResponse(
   body: string,
   userId: string,
   locale: string,
+  /** Le message que ce commentaire CITAIT, quand il est né d'un « Citer »
+      (MIN-162). Sert de contexte à Numo, et à rien d'autre : la forge, elle,
+      n'a pas de fil sur cette surface. */
+  replyTo?: number | null,
 ): Promise<NextResponse> {
   // Geste humain : il part du compte git de la personne, pas de `minddy-app[bot]`.
   const actor = await requireActor(scope, "read");
@@ -682,15 +715,23 @@ export async function createPrCommentResponse(
     // chemin de la réponse — comme `lib/server/add-comment.ts` le fait déjà pour
     // un commentaire de ticket. Le message doit exister avant que Numo y réponde,
     // et l'auteur n'a pas à attendre trois minutes pour voir le sien apparaître.
-    if (mentionsNumo(body)) {
-      await startNumoPrReview({
-        scope,
-        userId,
-        locale,
-        question: { author: actor.actor.login, body },
-      });
-    }
-    return NextResponse.json({ comment });
+    const review = mentionsNumo(body)
+      ? await startNumoPrReview({
+          scope,
+          userId,
+          locale,
+          question: {
+            author: actor.actor.login,
+            body,
+            replyToCommentId: replyTo ?? null,
+          },
+        })
+      : null;
+    // La session part DANS la réponse : c'est le seul moment où l'écran peut
+    // apprendre qu'une passe vient de s'ouvrir. Sans elle, il ne le découvrait
+    // qu'au prochain rafraîchissement fortuit — une minute de silence après un
+    // « @numo », pendant laquelle rien ne dit que le geste a marché.
+    return NextResponse.json({ comment, ...(review ? { review } : {}) });
   } catch (err) {
     return forgeErrorResponse(err);
   }
@@ -720,16 +761,18 @@ export async function startNumoPrReview(input: {
   scope: PrScope;
   userId: string;
   locale: string;
-  question: { author: string | null; body: string };
-}): Promise<void> {
+  question: { author: string | null; body: string; replyToCommentId?: number | null };
+}): Promise<PrReviewRun | null> {
   const { scope, userId } = input;
   try {
     await ensureAgentsAllowed(userId);
     await ensureUsageBudget(userId);
 
     // Une passe tourne déjà : elle lit le fil, donc elle lira aussi ce message.
-    // En ouvrir une seconde paierait deux fois le même diff.
-    if (await activePrReviewRun(scope.pr.id)) return;
+    // En ouvrir une seconde paierait deux fois le même diff. On rend LA sienne :
+    // c'est bien celle que l'écran doit montrer.
+    const running = await activePrReviewRun(scope.pr.id);
+    if (running) return running;
 
     const model = await resolvePrReviewModel({ userId });
     const run = await createPrReviewRun({
@@ -745,10 +788,12 @@ export async function startNumoPrReview(input: {
       runId: run.id,
       question: input.question,
     });
+    return run;
   } catch (err) {
     // Y compris les refus de plan et de budget : ils ont un sens sur un CLIC,
     // qui peut les afficher. Ici il n'y a pas d'écran à qui les dire.
     console.error("[pr-actions] @numo mention ignored:", (err as Error).message);
+    return null;
   }
 }
 
@@ -1840,7 +1885,11 @@ function runPrReviewInBackground(input: {
   locale: string;
   model: string;
   runId: string;
-  question?: { author: string | null; body: string } | null;
+  question?: {
+    author: string | null;
+    body: string;
+    replyToCommentId?: number | null;
+  } | null;
 }): void {
   const { scope, runId } = input;
   const recorder = openPrReviewRecorder(runId);

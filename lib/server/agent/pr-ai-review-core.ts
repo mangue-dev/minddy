@@ -337,6 +337,10 @@ export interface ReviewNote {
    *  d'une review soumise (« changes requested »). Rendu entre parenthèses. */
   about?: string | null;
   body: string;
+  /** Id du message chez la forge, pour les messages du FIL. Ne sert pas au
+   *  rendu : il permet de retrouver celui auquel on RÉPOND (MIN-162) dans une
+   *  liste qu'on a déjà chargée, plutôt que de la redemander. */
+  id?: number;
 }
 
 /** Tout ce qui a déjà été dit SUR LA PR — ce qu'une relecture ne doit pas redire. */
@@ -443,8 +447,12 @@ export function buildReviewUserMessage(input: {
   conversation?: ReviewConversation | null;
   files: ReviewableFile[];
   /** Le commentaire qui a mentionné `@numo` (MIN-162), quand c'est lui qui a
-      déclenché la passe. */
-  question?: { author: string | null; body: string } | null;
+      déclenché la passe, et le message qu'il CITAIT le cas échéant. */
+  question?: {
+    author: string | null;
+    body: string;
+    replyTo?: { author: string | null; body: string; mine: boolean } | null;
+  } | null;
 }): string {
   const parts: string[] = [`# Pull request\n\n${input.title.trim() || "(untitled)"}`];
 
@@ -453,14 +461,33 @@ export function buildReviewUserMessage(input: {
   // parmi d'autres — or elle est la raison de la passe.
   const question = input.question;
   if (question?.body.trim()) {
-    parts.push(
+    const quote = (text: string) =>
+      headTail(text.trim(), PR_BODY_MAX_CHARS)
+        .split("\n")
+        .map((line) => `> ${line}`)
+        .join("\n");
+
+    let section =
       `## What you were asked\n\n` +
-        `${question.author ? `@${question.author}` : "Someone"} wrote, on this pull request:\n\n` +
-        headTail(question.body.trim(), PR_BODY_MAX_CHARS)
-          .split("\n")
-          .map((line) => `> ${line}`)
-          .join("\n"),
-    );
+      `${question.author ? `@${question.author}` : "Someone"} wrote, on this pull request:\n\n` +
+      quote(question.body);
+
+    // Le message CITÉ, en entier et à part. Il est déjà dans la question sous
+    // forme de citation — mais tronqué par qui l'a collé, et sans qu'on sache
+    // qu'il s'agit d'un message précis du fil. Le redonner en entier, en disant
+    // qu'il est de Numo quand il l'est, change la réponse : on continue son
+    // propre propos au lieu de le redécouvrir.
+    const replyTo = question.replyTo;
+    if (replyTo?.body.trim()) {
+      section +=
+        `\n\n### The message being replied to\n\n` +
+        (replyTo.mine
+          ? "**This one is yours** — you wrote it earlier on this pull request. " +
+            "Continue it: do not restate it, do not contradict it without saying so.\n\n"
+          : `Written by ${replyTo.author ? `@${replyTo.author}` : "someone else"}.\n\n`) +
+        quote(replyTo.body);
+    }
+    parts.push(section);
   }
 
   const body = (input.body ?? "").trim();

@@ -22,6 +22,7 @@ import {
   SmilePlus,
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
@@ -33,6 +34,7 @@ import {
   type PrEndpoint,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
+import { usePrEndpoint } from "@/lib/pr-endpoint-context";
 import { displayLineOf } from "@/lib/pr-review-threads";
 import {
   groupReactionsByComment,
@@ -85,8 +87,12 @@ export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) 
     replyingId,
     postingId,
     valueFor: (threadId: number) => drafts[threadId] ?? "",
-    change: (threadId: number, next: string) =>
-      setDrafts((prev) => ({ ...prev, [threadId]: next })),
+    /** Une TRANSFORMATION, pas une valeur : deux pièces jointes qui atterrissent
+        dans le même tour doivent s'ajouter l'une après l'autre, chacune au
+        brouillon courant — passer une chaîne capturée au rendu ferait perdre la
+        première. */
+    change: (threadId: number, transform: (draft: string) => string) =>
+      setDrafts((prev) => ({ ...prev, [threadId]: transform(prev[threadId] ?? "") })),
     start: (threadId: number) => setReplyingId(threadId),
     cancel: () => setReplyingId(null),
     submit,
@@ -405,9 +411,20 @@ function CommentBody({
 }
 
 /**
- * Zone de saisie partagée par le composer d'un nouveau commentaire et celui d'une
- * réponse. ⌘/Ctrl+Entrée envoie ; le texte n'est JAMAIS effacé par l'appelant tant
- * que l'envoi n'a pas réussi (un échec GitHub ne doit pas coûter le message).
+ * Zone de saisie partagée par le composer d'un nouveau commentaire de ligne et
+ * celui d'une réponse. ⌘/Ctrl+Entrée envoie, Échap ferme ; le texte n'est JAMAIS
+ * effacé par l'appelant tant que l'envoi n'a pas réussi (un échec GitHub ne doit
+ * pas coûter le message).
+ *
+ * C'est LE MÊME composer que celui du fil depuis MIN-162 — mentions de comptes
+ * de la forge, pièces jointes, aperçu markdown — en variante `line` : plus
+ * compact, suggestions vers le bas, et un Annuler puisqu'il s'ouvre et se ferme.
+ * Une remarque de ligne est un commentaire GitHub comme un autre ; rien ne
+ * justifiait qu'elle reste un textarea nu quand le fil, lui, savait tout faire.
+ *
+ * L'endpoint vient du contexte : la vue diff est traversée par le panneau PR
+ * comme par la conversation d'un run, et aucun des composants intermédiaires n'a
+ * à porter la question.
  */
 function Composer({
   value,
@@ -420,7 +437,63 @@ function Composer({
   autoFocus,
 }: {
   value: string;
-  onChange: (next: string) => void;
+  onChange: (transform: (draft: string) => string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  submitting: boolean;
+  placeholder: string;
+  submitLabel: string;
+  autoFocus?: boolean;
+}) {
+  const endpoint = usePrEndpoint();
+
+  // Hors d'une vue de PR (le laboratoire de diff, une session sans PR) il n'y a
+  // ni compte à mentionner ni endroit où héberger un fichier : on garde le champ
+  // simple plutôt que d'offrir des gestes qui échoueraient.
+  if (!endpoint) {
+    return (
+      <PlainComposer
+        value={value}
+        onChange={onChange}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        submitting={submitting}
+        placeholder={placeholder}
+        submitLabel={submitLabel}
+        autoFocus={autoFocus}
+      />
+    );
+  }
+
+  return (
+    <PrCommentComposer
+      variant="line"
+      endpoint={endpoint}
+      value={value}
+      onChange={onChange}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+      posting={submitting}
+      placeholder={placeholder}
+      submitLabel={submitLabel}
+      autoFocus={autoFocus}
+    />
+  );
+}
+
+/** Le champ d'avant, gardé pour les surfaces sans pull request. */
+function PlainComposer({
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  submitting,
+  placeholder,
+  submitLabel,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (transform: (draft: string) => string) => void;
   onSubmit: () => void;
   onCancel: () => void;
   submitting: boolean;
@@ -436,7 +509,7 @@ function Composer({
         <AutoTextarea
           autoFocus={autoFocus}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(() => e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -470,7 +543,7 @@ export function LineComposer({
   submitting,
 }: {
   value: string;
-  onChange: (next: string) => void;
+  onChange: (transform: (draft: string) => string) => void;
   onSubmit: () => void;
   onCancel: () => void;
   submitting: boolean;

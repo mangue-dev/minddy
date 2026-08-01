@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
-import { ForgeImageEndpoint, Markdown } from "@/components/markdown";
+import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
@@ -90,8 +90,10 @@ import {
   type PullRequestReviewComment,
   type ReviewVerdict,
 } from "@/lib/agent-api";
+import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import {
   groupTimelineCommits,
@@ -379,6 +381,7 @@ function ThreadComment({
   createdAt,
   body,
   onQuoteReply,
+  quotingNumo,
   reactions,
   activity,
 }: {
@@ -389,6 +392,9 @@ function ThreadComment({
   /** Absent quand il n'y a pas de composer où citer : citer sans pouvoir
       répondre ne mène nulle part (MIN-144). */
   onQuoteReply?: () => void;
+  /** Ce message est de Numo : citer le RAPPELLE (MIN-162), et le geste se nomme
+      autrement — « Répondre en citant » ne dit pas qu'il va relancer une passe. */
+  quotingNumo?: boolean;
   /** Absentes quand la forge n'a pas su les lire : on n'affiche alors rien. */
   reactions?: CommentReactions;
   /** Déroulé replié AU-DESSUS du corps, pour le message qui en porte un — la
@@ -437,14 +443,16 @@ function ThreadComment({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={t("quoteReply")}
+                aria-label={t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                 className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
                 onClick={onQuoteReply}
               >
                 <Reply className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">{t("quoteReply")}</TooltipContent>
+            <TooltipContent side="top">
+              {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+            </TooltipContent>
           </Tooltip>
         ) : null}
       </div>
@@ -533,9 +541,16 @@ export function PrDetail({
   const [aiReviewModel, setAiReviewModel] = useState("");
   const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<"activity" | "commits" | "files">("activity");
+  // Fondu doux en haut et en bas du fil — le même que la conversation d'agent et
+  // que les colonnes du board : il ne s'allume que du côté où il RESTE quelque
+  // chose à voir, ce qu'une bordure fixe ne sait pas dire.
+  const feedFade = useScrollFade<HTMLDivElement>();
   // « Citer » écrit dans le brouillon depuis l'extérieur du composer : ce
   // compteur lui dit d'aller reprendre le curseur.
   const [quoteFocus, setQuoteFocus] = useState(0);
+  // Le message auquel ce brouillon répond, avec la citation qu'il a insérée —
+  // c'est elle qui atteste, à l'envoi, qu'on répond toujours à ce message-là.
+  const [replyTo, setReplyTo] = useState<{ commentId: number; quoted: string } | null>(null);
 
   const isWorking = !!item.activeRunId;
   // Ce que CE compte git peut faire sur ce dépôt (MIN-144). Un geste humain part
@@ -732,14 +747,49 @@ export function PrDetail({
   // in_reply_to — seuls les commentaires de review ancrés au code sont threadés).
   // « Répondre » cite donc le message dans le composer du bas, comme le fait le
   // « Quote reply » de GitHub, et mentionne son auteur pour garder le fil lisible.
-  const quoteReply = (body: string, login?: string | null) => {
+  /**
+   * Ce message est-il de NUMO ? (MIN-162)
+   *
+   * Deux repères, et le second rattrape ce que le premier ne voit pas :
+   *  · le compte sous lequel il écrit chez la forge (`viewer.numoLogin`) —
+   *    complet, mais GitHub seulement : côté GitLab il n'a pas d'identité à lui
+   *    (MIN-146), ses gestes partent du compte de qui a lié le dépôt ;
+   *  · le message de synthèse de la session courante, qu'on connaît par son id
+   *    quelle que soit la forge. Il ne couvre que la dernière passe, mais c'est
+   *    justement celle à laquelle on répond.
+   */
+  const isNumoComment = (commentId: number, login?: string | null): boolean => {
+    if (viewer?.numoLogin && login === viewer.numoLogin) return true;
+    return reviewSession.review?.summaryCommentId === commentId;
+  };
+
+  /**
+   * « Citer » — et, sur un message de Numo, **lui répondre**.
+   *
+   * Citer quelqu'un le mentionne, pour que le fil reste lisible : c'est ce que
+   * fait le « Quote reply » de GitHub. Sur un message de Numo, mentionner son
+   * compte de bot ne mènerait nulle part — un `@minddy-app[bot]` ne réveille
+   * personne. C'est `@Numo` qu'on pose : la mention que minddy traite elle-même,
+   * celle qui relance la passe. Répondre à Numo, c'est donc le rappeler, sans
+   * avoir à savoir qu'il faut l'écrire.
+   *
+   * L'id du message cité voyage avec le brouillon (`replyTo`) : la passe le
+   * relira pour savoir à QUOI on répond. Le corps le contient déjà en citation,
+   * mais tronqué et noyé dans le reste — l'id, lui, désigne le message entier.
+   */
+  const quoteReply = (commentId: number, body: string, login?: string | null) => {
     const quoted = body
       .trim()
       .split("\n")
       .map((line) => `> ${line}`)
       .join("\n");
-    const mention = login ? `@${login} ` : "";
+    const numo = isNumoComment(commentId, login);
+    const mention = numo ? "@Numo " : login ? `@${login} ` : "";
     setCommentBody((d) => `${d.trim() ? `${d.trimEnd()}\n\n` : ""}${quoted}\n\n${mention}`);
+    // Gardé AVEC sa citation : à l'envoi, on ne transmet l'id que si le
+    // brouillon la porte encore. Citer puis tout effacer puis écrire autre chose
+    // ne doit pas faire croire à Numo qu'on répondait à ce message-là.
+    setReplyTo({ commentId, quoted });
     // Le composer n'est plus un `<textarea>` mais un champ à mentions (MIN-162) :
     // le curseur ne se pose pas par `setSelectionRange` mais sur ce signal, que
     // le champ lit APRÈS avoir reposé son contenu.
@@ -751,9 +801,20 @@ export function PrDetail({
     if (!body || posting) return;
     setPosting(true);
     try {
-      await postPullRequestCommentApi(item.prId, body);
+      // L'id du message cité ne part QUE si le brouillon porte encore sa
+      // citation : citer, tout effacer, puis écrire autre chose ne répond plus
+      // à ce message-là.
+      const answering = replyTo && body.includes(replyTo.quoted) ? replyTo.commentId : undefined;
+      const { review } = await postPullRequestCommentApi(item.prId, body, answering);
       setCommentBody("");
+      setReplyTo(null);
       await refetchComments();
+      // Le message MENTIONNAIT Numo : sa passe est déjà ouverte côté serveur
+      // (MIN-162). On va la chercher tout de suite — c'est ce qui fait
+      // apparaître la carte vivante à la place du futur verdict, au lieu de
+      // laisser une minute de silence pendant laquelle rien ne dit que le geste
+      // a marché.
+      if (review) await reviewSession.refetch();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -792,13 +853,17 @@ export function PrDetail({
   const conversationCount = feed.filter((e) => e.kind !== "event").length;
 
   return (
-    // Une capture collée sur la forge n'est pas servable telle quelle (MIN-162) :
-    // l'enveloppe dit à TOUT le markdown du panneau — corps, fil, activité,
-    // remarques de ligne — de quelle PR il vient, et donc par quel proxy passer.
-    <ForgeImageEndpoint endpoint={prEndpoint(item.prId)}>
+    // L'enveloppe dit à TOUT le panneau — corps, fil, activité, remarques de
+    // ligne, composers — de quelle PR il parle : par quel proxy passer pour
+    // afficher une image de la forge, et à quelles routes demander les comptes
+    // mentionnables et l'hébergement d'une pièce jointe (MIN-162).
+    <PrEndpointProvider endpoint={prEndpoint(item.prId)}>
     <div className="flex h-full min-h-0 flex-col">
       {/* Header : retour (mobile) · identifiant · actions */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3 md:px-6">
+      {/* En-tête SANS bordure : c'est le fondu du fil qui dit qu'il continue
+          au-dessus, et une barre séparée le couperait de ce qu'il coiffe (même
+          parti que la conversation d'agent). */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -967,7 +1032,7 @@ export function PrDetail({
                 disabled={!!acting || isWorking}
               >
                 {acting === "close" ? <Spinner /> : <X />}
-                {t("reject")}
+                {t("close")}
               </Button>
             ) : null}
 
@@ -1062,7 +1127,11 @@ export function PrDetail({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
+      <div
+        ref={feedFade.ref}
+        {...feedFade.scrollProps}
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+      >
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
           {/* Titre de la PR + méta. Le TITRE de la pull request, et non celui du
               ticket : depuis MIN-143 elles ne vont plus par paires, et une PR
@@ -1196,7 +1265,7 @@ export function PrDetail({
                       // n'y en a pas, et le geste ne mènerait nulle part.
                       onQuoteReply={
                         canComment
-                          ? () => quoteReply(prDescription, pr?.user?.login)
+                          ? () => quoteReply(PR_BODY_COMMENT_ID, prDescription, pr?.user?.login)
                           : undefined
                       }
                       reactions={threadReactions}
@@ -1225,9 +1294,10 @@ export function PrDetail({
                         body={c.body}
                         onQuoteReply={
                           canComment
-                            ? () => quoteReply(c.body ?? "", c.user?.login)
+                            ? () => quoteReply(c.id, c.body ?? "", c.user?.login)
                             : undefined
                         }
+                        quotingNumo={isNumoComment(c.id, c.user?.login)}
                         reactions={threadReactions}
                         // Le message de VERDICT de Numo porte le déroulé de sa
                         // passe : ce qu'il a lu, les points qu'il a posés. Replié
@@ -1262,21 +1332,6 @@ export function PrDetail({
                 </ul>
               )}
 
-              {/* Composer — mentions de comptes de forge, pièces jointes,
-                  aperçu markdown (MIN-162). ABSENT sans compte git : le message
-                  partirait sous l'identité du bot (MIN-144). */}
-              {canComment ? (
-                <PrCommentComposer
-                  prId={item.prId}
-                  value={commentBody}
-                  onChange={setCommentBody}
-                  onSubmit={() => void submitComment()}
-                  posting={posting}
-                  placeholder={t("commentPlaceholder")}
-                  submitLabel={t("postComment")}
-                  focusSignal={quoteFocus}
-                />
-              ) : null}
             </TabsContent>
 
             <TabsContent value="commits" className="mt-4">
@@ -1319,6 +1374,38 @@ export function PrDetail({
         </div>
       </div>
 
+      {/* Composer — mentions de comptes de forge, pièces jointes, aperçu
+          markdown (MIN-162).
+
+          HORS de la zone qui défile, et non au bout du fil : sur une PR bavarde,
+          un composer posé après le dernier message se gagne au scroll, et on le
+          reperd dès qu'on remonte lire ce à quoi on voulait répondre. Épinglé en
+          pied, il est là où le fil de discussion se répond — c'est déjà ce que
+          fait le panneau de ticket (`SidePanelFooter`).
+
+          Seulement sous l'onglet du FIL : il n'y a rien à commenter en face
+          d'une liste de commits, et l'onglet Fichiers a ses propres champs,
+          ancrés à leur ligne. ABSENT sans compte git : le message partirait sous
+          l'identité du bot (MIN-144). */}
+      {tab === "activity" && canComment ? (
+        <div className="shrink-0 bg-background px-4 py-3 md:px-6">
+          {/* Même colonne que le fil au-dessus : un composer pleine largeur ne
+              serait plus en face de ce à quoi il répond. */}
+          <div className="mx-auto max-w-3xl">
+            <PrCommentComposer
+              endpoint={prEndpoint(item.prId)}
+              value={commentBody}
+              onChange={setCommentBody}
+              onSubmit={() => void submitComment()}
+              posting={posting}
+              placeholder={t("commentPlaceholder")}
+              submitLabel={t("postComment")}
+              focusSignal={quoteFocus}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {/* Confirmation fusionner / refuser */}
       <Dialog
         open={!!confirmAction}
@@ -1329,13 +1416,13 @@ export function PrDetail({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmRejectTitle")}
+              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmCloseTitle")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             {confirmAction?.kind === "merge"
               ? t("confirmMergeDescription")
-              : t("confirmRejectDescription")}
+              : t("confirmCloseDescription")}
           </p>
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
@@ -1351,7 +1438,7 @@ export function PrDetail({
               }}
             >
               {acting ? <Spinner /> : null}
-              {confirmAction?.kind === "merge" ? t("merge") : t("reject")}
+              {confirmAction?.kind === "merge" ? t("merge") : t("close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1510,6 +1597,6 @@ export function PrDetail({
         </DialogContent>
       </Dialog>
     </div>
-    </ForgeImageEndpoint>
+    </PrEndpointProvider>
   );
 }

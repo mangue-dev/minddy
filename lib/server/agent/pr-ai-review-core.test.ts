@@ -551,3 +551,70 @@ describe("parsePartialReview", () => {
     expect(partial.findings).toEqual(complete?.findings);
   });
 });
+
+/**
+ * Répondre à Numo en citant son message (MIN-162) : la mention le relance, et
+ * le message cité doit arriver ENTIER, présenté comme le sien — sans quoi il
+ * redécouvre son propre propos et le redit.
+ */
+describe("buildReviewUserMessage — la demande et le message cité", () => {
+  it("met la demande en tête, avant le diff", () => {
+    const message = buildReviewUserMessage({
+      title: "Corrige le compteur",
+      files: FILES,
+      question: { author: "mangue-dev", body: "@numo tu peux revérifier le cas vide ?" },
+    });
+    expect(message).toContain("## What you were asked");
+    expect(message).toContain("@mangue-dev");
+    expect(message).toContain("> @numo tu peux revérifier le cas vide ?");
+    // En TÊTE : c'est la demande, le reste n'est que ce qu'il faut pour y répondre.
+    expect(message.indexOf("## What you were asked")).toBeLessThan(message.indexOf("## Diff"));
+  });
+
+  it("dit à Numo qu'un message cité est LE SIEN", () => {
+    const message = buildReviewUserMessage({
+      title: "Corrige le compteur",
+      files: FILES,
+      question: {
+        author: "mangue-dev",
+        body: "@Numo et pour le cas vide ?",
+        replyTo: {
+          author: "minddy-app[bot]",
+          body: "J'ai relu le diff : le compteur ne gère pas la liste vide.",
+          mine: true,
+        },
+      },
+    });
+    expect(message).toContain("### The message being replied to");
+    expect(message).toContain("**This one is yours**");
+    expect(message).toContain("> J'ai relu le diff : le compteur ne gère pas la liste vide.");
+  });
+
+  it("nomme l'auteur quand le message cité est celui de quelqu'un d'autre", () => {
+    const message = buildReviewUserMessage({
+      title: "Corrige le compteur",
+      files: FILES,
+      question: {
+        author: "mangue-dev",
+        body: "@numo qu'en penses-tu ?",
+        replyTo: { author: "octocat", body: "Je trouve ça risqué.", mine: false },
+      },
+    });
+    expect(message).toContain("Written by @octocat");
+    expect(message).not.toContain("**This one is yours**");
+  });
+
+  it("ne pose aucune section quand rien n'a été demandé", () => {
+    const message = buildReviewUserMessage({ title: "Corrige le compteur", files: FILES });
+    expect(message).not.toContain("## What you were asked");
+    expect(message).not.toContain("### The message being replied to");
+  });
+});
+
+describe("buildReviewSystemPrompt", () => {
+  it("n'explique la mention QUE quand la passe vient d'une mention", () => {
+    expect(buildReviewSystemPrompt("fr", true)).toContain("What you were asked");
+    expect(buildReviewSystemPrompt("fr", true)).toContain("cannot change the code");
+    expect(buildReviewSystemPrompt("fr")).not.toContain("What you were asked");
+  });
+});

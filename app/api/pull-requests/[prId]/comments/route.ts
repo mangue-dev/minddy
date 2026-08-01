@@ -29,9 +29,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
 
-  let payload: { body?: string };
+  let payload: { body?: string; replyTo?: unknown };
   try {
-    payload = (await request.json()) as { body?: string };
+    payload = (await request.json()) as { body?: string; replyTo?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -39,7 +39,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const body = typeof payload?.body === "string" ? payload.body.trim() : "";
   if (!body) return NextResponse.json({ error: "Comment required" }, { status: 400 });
 
+  // `replyTo` ne désigne QUE du contexte pour Numo : il ne pilote aucune écriture
+  // chez la forge, qui n'a pas de fil sur cette surface. Un id qui ne correspond
+  // à rien se résout simplement en « aucun message cité » (cf. la passe), il n'y
+  // a donc rien à refuser ici au-delà de la forme. `0` est le corps de la PR.
+  const replyTo =
+    typeof payload?.replyTo === "number" && Number.isInteger(payload.replyTo)
+      ? payload.replyTo
+      : null;
+
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
-  return createPrCommentResponse(auth.scope, body, auth.userId, await getLocale());
+  return createPrCommentResponse(auth.scope, body, auth.userId, await getLocale(), replyTo);
 }

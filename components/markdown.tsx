@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, type ElementType, type JSX, type ReactNode } from "react";
+import type { ElementType, JSX } from "react";
 import ReactMarkdown, { type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -10,6 +10,7 @@ import { cn } from "mangue-ui";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { memberLabel, mentionScanner } from "@/lib/mention-scan";
 import { forgeImageSrc } from "@/lib/forge-image-assets";
+import { usePrEndpoint } from "@/lib/pr-endpoint-context";
 import type { Member } from "@/lib/types";
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
@@ -115,35 +116,6 @@ function rehypeChain(members?: Member[]): Options["rehypePlugins"] {
   return members ? [...chain, rehypeMentions(members)] : chain;
 }
 
-/**
- * De quelle pull request ce markdown vient-il ? Rien, partout ailleurs.
- *
- * Une capture collée dans un commentaire de forge n'est pas servable telle
- * quelle : son URL exige une session GitHub que minddy n'a pas, et il faut la
- * faire passer par le proxy de SA pull request (MIN-162, `lib/forge-image-assets`).
- * Le panneau PR en pose donc un autour de tout ce qu'il rend.
- *
- * Un contexte plutôt qu'une prop parce que ces surfaces sont nombreuses et
- * profondes — corps de la PR, messages du fil, activité, remarques de ligne et
- * leurs réponses, jusqu'au fond de la vue diff — et parce que la question qu'il
- * répond est la même pour toutes : celle du panneau, pas celle du composant.
- * Une seule enveloppe, et la surface suivante l'aura sans rien câbler.
- */
-const ForgeImageContext = createContext<string | null>(null);
-
-export function ForgeImageEndpoint({
-  endpoint,
-  children,
-}: {
-  /** Base de la PR : `/api/pull-requests/{id}`. */
-  endpoint: string;
-  children: ReactNode;
-}) {
-  return (
-    <ForgeImageContext.Provider value={endpoint}>{children}</ForgeImageContext.Provider>
-  );
-}
-
 /** Renders markdown (GFM) with minimal, token-aware styling, plus the raw HTML
     GitHub allows in a comment (sanitized — cf. `rehypeChain`).
     Pass `members` to render "@Name" and "@numo" mentions as chips — the same
@@ -159,9 +131,9 @@ export function Markdown({
   className?: string;
   members?: Member[];
 }) {
-  // null hors d'un panneau de PR : les images d'un commentaire de ticket sont
-  // déjà servies par minddy, elles n'ont rien à proxifier.
-  const imageEndpoint = useContext(ForgeImageContext);
+  // null hors d'une vue de PR : les images d'un commentaire de ticket sont déjà
+  // servies par minddy, elles n'ont rien à proxifier.
+  const imageEndpoint = usePrEndpoint();
   return (
     <div
       className={cn(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchPullRequestMembersApi, type RepoMember } from "@/lib/agent-api";
+import { fetchPullRequestMembersApi, type PrEndpoint, type RepoMember } from "@/lib/agent-api";
 
 /**
  * Les comptes de la forge mentionnables sur une PR (MIN-162).
@@ -15,13 +15,14 @@ import { fetchPullRequestMembersApi, type RepoMember } from "@/lib/agent-api";
  * réponse porte déjà son propre cache HTTP.
  */
 export function usePrMembersQuery(
-  prId: string | null,
+  /** Base de la PR : `/api/pull-requests/{id}` ou la façade `/api/agent-runs/{id}/pr`. */
+  endpoint: PrEndpoint | null,
   enabled: boolean,
 ): { members: RepoMember[]; loading: boolean } {
   const { data, isLoading } = useQuery({
-    queryKey: ["pr-members", prId],
-    queryFn: () => fetchPullRequestMembersApi(prId as string),
-    enabled: enabled && !!prId,
+    queryKey: ["pr-members", endpoint],
+    queryFn: () => fetchPullRequestMembersApi(endpoint as PrEndpoint),
+    enabled: enabled && !!endpoint,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
