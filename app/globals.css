@@ -95,6 +95,26 @@
   --card: oklch(0.214 0.005 264);
   --popover: oklch(0.214 0.005 264);
   --sidebar-border: oklch(0.27 0.006 264);
+
+  /* Remonter la surface sombre oblige à remonter TOUT ce qui se pose dessus.
+     mangue-ui calibre son échelle sombre sur --card à 0.170 : --muted 0.200,
+     --secondary 0.220, --accent 0.230, chacun un cran plus CLAIR que la carte.
+     En passant la carte à 0.214 on est repassé au-dessus d'eux, et l'échelle
+     s'est inversée : un `hover:bg-muted` posé dans une carte l'assombrissait,
+     et l'item actif de la sidebar (bg-sidebar-accent) se peignait plus sombre
+     que la sidebar — le contraire du sens voulu, et 0.014 d'écart, donc à peine
+     visible. En clair l'échelle tenait toujours (blanc → 0.935 pour --muted),
+     d'où un défaut qui n'existait qu'en sombre.
+
+     On la refait donc depuis 0.214, dans l'ordre d'origine (muted < secondary <
+     accent) et avec des pas d'environ 0.04 — ceux du thème clair, là où les
+     0.030 de mangue-ui ne se sentaient déjà pas. Teinte alignée sur 264 comme
+     les surfaces au-dessus plutôt que les 250 hérités : ce qui recouvre une
+     carte doit en prendre la nuance, pas en introduire une deuxième. */
+  --muted: oklch(0.255 0.005 264);          /* survols et aplats sur une carte */
+  --sidebar-accent: oklch(0.255 0.005 264); /* item actif / survolé de la sidebar */
+  --secondary: oklch(0.268 0.005 264);
+  --accent: oklch(0.276 0.005 264);
 }
 
 /* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
