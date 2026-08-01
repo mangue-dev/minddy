@@ -86,7 +86,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   };
   let body: LaunchBody = {};
   try {
-    body = (await request.json()) as LaunchBody;
+    // `null` est du JSON valide : l'affecter ferait un 500 sur `body.model`
+    // deux lignes plus bas. Même garde que POST /api/agent-runs (MIN-118).
+    const parsed: unknown = await request.json();
+    if (parsed && typeof parsed === "object") body = parsed as LaunchBody;
   } catch {
     // corps vide accepté
   }

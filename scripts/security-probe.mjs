@@ -127,9 +127,11 @@ async function main() {
   if (projErr) throw new Error(`projet Alice : ${projErr.message}`);
   created.projectId = project.id;
 
+  // `name`, pas `title` : la colonne s'appelle `name` (20260704170000), et la
+  // table n'a pas de `created_by` — l'insert échouait avant le premier contrôle.
   const { data: objective, error: objErr } = await service
     .from("objectives")
-    .insert({ project_id: project.id, title: "Probe obj", created_by: alice.id })
+    .insert({ project_id: project.id, name: "Probe obj" })
     .select("id, status")
     .single();
   if (objErr) throw new Error(`objectif Alice : ${objErr.message}`);
@@ -192,6 +194,46 @@ async function main() {
     !rpcAnon.ok,
     `status ${rpcAnon.status}`,
   );
+
+  // 3 bis. Les AUTRES fonctions SECURITY DEFINER, réservées au service_role.
+  // Elles ne révoquaient que « from public », ce qui laissait intacts les
+  // EXECUTE explicites d'`anon`/`authenticated` posés par le bootstrap Supabase :
+  // sans session du tout, la clé anon lisait la liste des comptes avec leurs
+  // emails, les coûts IA, l'usage de n'importe quel user_id, et pouvait réserver
+  // le run d'un autre. Fermé par 20260926093000 — vérifié ici pour anon ET
+  // authenticated (le pire cas est anon : aucun compte requis).
+  const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+  const DEFINER_RPCS = [
+    ["get_admin_users_overview", { p_search: null, p_limit: 1, p_offset: 0 }],
+    ["get_admin_user_totals", { p_tz: "UTC" }],
+    ["get_ai_usage_stats", {}],
+    ["get_ai_cost_daily", { p_days: 1, p_tz: "UTC" }],
+    ["get_ai_run_calls", { p_run_id: ZERO_UUID }],
+    ["get_agent_quota_usage", { p_month_start: "2026-01-01T00:00:00Z" }],
+    ["get_user_usage_since", { p_user_id: ZERO_UUID, p_since: "2026-01-01T00:00:00Z" }],
+    ["get_user_usage_history", { p_user_id: ZERO_UUID, p_since: "2026-01-01T00:00:00Z" }],
+    ["claim_agent_run", { p_run_id: ZERO_UUID }],
+    ["next_issue_number", { p_project_id: ZERO_UUID }],
+  ];
+  for (const [fn, payload] of DEFINER_RPCS) {
+    for (const [who, bearer] of [
+      ["anon", undefined],
+      ["authenticated", bob.jwt],
+    ]) {
+      const res = await rest(`/rest/v1/rpc/${fn}`, {
+        method: "POST",
+        bearer,
+        body: payload,
+      });
+      // 401/403 = privilège refusé (ce qu'on veut). Un 404 PGRST202 voudrait
+      // dire que la signature a bougé : le contrôle ne prouverait plus rien.
+      check(
+        `rpc ${fn} refusé (${who})`,
+        res.status === 401 || res.status === 403,
+        `status ${res.status}${res.status === 404 ? " — SIGNATURE À METTRE À JOUR" : ""}`,
+      );
+    }
+  }
 
   // 4. Colonne secrète refusée, colonne autorisée toujours lisible (§2).
   const secretCol = await rest(

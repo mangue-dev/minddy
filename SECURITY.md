@@ -71,8 +71,19 @@ par ce chemin.
   [20260926090000_security_grants.sql](supabase/migrations/20260926090000_security_grants.sql).
   ⚠ Conséquence : une colonne AJOUTÉE plus tard à l'une de ces tables n'est pas
   lisible tant qu'un `grant select (col)` explicite ne l'ajoute pas.
-- **Fonctions SECURITY DEFINER :** toutes suivent la paire
-  `revoke … from public, anon, authenticated; grant execute … to service_role`.
+- **Fonctions SECURITY DEFINER :** réservées au `service_role`, sauf les cinq
+  aides de policy (`can_access_project`, `is_project_member`, `is_project_owner`,
+  `can_watch_agent_run`, `can_watch_numo_comment`) — elles ne répondent que sur
+  l'accès de l'appelant, et les policies RLS ne peuvent pas les appeler sans
+  EXECUTE. La règle est appliquée par une boucle sur `pg_proc`
+  ([20260926093000_definer_grants_sweep.sql](supabase/migrations/20260926093000_definer_grants_sweep.sql)),
+  pas fonction par fonction.
+  ⚠ **Piège Supabase :** `revoke … from public` NE SUFFIT PAS. Le bootstrap pose
+  `alter default privileges … grant all on functions to anon, authenticated`,
+  donc chaque fonction naît avec un EXECUTE **explicite** pour ces deux rôles ;
+  seul `revoke … from public, anon, authenticated` les retire. Neuf fonctions du
+  repo (dashboard admin, coûts IA, usage, `claim_agent_run`) étaient de fait
+  appelables sans aucune session avec la seule clé anon publique.
 
 ## 3. Chiffrement
 

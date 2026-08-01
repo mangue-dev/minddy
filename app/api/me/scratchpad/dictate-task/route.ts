@@ -158,7 +158,10 @@ export async function POST(request: NextRequest) {
 
   let body: { transcript?: unknown; note?: unknown };
   try {
-    body = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as { transcript?: unknown; note?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

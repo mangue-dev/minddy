@@ -78,7 +78,10 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  if (typeof body.domain !== "string") {
+  // `null` est du JSON valide : lire body.domain dessus ferait un 500. La
+  // longueur, elle, est bornée par normalizeDomain (253 max, RFC hostname).
+  // Même garde que le jumeau /api/projects/[id]/feedback/domain (MIN-118).
+  if (!body || typeof body !== "object" || typeof body.domain !== "string") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
