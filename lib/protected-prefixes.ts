@@ -34,6 +34,9 @@ export const PROTECTED_PREFIXES = [
   "/my",
   // Écrans OAuth (consentement, succès) : `app/(auth)/oauth/`.
   "/oauth",
+  // Bancs d'essai de développement (`app/(app)/lab/`), déjà 404 en production —
+  // protégés quand même, ceinture et bretelles. À retirer avec eux.
+  "/lab",
 ] as const;
 
 /** `/projects` couvre `/projects` et `/projects/<id>/…`, jamais `/projectsfoo`. */

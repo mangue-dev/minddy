@@ -33,6 +33,7 @@ import {
   PR_BODY_COMMENT_ID,
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
+import { imageMimeType } from "@/lib/diff-binary";
 
 /**
  * Gestes de review d'une pull request (MIN-143), indexés par PR et non par run.
@@ -715,6 +716,130 @@ export async function prFileSourceResponse(
       return NextResponse.json({ error: "File not found at merge base" }, { status: 404 });
     }
     return NextResponse.json({ content });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+// ── Octets d'un fichier du diff (images) ─────────────────────────────────────
+
+/** Côté du diff dont on veut les octets : avant la PR, ou après. */
+export type FileSide = "base" | "head";
+
+/**
+ * Au-delà, on ne relaie pas : la vue diff sert des icônes et des captures, pas
+ * des masters. Une image plus lourde s'ouvre sur la forge.
+ */
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Réponse image du proxy d'octets, en-têtes de sécurité compris — partagée par
+ * la route indexée par PR et la façade indexée par run (dont le cas « sans PR »,
+ * qui lit un compare de branches et n'a donc pas de `PrScope`).
+ */
+export function imageBytesResponse(
+  bytes: ArrayBuffer,
+  contentType: string,
+  /** Le ref lu bouge-t-il sous l'URL ? Vrai quand on a lu une BRANCHE (run
+      vivant) plutôt qu'un SHA — la réponse n'est alors pas cachable. */
+  moving = false,
+): NextResponse {
+  if (bytes.byteLength > MAX_IMAGE_BYTES) {
+    return NextResponse.json({ error: "Image too large to preview" }, { status: 413 });
+  }
+  return new NextResponse(bytes, {
+    headers: {
+      "Content-Type": contentType,
+      "Content-Length": String(bytes.byteLength),
+      // `private` : la réponse traverse un jeton d'installation et un dépôt
+      // souvent privé — elle ne doit jamais atterrir dans un cache partagé. Le
+      // ref est un SHA (ou le merge base, figé tant que la PR ne bouge pas),
+      // donc le contenu à cette URL ne change pas.
+      "Cache-Control": moving ? "private, no-store" : "private, max-age=3600",
+      // Une image de dépôt tiers ne s'ouvre pas comme un document de notre
+      // origine : `nosniff` fige le type déduit de l'extension, `attachment`
+      // empêche un SVG atteint EN DIRECT de s'exécuter dans notre contexte (dans
+      // le `<img>` de la vue diff, il s'affiche quand même — l'en-tête ne
+      // gouverne que la navigation).
+      "X-Content-Type-Options": "nosniff",
+      "Content-Disposition": "attachment",
+    },
+  });
+}
+
+/**
+ * Octets d'un fichier du diff, d'un côté ou de l'autre (MIN-66) — ce qui permet
+ * de MONTRER une image modifiée au lieu d'annoncer un diff indisponible.
+ *
+ * Proxy et pas lien direct : les dépôts sont privés, `raw.githubusercontent.com`
+ * y répond 404 sans jeton, et un `<img src>` ne peut pas en porter un. Le jeton
+ * d'installation reste donc côté serveur, comme pour toutes les autres lectures.
+ *
+ * Trois gardes, dans cet ordre : le chemin doit être celui d'un fichier de CE
+ * diff (sinon la route lirait n'importe quel fichier du dépôt), l'extension doit
+ * être une image connue (le type MIME servi vient de LÀ, jamais de la forge), et
+ * la taille doit tenir sous `MAX_IMAGE_BYTES`.
+ */
+export async function prFileBytesResponse(
+  scope: PrScope,
+  filename: string,
+  side: FileSide,
+): Promise<NextResponse> {
+  const { forge, call } = scope;
+
+  const contentType = imageMimeType(filename);
+  if (!contentType) {
+    return NextResponse.json({ error: "Not a previewable image" }, { status: 415 });
+  }
+
+  try {
+    const [pr, files] = await Promise.all([
+      forge.getPullRequest(call),
+      forge.listPullRequestFiles(call),
+    ]);
+    const file = files.find((f) => f.filename === filename);
+    if (!file) {
+      return NextResponse.json({ error: "File not found in this diff" }, { status: 404 });
+    }
+
+    // Un fichier ajouté n'existe pas côté base, un supprimé n'existe pas côté
+    // tête : 404 franc, que l'appelant rend en « rien avant » / « rien après ».
+    if (side === "base" && file.status === "added") {
+      return NextResponse.json({ error: "File has no base version" }, { status: 404 });
+    }
+    if (side === "head" && file.status === "removed") {
+      return NextResponse.json({ error: "File has no head version" }, { status: 404 });
+    }
+
+    let ref: string;
+    if (side === "head") {
+      // Le SHA de tête, pas le nom de branche : la branche bouge sous le cache
+      // du navigateur, le SHA non — c'est lui qui rend l'URL immuable.
+      const head = pr.headSha ?? pr.head;
+      if (!head) {
+        return NextResponse.json({ error: "Pull request has no head" }, { status: 409 });
+      }
+      ref = head;
+    } else {
+      const base = pr.base;
+      const head = pr.headSha ?? pr.head;
+      if (!base || !head) {
+        return NextResponse.json({ error: "Pull request has no base or head" }, { status: 409 });
+      }
+      ref = await forge.getMergeBaseSha({ ...call, base, head });
+    }
+
+    const path = side === "base" ? basePathOf(file) : file.filename;
+    const bytes = await forge.getFileBytesAtRef({
+      token: call.token,
+      repoFullName: call.repoFullName,
+      path,
+      ref,
+    });
+    if (bytes === null) {
+      return NextResponse.json({ error: "File not found at this ref" }, { status: 404 });
+    }
+    return imageBytesResponse(bytes, contentType);
   } catch (err) {
     return forgeErrorResponse(err);
   }

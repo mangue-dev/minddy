@@ -520,6 +520,34 @@ export async function getFileAtRef(opts: {
 }
 
 /**
+ * Mêmes octets, non décodés — le pendant GitLab de `getFileBytesAtRef` de
+ * `pr.ts` : `res.text()` interprète le corps en UTF-8 et corrompt tout binaire.
+ * Sert la vue côte à côte des images du diff (MIN-66).
+ */
+export async function getFileBytesAtRef(opts: {
+  token: string;
+  repoFullName: string;
+  path: string;
+  ref: string;
+}): Promise<ArrayBuffer | null> {
+  const url =
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/files/` +
+    `${encodeURIComponent(opts.path)}/raw?ref=${encodeURIComponent(opts.ref)}`;
+  const res = await fetch(url, { headers: gitlabHeaders(opts.token, "application/octet-stream") });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    let data: unknown = null;
+    try {
+      data = await res.json();
+    } catch {
+      // Corps raw : message par défaut.
+    }
+    throw new GitlabApiError(errorMessage(data, res.status), res.status);
+  }
+  return res.arrayBuffer();
+}
+
+/**
  * Merge la MR. La STRATÉGIE (merge commit / fast-forward) est un réglage du
  * projet chez GitLab, pas un paramètre d'appel comme chez GitHub : le seul
  * levier par MR est `squash`. D'où `mergeMethods` réduit à `["merge","squash"]`

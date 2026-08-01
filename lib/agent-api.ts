@@ -484,6 +484,19 @@ export async function fetchPrFileSourceApi(
   return parseJson(await fetch(`${endpoint}/file?path=${encodeURIComponent(path)}`));
 }
 
+/**
+ * URL du proxy d'octets d'un fichier du diff — la source des `<img>` de la vue
+ * côte à côte des images (MIN-66). `path` = le chemin tel que le diff le nomme
+ * (le serveur en déduit lui-même la version base d'un fichier renommé).
+ */
+export function prFileRawUrl(
+  endpoint: PrEndpoint,
+  path: string,
+  side: "base" | "head",
+): string {
+  return `${endpoint}/file/raw?path=${encodeURIComponent(path)}&side=${side}`;
+}
+
 export async function actOnPullRequestApi(
   prId: string,
   action: "merge" | "close" | "ready_for_review",

@@ -3,9 +3,9 @@
 import "react-diff-view/style/index.css";
 
 import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
-import { cn, SegmentedControl, Spinner, toast } from "mangue-ui";
-import { ChevronDown, ChevronRight, ChevronUp, UnfoldVertical } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Badge, cn, SegmentedControl, Spinner, toast } from "mangue-ui";
+import { ChevronDown, ChevronRight, ChevronUp, UnfoldVertical, WrapText } from "lucide-react";
 import {
   parseDiff,
   Diff,
@@ -14,11 +14,14 @@ import {
   expandFromRawCode,
   getChangeKey,
   getCollapsedLinesCountBetween,
+  markEdits,
+  tokenize,
   type ChangeData,
   type DiffType,
   type FileData,
   type GutterOptions,
   type HunkData,
+  type HunkTokens,
 } from "react-diff-view";
 import {
   fetchPrFileSourceApi,
@@ -28,6 +31,9 @@ import {
   type PullRequestFile,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
+import { countLines, diffLanguage, hljs, MAX_HIGHLIGHT_LINES } from "@/lib/diff-highlight";
+import { noPatchKind } from "@/lib/diff-binary";
+import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
 import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
 import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -62,6 +68,41 @@ import {
 /** Nombre de lignes qu'une flèche déplie d'un coup (comme GitHub). */
 const EXPAND_STEP = 20;
 
+type ViewType = "unified" | "split";
+
+/**
+ * Colore le fichier et marque, DANS une ligne modifiée, les caractères qui ont
+ * réellement changé — les deux choses qui séparaient cette vue d'un diff de
+ * forge. La seconde compte autant que la première : sans elle, une ligne
+ * retouchée d'un caractère se présente comme entièrement réécrite, et l'oeil
+ * doit refaire la comparaison lui-même.
+ *
+ * `null` (donc aucune coloration) dans trois cas : langage inconnu — colorer
+ * avec le mauvais grammaire se lit plus mal que ne pas colorer —, fichier trop
+ * long (les deux passes sont synchrones, cf. MAX_HIGHLIGHT_LINES), ou grammaire
+ * qui lève. Le diff, lui, s'affiche dans tous les cas.
+ */
+function useDiffTokens(hunks: HunkData[], filename: string): HunkTokens | null {
+  return useMemo(() => {
+    const language = diffLanguage(filename);
+    if (!language) return null;
+    if (countLines(hunks) > MAX_HIGHLIGHT_LINES) return null;
+    try {
+      return tokenize(hunks, {
+        highlight: true,
+        refractor: hljs,
+        language,
+        // `block` marque le bloc changé d'un bout à l'autre, là où `line`
+        // recoupe mot à mot : sur du code (indentation, ponctuation), le second
+        // produit un confetti de surlignages qui dessert la lecture.
+        enhancers: [markEdits(hunks, { type: "block" })],
+      });
+    } catch {
+      return null;
+    }
+  }, [hunks, filename]);
+}
+
 /**
  * Plage de lignes à déplier, en numéros de ligne ANCIENS (ceux de la version
  * base). `end` est EXCLU : c'est la sémantique de `expandFromRawCode`, qui
@@ -94,8 +135,6 @@ function splitLines(content: string): string[] {
   return lines;
 }
 
-type ViewType = "unified" | "split";
-
 /**
  * Ce que l'en-tête d'un widget annonce : la ligne visée et sa nature. Une ligne
  * de contexte porte deux numéros (ancien / nouveau) : on affiche le NOUVEAU,
@@ -114,6 +153,7 @@ function anchorOf(change: ChangeData): { line: number; kind: "added" | "removed"
  */
 function ExpandBar({
   count,
+  context,
   loading,
   failed,
   onExpandAll,
@@ -122,6 +162,9 @@ function ExpandBar({
 }: {
   /** Lignes masquées, ou null quand la source n'est pas encore chargée. */
   count: number | null;
+  /** Portée du hunk qui suit (« export function foo() { »), telle que git la
+      donne après le `@@ … @@` — ce qui situe la modification sans déplier. */
+  context?: string;
   loading: boolean;
   failed: boolean;
   /** Petit écart : un seul clic déplie tout. */
@@ -137,11 +180,16 @@ function ExpandBar({
   const gutter = "flex w-[7ch] shrink-0 items-center justify-center gap-0.5 self-stretch";
   const arrow =
     "flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-brand/15 hover:text-brand";
-  const text = "text-[11px] text-muted-foreground";
+  const text = "shrink-0 text-[11px] text-muted-foreground";
   // Un échec de chargement ne casse pas le diff : la barre reste (recliquable),
   // l'erreur s'affiche discrètement à côté du décompte.
   const error = failed ? (
-    <span className="text-[11px] text-muted-foreground/70">{t("expandFailed")}</span>
+    <span className="shrink-0 text-[11px] text-muted-foreground/70">{t("expandFailed")}</span>
+  ) : null;
+  const scope = context ? (
+    <span className="min-w-0 flex-1 truncate pr-3 font-mono text-[11px] text-muted-foreground/70">
+      {context}
+    </span>
   ) : null;
 
   // Exactement UN enfant : `Decoration` étale alors la cellule sur toute la
@@ -164,6 +212,7 @@ function ExpandBar({
           </span>
           <span className={text}>{label}</span>
           {error}
+          {scope}
         </button>
       ) : (
         <div className="flex w-full items-center gap-2 py-1">
@@ -197,9 +246,106 @@ function ExpandBar({
           </span>
           <span className={text}>{label}</span>
           {error}
+          {scope}
         </div>
       )}
     </Decoration>
+  );
+}
+
+/**
+ * Ce qui est arrivé au fichier, dit en couleur — même forme que les badges
+ * d'état de PR (`pr-state-badge`) : teinte à 10 %, bord à 20 %, jamais un aplat.
+ * Et mêmes couleurs que là-bas, pour que le vert veuille dire la même chose d'un
+ * bout à l'autre de la page : vert ajouté, rouge supprimé, violet renommé, bleu
+ * modifié.
+ */
+const FILE_STATUS_STYLES: Record<FileStatus, string> = {
+  added:
+    "border-green-600/20 bg-green-600/10 text-green-700 dark:border-green-500/25 dark:bg-green-500/15 dark:text-green-400",
+  removed: "border-destructive/20 bg-destructive/10 text-destructive dark:bg-destructive/15",
+  renamed:
+    "border-violet-600/20 bg-violet-600/10 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/15 dark:text-violet-400",
+  modified:
+    "border-blue-600/20 bg-blue-600/10 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-400",
+};
+
+const FILE_STATUS_LABELS = {
+  added: "fileAdded",
+  removed: "fileRemoved",
+  renamed: "fileRenamed",
+  modified: "fileModified",
+} as const satisfies Record<FileStatus, string>;
+
+type FileStatus = "added" | "removed" | "renamed" | "modified";
+
+/**
+ * Statut normalisé d'un fichier. GitHub en connaît plus que les quatre qu'on
+ * peint (`copied`, `changed`, `unchanged`) : tout ce qui n'est pas un ajout, un
+ * retrait ou un renommage se dit « modifié ». `previous_filename` sert de
+ * second témoin du renommage — GitLab le pose aussi.
+ */
+function fileStatusOf(file: PullRequestFile): FileStatus {
+  if (file.status === "added" || file.status === "removed") return file.status;
+  if (file.status === "renamed" || file.previous_filename) return "renamed";
+  return "modified";
+}
+
+function FileStatusBadge({ status }: { status: FileStatus }) {
+  const t = useTranslations("PullRequests");
+  return (
+    <Badge
+      variant="secondary"
+      className={cn("h-5 shrink-0 px-2 text-[10px]", FILE_STATUS_STYLES[status])}
+    >
+      {t(FILE_STATUS_LABELS[status])}
+    </Badge>
+  );
+}
+
+/** Portée d'un hunk : ce que git écrit APRÈS le `@@ -a,b +c,d @@`, ou rien. */
+function hunkScope(hunk: HunkData): string | undefined {
+  const after = hunk.content.split("@@").pop()?.trim();
+  return after ? after : undefined;
+}
+
+/**
+ * Le carré de cinq blocs de GitHub : la proportion d'ajouts et de retraits, lue
+ * d'un coup d'oeil. Les compteurs chiffrés disent le volume, cette barre dit la
+ * NATURE du changement — un fichier réécrit et un fichier étoffé ne se
+ * ressemblent pas, même à +40/−40.
+ */
+function DiffStatBar({ additions, deletions }: { additions: number; deletions: number }) {
+  const total = additions + deletions;
+  // Un côté non nul vaut toujours au moins un bloc, et jamais les cinq quand
+  // l'autre existe : sur +2/−300, l'arrondi effacerait sinon l'ajout, et un
+  // fichier purement ajouté ne se distinguerait plus d'un fichier retouché.
+  const green =
+    total === 0
+      ? 0
+      : deletions === 0
+        ? 5
+        : additions === 0
+          ? 0
+          : Math.min(4, Math.max(1, Math.round((additions / total) * 5)));
+  const red = total === 0 ? 0 : 5 - green;
+
+  return (
+    <span className="flex shrink-0 gap-px" aria-hidden>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span
+          key={i}
+          className={cn(
+            "size-2 rounded-[1px]",
+            i < green
+              ? "bg-emerald-500 dark:bg-emerald-400"
+              : i < green + red
+                ? "bg-red-500 dark:bg-red-400"
+                : "bg-border",
+          )}
+        />
+      ))}
+    </span>
   );
 }
 
@@ -219,6 +365,8 @@ function PrDiffFile({
   file,
   parsed,
   viewType,
+  wrap,
+  locale,
   endpoint,
   prUrl,
   provider,
@@ -234,6 +382,10 @@ function PrDiffFile({
   file: PullRequestFile;
   parsed?: FileData;
   viewType: ViewType;
+  /** Replier les lignes trop longues plutôt que défiler horizontalement. */
+  wrap: boolean;
+  /** Locale active — le poids des images se formate avec (Ko/Mo, séparateurs). */
+  locale: string;
   endpoint: PrEndpoint;
   prUrl?: string | null;
   provider?: RepoProviderId;
@@ -305,6 +457,10 @@ function PrDiffFile({
     if (!source || ranges.length === 0) return base;
     return ranges.reduce((hs, [start, end]) => expandFromRawCode(hs, source, start, end), base);
   }, [parsed, source, ranges]);
+
+  // Recalculés à chaque dépliage : le contexte qu'on vient d'ajouter doit être
+  // coloré comme le reste, sans quoi la couture se verrait.
+  const tokens = useDiffTokens(hunks, file.filename);
 
   /**
    * Lignes où le « + » a le droit d'apparaître : celles des hunks D'ORIGINE.
@@ -473,6 +629,7 @@ function PrDiffFile({
           <ExpandBar
             key={`gap-${hunk.oldStart}`}
             count={gap}
+            context={hunkScope(hunk)}
             loading={loading}
             failed={failed}
             onExpandAll={gap <= EXPAND_STEP ? () => expand([start, end]) : undefined}
@@ -519,6 +676,19 @@ function PrDiffFile({
     return nodes;
   };
 
+  // Le dossier s'efface, le nom du fichier porte : dans une liste de trente
+  // chemins qui partagent leurs six premiers segments, c'est le dernier qu'on
+  // cherche des yeux.
+  const slash = file.filename.lastIndexOf("/");
+  const dir = slash === -1 ? "" : file.filename.slice(0, slash + 1);
+  const name = slash === -1 ? file.filename : file.filename.slice(slash + 1);
+
+  // Un fichier sans patch : image qu'on sait montrer, binaire qu'on ne sait pas,
+  // fichier sans changement de contenu (renommage pur), ou fichier texte que la
+  // forge a jugé trop volumineux — quatre situations que le message unique
+  // d'avant confondait.
+  const missing = parsed ? null : noPatchKind(file);
+
   return (
     <div className="overflow-hidden rounded-md border border-border">
       <button
@@ -531,32 +701,55 @@ function PrDiffFile({
         ) : (
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         )}
-        <span className="min-w-0 flex-1 truncate font-mono text-xs">{file.filename}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={file.filename}>
+          {file.previous_filename ? (
+            <span className="text-muted-foreground">{file.previous_filename} → </span>
+          ) : null}
+          <span className="text-muted-foreground">{dir}</span>
+          <span className="font-medium">{name}</span>
+        </span>
+        <FileStatusBadge status={fileStatusOf(file)} />
         <span className="shrink-0 text-[11px] tabular-nums text-emerald-600 dark:text-emerald-400">
           +{file.additions}
         </span>
         <span className="shrink-0 text-[11px] tabular-nums text-red-600 dark:text-red-400">
           −{file.deletions}
         </span>
+        <DiffStatBar additions={file.additions} deletions={file.deletions} />
       </button>
       {collapsed ? null : (
         <>
           {parsed ? (
-            <div className="overflow-x-auto text-[13px]">
+            <div
+              className={cn(
+                "text-[13px]",
+                // Le défilement n'a de sens qu'en unifié : le côte-à-côte tient
+                // ses deux volets à parts égales, donc à la largeur de la boîte.
+                viewType === "unified" && !wrap && "pr-diff-scroll overflow-x-auto",
+              )}
+            >
               <Diff
                 viewType={viewType}
                 diffType={parsed.type as DiffType}
                 hunks={hunks}
+                tokens={tokens}
                 widgets={widgets}
                 renderGutter={renderGutter}
               >
                 {renderHunks}
               </Diff>
             </div>
+          ) : missing === "image" ? (
+            <PrImageDiff file={file} endpoint={endpoint} locale={locale} />
           ) : (
             <div className="px-3 py-2 text-[11px] text-muted-foreground">
-              {t("binaryOrLarge")}{" "}
-              {prUrl ? (
+              {missing === "binary"
+                ? t("binaryFile")
+                : missing === "unchanged"
+                  ? t("noContentChange")
+                  : t("tooLargeFile")}{" "}
+              {/* Rien à aller voir ailleurs quand il n'y a rien à voir. */}
+              {prUrl && missing !== "unchanged" ? (
                 <a
                   href={prUrl}
                   target="_blank"
@@ -628,7 +821,12 @@ export function PrDiff({
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
+  const locale = useLocale();
   const [viewType, setViewType] = useState<ViewType>("unified");
+  // Défaut au défilement, comme les forges : replier une ligne longue casse
+  // l'alignement des numéros et déforme le code indenté. Le repli reste à un
+  // clic pour qui lit une PR sur un écran étroit.
+  const [wrap, setWrap] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const commentsByPath = useMemo(() => {
@@ -698,15 +896,34 @@ export function PrDiff({
           </span>
           <span className="ml-1 tabular-nums text-red-600 dark:text-red-400">−{totalDel}</span>
         </p>
-        <SegmentedControl
-          className="w-40 shrink-0"
-          value={viewType}
-          onChange={setViewType}
-          options={[
-            { value: "unified", label: t("unified") },
-            { value: "split", label: t("split") },
-          ]}
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          {viewType === "unified" ? (
+          <button
+            type="button"
+            onClick={() => setWrap((w) => !w)}
+            aria-pressed={wrap}
+            aria-label={t("wrapLines")}
+            title={t("wrapLines")}
+            className={cn(
+              "flex size-7 items-center justify-center rounded-md border transition-colors",
+              wrap
+                ? "border-brand/40 bg-brand/10 text-brand"
+                : "border-border text-muted-foreground hover:bg-muted",
+            )}
+          >
+            <WrapText className="size-3.5" />
+          </button>
+          ) : null}
+          <SegmentedControl
+            className="w-40"
+            value={viewType}
+            onChange={setViewType}
+            options={[
+              { value: "unified", label: t("unified") },
+              { value: "split", label: t("split") },
+            ]}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -716,6 +933,8 @@ export function PrDiff({
             file={f}
             parsed={f.patch ? parsedByPath.get(f.filename) : undefined}
             viewType={viewType}
+            wrap={wrap}
+            locale={locale}
             endpoint={endpoint}
             prUrl={prUrl}
             provider={provider}

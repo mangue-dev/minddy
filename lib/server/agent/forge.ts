@@ -153,6 +153,13 @@ export interface Forge {
     path: string;
     ref: string;
   }): Promise<string | null>;
+  /** Mêmes octets sans décodage UTF-8 — la vue côte à côte des images du diff. */
+  getFileBytesAtRef(opts: {
+    token: string;
+    repoFullName: string;
+    path: string;
+    ref: string;
+  }): Promise<ArrayBuffer | null>;
   mergePullRequest(opts: {
     token: string;
     repoFullName: string;
@@ -369,6 +376,7 @@ const githubForge: Forge = {
   getBranchesMergeBaseSha: github.getMergeBaseSha,
   getMergeBaseSha: github.getMergeBaseSha,
   getFileAtRef: github.getFileAtRef,
+  getFileBytesAtRef: github.getFileBytesAtRef,
   mergePullRequest: github.mergePullRequest,
   submitReview: github.submitPullRequestReview,
   listReviews: github.listPullRequestReviews,
@@ -442,6 +450,7 @@ const gitlabForge: Forge = {
   getBranchesMergeBaseSha: gitlab.getBranchesMergeBaseSha,
   getMergeBaseSha: gitlab.getMergeBaseSha,
   getFileAtRef: gitlab.getFileAtRef,
+  getFileBytesAtRef: gitlab.getFileBytesAtRef,
   mergePullRequest: gitlab.mergeMergeRequest,
   submitReview: gitlab.submitMergeRequestReview,
   listReviews: gitlab.listMergeRequestApprovals,

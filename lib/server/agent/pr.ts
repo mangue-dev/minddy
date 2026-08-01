@@ -524,6 +524,11 @@ export async function compareBranches(opts: {
   };
 }
 
+/** Chemin de fichier encodé segment par segment : encodeURIComponent avalerait les `/`. */
+function encodePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
 /** Contenu brut d'un fichier à un ref donné, ou null s'il n'y existe pas. */
 export async function getFileAtRef(opts: {
   token: string;
@@ -532,12 +537,38 @@ export async function getFileAtRef(opts: {
   ref: string;
 }): Promise<string | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  // Chemin encodé segment par segment : encodeURIComponent avalerait les `/`.
-  const path = opts.path.split("/").map(encodeURIComponent).join("/");
   return ghRawText(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(opts.ref)}`,
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${encodePath(opts.path)}?ref=${encodeURIComponent(opts.ref)}`,
     opts.token,
   );
+}
+
+/**
+ * Mêmes octets, non décodés : la version image d'un fichier du diff (MIN-66).
+ * `getFileAtRef` passe par `res.text()`, qui interprète le corps en UTF-8 et
+ * remplace tout octet invalide par U+FFFD — un PNG en ressort corrompu. C'est la
+ * seule raison d'être de ce doublon.
+ */
+export async function getFileBytesAtRef(opts: {
+  token: string;
+  repoFullName: string;
+  path: string;
+  ref: string;
+}): Promise<ArrayBuffer | null> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${encodePath(opts.path)}?ref=${encodeURIComponent(opts.ref)}`;
+  const res = await fetch(url, { headers: githubHeaders(opts.token, "application/vnd.github.raw") });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    let message = `GitHub API error (${res.status})`;
+    try {
+      message = ((await res.json()) as { message?: string }).message ?? message;
+    } catch {
+      // Corps non-JSON (raw) : on garde le message par défaut.
+    }
+    throw new GithubApiError(message, res.status);
+  }
+  return res.arrayBuffer();
 }
 
 export async function mergePullRequest(opts: {

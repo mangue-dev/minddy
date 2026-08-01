@@ -48,6 +48,10 @@
   --diff-code-insert-edit-background-color: rgb(35 178 62 / 0.36);
   --diff-code-delete-edit-background-color: rgb(255 65 55 / 0.36);
   --diff-selection-background-color: rgb(48 152 208 / 0.30);
+  /* Le trait qui marque, en côte-à-côte, une ligne absente de ce côté. Défaut de
+     la lib : un rouge vif (#cb2a1d) qui se lit comme une erreur alors qu'il ne
+     dit qu'« il n'y a rien ici ». Neutralisé au ton des bordures. */
+  --diff-omit-gutter-line-color: var(--border);
 }
 .dark .pr-diff-view {
   --diff-code-insert-background-color: rgb(57 208 78 / 0.17);
@@ -75,6 +79,170 @@
 .pr-diff-view .diff-widget-content {
   font-family: var(--font-sans, inherit);
   white-space: normal;
+}
+
+/* ── Repli des lignes longues ─────────────────────────────────────────────────
+   react-diff-view livre `white-space: pre-wrap; word-break: break-all` : une
+   ligne longue se replie TOUJOURS, et la coupure tombe au caractère près — au
+   milieu d'un identifiant, d'une URL, d'un littéral. C'est la première chose qui
+   « ne collait pas » : du code coupé n'importe où ne se lit plus comme du code.
+
+   Deux régimes, désormais explicites. En UNIFIÉ, défilement par défaut comme les
+   forges (`pr-diff-scroll`) : `table-layout: auto` + `width: max-content`
+   laissent la table dépasser sa boîte au lieu d'être comprimée à 100 %. Sinon —
+   côte à côte, ou repli demandé — la table reste en `fixed` à 100 % pour que les
+   deux volets gardent la même largeur, et la coupure tombe alors aux frontières
+   de mots plutôt qu'au caractère.
+
+   C'est aussi pourquoi le bouton de repli ne s'affiche qu'en unifié : le
+   côte-à-côte n'a pas de second régime à offrir. */
+.pr-diff-view .diff-code {
+  padding-left: 1ch;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.pr-diff-view .pr-diff-scroll .diff {
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+}
+.pr-diff-view .pr-diff-scroll .diff-code {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+/* Une couture entre les numéros et le code : sans elle, sur une ligne colorée en
+   vert ou en rouge, les deux aplats se touchent et la gouttière se lit comme la
+   première colonne du code. */
+.pr-diff-view .diff-gutter {
+  border-right: 1px solid var(--border);
+  color: color-mix(in oklch, var(--foreground) 40%, transparent);
+}
+.pr-diff-view .diff-line {
+  line-height: 1.6;
+}
+
+/* Le signe + / − de GitHub, en `::before` : posé par le style, il ne fait pas
+   partie du texte de la ligne — un copier-coller du diff rend donc du code
+   compilable, pas du patch. */
+.pr-diff-view .diff-code-insert::before,
+.pr-diff-view .diff-code-delete::before {
+  display: inline-block;
+  width: 1ch;
+  margin-left: -1ch;
+  color: color-mix(in oklch, var(--foreground) 45%, transparent);
+  content: "+";
+}
+.pr-diff-view .diff-code-delete::before {
+  content: "−";
+}
+
+/* ── Coloration syntaxique (lib/diff-highlight.ts) ────────────────────────────
+   Palette maison, pas un thème highlight.js importé : ces couleurs se posent SUR
+   les aplats vert et rouge du diff, où un thème calibré pour un fond neutre perd
+   son contraste. Valeurs héritées de la famille Primer, la plus éprouvée sur
+   fond teinté, et déclarées en variables pour rester réglables d'un endroit.
+
+   Le surlignage mot-à-mot (`markEdits`) passe PAR-DESSUS via
+   --diff-code-*-edit-background-color : la couleur du texte, elle, reste celle
+   du token — c'est ce qui permet de lire à la fois « ce mot a changé » et « ce
+   mot est un mot-clé ». */
+.pr-diff-view {
+  --hl-comment: #6a737d;
+  --hl-keyword: #cf222e;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-function: #8250df;
+  --hl-variable: #953800;
+  --hl-tag: #116329;
+  --hl-meta: #57606a;
+}
+.dark .pr-diff-view {
+  --hl-comment: #8b949e;
+  --hl-keyword: #ff7b72;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-function: #d2a8ff;
+  --hl-variable: #ffa657;
+  --hl-tag: #7ee787;
+  --hl-meta: #8b949e;
+}
+.pr-diff-view .hljs-comment,
+.pr-diff-view .hljs-quote {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+.pr-diff-view .hljs-keyword,
+.pr-diff-view .hljs-selector-tag,
+.pr-diff-view .hljs-literal,
+.pr-diff-view .hljs-doctag,
+.pr-diff-view .hljs-formula {
+  color: var(--hl-keyword);
+}
+.pr-diff-view .hljs-string,
+.pr-diff-view .hljs-regexp,
+.pr-diff-view .hljs-char.escape_,
+.pr-diff-view .hljs-template-variable,
+.pr-diff-view .hljs-subst,
+.pr-diff-view .hljs-symbol,
+.pr-diff-view .hljs-bullet,
+.pr-diff-view .hljs-selector-attr,
+.pr-diff-view .hljs-selector-pseudo {
+  color: var(--hl-string);
+}
+.pr-diff-view .hljs-number,
+.pr-diff-view .hljs-attr,
+.pr-diff-view .hljs-attribute,
+.pr-diff-view .hljs-property,
+.pr-diff-view .hljs-variable.constant_,
+.pr-diff-view .hljs-selector-class,
+.pr-diff-view .hljs-selector-id {
+  color: var(--hl-number);
+}
+.pr-diff-view .hljs-title,
+.pr-diff-view .hljs-title.function_,
+.pr-diff-view .hljs-title.class_,
+.pr-diff-view .hljs-section,
+.pr-diff-view .hljs-built_in,
+.pr-diff-view .hljs-class .hljs-title {
+  color: var(--hl-function);
+}
+.pr-diff-view .hljs-variable,
+.pr-diff-view .hljs-variable.language_,
+.pr-diff-view .hljs-type,
+.pr-diff-view .hljs-params,
+.pr-diff-view .hljs-operator {
+  color: var(--hl-variable);
+}
+.pr-diff-view .hljs-tag,
+.pr-diff-view .hljs-name,
+.pr-diff-view .hljs-addition {
+  color: var(--hl-tag);
+}
+.pr-diff-view .hljs-meta,
+.pr-diff-view .hljs-meta .hljs-keyword,
+.pr-diff-view .hljs-comment .hljs-doctag {
+  color: var(--hl-meta);
+}
+.pr-diff-view .hljs-emphasis {
+  font-style: italic;
+}
+.pr-diff-view .hljs-strong {
+  font-weight: 600;
+}
+
+/* Damier des panneaux d'image du diff : une image transparente doit se voir
+   COMME transparente, pas se confondre avec le fond de la carte. */
+.pr-image-checker {
+  --checker: color-mix(in oklch, var(--foreground) 7%, transparent);
+  background-image:
+    linear-gradient(45deg, var(--checker) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--checker) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--checker) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--checker) 75%);
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  background-size: 10px 10px;
 }
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
