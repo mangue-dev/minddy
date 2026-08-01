@@ -36,9 +36,17 @@ import { getGithubUserToken, updateIdentityAccount } from "./user-identities";
  * En mémoire, pas en base : `updated_at` ne peut pas servir de marqueur (il bouge
  * à chaque rotation de token, et jamais pour un token permanent), et ce garde ne
  * mérite pas une colonne. Le pire cas d'un process neuf est un appel de plus.
+ *
+ * On garde la PASSE, pas seulement sa date : la page des réglages monte les deux
+ * requêtes ensemble (`useGitIdentitiesQuery` + `useGitConnectionsQuery` dans
+ * `account-git-identity-section.tsx`), et un garde qui ne saurait dire que
+ * « quelqu'un s'en occupe » laisserait la seconde lire les lignes d'AVANT
+ * l'écriture — le nom périmé s'afficherait sur le chargement même qui devait le
+ * corriger. Attendre une passe déjà terminée ne coûte rien : la promesse est
+ * résolue.
  */
 const REFRESH_TTL_MS = 10 * 60_000;
-const lastRefreshByUser = new Map<string, number>();
+const refreshByUser = new Map<string, { at: number; done: Promise<void> }>();
 
 /** Le compte GitHub personnel : le token fait autorité sur id, login et avatar. */
 async function refreshGithubIdentity(userId: string): Promise<void> {
@@ -87,17 +95,11 @@ async function refreshGithubInstallations(userId: string): Promise<void> {
 }
 
 /**
- * Recale les noms de tous les comptes de forge de cet utilisateur, best-effort
- * de bout en bout : une forge muette laisse le nom d'hier à l'écran, elle ne
- * fait jamais échouer la page des réglages. Ne lève donc JAMAIS.
+ * Les trois branches, en parallèle. Chacune est rattrapée séparément : une forge
+ * muette laisse le nom d'hier à l'écran, elle n'emporte pas les deux autres — et
+ * cette promesse-ci ne rejette donc JAMAIS, ce dont dépend son partage plus bas.
  */
-export async function refreshForgeAccountNames(userId: string): Promise<void> {
-  const now = Date.now();
-  const last = lastRefreshByUser.get(userId);
-  if (last != null && now - last < REFRESH_TTL_MS) return;
-  // Posé AVANT les appels : deux chargements concurrents n'en déclenchent qu'un.
-  lastRefreshByUser.set(userId, now);
-
+async function runRefresh(userId: string): Promise<void> {
   const branches: [string, Promise<void>][] = [
     ["github identity", refreshGithubIdentity(userId)],
     ["gitlab connection", refreshGitlabConnection(userId)],
@@ -112,4 +114,29 @@ export async function refreshForgeAccountNames(userId: string): Promise<void> {
       }),
     ),
   );
+}
+
+/**
+ * Recale les noms de tous les comptes de forge de cet utilisateur, best-effort
+ * de bout en bout : une forge muette laisse le nom d'hier à l'écran, elle ne
+ * fait jamais échouer la page des réglages. Ne lève donc JAMAIS.
+ *
+ * Rend la main quand les lignes sont à jour — pas avant. C'est ce que l'appelant
+ * attend : il LIT juste après.
+ */
+export async function refreshForgeAccountNames(userId: string): Promise<void> {
+  const now = Date.now();
+  const pending = refreshByUser.get(userId);
+  // Une passe de la fenêtre ne se rejoue pas ; si elle court encore, on l'attend
+  // au lieu de la doubler — ou de lire par-dessus son épaule.
+  if (pending && now - pending.at < REFRESH_TTL_MS) {
+    await pending.done;
+    return;
+  }
+  // Posée AVANT l'attente : deux chargements concurrents n'en déclenchent qu'une,
+  // et le second attend LA MÊME. Une passe qui échoue garde sa place dans la
+  // fenêtre : on ne matraque pas une forge en panne à chaque rechargement.
+  const done = runRefresh(userId);
+  refreshByUser.set(userId, { at: now, done });
+  await done;
 }
