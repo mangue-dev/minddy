@@ -58,6 +58,10 @@ import {
   useCommentReactions,
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
+import {
+  PrReviewActivity,
+  PrReviewLiveCard,
+} from "@/components/pull-requests/pr-review-thread";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { UserAvatar } from "@/components/user-avatar";
@@ -83,6 +87,7 @@ import {
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
@@ -280,6 +285,7 @@ function ThreadComment({
   body,
   onQuoteReply,
   reactions,
+  activity,
 }: {
   commentId: number;
   user: { login: string; avatar_url: string | null } | null;
@@ -290,6 +296,10 @@ function ThreadComment({
   onQuoteReply?: () => void;
   /** Absentes quand la forge n'a pas su les lire : on n'affiche alors rien. */
   reactions?: CommentReactions;
+  /** Déroulé replié AU-DESSUS du corps, pour le message qui en porte un — la
+      review de Numo est le seul cas : son verdict est le message, son travail
+      est ce qui l'a produit. */
+  activity?: React.ReactNode;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
@@ -343,6 +353,9 @@ function ThreadComment({
           </Tooltip>
         ) : null}
       </div>
+      {/* Le déroulé se pose à distance de l'en-tête : collé au nom, il se lisait
+          comme une seconde ligne de signature. */}
+      {activity ? <div className="pt-1.5">{activity}</div> : null}
       <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
         {body}
       </Markdown>
@@ -416,9 +429,13 @@ export function PrDetail({
   const [model, setModel] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
-  // Numo relit la PR (MIN-141) : un appel modèle, donc long — le bouton Review
-  // porte le spinner, comme les autres gestes de la barre.
-  const [aiReviewing, setAiReviewing] = useState(false);
+  // Numo relit la PR (MIN-141) : une SESSION, pas un appel bloquant — elle se
+  // joue DANS le fil, à la place de son futur message de verdict, et survit à un
+  // rechargement.
+  const reviewSession = usePrReviewSession(item.prId);
+  const [aiReviewDialog, setAiReviewDialog] = useState(false);
+  const [aiReviewModel, setAiReviewModel] = useState("");
+  const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<"conversation" | "commits" | "files">("conversation");
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -469,6 +486,52 @@ export function PrDetail({
     }
     prevWorking.current = isWorking;
   }, [isWorking, refetchPr, refetchComments, refetchCommits, refetchReviewComments]);
+
+  const aiReviewActive = reviewSession.active;
+
+  // Quand la passe se termine, ce qu'elle a écrit est SUR la PR : la synthèse
+  // dans le fil, les points dans l'onglet Fichiers. Les deux surfaces se
+  // rafraîchissent, comme après une fin de run.
+  const prevReviewing = useRef(aiReviewActive);
+  useEffect(() => {
+    if (prevReviewing.current && !aiReviewActive) {
+      void refetchComments();
+      void refetchReviewComments();
+    }
+    prevReviewing.current = aiReviewActive;
+  }, [aiReviewActive, refetchComments, refetchReviewComments]);
+
+  // Numo a-t-il déjà relu EXACTEMENT ce diff ? Tant que la tête n'a pas bougé,
+  // relancer repaierait un tour de modèle pour le même code. Tête inconnue (la
+  // forge n'a pas encore répondu) = on n'empêche rien : mieux vaut laisser
+  // relancer que bloquer sur une ignorance.
+  const currentHeadSha = pr?.headSha ?? null;
+  const reviewUpToDate =
+    !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
+
+  /**
+   * La carte de session à montrer dans le fil, ou rien. Trois cas seulement, et
+   * ils s'excluent :
+   *  - la passe TOURNE → on montre ce qu'elle fait, à la place du futur message ;
+   *  - elle est finie mais son message n'est pas encore redescendu de la forge →
+   *    la carte tient la place le temps du refetch, sinon le fil clignote ;
+   *  - elle a ÉCHOUÉ (ou a été interrompue) → rien n'a été publié, donc aucun
+   *    message ne viendra le dire. Réservé à qui l'a demandée : pour les autres,
+   *    c'est une ligne rouge sur laquelle ils ne peuvent rien.
+   */
+  const reviewCard = (() => {
+    const review = reviewSession.review;
+    if (!review) return null;
+    if (aiReviewActive) return review;
+    if (review.status === "done") {
+      // Sans id de message, on ne saura JAMAIS dire qu'il est arrivé : la carte
+      // resterait à vie. Le commentaire est sur la forge de toute façon — c'est
+      // lui qui parle, pas la carte.
+      if (review.summaryCommentId === null) return null;
+      return comments.some((c) => c.id === review.summaryCommentId) ? null : review;
+    }
+    return review.mine ? review : null;
+  })();
 
   const act = async (action: "merge" | "close" | "ready_for_review", method?: MergeMethod) => {
     if (acting) return;
@@ -536,28 +599,34 @@ export function PrDetail({
    * celles que Numo n'a pas ouvertes : relire ne demande qu'un diff, là où
    * « relancer Numo » a besoin d'une branche à hériter.
    *
-   * Une fois la passe finie, les deux surfaces où elle atterrit sont
-   * rafraîchies : la synthèse est un commentaire du fil, les points sont des
-   * commentaires de ligne dans l'onglet Fichiers.
+   * Le geste passe par un dialogue parce qu'il porte maintenant un CHOIX : le
+   * modèle. Une grosse PR ne se relit pas comme un one-liner, et c'est au moment
+   * du clic qu'on le sait — pas dans un réglage posé une fois pour toutes.
    */
-  const requestAiReview = async () => {
-    if (aiReviewing) return;
-    setAiReviewing(true);
-    // Un tour de modèle sur un diff entier prend de longues secondes : le
-    // spinner du bouton dit qu'il se passe quelque chose, le toast dit QUOI.
-    toast.info(t("aiReviewStarted"));
+  const openAiReviewDialog = () => {
+    // Le dernier choix du compte, sinon « le défaut de minddy » (chaîne vide).
+    setAiReviewModel(reviewSession.model?.preferred ?? "");
+    setAiReviewDialog(true);
+  };
+
+  /**
+   * Lance la passe et ouvre le panneau. La réponse ne l'attend pas : elle rend
+   * la session, et c'est le panneau qui montre la suite en direct.
+   */
+  const startAiReview = async () => {
+    if (startingAiReview) return;
+    setStartingAiReview(true);
     try {
-      const result = await requestPullRequestAiReviewApi(item.prId);
-      toast.success(
-        result.inlineComments > 0
-          ? t("aiReviewDoneWithComments", { count: result.inlineComments })
-          : t("aiReviewDone"),
-      );
-      await Promise.all([refetchComments(), refetchReviewComments(), refetchPr()]);
+      await requestPullRequestAiReviewApi(item.prId, aiReviewModel);
+      setAiReviewDialog(false);
+      // La passe se regarde dans le fil : y ramener, sinon elle se joue sous un
+      // onglet que personne ne regarde.
+      setTab("conversation");
+      await reviewSession.refetch();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setAiReviewing(false);
+      setStartingAiReview(false);
     }
   };
 
@@ -718,8 +787,8 @@ export function PrDetail({
             {canComment ? (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={aiReviewing}>
-                    {aiReviewing ? <Spinner /> : null}
+                  <Button variant="outline" size="sm">
+                    {aiReviewActive ? <Spinner /> : null}
                     {t("review")}
                     <ChevronDown className="size-3.5" />
                   </Button>
@@ -738,9 +807,20 @@ export function PrDetail({
                     {t("reviewComment")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => void requestAiReview()}>
+                  <DropdownMenuItem
+                    // Déjà relu ce diff, ou une passe en cours : l'entrée reste
+                    // VISIBLE et se grise, avec son libellé qui dit pourquoi.
+                    disabled={aiReviewActive || reviewUpToDate}
+                    onSelect={openAiReviewDialog}
+                  >
                     <NumoIcon animated={false} />
-                    {t("aiReview")}
+                    {aiReviewActive
+                      ? t("numoReviewRunning")
+                      : reviewUpToDate
+                        ? t("numoReviewUpToDateShort")
+                        : reviewSession.review
+                          ? t("numoReviewRerun")
+                          : t("aiReview")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -748,11 +828,15 @@ export function PrDetail({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={aiReviewing}
-                onClick={() => void requestAiReview()}
+                disabled={aiReviewActive || reviewUpToDate}
+                onClick={openAiReviewDialog}
               >
-                {aiReviewing ? <Spinner /> : <NumoIcon animated={false} />}
-                {t("aiReview")}
+                {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
+                {aiReviewActive
+                  ? t("numoReviewRunning")
+                  : reviewUpToDate
+                    ? t("numoReviewUpToDateShort")
+                    : t("aiReview")}
               </Button>
             )}
 
@@ -973,7 +1057,7 @@ export function PrDetail({
             <TabsContent value="conversation" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
                 <Skeleton className="h-16 rounded-lg" />
-              ) : !prDescription && comments.length === 0 ? (
+              ) : !prDescription && comments.length === 0 && !reviewCard ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
                 // Mêmes cartes que les commentaires d'issue (CommentCard) : bordure,
@@ -1011,8 +1095,32 @@ export function PrDetail({
                           : undefined
                       }
                       reactions={threadReactions}
+                      // Le message de VERDICT de Numo porte le déroulé de sa
+                      // passe : ce qu'il a lu, les points qu'il a posés. Replié
+                      // sous le même accordéon que le fil de l'agent — la review
+                      // vit avec son message, pas dans un écran à côté.
+                      activity={
+                        reviewSession.review &&
+                        reviewSession.review.summaryCommentId === c.id ? (
+                          <PrReviewActivity
+                            review={reviewSession.review}
+                            events={reviewSession.events}
+                          />
+                        ) : null
+                      }
                     />
                   ))}
+                  {/* La passe EN COURS prend la place que son message occupera :
+                      c'est là que le lecteur regarde, et c'est là que le verdict
+                      tombera. Elle s'efface dès que le vrai message arrive. */}
+                  {reviewCard ? (
+                    <PrReviewLiveCard
+                      review={reviewCard}
+                      events={reviewSession.events}
+                      live={reviewSession.live}
+                      active={aiReviewActive}
+                    />
+                  ) : null}
                 </ul>
               )}
 
@@ -1131,6 +1239,54 @@ export function PrDetail({
             >
               {acting ? <Spinner /> : null}
               {confirmAction?.kind === "merge" ? t("merge") : t("reject")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* « Faire vérifier par Numo » — le seul choix à faire est le modèle, et
+          il se fait ICI, au clic : le défaut de l'instance convient la plupart
+          du temps, une grosse PR mérite parfois mieux. Le choix est retenu pour
+          la prochaine fois ; « défaut de minddy » l'efface. */}
+      <Dialog
+        open={aiReviewDialog}
+        onOpenChange={(next) => {
+          if (!next && !startingAiReview) setAiReviewDialog(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("aiReview")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("numoReviewDialogDescription")}</p>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground">{t("numoReviewModelLabel")}</span>
+            <ModelCombobox
+              // Catalogue de la clé plateforme, filtré tool-calling : la review
+              // tourne dessus quel que soit le BYOK du compte (`review`).
+              scope="review"
+              value={aiReviewModel}
+              onChange={setAiReviewModel}
+              defaultLabel={t("numoReviewModelInstance")}
+              defaultModelId={reviewSession.model?.instance ?? null}
+              placeholder={tAgent("modelSearchPlaceholder")}
+              emptyLabel={tAgent("modelSearchEmpty")}
+              loadingLabel={tAgent("modelSearchLoading")}
+              freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+              disabled={startingAiReview}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={startingAiReview}
+              onClick={() => setAiReviewDialog(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button disabled={startingAiReview} onClick={() => void startAiReview()}>
+              {startingAiReview ? <Spinner /> : <NumoIcon animated={false} />}
+              {t("numoReviewStart")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -12,6 +12,19 @@ import { ensureUsageBudget } from "@/lib/server/usage";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { runPrAiReview } from "./pr-ai-review";
+import {
+  activePrReviewRun,
+  createPrReviewRun,
+  finishPrReviewRun,
+  getInstancePrReviewModel,
+  getUserPrReviewModel,
+  lastFinishedPrReviewRun,
+  latestPrReviewRun,
+  openPrReviewRecorder,
+  prReviewEvents,
+  rememberPrReviewModel,
+  resolvePrReviewModel,
+} from "./pr-review-runs";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
 import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
@@ -1331,13 +1344,19 @@ export async function prReviewResponse(
  *  2. **le budget d'usage** — comme partout où un clic déclenche un appel LLM :
  *     c'est le déclencheur qui paye.
  *
- * Les erreurs du modèle (clé absente, réponse hors format) sortent en 502 avec
- * un code — la review n'a simplement pas eu lieu, rien n'a été posté.
+ * La réponse n'ATTEND PLUS la review : elle ouvre la session (`pr_review_runs`),
+ * rend son id en 202, et la passe se joue dans `after()`. Ce qui change pour
+ * l'utilisateur : il voit Numo lire, réfléchir et écrire au lieu de fixer un
+ * spinner pendant trois minutes, et fermer l'onglet n'interrompt plus une passe
+ * à moitié postée. Les échecs (clé absente, réponse hors format, forge tombée)
+ * n'ont donc plus de code HTTP à porter : ils s'écrivent dans le fil de la
+ * session, avec leur code, et l'écran les traduit.
  */
 export async function prAiReviewResponse(
   scope: PrScope,
   userId: string,
   locale: string,
+  requestedModel?: string | null,
 ): Promise<Response> {
   try {
     await ensureAgentsAllowed(userId);
@@ -1347,30 +1366,108 @@ export async function prAiReviewResponse(
     throw err;
   }
 
-  try {
-    const result = await runPrAiReview({
-      forge: scope.forge,
-      call: scope.call,
-      pr: scope.pr,
-      userId,
-      locale,
-    });
-    if (!result.ok) {
-      // « Rien à relire » n'est pas une panne (409) ; un modèle absent ou hors
-      // format en est une, et elle vient d'en face (502). Dans les deux cas rien
-      // n'a été posté sur la PR — le message le dit, le code le laisse brancher.
-      const t = await getTranslations("ApiErrors");
-      const noDiff = result.error === "noDiff";
-      return NextResponse.json(
-        {
-          error: t(noDiff ? "aiReviewNoDiff" : "aiReviewFailed"),
-          code: result.error,
-        },
-        { status: noDiff ? 409 : 502 },
-      );
+  // Une passe tourne déjà sur cette PR : on rend la sienne plutôt que d'en
+  // ouvrir une deuxième. Deux tours de modèle sur le même diff, c'est deux fois
+  // la dépense pour deux fois le même avis — et deux jeux de commentaires.
+  const running = await activePrReviewRun(scope.pr.id);
+  if (running) return NextResponse.json({ ok: true, review: running }, { status: 202 });
+
+  // Trois cas, et ils sont distincts : un modèle NOMMÉ (on le prend et on le
+  // retient), la chaîne VIDE (« revenir au défaut de minddy » — on efface le
+  // choix retenu, sans quoi il gagnerait pour toujours), et l'absence de champ
+  // (on résout comme d'habitude, sans rien toucher).
+  const chosen = requestedModel?.trim();
+  if (requestedModel !== undefined && !chosen) await rememberPrReviewModel(userId, null);
+  const model = await resolvePrReviewModel({
+    perCall: chosen,
+    userId,
+    // Le choix retenu ne doit pas revenir par la fenêtre quand on vient
+    // justement de demander le défaut.
+    ignoreRemembered: requestedModel !== undefined && !chosen,
+  });
+  const run = await createPrReviewRun({ pullRequestId: scope.pr.id, userId, model });
+  // Le choix n'est retenu que s'il a été FAIT : figer le défaut de l'instance
+  // sur le compte le gèlerait à la valeur du jour, et un changement en /admin
+  // ne l'atteindrait plus.
+  if (chosen) await rememberPrReviewModel(userId, model);
+
+  const recorder = openPrReviewRecorder(run.id);
+
+  // La passe part en tâche de fond, la réponse ne l'attend pas. C'est ce qui la
+  // rend REGARDABLE : l'écran reçoit tout de suite l'id de la session, s'abonne
+  // à son direct, et la review continue même si on quitte la page — trois
+  // minutes de requête suspendue, un onglet fermé, et les commentaires déjà
+  // posés seraient restés seuls, sans la synthèse qui les explique.
+  after(async () => {
+    try {
+      const result = await runPrAiReview({
+        forge: scope.forge,
+        call: scope.call,
+        pr: scope.pr,
+        userId,
+        locale,
+        model,
+        recorder,
+      });
+      if (!result.ok) {
+        await recorder.failed(result.error);
+        await finishPrReviewRun(run.id, {
+          status: "failed",
+          headSha: result.headSha,
+          error: result.error,
+        });
+        return;
+      }
+      await finishPrReviewRun(run.id, {
+        status: "done",
+        headSha: result.headSha,
+        verdict: result.verdict,
+        inlineComments: result.inlineComments,
+        summaryCommentId: result.summaryCommentId,
+      });
+      await recorder.status("finished");
+    } catch (err) {
+      // Une panne de forge en cours de passe (token expiré, dépôt retiré) : elle
+      // n'a plus personne à qui répondre en HTTP, elle se dit donc dans le fil.
+      console.error("[pr-actions] ai review failed:", (err as Error).message);
+      await recorder.failed("forge");
+      await finishPrReviewRun(run.id, { status: "failed", error: "forge" });
     }
-    return NextResponse.json(result);
-  } catch (err) {
-    return forgeErrorResponse(err);
-  }
+  });
+
+  return NextResponse.json({ ok: true, review: run }, { status: 202 });
+}
+
+/**
+ * L'état de la review de Numo sur cette PR : la dernière session, son flux, et
+ * de quoi décider s'il y a lieu d'en relancer une.
+ *
+ * `reviewedHeadSha` est le SHA que la dernière passe TERMINÉE a lu. L'écran le
+ * compare à la tête courante : tant qu'ils sont égaux, relancer repaierait un
+ * tour de modèle pour exactement le même code, et l'entrée du menu se grise.
+ * C'est le serveur qui le dit, pas l'écran qui le devine.
+ *
+ * `defaultModel` est le modèle qui partirait au prochain clic — dernier choix du
+ * compte, sinon le défaut de l'instance : ce que le picker doit présenter comme
+ * sélectionné.
+ */
+export async function prReviewRunResponse(
+  scope: PrScope,
+  userId: string,
+): Promise<NextResponse> {
+  const [run, lastFinished, instance, preferred] = await Promise.all([
+    latestPrReviewRun(scope.pr.id, userId),
+    lastFinishedPrReviewRun(scope.pr.id),
+    getInstancePrReviewModel(),
+    getUserPrReviewModel(userId),
+  ]);
+  const events = run ? await prReviewEvents(run.id) : [];
+  return NextResponse.json({
+    review: run,
+    events,
+    reviewedHeadSha: lastFinished?.headSha ?? null,
+    // `instance` = le défaut réglé en /admin (ce que « défaut » veut dire dans le
+    // picker) ; `preferred` = le dernier choix du compte, ou null.
+    model: { instance, preferred },
+  });
 }

@@ -13,6 +13,7 @@ import {
   formatReviewBody,
   normalizeFindingPath,
   parseAiReview,
+  parsePartialReview,
   selectFindings,
   type ReviewFinding,
   type ReviewNote,
@@ -492,5 +493,61 @@ describe("buildReviewSystemPrompt", () => {
     expect(prompt).toContain("decided before the code was written");
     expect(prompt).toContain("Departing from the plan is not a defect in itself");
     expect(prompt).toContain("Do not say again what has already been said");
+  });
+});
+
+describe("parsePartialReview", () => {
+  /** Le tool call tel qu'il arrive : coupé n'importe où, y compris au milieu
+   *  d'un mot, d'un échappement ou d'un objet. */
+  const FULL = JSON.stringify({
+    summary: "Cette PR ajoute un compteur.\nLe reste **tient**.",
+    verdict: "comment",
+    findings: [
+      { path: "lib/a.ts", line: 12, side: "RIGHT", severity: "risk", body: "Cas non couvert." },
+      { path: "lib/b.ts", line: 3, side: "LEFT", severity: "nit", body: "Nom trompeur." },
+    ],
+  });
+
+  it("rend la synthèse échappements résolus, avant même la fin de la phrase", () => {
+    const cut = FULL.slice(0, FULL.indexOf("compteur"));
+    const partial = parsePartialReview(cut);
+    expect(partial.summary).toBe("Cette PR ajoute un");
+    // Le `\n` du JSON est une VRAIE fin de ligne à l'écran, pas deux caractères.
+    expect(parsePartialReview(FULL).summary).toContain("compteur.\nLe reste");
+  });
+
+  it("ne rend que les points COMPLETS — un point à moitié écrit n'a pas d'ancre", () => {
+    const cut = FULL.slice(0, FULL.indexOf('"body":"Nom') + 10);
+    const partial = parsePartialReview(cut);
+    expect(partial.findings).toHaveLength(1);
+    expect(partial.findings[0]).toMatchObject({ path: "lib/a.ts", line: 12 });
+    expect(parsePartialReview(FULL).findings).toHaveLength(2);
+  });
+
+  it("survit à une coupe au milieu d'un échappement", () => {
+    const src = '{"summary": "avant\\';
+    expect(parsePartialReview(src).summary).toBe("avant");
+    expect(parsePartialReview('{"summary": "avant\\u00e').summary).toBe("avant");
+    expect(parsePartialReview('{"summary": "avant\\u00e9"').summary).toBe("avanté");
+  });
+
+  it("ne confond pas une clé citée DANS un texte avec la vraie clé", () => {
+    const src = '{"summary": "on parle de \\"findings\\" ici", "findings": [';
+    const partial = parsePartialReview(src);
+    expect(partial.summary).toBe('on parle de "findings" ici');
+    expect(partial.findings).toEqual([]);
+  });
+
+  it("rend du vide sur une entrée vide plutôt que de lever", () => {
+    expect(parsePartialReview("")).toEqual({ summary: "", findings: [] });
+    expect(parsePartialReview("{")).toEqual({ summary: "", findings: [] });
+    expect(parsePartialReview('{"verdict": "approve"}').summary).toBe("");
+  });
+
+  it("lit la même chose que parseAiReview une fois le flux terminé", () => {
+    const complete = parseAiReview(JSON.parse(FULL));
+    const partial = parsePartialReview(FULL);
+    expect(partial.summary).toBe(complete?.summary);
+    expect(partial.findings).toEqual(complete?.findings);
   });
 });

@@ -8,19 +8,24 @@ import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-provid
  * bouge lentement. La clé de query est invalidée quand le BYOK change
  * (cf. account-ai-keys-section) → le provider et la liste se rafraîchissent.
  *
- * Deux portées :
+ * Trois portées :
  *  - `user` (défaut) → `/api/agent/models`, le provider ACTIF du compte (son
  *    BYOK ou la clé plateforme) : ce que SON agent peut lancer ;
  *  - `platform` → `/api/admin/models-catalog`, la clé plateforme OpenRouter
  *    sans filtre tool-calling, pour la config admin (MIN-90). Le BYOK de l'admin
- *    n'a rien à faire là : `app_config` tourne sur la plateforme.
+ *    n'a rien à faire là : `app_config` tourne sur la plateforme ;
+ *  - `review` → `/api/agent/review-models`, la clé plateforme AVEC le filtre
+ *    tool-calling, pour le choix du modèle de review d'une PR : cette passe
+ *    tourne sur la plateforme et force un tool call, quel que soit le BYOK du
+ *    compte.
  */
 
-export type AgentModelsScope = "user" | "platform";
+export type AgentModelsScope = "user" | "platform" | "review";
 
 const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
   user: "/api/agent/models",
   platform: "/api/admin/models-catalog",
+  review: "/api/agent/review-models",
 };
 
 export interface AgentModel {

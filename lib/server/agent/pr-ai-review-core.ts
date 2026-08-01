@@ -1,3 +1,4 @@
+import type { FindingSeverity } from "@/lib/pr-review-run";
 import { headTail } from "./prune";
 import { resolveDiffPosition } from "./mr-position";
 
@@ -48,8 +49,10 @@ export interface ReviewableFile {
   previous_filename?: string;
 }
 
-/** Gravité d'un point, de la plus sérieuse à la moins : décide qui passe en ligne. */
-export type FindingSeverity = "blocker" | "risk" | "nit";
+/** Gravité d'un point, de la plus sérieuse à la moins : décide qui passe en ligne.
+ *  Déclarée dans `lib/pr-review-run` — elle voyage jusqu'à l'écran, qui n'importe
+ *  rien de `lib/server`. Ré-exportée ici pour les appelants de ce module. */
+export type { FindingSeverity };
 
 export interface ReviewFinding {
   path: string;
@@ -565,24 +568,191 @@ export function parseAiReview(raw: unknown): AiReview | null {
 
   const findings: ReviewFinding[] = [];
   for (const item of Array.isArray(r.findings) ? r.findings : []) {
-    const f = (item ?? {}) as Record<string, unknown>;
-    const path = typeof f.path === "string" ? f.path.trim() : "";
-    const body = typeof f.body === "string" ? f.body.trim() : "";
-    const line = typeof f.line === "number" ? f.line : Number(f.line);
-    if (!path || !body || !Number.isInteger(line) || line < 1) continue;
-    findings.push({
-      path,
-      line,
-      body,
-      side: typeof f.side === "string" && SIDES.has(f.side) ? (f.side as "LEFT" | "RIGHT") : "RIGHT",
-      severity:
-        typeof f.severity === "string" && SEVERITIES.has(f.severity)
-          ? (f.severity as FindingSeverity)
-          : "risk",
-    });
+    const finding = normalizeFinding(item);
+    if (finding) findings.push(finding);
   }
 
   return { summary, verdict, findings };
+}
+
+/** Un point du tool call, validé. `null` = mal formé, il est écarté seul. */
+function normalizeFinding(item: unknown): ReviewFinding | null {
+  const f = (item ?? {}) as Record<string, unknown>;
+  const path = typeof f.path === "string" ? f.path.trim() : "";
+  const body = typeof f.body === "string" ? f.body.trim() : "";
+  const line = typeof f.line === "number" ? f.line : Number(f.line);
+  if (!path || !body || !Number.isInteger(line) || line < 1) return null;
+  return {
+    path,
+    line,
+    body,
+    side: typeof f.side === "string" && SIDES.has(f.side) ? (f.side as "LEFT" | "RIGHT") : "RIGHT",
+    severity:
+      typeof f.severity === "string" && SEVERITIES.has(f.severity)
+        ? (f.severity as FindingSeverity)
+        : "risk",
+  };
+}
+
+// ── Lecture de la réponse EN COURS D'ÉCRITURE ────────────────────────────────
+
+/**
+ * Ce qui est lisible d'un tool call encore en train de s'écrire — la moitié qui
+ * rend la vue en direct HONNÊTE.
+ *
+ * Le direct d'une review ne peut pas montrer le flux brut : ce que le modèle
+ * écrit est un objet JSON dans le champ `arguments` d'un tool call, et afficher
+ * `{"summary":"Cette PR ajo` à quelqu'un, c'est lui montrer notre plomberie.
+ * `JSON.parse` ne peut rien en faire non plus tant que l'objet n'est pas clos —
+ * c'est-à-dire jamais, pendant toute la durée de l'écriture.
+ *
+ * D'où une lecture TOLÉRANTE, qui ne suppose que deux choses vraies à chaque
+ * instant : une chaîne JSON se lit jusqu'à son guillemet non échappé, et un
+ * objet se lit jusqu'à son accolade fermante. On rend donc :
+ *  - la **synthèse** telle qu'écrite jusqu'ici, échappements résolus (c'est du
+ *    texte pour un humain — un `\n` littéral s'y verrait) ;
+ *  - les points **complets**, et eux seuls : un point à moitié écrit n'a pas
+ *    encore son ancre, et il apparaîtrait puis changerait sous les yeux.
+ *
+ * Aucune exception ne sort d'ici : une réponse à moitié écrite est l'état
+ * NORMAL de cette fonction, pas une erreur.
+ */
+export interface PartialReview {
+  summary: string;
+  findings: ReviewFinding[];
+}
+
+export function parsePartialReview(args: string): PartialReview {
+  return {
+    summary: readKeyString(args, "summary").trim(),
+    findings: readKeyFindings(args),
+  };
+}
+
+/** Valeur (chaîne) d'une clé, lue là où elle en est. "" si la clé n'a pas commencé. */
+function readKeyString(src: string, key: string): string {
+  const at = keyValueStart(src, key);
+  if (at < 0 || src[at] !== '"') return "";
+  return readJsonString(src, at + 1).value;
+}
+
+/**
+ * Index du premier caractère de la valeur d'une clé de premier niveau, ou -1.
+ * Recherche la clé en tant que CHAÎNE (`"key"`) suivie d'un `:` — un `"summary"`
+ * qui apparaîtrait dans le texte d'un point ne serait pas suivi de `:`.
+ */
+function keyValueStart(src: string, key: string): number {
+  const needle = `"${key}"`;
+  let from = 0;
+  for (;;) {
+    const at = src.indexOf(needle, from);
+    if (at < 0) return -1;
+    let i = at + needle.length;
+    while (i < src.length && /\s/.test(src[i])) i++;
+    if (src[i] === ":") {
+      i++;
+      while (i < src.length && /\s/.test(src[i])) i++;
+      return i;
+    }
+    from = at + needle.length;
+  }
+}
+
+const ESCAPES: Record<string, string> = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+};
+
+/**
+ * Lit une chaîne JSON à partir de `from` (juste après le guillemet ouvrant).
+ * `closed` dit si le guillemet fermant a été vu — sinon la chaîne s'écrit
+ * encore. Un échappement coupé en deux par la frontière d'un chunk (`\` seul, ou
+ * `\u00e` tronqué) est ABANDONNÉ plutôt que rendu de travers : il arrivera
+ * entier au flush suivant.
+ */
+function readJsonString(src: string, from: number): { value: string; closed: boolean; end: number } {
+  let out = "";
+  let i = from;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '"') return { value: out, closed: true, end: i + 1 };
+    if (c !== "\\") {
+      out += c;
+      i++;
+      continue;
+    }
+    const esc = src[i + 1];
+    if (esc === undefined) break;
+    if (esc === "u") {
+      const hex = src.slice(i + 2, i + 6);
+      if (hex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(hex)) break;
+      out += String.fromCharCode(parseInt(hex, 16));
+      i += 6;
+      continue;
+    }
+    const mapped = ESCAPES[esc];
+    if (mapped === undefined) break;
+    out += mapped;
+    i += 2;
+  }
+  return { value: out, closed: false, end: src.length };
+}
+
+/** Les points COMPLETS du tableau `findings`, dans l'ordre d'écriture. */
+function readKeyFindings(src: string): ReviewFinding[] {
+  const at = keyValueStart(src, "findings");
+  if (at < 0 || src[at] !== "[") return [];
+
+  const findings: ReviewFinding[] = [];
+  let i = at + 1;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === "]") break;
+    if (c !== "{") {
+      i++;
+      continue;
+    }
+    const end = objectEnd(src, i);
+    // Objet encore ouvert : c'est celui qui s'écrit, et il n'y en aura pas
+    // d'autre derrière lui.
+    if (end < 0) break;
+    try {
+      const finding = normalizeFinding(JSON.parse(src.slice(i, end)));
+      if (finding) findings.push(finding);
+    } catch {
+      // Un point illisible est sauté ; le suivant, lui, sera peut-être bon.
+    }
+    i = end;
+  }
+  return findings;
+}
+
+/** Index juste après l'accolade fermante de l'objet ouvert en `from`, ou -1. */
+function objectEnd(src: string, from: number): number {
+  let depth = 0;
+  let i = from;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '"') {
+      const s = readJsonString(src, i + 1);
+      if (!s.closed) return -1;
+      i = s.end;
+      continue;
+    }
+    if (c === "{") depth++;
+    if (c === "}") {
+      depth--;
+      if (depth === 0) return i + 1;
+    }
+    i++;
+  }
+  return -1;
 }
 
 // ── Ancrage ──────────────────────────────────────────────────────────────────

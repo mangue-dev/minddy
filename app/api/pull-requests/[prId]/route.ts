@@ -18,7 +18,10 @@ import {
  *       | { action: 'close' }
  *       | { action: 'ready_for_review' }                     → brouillon → prête
  *       | { action: 'review', verdict, message, relaunch?, model? }
- *       | { action: 'ai_review' }                            → Numo relit (MIN-141)
+ *       | { action: 'ai_review', model? }                    → Numo relit (MIN-141)
+ *
+ * `ai_review` rend un 202 avec la SESSION de review (`pr_review_runs`) : la
+ * passe se joue en tâche de fond et se regarde en direct sur `./ai-review`.
  *
  * Les anciennes routes `agent-runs/[runId]/pr/*` sont devenues des façades de
  * celles-ci : le corps de chaque geste vit dans `lib/server/agent/pr-actions`,
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (action === "ai_review") {
     // La review est écrite dans la langue du demandeur — celle du cookie de
     // locale, comme tout le reste de ce que minddy lui rend.
-    return prAiReviewResponse(auth.scope, auth.userId, await getLocale());
+    return prAiReviewResponse(auth.scope, auth.userId, await getLocale(), body.model);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }

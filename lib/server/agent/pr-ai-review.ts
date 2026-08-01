@@ -1,9 +1,7 @@
 import "server-only";
 
-import { aiModelFallback } from "@/lib/ai-model-config";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { getAppConfigValue } from "@/lib/server/app-config";
 import {
   newRunId,
   parseOpenRouterUsage,
@@ -21,12 +19,15 @@ import {
   buildReviewUserMessage,
   formatReviewBody,
   parseAiReview,
+  parsePartialReview,
   selectFindings,
   type AiReview,
   type ReviewConversation,
+  type ReviewFinding,
   type ReviewIssueContext,
   type ReviewNote,
 } from "./pr-ai-review-core";
+import type { PrReviewRecorder } from "./pr-review-runs";
 import type { PullRequestRow } from "./pull-requests";
 
 /**
@@ -43,11 +44,22 @@ import type { PullRequestRow } from "./pull-requests";
  *  1. **Manuel.** Rien ne l'appelle à l'ouverture d'une PR. Un tour de modèle
  *     coûte de l'argent, un clic n'en coûte pas — et c'est le déclencheur qui
  *     paye (`billTo: { userId }`, MIN-131), pas le owner du projet.
- *  2. **Un autre modèle.** `pr_review_model` est délibérément distinct de
- *     `agent_model` : faire relire du code par le modèle qui vient de l'écrire
- *     donne un second avis identique. C'est la raison d'être de la passe.
+ *  2. **Un autre modèle.** Le défaut `pr_review_model` est délibérément distinct
+ *     de `agent_model` : faire relire du code par le modèle qui vient de
+ *     l'écrire donne un second avis identique. C'est la raison d'être de la
+ *     passe. Le modèle EXACT, lui, se choisit au moment du clic
+ *     (`resolvePrReviewModel`) — une grosse PR ne se relit pas comme un
+ *     one-liner.
  *  3. **Synthèse + 3 à 5 points en ligne** (`selectFindings`), le reste replié
  *     dans la synthèse — quinze commentaires de ligne, c'est du bruit.
+ *
+ * La passe RACONTE ce qu'elle fait, au `PrReviewRecorder` qu'on lui passe : une
+ * phase à chaque étape, une ligne par source lue, un point à chaque commentaire
+ * déposé, et le texte de la synthèse pendant qu'il s'écrit (le tour de modèle
+ * est streamé pour ça). C'est ce fil que la conversation de la PR affiche en
+ * direct, à la place où le message de verdict va tomber, puis replie DANS ce
+ * message une fois qu'il est publié — trois minutes de silence suivies d'un
+ * toast ne disaient ni ce que Numo avait lu, ni ce qu'il était en train de faire.
  *
  * Ce que la passe LIT avant de juger, et qui vient d'autant de sources : le
  * diff, le ticket avec son PLAN et ses commentaires (`loadIssueContext`), et
@@ -66,14 +78,16 @@ import type { PullRequestRow } from "./pull-requests";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-/** Clé `app_config` du modèle de review — surchargeable sans redeploy. */
-export const PR_REVIEW_MODEL_CONFIG_KEY = "pr_review_model";
-
 /** Un diff se lit plus lentement qu'un ticket se classe : 3 minutes, pas 45 s. */
 const REVIEW_TIMEOUT_MS = 180_000;
 
 /** Assez pour une synthèse et une poignée de points argumentés, pas pour un essai. */
 const REVIEW_MAX_TOKENS = 4000;
+
+/** Cadence du direct pendant que le modèle écrit — quatre fois par seconde, comme
+ *  le fil d'un run d'agent. En dessous, ça saccade ; au-dessus, on paye du réseau
+ *  pour des caractères que l'œil ne distingue pas. */
+const LIVE_FLUSH_MS = 250;
 
 export type PrAiReviewOutcome =
   | {
@@ -84,8 +98,17 @@ export type PrAiReviewOutcome =
       /** Commentaires de ligne réellement déposés. */
       inlineComments: number;
       model: string;
+      /** Le diff qui vient d'être relu — ce qui permet de savoir, plus tard, si
+       *  relancer la passe aurait quelque chose de nouveau à lire. */
+      headSha: string | null;
+      /** Le commentaire de fil qui porte la synthèse, chez la forge. */
+      summaryCommentId: number | null;
     }
-  | { ok: false; error: "noDiff" | "modelUnavailable" | "modelRefused" };
+  | {
+      ok: false;
+      error: "noDiff" | "modelUnavailable" | "modelRefused";
+      headSha: string | null;
+    };
 
 interface PrAiReviewInput {
   forge: Forge;
@@ -94,6 +117,11 @@ interface PrAiReviewInput {
   /** Qui a cliqué — c'est lui qui paye. */
   userId: string;
   locale: string;
+  /** Le modèle retenu pour CETTE passe (`resolvePrReviewModel`, côté appelant :
+   *  c'est lui qui sait ce qui a été choisi au clic). */
+  model: string;
+  /** Le carnet de la session : phases, sources lues, points, synthèse, direct. */
+  recorder: PrReviewRecorder;
 }
 
 /**
@@ -102,21 +130,26 @@ interface PrAiReviewInput {
  * qu'un modèle qui n'a rien à dire n'est pas une panne de minddy.
  */
 export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewOutcome> {
-  const { forge, call } = input;
+  const { forge, call, recorder, model } = input;
+  await recorder.status("reading");
   const [pr, files] = await Promise.all([
     forge.getPullRequest(call),
     forge.listPullRequestFiles(call),
   ]);
+  const headSha = pr.headSha ?? input.pr.head_sha ?? null;
+  await recorder.context({
+    kind: "diff",
+    files: files.length,
+    additions: files.reduce((n, f) => n + (f.additions ?? 0), 0),
+    deletions: files.reduce((n, f) => n + (f.deletions ?? 0), 0),
+  });
+
   // « Rien à relire » n'est pas « aucun fichier » : une PR qui ne déplace que des
   // binaires — ou des fichiers trop gros pour que la forge en serve le patch —
   // arrive avec des fichiers ET aucun diff lisible. Le modèle n'aurait rien sous
   // les yeux, et l'appel serait payé quand même. (`every` sur une liste vide est
   // vrai : le cas « zéro fichier » passe par la même porte.)
-  if (files.every((f) => !f.patch?.trim())) return { ok: false, error: "noDiff" };
-
-  const model =
-    (await getAppConfigValue(PR_REVIEW_MODEL_CONFIG_KEY))?.trim() ||
-    aiModelFallback(PR_REVIEW_MODEL_CONFIG_KEY);
+  if (files.every((f) => !f.patch?.trim())) return { ok: false, error: "noDiff", headSha };
 
   // Le ticket (plan + commentaires) et la discussion de la PR se lisent en
   // parallèle : ni l'un ni l'autre ne dépend de l'autre, et les deux sont du
@@ -125,6 +158,25 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
     loadIssueContext(input.pr.issue_id),
     loadPrConversation(forge, call),
   ]);
+  // Ce qui a été lu, dit à l'écran : sur une review, « d'où ça sort » vaut le
+  // verdict lui-même. Une PR non rattachée n'a pas de ligne ticket — c'est un
+  // état normal (MIN-143), pas un trou.
+  if (issue) {
+    await recorder.context({
+      kind: "issue",
+      identifier: issue.context.identifier,
+      hasPlan: !!issue.context.plan?.trim(),
+      comments: issue.context.comments?.length ?? 0,
+    });
+  }
+  await recorder.context({
+    kind: "conversation",
+    comments: conversation.comments.length,
+    reviews: conversation.reviews.length,
+    reviewComments: conversation.reviewComments.length,
+  });
+
+  await recorder.status("analyzing");
   const raw = await callReviewModel({
     model,
     system: buildReviewSystemPrompt(input.locale),
@@ -140,12 +192,14 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
     // peut être lié depuis plusieurs projets, et `resolveRepoCloneTargetForRepo`
     // n'en choisit un que pour minter un token. Le ticket, lui, n'en a qu'un.
     projectId: issue?.projectId ?? null,
+    recorder,
   });
-  if (raw === null) return { ok: false, error: "modelUnavailable" };
+  if (raw === null) return { ok: false, error: "modelUnavailable", headSha };
 
   const review = parseAiReview(raw);
-  if (!review) return { ok: false, error: "modelRefused" };
+  if (!review) return { ok: false, error: "modelRefused", headSha };
 
+  await recorder.status("posting");
   const { inline, inSummary } = selectFindings(review.findings, files);
 
   // Les commentaires de ligne d'abord, la synthèse ensuite : c'est la synthèse
@@ -172,6 +226,10 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
         side: finding.side,
       });
       posted.push(finding);
+      // Chaque point apparaît à l'écran AU MOMENT où il arrive sur la PR, pas
+      // tous ensemble à la fin : c'est le seul rendu qui dit la vérité sur ce
+      // que Numo est en train de faire.
+      await recordFinding(recorder, finding, true);
     } catch (err) {
       if (!isForgeApiError(err)) throw err;
       console.error(
@@ -179,8 +237,14 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
         err.message,
       );
       failed.push(finding);
+      await recordFinding(recorder, finding, false);
     }
   }
+
+  // Les points que le plafond a écartés (ou dont l'ancre a été refusée) sont
+  // dits eux aussi, marqués comme repliés dans la synthèse : sans ça, l'écran
+  // montrerait trois points là où la review en compte sept.
+  for (const finding of inSummary) await recordFinding(recorder, finding, false);
 
   const body = formatReviewBody({
     review,
@@ -207,9 +271,38 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
   // texte qu'il fallait aller lire sur GitHub. Côté GitLab le geste est identique
   // au précédent (`submitMergeRequestReview` en `comment` n'était déjà qu'un
   // `createMergeRequestNote`), donc rien n'y change.
-  await forge.createPullRequestComment({ ...call, body });
+  const summaryComment = await forge.createPullRequestComment({ ...call, body });
+  await recorder.summary({
+    verdict: review.verdict,
+    summary: review.summary,
+    inlineComments: posted.length,
+  });
 
-  return { ok: true, verdict: review.verdict, inlineComments: posted.length, model };
+  return {
+    ok: true,
+    verdict: review.verdict,
+    inlineComments: posted.length,
+    model,
+    headSha,
+    // L'id du message de synthèse : c'est à LUI que le fil de la session se
+    // rattache dans la conversation.
+    summaryCommentId: summaryComment?.id ?? null,
+  };
+}
+
+/** Un point, tel qu'il apparaît dans le fil de la session. */
+function recordFinding(
+  recorder: PrReviewRecorder,
+  finding: ReviewFinding,
+  anchored: boolean,
+): Promise<void> {
+  return recorder.finding({
+    path: finding.path,
+    line: finding.line,
+    severity: finding.severity,
+    body: finding.body,
+    anchored,
+  });
 }
 
 /** Derniers commentaires du ticket remontés. Au-delà, `renderNotes` ne garderait
@@ -350,10 +443,17 @@ async function loadPrConversation(
 }
 
 /**
- * L'appel modèle à sortie forcée. Même contrat que `forcedToolCall` du feedback
- * (un tool obligatoire, `null` au moindre échec) mais avec ses propres budgets :
- * une review lit un diff entier et écrit plusieurs paragraphes, les 1 024 tokens
- * et 45 s de la passe feedback la couperaient au milieu.
+ * L'appel modèle à sortie forcée, STREAMÉ. Même contrat que `forcedToolCall` du
+ * feedback (un tool obligatoire, `null` au moindre échec) mais avec ses propres
+ * budgets : une review lit un diff entier et écrit plusieurs paragraphes, les
+ * 1 024 tokens et 45 s de la passe feedback la couperaient au milieu.
+ *
+ * Streamé pour une seule raison, et elle est visible : sans flux, la passe reste
+ * muette pendant tout le tour de modèle — la partie longue — et la « vue en
+ * direct » ne montrerait qu'un spinner. On lit donc les deltas du tool call au
+ * fil de l'eau et on republie, au plus quatre fois par seconde, ce qui est déjà
+ * lisible de la synthèse (`parsePartialReview`). Le résultat, lui, ne change
+ * pas : c'est le MÊME objet JSON, simplement recollé de ses morceaux.
  */
 async function callReviewModel(input: {
   model: string;
@@ -361,6 +461,7 @@ async function callReviewModel(input: {
   user: string;
   userId: string;
   projectId: string | null;
+  recorder: PrReviewRecorder;
 }): Promise<Record<string, unknown> | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
@@ -391,6 +492,7 @@ async function callReviewModel(input: {
           },
         ],
         tool_choice: { type: "function", function: { name: AI_REVIEW_TOOL_NAME } },
+        stream: true,
         usage: { include: true },
         max_tokens: REVIEW_MAX_TOKENS,
       }),
@@ -400,22 +502,18 @@ async function callReviewModel(input: {
       const errorText = await response.text();
       throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
     }
-    const data = (await response.json()) as {
-      choices?: { message?: { tool_calls?: { function?: { name?: string; arguments?: string } }[] } }[];
-      id?: string;
-      model?: string;
-      usage?: OpenRouterUsage;
-    };
+
+    const stream = await readReviewStream(response, input.recorder);
 
     // Le ledger AVANT la lecture du tool call : l'appel est payé même quand le
     // modèle répond à côté, et une dépense hors compteur est exactement ce que
     // MIN-131 interdit.
-    const usage = parseOpenRouterUsage(data.usage);
+    const usage = parseOpenRouterUsage(stream.usage ?? undefined);
     await recordAiUsage({
       runId: newRunId(),
       feature: "pr_review",
-      model: data.model ?? input.model,
-      generationId: data.id ?? null,
+      model: stream.model ?? input.model,
+      generationId: stream.generationId,
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
       totalTokens: usage.totalTokens,
@@ -424,11 +522,97 @@ async function callReviewModel(input: {
       projectId: input.projectId,
     });
 
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
-    if (toolCall?.name !== AI_REVIEW_TOOL_NAME) return {};
-    return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
+    if (stream.toolName && stream.toolName !== AI_REVIEW_TOOL_NAME) return {};
+    return JSON.parse(stream.args || "{}") as Record<string, unknown>;
   } catch (err) {
     console.error("[pr-ai-review] LLM call failed:", (err as Error).message);
     return null;
   }
+}
+
+/** Un chunk SSE d'OpenRouter, réduit à ce que la review y lit. */
+interface ReviewStreamChunk {
+  id?: string;
+  model?: string;
+  usage?: OpenRouterUsage;
+  choices?: {
+    delta?: {
+      tool_calls?: { function?: { name?: string; arguments?: string } }[];
+    };
+  }[];
+}
+
+/**
+ * Recolle le tool call de ses deltas, en publiant la synthèse au passage.
+ *
+ * Le direct est throttlé (`LIVE_FLUSH_MS`) ET conditionné à un vrai changement :
+ * un modèle qui écrit ses `findings` ne fait plus bouger la synthèse, et
+ * réémettre le même texte trente fois ne dit rien de plus. Un dernier envoi
+ * forcé clôt le flux — sinon la fin de la synthèse n'apparaîtrait qu'avec
+ * l'événement final, une bonne seconde plus tard.
+ */
+async function readReviewStream(
+  response: Response,
+  recorder: PrReviewRecorder,
+): Promise<{
+  args: string;
+  toolName: string | null;
+  generationId: string | null;
+  model: string | null;
+  usage: OpenRouterUsage | null;
+}> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body from LLM");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let args = "";
+  let toolName: string | null = null;
+  let generationId: string | null = null;
+  let model: string | null = null;
+  let usage: OpenRouterUsage | null = null;
+
+  let lastFlushAt = 0;
+  let lastSignature = "";
+  const flush = (force = false) => {
+    if (!force && Date.now() - lastFlushAt < LIVE_FLUSH_MS) return;
+    const partial = parsePartialReview(args);
+    const signature = `${partial.summary.length}:${partial.findings.length}`;
+    if (!force && signature === lastSignature) return;
+    lastFlushAt = Date.now();
+    lastSignature = signature;
+    recorder.stream(partial.summary, partial.findings.length);
+  };
+
+  for (;;) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6).trim();
+      if (data === "[DONE]") continue;
+      let parsed: ReviewStreamChunk;
+      try {
+        parsed = JSON.parse(data) as ReviewStreamChunk;
+      } catch {
+        continue;
+      }
+      if (parsed.id && !generationId) generationId = parsed.id;
+      if (parsed.model) model = parsed.model;
+      if (parsed.usage) usage = parsed.usage;
+      // Un seul tool call attendu (sortie forcée) : tous les deltas s'ajoutent
+      // au même tampon, quel que soit leur index.
+      for (const tc of parsed.choices?.[0]?.delta?.tool_calls ?? []) {
+        if (tc.function?.name) toolName = tc.function.name;
+        if (tc.function?.arguments) args += tc.function.arguments;
+      }
+    }
+    flush();
+  }
+  flush(true);
+
+  return { args, toolName, generationId, model, usage };
 }

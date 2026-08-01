@@ -3,6 +3,7 @@
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
+import type { PrReviewEvent, PrReviewRun } from "@/lib/pr-review-run";
 import type {
   ReviewCommentReaction,
   ReviewReactionContent,
@@ -350,6 +351,9 @@ export interface PullRequestRef {
   body?: string | null;
   head?: string;
   base?: string;
+  /** SHA de tête — le diff EXACT servi. Comparé au SHA qu'a relu la dernière
+   *  review de Numo pour savoir si relancer aurait quelque chose de neuf à lire. */
+  headSha?: string;
   /** Auteur et date d'ouverture : le `body` ouvre le fil de conversation comme un commentaire. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
@@ -538,18 +542,6 @@ export async function submitPullRequestReviewApi(
   );
 }
 
-/** Ce que Numo a fait de la PR qu'on lui a donnée à relire (MIN-141). */
-export interface PrAiReviewResult {
-  ok: true;
-  /** Ce que Numo pense de la PR — écrit dans sa synthèse. La review est toujours
-   *  postée en simple commentaire : Numo donne un avis, il n'approuve ni ne
-   *  bloque, ces deux gestes-là restent ceux du menu Review. */
-  verdict: ReviewVerdict;
-  /** Commentaires de ligne réellement déposés sur le diff (0 à 5). */
-  inlineComments: number;
-  model: string;
-}
-
 /**
  * « Faire vérifier par Numo » (MIN-141) : une passe de review sur le diff, qui
  * dépose une synthèse et jusqu'à cinq commentaires de ligne sur la PR.
@@ -557,18 +549,45 @@ export interface PrAiReviewResult {
  * Disponible sur TOUTE pull request — relire ne demande rien d'autre qu'un diff,
  * contrairement à « relancer Numo », qui a besoin d'une branche à hériter.
  * Manuel par construction : rien ne le déclenche à l'ouverture d'une PR.
+ *
+ * Rend la SESSION, pas le résultat : la passe se joue en tâche de fond et se
+ * regarde dans le panneau de review (`usePrReviewSession`). Si une passe tourne
+ * déjà sur cette PR, c'est la sienne qui revient — on n'en ouvre pas deux.
+ *
+ * `model` : l'id choisi dans le picker, `""` pour revenir au défaut de minddy,
+ * `undefined` pour ne rien changer au choix retenu.
  */
 export async function requestPullRequestAiReviewApi(
   prId: string,
-): Promise<PrAiReviewResult> {
+  model?: string,
+): Promise<{ ok: true; review: PrReviewRun }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
     await fetch(prEndpoint(prId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "ai_review" }),
+      body: JSON.stringify({ action: "ai_review", ...(model === undefined ? {} : { model }) }),
     }),
   );
+}
+
+/** L'état de la review de Numo sur une PR : la session, son fil, et de quoi
+ *  décider s'il y a lieu d'en relancer une (`reviewedHeadSha`). */
+export interface PrReviewSession {
+  review: PrReviewRun | null;
+  events: PrReviewEvent[];
+  /** SHA relu par la dernière passe terminée — comparé à la tête courante. */
+  reviewedHeadSha: string | null;
+  model: {
+    /** Défaut réglé en /admin : ce que vaut « défaut » dans le picker. */
+    instance: string;
+    /** Dernier choix du compte, ou null s'il n'en a jamais fait. */
+    preferred: string | null;
+  };
+}
+
+export async function fetchPullRequestAiReviewApi(prId: string): Promise<PrReviewSession> {
+  return parseJson(await fetch(`${prEndpoint(prId)}/ai-review`));
 }
 
 // ── Page Pull Requests globale (MIN-66, élargie par MIN-143) ─────────────────

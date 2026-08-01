@@ -112,6 +112,33 @@
   overflow-wrap: normal;
 }
 
+/* Un commentaire de ligne n'est pas une ligne de code, et il ne doit pas en
+   prendre la largeur. En unifié sans repli, la table est en `width: max-content` :
+   elle vaut sa plus longue ligne, et la boîte défile. Le fil de commentaires vit
+   dans une cellule de CETTE table — il héritait donc de cette largeur-là. Un
+   commentaire de trois lignes s'étalait sur une seule, très au-delà du bord
+   droit, et il fallait faire défiler le diff pour le lire en entier.
+
+   La largeur retenue est celle de la BOÎTE, jamais celle de la table :
+   `--pr-diff-box` est mesurée par le composant (`pr-diff.tsx`, ResizeObserver),
+   et `100cqw` — la même valeur, dite par la requête de conteneur — sert de repli
+   au premier rendu. Deux chemins pour un seul résultat, parce que la mesure
+   arrive avec le composant là où `cqw` suppose un moteur à jour et une feuille
+   de style fraîche.
+
+   `sticky` par-dessus : le commentaire reste sous les yeux quand on fait défiler
+   le code à côté, au lieu de partir hors champ avec la table. */
+.pr-diff-view .pr-diff-scroll {
+  container-type: inline-size;
+}
+.pr-diff-view .diff-widget-content > * {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--pr-diff-box, 100cqw);
+  max-width: var(--pr-diff-box, 100cqw);
+}
+
 /* Une couture entre les numéros et le code : sans elle, sur une ligne colorée en
    vert ou en rouge, les deux aplats se touchent et la gouttière se lit comme la
    première colonne du code. */

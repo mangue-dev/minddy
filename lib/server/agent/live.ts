@@ -45,8 +45,14 @@ export interface AgentLiveStream {
   at: number;
 }
 
-async function broadcast(
-  runId: string,
+/**
+ * Envoi brut sur un topic privé. Sorti de la fonction ci-dessous pour servir
+ * aussi la review d'une PR (`pr-review:{id}`), qui diffuse la même paire
+ * `stream`/`event` sur son propre topic : le transport ne dépend pas de ce qui
+ * est diffusé, seul le topic change.
+ */
+export async function broadcastToTopic(
+  topic: string,
   event: "stream" | "event",
   payload: Record<string, unknown>,
 ): Promise<void> {
@@ -62,14 +68,20 @@ async function broadcast(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messages: [
-          { topic: agentRunTopic(runId), event, payload, private: true },
-        ],
+        messages: [{ topic, event, payload, private: true }],
       }),
     });
   } catch {
     // Le fil poll toutes les 2 s : au pire, l'écran a un temps de retard.
   }
+}
+
+async function broadcast(
+  runId: string,
+  event: "stream" | "event",
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await broadcastToTopic(agentRunTopic(runId), event, payload);
 }
 
 /** Texte du round en cours. Appelé à la cadence du stream LLM (throttlé en amont). */

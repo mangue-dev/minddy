@@ -2,7 +2,15 @@
 
 import "react-diff-view/style/index.css";
 
-import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge, cn, SegmentedControl, Spinner, toast } from "mangue-ui";
 import { ChevronDown, ChevronRight, ChevronUp, UnfoldVertical, WrapText } from "lucide-react";
@@ -689,6 +697,34 @@ function PrDiffFile({
   // d'avant confondait.
   const missing = parsed ? null : noPatchKind(file);
 
+  /**
+   * La largeur VISIBLE de la boîte du diff, publiée en variable CSS.
+   *
+   * C'est elle qui borne les commentaires de ligne : ils vivent dans une cellule
+   * de la table du diff, qui en unifié vaut sa plus longue LIGNE DE CODE (parfois
+   * trois fois la boîte). Sans borne, un commentaire s'étale sur une seule ligne
+   * loin à droite, et il faut faire défiler le code pour le lire.
+   *
+   * Mesurée en JS et non laissée au seul `100cqw` : la requête de conteneur dit
+   * la même chose, mais elle demande un moteur qui la suit ET une feuille de
+   * style fraîche — deux conditions qu'on ne contrôle pas chez le lecteur. La
+   * variable, elle, arrive avec le composant. `100cqw` reste le repli au premier
+   * rendu, avant que la mesure ait eu lieu.
+   */
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const publish = () => box.style.setProperty("--pr-diff-box", `${box.clientWidth}px`);
+    publish();
+    // La boîte change de largeur sans que rien ne re-rende : fenêtre
+    // redimensionnée, panneau latéral ouvert, barre de défilement apparue.
+    const observer = new ResizeObserver(publish);
+    observer.observe(box);
+    return () => observer.disconnect();
+    // `collapsed` remonte la boîte : elle n'existe pas quand le fichier est replié.
+  }, [collapsed, viewType, wrap]);
+
   return (
     <div className="overflow-hidden rounded-md border border-border">
       <button
@@ -721,6 +757,7 @@ function PrDiffFile({
         <>
           {parsed ? (
             <div
+              ref={boxRef}
               className={cn(
                 "text-[13px]",
                 // Le défilement n'a de sens qu'en unifié : le côte-à-côte tient
