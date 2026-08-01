@@ -18,6 +18,7 @@ import { AgentBeam } from "@/components/agent-beam";
 import {
   Calendar,
   ChevronRight,
+  GitMerge,
   GitPullRequest,
   IterationCw,
   Link2,
@@ -58,9 +59,9 @@ import { RelationTargetPicker } from "@/components/relation-target-picker";
 import {
   useAgentActive,
   useAgentHasSession,
-  useAgentPr,
-  type IssuePr,
+  useIssuePr,
 } from "@/components/agent/agent-activity-context";
+import { isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
 import {
   setAgentComposeDraft,
   type AgentComposeIntent,
@@ -519,20 +520,38 @@ function PlanPick({
   );
 }
 
-/** « PR disponible » sur l'en-tête de la carte, à la place du plan quand une pull
-    request existe pour ce ticket. Cliquer ouvre la review de la PR. Read-only (span
-    sans handler) dans le drag overlay / board public. */
-function PrPick({ onOpen }: { onOpen?: () => void }) {
+/** La pull request sur l'en-tête de la carte, à la place du plan. Cliquer ouvre
+    sa review. Read-only (span sans handler) dans le drag overlay / board public.
+
+    Les couleurs sont celles de GitHub, comme partout ailleurs : VERT ouverte,
+    VIOLET fusionnée. Le chip était vert quel que soit l'état — il annonçait donc
+    « PR disponible » en vert sur un travail déjà livré, là où le chip du panneau
+    latéral disait « PR fusionnée » en violet à un clic de distance. */
+function PrPick({
+  state,
+  onOpen,
+}: {
+  state: IssuePr["state"];
+  onOpen?: () => void;
+}) {
   const t = useTranslations("Agent");
+  const merged = state === "merged";
   const content = (
     <>
-      <GitPullRequest className="size-3.5 shrink-0" />
-      <span className="truncate">{t("prBadge")}</span>
+      {merged ? (
+        <GitMerge className="size-3.5 shrink-0" />
+      ) : (
+        <GitPullRequest className="size-3.5 shrink-0" />
+      )}
+      <span className="truncate">{merged ? t("prMerged") : t("prBadge")}</span>
     </>
   );
+  const tone = merged
+    ? "text-violet-700 dark:text-violet-400"
+    : "text-emerald-600 dark:text-emerald-500";
   if (!onOpen) {
     return (
-      <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-500">
+      <span className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}>
         {content}
       </span>
     );
@@ -548,7 +567,13 @@ function PrPick({ onOpen }: { onOpen?: () => void }) {
             onOpen();
           }}
           onPointerDown={stop}
-          className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-emerald-600 outline-none transition-colors hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10 dark:text-emerald-500"
+          className={cn(
+            "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
+            tone,
+            merged
+              ? "hover:bg-violet-500/10 focus-visible:bg-violet-500/10"
+              : "hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10",
+          )}
         >
           {content}
         </button>
@@ -600,7 +625,10 @@ export function IssueCardBody({
   onOpenRelated?: (issueId: string) => void;
   /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
   onOpenPlan?: () => void;
-  /** PR disponible pour ce ticket → chip « PR disponible » À LA PLACE du plan. */
+  /** La PR du ticket, tous états confondus. Le chip « PR disponible » ne s'affiche
+      (À LA PLACE du plan) que si elle appelle encore quelque chose — une PR
+      REFUSÉE n'appelle rien, et masquer l'avancement du plan pour elle serait
+      perdre l'information utile. Le menu, lui, y mène quel que soit son état. */
   pr?: IssuePr | null;
   /** Ouvre la review de la pull request (clic sur le chip « PR disponible »). */
   onOpenPr?: () => void;
@@ -732,8 +760,8 @@ export function IssueCardBody({
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
           {/* PR disponible → remplace l'indicateur de plan ; sinon le plan. */}
-          {pr ? (
-            <PrPick onOpen={onOpenPr} />
+          {pr && isPrWorthShowing(pr) ? (
+            <PrPick state={pr.state} onOpen={onOpenPr} />
           ) : plan.total > 0 ? (
             <PlanPick progress={plan} onOpen={onOpenPlan} />
           ) : null}
@@ -873,11 +901,14 @@ export function IssueCard({
     issue.project_id
   );
   const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
-  // PR disponible pour ce ticket → chip « PR disponible » sur la carte + option menu.
-  const pr = useAgentPr(issue.id);
+  // La PR du ticket → chip sur la carte (si elle appelle encore une action) et
+  // entrée « Voir la pull request » dans le menu (quel que soit son état).
+  // `?pr=` et non `?run=` : le lien doit marcher aussi pour une PR qu'aucun run
+  // n'a ouverte — une PR humaine, ou une PR rattachée à la main (MIN-163).
+  const pr = useIssuePr(issue.id);
   const router = useRouter();
   const openPr = pr
-    ? () => router.push(`/pull-requests?run=${pr.runId}`)
+    ? () => router.push(`/pull-requests?pr=${pr.prId}`)
     : undefined;
 
   // Drop de fichiers depuis l'OS directement sur la carte (MIN-24) — chaque

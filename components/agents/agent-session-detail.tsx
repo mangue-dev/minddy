@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
 import { ChevronLeft, GitPullRequest, NotebookPen } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
+import { PR_STATE_STYLES } from "@/components/pull-requests/pr-state-badge";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
@@ -83,12 +84,16 @@ export function AgentSessionDetail({
   const prActions =
     // En compose : pas de bouton PR (aucune run lancée ; la PR héritée n'existe
     // qu'une fois le 1er message envoyé). Sinon, s'adapte à l'état de la PR :
-    // rien (pas de PR), bouton (disponible), ou lien texte vert (fusionnée).
+    // rien (pas de PR), bouton (disponible), ou lien texte (fusionnée).
+    //
+    // Les couleurs sont celles de GitHub — violet fusionnée, vert ouverte. Le
+    // lien « fusionnée » était VERT, la couleur d'« ouverte » : deux états
+    // contraires sous la même couleur.
     compose || item.pr_number == null ? undefined : item.pr_state === "merged" ? (
       <button
         type="button"
         onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
-        className="text-sm font-medium text-emerald-600 outline-none hover:underline dark:text-emerald-500"
+        className="text-sm font-medium text-violet-700 outline-none hover:underline dark:text-violet-400"
       >
         {t("prMerged")}
       </button>
@@ -98,6 +103,7 @@ export function AgentSessionDetail({
         size="sm"
         variant="outline"
         onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
+        className={cn(item.pr_state === "open" && PR_STATE_STYLES.open)}
       >
         <GitPullRequest className="size-3.5" />
         {t("openPullRequest")}

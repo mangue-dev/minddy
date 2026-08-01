@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { IssuePr } from "@/lib/agent-api";
 
 /**
  * Contexte « état de l'agent par issue » (MIN-46). Un seul poll par board expose
@@ -10,18 +11,15 @@ import { useQuery } from "@tanstack/react-query";
  *   • session  — une CONVERSATION existe (au moins une run non `failed`, au travail
  *                ou au repos) → l'entrée de la carte propose « Ouvrir l'agent »
  *                plutôt que « Lancer un agent ».
+ * …plus la PULL REQUEST de chaque ticket, qui n'est PAS une affaire d'agent (une
+ * PR humaine en est une aussi) mais voyage ici parce que c'est le même poll.
+ *
  * Polling adaptatif : rapide tant qu'un agent travaille, lent sinon (les sessions
  * au repos ne changent pas d'elles-mêmes).
  *
  * Deux modes : `projectId` fourni → un projet ; `projectId` absent → GLOBAL (board
  * « Tous les tickets », cross-projet — la RLS borne aux projets accessibles).
  */
-
-/** PR d'une issue : le run qui l'a ouverte + son numéro. */
-export interface IssuePr {
-  runId: string;
-  prNumber: number;
-}
 
 interface AgentActivity {
   working: Set<string>;
@@ -81,7 +79,7 @@ export function AgentActivityProvider({
   const workingKey = working.slice().sort().join(",");
   const sessionKey = session.slice().sort().join(",");
   const prsKey = Object.entries(prs)
-    .map(([k, v]) => `${k}:${v.runId}:${v.prNumber}`)
+    .map(([k, v]) => `${k}:${v.prId}:${v.state}`)
     .sort()
     .join(",");
   // Sets/Map stables tant que les listes ne changent pas (évite de re-render toutes
@@ -113,7 +111,14 @@ export function useAgentHasSession(issueId: string): boolean {
   return useContext(AgentActivityContext).session.has(issueId);
 }
 
-/** PR disponible sur cette issue (run + numéro), ou null — chip « PR disponible ». */
-export function useAgentPr(issueId: string): IssuePr | null {
+/**
+ * La pull request de ce ticket, TOUS ÉTATS CONFONDUS, ou null.
+ *
+ * Tous états : « Voir la pull request » doit mener à une PR fermée comme à une
+ * PR ouverte. C'est l'appelant qui écarte `closed` là où ça a du sens — le chip
+ * « PR disponible » de la carte, qui ne parle que de ce qui appelle encore une
+ * action (`isPrWorthShowing`).
+ */
+export function useIssuePr(issueId: string): IssuePr | null {
   return useContext(AgentActivityContext).prs.get(issueId) ?? null;
 }

@@ -44,7 +44,12 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
       return false;
     },
   });
-  return { runs: data?.runs ?? [], loading: isLoading };
+  return {
+    runs: data?.runs ?? [],
+    /** La PR du ticket, quel que soit son état — null s'il n'en a aucune. */
+    pullRequest: data?.pullRequest ?? null,
+    loading: isLoading,
+  };
 }
 
 /** Clé de cache du détail d'un run (conversation d'une session CARNET, MIN-84). */

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
-import type { AgentRunSummary } from "@/lib/agent-api";
+import { isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
 
 /**
  * L'état de l'agent de code sur l'en-tête du panneau d'issue, en un chip — le
@@ -17,14 +17,14 @@ import type { AgentRunSummary } from "@/lib/agent-api";
  */
 export function IssueAgentChip({
   working,
-  prRun,
+  pr,
   onOpenConversation,
   onOpenPr,
 }: {
   /** Une run de l'issue est queued/running. */
   working: boolean;
-  /** La run la plus récente portant une PR non fermée, ou null. */
-  prRun: AgentRunSummary | null;
+  /** La PR du ticket, tous états confondus — le chip écarte lui-même `closed`. */
+  pr: IssuePr | null;
   onOpenConversation: () => void;
   onOpenPr: () => void;
 }) {
@@ -50,8 +50,10 @@ export function IssueAgentChip({
     );
   }
 
-  if (!prRun) return null;
-  const merged = prRun.pr_state === "merged";
+  // Une PR REFUSÉE n'appelle plus rien : le chip se tait. Le menu « ⋯ », lui, y
+  // mène quand même — c'est ce qui s'est passé sur ce ticket.
+  if (!isPrWorthShowing(pr)) return null;
+  const merged = pr?.state === "merged";
 
   return (
     <Tooltip>

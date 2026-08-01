@@ -2,23 +2,26 @@
 
 import { Badge, Spinner, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
+import { PR_STATE_STYLES } from "@/components/pull-requests/pr-state-badge";
 import type { AgentRunStatus } from "@/lib/agent-api";
 
 type PrState = "draft" | "open" | "merged" | "closed" | null;
-
-/** Style vert « fusionnée » (aligné sur l'indicateur PR du panneau d'issue). */
-const MERGED_GREEN =
-  "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500";
 
 /**
  * Indicateur d'état d'une session d'agent (liste de la page Agents). Ne dit plus
  * « terminé » : il reflète la GÉNÉRATION en cours, puis l'ÉTAT DE LA PULL REQUEST.
  * Priorité :
  *   1. génération en cours → « En cours » + spinner ;
- *   2. PR fusionnée → « Pull request fusionnée » (vert) ;
- *   3. PR disponible (ouverte/brouillon) → « Pull request disponible » ;
- *   4. PR fermée → « Pull request fermée » ;
- *   5. sinon (pas de PR) → échec / annulation / en attente.
+ *   2. PR fusionnée → « PR fusionnée » (violet) ;
+ *   3. PR ouverte → « PR disponible » (vert) ;
+ *   4. PR brouillon, ou état inconnu → « PR disponible » (gris) ;
+ *   5. PR fermée → « PR fermée » (rouge) ;
+ *   6. sinon (pas de PR) → échec / annulation / en attente.
+ *
+ * Les couleurs viennent de `PR_STATE_STYLES`, c'est-à-dire de GitHub. Elles
+ * étaient peintes ici, et le « fusionnée » y était VERT — la couleur que GitHub
+ * réserve à « ouverte ». Deux états contraires sous la même couleur, à un écran
+ * de distance de la page Pull requests qui, elle, les distinguait.
  */
 export function AgentStatusBadge({
   status,
@@ -47,14 +50,19 @@ export function AgentStatusBadge({
 
   if (prState === "merged") {
     return (
-      <Badge variant="outline" className={cn(MERGED_GREEN, className)}>
+      <Badge variant="secondary" className={cn(PR_STATE_STYLES.merged, className)}>
         {t("prMergedShort")}
       </Badge>
     );
   }
   if (prNumber != null && prState !== "closed") {
+    // Le brouillon garde le gris — c'est celui de GitHub, et une PR que
+    // personne n'a encore proposée n'est pas « ouverte ».
     return (
-      <Badge variant="secondary" className={className}>
+      <Badge
+        variant="secondary"
+        className={cn(prState === "open" && PR_STATE_STYLES.open, className)}
+      >
         {t("prAvailable")}
       </Badge>
     );

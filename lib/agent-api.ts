@@ -123,9 +123,31 @@ export function isAgentRunResumable(status: AgentRunStatus): boolean {
   return status !== "failed";
 }
 
+/**
+ * La pull request d'un ticket, telle que les cartes et le panneau la lisent.
+ *
+ * Elle se lisait sur les runs de Numo — ce qui la rendait invisible dès que
+ * personne n'avait lancé d'agent (PR humaine, ou PR rattachée à la main), et dès
+ * qu'elle était FERMÉE. Elle vient maintenant de `pull_requests`, tous états
+ * confondus : « Voir la pull request » doit mener à une PR fermée comme à une
+ * autre. Le chip, lui, se tait sur `closed` — c'est le seul état qui n'appelle
+ * plus rien.
+ */
+export interface IssuePr {
+  /** Id minddy — `?pr=` ouvre la PR quel que soit son état (la page l'épingle). */
+  prId: string;
+  prNumber: number;
+  state: "draft" | "open" | "merged" | "closed";
+}
+
+/** Une PR encore vivante ou livrée : tout sauf refusée. */
+export function isPrWorthShowing(pr: IssuePr | null): boolean {
+  return !!pr && pr.state !== "closed";
+}
+
 export async function fetchIssueAgentRunsApi(
   issueId: string,
-): Promise<{ runs: AgentRunSummary[] }> {
+): Promise<{ runs: AgentRunSummary[]; pullRequest: IssuePr | null }> {
   return parseJson(await fetch(`/api/issues/${issueId}/agent`));
 }
 

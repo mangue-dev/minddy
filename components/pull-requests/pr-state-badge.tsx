@@ -24,11 +24,16 @@ import type { PullRequestListItem } from "@/lib/agent-api";
  *
  * La FORME, elle, reste celle des badges de minddy : teinte à 10 %, bord à
  * 20 %, jamais un aplat — c'est ça qui est à nous.
+ *
+ * `PR_STATE_STYLES` est exporté parce que l'état d'une PR se lit AILLEURS que
+ * dans ce badge — la liste des sessions d'agent, l'en-tête d'une conversation —
+ * et que ces endroits-là repeignaient à leur tour, en vert le « fusionnée » que
+ * GitHub met en violet. Une seule table, et le code reste lisible partout.
  */
 
 type PrState = PullRequestListItem["pr_state"];
 
-const STATE_STYLES: Record<PrState, string> = {
+export const PR_STATE_STYLES: Record<PrState, string> = {
   open: "border-green-600/20 bg-green-600/10 text-green-700 dark:border-green-500/25 dark:bg-green-500/15 dark:text-green-400",
   merged:
     "border-violet-600/20 bg-violet-600/10 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/15 dark:text-violet-400",
@@ -69,7 +74,7 @@ export function PrStateBadge({
     <Badge
       variant="secondary"
       icon={icon ? <Icon /> : undefined}
-      className={cn(STATE_STYLES[state], className)}
+      className={cn(PR_STATE_STYLES[state], className)}
     >
       {t(STATE_LABELS[state])}
     </Badge>

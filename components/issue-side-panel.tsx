@@ -210,8 +210,9 @@ export function IssueSidePanel({
   // Agent de code de ce ticket. Mêmes dérivations que les cartes (lib/server/
   // agent/activity.ts), mais depuis les runs de l'issue seule : le panneau
   // s'ouvre aussi là où le provider d'activité du board n'existe pas (page Pull
-  // requests, board de feedback).
-  const { runs } = useIssueAgentRunsQuery(issue?.id ?? null);
+  // requests, board de feedback). La PR voyage avec, servie par la même route et
+  // lue sur `pull_requests` : un ticket peut en porter une sans aucun run.
+  const { runs, pullRequest } = useIssueAgentRunsQuery(issue?.id ?? null);
   const { agentsAllowed } = usePlanGates();
   // Agent + PR indisponibles sans dépôt lié (MIN-80) : le serveur rejette de toute
   // façon un lancement `noRepo`, on retire donc l'option en amont. Permissif tant
@@ -224,9 +225,6 @@ export function IssueSidePanel({
   const latestRun = runs[0] ?? null;
   // Une conversation reprennable existe (au moins une run non `failed`).
   const hasAgentSession = runs.some((r) => r.status !== "failed");
-  // Runs triés DESC → la première portant une PR non fermée est la PR du ticket.
-  const prRun =
-    runs.find((r) => r.pr_number != null && r.pr_state !== "closed") ?? null;
 
   // Cycle (MIN-32) : le panneau lit le cycle courant lui-même plutôt que de le
   // faire descendre par ses quatre appelants — le hook est déjà gaté par les
@@ -389,9 +387,11 @@ export function IssueSidePanel({
     else startNewAgentSession();
   }, [agentsEnabled, hasAgentSession, startNewAgentSession]);
 
+  // `?pr=` et non `?run=` : le lien doit marcher aussi pour une PR qu'aucun run
+  // n'a ouverte — une PR humaine, ou une PR rattachée à la main (MIN-163).
   const openPr = useCallback(() => {
-    if (prRun) router.push(`/pull-requests?run=${prRun.id}`);
-  }, [prRun, router]);
+    if (pullRequest) router.push(`/pull-requests?pr=${pullRequest.prId}`);
+  }, [pullRequest, router]);
 
   // Contexte partagé par les deux prompts copiables (travailler sur le ticket,
   // écrire son plan) : relations résolues et noms des catégories.
@@ -684,11 +684,15 @@ export function IssueSidePanel({
   // (prompt, agent, PR, cycle), plus la suppression qui vivait ici avant.
   const menuActions: ContextMenuAction[] = [
     ...agentActions,
-    ...(agentsEnabled && prRun
+    // « Voir la pull request » dès qu'il y en a une, QUEL QUE SOIT SON ÉTAT : une
+    // PR fermée reste ce qui s'est passé sur ce ticket, et c'est souvent elle
+    // qu'on cherche. Le chip de l'en-tête, lui, se tait dessus.
+    ...(agentsEnabled && pullRequest
       ? [
           {
             id: "open-pr",
             label: tAgent("viewPullRequest"),
+            keywords: ["pull request", "pr", "review", "github", "merge"],
             icon: <GitPullRequest className="size-4" />,
             onSelect: openPr,
           },
@@ -780,7 +784,7 @@ export function IssueSidePanel({
               {agentsEnabled && (
                 <IssueAgentChip
                   working={agentWorking}
-                  prRun={prRun}
+                  pr={pullRequest}
                   onOpenConversation={() => setChatOpen(true)}
                   onOpenPr={openPr}
                 />

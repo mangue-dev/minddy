@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
+import { pickIssuePullRequests, type IssuePrRow } from "@/lib/server/agent/activity";
 import {
   launchAgentRun,
   type AgentLaunchIntent,
@@ -11,7 +12,7 @@ import {
 
 /**
  * Runs de l'agent de code d'une issue (MIN-46).
- *  GET  → liste les runs de l'issue (colonnes client-safe).
+ *  GET  → liste les runs de l'issue (colonnes client-safe) + sa pull request.
  *  POST → lance un run { prompt?, model? } (bouton « Lancer un agent »).
  * L'accès à l'issue est vérifié via le cookie client (RLS) ; `launchAgentRun`
  * fait ensuite les pré-checks (dépôt lié, quota/BYOK, run déjà actif).
@@ -38,12 +39,25 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
   const service = getServiceClient();
-  const { data } = await service
-    .from("agent_runs")
-    .select(RUN_COLUMNS)
-    .eq("issue_id", id)
-    .order("created_at", { ascending: false });
-  return NextResponse.json({ runs: data ?? [] });
+  // La PR du ticket voyage avec les runs : le panneau latéral la lit ici, et non
+  // plus sur `agent_runs` (MIN-163). Un ticket peut porter une PR sans qu'aucun
+  // run ne l'ait ouverte — PR humaine rattachée par convention, ou rattachée à
+  // la main depuis le header de la PR — et le panneau la taisait alors.
+  const [{ data }, { data: prs }] = await Promise.all([
+    service
+      .from("agent_runs")
+      .select(RUN_COLUMNS)
+      .eq("issue_id", id)
+      .order("created_at", { ascending: false }),
+    service
+      .from("pull_requests")
+      .select("id, issue_id, number, state, updated_at")
+      .eq("issue_id", id)
+      .order("updated_at", { ascending: false }),
+  ]);
+  const pullRequest =
+    pickIssuePullRequests((prs ?? []) as IssuePrRow[])[id] ?? null;
+  return NextResponse.json({ runs: data ?? [], pullRequest });
 }
 
 // Bornes de longueur (MIN-118) : la consigne est persistée telle quelle dans
