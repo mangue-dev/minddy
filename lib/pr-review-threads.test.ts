@@ -48,6 +48,7 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
     original_line: 150,
     side: "RIGHT",
     in_reply_to_id: null,
+    review_id: null,
     diff_hunk: "@@ -147,7 +147,7 @@",
     user: { login: "someone", avatar_url: null },
     created_at: "2026-07-17T10:00:00Z",

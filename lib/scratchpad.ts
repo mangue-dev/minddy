@@ -141,6 +141,75 @@ export function splitScratchpadSections(content: string): ScratchpadSection[] {
   return sections.filter((s) => s.markdown.trim() !== "");
 }
 
+/**
+ * La section du `headingIndex`-ième titre du carnet (0-based, dans l'ordre du
+ * document ; un `#` en bloc de code n'est pas un titre et ne compte pas) —
+ * SOUS-SECTIONS COMPRISES : du titre jusqu'au prochain titre de rang égal ou
+ * supérieur, ou la fin de la note.
+ *
+ * `splitScratchpadSections` coupe à CHAQUE titre : c'est ce qu'il faut pour
+ * ranger les tâches par titre (l'aperçu de l'accueil, la liste des sections
+ * connues du MCP), mais pas pour les gestes qui prennent « cette section » —
+ * copier en prompt, lancer un agent. Un `# Pull requests` qui n'a que des
+ * `## …` en dessous en ressortait vide, et le geste ne portait alors sur rien.
+ * Ici la section est un SOUS-ARBRE, comme dans `removeCompletedTasks`.
+ *
+ * Null si le carnet n'a pas autant de titres.
+ */
+export function scratchpadSectionSubtree(
+  content: string,
+  headingIndex: number
+): ScratchpadSection | null {
+  const lines = content.split("\n");
+  let fence: string | null = null;
+  let seen = -1;
+  let start = -1;
+  let rank = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const fenceMatch = lines[i].match(FENCE);
+    if (fenceMatch) {
+      if (!fence) fence = fenceMatch[1];
+      else if (
+        fenceMatch[1][0] === fence[0] &&
+        fenceMatch[1].length >= fence.length
+      )
+        fence = null;
+      continue;
+    }
+    if (fence) continue;
+
+    const heading = lines[i].match(HEADING_LEVEL);
+    if (!heading) continue;
+    if (start === -1) {
+      seen += 1;
+      if (seen === headingIndex) {
+        start = i;
+        rank = heading[1].length;
+      }
+      continue;
+    }
+    // Un titre plus profond appartient à la section ; un titre de même rang (ou
+    // plus haut) la ferme.
+    if (heading[1].length <= rank) return sectionSlice(lines, start, i);
+  }
+
+  return start === -1 ? null : sectionSlice(lines, start, lines.length);
+}
+
+function sectionSlice(
+  lines: string[],
+  start: number,
+  end: number
+): ScratchpadSection {
+  const headingMatch = lines[start]?.match(HEADING);
+  return {
+    title: headingMatch ? headingMatch[1].trim() : null,
+    markdown: lines.slice(start, end).join("\n").replace(/\s+$/, ""),
+    startLine: start,
+  };
+}
+
 export interface ScratchpadPreviewSection {
   /** Titre de la section, ou null pour ce qui précède le premier titre. */
   title: string | null;

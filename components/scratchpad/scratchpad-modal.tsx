@@ -16,6 +16,8 @@ import {
 } from "mangue-ui";
 import { Bot, Check, Copy, ListX, X } from "lucide-react";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
+import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
+import { useAuth } from "@/lib/auth-context";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
@@ -82,12 +84,14 @@ function SavedAgo({ updatedAt }: { updatedAt: string | null }) {
 function ScratchpadBody() {
   const t = useTranslations("Scratchpad");
   const { isOpen, setOpen } = useScratchpad();
+  const { user } = useAuth();
 
   const markdownRef = useRef<(() => string) | null>(null);
   const applyRef = useRef<
     ((content: string, opts?: { emitUpdate?: boolean }) => void) | null
   >(null);
   const removeCompletedRef = useRef<(() => number) | null>(null);
+  const startAllRef = useRef<(() => number) | null>(null);
 
   const { content, updatedAt, isLoading, isSaving, save } = useScratchpadDoc({
     open: isOpen,
@@ -105,20 +109,34 @@ function ScratchpadBody() {
     else toast(t("noCompleted"));
   };
 
+  // Confier du travail à un agent, c'est le commencer — à la ligne (MIN-20/46,
+  // cf. scratchpad-task.tsx), à la section, et ici au carnet entier : les deux
+  // boutons d'en-tête passent « en cours » tout ce qui restait à faire. Copier
+  // suit l'option de compte, lancer un agent démarre toujours.
+  const startOnCopy = resolvePromptCopyAutoStart(user?.user_metadata);
+  const liveMarkdown = () => (markdownRef.current?.() ?? content).trim();
+
   const copyAll = async () => {
-    const md = (markdownRef.current?.() ?? content).trim();
-    if (!md) {
+    if (!liveMarkdown()) {
       toast(t("emptyCopyToast"));
       return;
     }
-    await navigator.clipboard.writeText(buildScratchpadPrompt(md));
-    toast.success(t("copiedToast"));
+    const moved = startOnCopy ? (startAllRef.current?.() ?? 0) : 0;
+    // Relu APRÈS le déplacement : la note sort avec ses marqueurs d'après-geste.
+    await navigator.clipboard.writeText(buildScratchpadPrompt(liveMarkdown()));
+    toast.success(
+      moved > 0 ? t("copiedMovedToast", { count: moved }) : t("copiedToast")
+    );
   };
-  const copySection = async (markdown: string) => {
+  const copySection = async (markdown: string, moved: number) => {
     await navigator.clipboard.writeText(
       buildScratchpadPrompt(markdown, { section: true })
     );
-    toast.success(t("copiedSectionToast"));
+    toast.success(
+      moved > 0
+        ? t("copiedSectionMovedToast", { count: moved })
+        : t("copiedSectionToast")
+    );
   };
 
   // « Lancer un agent » (MIN-84) : la note part BRUTE (pas le wrapper de copie —
@@ -126,12 +144,14 @@ function ScratchpadBody() {
   // Agents, qui fait choisir projet / modèle / branche avant l'envoi.
   const launchNote = useLaunchAgentNote();
   const launchAll = () => {
-    const md = (markdownRef.current?.() ?? content).trim();
-    if (!md) {
+    if (!liveMarkdown()) {
       toast(t("emptyCopyToast"));
       return;
     }
-    launchNote(md);
+    // AVANT `launchNote` : il ferme le carnet, et c'est ce démontage qui flushe
+    // l'autosave (scratchpad-editor.tsx) — les tâches démarrées partent avec.
+    startAllRef.current?.();
+    launchNote(liveMarkdown());
   };
 
   const showSaveState = !isLoading && (isSaving || content.trim() !== "");
@@ -242,12 +262,14 @@ function ScratchpadBody() {
               onChange={save}
               onCopySection={copySection}
               onLaunchSection={launchNote}
+              startOnCopy={startOnCopy}
               placeholder={t("placeholder")}
               copySectionLabel={t("copySection")}
               launchSectionLabel={t("launchAgentSection")}
               markdownRef={markdownRef}
               applyExternalRef={applyRef}
               removeCompletedRef={removeCompletedRef}
+              startAllRef={startAllRef}
             />
           )}
         </div>

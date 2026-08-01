@@ -5,6 +5,7 @@ import {
   mergeScratchpad,
   removeCompletedTasks,
   scratchpadPreview,
+  scratchpadSectionSubtree,
   splitScratchpadSections,
   tasksCheckedOff,
 } from "@/lib/scratchpad";
@@ -46,6 +47,60 @@ describe("splitScratchpadSections", () => {
     const sections = splitScratchpadSections(note);
     expect(sections).toHaveLength(1);
     expect(sections[0].title).toBe("Real");
+  });
+});
+
+describe("scratchpadSectionSubtree", () => {
+  const note = [
+    "intro",
+    "# Pull requests", // heading 0
+    "- [ ] a",
+    "## Review", // heading 1
+    "- [ ] b",
+    "### Détail", // heading 2
+    "- [ ] c",
+    "## Diff", // heading 3
+    "- [ ] d",
+    "# Carnet", // heading 4
+    "- [ ] e",
+  ].join("\n");
+
+  it("carries the sub-sections of a section along with it", () => {
+    const section = scratchpadSectionSubtree(note, 0);
+    expect(section?.title).toBe("Pull requests");
+    expect(section?.startLine).toBe(1);
+    expect(section?.markdown).toBe(
+      "# Pull requests\n- [ ] a\n## Review\n- [ ] b\n### Détail\n- [ ] c\n## Diff\n- [ ] d"
+    );
+  });
+
+  it("stops at the next heading of the same or a shallower level", () => {
+    expect(scratchpadSectionSubtree(note, 1)?.markdown).toBe(
+      "## Review\n- [ ] b\n### Détail\n- [ ] c"
+    );
+    expect(scratchpadSectionSubtree(note, 2)?.markdown).toBe(
+      "### Détail\n- [ ] c"
+    );
+    expect(scratchpadSectionSubtree(note, 3)?.markdown).toBe("## Diff\n- [ ] d");
+  });
+
+  it("runs the last section to the end of the note", () => {
+    expect(scratchpadSectionSubtree(note, 4)?.markdown).toBe(
+      "# Carnet\n- [ ] e"
+    );
+  });
+
+  it("counts headings as the note reads them, code fences excluded", () => {
+    const fenced = "# Real\n```\n# not a heading\n```\n## Sub\n- [ ] x";
+    expect(scratchpadSectionSubtree(fenced, 0)?.markdown).toBe(fenced);
+    expect(scratchpadSectionSubtree(fenced, 1)?.title).toBe("Sub");
+    expect(scratchpadSectionSubtree(fenced, 2)).toBeNull();
+  });
+
+  it("has nothing to give when the note has no heading at that index", () => {
+    expect(scratchpadSectionSubtree("", 0)).toBeNull();
+    expect(scratchpadSectionSubtree("- [ ] a\n- [ ] b", 0)).toBeNull();
+    expect(scratchpadSectionSubtree(note, 5)).toBeNull();
   });
 });
 

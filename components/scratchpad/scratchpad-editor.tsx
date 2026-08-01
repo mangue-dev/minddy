@@ -15,9 +15,10 @@ import { Spinner, cn } from "mangue-ui";
 import { Heading1, Heading2, Heading3, List, ListTodo, Mic } from "lucide-react";
 import {
   removeCompletedTasks,
-  splitScratchpadSections,
+  scratchpadSectionSubtree,
   stripScratchpadSpacers,
 } from "@/lib/scratchpad";
+import { isQuestionHeading } from "@/lib/plan";
 import { AgentBeam } from "@/components/agent-beam";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
@@ -74,6 +75,84 @@ function getMarkdown(editor: Editor): string {
   return stripScratchpadSpacers(md).trim() === "" ? "" : md;
 }
 
+/** Rang (1–3) d'un nœud titre. */
+const nodeRank = (node: { attrs: { level?: unknown } }): number =>
+  Math.min(6, Math.max(1, Number(node.attrs.level) || 1));
+
+/**
+ * L'intervalle [from, to) du document couvert par le `index`-ième titre — le
+ * même index que celui posé sur les boutons de survol (section-copy-extension,
+ * titres de premier niveau), et la même portée que `scratchpadSectionSubtree` :
+ * SOUS-SECTIONS COMPRISES, jusqu'au prochain titre de rang égal ou supérieur.
+ */
+function sectionRange(
+  editor: Editor,
+  index: number
+): { from: number; to: number } | null {
+  const doc = editor.state.doc;
+  let seen = -1;
+  let from: number | null = null;
+  let to: number | null = null;
+  let rank = 0;
+  doc.forEach((node, pos) => {
+    if (node.type.name !== "heading") return;
+    if (from === null) {
+      seen += 1;
+      if (seen === index) {
+        from = pos;
+        rank = nodeRank(node);
+      }
+    } else if (to === null && nodeRank(node) <= rank) {
+      to = pos;
+    }
+  });
+  return from === null ? null : { from, to: to ?? doc.content.size };
+}
+
+/**
+ * Passe « en cours » toutes les tâches PAS ENCORE COMMENCÉES de l'intervalle
+ * [from, to) — le pendant, à l'échelle d'une section ou du carnet entier, de ce
+ * que la ligne fait pour elle seule (scratchpad-task.tsx) : confier du travail à
+ * un agent, c'est le commencer. Une tâche déjà en cours, cochée ou annulée ne
+ * bouge pas, et les cases d'une section « Questions » non plus — ce sont des
+ * questions, pas du travail (même règle que `parsePlan`, que suivent déjà le
+ * compteur et l'aperçu de l'accueil).
+ *
+ * Tout part en UNE transaction : un seul Ctrl-Z remet la section entière, et
+ * l'autosave ne voit qu'une modification. Retourne le nombre de tâches déplacées.
+ */
+function startPendingTasks(editor: Editor, from: number, to: number): number {
+  const { state } = editor;
+  const tr = state.tr;
+  let moved = 0;
+  // Le balayage part du DÉBUT du document, pas de `from` : l'intervalle visé
+  // peut commencer à l'intérieur d'une section « Questions » ouverte plus haut.
+  let questionRank: number | null = null;
+  state.doc.forEach((node, pos) => {
+    if (node.type.name === "heading") {
+      const rank = nodeRank(node);
+      if (questionRank !== null && rank <= questionRank) questionRank = null;
+      if (isQuestionHeading(node.textContent)) questionRank = rank;
+      return;
+    }
+    if (questionRank !== null || pos < from || pos >= to) return;
+    // Les tâches vivent dans une liste, et une tâche peut en porter d'autres :
+    // on descend le bloc entier. Changer un attribut ne change pas la taille du
+    // nœud, donc les positions déjà relevées restent valides d'un pas à l'autre.
+    node.descendants((child, offset) => {
+      if (child.type.name !== "taskItem" || child.attrs.state !== "pending")
+        return;
+      tr.setNodeMarkup(pos + 1 + offset, undefined, {
+        ...child.attrs,
+        state: "in_progress",
+      });
+      moved += 1;
+    });
+  });
+  if (moved > 0) editor.view.dispatch(tr);
+  return moved;
+}
+
 /**
  * Always-editable WYSIWYG note (edit == preview, no raw-markdown mode, no
  * intermediary). Reads/writes markdown; autosaves debounced + on blur + on
@@ -84,18 +163,25 @@ export function ScratchpadEditor({
   onChange,
   onCopySection,
   onLaunchSection,
+  startOnCopy,
   placeholder,
   copySectionLabel,
   launchSectionLabel,
   markdownRef,
   applyExternalRef,
   removeCompletedRef,
+  startAllRef,
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
-  onCopySection: (markdown: string) => void;
+  /** « Copier la section » — `moved` = tâches passées « en cours » au passage. */
+  onCopySection: (markdown: string, moved: number) => void;
   /** « Lancer un agent » sur la section survolée (MIN-84) — markdown de la section. */
   onLaunchSection: (markdown: string) => void;
+  /** L'option de compte « copier le prompt démarre le travail » (MIN-20) : elle
+      commande le geste de copie, à la ligne comme à la section. Lancer un agent,
+      lui, démarre toujours (MIN-46) — rien à régler. */
+  startOnCopy: boolean;
   placeholder: string;
   copySectionLabel: string;
   launchSectionLabel: string;
@@ -112,6 +198,10 @@ export function ScratchpadEditor({
   /** Populated with an action that drops completed tasks from the live editor
       (returns how many were removed) — driven by the modal's toolbar button. */
   removeCompletedRef?: MutableRefObject<(() => number) | null>;
+  /** Populated with an action qui passe « en cours » toutes les tâches encore à
+      faire du carnet (retourne combien) — les gestes d'en-tête, qui portent sur
+      la note entière. */
+  startAllRef?: MutableRefObject<(() => number) | null>;
 }) {
   const t = useTranslations("Scratchpad");
   const tDictate = useTranslations("Dictate");
@@ -233,24 +323,53 @@ export function ScratchpadEditor({
   const removeCompletedFnRef = useRef(removeCompleted);
   removeCompletedFnRef.current = removeCompleted;
 
-  // Stable across the editor's life (SectionCopy reads options once at plugin
-  // creation) — resolves the clicked heading's section from the live markdown.
-  const resolveSection = (headingIndex: number): string | null => {
+  // Passer tout le carnet « en cours » — la portée des boutons d'en-tête.
+  const startAll = () => {
     const ed = editorRef.current;
-    if (!ed) return null;
-    const sections = splitScratchpadSections(getMarkdown(ed)).filter(
-      (s) => s.title !== null
-    );
-    return sections[headingIndex]?.markdown ?? null;
+    if (!ed || ed.isDestroyed) return 0;
+    return startPendingTasks(ed, 0, ed.state.doc.content.size);
   };
-  const copySectionRef = useRef((headingIndex: number) => {
-    const markdown = resolveSection(headingIndex);
-    if (markdown) onCopySectionRef.current(markdown);
-  });
-  const launchSectionRef = useRef((headingIndex: number) => {
-    const markdown = resolveSection(headingIndex);
-    if (markdown) onLaunchSectionRef.current(markdown);
-  });
+  const startAllFnRef = useRef(startAll);
+  startAllFnRef.current = startAll;
+
+  // Le geste porté par les boutons de survol d'un titre : la section part avec
+  // TOUT ce qu'elle contient (sous-sections comprises), et `start` en démarre
+  // les tâches encore à faire.
+  //
+  // Le markdown est relu APRÈS le déplacement : la section sort avec ses
+  // marqueurs d'après-geste, exactement comme la ligne d'une tâche copiée
+  // (scratchpad-task.tsx) — sans quoi le prompt décrirait comme « à faire » un
+  // travail que le carnet dit déjà en cours.
+  const sectionGesture = (
+    headingIndex: number,
+    start: boolean
+  ): { markdown: string; moved: number } | null => {
+    const ed = editorRef.current;
+    if (!ed || ed.isDestroyed) return null;
+    const range = sectionRange(ed, headingIndex);
+    const moved =
+      start && range ? startPendingTasks(ed, range.from, range.to) : 0;
+    const markdown = scratchpadSectionSubtree(
+      getMarkdown(ed),
+      headingIndex
+    )?.markdown;
+    return markdown?.trim() ? { markdown, moved } : null;
+  };
+  // Réassignées à chaque rendu (SectionCopy ne lit ses options qu'une fois, à la
+  // création du plugin, mais appelle la ref au moment du clic).
+  const copySectionRef = useRef<(headingIndex: number) => void>(() => {});
+  copySectionRef.current = (headingIndex: number) => {
+    const done = sectionGesture(headingIndex, startOnCopy);
+    if (done) onCopySectionRef.current(done.markdown, done.moved);
+  };
+  const launchSectionRef = useRef<(headingIndex: number) => void>(() => {});
+  launchSectionRef.current = (headingIndex: number) => {
+    // Comme sur une tâche : lancer un agent démarre toujours le travail, et le
+    // déplacement précède `onLaunchSection` — c'est lui qui ferme le carnet, et
+    // ce démontage flushe l'autosave.
+    const done = sectionGesture(headingIndex, true);
+    if (done) onLaunchSectionRef.current(done.markdown);
+  };
 
   // pnpm resolves @tiptap/core twice (same 3.27.4 version, two symlink paths),
   // so TaskList/TaskItem's Node type reads as a different identity than the one
@@ -305,6 +424,7 @@ export function ScratchpadEditor({
         };
       if (removeCompletedRef)
         removeCompletedRef.current = () => removeCompletedFnRef.current();
+      if (startAllRef) startAllRef.current = () => startAllFnRef.current();
     },
     onUpdate: ({ editor }) => {
       scheduleCommit(getMarkdown(editor));
@@ -320,6 +440,7 @@ export function ScratchpadEditor({
       if (markdownRef) markdownRef.current = null;
       if (applyExternalRef) applyExternalRef.current = null;
       if (removeCompletedRef) removeCompletedRef.current = null;
+      if (startAllRef) startAllRef.current = null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []

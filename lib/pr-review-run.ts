@@ -65,6 +65,16 @@ export interface PrReviewFindingPayload {
   body: string;
   /** Posé en commentaire de ligne (`true`) ou replié dans la synthèse (`false`). */
   anchored: boolean;
+  /**
+   * Le commentaire de review que ce point est DEVENU sur la forge — la clé qui
+   * permet au déroulé de la passe de le montrer avec son extrait de code, comme
+   * partout ailleurs dans l'activité.
+   *
+   * Absent sur un point replié dans la synthèse (il n'est devenu aucun
+   * commentaire) et sur les passes d'avant MIN-159, qui ne l'enregistraient pas :
+   * le rendu retombe alors sur l'appariement `fichier:ligne`.
+   */
+  commentId?: number;
 }
 
 export interface PrReviewSummaryPayload {

@@ -14,6 +14,12 @@ import {
   type ReviewCommentReaction,
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
+import {
+  fromGithubTimeline,
+  type PrTimelineEvent,
+  type RawGithubTimelineEvent,
+} from "@/lib/pr-timeline";
+import type { CommitAuthor } from "@/lib/commit-authors";
 
 /**
  * Opérations Pull Request GitHub pour l'agent de code (MIN-46) : ouvrir la PR
@@ -105,6 +111,9 @@ export interface PullRequestCommit {
   message: string;
   author: { login: string; avatar_url: string | null } | null;
   authorName: string | null;
+  /** Email de l'auteur — la seule clé qui dédoublonne un co-signataire d'avec
+      l'auteur principal quand aucune des deux formes ne porte de compte. */
+  authorEmail: string | null;
   authoredAt: string | null;
   url: string | null;
   /** Signature vérifiée par la forge. `null` = INCONNU, pas « non signé » :
@@ -117,15 +126,26 @@ export interface PullRequestCommit {
    */
   parentSha: string | null;
   /** Lignes ajoutées / retirées PAR CE COMMIT. `null` = pas encore lu : aucune
-      des deux forges ne sert ces chiffres avec la liste (cf. `…CommitStats`). */
+      des deux forges ne sert ces chiffres avec la liste (cf. `…CommitExtras`). */
   additions: number | null;
   deletions: number | null;
+  /**
+   * TOUS ses auteurs, principal en tête (MIN-159) — un commit co-signé en a
+   * plusieurs, et c'est le cas courant dès qu'un agent a tenu le clavier.
+   * Vide tant que `…CommitExtras` n'a pas répondu ; l'appelant retombe alors sur
+   * `author` / `authorName`, l'auteur principal seul.
+   */
+  authors: CommitAuthor[];
 }
 
-/** Poids d'un commit, indexé par SHA — ce que la liste de commits ne porte pas. */
-export interface CommitStats {
+/** Ce que la liste de commits ne porte PAS, et qu'un second appel va chercher :
+    le poids de chaque commit, et ses auteurs résolus en comptes de forge. */
+export interface CommitExtras {
   additions: number;
   deletions: number;
+  /** Auteurs, principal en tête, dédoublonnés PAR LA FORGE. Vide quand elle ne
+      sait pas les résoudre (GitLab) : le repli lit alors les trailers. */
+  authors: CommitAuthor[];
 }
 
 /** Le diff d'UN commit contre son parent : la vue « ce que ce commit change ». */
@@ -169,6 +189,9 @@ export interface PullRequestReviewComment {
   side: "LEFT" | "RIGHT";
   /** Racine du fil (GitHub normalise : répondre à une réponse pointe la racine). */
   in_reply_to_id: number | null;
+  /** Review qui porte ce commentaire (MIN-159) — la clé qui le range sous elle
+      dans le fil de conversation. `null` côté GitLab, qui n'a pas d'objet review. */
+  review_id: number | null;
   /** Extrait du diff autour de la ligne, tel qu'au moment du commentaire. */
   diff_hunk: string;
   user: { login: string; avatar_url: string | null } | null;
@@ -186,6 +209,8 @@ export type {
   ReviewCommentReaction,
   ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
+export type { PrTimelineEvent } from "@/lib/pr-timeline";
+export type { CommitAuthor } from "@/lib/commit-authors";
 
 /** Erreur d'API GitHub avec le status HTTP (permet de distinguer 422 « no commits »). */
 export class GithubApiError extends Error {
@@ -414,7 +439,7 @@ interface RawCommit {
   html_url?: string;
   commit?: {
     message?: string;
-    author?: { name?: string; date?: string } | null;
+    author?: { name?: string; email?: string; date?: string } | null;
     verification?: { verified?: boolean } | null;
   } | null;
   author?: { login?: string; avatar_url?: string } | null;
@@ -429,6 +454,7 @@ function toCommit(c: RawCommit): PullRequestCommit {
       ? { login: c.author.login ?? "", avatar_url: c.author.avatar_url ?? null }
       : null,
     authorName: c.commit?.author?.name ?? null,
+    authorEmail: c.commit?.author?.email ?? null,
     authoredAt: c.commit?.author?.date ?? null,
     url: c.html_url ?? null,
     verified: c.commit?.verification?.verified ?? null,
@@ -436,9 +462,11 @@ function toCommit(c: RawCommit): PullRequestCommit {
     // principale, et c'est contre elle que les deux forges diffent.
     parentSha: c.parents?.[0]?.sha ?? null,
     // La REST des commits ne porte PAS de stats (vérifié contre l'API) : elles
-    // arrivent d'ailleurs, et sont fusionnées par l'appelant.
+    // arrivent d'ailleurs, et sont fusionnées par l'appelant. Les co-auteurs non
+    // plus : la REST ne lit pas les trailers, seul GraphQL les résout.
     additions: null,
     deletions: null,
+    authors: [],
   };
 }
 
@@ -478,68 +506,110 @@ export async function listPullRequestCommits(opts: {
   return { commits, truncated };
 }
 
-interface RawCommitStats {
+interface RawCommitExtras {
   repository?: {
     pullRequest?: {
       commits?: {
         pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
         nodes?: Array<{
-          commit?: { oid?: string; additions?: number; deletions?: number } | null;
+          commit?: {
+            oid?: string;
+            additions?: number;
+            deletions?: number;
+            authors?: {
+              nodes?: Array<{
+                name?: string;
+                user?: { login?: string; avatarUrl?: string | null } | null;
+              } | null>;
+            } | null;
+          } | null;
         } | null>;
       } | null;
     } | null;
   } | null;
 }
 
-const COMMIT_STATS_QUERY = `
+/** Au-delà, l'avatar empilé n'est plus lisible — et GitHub replie aussi. */
+const MAX_COMMIT_AUTHORS = 10;
+
+const COMMIT_EXTRAS_QUERY = `
   query($owner:String!,$name:String!,$number:Int!,$cursor:String){
     repository(owner:$owner,name:$name){
       pullRequest(number:$number){
         commits(first:100, after:$cursor){
           pageInfo{ hasNextPage endCursor }
-          nodes{ commit{ oid additions deletions } }
+          nodes{ commit{
+            oid additions deletions
+            authors(first:${MAX_COMMIT_AUTHORS}){ nodes{ name user{ login avatarUrl } } }
+          } }
         }
       }
     }
   }`;
 
 /**
- * Le poids de CHAQUE commit de la PR (+/− lignes), indexé par SHA.
+ * Ce que la liste REST des commits ne porte pas : leur POIDS (+/− lignes) et
+ * leurs AUTEURS résolus en comptes de forge — indexés par SHA.
  *
- * En GraphQL, et à part de la liste, parce que la REST ne sait pas le faire :
- * `pulls/{n}/commits` ne porte aucune stat (vérifié contre l'API), et les
- * obtenir en REST demanderait un `GET commits/{sha}` PAR commit. GraphQL les
- * rend toutes en une requête — et sans permission de plus que la REST
+ * En GraphQL, et à part de la liste, parce que la REST ne sait faire ni l'un ni
+ * l'autre : `pulls/{n}/commits` ne porte aucune stat (vérifié contre l'API), et
+ * les obtenir en REST demanderait un `GET commits/{sha}` PAR commit ; quant aux
+ * co-auteurs, elle ne lit tout simplement pas les trailers `Co-authored-by`.
+ * GraphQL rend les deux en une requête — et sans permission de plus que la REST
  * équivalente (même constat que les fils de review).
  *
- * L'appelant traite l'échec en best-effort : sans stats, la liste s'affiche
- * quand même, seul l'indicateur +/− disparaît.
+ * Les deux voyagent ensemble parce qu'ils viennent du même aller-retour : les
+ * séparer en doublerait le coût pour rien.
+ *
+ * L'appelant traite l'échec en best-effort : sans cet appel, la liste s'affiche
+ * quand même — l'indicateur +/− disparaît, et les auteurs retombent sur l'auteur
+ * principal plus ce que les trailers du message disent.
  */
-export async function listPullRequestCommitStats(opts: {
+export async function listPullRequestCommitExtras(opts: {
   token: string;
   repoFullName: string;
   number: number;
-}): Promise<Map<string, CommitStats>> {
+}): Promise<Map<string, CommitExtras>> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const stats = new Map<string, CommitStats>();
+  const extras = new Map<string, CommitExtras>();
   let cursor: string | null = null;
   for (let page = 1; page <= COMMITS_MAX_PAGES; page++) {
-    const data: RawCommitStats = await ghGraphql<RawCommitStats>(
+    const data: RawCommitExtras = await ghGraphql<RawCommitExtras>(
       opts.token,
-      COMMIT_STATS_QUERY,
+      COMMIT_EXTRAS_QUERY,
       { owner, name: repo, number: opts.number, cursor },
     );
     const connection = data.repository?.pullRequest?.commits;
     for (const node of connection?.nodes ?? []) {
       const c = node?.commit;
       if (!c?.oid) continue;
-      stats.set(c.oid, { additions: c.additions ?? 0, deletions: c.deletions ?? 0 });
+      extras.set(c.oid, {
+        additions: c.additions ?? 0,
+        deletions: c.deletions ?? 0,
+        // MESURÉ : GitHub rend l'auteur principal EN TÊTE puis les co-signataires,
+        // déjà dédoublonnés par email — un trailer qui répète l'auteur n'ajoute
+        // pas d'entrée. Il résout aussi les comptes, jusqu'à `noreply@anthropic.com`
+        // (→ `claude`), ce que la REST ne fait nulle part.
+        authors: (c.authors?.nodes ?? []).flatMap((a) => {
+          const name = a?.name?.trim();
+          if (!name && !a?.user?.login) return [];
+          return [
+            {
+              login: a?.user?.login ?? null,
+              name: name || (a?.user?.login as string),
+              // L'avatar du COMPTE seulement : `GitActor.avatarUrl` sert un
+              // identicon pour un email inconnu, qui se lirait comme une photo.
+              avatar_url: a?.user?.avatarUrl ?? null,
+            },
+          ];
+        }),
+      });
     }
     if (!connection?.pageInfo?.hasNextPage) break;
     cursor = connection.pageInfo.endCursor ?? null;
     if (!cursor) break;
   }
-  return stats;
+  return extras;
 }
 
 /**
@@ -1139,6 +1209,43 @@ export async function listPullRequestComments(opts: {
   return comments.map(toComment);
 }
 
+const TIMELINE_PER_PAGE = 100;
+/** Garde-fou : 10 pages = 1000 faits, très au-delà de la PR la plus bavarde. */
+const TIMELINE_MAX_PAGES = 10;
+
+/**
+ * L'ACTIVITÉ de la PR (MIN-159) — reviews soumises, commits poussés, labels,
+ * assignations, renommages, brouillon ↔ prête, fermeture, merge.
+ *
+ * Sur GitHub une PR est une issue, et tout ça vit sous `issues/{n}/timeline` :
+ * un flux hétérogène où chaque `event` a sa propre forme. La normalisation est
+ * dans `lib/pr-timeline` (pure, partagée avec le client) ; ici on ne fait que
+ * paginer — du plus ANCIEN au plus récent, comme les commentaires.
+ *
+ * Les reviews en font partie (`event: "reviewed"`, avec leur corps) : c'est ce
+ * qui manquait le plus au fil de minddy, une approbation motivée n'y étant
+ * jusqu'ici visible nulle part.
+ */
+export async function listPullRequestTimeline(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PrTimelineEvent[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const all: RawGithubTimelineEvent[] = [];
+  for (let page = 1; page <= TIMELINE_MAX_PAGES; page++) {
+    const batch = await ghJson<RawGithubTimelineEvent[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/timeline` +
+        `?per_page=${TIMELINE_PER_PAGE}&page=${page}`,
+      opts.token,
+    );
+    all.push(...batch);
+    // Page incomplète = dernière page.
+    if (batch.length < TIMELINE_PER_PAGE) break;
+  }
+  return fromGithubTimeline(all);
+}
+
 interface RawReviewComment extends RawComment {
   path?: string;
   line?: number | null;
@@ -1146,6 +1253,7 @@ interface RawReviewComment extends RawComment {
   side?: string | null;
   in_reply_to_id?: number | null;
   diff_hunk?: string;
+  pull_request_review_id?: number | null;
 }
 
 function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
@@ -1157,6 +1265,7 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
     original_line: c.original_line ?? null,
     side: c.side === "LEFT" ? "LEFT" : "RIGHT",
     in_reply_to_id: c.in_reply_to_id ?? null,
+    review_id: c.pull_request_review_id ?? null,
     diff_hunk: c.diff_hunk ?? "",
     user: c.user ? { login: c.user.login ?? "", avatar_url: c.user.avatar_url ?? null } : null,
     created_at: c.created_at,

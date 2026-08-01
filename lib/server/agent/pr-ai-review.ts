@@ -218,7 +218,7 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
   const failed: typeof inline = [];
   for (const finding of inline) {
     try {
-      await forge.createPullRequestReviewComment({
+      const comment = await forge.createPullRequestReviewComment({
         ...call,
         body: finding.body,
         path: finding.path,
@@ -228,8 +228,9 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
       posted.push(finding);
       // Chaque point apparaît à l'écran AU MOMENT où il arrive sur la PR, pas
       // tous ensemble à la fin : c'est le seul rendu qui dit la vérité sur ce
-      // que Numo est en train de faire.
-      await recordFinding(recorder, finding, true);
+      // que Numo est en train de faire. Son id voyage avec (MIN-159) : c'est lui
+      // qui, dans le déroulé, ramène l'extrait de code du commentaire.
+      await recordFinding(recorder, finding, true, comment.id);
     } catch (err) {
       if (!isForgeApiError(err)) throw err;
       console.error(
@@ -290,11 +291,17 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
   };
 }
 
-/** Un point, tel qu'il apparaît dans le fil de la session. */
+/**
+ * Un point, tel qu'il apparaît dans le fil de la session. `commentId` est celui
+ * du commentaire de review qu'il est devenu sur la forge (MIN-159) : c'est par
+ * lui que le déroulé de la passe le retrouve pour le montrer avec son extrait de
+ * code. Absent quand le point n'a été ancré nulle part.
+ */
 function recordFinding(
   recorder: PrReviewRecorder,
   finding: ReviewFinding,
   anchored: boolean,
+  commentId?: number,
 ): Promise<void> {
   return recorder.finding({
     path: finding.path,
@@ -302,6 +309,7 @@ function recordFinding(
     severity: finding.severity,
     body: finding.body,
     anchored,
+    ...(commentId != null ? { commentId } : {}),
   });
 }
 

@@ -11,7 +11,7 @@ import type {
   PullRequestComment,
   PullRequestCommit,
   CommitDiff,
-  CommitStats,
+  CommitExtras,
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
@@ -21,6 +21,7 @@ import type {
   ReviewThreadState,
   ReviewVerdict,
 } from "./pr";
+import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { ChecksSummary } from "./checks-core";
 
 /**
@@ -137,11 +138,11 @@ export interface Forge {
       liste, parce qu'aucune des deux forges ne le sert avec : GitHub le rend
       d'un coup en GraphQL, GitLab commit par commit (donc borné). Best-effort
       chez l'appelant : sans stats, seul l'indicateur +/− manque. */
-  listPullRequestCommitStats(opts: {
+  listPullRequestCommitExtras(opts: {
     token: string;
     repoFullName: string;
     number: number;
-  }): Promise<Map<string, CommitStats>>;
+  }): Promise<Map<string, CommitExtras>>;
   /** Le diff d'UN commit contre son premier parent, aux mêmes types que le diff
       de la PR entière — la vue « ce que ce commit-là change ». */
   getCommitDiff(opts: {
@@ -264,6 +265,25 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestComment[]>;
+  /**
+   * L'ACTIVITÉ de la PR (MIN-159) : tout ce qui lui est arrivé et qui n'est pas
+   * un message — reviews soumises (avec leur corps), commits poussés, labels,
+   * assignations, demandes de review, renommages, brouillon ↔ prête, fermeture,
+   * réouverture, merge.
+   *
+   * À PART des commentaires, comme chez les deux forges : GitHub sert un flux
+   * d'événements typés (`issues/{n}/timeline`), GitLab des notes système en
+   * anglais mêlées aux messages. Le vocabulaire commun est celui de
+   * `lib/pr-timeline` — et l'appelant fusionne les deux listes par date.
+   *
+   * Best-effort chez l'appelant : sans activité, le fil rend ce qu'il rendait
+   * avant, jamais une erreur.
+   */
+  listTimeline(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<PrTimelineEvent[]>;
   createPullRequestComment(opts: {
     token: string;
     repoFullName: string;
@@ -400,7 +420,7 @@ const githubForge: Forge = {
   getPullRequest: github.getPullRequest,
   listPullRequestFiles: github.listPullRequestFiles,
   listPullRequestCommits: github.listPullRequestCommits,
-  listPullRequestCommitStats: github.listPullRequestCommitStats,
+  listPullRequestCommitExtras: github.listPullRequestCommitExtras,
   getCommitDiff: github.getCommitDiff,
   compareBranches: github.compareBranches,
   // Le compare GitHub est déjà branche-à-branche : la même fonction sert les
@@ -426,6 +446,7 @@ const githubForge: Forge = {
   closePullRequest: github.closePullRequest,
   reopenPullRequest: github.reopenPullRequest,
   listPullRequestComments: github.listPullRequestComments,
+  listTimeline: github.listPullRequestTimeline,
   createPullRequestComment: github.createPullRequestComment,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
   // GitHub exige `commit_id` = la TÊTE de la PR, relue à chaud à chaque envoi
@@ -479,7 +500,7 @@ const gitlabForge: Forge = {
   getPullRequest: gitlab.getMergeRequest,
   listPullRequestFiles: gitlab.listMergeRequestChanges,
   listPullRequestCommits: gitlab.listMergeRequestCommits,
-  listPullRequestCommitStats: gitlab.listMergeRequestCommitStats,
+  listPullRequestCommitExtras: gitlab.listMergeRequestCommitExtras,
   getCommitDiff: gitlab.getCommitDiff,
   compareBranches: gitlab.compareBranches,
   getBranchesMergeBaseSha: gitlab.getBranchesMergeBaseSha,
@@ -495,6 +516,7 @@ const gitlabForge: Forge = {
   closePullRequest: gitlab.closeMergeRequest,
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,
+  listTimeline: gitlab.listMergeRequestTimeline,
   createPullRequestComment: gitlab.createMergeRequestNote,
   listPullRequestReviewComments: gitlab.listMergeRequestDiffComments,
   createPullRequestReviewComment: gitlab.createMergeRequestDiffComment,

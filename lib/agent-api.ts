@@ -4,6 +4,8 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
 import type { PrReviewEvent, PrReviewRun } from "@/lib/pr-review-run";
+import type { PrTimelineEvent } from "@/lib/pr-timeline";
+import type { CommitAuthor } from "@/lib/commit-authors";
 import type {
   ReviewCommentReaction,
   ReviewReactionContent,
@@ -655,15 +657,21 @@ export async function fetchAllPullRequestsApi(input: {
 }
 
 /**
- * Le fil de conversation et les réactions de ses messages (MIN-147), servis
- * ensemble — une réaction se rend sous son message, jamais séparément.
+ * Le fil de conversation : messages, ACTIVITÉ de la PR (MIN-159) et réactions,
+ * servis ensemble — tout ça se rend dans un seul fil ordonné par date.
  *
  * `reactions` porte AUSSI celles du corps de la PR, sous `PR_BODY_COMMENT_ID` :
  * le message qui ouvre le fil se réagit comme les autres.
+ *
+ * `timeline` est best-effort côté serveur : une liste vide veut dire « la forge
+ * n'a pas su la donner » autant que « il ne s'est rien passé ». Le fil rend alors
+ * ses messages, comme avant.
  */
-export async function fetchPullRequestCommentsApi(
-  prId: string,
-): Promise<{ comments: PullRequestComment[]; reactions: ReviewCommentReaction[] }> {
+export async function fetchPullRequestCommentsApi(prId: string): Promise<{
+  comments: PullRequestComment[];
+  timeline: PrTimelineEvent[];
+  reactions: ReviewCommentReaction[];
+}> {
   return parseJson(await fetch(`${prEndpoint(prId)}/comments`));
 }
 
@@ -680,6 +688,8 @@ export interface PullRequestCommit {
   message: string;
   author: { login: string; avatar_url: string | null } | null;
   authorName: string | null;
+  /** Email de l'auteur — la clé de dédoublonnage avec les co-signataires. */
+  authorEmail: string | null;
   authoredAt: string | null;
   url: string | null;
   /** Signature vérifiée. `null` = INCONNU (GitLab ne le sert pas), pas « non ». */
@@ -691,6 +701,17 @@ export interface PullRequestCommit {
       +/− disparaît alors, mais le diff du commit reste ouvrable. */
   additions: number | null;
   deletions: number | null;
+  /**
+   * TOUS ses auteurs, principal en tête (MIN-159). Un commit co-signé
+   * (`Co-authored-by:`) en a plusieurs — le cas courant dès qu'un agent a tenu
+   * le clavier — et l'écran en empile les avatars, comme la forge.
+   *
+   * OPTIONNEL bien que la route le remplisse toujours : un onglet resté ouvert
+   * pendant un déploiement garde en cache la réponse de la version d'avant, qui
+   * n'avait pas ce champ. Le type le dit, pour que chaque lecture le garde —
+   * sans quoi la page entière tombe sur un `.length` d'`undefined`.
+   */
+  authors?: CommitAuthor[];
 }
 
 /**
@@ -774,6 +795,9 @@ export interface PullRequestReviewComment {
   side: "LEFT" | "RIGHT";
   /** Racine du fil, ou null si ce commentaire EST la racine. */
   in_reply_to_id: number | null;
+  /** Review qui porte ce commentaire (MIN-159) — le fil de conversation range
+      les points d'une review SOUS elle. `null` côté GitLab, sans objet review. */
+  review_id: number | null;
   diff_hunk: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;

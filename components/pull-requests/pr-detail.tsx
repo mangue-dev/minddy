@@ -62,6 +62,7 @@ import {
   PrReviewActivity,
   PrReviewLiveCard,
 } from "@/components/pull-requests/pr-review-thread";
+import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { UserAvatar } from "@/components/user-avatar";
@@ -83,12 +84,22 @@ import {
   type ChecksSummary,
   type CheckState,
   type MergeMethod,
+  type PullRequestComment,
+  type PullRequestCommit,
   type PullRequestListItem,
+  type PullRequestReviewComment,
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
+import {
+  groupTimelineCommits,
+  groupTimelineReviews,
+  resolveCommitActors,
+  sortTimelineOlderFirst,
+  type PrTimelineEvent,
+} from "@/lib/pr-timeline";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
 
@@ -268,6 +279,90 @@ function ChecksBanner({
 }
 
 /**
+ * Une entrée du fil de conversation, messages ET activité confondus (MIN-159).
+ * Le fil est UNE suite chronologique, comme sur GitHub : un commentaire, une
+ * review, un push et un changement de titre s'y lisent dans l'ordre où ils ont
+ * eu lieu, pas dans trois listes séparées.
+ */
+type FeedEntry =
+  | { key: string; id: string; createdAt: string | null; kind: "comment"; comment: PullRequestComment }
+  | { key: string; id: string; createdAt: string | null; kind: "event"; event: PrTimelineEvent }
+  | {
+      key: string;
+      id: string;
+      createdAt: string | null;
+      kind: "review";
+      event: PrTimelineEvent;
+      comments: PullRequestReviewComment[];
+    };
+
+/**
+ * Messages + activité, fusionnés et remis dans l'ordre.
+ *
+ * Quatre règles portent tout le rendu :
+ *  - un commit est signé par son COMPTE de forge, pas par le `user.name` écrit
+ *    dedans (`resolveCommitActors`) : la timeline ne connaît que le second, et
+ *    la liste des commits — déjà chargée pour son onglet — porte le premier ;
+ *  - les commits CONSÉCUTIFS se replient en un seul « a poussé N commits »
+ *    (`groupTimelineCommits`), sans quoi une PR de vingt commits noierait les
+ *    trois messages qui comptent ;
+ *  - les reviews sans corps du même auteur se replient de même
+ *    (`groupTimelineReviews`) : chez GitHub, un point posé seul EST une review,
+ *    et une passe de Numo en dépose une douzaine d'affilée ;
+ *  - une review devient une CARTE dès qu'elle a quelque chose à dire — un corps,
+ *    ou des points posés sur le code. Une approbation nue reste une ligne : elle
+ *    n'a pas de contenu, et lui donner une carte vide serait mentir sur son poids.
+ */
+function buildFeed(
+  comments: PullRequestComment[],
+  timeline: PrTimelineEvent[],
+  reviewComments: PullRequestReviewComment[],
+  commits: PullRequestCommit[],
+): FeedEntry[] {
+  const commentsByReview = new Map<number, PullRequestReviewComment[]>();
+  for (const comment of reviewComments) {
+    if (comment.review_id == null) continue;
+    const list = commentsByReview.get(comment.review_id);
+    if (list) list.push(comment);
+    else commentsByReview.set(comment.review_id, [comment]);
+  }
+
+  const entries: FeedEntry[] = comments.map((comment) => ({
+    key: `comment:${comment.id}`,
+    id: `comment:${comment.id}`,
+    createdAt: comment.created_at,
+    kind: "comment",
+    comment,
+  }));
+
+  // L'ordre compte : les comptes d'abord, sinon le regroupement des commits
+  // comparerait des noms git là où deux poussées du même compte doivent se
+  // reconnaître.
+  const events = groupTimelineReviews(
+    groupTimelineCommits(resolveCommitActors(timeline, commits)),
+  );
+  for (const event of events) {
+    if (event.kind === "reviewed") {
+      const own = (event.reviewIds ?? []).flatMap((id) => commentsByReview.get(id) ?? []);
+      if (event.body || own.length > 0) {
+        entries.push({
+          key: event.id,
+          id: event.id,
+          createdAt: event.createdAt,
+          kind: "review",
+          event,
+          comments: own,
+        });
+        continue;
+      }
+    }
+    entries.push({ key: event.id, id: event.id, createdAt: event.createdAt, kind: "event", event });
+  }
+
+  return sortTimelineOlderFirst(entries);
+}
+
+/**
  * Une entrée du fil : avatar, auteur, heure, corps markdown, réactions. Sert
  * autant à la description de la PR (le commentaire qui OUVRE le fil) qu'aux
  * commentaires qui suivent — côté GitHub c'est la même chose, et le fil ne se lit
@@ -397,6 +492,7 @@ export function PrDetail({
   } = usePullRequestQuery(item.prId, true);
   const {
     comments,
+    timeline,
     reactions: commentReactions,
     loading: commentsLoading,
     refetch: refetchComments,
@@ -436,7 +532,7 @@ export function PrDetail({
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
   const [aiReviewModel, setAiReviewModel] = useState("");
   const [startingAiReview, setStartingAiReview] = useState(false);
-  const [tab, setTab] = useState<"conversation" | "commits" | "files">("conversation");
+  const [tab, setTab] = useState<"activity" | "commits" | "files">("activity");
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
@@ -621,7 +717,7 @@ export function PrDetail({
       setAiReviewDialog(false);
       // La passe se regarde dans le fil : y ramener, sinon elle se joue sous un
       // onglet que personne ne regarde.
-      setTab("conversation");
+      setTab("activity");
       await reviewSession.refetch();
     } catch (err) {
       toast.error((err as Error).message);
@@ -689,6 +785,12 @@ export function PrDetail({
   // Corps GitHub de la PR, sans le suffixe auto « 🤖 Généré par l'agent numo… »
   // (redondant avec le badge « Généré par Numo »).
   const prDescription = (pr?.body ?? "").replace(/\n*🤖[^\n]*$/u, "").trim();
+
+  // Le fil complet : messages ET activité, dans l'ordre où tout est arrivé.
+  const feed = buildFeed(comments, timeline, reviewComments, commits);
+  // Le compteur de l'onglet compte ce qui se LIT — messages et reviews qui
+  // disent quelque chose — pas les lignes d'activité, qui sont du contexte.
+  const conversationCount = feed.filter((e) => e.kind !== "event").length;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -1027,13 +1129,13 @@ export function PrDetail({
           {/* Onglets façon GitHub : le fil d'un côté, le code de l'autre. */}
           <Tabs
             value={tab}
-            onValueChange={(v) => setTab(v as "conversation" | "commits" | "files")}
+            onValueChange={(v) => setTab(v as "activity" | "commits" | "files")}
           >
             <TabsList variant="line" className="justify-start p-0">
-              <TabsTrigger value="conversation" className="gap-1.5">
-                {t("tabConversation")}
-                {comments.length > 0 ? (
-                  <span className="text-xs text-muted-foreground">{comments.length}</span>
+              <TabsTrigger value="activity" className="gap-1.5">
+                {t("tabActivity")}
+                {conversationCount > 0 ? (
+                  <span className="text-xs text-muted-foreground">{conversationCount}</span>
                 ) : null}
               </TabsTrigger>
               {/* Les commits AVANT les fichiers, comme sur GitHub : on lit ce qui
@@ -1054,14 +1156,15 @@ export function PrDetail({
 
             {/* Fil : la description de la PR ouvre la discussion, les commentaires
                 GitHub suivent, le composer ferme. */}
-            <TabsContent value="conversation" className="mt-4 flex flex-col gap-3">
+            <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
                 <Skeleton className="h-16 rounded-lg" />
-              ) : !prDescription && comments.length === 0 && !reviewCard ? (
+              ) : !prDescription && feed.length === 0 && !reviewCard ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
                 // Mêmes cartes que les commentaires d'issue (CommentCard) : bordure,
                 // fond card, en-tête avatar/auteur/heure puis le corps markdown.
+                // Les lignes d'activité s'intercalent entre elles, sans carte.
                 <ul className="flex flex-col gap-3">
                   {prDescription ? (
                     <ThreadComment
@@ -1082,34 +1185,52 @@ export function PrDetail({
                       reactions={threadReactions}
                     />
                   ) : null}
-                  {comments.map((c) => (
-                    <ThreadComment
-                      key={c.id}
-                      commentId={c.id}
-                      user={c.user}
-                      createdAt={c.created_at}
-                      body={c.body}
-                      onQuoteReply={
-                        canComment
-                          ? () => quoteReply(c.body ?? "", c.user?.login)
-                          : undefined
-                      }
-                      reactions={threadReactions}
-                      // Le message de VERDICT de Numo porte le déroulé de sa
-                      // passe : ce qu'il a lu, les points qu'il a posés. Replié
-                      // sous le même accordéon que le fil de l'agent — la review
-                      // vit avec son message, pas dans un écran à côté.
-                      activity={
-                        reviewSession.review &&
-                        reviewSession.review.summaryCommentId === c.id ? (
-                          <PrReviewActivity
-                            review={reviewSession.review}
-                            events={reviewSession.events}
-                          />
-                        ) : null
-                      }
-                    />
-                  ))}
+                  {feed.map((entry) => {
+                    if (entry.kind === "event") {
+                      return <PrTimelineRow key={entry.key} event={entry.event} />;
+                    }
+                    if (entry.kind === "review") {
+                      return (
+                        <PrTimelineReview
+                          key={entry.key}
+                          event={entry.event}
+                          comments={entry.comments}
+                        />
+                      );
+                    }
+                    const c = entry.comment;
+                    return (
+                      <ThreadComment
+                        key={entry.key}
+                        commentId={c.id}
+                        user={c.user}
+                        createdAt={c.created_at}
+                        body={c.body}
+                        onQuoteReply={
+                          canComment
+                            ? () => quoteReply(c.body ?? "", c.user?.login)
+                            : undefined
+                        }
+                        reactions={threadReactions}
+                        // Le message de VERDICT de Numo porte le déroulé de sa
+                        // passe : ce qu'il a lu, les points qu'il a posés. Replié
+                        // sous le même accordéon que le fil de l'agent — la review
+                        // vit avec son message, pas dans un écran à côté.
+                        activity={
+                          reviewSession.review &&
+                          reviewSession.review.summaryCommentId === c.id ? (
+                            <PrReviewActivity
+                              review={reviewSession.review}
+                              events={reviewSession.events}
+                              // Les points ancrés se rendent alors avec leur
+                              // extrait de code, comme dans le reste du fil.
+                              comments={reviewComments}
+                            />
+                          ) : null
+                        }
+                      />
+                    );
+                  })}
                   {/* La passe EN COURS prend la place que son message occupera :
                       c'est là que le lecteur regarde, et c'est là que le verdict
                       tombera. Elle s'efface dès que le vrai message arrive. */}

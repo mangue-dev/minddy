@@ -87,7 +87,7 @@ const headingKey = (text: string): string =>
 const QUESTION_HEADING =
   /^(?:open|remaining|unresolved|outstanding|pending)?\s*questions?\b/i;
 
-const isQuestionHeading = (text: string): boolean =>
+export const isQuestionHeading = (text: string): boolean =>
   QUESTION_HEADING.test(headingKey(text));
 
 const STATE_BY_MARKER: Record<string, PlanTaskState> = {

@@ -40,7 +40,8 @@ import {
   type PullRequestState,
 } from "./pull-requests";
 import { getRun } from "./runs";
-import type { PullRequestCommit, PullRequestFile, ReviewVerdict } from "./pr";
+import type { CommitExtras, PullRequestCommit, PullRequestFile, ReviewVerdict } from "./pr";
+import { commitAuthors } from "@/lib/commit-authors";
 import {
   isReviewReactionContent,
   PR_BODY_COMMENT_ID,
@@ -361,20 +362,28 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
 export async function prCommitsResponse(scope: PrScope): Promise<NextResponse> {
   try {
     const { commits, truncated } = await scope.forge.listPullRequestCommits(scope.call);
-    // Le poids de chaque commit vient d'un second appel (aucune forge ne le sert
-    // avec la liste). Best-effort : sans lui, la liste s'affiche telle quelle et
-    // seul l'indicateur +/− manque — le diff d'un commit reste ouvrable, et il
-    // porte ses propres chiffres.
-    const stats = await scope.forge
-      .listPullRequestCommitStats(scope.call)
+    // Le poids de chaque commit ET ses auteurs viennent d'un second appel (aucune
+    // forge ne les sert avec la liste). Best-effort : sans lui, la liste s'affiche
+    // telle quelle, seul l'indicateur +/− manque — le diff d'un commit reste
+    // ouvrable, et il porte ses propres chiffres.
+    const extras = await scope.forge
+      .listPullRequestCommitExtras(scope.call)
       .catch((err) => {
-        console.error("[pr-actions] commit stats unreadable:", (err as Error).message);
-        return new Map<string, { additions: number; deletions: number }>();
+        console.error("[pr-actions] commit extras unreadable:", (err as Error).message);
+        return new Map<string, CommitExtras>();
       });
     return NextResponse.json({
       commits: commits.map((c) => {
-        const s = stats.get(c.sha);
-        return s ? { ...c, additions: s.additions, deletions: s.deletions } : c;
+        const e = extras.get(c.sha);
+        return {
+          ...c,
+          additions: e?.additions ?? c.additions,
+          deletions: e?.deletions ?? c.deletions,
+          // Les auteurs de la forge quand elle les a résolus (GitHub, comptes et
+          // avatars compris) ; sinon les trailers du message, seule source de
+          // GitLab et filet quand GraphQL n'a pas répondu.
+          authors: commitAuthors(c, e?.authors),
+        };
       }),
       truncated,
     });
@@ -552,23 +561,30 @@ export async function prCommitFileBytesResponse(
 // ── Fil de conversation ──────────────────────────────────────────────────────
 
 /**
- * Le fil de conversation, avec les réactions de ses messages ET du corps de la PR
- * (MIN-147) — servis ensemble pour la même raison que côté review : une réaction
- * se rend SOUS son message, jamais séparément, et deux requêtes pour l'afficher
- * se désynchroniseraient.
+ * Le fil de conversation : les messages, l'ACTIVITÉ de la PR (MIN-159) et les
+ * réactions des messages comme du corps de la PR (MIN-147) — servis ensemble
+ * pour la même raison que côté review : tout ça se rend dans UN fil, ordonné par
+ * date, et trois requêtes pour l'afficher se désynchroniseraient.
  *
- * Les commentaires restent lus sur le token d'installation (tout membre du projet
- * minddy voit la PR sans compte git) ; les réactions, elles, dépendent de qui
- * regarde — d'où `viewerIsActor`, faux quand il n'y a pas d'acteur : les comptes
- * restent justes, mais aucun chip ne s'allume plutôt que d'allumer chez chacun
- * une réaction posée par le bot.
+ * L'activité est BEST-EFFORT, au même titre que les réactions : un flux
+ * d'événements illisible (droit manquant, endpoint indisponible) rend le fil
+ * d'avant MIN-159 — les messages seuls — jamais une erreur. C'est un fil moins
+ * complet, pas une vue cassée.
  *
- * Best-effort : une réaction illisible rend le fil sans emoji, jamais une erreur.
+ * Les commentaires et l'activité restent lus sur le token d'installation (tout
+ * membre du projet minddy voit la PR sans compte git) ; les réactions, elles,
+ * dépendent de qui regarde — d'où `viewerIsActor`, faux quand il n'y a pas
+ * d'acteur : les comptes restent justes, mais aucun chip ne s'allume plutôt que
+ * d'allumer chez chacun une réaction posée par le bot.
  */
 export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const [comments, actor] = await Promise.all([
+    const [comments, timeline, actor] = await Promise.all([
       scope.forge.listPullRequestComments(scope.call),
+      scope.forge.listTimeline(scope.call).catch((err) => {
+        console.error("[pr-actions] timeline unreadable:", (err as Error).message);
+        return [];
+      }),
       scope.actor(),
     ]);
     const viewerIsActor = actor.kind === "actor";
@@ -584,7 +600,7 @@ export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> 
         console.error("[pr-actions] conversation reactions unreadable:", (err as Error).message);
         return [];
       });
-    return NextResponse.json({ comments, reactions });
+    return NextResponse.json({ comments, timeline, reactions });
   } catch (err) {
     return forgeErrorResponse(err);
   }

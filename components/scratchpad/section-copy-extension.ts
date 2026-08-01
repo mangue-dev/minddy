@@ -13,7 +13,8 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
  * While a button is hovered/focused it also shows two pieces of shared "hover
  * chrome", both parented to the `.scratchpad-editor` container:
  *   - a tinted box behind the exact section targeted (heading → the last block
- *     before the next heading), so the target is unmistakable;
+ *     before the next heading of the SAME or a shallower level, sub-sections
+ *     included), so the target is unmistakable;
  *   - a styled tooltip on the button (matching the app's tooltips) instead of a
  *     raw browser `title`.
  */
@@ -32,7 +33,9 @@ const COPY_SVG =
 const BOT_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>';
 
-const HEADING_TAGS = new Set(["H1", "H2", "H3"]);
+/** Rang d'un titre (1–3 dans l'éditeur), 0 pour tout autre bloc. */
+const headingRank = (el: Element): number =>
+  /^H[1-6]$/.test(el.tagName) ? Number(el.tagName[1]) : 0;
 
 export const SectionCopy = Extension.create<SectionCopyOptions>({
   name: "sectionCopy",
@@ -79,14 +82,18 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
       const cRect = c.container.getBoundingClientRect();
 
       // Tinted box spans the heading down to the last block before the next
-      // heading (or the document end).
+      // heading of the same or a shallower level (or the document end) : les
+      // sous-sections font partie de la section, et le geste les emporte (cf.
+      // scratchpadSectionSubtree) — la boîte doit dire la même chose.
+      const rank = headingRank(heading);
       let last: HTMLElement = heading;
       for (
         let el = heading.nextElementSibling;
         el;
         el = el.nextElementSibling
       ) {
-        if (HEADING_TAGS.has(el.tagName)) break;
+        const r = headingRank(el);
+        if (r > 0 && r <= rank) break;
         last = el as HTMLElement;
       }
       const hRect = heading.getBoundingClientRect();
@@ -158,7 +165,12 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
 
             const decorations: Decoration[] = [];
             let headingIndex = -1;
-            state.doc.descendants((node, pos) => {
+            // Titres de PREMIER NIVEAU seulement : une section du carnet, c'est
+            // un titre de la note, pas un `#` égaré dans une citation ou une
+            // liste. C'est aussi ce qui garde cet index égal à celui que compte
+            // le markdown (lib/scratchpad.ts) — un titre imbriqué s'y écrit
+            // « > # … » et n'y compte pas, donc le geste porterait ailleurs.
+            state.doc.forEach((node, pos) => {
               if (node.type.name !== "heading") return;
               headingIndex += 1;
               const index = headingIndex;

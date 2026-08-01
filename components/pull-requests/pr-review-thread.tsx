@@ -7,8 +7,11 @@ import { cn, Spinner } from "mangue-ui";
 import { Markdown } from "@/components/markdown";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
+import { ReviewCommentBlock } from "@/components/pull-requests/pr-timeline";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { formatModelName } from "@/lib/model-display";
+import { displayLineOf } from "@/lib/pr-review-threads";
+import type { PullRequestReviewComment } from "@/lib/agent-api";
 import type {
   FindingSeverity,
   PrReviewContextPayload,
@@ -107,20 +110,30 @@ export function PrReviewLiveCard({
 export function PrReviewActivity({
   review,
   events,
+  comments,
 }: {
   review: PrReviewRun;
   events: PrReviewEvent[];
+  /** Les commentaires de review de la PR — de quoi rendre chaque point ANCRÉ
+      comme il se rend partout ailleurs, extrait de code compris (MIN-159). */
+  comments?: PullRequestReviewComment[];
 }) {
   if (events.length === 0) return null;
   return (
     <WorkAccordion startedAt={review.createdAt} endedAt={review.finishedAt} active={false}>
-      <ReviewSteps events={events} />
+      <ReviewSteps events={events} comments={comments} />
     </WorkAccordion>
   );
 }
 
 /** Ce que Numo a lu, puis ce qu'il a posé — dans l'ordre où ça a eu lieu. */
-function ReviewSteps({ events }: { events: PrReviewEvent[] }) {
+function ReviewSteps({
+  events,
+  comments,
+}: {
+  events: PrReviewEvent[];
+  comments?: PullRequestReviewComment[];
+}) {
   return (
     <ol className="flex flex-col gap-2">
       {events.map((event) => {
@@ -129,10 +142,16 @@ function ReviewSteps({ events }: { events: PrReviewEvent[] }) {
             return (
               <ContextRow key={event.id} payload={event.payload as PrReviewContextPayload} />
             );
-          case "finding":
+          case "finding": {
+            const payload = event.payload as PrReviewFindingPayload;
             return (
-              <FindingRow key={event.id} payload={event.payload as PrReviewFindingPayload} />
+              <FindingRow
+                key={event.id}
+                payload={payload}
+                comment={findAnchoredComment(payload, comments)}
+              />
             );
+          }
           case "error":
             return (
               <ErrorRow
@@ -217,13 +236,72 @@ const SEVERITY_DOT: Record<FindingSeverity, string> = {
 };
 
 /**
- * Un point, tel qu'il a atterri. `anchored` n'est pas un détail : un point ancré
- * se lit dans l'onglet Fichiers, à sa ligne ; un point replié se lit dans la
- * synthèse, juste en dessous. Ne pas le dire enverrait chercher au mauvais
- * endroit.
+ * Le commentaire de review qu'un point est DEVENU, quand il en est devenu un.
+ *
+ * `commentId` est la clé exacte, enregistrée à la pose (MIN-159). Les passes
+ * d'avant ne l'ont pas : on retombe sur `fichier:ligne`, ce que la forge sait
+ * encore rendre ambigu (deux points sur la même ligne), mais qui vaut mieux que
+ * de perdre l'extrait de code sur tout l'historique.
+ *
+ * Rien pour un point REPLIÉ dans la synthèse : il n'est devenu aucun commentaire,
+ * et en accrocher un serait montrer le code de quelqu'un d'autre.
  */
-function FindingRow({ payload }: { payload: PrReviewFindingPayload }) {
+function findAnchoredComment(
+  payload: PrReviewFindingPayload,
+  comments: PullRequestReviewComment[] | undefined,
+): PullRequestReviewComment | null {
+  if (!payload.anchored || !comments?.length) return null;
+  if (payload.commentId != null) {
+    return comments.find((c) => c.id === payload.commentId) ?? null;
+  }
+  return (
+    comments.find((c) => c.path === payload.path && displayLineOf(c) === payload.line) ?? null
+  );
+}
+
+/**
+ * Un point, tel qu'il a atterri.
+ *
+ * Ancré, il se rend EXACTEMENT comme dans l'activité de la PR — chemin, extrait
+ * de code, puis le commentaire signé (`ReviewCommentBlock`). C'est le même objet
+ * vu au même endroit de la page : lui donner ici une seconde apparence, plus
+ * pauvre, obligeait à comprendre deux fois la même chose.
+ *
+ * Replié dans la synthèse, il n'est devenu aucun commentaire : pas d'extrait à
+ * montrer, et c'est justement ce que la mention à droite dit. Il garde donc sa
+ * forme courte — c'est le seul cas où elle est la bonne. Même chose tant que les
+ * commentaires ne sont pas redescendus de la forge (la passe EN COURS) : la
+ * forme courte tient la place, et le bloc complet la remplace au refetch.
+ *
+ * La pastille de gravité reste dans les deux cas : elle est ce que Numo ajoute
+ * au commentaire, et la forge ne la porte nulle part.
+ */
+function FindingRow({
+  payload,
+  comment,
+}: {
+  payload: PrReviewFindingPayload;
+  comment: PullRequestReviewComment | null;
+}) {
   const t = useTranslations("PullRequests");
+
+  if (comment) {
+    return (
+      <li className="flex items-start gap-1.5">
+        <span
+          className={cn(
+            "mt-2.5 size-1.5 shrink-0 rounded-full",
+            SEVERITY_DOT[payload.severity],
+          )}
+          aria-hidden
+        />
+        <ul className="min-w-0 flex-1">
+          <ReviewCommentBlock comment={comment} />
+        </ul>
+      </li>
+    );
+  }
+
   return (
     <li className="flex flex-col gap-1 rounded-md border border-border bg-background px-2.5 py-2">
       <span className="flex min-w-0 items-center gap-1.5">

@@ -12,11 +12,10 @@ import {
   cn,
 } from "mangue-ui";
 import { Check, Copy, ExternalLink, ShieldCheck } from "lucide-react";
-import { BotBadge } from "@/components/git/git-login";
+import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
-import { UserAvatar } from "@/components/user-avatar";
 import type { PullRequestCommit } from "@/lib/agent-api";
-import { parseForgeLogin, type RepoProviderId } from "@/lib/repo-providers";
+import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Onglet Commits d'une pull request : ce qui la COMPOSE, dans l'ordre où le
@@ -169,21 +168,27 @@ function CommitRow({
   const [showBody, setShowBody] = useState(false);
   const { title, body } = useMemo(() => splitMessage(commit.message), [commit.message]);
 
-  // Le compte de la forge quand elle l'a rattaché (avatar + login), sinon le
-  // nom écrit dans le commit : git en a toujours un, et « — » à sa place ne
-  // dirait rien de plus qu'un blanc.
-  const login = commit.author?.login ?? null;
-  const parsed = login ? parseForgeLogin(login) : null;
-  const displayName = parsed?.name ?? commit.authorName ?? null;
+  // TOUS les auteurs, principal en tête (MIN-159) : un commit co-signé en a
+  // plusieurs, et c'est le cas courant dès qu'un agent a tenu le clavier. Le
+  // repli — la forge n'a pas répondu, ou la réponse en cache date d'avant le
+  // déploiement qui a ajouté le champ — est l'auteur principal seul, exactement
+  // ce que cette vue affichait avant.
+  const authors =
+    commit.authors?.length
+      ? commit.authors
+      : commit.author || commit.authorName
+        ? [
+            {
+              login: commit.author?.login ?? null,
+              name: commit.authorName ?? commit.author?.login ?? commit.sha,
+              avatar_url: commit.author?.avatar_url ?? null,
+            },
+          ]
+        : [];
 
   return (
     <li className="flex items-start gap-3 px-3.5 py-3">
-      <UserAvatar
-        url={commit.author?.avatar_url}
-        seed={login ?? commit.authorName ?? commit.sha}
-        className="mt-0.5 size-6"
-        title={login ?? commit.authorName ?? undefined}
-      />
+      <AuthorStack authors={authors} className="mt-0.5" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-start gap-1.5">
           {/* Le titre ouvre le diff, comme il ouvre le commit sur GitHub : c'est
@@ -220,8 +225,7 @@ function CommitRow({
           </pre>
         ) : null}
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground/80">{displayName ?? "—"}</span>
-          {parsed?.isBot ? <BotBadge /> : null}
+          <AuthorNames authors={authors} />
           {commit.authoredAt ? (
             <Tooltip>
               <TooltipTrigger asChild>

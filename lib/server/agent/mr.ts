@@ -13,6 +13,7 @@ import {
   type ReviewCommentReaction,
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
+import { fromGitlabSystemNotes, type PrTimelineEvent } from "@/lib/pr-timeline";
 import { resolveDiffPosition } from "./mr-position";
 import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
 import type {
@@ -21,7 +22,7 @@ import type {
   PullRequestComment,
   PullRequestCommit,
   CommitDiff,
-  CommitStats,
+  CommitExtras,
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
@@ -362,6 +363,7 @@ interface RawCommit {
   message?: string;
   title?: string;
   author_name?: string | null;
+  author_email?: string | null;
   authored_date?: string | null;
   created_at?: string | null;
   web_url?: string | null;
@@ -408,6 +410,7 @@ export async function listMergeRequestCommits(opts: {
         message: c.message ?? c.title ?? "",
         author: null,
         authorName: c.author_name ?? null,
+        authorEmail: c.author_email ?? null,
         authoredAt,
         // Certaines instances ne servent pas `web_url` ici : l'URL de commit est
         // stable et se reconstruit, comme celle du compare.
@@ -415,7 +418,10 @@ export async function listMergeRequestCommits(opts: {
         verified: null,
         // Premier parent : la ligne principale d'un commit de fusion.
         parentSha: c.parent_ids?.[0] ?? null,
-        // Comme chez GitHub, la liste ne porte pas de stats (`…CommitStats`).
+        // Comme chez GitHub, la liste ne porte ni stats ni auteurs (`…CommitExtras`)
+        // — sauf que GitLab ne saura jamais résoudre les seconds en comptes :
+        // l'appelant lira les trailers `Co-authored-by` du message.
+        authors: [],
         additions: null,
         deletions: null,
       } satisfies PullRequestCommit;
@@ -446,14 +452,14 @@ const STATS_CONCURRENCY = 5;
  * Best-effort commit par commit : un SHA illisible (commit élagué d'un
  * force-push) n'ôte pas ses chiffres aux autres.
  */
-export async function listMergeRequestCommitStats(opts: {
+export async function listMergeRequestCommitExtras(opts: {
   token: string;
   repoFullName: string;
   number: number;
-}): Promise<Map<string, CommitStats>> {
+}): Promise<Map<string, CommitExtras>> {
   const { commits } = await listMergeRequestCommits(opts);
   const shas = commits.slice(0, MAX_STATS_COMMITS).map((c) => c.sha);
-  const stats = new Map<string, CommitStats>();
+  const stats = new Map<string, CommitExtras>();
 
   for (let i = 0; i < shas.length; i += STATS_CONCURRENCY) {
     const slice = shas.slice(i, i + STATS_CONCURRENCY);
@@ -467,6 +473,9 @@ export async function listMergeRequestCommitStats(opts: {
           stats.set(sha, {
             additions: commit.stats?.additions ?? 0,
             deletions: commit.stats?.deletions ?? 0,
+            // GitLab ne résout AUCUN compte sur ses commits, co-auteurs compris :
+            // l'appelant lira les trailers du message, seule source qui reste.
+            authors: [],
           });
         } catch (err) {
           console.error("[mr] commit stats unreadable:", (err as Error).message);
@@ -983,6 +992,37 @@ export async function listMergeRequestNotes(opts: {
     .map((n) => toComment(opts.repoFullName, opts.number, n));
 }
 
+/**
+ * L'ACTIVITÉ de la MR (MIN-159) : approbations, commits poussés, labels,
+ * assignations, changements de titre, brouillon ↔ prête, merge, fermeture.
+ *
+ * GitLab ne type RIEN de tout ça : il l'écrit en anglais dans une note marquée
+ * `system`, sur le même endpoint que les commentaires. C'est donc l'exacte
+ * moitié que `listMergeRequestNotes` jette, relue avec l'autre filtre — la
+ * reconnaissance des phrases (et le repli quand aucune ne colle) est dans
+ * `lib/pr-timeline`, partagé avec GitHub et le client.
+ *
+ * Oui, ce sont les mêmes pages que le fil : deux appels au lieu d'un. C'est le
+ * prix d'une interface où les deux forges répondent à la même question, là où
+ * GitHub sert bien deux endpoints distincts. Les pages sont chaudes chez GitLab,
+ * et fusionner les deux méthodes obligerait tout appelant à connaître ce détail.
+ */
+export async function listMergeRequestTimeline(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<PrTimelineEvent[]> {
+  const notes = await glPaged<RawNote>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/notes` +
+      `?sort=asc&order_by=created_at`,
+    opts.token,
+    NOTES_MAX_PAGES,
+  );
+  return fromGitlabSystemNotes(notes, (noteId) =>
+    noteUrl(opts.repoFullName, opts.number, noteId),
+  );
+}
+
 /** Ajoute une note à la conversation de la MR (auteur = le compte connecté). */
 export async function createMergeRequestNote(opts: {
   token: string;
@@ -1032,6 +1072,9 @@ function toReviewComment(
     original_line: original.line,
     side,
     in_reply_to_id: rootId,
+    // Aucune review à laquelle rattacher ce commentaire : GitLab n'a pas d'objet
+    // review, ses notes de diff se rendent seules dans le fil (MIN-159).
+    review_id: null,
     // GitLab n'expose pas d'extrait de hunk par note — tous les rendus (UI,
     // prompt de l'agent) ont un repli sans hunk (chemin + ligne + corps).
     diff_hunk: "",

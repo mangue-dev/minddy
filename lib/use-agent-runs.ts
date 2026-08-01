@@ -259,6 +259,9 @@ export function usePrCommentsQuery(prId: string | null) {
   });
   return {
     comments: data?.comments ?? [],
+    // L'activité (MIN-159) voyage avec les messages : c'est le MÊME fil, ordonné
+    // par date — la servir à part la ferait s'intercaler avec un temps de retard.
+    timeline: data?.timeline ?? [],
     // Les réactions (MIN-147) voyagent avec les commentaires, comme côté review :
     // elles se rendent SOUS un message, et le corps de la PR y a les siennes.
     reactions: data?.reactions ?? [],
