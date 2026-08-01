@@ -1,20 +1,45 @@
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
- * Événements d'activité tracés pour les actions de review d'une pull request /
- * merge request : accepter (merge), refuser (close), approuver et demander des
- * changements. Seules ces ACTIONS comptent — les simples commentaires n'en
- * produisent aucune (choix produit). Partagé entre l'émission (route in-app +
- * webhooks GitHub/GitLab) et le rendu du journal d'activité (timeline).
+ * Événements d'activité tracés pour la vie d'une pull request / merge request :
+ * l'ouvrir, y pousser des commits, la commenter (fil ou code), et les gestes de
+ * review — approuver, demander des changements, accepter (merge), refuser
+ * (close). Partagé entre l'émission (agent + routes in-app + webhooks
+ * GitHub/GitLab) et le rendu du journal d'activité (timeline).
  */
 export const PR_ACTION_EVENT_TYPES = [
   "pr_approved",
   "pr_accepted",
   "pr_rejected",
   "pr_changes_requested",
+  "pr_opened",
+  "pr_committed",
+  "pr_commented",
+  "pr_code_commented",
 ] as const;
 
 export type PrActionEventType = (typeof PR_ACTION_EVENT_TYPES)[number];
+
+/**
+ * Fenêtre de regroupement des gestes RÉPÉTABLES (cf. `collapsesInBurst`) : au
+ * sein de cette fenêtre, un même acteur qui refait le même geste sur la même PR
+ * ne produit qu'une ligne. Calée sur celle de l'anti-écho — le hook qui revient
+ * après une action in-app tombe dans la même seconde.
+ */
+export const PR_EVENT_BURST_MS = 2 * 60_000;
+
+/**
+ * Ce type d'événement se regroupe-t-il dans une rafale ?
+ *
+ * Vrai pour les COMMENTAIRES seulement : une review GitHub de huit remarques de
+ * ligne, c'est huit `pull_request_review_comment` en quelques millisecondes pour
+ * UN SEUL geste — huit fois « a commenté le code de la PR #12 » rendrait le
+ * journal illisible. Les autres gestes sont des faits distincts, y compris les
+ * pushs successifs : chacun garde sa ligne.
+ */
+export function collapsesInBurst(type: string): boolean {
+  return type === "pr_commented" || type === "pr_code_commented";
+}
 
 /** Provider d'origine d'une action PR venue d'un webhook (id du registre). */
 export type ForgeProvider = RepoProviderId;
@@ -28,7 +53,14 @@ export type ForgeProvider = RepoProviderId;
  */
 const GITLAB_ACTOR_PREFIX = "gitlab:";
 
-/** Encode l'acteur webhook (login + provider) vers `from_value`. */
+/**
+ * Encode l'acteur (login + provider) vers `from_value`.
+ *
+ * Appelé avec un login nul par les gestes IN-APP, qui n'ont pas d'acteur de
+ * forge à nommer — l'acteur y est le membre minddy (`actor_id`). Ce qu'ils
+ * encodent quand même, c'est le PROVIDER : sans lui, `describeEvent` retombe sur
+ * « pull request » et un utilisateur GitLab lit du GitHub sur son propre ticket.
+ */
 export function forgeActorValue(
   provider: ForgeProvider,
   login: string | null,

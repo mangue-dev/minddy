@@ -44,5 +44,5 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const auth = await authorizeRunPrRequest(request, runId);
   if (!auth.ok) return auth.response;
-  return createPrCommentResponse(auth.scope, body);
+  return createPrCommentResponse(auth.scope, body, auth.userId);
 }

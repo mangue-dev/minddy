@@ -3,9 +3,16 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
-import { forgeActorValue, type ForgeProvider, type PrActionEventType } from "@/lib/pr-events";
+import {
+  collapsesInBurst,
+  forgeActorValue,
+  PR_EVENT_BURST_MS,
+  type ForgeProvider,
+  type PrActionEventType,
+} from "@/lib/pr-events";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { findPullRequestByNumber } from "./pull-requests";
+import { findRunsForPr } from "./runs";
 import type { NotificationType } from "@/lib/types";
 import type { AgentRun, SyncedPrRun } from "./runs";
 
@@ -165,6 +172,72 @@ export async function isPrActionEcho(opts: {
 }
 
 /**
+ * Ce (ticket, geste, PR, acteur) porte-t-il DÉJÀ une ligne de moins de deux
+ * minutes ? Le garde des gestes répétables (`collapsesInBurst`).
+ *
+ * Une review GitHub de huit remarques de ligne arrive en huit
+ * `pull_request_review_comment` quasi simultanés : ce sont huit faits pour la
+ * forge, un seul geste pour le lecteur du ticket. Sans ce regroupement, le
+ * journal porterait huit fois la même phrase.
+ *
+ * Best-effort, et pour la même raison que l'anti-écho : les huit livraisons
+ * peuvent s'exécuter en parallèle, et une lecture peut passer avant l'écriture
+ * de sa voisine. On retombe alors sur quelques lignes de trop — jamais sur une
+ * perte, jamais sur une ligne attribuée à côté.
+ *
+ * Deux modes, selon d'où vient le geste : in-app (`actorId`, le membre minddy)
+ * ou forge (`actor_id` null, l'acteur encodé dans `from_value`).
+ */
+export async function hasRecentPrEvent(opts: {
+  issueIds: string[];
+  type: string;
+  prNumber: number;
+  actorId?: string | null;
+  fromValue?: string | null;
+}): Promise<boolean> {
+  if (opts.issueIds.length === 0) return false;
+  let query = getServiceClient()
+    .from("issue_events")
+    .select("id")
+    .in("issue_id", opts.issueIds)
+    .eq("type", opts.type)
+    .eq("to_value", String(opts.prNumber))
+    .gte("created_at", new Date(Date.now() - PR_EVENT_BURST_MS).toISOString())
+    .limit(1);
+  if (opts.actorId) {
+    query = query.eq("actor_id", opts.actorId);
+  } else {
+    query = query.is("actor_id", null);
+    query = opts.fromValue
+      ? query.eq("from_value", opts.fromValue)
+      : query.is("from_value", null);
+  }
+  const { data } = await query;
+  return !!data?.length;
+}
+
+/** Tickets qui n'ont pas déjà la ligne (identité : geste + PR + acteur de forge). */
+async function withoutBurstDuplicates(opts: {
+  issueIds: string[];
+  type: PrActionEventType;
+  prNumber: number;
+  fromValue: string | null;
+}): Promise<string[]> {
+  if (!collapsesInBurst(opts.type)) return opts.issueIds;
+  const kept: string[] = [];
+  for (const issueId of opts.issueIds) {
+    const recent = await hasRecentPrEvent({
+      issueIds: [issueId],
+      type: opts.type,
+      prNumber: opts.prNumber,
+      fromValue: opts.fromValue,
+    });
+    if (!recent) kept.push(issueId);
+  }
+  return kept;
+}
+
+/**
  * Émetteur d'activité des actions PR/MR faites DIRECTEMENT sur le provider
  * (webhooks GitHub ET GitLab — MIN-69, extrait du webhook GitHub). Un seul event
  * par issue (plusieurs runs peuvent partager la même PR). Acteur = l'utilisateur
@@ -185,13 +258,21 @@ export async function recordForgePrActionEvents(opts: {
     ...new Set(opts.runs.map((r) => r.issueId).filter((id): id is string => id != null)),
   ];
   if (issueIds.length === 0) return;
+  const fromValue = forgeActorValue(opts.provider, opts.login);
+  const targets = await withoutBurstDuplicates({
+    issueIds,
+    type: opts.type,
+    prNumber: opts.prNumber,
+    fromValue,
+  });
+  if (targets.length === 0) return;
   await insertEvents(
     getServiceClient(),
-    issueIds.map((issueId) => ({
+    targets.map((issueId) => ({
       issue_id: issueId,
       actor_id: null,
       type: opts.type,
-      from_value: forgeActorValue(opts.provider, opts.login),
+      from_value: fromValue,
       to_value: String(opts.prNumber),
     })),
   );
@@ -363,14 +444,75 @@ export async function applyForgePrToIssue(opts: {
       login: opts.login,
     }))
   ) {
+    const fromValue = forgeActorValue(opts.provider, opts.login);
+    const targets = await withoutBurstDuplicates({
+      issueIds: [issueId],
+      type: opts.actionType,
+      prNumber: opts.prNumber,
+      fromValue,
+    });
+    if (targets.length === 0) return;
     await insertEvents(getServiceClient(), [
       {
         issue_id: issueId,
         actor_id: null,
         type: opts.actionType,
-        from_value: forgeActorValue(opts.provider, opts.login),
+        from_value: fromValue,
         to_value: String(opts.prNumber),
       },
     ]);
   }
+}
+
+/**
+ * Trace sur le(s) ticket(s) d'une PR un geste de forge SANS effet d'état — une
+ * review, un commentaire de fil, une remarque de ligne. Le pendant, pour les
+ * gestes qui ne changent rien à la PR elle-même, de ce que `handlePullRequest`
+ * fait autour de `syncPrState`.
+ *
+ * Une seule règle à retenir : la PR de Numo passe par ses RUNS (ils portent le
+ * ticket, et l'auteur du run mérite sa notification), une PR humaine par la PR
+ * elle-même (MIN-143, `applyForgePrToIssue`). Ce garde `runs.length === 0`
+ * manquait au chemin des reviews : approuver une PR humaine sur GitHub ne
+ * laissait aucune trace sur son ticket, là où la fusionner en laissait une.
+ *
+ * Best-effort de bout en bout, comme le reste de ce module.
+ */
+export async function recordForgePrGesture(opts: {
+  provider: ForgeProvider;
+  repoFullName: string;
+  prNumber: number;
+  type: PrActionEventType;
+  /** Id du compte de l'acteur chez la forge — la clé de l'anti-écho (MIN-154). */
+  accountId: string | null;
+  /** Login de l'acteur chez la forge — il tient lieu d'acteur dans la timeline. */
+  login: string | null;
+}): Promise<void> {
+  const runs = await findRunsForPr({
+    repoFullName: opts.repoFullName,
+    prNumber: opts.prNumber,
+    provider: opts.provider,
+  });
+  if (runs.length === 0) {
+    await applyForgePrToIssue({ ...opts, prState: null, actionType: opts.type });
+    return;
+  }
+  const echo = await isPrActionEcho({
+    issueIds: runs.map((r) => r.issueId),
+    type: opts.type,
+    prNumber: opts.prNumber,
+    provider: opts.provider,
+    accountId: opts.accountId,
+    login: opts.login,
+  });
+  if (echo) return;
+  await recordForgePrActionEvents({
+    runs,
+    type: opts.type,
+    prNumber: opts.prNumber,
+    provider: opts.provider,
+    login: opts.login,
+  });
+  // Inbox : sans type de notification associé (commentaires), c'est un no-op.
+  await notifyForgePrAction({ runs, type: opts.type, actorLogin: opts.login });
 }

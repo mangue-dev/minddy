@@ -379,6 +379,7 @@ interface GitlabHook {
   url?: string;
   issues_events?: boolean;
   merge_requests_events?: boolean;
+  note_events?: boolean;
 }
 
 /**
@@ -386,10 +387,11 @@ interface GitlabHook {
  * d'issues. GitLab n'a pas d'endpoint global comme la GitHub App : le hook vit
  * SUR LE DÉPÔT, donc on le provisionne à l'activation.
  *
- * Absent → création (issues + merge requests, jamais les pushs). Présent →
- * un PUT qui ne bascule QUE `issues_events`. Jamais de DELETE : le même hook
- * porte la synchro des MR de l'agent (MIN-69) — le désactiver, c'est remettre
- * `issues_events: false`, pas supprimer la ligne.
+ * Absent → création (issues + merge requests + notes, jamais les pushs). Présent
+ * → un PUT qui ne bascule QUE `issues_events`. Jamais de DELETE : le même hook
+ * porte la synchro des MR de l'agent (MIN-69) et les commentaires de MR du
+ * journal d'activité — le désactiver, c'est remettre `issues_events: false`, pas
+ * supprimer la ligne.
  *
  * Renvoie l'id du hook (stocké en `issue_sync_hook_id`), ou null si aucun
  * secret n'est déployé — sans secret le récepteur est fail-closed, un hook
@@ -442,6 +444,10 @@ export async function ensureGitlabIssuesHook(
       token: secret,
       issues_events: true,
       merge_requests_events: true,
+      // Les commentaires de MR (message de fil, remarque de ligne) entrent dans
+      // le journal d'activité du ticket — GitLab ne les livre que sous ce
+      // drapeau, une MR commentée ne produit AUCUN `merge_request` event.
+      note_events: true,
       push_events: false,
       enable_ssl_verification: true,
     });
@@ -453,6 +459,9 @@ export async function ensureGitlabIssuesHook(
     issues_events: opts.enabled,
     // Le hook est partagé avec la synchro des MR : on le préserve tel quel.
     merge_requests_events: existing.merge_requests_events ?? true,
+    // Les notes, elles, s'ALIGNENT plutôt que se préserver : c'est ce passage
+    // qui rattrape les dépôts liés avant l'arrivée des commentaires au journal.
+    note_events: true,
     push_events: false,
     enable_ssl_verification: true,
   });

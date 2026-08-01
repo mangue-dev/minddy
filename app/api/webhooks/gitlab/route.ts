@@ -6,8 +6,14 @@ import {
   applyForgePrToIssue,
   isPrActionEcho,
   recordForgePrActionEvents,
+  recordForgePrGesture,
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
+import {
+  isServiceAccountGesture,
+  prActionForMergeRequest,
+  prActionForNote,
+} from "@/lib/server/agent/pr-webhook-core";
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
@@ -16,7 +22,6 @@ import {
   type PullRequestState,
 } from "@/lib/server/agent/pull-requests";
 import { getServiceClient } from "@/lib/supabase-service";
-import type { PrActionEventType } from "@/lib/pr-events";
 import type { AgentRun } from "@/lib/server/agent/runs";
 
 /**
@@ -28,20 +33,26 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *  - toute action utile → INGÈRE la MR dans `pull_requests` (MIN-143 : de Numo
  *    ou d'un humain, c'est le même fait du dépôt).
  *  - action `merge` / `close` / `reopen` / `open` → met à jour `agent_runs.pr_state`
- *    (la review in-app reflète le vrai état côté GitLab) ET, pour un merge/close
- *    fait DIRECTEMENT sur GitLab, trace « accepté / refusé la MR » dans l'activité
- *    de l'issue liée. L'action `update` sert la bascule BROUILLON (MIN-138) —
- *    GitLab n'a pas d'action dédiée, cf. `mapMrState`.
+ *    (la review in-app reflète le vrai état côté GitLab) ET, pour un geste fait
+ *    DIRECTEMENT sur GitLab, trace « ouvert / accepté / refusé la MR » dans
+ *    l'activité de l'issue liée. L'action `update` sert la bascule BROUILLON
+ *    (MIN-138) — GitLab n'a pas d'action dédiée, cf. `mapMrState` — et, quand elle
+ *    porte un `oldrev`, le PUSH : « a commité sur la MR ».
  *  - action `approved` / `approval` → trace « approuvé la MR ». GitLab n'a PAS de
  *    review « request changes » native : `pr_changes_requested` ne vient que de
  *    l'action in-app. `unapproved`/`unapproval` sont IGNORÉS (aucun événement
  *    minddy correspondant — retirer une approbation n'est pas une action tracée,
  *    GitHub n'a d'ailleurs pas d'équivalent).
- * Le hook `Issue Hook` (object_kind `issue`) porte la synchronisation
- * unidirectionnelle des issues du dépôt vers les projets qui l'ont activée
- * (MIN-97) — sens unique : minddy n'écrit jamais chez GitLab. Les
- * `Note Hook` (commentaires) et tout autre object_kind sont acquittés sans
- * traitement : un commentaire n'est pas une activité (choix produit).
+ * Le hook `Note Hook` (object_kind `note`) porte les COMMENTAIRES : sur une merge
+ * request, ils tracent « commenté la MR » (message de fil) ou « commenté le code
+ * de la MR » (note ancrée dans le diff). Le hook `Issue Hook` (object_kind
+ * `issue`) porte la synchronisation unidirectionnelle des issues du dépôt vers
+ * les projets qui l'ont activée (MIN-97) — sens unique : minddy n'écrit jamais
+ * chez GitLab. Tout autre object_kind est acquitté sans traitement.
+ *
+ * PRÉREQUIS : le hook du dépôt doit être abonné à `note_events` — c'est fait à sa
+ * création et à chaque passage d'`ensureGitlabIssuesHook`, mais un dépôt lié
+ * AVANT cette version garde un hook sans notes tant qu'il n'y repasse pas.
  *
  * Anti-doublon : les actions minddy in-app (merge/close) sont faites avec le token
  * OAuth du COMPTE CONNECTÉ du dépôt — leur écho webhook porte ce compte comme
@@ -87,24 +98,6 @@ function mapMrState(payload: MergeRequestEvent): AgentRun["pr_state"] | null {
   }
 }
 
-/** action → événement d'activité PR (null = action non tracée). */
-function prActionFor(action: string): PrActionEventType | null {
-  switch (action) {
-    case "merge":
-      return "pr_accepted";
-    case "close":
-      return "pr_rejected";
-    // `approved` = la MR devient entièrement approuvée ; `approval` = une
-    // approbation individuelle quand plusieurs sont requises. Mutuellement
-    // exclusifs par événement → pas de double trace.
-    case "approved":
-    case "approval":
-      return "pr_approved";
-    default:
-      return null;
-  }
-}
-
 interface GitlabUserPayload {
   id?: number;
   username?: string;
@@ -120,6 +113,8 @@ interface MergeRequestAttributes {
   action?: string;
   state?: string;
   url?: string;
+  /** Ancienne tête : présente sur le seul `update` qui porte un PUSH. */
+  oldrev?: string;
   /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
   draft?: boolean;
   work_in_progress?: boolean;
@@ -247,7 +242,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   }
 
   const prState = mapMrState(payload);
-  const actionType = prActionFor(action);
+  const actionType = prActionForMergeRequest(attrs);
   if (!prState && !actionType) return;
 
   // Runs concernés. merge/close/reopen/open recalent pr_state au passage.
@@ -267,7 +262,8 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   // GitLab doit produire ce que la fusionner depuis minddy produit.
   if (runs.length === 0) {
     const echoed =
-      (actionType === "pr_accepted" || actionType === "pr_rejected") &&
+      !!actionType &&
+      isServiceAccountGesture(actionType) &&
       (await isServiceAccount(repoFullName, payload.user));
     await applyForgePrToIssue({
       provider: "gitlab",
@@ -299,7 +295,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   // écrit — depuis MIN-144 un geste humain part du compte git de la personne,
   // qui n'est celui du lien que pour qui a lié le dépôt.
   const echo =
-    ((actionType === "pr_accepted" || actionType === "pr_rejected") &&
+    (isServiceAccountGesture(actionType) &&
       (await isServiceAccount(repoFullName, payload.user))) ||
     (await isPrActionEcho({
       issueIds: runs.map((r) => r.issueId),
@@ -320,6 +316,41 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   });
   // Inbox : l'auteur du run apprend qu'on a approuvé ou fusionné sa MR (MIN-138).
   await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.user?.username ?? null });
+}
+
+/** Une note (commentaire) telle que GitLab la livre — `Note Hook`. */
+interface NoteEvent {
+  object_kind?: string;
+  user?: GitlabUserPayload;
+  project?: { path_with_namespace?: string };
+  object_attributes?: { noteable_type?: string; position?: unknown };
+  /** Présent quand la note porte sur une merge request. */
+  merge_request?: { iid?: number };
+}
+
+/**
+ * Commentaire sur une merge request → activité du ticket. Message de fil ou
+ * remarque de ligne selon l'ancrage (cf. `prActionForNote`).
+ *
+ * Pas de garde « compte de service » ici : personne ne commente sous ce token —
+ * un commentaire posté depuis minddy part du compte git de la PERSONNE, et c'est
+ * `isPrActionEcho` (dans `recordForgePrGesture`) qui reconnaît son écho. L'y
+ * ajouter rendrait muets, pour toujours, les commentaires de celui qui a lié le
+ * dépôt.
+ */
+async function handleNote(payload: NoteEvent): Promise<void> {
+  const type = prActionForNote(payload.object_attributes ?? {});
+  const iid = payload.merge_request?.iid;
+  const repoFullName = payload.project?.path_with_namespace;
+  if (!type || iid == null || !repoFullName) return;
+  await recordForgePrGesture({
+    provider: "gitlab",
+    repoFullName,
+    prNumber: iid,
+    type,
+    accountId: actorAccountId(payload.user),
+    login: payload.user?.username ?? null,
+  });
 }
 
 /** Actions `issue` synchronisées (MIN-97) — les éditions (`update`) et les
@@ -358,11 +389,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const payload = JSON.parse(rawBody) as MergeRequestEvent;
-    // Merge Requests (agent) et Issues (synchro du dépôt lié) — les Note Hook
-    // (commentaires) et autres object_kind sont acquittés sans traitement.
+    const payload = JSON.parse(rawBody) as MergeRequestEvent & NoteEvent;
+    // Merge Requests (agent), Notes (commentaires de MR) et Issues (synchro du
+    // dépôt lié) — tout autre object_kind est acquitté sans traitement.
     if (payload.object_kind === "merge_request") {
       await handleMergeRequest(payload);
+    } else if (payload.object_kind === "note") {
+      await handleNote(payload);
     } else if (payload.object_kind === "issue") {
       await handleIssue(payload);
     }

@@ -1,6 +1,6 @@
 import { EFFORT_MAP, issueIdentifier, type IssueEffort } from "./issue-constants";
 import { displayName } from "./display-name";
-import { forgePrActor, isForgePrEvent } from "./pr-events";
+import { forgePrActor } from "./pr-events";
 import type { Category, Issue, IssueEvent, Member, Objective } from "./types";
 
 /** Translator scoped to the "Activity" namespace (next-intl useTranslations). */
@@ -54,16 +54,27 @@ function issueRef(ctx: EventContext, tr: EventTranslators, id: string | null): s
   return i ? issueIdentifier(ctx.projectKey, i.number) : tr.t("issueSome");
 }
 /**
- * Clé d'activité d'une action de review, selon la forge : GitLab dit « merge
- * request !123 » là où GitHub dit « pull request #123 ». Le provider n'est
- * encodé (dans `from_value`) que pour les actions venues d'un webhook — une
- * action faite in-app porte un acteur minddy et reste sur le vocabulaire PR.
+ * Clé d'activité d'un geste de pull request, selon la forge : GitLab dit
+ * « merge request !123 » là où GitHub dit « pull request #123 ».
+ *
+ * Le provider se lit TOUJOURS sur `from_value` (cf. `forgeActorValue`), qui
+ * l'encode aussi bien pour un geste de webhook — où il accompagne le login de
+ * l'acteur — que pour un geste in-app, où il voyage seul. `forgePrActor` retombe
+ * sur GitHub quand la valeur est nulle : c'est la forme historique.
  */
 function prEventKey(
   e: IssueEvent,
-  action: "Approved" | "Accepted" | "Rejected" | "ChangesRequested"
+  action:
+    | "Approved"
+    | "Accepted"
+    | "Rejected"
+    | "ChangesRequested"
+    | "Opened"
+    | "Committed"
+    | "Commented"
+    | "CodeCommented"
 ): string {
-  const provider = isForgePrEvent(e) ? forgePrActor(e.from_value).provider : "github";
+  const { provider } = forgePrActor(e.from_value);
   return `${provider === "gitlab" ? "mr" : "pr"}${action}`;
 }
 
@@ -119,9 +130,17 @@ export function describeEvent(
   // Plan task transitions: to_value carries the task text.
   if (e.type === "agent_launched")
     return t("agentLaunched", { model: e.to_value ?? "" });
-  // Review PR (to_value = numéro de la PR). Seules les actions accepter /
-  // refuser / approuver / demander des changements sont tracées — pas les
-  // commentaires. Émises in-app (acteur = membre) ou par le webhook GitHub.
+  // Vie de la PR (to_value = son numéro) : l'ouvrir, y pousser, la commenter,
+  // la relire. Émis par l'agent (Numo), par les routes in-app (acteur = membre)
+  // ou par les webhooks GitHub/GitLab (acteur = login de la forge).
+  if (e.type === "pr_opened")
+    return t(prEventKey(e, "Opened"), { number: e.to_value ?? "" });
+  if (e.type === "pr_committed")
+    return t(prEventKey(e, "Committed"), { number: e.to_value ?? "" });
+  if (e.type === "pr_commented")
+    return t(prEventKey(e, "Commented"), { number: e.to_value ?? "" });
+  if (e.type === "pr_code_commented")
+    return t(prEventKey(e, "CodeCommented"), { number: e.to_value ?? "" });
   if (e.type === "pr_approved")
     return t(prEventKey(e, "Approved"), { number: e.to_value ?? "" });
   if (e.type === "pr_accepted")

@@ -6,6 +6,12 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
+import {
+  collapsesInBurst,
+  forgeActorValue,
+  type PrActionEventType,
+} from "@/lib/pr-events";
+import { hasRecentPrEvent } from "./pr-activity";
 import { ensureAgentsAllowed } from "@/lib/server/entitlements";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { ensureUsageBudget } from "@/lib/server/usage";
@@ -26,6 +32,7 @@ import {
   resolvePrReviewModel,
 } from "./pr-review-runs";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
 import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
 import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
@@ -632,6 +639,7 @@ export async function setPrCommentReactionResponse(
 export async function createPrCommentResponse(
   scope: PrScope,
   body: string,
+  userId: string,
 ): Promise<NextResponse> {
   // Geste humain : il part du compte git de la personne, pas de `minddy-app[bot]`.
   const actor = await requireActor(scope, "read");
@@ -641,6 +649,17 @@ export async function createPrCommentResponse(
       ...actorCall(actor.actor, scope),
       body: body.slice(0, MAX_COMMENT_BODY_LENGTH),
     });
+    // Trace « a commenté la PR » sur le ticket lié. APRÈS l'envoi : un message
+    // que la forge a refusé n'existe pour personne.
+    if (scope.pr.issue_id) {
+      await recordPrActionEvent(
+        scope.pr.issue_id,
+        userId,
+        "pr_commented",
+        scope.pr.number,
+        scope.target.provider,
+      );
+    }
     return NextResponse.json({ comment });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -865,6 +884,7 @@ export function parseReviewCommentPayload(
 export async function createPrReviewCommentResponse(
   scope: PrScope,
   payload: ReviewCommentPayload,
+  userId: string,
 ): Promise<NextResponse> {
   // `read` et non « connecté » : côté GitHub, `createPullRequestReviewComment`
   // relit la PR à chaud pour son `commitId` AVEC le token qu'on lui passe. Un
@@ -872,6 +892,18 @@ export async function createPrReviewCommentResponse(
   const actor = await requireActor(scope, "read");
   if (!actor.ok) return actor.response;
   const call = actorCall(actor.actor, scope);
+  /** « a commenté le code de la PR » — regroupé : relire, c'est enchaîner les
+      remarques, et une ligne par remarque noierait le journal du ticket. */
+  const trace = async () => {
+    if (!scope.pr.issue_id) return;
+    await recordPrActionEvent(
+      scope.pr.issue_id,
+      userId,
+      "pr_code_commented",
+      scope.pr.number,
+      scope.target.provider,
+    );
+  };
   try {
     if (payload.inReplyTo != null) {
       const comment = await scope.forge.replyToPullRequestReviewComment({
@@ -879,6 +911,7 @@ export async function createPrReviewCommentResponse(
         commentId: payload.inReplyTo,
         body: payload.body,
       });
+      await trace();
       return NextResponse.json({ comment });
     }
     // L'ancre du commentaire est résolue PAR le provider (tête de PR relue à
@@ -890,6 +923,7 @@ export async function createPrReviewCommentResponse(
       line: payload.line as number,
       side: payload.side as "LEFT" | "RIGHT",
     });
+    await trace();
     return NextResponse.json({ comment });
   } catch (err) {
     if (isForgeApiError(err) && err.status === 422) {
@@ -1097,30 +1131,56 @@ function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
 }
 
 /**
- * Trace une action de review dans le journal d'activité du ticket lié :
- * accepter (merge), refuser (close), approuver ou demander des changements.
- * Acteur = le membre qui agit (jamais Numo). Les simples commentaires — et les
- * reviews de verdict « commenter » — n'en produisent volontairement aucune.
+ * Trace un geste de pull request dans le journal d'activité du ticket lié :
+ * accepter (merge), refuser (close), approuver, demander des changements,
+ * commenter le fil ou le code. Acteur = le membre qui agit (jamais Numo).
+ *
+ * `from_value` ne porte pas d'acteur ici — l'acteur EST `actor_id` — mais il
+ * porte le PROVIDER (cf. `forgeActorValue`) : sans lui, `describeEvent` retombe
+ * sur « pull request » et un utilisateur GitLab lit du vocabulaire GitHub sur son
+ * propre ticket.
+ *
+ * Les gestes qui se répètent pour UN seul geste de l'utilisateur — commenter —
+ * se regroupent sur une fenêtre courte (`collapsesInBurst`), sinon trois
+ * remarques de ligne posées d'affilée feraient trois lignes identiques.
+ *
  * Best-effort : insertEvents avale ses erreurs, la synchro ne casse pas le flux.
  */
 async function recordPrActionEvent(
   issueId: string,
   actorId: string,
-  type: "pr_accepted" | "pr_rejected" | "pr_changes_requested" | "pr_approved",
+  type: PrActionEventType,
   prNumber: number,
+  provider: RepoProviderId,
 ): Promise<void> {
+  if (
+    collapsesInBurst(type) &&
+    (await hasRecentPrEvent({ issueIds: [issueId], type, prNumber, actorId }))
+  ) {
+    return;
+  }
   await insertEvents(getServiceClient(), [
-    { issue_id: issueId, actor_id: actorId, type, to_value: String(prNumber) },
+    {
+      issue_id: issueId,
+      actor_id: actorId,
+      type,
+      from_value: forgeActorValue(provider, null),
+      to_value: String(prNumber),
+    },
   ]);
 }
 
-/** Verdict de review → événement d'activité, ou null (« commenter » ne trace rien). */
-function eventForVerdict(
-  verdict: ReviewVerdict,
-): "pr_approved" | "pr_changes_requested" | null {
+/**
+ * Verdict de review → événement d'activité.
+ *
+ * « Commenter » trace un MESSAGE : c'est le geste que la route exige non vide
+ * (un verdict sans message est refusé plus haut), et le pendant exact de la
+ * review `commented` avec corps côté webhook GitHub.
+ */
+function eventForVerdict(verdict: ReviewVerdict): PrActionEventType {
   if (verdict === "approve") return "pr_approved";
   if (verdict === "request_changes") return "pr_changes_requested";
-  return null;
+  return "pr_commented";
 }
 
 export const REVIEW_VERDICTS: readonly ReviewVerdict[] = [
@@ -1196,7 +1256,13 @@ export async function prStateActionResponse(
       await propagatePrState(scope, "merged", userId);
       // Trace « a accepté la PR » dans l'activité du ticket lié.
       if (scope.pr.issue_id) {
-        await recordPrActionEvent(scope.pr.issue_id, userId, "pr_accepted", scope.pr.number);
+        await recordPrActionEvent(
+          scope.pr.issue_id,
+          userId,
+          "pr_accepted",
+          scope.pr.number,
+          scope.target.provider,
+        );
       }
       return NextResponse.json({ ok: true, pr_state: "merged" });
     }
@@ -1218,7 +1284,13 @@ export async function prStateActionResponse(
     // PR refusée → le ticket retourne « à faire » (todo, jamais annulé) — MIN-46.
     await propagatePrState(scope, "closed", userId);
     if (scope.pr.issue_id) {
-      await recordPrActionEvent(scope.pr.issue_id, userId, "pr_rejected", scope.pr.number);
+      await recordPrActionEvent(
+        scope.pr.issue_id,
+        userId,
+        "pr_rejected",
+        scope.pr.number,
+        scope.target.provider,
+      );
     }
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {
@@ -1333,9 +1405,14 @@ export async function prReviewResponse(
 
   // Le verdict RÉEL est tracé côté minddy même quand la forge l'a replié en
   // commentaire : c'est là que l'utilisateur lira « a approuvé la PR ».
-  const eventType = eventForVerdict(verdict);
-  if (scope.pr.issue_id && eventType) {
-    await recordPrActionEvent(scope.pr.issue_id, userId, eventType, scope.pr.number);
+  if (scope.pr.issue_id) {
+    await recordPrActionEvent(
+      scope.pr.issue_id,
+      userId,
+      eventForVerdict(verdict),
+      scope.pr.number,
+      scope.target.provider,
+    );
   }
   return NextResponse.json({
     ok: true,

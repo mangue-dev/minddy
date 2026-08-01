@@ -6,8 +6,14 @@ import {
   applyForgePrToIssue,
   isPrActionEcho,
   recordForgePrActionEvents,
+  recordForgePrGesture,
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
+import {
+  isPullRequestComment,
+  prActionForPullRequest,
+  prActionForReview,
+} from "@/lib/server/agent/pr-webhook-core";
 import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
@@ -25,16 +31,26 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * des Pull Requests du dépôt :
  *  - `pull_request` → INGÈRE la PR dans `pull_requests` (MIN-143 : de Numo ou
  *    d'un humain, c'est le même fait du dépôt), met à jour `agent_runs.pr_state`
- *    (la review in-app reflète le vrai état côté GitHub) ET, pour un merge/close
- *    fait DIRECTEMENT sur GitHub, trace « accepté / refusé la PR » dans l'activité
- *    de l'issue liée.
- *  - `pull_request_review` (approved / changes_requested) → trace « approuvé la PR »
- *    / « demandé des changements » dans l'activité. Les reviews « commented » /
- *    « dismissed » sont ignorées (un commentaire n'est pas une activité).
+ *    (la review in-app reflète le vrai état côté GitHub) ET trace dans l'activité
+ *    de l'issue liée ce qui a été fait DIRECTEMENT sur GitHub : ouvrir (`opened`),
+ *    pousser des commits (`synchronize`), accepter ou refuser (`closed`).
+ *  - `pull_request_review` → trace « approuvé la PR » / « demandé des changements »,
+ *    et « commenté la PR » quand la review porte un message. Les reviews
+ *    « dismissed » sont ignorées.
+ *  - `pull_request_review_comment` → trace « commenté le code de la PR ». Une
+ *    review de N remarques arrive en N events : ils se regroupent en une ligne
+ *    (`collapsesInBurst`).
+ *  - `issue_comment` (sur une PR) → trace « commenté la PR ».
  *  - `issues` (opened/closed/reopened) → synchronisation unidirectionnelle des
  *    issues du dépôt vers les projets qui l'ont activée (MIN-97). Sens unique :
  *    minddy n'écrit jamais chez GitHub.
  * Tout autre event (ping, push…) est simplement acquitté.
+ *
+ * PRÉREQUIS D'INSTALLATION : `issue_comment` et `pull_request_review_comment`
+ * doivent être cochés dans les événements auxquels la GitHub App s'abonne (page
+ * de réglages de l'App) — ils n'exigent aucune permission de plus que les
+ * Pull requests déjà accordées. Sans ça, les commentaires ne sont jamais livrés
+ * et les lignes correspondantes n'apparaissent pas.
  *
  * Anti-doublon : les actions minddy in-app (merge/close/demande de changements)
  * sont déjà tracées côté route avec l'acteur HUMAIN précis. Leur écho webhook est
@@ -56,24 +72,6 @@ function mapPrState(action: string, merged: boolean): AgentRun["pr_state"] | nul
       return "open";
     case "converted_to_draft":
       return "draft";
-    default:
-      return null;
-  }
-}
-
-/** action `pull_request` → événement d'activité PR (null = action non tracée). */
-function prActionForPullRequest(action: string, merged: boolean): PrActionEventType | null {
-  if (action !== "closed") return null;
-  return merged ? "pr_accepted" : "pr_rejected";
-}
-
-/** state d'une review → événement d'activité (null = ignoré : commentaire/dismiss). */
-function prActionForReview(state: string): PrActionEventType | null {
-  switch (state) {
-    case "approved":
-      return "pr_approved";
-    case "changes_requested":
-      return "pr_changes_requested";
     default:
       return null;
   }
@@ -189,7 +187,28 @@ async function ingestPullRequest(
 
 interface PullRequestReviewEvent {
   action?: string;
-  review?: { state?: string; user?: GithubActor };
+  /** `body` sépare la review qui PORTE un message de la simple enveloppe de
+      remarques de ligne (cf. `prActionForReview`). */
+  review?: { state?: string; body?: string | null; user?: GithubActor };
+  pull_request?: { number?: number };
+  repository?: { full_name?: string };
+  sender?: GithubActor;
+}
+
+/** Commentaire de FIL. GitHub sert les issues et les PR sur le même event —
+    `issue.pull_request` est ce qui les distingue (cf. `isPullRequestComment`). */
+interface IssueCommentEvent {
+  action?: string;
+  issue?: { number?: number; pull_request?: unknown } | null;
+  comment?: { user?: GithubActor } | null;
+  repository?: { full_name?: string };
+  sender?: GithubActor;
+}
+
+/** Remarque de LIGNE (commentaire de review ancré dans le diff). */
+interface PullRequestReviewCommentEvent {
+  action?: string;
+  comment?: { user?: GithubActor } | null;
   pull_request?: { number?: number };
   repository?: { full_name?: string };
   sender?: GithubActor;
@@ -210,19 +229,26 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
 
   const merged = !!payload.pull_request?.merged;
   const prState = mapPrState(action, merged);
-  if (!prState) return;
-
-  const runs = await syncPrState({
-    repoFullName,
-    prNumber: number,
-    prState,
-    prUrl: payload.pull_request?.html_url ?? null,
-    provider: "github",
-  });
-
-  // Activité : accepter (merge) / refuser (close) faits par un HUMAIN sur GitHub.
-  // Le merge/close in-app passe par le bot de l'App → ignoré (déjà tracé).
+  // Activité : ouvrir, pousser des commits, accepter (merge) ou refuser (close)
+  // depuis GitHub. Le geste in-app fait par Numo passe par le bot de l'App →
+  // ignoré (déjà tracé côté agent ou route).
   const actionType = prActionForPullRequest(action, merged);
+  // Deux axes indépendants (même forme que le récepteur GitLab) : `opened` et
+  // `synchronize` ne changent AUCUN état de run — ils ne font que raconter. Les
+  // sortir ici, comme le faisait le `if (!prState) return`, revenait à ne jamais
+  // les tracer.
+  if (!prState && !actionType) return;
+
+  const runs = prState
+    ? await syncPrState({
+        repoFullName,
+        prNumber: number,
+        prState,
+        prUrl: payload.pull_request?.html_url ?? null,
+        provider: "github",
+      })
+    : await findRunsForPr({ repoFullName, prNumber: number, provider: "github" });
+
   const byHuman = !isBot(payload.sender);
 
   // AUCUN run derrière cette PR : c'est une PR humaine (MIN-143). Elle peut
@@ -244,10 +270,12 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
 
   // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
   // merged→done, closed→todo, reopened/ready_for_review→in_review.
-  for (const run of runs) {
-    // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
-    if (run.createdBy && run.issueId) {
-      await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
+  if (prState) {
+    for (const run of runs) {
+      // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+      if (run.createdBy && run.issueId) {
+        await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
+      }
     }
   }
   // `byHuman` ne dit plus « fait sur GitHub » depuis MIN-144 : un merge/close
@@ -277,38 +305,61 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   }
 }
 
+/**
+ * Trace un geste de forge SANS effet d'état — review, commentaire de fil,
+ * remarque de ligne. Le bot de l'App est écarté ici : quand il agit, c'est Numo,
+ * et Numo trace ses propres gestes avec sa propre identité.
+ *
+ * `recordForgePrGesture` porte le reste (runs ou PR humaine, anti-écho,
+ * regroupement des rafales) — il est partagé avec le récepteur GitLab.
+ */
+async function recordGithubGesture(opts: {
+  type: PrActionEventType | null;
+  number: number | undefined;
+  repoFullName: string | undefined;
+  actor: GithubActor | undefined | null;
+}): Promise<void> {
+  if (!opts.type || opts.number == null || !opts.repoFullName || isBot(opts.actor)) return;
+  await recordForgePrGesture({
+    provider: "github",
+    repoFullName: opts.repoFullName,
+    prNumber: opts.number,
+    type: opts.type,
+    accountId: actorAccountId(opts.actor),
+    login: opts.actor?.login ?? null,
+  });
+}
+
 async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise<void> {
   if (payload.action !== "submitted") return;
-  const number = payload.pull_request?.number;
-  const repoFullName = payload.repository?.full_name;
-  const reviewer = payload.review?.user ?? payload.sender;
-  const actionType = prActionForReview(payload.review?.state ?? "");
-  if (!actionType || number == null || !repoFullName || isBot(reviewer)) return;
-
-  const runs = await findRunsForPr({ repoFullName, prNumber: number, provider: "github" });
-  // Approuver depuis minddy part maintenant du compte de la personne (MIN-144) :
-  // la review arrive donc ici comme si elle avait été soumise sur github.com.
-  // La route l'a déjà tracée — sans ce garde, l'auteur du run reçoit deux fois
-  // « votre PR a été relue » et le ticket porte deux fois la même ligne.
-  const echo = await isPrActionEcho({
-    issueIds: runs.map((r) => r.issueId),
-    type: actionType,
-    prNumber: number,
-    provider: "github",
-    accountId: actorAccountId(reviewer),
-    login: reviewer?.login ?? null,
+  await recordGithubGesture({
+    type: prActionForReview(payload.review ?? {}),
+    number: payload.pull_request?.number,
+    repoFullName: payload.repository?.full_name,
+    actor: payload.review?.user ?? payload.sender,
   });
-  if (echo) return;
+}
 
-  await recordForgePrActionEvents({
-    runs,
-    type: actionType,
-    prNumber: number,
-    provider: "github",
-    login: reviewer?.login ?? null,
+async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
+  if (!isPullRequestComment(payload)) return;
+  await recordGithubGesture({
+    type: "pr_commented",
+    number: payload.issue?.number,
+    repoFullName: payload.repository?.full_name,
+    actor: payload.comment?.user ?? payload.sender,
   });
-  // Inbox : l'auteur du run apprend qu'on a relu sa PR (MIN-138).
-  await notifyForgePrAction({ runs, type: actionType, actorLogin: reviewer?.login ?? null });
+}
+
+async function handlePullRequestReviewComment(
+  payload: PullRequestReviewCommentEvent,
+): Promise<void> {
+  if (payload.action !== "created") return;
+  await recordGithubGesture({
+    type: "pr_code_commented",
+    number: payload.pull_request?.number,
+    repoFullName: payload.repository?.full_name,
+    actor: payload.comment?.user ?? payload.sender,
+  });
 }
 
 /** Actions `issues` synchronisées (MIN-97) — les éditions de titre/corps, les
@@ -351,6 +402,12 @@ export async function POST(request: NextRequest) {
       await handlePullRequest(JSON.parse(rawBody) as PullRequestEvent);
     } else if (event === "pull_request_review") {
       await handlePullRequestReview(JSON.parse(rawBody) as PullRequestReviewEvent);
+    } else if (event === "pull_request_review_comment") {
+      await handlePullRequestReviewComment(
+        JSON.parse(rawBody) as PullRequestReviewCommentEvent,
+      );
+    } else if (event === "issue_comment") {
+      await handleIssueComment(JSON.parse(rawBody) as IssueCommentEvent);
     } else if (event === "issues") {
       await handleIssues(JSON.parse(rawBody));
     }

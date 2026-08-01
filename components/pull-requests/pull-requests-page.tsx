@@ -238,9 +238,16 @@ export function PullRequestsPage() {
                     setSelectedPrId(pr.prId);
                     setMobileDetail(true);
                   }}
+                  // `selectedId` — la sélection DÉRIVÉE — et non `selectedPrId`,
+                  // qui n'enregistre que les CLICS. Les deux divergent dans les
+                  // deux cas d'ouverture les plus courants : à l'arrivée sur la
+                  // page (rien n'a été cliqué, la première PR s'affiche) et sur
+                  // un `?run=`, résolu en PR sans passer par l'état. La liste ne
+                  // surlignait alors rien, en face d'une PR bel et bien ouverte.
+                  aria-current={pr.prId === selectedId ? "true" : undefined}
                   className={cn(
                     "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-                    pr.prId === selectedPrId
+                    pr.prId === selectedId
                       ? "bg-muted"
                       : "hover:bg-muted/60 focus-visible:bg-muted/60",
                   )}

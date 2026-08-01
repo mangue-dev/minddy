@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { insertEvents } from "@/lib/server/issue-events";
+import { forgeActorValue } from "@/lib/pr-events";
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import type { AiUsageBillTo } from "@/lib/server/ai-usage";
@@ -1328,6 +1330,47 @@ export async function executeAgentRun(
       state: run.pr_state,
     };
 
+    /**
+     * Trace un geste de Numo sur la PR dans le journal d'activité du ticket.
+     *
+     * L'acteur en base est l'auteur du run (il faut un utilisateur réel), mais
+     * `via_assistant` fait dire NUMO à la timeline — c'est lui qui a agi, et la
+     * règle d'identité vaut dans les deux sens. `from_value` ne porte pas de
+     * login mais le PROVIDER (cf. `forgeActorValue`), sans quoi une merge request
+     * GitLab se raconterait en vocabulaire GitHub.
+     */
+    const recordAgentPrEvent = async (
+      type: "pr_opened" | "pr_committed",
+      prNumber: number,
+    ): Promise<void> => {
+      if (!run.issue_id || !run.created_by) return;
+      await insertEvents(getServiceClient(), [
+        {
+          issue_id: run.issue_id,
+          actor_id: run.created_by,
+          type,
+          from_value: forgeActorValue(target.provider, null),
+          to_value: String(prNumber),
+          via_assistant: true,
+        },
+      ]);
+    };
+
+    /**
+     * « Numo a commité sur la PR #12 » — un push qui a fait AVANCER la branche
+     * distante, et seulement quand une PR le porte : avant elle, les commits
+     * n'appartiennent à rien que le ticket puisse nommer.
+     *
+     * `remoteUpdated` et non `pushed` : un push qui ne pousse rien de neuf (le
+     * remote était déjà à jour) n'est pas un fait.
+     */
+    const notePrCommits = async (
+      pushed: { remoteUpdated: boolean } | null,
+    ): Promise<void> => {
+      if (!pushed?.remoteUpdated || prState.number == null) return;
+      await recordAgentPrEvent("pr_committed", prState.number);
+    };
+
     /** Enregistre une PR ouverte/rouverte : état local + stamp + statut d'issue +
      *  event live + commentaire d'issue (le SEUL commentaire du nouveau modèle). */
     const registerPr = async (
@@ -1375,6 +1418,12 @@ export async function executeAgentRun(
             prState: prState.state,
           });
         }
+        // « Numo a ouvert la pull request #12 » dans le journal d'activité. Émis
+        // ICI et pas par le webhook : la PR part du token de l'App (GitHub) ou du
+        // compte qui a lié le dépôt (GitLab), donc l'écho porte une identité de
+        // machine ou celle d'un tiers — or c'est Numo qui a ouvert. Les deux
+        // récepteurs écartent d'ailleurs leur propre écho.
+        if (kind === "opened") await recordAgentPrEvent("pr_opened", pr.number);
         await postPrComment(run, issue.identifier, kind, pr.url, commentLocale, target.provider);
       }
     };
@@ -1418,6 +1467,10 @@ export async function executeAgentRun(
         };
       }
       await noteBranchPushed(pushed);
+      // `create_pr` sur une PR qui existe DÉJÀ : ce push l'alimente, il se trace
+      // comme les autres. Sur une PR encore à ouvrir, `prState.number` est nul et
+      // rien ne se trace — c'est `registerPr` qui dira « a ouvert la PR ».
+      await notePrCommits(pushed);
       if (prState.number != null) {
         const current = await forge
           .getPullRequest({
@@ -2094,6 +2147,9 @@ export async function executeAgentRun(
 
       await noteBranchPushed(pushed);
       await reopenIfRejectedWorkPushed(pushed, token);
+      // APRÈS la réouverture éventuelle : elle recale `prState` sur la base, donc
+      // un push qui ressuscite une PR refusée se raconte sur la bonne PR.
+      await notePrCommits(pushed);
       // Le remote a reçu du travail mais la PR a été FUSIONNÉE pendant le tour
       // (`refreshPrStateFromDb` dans le reopen vient de recaler l'état) : les
       // commits sont préservés sur la branche mais n'appartiennent plus à aucune
@@ -2153,6 +2209,7 @@ export async function executeAgentRun(
     });
     await noteBranchPushed(wipPushed);
     await reopenIfRejectedWorkPushed(wipPushed, target.token);
+    await notePrCommits(wipPushed);
 
     // Budget d'usage épuisé → REPOS, avec la carte qui dit pourquoi et ce qu'on peut
     // faire. Le travail du chunk vient d'être poussé en WIP et le checkpoint est

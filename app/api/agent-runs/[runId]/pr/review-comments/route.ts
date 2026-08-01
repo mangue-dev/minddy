@@ -47,7 +47,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const auth = await authorizeRunPrRequest(request, runId);
   if (!auth.ok) return auth.response;
-  return createPrReviewCommentResponse(auth.scope, parsed.payload);
+  return createPrReviewCommentResponse(auth.scope, parsed.payload, auth.userId);
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
