@@ -43,7 +43,8 @@ export function objectivesQueryFn(projectId: string) {
     const startedAt = Date.now();
     return applyPendingObjectives(
       await fetchObjectivesApi(projectId, signal),
-      startedAt
+      startedAt,
+      projectId
     );
   };
 }

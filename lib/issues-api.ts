@@ -54,7 +54,11 @@ export async function fetchIssuesApi(
 export function issuesQueryFn(projectId: string) {
   return async ({ signal }: { signal?: AbortSignal } = {}): Promise<Issue[]> => {
     const startedAt = Date.now();
-    return applyPendingIssues(await fetchIssuesApi(projectId, signal), startedAt);
+    return applyPendingIssues(
+      await fetchIssuesApi(projectId, signal),
+      startedAt,
+      projectId
+    );
   };
 }
 

@@ -204,6 +204,13 @@ function keysForProjectEvent(
         : [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
     case "issue_relations":
       return [active(["issue-relations", projectId]), active(GLOBAL_BOARD_KEY)];
+    // Un objectif est recopié dans DEUX caches : celui de son projet et la
+    // tranche `objectives` du board cross-projet (puces des cartes, facette
+    // « Objectif », sélecteur du panneau d'un ticket). L'écho de notre propre
+    // écriture n'a rien à leur apprendre — les deux portent déjà la ligne
+    // serveur (MIN-156) ; celui d'un autre client (coéquipier, Numo, MCP), ou
+    // d'une création / suppression, doit atteindre les deux, sans quoi `/all`
+    // gardait un objectif renommé sous son ancien nom.
     case "objectives":
       return objectiveWrites.wasJustWritten(
         (change.record ?? change.old_record)?.id,
@@ -212,6 +219,7 @@ function keysForProjectEvent(
         ? [{ key: SEARCH_INDEX_KEY, refetch: "none" }]
         : [
             active(["objectives", projectId]),
+            active(GLOBAL_BOARD_KEY),
             { key: SEARCH_INDEX_KEY, refetch: "none" },
           ];
     case "categories": // renames/deletes also affect chips on cached issues

@@ -35,25 +35,73 @@ const objectivesKey = (projectId: string) => ["objectives", projectId] as const;
 export const issueWrites = createPendingWrites<Issue>();
 export const objectiveWrites = createPendingWrites<Objective>();
 
-/** Overlay des écritures en attente sur une liste de tickets de projet. */
-export function applyPendingIssues(issues: Issue[], startedAt: number): Issue[] {
-  return issueWrites.apply(issues, startedAt);
+/**
+ * Une réponse scopée à UN projet ne doit jamais recevoir la ligne d'un voisin.
+ *
+ * Le registre, lui, est global : une carte créée depuis le board cross-projet
+ * ne sait pas quelle liste la lira, et `apply` ajoute toute insertion en
+ * attente à la liste qu'on lui présente. Sans ce rescopage, une création encore
+ * en vol dans le projet A s'ajoutait à la réponse du projet B — un
+ * préchargement au survol ou un refetch de B pendant le POST suffisait à faire
+ * apparaître la carte du voisin dans son tableau. Les `patch` et les `remove`,
+ * eux, sont désignés par un id : ils ne peuvent pas se tromper de liste.
+ */
+function scopeToProject<T extends { project_id: string }>(
+  applied: T[],
+  original: T[],
+  projectId: string | undefined
+): T[] {
+  if (applied === original || !projectId) return applied;
+  const scoped = applied.filter((row) => row.project_id === projectId);
+  return scoped.length === applied.length ? applied : scoped;
 }
 
-/** Même overlay sur le board agrégé — seule sa tranche `issues` est concernée. */
+/** Overlay des écritures en attente sur la liste de tickets d'un projet. */
+export function applyPendingIssues(
+  issues: Issue[],
+  startedAt: number,
+  projectId?: string
+): Issue[] {
+  return scopeToProject(issueWrites.apply(issues, startedAt), issues, projectId);
+}
+
+/** Overlay des écritures en attente sur la liste d'objectifs d'un projet. */
+export function applyPendingObjectives(
+  objectives: Objective[],
+  startedAt: number,
+  projectId?: string
+): Objective[] {
+  return scopeToProject(
+    objectiveWrites.apply(objectives, startedAt),
+    objectives,
+    projectId
+  );
+}
+
+/**
+ * Même overlay sur le board agrégé. Il porte DEUX tranches qu'une édition
+ * patche localement : ses tickets, et sa copie des objectifs par projet — les
+ * puces des cartes, la facette « Objectif » de la barre d'outils et le
+ * sélecteur du panneau d'un ticket lisent celle-ci, pas `["objectives", pid]`.
+ * Sans elle dans l'overlay, une réponse de `/api/me/board` partie avant le
+ * PATCH d'un objectif rejouait son ancien nom (ou son ancienne couleur) sur
+ * `/all`, exactement comme elle le faisait pour les tickets.
+ */
 export function applyPendingBoard(
   board: GlobalBoardResponse,
   startedAt: number
 ): GlobalBoardResponse {
   const issues = issueWrites.apply(board.issues, startedAt);
-  return issues === board.issues ? board : { ...board, issues };
-}
-
-export function applyPendingObjectives(
-  objectives: Objective[],
-  startedAt: number
-): Objective[] {
-  return objectiveWrites.apply(objectives, startedAt);
+  let objectives = board.objectives;
+  for (const [projectId, list] of Object.entries(board.objectives)) {
+    const applied = applyPendingObjectives(list, startedAt, projectId);
+    if (applied === list) continue;
+    if (objectives === board.objectives) objectives = { ...board.objectives };
+    objectives[projectId] = applied;
+  }
+  return issues === board.issues && objectives === board.objectives
+    ? board
+    : { ...board, issues, objectives };
 }
 
 /**
@@ -138,14 +186,35 @@ export function mergeServerIssue(
   patchIssueEverywhere(queryClient, projectId, issue.id, issue);
 }
 
-/** Le pendant pour un objectif : son cache de projet, rien d'autre. */
-export function patchObjectiveCache(
+/**
+ * Le pendant pour un objectif : son cache de projet ET la copie que le board
+ * cross-projet porte pour ce projet.
+ *
+ * Les deux, parce que les deux sont lues : le panneau latéral, les cartes de la
+ * page Objectifs et la bannière du board d'un projet lisent
+ * `["objectives", pid]` ; les puces des cartes de `/all`, sa facette
+ * « Objectif » et le sélecteur d'objectif du panneau d'un ticket lisent
+ * `["me","board"].objectives`. Rien ne rafraîchissait la seconde sur une
+ * édition d'objectif — ni le chemin de succès, ni l'écho temps réel — donc un
+ * objectif renommé restait affiché sous son ancien nom sur le board
+ * cross-projet jusqu'à ce qu'autre chose fasse recharger la route.
+ */
+export function patchObjectiveEverywhere(
   queryClient: QueryClient,
   projectId: string,
   objectiveId: string,
   patch: Partial<Objective>
 ): void {
+  const apply = (o: Objective) => (o.id === objectiveId ? { ...o, ...patch } : o);
   queryClient.setQueryData<Objective[]>(objectivesKey(projectId), (old) =>
-    old?.map((o) => (o.id === objectiveId ? { ...o, ...patch } : o))
+    old?.map(apply)
   );
+  queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) => {
+    const list = old?.objectives[projectId];
+    if (!old || !list) return old;
+    return {
+      ...old,
+      objectives: { ...old.objectives, [projectId]: list.map(apply) },
+    };
+  });
 }

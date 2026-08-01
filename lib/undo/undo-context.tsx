@@ -57,6 +57,7 @@ import {
   type UndoAction,
   type UndoEntry,
 } from "./undo-core";
+import type { PendingHandle } from "@/lib/optimistic/pending-writes";
 import type {
   GlobalBoardResponse,
   Issue,
@@ -169,9 +170,15 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   );
 
   /** What can be shown before the server confirms. Re-creations and relation
-      re-adds need server-assigned ids, so they reconcile via invalidation. */
+      re-adds need server-assigned ids, so they reconcile via invalidation.
+      Renvoie l'entrée du registre d'écritures ouverte par CE rejouage : elle
+      appartient au rejouage, pas à l'entrée d'historique. Un ⌘Z suivi d'un ⌘⇧Z
+      avant que le premier n'ait atteint le serveur en ouvre deux, et chacune
+      doit être refermée par son propre tour de file — la garder sur l'entrée
+      faisait perdre la première, qui restait alors « en vol » à jamais et
+      rejouait son patch sur toutes les réponses suivantes (MIN-156). */
   const applyOptimistic = useCallback(
-    (entry: UndoEntry, direction: "undo" | "redo") => {
+    (entry: UndoEntry, direction: "undo" | "redo"): PendingHandle | null => {
       const alias = aliasRef.current;
       switch (entry.kind) {
         case "update": {
@@ -179,43 +186,45 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           const patch = (
             direction === "undo" ? entry.before : entry.after
           ) as Partial<Issue>;
-          entry.pending = issueWrites.begin({ kind: "patch", id, patch });
+          const handle = issueWrites.begin({ kind: "patch", id, patch });
           patchIssueCaches(entry.projectId, id, patch);
-          break;
+          return handle;
         }
         case "categories": {
           const id = resolveAliased(alias, entry.issueId);
           const patch = {
             category_ids: direction === "undo" ? entry.before : entry.after,
           };
-          entry.pending = issueWrites.begin({ kind: "patch", id, patch });
+          const handle = issueWrites.begin({ kind: "patch", id, patch });
           patchIssueCaches(entry.projectId, id, patch);
-          break;
+          return handle;
         }
         case "create":
           if (direction === "undo") {
             const id = resolveAliased(alias, entry.issueId);
-            entry.pending = issueWrites.begin({ kind: "remove", id });
+            const handle = issueWrites.begin({ kind: "remove", id });
             removeIssueFromCaches(entry.projectId, id);
+            return handle;
           }
-          break;
+          return null;
         case "delete":
           if (direction === "redo") {
             const id = resolveAliased(alias, entry.issueId);
-            entry.pending = issueWrites.begin({ kind: "remove", id });
+            const handle = issueWrites.begin({ kind: "remove", id });
             removeIssueFromCaches(entry.projectId, id);
+            return handle;
           }
-          break;
+          return null;
         case "relation-add":
           if (direction === "undo") {
             removeRelationFromCaches(entry.projectId, entry.relationId);
           }
-          break;
+          return null;
         case "relation-remove":
           if (direction === "redo") {
             removeRelationFromCaches(entry.projectId, entry.relationId);
           }
-          break;
+          return null;
       }
     },
     [patchIssueCaches, removeIssueFromCaches, removeRelationFromCaches]
@@ -225,11 +234,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       l'écriture a abouti (les réponses parties après elle font foi), oubliée
       quand elle a échoué (l'invalidation qui suit rétablit la vérité). */
   const closePending = useCallback(
-    (entry: UndoEntry, outcome: "settled" | "failed") => {
-      if (!entry.pending) return;
-      if (outcome === "settled") issueWrites.settle(entry.pending);
-      else issueWrites.fail(entry.pending);
-      entry.pending = undefined;
+    (pending: PendingHandle | null, outcome: "settled" | "failed") => {
+      if (!pending) return;
+      if (outcome === "settled") issueWrites.settle(pending);
+      else issueWrites.fail(pending);
     },
     []
   );
@@ -387,10 +395,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           }
           break;
       }
-      closePending(entry, "settled");
       invalidate(entry);
     },
-    [closePending, invalidate, recreate, readdRelation]
+    [invalidate, recreate, readdRelation]
   );
 
   const run = useCallback(
@@ -406,7 +413,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       if (!entry) return;
 
       // Instant feedback: patch the caches and toast now, write in the queue.
-      applyOptimistic(entry, direction);
+      const pending = applyOptimistic(entry, direction);
       to.push(entry);
       const action = tRef.current(ACTION_KEYS[entry.kind]);
       toast.success(
@@ -416,17 +423,21 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       const queued = entry;
       queueRef.current = queueRef.current.then(async () => {
         if (queued.dead) {
-          closePending(queued, "failed");
+          closePending(pending, "failed");
           return;
         }
         try {
           // Never overtake the mutation being replayed (it may still be in flight).
           if (queued.settled) await queued.settled;
           await applyServer(queued, direction);
+          // Refermée APRÈS l'invalidation d'`applyServer` : un refetch parti
+          // avant ce point garde l'overlay, donc ne peut pas rejouer l'état
+          // d'avant le rejouage.
+          closePending(pending, "settled");
         } catch (err) {
           // Entry dropped: it no longer applies (e.g. deleted elsewhere) and
           // keeping it would wedge the stack; invalidation restores the truth.
-          closePending(queued, "failed");
+          closePending(pending, "failed");
           retract(queued);
           toast.error(
             tRef.current(direction === "undo" ? "undoFailed" : "redoFailed", {

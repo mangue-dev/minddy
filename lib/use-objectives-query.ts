@@ -10,7 +10,7 @@ import {
 } from "./objectives-api";
 import {
   objectiveWrites,
-  patchObjectiveCache,
+  patchObjectiveEverywhere,
 } from "./optimistic/issue-writes";
 import { effortToPoints, statusCompletionCredit } from "./cycle";
 import type { IssueEffort, IssueStatus } from "./issue-constants";
@@ -75,7 +75,7 @@ export function useObjectivesQuery(projectId: string | null) {
         patch: updates as Partial<Objective>,
       });
       if (pid) {
-        patchObjectiveCache(
+        patchObjectiveEverywhere(
           queryClient,
           pid,
           objectiveId,
@@ -86,13 +86,13 @@ export function useObjectivesQuery(projectId: string | null) {
         const objective = await updateObjectiveApi(objectiveId, updates);
         // La ligne serveur entre dans le cache — pas d'invalidation : c'est ce
         // refetch qui rejouait l'ancien état pendant une seconde.
-        if (pid) patchObjectiveCache(queryClient, pid, objectiveId, objective);
+        if (pid) patchObjectiveEverywhere(queryClient, pid, objectiveId, objective);
         objectiveWrites.settle(handle, objective);
         return objective;
       } catch (err) {
         objectiveWrites.fail(handle);
         if (pid && current) {
-          patchObjectiveCache(queryClient, pid, objectiveId, before);
+          patchObjectiveEverywhere(queryClient, pid, objectiveId, before);
         }
         // Conservé : le toast d'erreur du panneau latéral le récupère.
         throw err;
