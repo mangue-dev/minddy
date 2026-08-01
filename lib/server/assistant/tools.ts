@@ -6,6 +6,7 @@ import {
   ISSUE_EFFORTS,
 } from "@/lib/issue-validation";
 import { PLAN_TASK_STATES } from "@/lib/plan";
+import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
@@ -78,6 +79,12 @@ const ISSUE_FIELD_PROPERTIES = {
     type: ["string", "null"],
     description: "Due date as an ISO 8601 timestamp, or null to clear.",
   },
+  recurrence: {
+    type: ["string", "null"],
+    enum: [...RECURRENCE_CADENCES, null],
+    description:
+      "Recurrence cadence — the issue comes back at this rhythm ('every Monday', 'every 4th of the month', 'every year'). It NEEDS a due_date: pass one in the same call unless the issue already has one, otherwise the write is refused. That due date carries the FIRST occurrence and gives the rhythm its day (weekly + a Monday = every Monday, monthly + the 4th = every 4th); a date already past is moved forward to the next occurrence, so a recurring issue never starts overdue. It then runs on its own: setting the issue to 'done' creates the next occurrence in 'backlog' with the due date shifted by one cadence and moves the recurrence onto it — never create that next occurrence yourself. null stops the series (so do clearing the due_date and canceling the issue).",
+  },
 } as const;
 
 // The saved-view filter schema, shared by create_view and update_view so both
@@ -137,7 +144,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_issues",
       description:
-        "List the project's issues (compact rows: id, identifier, title, status, priority, effort, assignee_id, objective_id, due_date, parent_id, category_ids). Filterable. Use this to resolve which issues the user means before editing.",
+        "List the project's issues (compact rows: id, identifier, title, status, priority, effort, assignee_id, objective_id, due_date, recurrence, parent_id, category_ids). Filterable. Use this to resolve which issues the user means before editing.",
       parameters: {
         type: "object",
         properties: {

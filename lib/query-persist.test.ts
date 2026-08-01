@@ -42,6 +42,10 @@ describe("isPersistableKey", () => {
     expect(isPersistableKey(["billing", "usage"])).toBe(false);
   });
 
+  it("exclut le SHA du déploiement — sinon le bandeau revient au rechargement", () => {
+    expect(isPersistableKey(["version"])).toBe(false);
+  });
+
   it("ne confond pas un préfixe avec une clé voisine", () => {
     // ["me","board"] partage son premier segment avec ["me","search-index"] :
     // le filtre doit comparer le préfixe entier, pas seulement key[0].

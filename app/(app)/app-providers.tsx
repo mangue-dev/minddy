@@ -18,6 +18,7 @@ import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
+import { NewVersionBanner } from "@/components/new-version-banner";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
@@ -67,6 +68,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                         <ScratchpadModal />
                         <KeyboardCheatsheet />
                         <AnalyticsProjectGroup />
+                        <NewVersionBanner />
                       </UndoProvider>
                     </KeyboardProvider>
                   </ZenModeProvider>

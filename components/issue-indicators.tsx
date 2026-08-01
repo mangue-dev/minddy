@@ -13,7 +13,16 @@ import type { IssueRelationType } from "@/lib/types";
    Linear-style ring: dashed (backlog), empty (todo), a pie fill for progress
    (in_progress / in_review). done / canceled / duplicate are filled discs with
    the glyph (check / cross / equals) knocked out as a real hole via an SVG mask,
-   so the background shows through. Colors come from the Figma design. */
+   so the background shows through. Colors come from the Figma design.
+
+   The three variants drawn in `currentColor` (backlog, todo, in_progress) carry
+   their color class with `!`: a hovered menu row repaints its icons' `color`
+   (`focus:**:text-accent-foreground` on DropdownMenuItem,
+   `data-selected:*:[svg]:text-foreground` on CommandItem, the latter outranking
+   a plain utility on the svg), and the status tint is meaning, not decoration —
+   it must read the same hovered or not. Same intent as PriorityIndicator's
+   fill-* below, and as RELATION_META's colors in lib/relation-constants.ts.
+   The other variants are hex-filled, so nothing can tint them. */
 
 /** Pie slice from 12 o'clock, clockwise, covering `fraction` of the circle. */
 function piePath(cx: number, cy: number, r: number, fraction: number): string {
@@ -59,13 +68,13 @@ export function StatusIndicator({
       );
     case "backlog":
       return (
-        <svg viewBox="0 0 16 16" fill="none" className={cn(base, "text-muted-foreground")}>
+        <svg viewBox="0 0 16 16" fill="none" className={cn(base, "text-muted-foreground!")}>
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
         </svg>
       );
     case "todo":
       return (
-        <svg viewBox="0 0 16 16" fill="none" className={cn(base, "text-muted-foreground")}>
+        <svg viewBox="0 0 16 16" fill="none" className={cn(base, "text-muted-foreground!")}>
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
         </svg>
       );
@@ -76,7 +85,7 @@ export function StatusIndicator({
         <Pie
           color="currentColor"
           fraction={0.5}
-          className={cn("text-[#B0890B] dark:text-[#FADB28]", className)}
+          className={cn("text-[#B0890B]! dark:text-[#FADB28]!", className)}
         />
       );
     case "in_review":

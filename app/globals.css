@@ -144,6 +144,16 @@
     bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px) !important;
   }
 
+  /* Même ré-ancrage pour le bandeau « nouvelle version » (MIN-157), qui vit au
+     même coin : mêmes `right`, et un `bottom` décalé de 4.5rem pour rester
+     empilé AU-DESSUS du FAB plutôt que par-dessus lui. */
+  .ultrawide-canvas .new-version-anchor {
+    right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
+    bottom: calc(
+      max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px + 4.5rem
+    ) !important;
+  }
+
   /* Chaîne de rayons concentriques sur ultrawide : le panneau compact se niche
      dans le coin de 30px du shell avec le même gap de 8px que le FAB, donc son
      coin descend à 22px (30 − 8). Le ChatInput garde son gap de 6px au bord du

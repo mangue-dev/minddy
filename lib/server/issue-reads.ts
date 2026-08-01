@@ -26,7 +26,7 @@ export interface ReadContext {
 }
 
 export const COMPACT_ISSUE_COLUMNS =
-  "id, number, title, status, priority, effort, assignee_id, objective_id, due_date, parent_id, issue_categories(category_id)";
+  "id, number, title, status, priority, effort, assignee_id, objective_id, due_date, recurrence, parent_id, issue_categories(category_id)";
 
 /** Statuses hidden from list_issues unless include_done (or an explicit filter). */
 export const CLOSED_STATUSES = ["done", "canceled", "duplicate"];
@@ -49,6 +49,10 @@ export function compactIssue(
     assignee_id: row.assignee_id,
     objective_id: row.objective_id,
     due_date: row.due_date,
+    // La cadence se lit AVEC l'échéance (« tous les lundis ») : sans elle dans
+    // la ligne compacte, un agent ne peut pas distinguer un ticket récurrent
+    // d'un ticket daté, et reposerait une récurrence déjà en place.
+    recurrence: row.recurrence,
     parent_id: row.parent_id,
     category_ids: categories?.map((c) => c.category_id) ?? [],
   };

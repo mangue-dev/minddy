@@ -14,6 +14,11 @@ export const MCP_SERVER_INSTRUCTIONS =
       "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +
       "none, urgent, high, medium, low. Efforts (t-shirt): xs, s, m, l, xl. An issue " +
+      "can RECUR: field 'recurrence' (daily, weekly, monthly, yearly) riding on its " +
+      "due date — 'every Monday' is the cadence plus the date, so a cadence without " +
+      "a due_date is refused. Completing a recurring issue creates the next " +
+      "occurrence itself, in backlog, one cadence later: only ever ONE live issue " +
+      "per series, never create the next one by hand. An issue " +
       "can carry an implementation plan (field 'plan'): a REAL engineering plan in " +
       "markdown, like your plan mode output, with a short context (goal, approach), " +
       "ordered checkbox tasks naming the actual code to touch (exact file paths, " +

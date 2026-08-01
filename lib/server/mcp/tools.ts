@@ -21,6 +21,7 @@ import {
   ISSUE_PRIORITIES,
   ISSUE_STATUSES,
 } from "@/lib/issue-validation";
+import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import {
@@ -169,6 +170,20 @@ const ISSUE_REF = z
   .string()
   .describe(
     "Issue reference: UUID, identifier like 'MIND-42', or bare issue number."
+  );
+
+const RECURRENCE_FIELD = z
+  .enum(RECURRENCE_CADENCES)
+  .describe(
+    "Makes the issue RECURRING at this cadence. Needs a due_date (in the same " +
+      "call, or already on the issue), which carries the first occurrence and " +
+      "gives the rhythm its day: weekly + a Monday = every Monday, monthly + " +
+      "the 4th = every 4th. A past due date is moved forward to the next " +
+      "occurrence, so the issue never starts overdue. Then it runs on its own: " +
+      "completing it (status 'done') creates the next occurrence in 'backlog' " +
+      "one cadence later and carries the recurrence over — only ever ONE live " +
+      "issue per series, so never create the next occurrence yourself. Clear it " +
+      "(null, via minddy_update_issues) to stop the series."
   );
 
 /** Garde combinée auth + rate limit + accès projet des tools scopés projet. */
@@ -911,6 +926,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         objective_id: z.string().uuid().optional(),
         parent: ISSUE_REF.optional().describe("Parent issue → creates a sub-issue."),
         due_date: z.string().optional().describe("ISO 8601 date or datetime."),
+        recurrence: RECURRENCE_FIELD.optional(),
         category_ids: z.array(z.string().uuid()).optional(),
         sub_issues: z
           .array(
@@ -1032,6 +1048,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             duplicate_of: ISSUE_REF.nullable().optional()
               .describe("With status 'duplicate': the issue this one duplicates."),
             due_date: z.string().nullable().optional(),
+            recurrence: RECURRENCE_FIELD.nullable().optional(),
             category_ids: z.array(z.string().uuid()).optional(),
           })
           .describe("At least one field."),

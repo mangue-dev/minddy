@@ -35,7 +35,12 @@ import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
 import { TASK_MARKER_BY_STATE } from "@/lib/scratchpad";
+import {
+  resolvePromptCopyAutoStart,
+  shouldAutoStartTask,
+} from "@/lib/prompt-copy-auto-start";
 import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown";
+import { useAuth } from "@/lib/auth-context";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
@@ -112,6 +117,7 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   const tScratch = useTranslations("Scratchpad");
   const { close: closeScratchpad } = useScratchpad();
   const openAssistant = useAssistantPanel().open;
+  const { user } = useAuth();
 
   const raw = node.attrs.state;
   const state: PlanTaskState = isPlanTaskState(raw) ? raw : "pending";
@@ -120,25 +126,43 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
 
   const set = (next: PlanTaskState) => updateAttributes({ state: next });
 
+  // Confier la tâche à un agent, c'est la commencer : la passation la fait
+  // passer « en cours », exactement comme sur un ticket, et avec les deux mêmes
+  // règles — « copier le prompt » démarre sous l'option de compte (MIN-20,
+  // Compte → Préférences), « lancer un agent » démarre toujours (MIN-46). Une
+  // tâche déjà commencée, cochée ou annulée ne bouge dans aucun des deux cas.
+  const startOnLaunch = shouldAutoStartTask(state);
+  const startOnCopy =
+    startOnLaunch && resolvePromptCopyAutoStart(user?.user_metadata);
+
   // Le markdown que porte la ligne quand elle sort du carnet (copie ou agent) :
   // la tâche telle quelle, marqueur compris, PRÉCÉDÉE du titre de sa section —
   // seul moyen de dire à l'agent d'où elle vient (le prompt le reformule en
   // clair, cf. lib/scratchpad-prompt.ts). Null si la ligne est vide.
-  const taskMarkdown = (): string | null => {
+  //
+  // Le marqueur est celui de l'état APRÈS le geste (comme le XML d'un ticket
+  // copié, cf. issue-card.tsx) : une tâche que la passation démarre part en
+  // `[~]`, pas dans son état d'avant — sans quoi le prompt décrirait comme « à
+  // faire » un travail que le carnet, lui, dit déjà en cours.
+  const taskMarkdown = (as: PlanTaskState): string | null => {
     const text = node.textContent.trim();
     if (!text) return null;
-    const line = `- ${TASK_MARKER_BY_STATE[state]} ${text}`;
+    const line = `- ${TASK_MARKER_BY_STATE[as]} ${text}`;
     const heading = sectionHeadingAt(editor, getPos());
     return heading ? `${heading}\n\n${line}` : line;
   };
 
   const copyLine = () => {
-    const md = taskMarkdown();
+    const md = taskMarkdown(startOnCopy ? "in_progress" : state);
     if (!md) return;
     void navigator.clipboard.writeText(
       buildScratchpadPrompt(md, { section: true })
     );
-    toast.success(tScratch("copiedLineToast"));
+    if (startOnCopy) set("in_progress");
+    // Le toast ne signale le déplacement que s'il a eu lieu.
+    toast.success(
+      tScratch(startOnCopy ? "copiedLineMovedToast" : "copiedLineToast")
+    );
   };
 
   // « Promouvoir en ticket » : la note part telle quelle à Numo, qui la convertit
@@ -156,14 +180,25 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
     openAssistant({ prompt: tScratch("promotePrompt", { note: text }) });
   };
 
-  // « Lancer un agent » (MIN-84) : la ligne part telle quelle (marqueur et titre
-  // de section compris — c'est du markdown honnête du carnet, et la note est le
-  // SEUL canal jusqu'à l'agent) comme instruction d'un run carnet ; le composer
-  // de la page Agents fait choisir le projet avant l'envoi.
+  // « Lancer un agent » (MIN-84) : la ligne part en markdown de carnet (marqueur
+  // et titre de section compris — la note est le SEUL canal jusqu'à l'agent)
+  // comme instruction d'un run carnet ; le composer de la page Agents fait
+  // choisir le projet avant l'envoi.
+  //
+  // Le démarrage a lieu ICI, au geste, et pas à l'envoi réel : le run carnet
+  // n'est rattaché à aucune tâche (sa note est un simple texte, cf.
+  // lib/server/agent/launch.ts), donc rien ne pourrait retrouver la ligne plus
+  // tard. Abandonner le composer laisse la tâche « en cours » — un clic pour la
+  // remettre, contre une passation qui ne marque rien dans le cas normal.
   const launchNote = useLaunchAgentNote();
   const launchAgent = () => {
-    const md = taskMarkdown();
-    if (md) launchNote(md);
+    const md = taskMarkdown(startOnLaunch ? "in_progress" : state);
+    if (!md) return;
+    // AVANT `launchNote` : il ferme le carnet, et c'est ce démontage qui flushe
+    // l'autosave (scratchpad-editor.tsx) — l'état doit donc être posé pour
+    // partir avec, sinon il se perdrait avec l'éditeur.
+    if (startOnLaunch) set("in_progress");
+    launchNote(md);
   };
 
   // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button

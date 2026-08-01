@@ -32,6 +32,7 @@
     "copiedSectionToast": "Section copiée en prompt.",
     "copyLine": "Copier en prompt",
     "copiedLineToast": "Tâche copiée en prompt.",
+    "copiedLineMovedToast": "Tâche copiée en prompt. Elle est passée « En cours ».",
     "promoteToIssue": "Promouvoir en ticket",
     "promotePrompt": "Convertis cette note de mon carnet de tâches en ticket :\n\n{note}\n\nSi la note n'est pas assez claire pour en faire un bon ticket, pose-moi des questions avant de le créer. Une fois le ticket créé, retire cette note du carnet : elle vit désormais dans le ticket.",
     "emptyCopyToast": "Rien à copier pour l'instant.",
@@ -940,6 +941,7 @@
     "dictateEditTooltip": "Modifier le ticket à la voix",
     "addSubIssuePlaceholder": "Ajouter un sous-ticket…",
     "openParentAria": "Ouvrir le ticket parent {id}",
+    "subIssueOf": "Sous-ticket de {id}",
     "viewPlanAria": "Voir le plan",
     "createdByIntegration": "Créé via l'intégration {name}",
     "createdByIntegrationGeneric": "Créé via une intégration",
@@ -1384,8 +1386,8 @@
     "numoStatusTitle": "Statut des tickets créés par Numo",
     "numoStatusDesc": "« Triage » ajoute une étape de validation manuelle ; « Backlog » et « À faire » la sautent.",
     "promptAutoStartTitle": "Démarrage automatique à la copie du prompt",
-    "promptAutoStartDesc": "Ne s'applique qu'aux tickets pas encore démarrés.",
-    "promptAutoStartLabel": "Démarrer le ticket quand je copie son prompt",
+    "promptAutoStartDesc": "Ne s'applique qu'aux tickets et aux tâches du carnet pas encore démarrés.",
+    "promptAutoStartLabel": "Démarrer le ticket ou la tâche quand je copie son prompt",
     "apiKeyLastUsed": "Dernière utilisation {date}",
     "apiKeyNeverUsed": "Jamais utilisée",
     "apiKeyRevoke": "Déconnecter",
@@ -2876,6 +2878,11 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "learnMore": "Politique de cookies"
+  },
+  "NewVersion": {
+    "title": "Une nouvelle version est disponible",
+    "refresh": "Rafraîchir",
+    "dismiss": "Fermer"
   },
   "Landing": {
     "metaTitle": "minddy, le suivi de tickets qui reste simple",

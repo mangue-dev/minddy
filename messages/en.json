@@ -32,6 +32,7 @@
     "copiedSectionToast": "Section copied as a prompt.",
     "copyLine": "Copy as prompt",
     "copiedLineToast": "Task copied as a prompt.",
+    "copiedLineMovedToast": "Task copied as a prompt. It moved to “In Progress”.",
     "promoteToIssue": "Promote to issue",
     "promotePrompt": "Turn this note from my task notebook into an issue:\n\n{note}\n\nIf the note isn't clear enough to make a good issue, ask me questions before creating it. Once the issue exists, remove that note from the notebook — it lives in the issue now.",
     "emptyCopyToast": "Nothing to copy yet.",
@@ -940,6 +941,7 @@
     "dictateEditTooltip": "Edit the issue by voice",
     "addSubIssuePlaceholder": "Add a sub-issue…",
     "openParentAria": "Open parent issue {id}",
+    "subIssueOf": "Sub-issue of {id}",
     "viewPlanAria": "View plan",
     "createdByIntegration": "Created via the {name} integration",
     "createdByIntegrationGeneric": "Created via an integration",
@@ -1384,8 +1386,8 @@
     "numoStatusTitle": "Status for issues Numo creates",
     "numoStatusDesc": "Triage adds a manual review step; Backlog and Todo skip it.",
     "promptAutoStartTitle": "Auto-start when copying the prompt",
-    "promptAutoStartDesc": "Only applies to issues that haven't started yet.",
-    "promptAutoStartLabel": "Start the issue when I copy its prompt",
+    "promptAutoStartDesc": "Only applies to issues and notebook tasks that haven't started yet.",
+    "promptAutoStartLabel": "Start the issue or task when I copy its prompt",
     "apiKeyLastUsed": "Last used {date}",
     "apiKeyNeverUsed": "Never used",
     "apiKeyRevoke": "Disconnect",
@@ -2876,6 +2878,11 @@
     "accept": "Accept",
     "decline": "Decline",
     "learnMore": "Cookie policy"
+  },
+  "NewVersion": {
+    "title": "A new version is available",
+    "refresh": "Refresh",
+    "dismiss": "Dismiss"
   },
   "Landing": {
     "metaTitle": "minddy, the issue tracker that stays simple",

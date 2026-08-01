@@ -16,6 +16,9 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   toast,
 } from "mangue-ui";
 import {
@@ -728,24 +731,39 @@ export function IssueSidePanel({
                   <IntegrationIndicator issue={issue} iconClassName="size-4" />
                   <RemoteIssueIndicator issue={issue} iconClassName="size-4" />
                   {parent && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onOpenIssue(parent.id)}
-                        aria-label={t("openParentAria", {
+                    <button
+                      type="button"
+                      onClick={() => onOpenIssue(parent.id)}
+                      aria-label={t("openParentAria", {
+                        id: issueIdentifier(projectKey, parent.number),
+                      })}
+                      className="rounded font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:outline-none"
+                    >
+                      {issueIdentifier(projectKey, parent.number)}
+                    </button>
+                  )}
+                  {/* Comme sur la carte : survoler « › MIN-42 » nomme la relation
+                      que le seul chevron laisse deviner. */}
+                  {parent ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex items-center gap-1.5">
+                          <ChevronRight
+                            className="size-4 shrink-0 text-muted-foreground"
+                            aria-hidden
+                          />
+                          {issueIdentifier(projectKey, issue.number)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t("subIssueOf", {
                           id: issueIdentifier(projectKey, parent.number),
                         })}
-                        className="rounded font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:outline-none"
-                      >
-                        {issueIdentifier(projectKey, parent.number)}
-                      </button>
-                      <ChevronRight
-                        className="size-4 shrink-0 text-muted-foreground"
-                        aria-hidden
-                      />
-                    </>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    issueIdentifier(projectKey, issue.number)
                   )}
-                  {issueIdentifier(projectKey, issue.number)}
                 </span>
               </SidePanelTitle>
               {resolvedRelations.length > 0 && (

@@ -9,16 +9,23 @@ import { isClosedStatus, type IssueStatus } from "./issue-constants";
 export interface RelationMeta {
   value: IssueRelationType;
   icon: LucideIcon;
-  /** Tailwind text-color class for the icon. */
+  /** Tailwind text-color class for the icon (see the `!` note below). */
   color: string;
 }
 
 // blocked_by = you're stuck (red, most urgent); blocks = you gate others
 // (amber); related = a soft link (muted).
+//
+// `!` because the tint carries the meaning and must survive a hovered menu row:
+// both menus that offer these relations repaint their rows' icons — the card's
+// right-click menu with `focus:**:text-accent-foreground` (DropdownMenuItem),
+// the side panel's picker with `data-selected:*:[svg]:text-foreground`
+// (CommandItem), and the latter outranks a plain utility class on the svg.
+// Same intent as PriorityIndicator's fill-* dodge in issue-indicators.tsx.
 export const RELATION_META: Record<IssueRelationType, RelationMeta> = {
-  blocked_by: { value: "blocked_by", icon: Ban, color: "text-red-500" },
-  blocks: { value: "blocks", icon: OctagonX, color: "text-amber-500" },
-  related: { value: "related", icon: Link2, color: "text-muted-foreground" },
+  blocked_by: { value: "blocked_by", icon: Ban, color: "text-red-500!" },
+  blocks: { value: "blocks", icon: OctagonX, color: "text-amber-500!" },
+  related: { value: "related", icon: Link2, color: "text-muted-foreground!" },
 };
 
 /** Priority order (most urgent first): which relation the compact card chip

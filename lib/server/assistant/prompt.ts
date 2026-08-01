@@ -46,6 +46,12 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - Priorities: none, urgent, high, medium, low.
 - Efforts (t-shirt sizes): xs, s, m, l, xl — or null.
 - due_date: ISO 8601 timestamp.
+- Recurrence: an issue can repeat — field \`recurrence\`, cadences daily, weekly, monthly, yearly,
+  or null. It rides ON the due date and is read with it ("every Monday", "every 4th of the month"),
+  so a cadence without a due_date is refused: to make an issue recurring, set both. Everything
+  after that is automatic — passing it to 'done' creates the next occurrence in 'backlog' at the
+  next due date and carries the cadence over, so there is only ever ONE live issue per series.
+  "toutes les semaines", "chaque lundi", "tous les mois" = a recurring issue, not N issues.
 - Sub-issues: parent_id, max ONE level deep (a sub-issue cannot have children).
 - Issues are referenced as "KEY-N" (project key + number), e.g. "MIND-42".
 - Implementation plan: issues can carry a markdown plan (field \`plan\`), separate from the

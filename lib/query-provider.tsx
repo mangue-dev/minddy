@@ -52,6 +52,10 @@ const PERSIST_BUSTER = "v1";
  *   exclure ne coûte rien : ils repartaient du serveur de toute façon.
  * - `["billing", …]` : droits et quotas. Repartir du serveur évite d'ouvrir une
  *   fonctionnalité payante sur la foi d'un cache disque.
+ * - `["version"]` : le SHA du déploiement (MIN-157). Réhydraté depuis le
+ *   disque, il rallumerait le bandeau « nouvelle version » juste après le
+ *   rechargement qui vient de mettre l'app à jour — un faux positif
+ *   systématique, et que rien ne viendrait éteindre.
  *
  * Les préfixes ci-dessous sont les VRAIES clés (cf. lib/use-agent-runs.ts) :
  * s'en écarter donnerait une liste qui ne filtre rien tout en prétendant le
@@ -70,6 +74,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["pr-comments"],
   ["pr-review-comments"],
   ["billing"],
+  ["version"], // lib/use-new-version.ts
 ];
 
 /** Exportée pour le test unitaire (lib/query-persist.test.ts). */

@@ -82,6 +82,13 @@ const nextConfig = {
   // Unset locally → "development". Inlined at build time.
   env: {
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "development",
+    // Le SHA du commit qui a produit CE bundle (MIN-157). Server-only chez
+    // Vercel comme VERCEL_ENV, donc bridgé ici — et inliné au build, ce qui est
+    // exactement le point : la constante reste celle de la version chargée dans
+    // l'onglet, quand /api/version répond, elle, celle du déploiement qui sert
+    // le trafic. Vide en local (et si « Automatically expose System Environment
+    // Variables » est décoché) → la détection s'éteint d'elle-même.
+    NEXT_PUBLIC_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
   },
   // Test local des domaines personnalisés (MIN-36) : hosts /etc/hosts pointés
   // sur 127.0.0.1 — sans quoi `next dev` bloque les requêtes cross-origin

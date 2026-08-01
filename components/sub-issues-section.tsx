@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Progress, Spinner, cn, toast } from "mangue-ui";
 import { Plus } from "lucide-react";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { CreateIssueInput, Issue } from "@/lib/types";
 
@@ -37,7 +37,10 @@ export function SubIssuesSection({
   const [adding, setAdding] = useState(false);
 
   const total = children.length;
-  const done = children.filter((c) => c.status === "done").length;
+  // Un sous-ticket annulé (ou doublon) est fini pour le suivi, au même titre
+  // qu'un terminé : il ne sera jamais travaillé. Même convention que
+  // statusCompletionCredit (lib/cycle.ts), qui donne 1 à tout statut clos.
+  const done = children.filter((c) => isClosedStatus(c.status)).length;
   const percent = total === 0 ? 0 : Math.round((done / total) * 100);
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -86,7 +89,8 @@ export function SubIssuesSection({
                 <span
                   className={cn(
                     "min-w-0 flex-1 truncate text-sm",
-                    child.status === "done" && "text-muted-foreground line-through"
+                    isClosedStatus(child.status) &&
+                      "text-muted-foreground line-through"
                   )}
                 >
                   {child.title}

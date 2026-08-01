@@ -682,30 +682,44 @@ export function IssueCardBody({
           <RemoteIssueIndicator issue={issue} iconClassName="size-3" />
           {parentNumber != null &&
             (onOpenParent ? (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    stop(e);
-                    onOpenParent();
-                  }}
-                  onPointerDown={stop}
-                  aria-label={t("openParentAria", {
-                    id: issueIdentifier(projectKey, parentNumber),
-                  })}
-                  className="rounded-sm transition-colors hover:text-foreground hover:underline"
-                >
-                  {issueIdentifier(projectKey, parentNumber)}
-                </button>
-                <ChevronRight className="size-3 shrink-0" aria-hidden />
-              </>
+              <button
+                type="button"
+                onClick={(e) => {
+                  stop(e);
+                  onOpenParent();
+                }}
+                onPointerDown={stop}
+                aria-label={t("openParentAria", {
+                  id: issueIdentifier(projectKey, parentNumber),
+                })}
+                className="rounded-sm transition-colors hover:text-foreground hover:underline"
+              >
+                {issueIdentifier(projectKey, parentNumber)}
+              </button>
             ) : (
-              <>
-                <span>{issueIdentifier(projectKey, parentNumber)}</span>
-                <ChevronRight className="size-3 shrink-0" aria-hidden />
-              </>
+              <span>{issueIdentifier(projectKey, parentNumber)}</span>
             ))}
-          <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
+          {/* Le chevron seul ne dit pas ce qu'est le préfixe : sur un sous-ticket,
+              survoler « › MIN-42 » nomme la relation — « Sous-ticket de MIN-12 ». */}
+          {parentNumber == null ? (
+            <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex min-w-0 items-center gap-1">
+                  <ChevronRight className="size-3 shrink-0" aria-hidden />
+                  <span className="truncate">
+                    {issueIdentifier(projectKey, issue.number)}
+                  </span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("subIssueOf", {
+                  id: issueIdentifier(projectKey, parentNumber),
+                })}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {relations && relations.length > 0 && (
             <RelationChips
               relations={relations}
