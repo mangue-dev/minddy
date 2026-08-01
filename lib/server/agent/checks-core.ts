@@ -16,6 +16,19 @@ export interface PullRequestCheck {
   state: CheckState;
   /** Page du check chez la forge, quand elle existe. */
   url: string | null;
+  /** L'intégration qui a produit le check — « GitHub Actions », « Socket
+      Security »… `null` quand le NOM du check la porte déjà (les commit statuses
+      s'appellent « Vercel – ui »). */
+  appName: string | null;
+  /** Son logo, servi par la forge. `null` = pas de logo à afficher (GitLab n'en
+      expose aucun) : l'UI retombe sur l'icône de la forge. */
+  appAvatarUrl: string | null;
+  /** Le résultat en une ligne, tel que la forge le formule (« Deployment has
+      completed »). Vide pour la plupart des jobs GitHub Actions : eux ne se
+      racontent que par leur état et leur durée. */
+  description: string | null;
+  /** Durée mesurée, quand la forge donne les deux bornes. */
+  durationMs: number | null;
 }
 
 export interface ChecksSummary {
@@ -39,6 +52,14 @@ const SEVERITY: Record<CheckState, number> = {
   success: 3,
 };
 
+/** L'App GitHub derrière un check run (GitHub Actions, Vercel, Socket Security…). */
+export interface RawCheckApp {
+  id?: number;
+  slug?: string;
+  name?: string;
+  owner?: { avatar_url?: string | null } | null;
+}
+
 /** Check run GitHub (`GET /commits/{sha}/check-runs`, `filter=latest` par défaut). */
 export interface RawCheckRun {
   name?: string;
@@ -46,6 +67,12 @@ export interface RawCheckRun {
   conclusion?: string | null; // success | failure | neutral | cancelled | timed_out | action_required | skipped | stale
   html_url?: string | null;
   details_url?: string | null;
+  app?: RawCheckApp | null;
+  /** Le résultat tel que l'App le formule. `title` est vide sur les jobs GitHub
+      Actions, rempli par les intégrations qui ont quelque chose à dire. */
+  output?: { title?: string | null } | null;
+  started_at?: string | null;
+  completed_at?: string | null;
 }
 
 /** Commit status GitHub (`GET /commits/{sha}/status`). */
@@ -53,6 +80,11 @@ export interface RawCommitStatus {
   context?: string;
   state?: string; // pending | success | failure | error
   target_url?: string | null;
+  description?: string | null;
+  /** Logo de l'intégration, déjà servi par GitHub sous sa forme canonique
+      (`https://avatars.githubusercontent.com/in/{app_id}` — mesuré). */
+  avatar_url?: string | null;
+  creator?: { avatar_url?: string | null } | null;
 }
 
 /** Pipeline GitLab (`GET /merge_requests/:iid/pipelines`). */
@@ -61,6 +93,40 @@ export interface RawPipeline {
   status?: string; // created | waiting_for_resource | preparing | pending | running | success | failed | canceled | skipped | manual | scheduled
   web_url?: string | null;
   ref?: string | null;
+  /** Nom du pipeline quand le projet en donne un (`workflow:name`). */
+  name?: string | null;
+}
+
+/** Marque du CI de GitLab — un nom propre, donc jamais traduit. */
+const GITLAB_CI_APP = "GitLab CI/CD";
+
+/**
+ * Logo d'une App GitHub. Ce n'est PAS `app.owner.avatar_url` : celui-là est
+ * l'avatar du COMPTE propriétaire (l'organisation `github` pour GitHub Actions,
+ * donc l'octocat au lieu du logo Actions). Le logo de l'App vit sous `/in/{id}`,
+ * et c'est exactement l'URL que GitHub sert lui-même dans l'`avatar_url` des
+ * commit statuses (mesuré : `in/8329` pour Vercel). `s=48` parce qu'on l'affiche
+ * en 20 px : sans lui, GitHub renvoie l'original en 460 px.
+ */
+function githubAppAvatar(app: RawCheckApp | null | undefined): string | null {
+  if (app?.id) return `https://avatars.githubusercontent.com/in/${app.id}?s=48`;
+  return app?.owner?.avatar_url ?? null;
+}
+
+/**
+ * Durée entre deux bornes ISO. `null` dès que l'une manque ou que l'écart n'est
+ * pas positif : GitHub date un job sauté avec un `completed_at` ANTÉRIEUR à son
+ * `started_at` (mesuré), et « 0 s » ne dit rien de plus que rien.
+ */
+function elapsedMs(start?: string | null, end?: string | null): number | null {
+  if (!start || !end) return null;
+  const ms = Date.parse(end) - Date.parse(start);
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
+}
+
+/** Chaîne non vide, débarrassée de ses espaces — sinon `null`. */
+function text(value: string | null | undefined): string | null {
+  return value?.trim() || null;
 }
 
 function checkRunState(run: RawCheckRun): CheckState {
@@ -143,17 +209,32 @@ export function summarizeGithubChecks(
 ): ChecksSummary {
   const byName = new Map<string, PullRequestCheck>();
   for (const s of statuses) {
-    const name = s.context?.trim();
+    const name = text(s.context);
     if (!name) continue;
-    byName.set(name, { name, state: commitStatusState(s), url: s.target_url ?? null });
+    byName.set(name, {
+      name,
+      state: commitStatusState(s),
+      url: s.target_url ?? null,
+      // Le contexte d'un status NOMME déjà son intégration (« Vercel – ui ») :
+      // répéter le login du bot qui l'a posé (« vercel[bot] ») n'ajoute rien.
+      appName: null,
+      appAvatarUrl: s.avatar_url ?? s.creator?.avatar_url ?? null,
+      description: text(s.description),
+      // L'API historique ne date que la pose du status, pas le travail derrière.
+      durationMs: null,
+    });
   }
   for (const r of runs) {
-    const name = r.name?.trim();
+    const name = text(r.name);
     if (!name) continue;
     byName.set(name, {
       name,
       state: checkRunState(r),
       url: r.html_url ?? r.details_url ?? null,
+      appName: text(r.app?.name),
+      appAvatarUrl: githubAppAvatar(r.app),
+      description: text(r.output?.title),
+      durationMs: elapsedMs(r.started_at, r.completed_at),
     });
   }
   return summarize([...byName.values()]);
@@ -165,6 +246,11 @@ export function summarizeGithubChecks(
  * ferait traîner indéfiniment l'échec d'un push déjà corrigé. Le nom affiché est
  * le numéro de pipeline : GitLab n'expose pas ici le détail par job (il faudrait
  * un appel par pipeline, pour une vue que minddy ne déplie pas).
+ *
+ * Aucun logo par intégration de ce côté — chez GitLab, le CI EST GitLab : l'UI
+ * retombe sur l'icône de la forge. Aucune durée non plus : cette liste ne donne
+ * que `created_at`/`updated_at`, et leur écart n'est pas la durée du pipeline
+ * (une relance le rallonge après coup).
  */
 export function summarizeGitlabPipelines(pipelines: RawPipeline[]): ChecksSummary {
   const latest = pipelines[0];
@@ -174,6 +260,12 @@ export function summarizeGitlabPipelines(pipelines: RawPipeline[]): ChecksSummar
       name: `#${latest.id}`,
       state: pipelineState(latest.status),
       url: latest.web_url ?? null,
+      appName: GITLAB_CI_APP,
+      appAvatarUrl: null,
+      // À défaut d'un résultat en une ligne, ce que le pipeline a fait tourner :
+      // son nom quand le projet en donne un, sinon la branche.
+      description: text(latest.name) ?? text(latest.ref),
+      durationMs: null,
     },
   ]);
 }

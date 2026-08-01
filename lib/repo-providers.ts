@@ -84,6 +84,29 @@ export function prIdentifier(
   return `${provider === "gitlab" ? "!" : "#"}${number}`;
 }
 
+/** Le suffixe que GitHub colle au login de toute App. */
+const BOT_SUFFIX = "[bot]";
+
+/**
+ * Sépare un login de forge de sa marque de bot. GitHub suffixe le login de
+ * toute App par `[bot]` — `vercel[bot]`, `dependabot[bot]`, et le nôtre quand
+ * Numo commente. Ce suffixe est une ÉTIQUETTE DE TYPE, pas une partie du nom :
+ * GitHub ne l'écrit jamais en toutes lettres, il affiche le nom puis une petite
+ * pastille « bot ». `GitLogin` fait pareil.
+ *
+ * Un login qui ne serait QUE `[bot]` reste rendu tel quel : mieux vaut un nom
+ * bizarre qu'une pastille sans nom devant.
+ *
+ * Rien à détecter côté GitLab : ses bots sont des comptes ordinaires, sans
+ * convention de nommage — la fonction y rend le login inchangé.
+ */
+export function parseForgeLogin(login: string): { name: string; isBot: boolean } {
+  const trimmed = login.trim();
+  if (!trimmed.toLowerCase().endsWith(BOT_SUFFIX)) return { name: trimmed, isBot: false };
+  const name = trimmed.slice(0, -BOT_SUFFIX.length);
+  return name ? { name, isBot: true } : { name: trimmed, isBot: false };
+}
+
 /** Résout une valeur `provider` stockée en métadonnées, par défaut GitHub. */
 export function getRepoProvider(
   value: string | null | undefined,

@@ -35,6 +35,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Github,
+  Gitlab,
   MessageSquare,
   Reply,
   Send,
@@ -43,6 +45,7 @@ import {
 import Link from "next/link";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
@@ -71,7 +74,8 @@ import {
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { prIdentifier } from "@/lib/repo-providers";
+import type { MessageKey } from "@/lib/i18n-keys";
+import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Panneau de détail d'une PR (MIN-66 + MIN-138 + MIN-143) : en-tête (ticket +
@@ -108,8 +112,58 @@ function CheckDot({ state, className }: { state: CheckState; className?: string 
 }
 
 /**
+ * Logo de l'intégration qui a produit le check — GitHub sert le VRAI logo de
+ * chaque App (Vercel, Socket Security, GitHub Actions…), c'est lui qu'on affiche
+ * plutôt qu'une icône générique. Le repli est l'icône de la forge : chez GitLab
+ * le CI est GitLab, et il n'y a pas d'autre logo à montrer.
+ *
+ * Fond neutre derrière l'image : beaucoup de ces logos sont transparents et
+ * monochromes — sans lui, un logo noir disparaît en thème sombre.
+ */
+function CheckLogo({ url, provider }: { url: string | null; provider: RepoProviderId }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt=""
+        className="size-5 shrink-0 rounded-[4px] bg-muted object-cover"
+      />
+    );
+  }
+  const Icon = provider === "gitlab" ? Gitlab : Github;
+  return (
+    <Icon className="size-5 shrink-0 rounded-[4px] bg-muted p-0.5 text-muted-foreground" />
+  );
+}
+
+/** « 42 s », « 3 min 7 s ». `null` quand la forge ne date pas le check. */
+function checkDuration(
+  t: ReturnType<typeof useTranslations<"PullRequests">>,
+  durationMs: number | null,
+): string | null {
+  if (durationMs == null) return null;
+  const seconds = Math.round(durationMs / 1000);
+  return seconds < 60
+    ? t("checkDurationSeconds", { seconds })
+    : t("checkDurationMinutes", {
+        minutes: Math.floor(seconds / 60),
+        seconds: seconds % 60,
+      });
+}
+
+/** Le mot de l'état, pour les checks dont la forge ne dit rien de plus. */
+const CHECK_STATE_KEY: Record<CheckState, MessageKey<"PullRequests">> = {
+  success: "checkStateSuccess",
+  failure: "checkStateFailure",
+  pending: "checkStatePending",
+  neutral: "checkStateNeutral",
+};
+
+/**
  * Bandeau de checks CI. Replié il tient en une ligne (« 3/4 réussis ») ; déplié
- * il liste chaque check avec son lien chez la forge.
+ * il liste chaque check comme GitHub le fait : le logo de l'intégration, le nom
+ * du check, ce que la forge dit du résultat, sa durée, et le lien vers la forge.
  *
  * Trois « pas de checks » différents, et ils ne se disent pas pareil :
  * `error` = on n'a pas pu lire (permission de la GitHub App non acceptée par
@@ -118,9 +172,11 @@ function CheckDot({ state, className }: { state: CheckState; className?: string 
 function ChecksBanner({
   checks,
   error,
+  provider,
 }: {
   checks: ChecksSummary | null;
   error: "forbidden" | "unknown" | null;
+  provider: RepoProviderId;
 }) {
   const t = useTranslations("PullRequests");
   const [open, setOpen] = useState(false);
@@ -155,23 +211,41 @@ function ChecksBanner({
         )}
       </button>
       {open ? (
-        <ul className="flex flex-col border-t border-border">
-          {checks.checks.map((c) => (
-            <li key={c.name} className="flex items-center gap-2 px-3.5 py-2 text-sm">
-              <CheckDot state={c.state} />
-              <span className="min-w-0 truncate">{c.name}</span>
-              {c.url ? (
-                <a
-                  href={c.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-auto shrink-0 text-brand hover:underline"
-                >
-                  <ExternalLink className="size-3.5" />
-                </a>
-              ) : null}
-            </li>
-          ))}
+        <ul className="flex flex-col divide-y divide-border border-t border-border">
+          {checks.checks.map((c) => {
+            const duration = checkDuration(t, c.durationMs);
+            // Ce que la forge dit du résultat, sinon le mot de l'état : « Échec »
+            // seul reste plus utile qu'une deuxième ligne vide sous le nom.
+            const detail = [c.appName, c.description ?? t(CHECK_STATE_KEY[c.state])]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <li key={c.name} className="flex items-center gap-2.5 px-3.5 py-2.5">
+                <CheckDot state={c.state} />
+                <CheckLogo url={c.appAvatarUrl} provider={provider} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{c.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{detail}</p>
+                </div>
+                {duration ? (
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {duration}
+                  </span>
+                ) : null}
+                {c.url ? (
+                  <a
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex shrink-0 items-center gap-1 text-xs text-brand hover:underline"
+                  >
+                    {t("checkDetails")}
+                    <ExternalLink className="size-3" />
+                  </a>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </div>
@@ -209,9 +283,10 @@ function ThreadComment({
           seed={user?.login ?? "?"}
           className="size-5"
         />
-        <span className="min-w-0 truncate text-sm font-medium text-foreground">
-          {user?.login ?? "—"}
-        </span>
+        <GitLogin
+          login={user?.login}
+          className="text-sm font-medium text-foreground"
+        />
         {createdAt ? (
           <span className="shrink-0 text-xs text-muted-foreground/80">
             {format.relativeTime(new Date(createdAt), now)}
@@ -765,7 +840,10 @@ export function PrDetail({
                     seed={author.login}
                     className="size-4"
                   />
-                  {t("openedBy", { login: author.login })}
+                  {/* La phrase finit par le login dans les deux langues : la
+                      pastille se pose donc après elle, pas au milieu. */}
+                  {t("openedBy", { login: parseForgeLogin(author.login).name })}
+                  {parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
                 </span>
               ) : null}
               {item.project ? (
@@ -797,7 +875,9 @@ export function PrDetail({
 
           {/* Checks CI — sous l'en-tête, avant le fil : c'est ce qu'on regarde
               avant de décider de fusionner. */}
-          {!loading ? <ChecksBanner checks={checks} error={checksError} /> : null}
+          {!loading ? (
+            <ChecksBanner checks={checks} error={checksError} provider={item.provider} />
+          ) : null}
 
           {/* L'unique endroit où se dit « sous quel compte git vous agissez »
               (MIN-144). Muet quand tout va bien. */}

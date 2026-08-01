@@ -679,7 +679,8 @@
     "copied": "Copié",
     "notFoundTitle": "Cette page n'existe pas",
     "notFoundBody": "Le lien est faux, ou la page a bougé. Tout le reste est resté à sa place.",
-    "notFoundCta": "Revenir à l'accueil"
+    "notFoundCta": "Revenir à l'accueil",
+    "botAccount": "Bot"
   },
   "DatePicker": {
     "placeholder": "Choisir une date",
@@ -2259,6 +2260,13 @@
     "checksFailing": "Des checks échouent · {passing}/{total} réussis",
     "checksPending": "Checks en cours · {passing}/{total} réussis",
     "checksUnavailable": "Checks CI indisponibles — l'app minddy n'a pas la permission de les lire.",
+    "checkStateSuccess": "Réussi",
+    "checkStateFailure": "Échec",
+    "checkStatePending": "En cours",
+    "checkStateNeutral": "Ignoré",
+    "checkDurationSeconds": "{seconds} s",
+    "checkDurationMinutes": "{minutes} min {seconds} s",
+    "checkDetails": "Détails",
     "viewerNoAccountTitle": "minddy n'est pas autorisé sur {provider}",
     "viewerNoAccountBody": "Approuver, commenter et fusionner partent de votre propre compte {provider}. Autorisez minddy à agir en votre nom sur cette pull request.",
     "viewerConnectAccount": "Autoriser {provider}",

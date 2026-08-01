@@ -679,7 +679,8 @@
     "copied": "Copied",
     "notFoundTitle": "This page does not exist",
     "notFoundBody": "The link is wrong, or the page has moved. Everything else is still where you left it.",
-    "notFoundCta": "Back to home"
+    "notFoundCta": "Back to home",
+    "botAccount": "Bot"
   },
   "DatePicker": {
     "placeholder": "Pick a date",
@@ -2259,6 +2260,13 @@
     "checksFailing": "Checks failing · {passing}/{total} passed",
     "checksPending": "Checks running · {passing}/{total} passed",
     "checksUnavailable": "CI checks unavailable — the minddy app doesn't have permission to read them.",
+    "checkStateSuccess": "Passed",
+    "checkStateFailure": "Failed",
+    "checkStatePending": "Running",
+    "checkStateNeutral": "Skipped",
+    "checkDurationSeconds": "{seconds}s",
+    "checkDurationMinutes": "{minutes} min {seconds}s",
+    "checkDetails": "Details",
     "viewerNoAccountTitle": "minddy isn't authorized on {provider}",
     "viewerNoAccountBody": "Approving, commenting and merging happen under your own {provider} account. Authorize minddy to act in your name on this pull request.",
     "viewerConnectAccount": "Authorize {provider}",

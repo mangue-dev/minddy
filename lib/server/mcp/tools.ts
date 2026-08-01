@@ -694,7 +694,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
                   total: checks.total,
                   failing: checks.checks
                     .filter((c) => c.state === "failure")
-                    .map((c) => ({ name: c.name, url: c.url })),
+                    // `description` = ce que la forge dit de l'échec, quand elle
+                    // le formule : de quoi savoir QUOI corriger sans ouvrir le lien.
+                    .map((c) => ({ name: c.name, url: c.url, description: c.description })),
                 }
               : null,
             repository: target.repoFullName,

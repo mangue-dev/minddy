@@ -34,7 +34,8 @@ import {
   SmartAssignAvatar,
 } from "@/components/actor-avatars";
 import { isForgePrEvent, forgePrActor, type ForgeProvider } from "@/lib/pr-events";
-import { getRepoProvider } from "@/lib/repo-providers";
+import { getRepoProvider, parseForgeLogin } from "@/lib/repo-providers";
+import { BotBadge } from "@/components/git/git-login";
 import {
   describeEvent,
   describeFeedbackEvent,
@@ -260,6 +261,9 @@ function EventRow({
   // le cas échéant) tient lieu d'acteur, avec le logo du provider.
   const viaForge = isForgePrEvent(item.event);
   const forgeActor = viaForge ? forgePrActor(item.event.from_value) : null;
+  // Une App de la forge (`vercel[bot]`, et le nôtre quand Numo pousse) : le nom
+  // d'un côté, la marque de bot de l'autre — jamais `[bot]` en toutes lettres.
+  const forgeLogin = forgeActor?.login ? parseForgeLogin(forgeActor.login) : null;
   // Soumission board (feedback) : l'auteur est un utilisateur final anonyme
   // sans identité équipe — le board tient lieu d'acteur.
   const viaBoard =
@@ -276,7 +280,7 @@ function EventRow({
     : viaNumo
       ? "Numo"
       : forgeActor
-        ? forgeActor.login || getRepoProvider(forgeActor.provider).displayName
+        ? (forgeLogin?.name ?? getRepoProvider(forgeActor.provider).displayName)
         : viaIntegration
           ? t("integrationActor", {
               name: item.event.integration_name ?? t("integrationFallback"),
@@ -312,7 +316,8 @@ function EventRow({
         <ActorAvatar members={ctx.members} id={item.event.actor_id} name={actor} />
       )}
       <OneLine full={`${name} ${summary}`}>
-        <span className="font-medium text-foreground">{name}</span>{" "}
+        <span className="font-medium text-foreground">{name}</span>
+        {forgeLogin?.isBot ? <BotBadge className="ml-1" /> : null}{" "}
         <span className="text-muted-foreground">{summary}</span>
       </OneLine>
       <span className="shrink-0 text-xs text-muted-foreground/80">

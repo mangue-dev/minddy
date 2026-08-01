@@ -16,6 +16,7 @@ import {
 } from "mangue-ui";
 import { ChevronRight, GitPullRequest } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
@@ -197,7 +198,7 @@ export function PullRequestsPage() {
                 <SelectItem value={AUTHOR_NUMO}>{t("filterNumoOnly")}</SelectItem>
                 {authors.map((a) => (
                   <SelectItem key={a.login} value={a.login}>
-                    {a.login}
+                    <GitLogin login={a.login} />
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -276,9 +277,11 @@ export function PullRequestsPage() {
                         className="size-3.5 shrink-0"
                       />
                     ) : null}
-                    <span className="truncate">
-                      {pr.runId ? t("numoAuthor") : (pr.author?.login ?? "—")}
-                    </span>
+                    {pr.runId ? (
+                      <span className="truncate">{t("numoAuthor")}</span>
+                    ) : (
+                      <GitLogin login={pr.author?.login} className="text-xs" />
+                    )}
                     {pr.project ? (
                       <>
                         <span aria-hidden>·</span>

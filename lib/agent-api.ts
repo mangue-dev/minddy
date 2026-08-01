@@ -368,6 +368,14 @@ export interface PullRequestCheck {
   name: string;
   state: CheckState;
   url: string | null;
+  /** L'intégration qui a produit le check (« GitHub Actions », « Vercel »…),
+      quand le nom du check ne la porte pas déjà. */
+  appName: string | null;
+  /** Son logo chez la forge. `null` → l'UI retombe sur l'icône de la forge. */
+  appAvatarUrl: string | null;
+  /** Le résultat en une ligne, tel que la forge le formule. */
+  description: string | null;
+  durationMs: number | null;
 }
 
 export interface ChecksSummary {

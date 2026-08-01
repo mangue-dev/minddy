@@ -88,6 +88,72 @@ describe("summarizeGithubChecks", () => {
     expect(s.checks.find((c) => c.name === "ci/vercel")?.state).toBe("failure");
   });
 
+  it("porte le logo de l'App, son nom, son résultat et sa durée", () => {
+    const s = summarizeGithubChecks(
+      [
+        run({
+          name: "build",
+          app: { id: 15368, slug: "github-actions", name: "GitHub Actions" },
+          output: { title: "  3 warnings  " },
+          started_at: "2026-08-01T15:25:57Z",
+          completed_at: "2026-08-01T15:27:09Z",
+        }),
+      ],
+      [],
+    );
+    const c = s.checks[0];
+    expect(c.appName).toBe("GitHub Actions");
+    expect(c.appAvatarUrl).toBe("https://avatars.githubusercontent.com/in/15368?s=48");
+    expect(c.description).toBe("3 warnings");
+    expect(c.durationMs).toBe(72_000);
+  });
+
+  it("le logo de l'App n'est PAS l'avatar de son propriétaire (l'org `github`)", () => {
+    const owned = { owner: { avatar_url: "https://avatars/u/9919" } };
+    // Avec un id, c'est le logo de l'App qui gagne…
+    expect(
+      summarizeGithubChecks([run({ name: "a", app: { id: 15368, ...owned } })], [])
+        .checks[0].appAvatarUrl,
+    ).toBe("https://avatars.githubusercontent.com/in/15368?s=48");
+    // …et sans id, l'avatar du propriétaire vaut mieux que rien.
+    expect(
+      summarizeGithubChecks([run({ name: "a", app: owned })], [])
+        .checks[0].appAvatarUrl,
+    ).toBe("https://avatars/u/9919");
+  });
+
+  it("une durée absente, nulle ou négative ne s'affiche pas", () => {
+    const noEnd = run({ name: "a", started_at: "2026-08-01T15:25:57Z" });
+    expect(summarizeGithubChecks([noEnd], []).checks[0].durationMs).toBeNull();
+    // GitHub date un job sauté avec une fin ANTÉRIEURE à son début (mesuré).
+    const skipped = run({
+      name: "b",
+      started_at: "2026-08-01T12:19:20Z",
+      completed_at: "2026-08-01T12:19:19Z",
+    });
+    expect(summarizeGithubChecks([skipped], []).checks[0].durationMs).toBeNull();
+  });
+
+  it("un commit status porte son logo et sa description, sans nom d'app", () => {
+    const s = summarizeGithubChecks(
+      [],
+      [
+        {
+          context: "Vercel – ui",
+          state: "success",
+          description: "Deployment has completed",
+          avatar_url: "https://avatars.githubusercontent.com/in/8329?v=4",
+        },
+      ],
+    );
+    const c = s.checks[0];
+    expect(c.appAvatarUrl).toBe("https://avatars.githubusercontent.com/in/8329?v=4");
+    expect(c.description).toBe("Deployment has completed");
+    // Le contexte nomme déjà l'intégration : pas de « vercel[bot] » en plus.
+    expect(c.appName).toBeNull();
+    expect(c.durationMs).toBeNull();
+  });
+
   it("préfère html_url à details_url pour le lien du check", () => {
     const s = summarizeGithubChecks(
       [run({ name: "a", html_url: "https://gh", details_url: "https://ext" })],
@@ -118,6 +184,20 @@ describe("summarizeGitlabPipelines", () => {
     expect(s.state).toBe("success");
     expect(s.checks[0].name).toBe("#20");
     expect(s.checks[0].url).toBe("https://gl/20");
+  });
+
+  it("le pipeline dit son CI et ce qu'il a fait tourner — le nom, sinon la branche", () => {
+    const named = summarizeGitlabPipelines([
+      { id: 20, status: "success", name: "Ruby 3.3", ref: "main" },
+    ]).checks[0];
+    expect(named.appName).toBe("GitLab CI/CD");
+    expect(named.description).toBe("Ruby 3.3");
+    // Pas de logo par intégration chez GitLab : l'UI retombe sur l'icône de la forge.
+    expect(named.appAvatarUrl).toBeNull();
+    expect(
+      summarizeGitlabPipelines([{ id: 20, status: "success", ref: "main" }]).checks[0]
+        .description,
+    ).toBe("main");
   });
 
   it("mappe les états GitLab sur le vocabulaire commun", () => {

@@ -19,6 +19,7 @@ import {
   SmilePlus,
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
 import {
@@ -300,9 +301,10 @@ function CommentBody({
           seed={comment.user?.login ?? "?"}
           className="size-5"
         />
-        <span className="min-w-0 truncate text-sm font-medium text-foreground">
-          {comment.user?.login ?? "—"}
-        </span>
+        <GitLogin
+          login={comment.user?.login}
+          className="text-sm font-medium text-foreground"
+        />
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {format.relativeTime(new Date(comment.created_at), now)}
         </span>
