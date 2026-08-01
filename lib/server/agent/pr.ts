@@ -9,9 +9,10 @@ import {
 } from "./checks-core";
 
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
-import type {
-  ReviewCommentReaction,
-  ReviewReactionContent,
+import {
+  PR_BODY_COMMENT_ID,
+  type ReviewCommentReaction,
+  type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
 
 /**
@@ -1122,6 +1123,38 @@ const GH_REACTION_BY_ENUM: Record<string, ReviewReactionContent> = {
   EYES: "eyes",
 };
 
+/** Un groupe de réaction GraphQL, tel que le rendent les DEUX requêtes (review et
+    conversation) : le même fragment, donc la même forme. */
+type RawReactionGroup = {
+  content?: string;
+  viewerHasReacted?: boolean;
+  reactors?: { totalCount?: number } | null;
+} | null;
+
+/** Groupes GraphQL → réactions canoniques d'UN sujet. Les groupes à zéro sont
+    écartés (GitHub garde un instant celui d'une réaction retirée : le rendre
+    afficherait un emoji que plus personne n'a posé), et `mine` est forcé à faux
+    quand le token n'est pas celui de l'humain — cf. `viewerIsActor`. */
+function toReactions(
+  commentId: number,
+  groups: RawReactionGroup[] | null | undefined,
+  viewerIsActor: boolean,
+): ReviewCommentReaction[] {
+  const out: ReviewCommentReaction[] = [];
+  for (const group of groups ?? []) {
+    const content = group?.content ? GH_REACTION_BY_ENUM[group.content] : undefined;
+    const count = group?.reactors?.totalCount ?? 0;
+    if (!content || count <= 0) continue;
+    out.push({
+      commentId,
+      content,
+      count,
+      mine: viewerIsActor && !!group?.viewerHasReacted,
+    });
+  }
+  return out;
+}
+
 /** Commentaires lus par fil : un fil de review qui dépasse est rarissime, et ce
     qui déborde ne perd que ses réactions — jamais son texte, servi par la REST. */
 const REACTIONS_COMMENTS_PER_THREAD = 50;
@@ -1135,11 +1168,7 @@ interface RawReactionThreads {
           comments?: {
             nodes?: Array<{
               databaseId?: number | null;
-              reactionGroups?: Array<{
-                content?: string;
-                viewerHasReacted?: boolean;
-                reactors?: { totalCount?: number } | null;
-              } | null> | null;
+              reactionGroups?: RawReactionGroup[] | null;
             } | null>;
           } | null;
         } | null>;
@@ -1198,20 +1227,10 @@ export async function listPullRequestReviewCommentReactions(opts: {
     for (const thread of threads?.nodes ?? []) {
       for (const comment of thread?.comments?.nodes ?? []) {
         const commentId = comment?.databaseId;
-        if (comment == null || commentId == null) continue;
-        for (const group of comment.reactionGroups ?? []) {
-          const content = group?.content ? GH_REACTION_BY_ENUM[group.content] : undefined;
-          const count = group?.reactors?.totalCount ?? 0;
-          // Un groupe à zéro survit un instant au retrait de sa dernière
-          // réaction : le rendre ferait apparaître un emoji que personne n'a posé.
-          if (!content || count <= 0) continue;
-          reactions.push({
-            commentId,
-            content,
-            count,
-            mine: opts.viewerIsActor && !!group?.viewerHasReacted,
-          });
-        }
+        if (commentId == null) continue;
+        reactions.push(
+          ...toReactions(commentId, comment?.reactionGroups, opts.viewerIsActor),
+        );
       }
     }
     if (!threads?.pageInfo?.hasNextPage || !threads.pageInfo.endCursor) break;
@@ -1264,9 +1283,27 @@ export async function setPullRequestReviewCommentReaction(opts: {
   on: boolean;
   login: string | null;
 }): Promise<void> {
-  if (!opts.login) throw new Error("Reaction requires the actor's GitHub login");
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/comments/${opts.commentId}/reactions`;
+  return setGithubReaction({
+    ...opts,
+    base: `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/comments/${opts.commentId}/reactions`,
+  });
+}
+
+/**
+ * La bascule elle-même, à une COLLECTION de réactions près (`base`) : la même
+ * mécanique sert les commentaires de review, ceux du fil, et le corps de la PR —
+ * seule l'URL change d'une surface à l'autre.
+ */
+async function setGithubReaction(opts: {
+  token: string;
+  base: string;
+  content: ReviewReactionContent;
+  on: boolean;
+  login: string | null;
+}): Promise<void> {
+  if (!opts.login) throw new Error("Reaction requires the actor's GitHub login");
+  const base = opts.base;
 
   if (opts.on) {
     // Idempotent : GitHub rend 200 (et non 201) quand la réaction existait déjà.
@@ -1303,6 +1340,119 @@ export async function setPullRequestReviewCommentReaction(opts: {
   // Rien à retirer : la bascule a déjà l'effet demandé, ce n'est pas une panne.
   if (mine?.id == null) return;
   await ghJson<unknown>(`${base}/${mine.id}`, opts.token, { method: "DELETE" });
+}
+
+// ── Réactions du FIL de conversation (MIN-147) ───────────────────────────────
+
+/**
+ * Collection de réactions visée par un id de commentaire de conversation.
+ *
+ * Une PR EST une issue chez GitHub : ses messages vivent sous
+ * `issues/comments/{id}`, et son CORPS — le message qui ouvre le fil — sous
+ * `issues/{n}` lui-même. `PR_BODY_COMMENT_ID` fait la bascule entre les deux.
+ */
+function conversationReactionsUrl(opts: {
+  repoFullName: string;
+  number: number;
+  commentId: number;
+}): string {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const subject =
+    opts.commentId === PR_BODY_COMMENT_ID
+      ? `issues/${opts.number}`
+      : `issues/comments/${opts.commentId}`;
+  return `${GITHUB_API_BASE}/repos/${owner}/${repo}/${subject}/reactions`;
+}
+
+interface RawConversationReactions {
+  repository?: {
+    pullRequest?: {
+      reactionGroups?: RawReactionGroup[] | null;
+      comments?: {
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+        nodes?: Array<{
+          databaseId?: number | null;
+          reactionGroups?: RawReactionGroup[] | null;
+        } | null>;
+      } | null;
+    } | null;
+  } | null;
+}
+
+/** Pages de commentaires de fil lues pour leurs réactions — au-delà, seuls les
+    emoji manquent : le TEXTE des commentaires vient de la REST, sans plafond. */
+const CONVERSATION_REACTIONS_MAX_PAGES = 5;
+
+/**
+ * Réactions du fil de conversation — le corps de la PR ET tous ses commentaires,
+ * en une requête GraphQL, exactement comme leur pendant de review.
+ *
+ * Le corps sort sous `PR_BODY_COMMENT_ID` : c'est un message de plus dans le fil
+ * pour qui lit, un sujet à part pour qui écrit (cf. `conversationReactionsUrl`).
+ *
+ * `viewerIsActor` (MIN-145) : à faux, `viewerHasReacted` parle du BOT et non de
+ * la personne qui regarde — tout sort en `mine: false`, les comptes restent justes.
+ */
+export async function listPullRequestConversationReactions(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  viewerIsActor: boolean;
+}): Promise<ReviewCommentReaction[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const groups = "reactionGroups{content viewerHasReacted reactors{totalCount}}";
+  const query = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+    repository(owner:$owner,name:$name){
+      pullRequest(number:$number){
+        ${groups}
+        comments(first:100,after:$cursor){
+          pageInfo{hasNextPage endCursor}
+          nodes{databaseId ${groups}}
+        }
+      }
+    }
+  }`;
+
+  const reactions: ReviewCommentReaction[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < CONVERSATION_REACTIONS_MAX_PAGES; page++) {
+    const data: RawConversationReactions = await ghGraphql<RawConversationReactions>(
+      opts.token,
+      query,
+      { owner, name: repo, number: opts.number, cursor },
+    );
+    const pr = data.repository?.pullRequest;
+    // Le corps ne vient QUE de la première page : il est porté par la PR, pas par
+    // la pagination des commentaires, et le relire compterait ses réactions deux fois.
+    if (page === 0) {
+      reactions.push(
+        ...toReactions(PR_BODY_COMMENT_ID, pr?.reactionGroups, opts.viewerIsActor),
+      );
+    }
+    for (const comment of pr?.comments?.nodes ?? []) {
+      const commentId = comment?.databaseId;
+      if (commentId == null) continue;
+      reactions.push(...toReactions(commentId, comment?.reactionGroups, opts.viewerIsActor));
+    }
+    const pageInfo = pr?.comments?.pageInfo;
+    if (!pageInfo?.hasNextPage || !pageInfo.endCursor) break;
+    cursor = pageInfo.endCursor;
+  }
+  return reactions;
+}
+
+/** Pose ou retire une réaction sur un message du fil — ou sur le corps de la PR
+    (`PR_BODY_COMMENT_ID`). Même mécanique que la review, autre collection. */
+export async function setPullRequestConversationReaction(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  content: ReviewReactionContent;
+  on: boolean;
+  login: string | null;
+}): Promise<void> {
+  return setGithubReaction({ ...opts, base: conversationReactionsUrl(opts) });
 }
 
 /** Ajoute un commentaire à la conversation de la PR (auteur = la GitHub App minddy). */

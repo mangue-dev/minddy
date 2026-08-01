@@ -30,6 +30,7 @@ import { getRun } from "./runs";
 import type { PullRequestFile, ReviewVerdict } from "./pr";
 import {
   isReviewReactionContent,
+  PR_BODY_COMMENT_ID,
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
 
@@ -332,10 +333,63 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
 
 // ── Fil de conversation ──────────────────────────────────────────────────────
 
+/**
+ * Le fil de conversation, avec les réactions de ses messages ET du corps de la PR
+ * (MIN-147) — servis ensemble pour la même raison que côté review : une réaction
+ * se rend SOUS son message, jamais séparément, et deux requêtes pour l'afficher
+ * se désynchroniseraient.
+ *
+ * Les commentaires restent lus sur le token d'installation (tout membre du projet
+ * minddy voit la PR sans compte git) ; les réactions, elles, dépendent de qui
+ * regarde — d'où `viewerIsActor`, faux quand il n'y a pas d'acteur : les comptes
+ * restent justes, mais aucun chip ne s'allume plutôt que d'allumer chez chacun
+ * une réaction posée par le bot.
+ *
+ * Best-effort : une réaction illisible rend le fil sans emoji, jamais une erreur.
+ */
 export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const comments = await scope.forge.listPullRequestComments(scope.call);
-    return NextResponse.json({ comments });
+    const [comments, actor] = await Promise.all([
+      scope.forge.listPullRequestComments(scope.call),
+      scope.actor(),
+    ]);
+    const viewerIsActor = actor.kind === "actor";
+    const reactions = await scope.forge
+      .listConversationReactions({
+        ...(viewerIsActor ? actorCall(actor, scope) : scope.call),
+        // Le corps de la PR en fait partie : il se réagit comme un message du fil
+        // (GitLab l'interroge sujet par sujet, GitHub ignore cette liste).
+        commentIds: [PR_BODY_COMMENT_ID, ...comments.map((c) => c.id)],
+        viewerIsActor,
+      })
+      .catch((err) => {
+        console.error("[pr-actions] conversation reactions unreadable:", (err as Error).message);
+        return [];
+      });
+    return NextResponse.json({ comments, reactions });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Pose ou retire une réaction sur un message du fil — ou sur le corps de la PR
+ * (`comment_id: 0`). Même exigence que la review : `read`, parce que le RETRAIT
+ * relit la liste des réactions du sujet avec ce même token.
+ */
+export async function setPrCommentReactionResponse(
+  scope: PrScope,
+  payload: { commentId: number; content: ReviewReactionContent; on: boolean },
+): Promise<NextResponse> {
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
+  try {
+    await scope.forge.setConversationReaction({
+      ...actorCall(actor.actor, scope),
+      ...payload,
+      login: actor.actor.login,
+    });
+    return NextResponse.json({ ok: true, on: payload.on });
   } catch (err) {
     return forgeErrorResponse(err);
   }
@@ -462,9 +516,14 @@ export async function setPrReviewThreadResolvedResponse(
  * Valide un POST de réaction (MIN-139). `comment_id` finit interpolé dans une URL
  * de forge — même vigilance que `in_reply_to` : un ENTIER, vérifié comme tel.
  * `content` est refermé sur les huit valeurs du vocabulaire canonique.
+ *
+ * `allowBody` (MIN-147) ouvre la valeur `0`, seule valeur non-id acceptée : c'est
+ * `PR_BODY_COMMENT_ID`, le corps de la PR. Fermé par défaut — un commentaire de
+ * review porte toujours un vrai id, et le zéro n'y désignerait rien.
  */
 export function parseReactionPayload(
   raw: unknown,
+  opts?: { allowBody?: boolean },
 ):
   | { ok: true; payload: { commentId: number; content: ReviewReactionContent; on: boolean } }
   | { ok: false; response: NextResponse } {
@@ -479,7 +538,7 @@ export function parseReactionPayload(
   if (
     typeof p.comment_id !== "number" ||
     !Number.isSafeInteger(p.comment_id) ||
-    p.comment_id < 1
+    p.comment_id < (opts?.allowBody ? PR_BODY_COMMENT_ID : 1)
   ) {
     return bad("Invalid comment_id");
   }

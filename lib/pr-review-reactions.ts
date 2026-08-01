@@ -73,6 +73,19 @@ export function isReviewReactionContent(value: unknown): value is ReviewReaction
 }
 
 /**
+ * Le CORPS de la pull request, vu comme un commentaire de plus (MIN-147).
+ *
+ * Il ouvre le fil et se rend exactement comme les autres messages : GitHub y
+ * laisse réagir, et n'y pas laisser réagir se lirait comme une panne (« pourquoi
+ * tous les messages sauf le premier ? »). Mais ce n'est PAS un commentaire, et
+ * les deux forges l'adressent ailleurs — `issues/{n}/reactions` chez GitHub,
+ * `merge_requests/{iid}/award_emoji` chez GitLab. D'où ce zéro : aucun
+ * commentaire ne le porte, et il traverse toute la chaîne (payload, groupement,
+ * boutons) sans qu'aucune couche ait besoin d'un second champ.
+ */
+export const PR_BODY_COMMENT_ID = 0;
+
+/**
  * Une réaction, agrégée par (commentaire, emoji) — jamais par personne : les deux
  * forges ne nomment pas leurs réacteurs de la même façon, et c'est le COMPTE que
  * l'UI affiche.

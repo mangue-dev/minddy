@@ -8,6 +8,9 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -24,6 +27,7 @@ import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   replyPrReviewCommentApi,
+  setPrCommentReactionApi,
   setPrReviewCommentReactionApi,
   setPrReviewThreadResolvedApi,
   type PrEndpoint,
@@ -127,8 +131,8 @@ export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unkno
 export type ThreadResolution = ReturnType<typeof useThreadResolution>;
 
 /**
- * Réactions emoji des commentaires d'une PR (MIN-139) : la table indexée par
- * commentaire, l'état voulu à poser, et le fil en vol.
+ * Réactions emoji des commentaires d'une PR (MIN-139, élargi par MIN-147) : la
+ * table indexée par commentaire, l'état voulu à poser, et le fil en vol.
  *
  * `canReact` sépare LIRE de POSER — une vue en lecture seule affiche les
  * réactions des autres sans en offrir : les masquer ferait croire qu'il n'y en a
@@ -137,12 +141,19 @@ export type ThreadResolution = ReturnType<typeof useThreadResolution>;
  * La bascule envoie l'ÉTAT VOULU (`!mine`), pas un « inverse ce que tu as » :
  * c'est le serveur qui tranche, et un renvoi après un échec réseau ne défait
  * alors pas ce qui avait abouti.
+ *
+ * `surface` dit sur QUELLE famille de commentaires on réagit — les deux ont la
+ * même forme et les mêmes gestes, mais pas la même route : chez GitHub, les
+ * commentaires ancrés au code et ceux du fil ne vivent pas au même endroit. Le
+ * reste (groupement, chips, palette) est rigoureusement commun, et c'est ce qui
+ * fait que réagir se comporte pareil partout.
  */
 export function useCommentReactions(
   endpoint: PrEndpoint,
   onChanged: () => unknown,
   reactions: ReviewCommentReaction[],
   canReact: boolean,
+  surface: "review" | "conversation" = "review",
 ) {
   const [pending, setPending] = useState<string | null>(null);
   const byComment = useMemo(() => groupReactionsByComment(reactions), [reactions]);
@@ -152,7 +163,9 @@ export function useCommentReactions(
       if (pending) return;
       setPending(`${commentId}:${content}`);
       try {
-        await setPrReviewCommentReactionApi(endpoint, { commentId, content, on });
+        const post =
+          surface === "review" ? setPrReviewCommentReactionApi : setPrCommentReactionApi;
+        await post(endpoint, { commentId, content, on });
         await onChanged();
       } catch (err) {
         toast.error((err as Error).message);
@@ -160,7 +173,7 @@ export function useCommentReactions(
         setPending(null);
       }
     },
-    [endpoint, onChanged, pending],
+    [endpoint, onChanged, pending, surface],
   );
 
   return { byComment, pending, canReact, toggle };
@@ -181,17 +194,40 @@ const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">>
 };
 
 /**
- * Les emoji déjà posés sur un commentaire, avec leur compte. La palette qui en
- * ajoute vit dans l'EN-TÊTE du commentaire, pas ici : une ligne de réactions vide
- * sous chaque message coûterait sa hauteur à tous les commentaires du monde pour
- * n'afficher qu'un bouton.
+ * Le geste « bascule cette réaction », partagé par les deux endroits d'où la
+ * palette s'ouvre : l'état VOULU se déduit de ce qui est déjà posé, jamais d'un
+ * « inverse ce que tu as » — cf. `useCommentReactions`.
+ */
+export function reactionToggler(
+  reactions: CommentReactions,
+  commentId: number,
+  list: ReviewCommentReaction[],
+) {
+  return (content: ReviewReactionContent) =>
+    void reactions.toggle(
+      commentId,
+      content,
+      !list.find((r) => r.content === content)?.mine,
+    );
+}
+
+/**
+ * La bande de réactions d'un commentaire : les emoji déjà posés avec leur compte,
+ * puis le bouton qui en ajoute — TOUT ce qui touche aux réactions au même endroit,
+ * dans la même ligne.
+ *
+ * Cette ligne n'existe QUE si le commentaire porte déjà une réaction : sinon, la
+ * palette reste dans l'en-tête, révélée au survol (l'appelant fait ce partage).
+ * Une bande vide sous chaque message coûterait sa hauteur à tous les commentaires
+ * de toutes les PR pour n'y montrer qu'un bouton — c'est aussi, exactement, ce que
+ * fait GitHub.
  *
  * Un chip allumé = « MOI j'ai réagi » (MIN-145) : la réaction part du compte git
  * de la personne sur les deux forges, et le serveur ne l'allume que pour elle.
  * Sans compte git connecté, aucun chip n'est allumé — les compteurs, eux,
  * restent justes : ils disent ce que les autres ont posé.
  */
-function CommentReactionChips({
+export function CommentReactionChips({
   commentId,
   reactions,
   list,
@@ -206,36 +242,59 @@ function CommentReactionChips({
     <div className="flex flex-wrap items-center gap-1">
       {list.map((reaction) => {
         const busy = reactions.pending === `${commentId}:${reaction.content}`;
+        // `aria-disabled` et non `disabled` : un bouton désactivé ne reçoit aucun
+        // événement de pointeur, donc n'affiche jamais son infobulle — or c'est
+        // en lecture seule qu'on a le PLUS besoin de lire ce que l'emoji veut
+        // dire. Le clic est refusé ici, et `toggle` refuse déjà le doublon.
+        const locked = !reactions.canReact || busy;
         return (
-          <button
-            key={reaction.content}
-            type="button"
-            aria-pressed={reaction.mine}
-            aria-label={t(REACTION_LABELS[reaction.content])}
-            title={reaction.mine ? t("reactionMine") : t(REACTION_LABELS[reaction.content])}
-            disabled={!reactions.canReact || busy}
-            onClick={() => void reactions.toggle(commentId, reaction.content, !reaction.mine)}
-            className={cn(
-              "flex h-6 items-center gap-1 rounded-full border px-2 text-xs tabular-nums transition-colors",
-              reaction.mine
-                ? "border-primary/60 bg-primary/10 text-foreground"
-                : "border-border text-muted-foreground hover:bg-muted",
-              (!reactions.canReact || busy) && "cursor-default opacity-70",
-            )}
-          >
-            <span className="text-[13px] leading-none">
-              {REVIEW_REACTION_EMOJI[reaction.content]}
-            </span>
-            {reaction.count}
-          </button>
+          <Tooltip key={reaction.content}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-pressed={reaction.mine}
+                aria-disabled={locked}
+                aria-label={t(REACTION_LABELS[reaction.content])}
+                onClick={() => {
+                  if (locked) return;
+                  void reactions.toggle(commentId, reaction.content, !reaction.mine);
+                }}
+                className={cn(
+                  "flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs tabular-nums transition-colors",
+                  reaction.mine
+                    ? "border-primary/60 bg-primary/10 text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted",
+                  locked && "cursor-default opacity-70",
+                )}
+              >
+                <span className="text-[13px] leading-none">
+                  {REVIEW_REACTION_EMOJI[reaction.content]}
+                </span>
+                {reaction.count}
+              </button>
+            </TooltipTrigger>
+            {/* Le nom de l'emoji, et — quand c'est la mienne — le geste qu'un
+                deuxième clic ferait. Les forges ne nomment pas leurs réacteurs de
+                la même façon : on ne peut pas promettre le « X et Y ont réagi »
+                de GitHub sans qu'il manque d'un côté. */}
+            <TooltipContent side="top">
+              {reaction.mine ? t("reactionMine") : t(REACTION_LABELS[reaction.content])}
+            </TooltipContent>
+          </Tooltip>
         );
       })}
+      {/* Le bouton d'ajout ferme la bande : la ligne dit « voilà les réactions, et
+          voilà comment en mettre une ». Visible en permanence, contrairement à
+          celui de l'en-tête — la ligne est déjà là, rien à révéler. */}
+      {reactions.canReact ? (
+        <ReactionPicker onPick={reactionToggler(reactions, commentId, list)} />
+      ) : null}
     </div>
   );
 }
 
 /** La palette : les huit réactions que GitHub accepte, pas une de plus. */
-function ReactionPicker({
+export function ReactionPicker({
   onPick,
   className,
 }: {
@@ -247,19 +306,35 @@ function ReactionPicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={t("addReaction")}
-          title={t("addReaction")}
-          className={cn(
-            "flex h-6 items-center rounded-full border border-dashed border-border px-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            className,
-          )}
-        >
-          <SmilePlus className="size-3.5" />
-        </button>
-      </PopoverTrigger>
+      {/* Le bouton porte une icône et rien d'autre : ce qu'il fait doit se lire
+          sans cliquer. Infobulle plutôt que `title` natif — c'est celle du reste
+          de l'app (le « Citer » du fil est juste à côté), elle se montre tout de
+          suite là où le `title` du navigateur se fait attendre une seconde. Les
+          deux déclencheurs sont imbriqués en `asChild` : la recette Radix pour
+          qu'une infobulle et un popover partagent le MÊME bouton — le clic qui
+          ouvre la palette referme l'infobulle au passage.
+
+          Un rond de 28 px, en `Button` ghost : EXACTEMENT la forme du « Citer »
+          qui le suit dans l'en-tête d'un message, et la hauteur des chips de la
+          bande de réactions. Ces voisins-là se rendent toujours côte à côte — la
+          moindre différence de taille ou de traitement s'y lit comme un défaut.
+          Le rattrapage vertical, lui, appartient à l'EN-TÊTE (`-my-1` chez
+          l'appelant) : dans la bande de réactions il n'y a rien à rattraper. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("addReaction")}
+              className={cn("size-7 rounded-full text-muted-foreground", className)}
+            >
+              <SmilePlus className="size-4" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top">{t("addReaction")}</TooltipContent>
+      </Tooltip>
       <PopoverContent align="start" sideOffset={6} className="flex w-auto gap-0.5 p-1">
         {REVIEW_REACTIONS.map((content) => (
           <button
@@ -308,20 +383,16 @@ function CommentBody({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {format.relativeTime(new Date(comment.created_at), now)}
         </span>
-        {/* Révélée au survol, comme le « + » de la gouttière juste à côté : une
-            palette permanente sous chaque message ferait un damier de boutons.
-            Rendue quand même (et non montée au survol) pour rester atteignable
-            au clavier — `focus-visible` la rallume. */}
-        {reactions?.canReact ? (
+        {/* Le repli de l'en-tête, pour un commentaire SANS réaction : dès qu'il
+            en porte une, la palette descend dans la bande, avec les emoji qu'elle
+            ajoute. Ici elle est révélée au survol, comme le « + » de la gouttière
+            juste à côté — une palette permanente sous chaque message ferait un
+            damier de boutons. Rendue quand même (et non montée au survol) pour
+            rester atteignable au clavier — `focus-visible` la rallume. */}
+        {reactions?.canReact && list.length === 0 ? (
           <ReactionPicker
-            className="ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-            onPick={(content) =>
-              void reactions.toggle(
-                comment.id,
-                content,
-                !list.find((r) => r.content === content)?.mine,
-              )
-            }
+            className="-my-1 ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            onPick={reactionToggler(reactions, comment.id, list)}
           />
         ) : null}
       </div>

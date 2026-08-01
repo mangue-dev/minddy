@@ -248,14 +248,21 @@ export function useAgentSessionsQuery() {
   return { sessions: data?.sessions ?? [], loading: isLoading, refetch };
 }
 
-/** Fil de conversation d'une PR (commentaires GitHub). */
+/** Fil de conversation d'une PR (commentaires GitHub) et leurs réactions. */
 export function usePrCommentsQuery(prId: string | null) {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["pr-comments", prId],
     queryFn: () => fetchPullRequestCommentsApi(prId as string),
     enabled: !!prId,
   });
-  return { comments: data?.comments ?? [], loading: isLoading, refetch };
+  return {
+    comments: data?.comments ?? [],
+    // Les réactions (MIN-147) voyagent avec les commentaires, comme côté review :
+    // elles se rendent SOUS un message, et le corps de la PR y a les siennes.
+    reactions: data?.reactions ?? [],
+    loading: isLoading,
+    refetch,
+  };
 }
 
 /**

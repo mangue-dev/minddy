@@ -622,10 +622,39 @@ export async function fetchAllPullRequestsApi(input: {
   return parseJson(await fetch(`/api/pull-requests?${params}`));
 }
 
+/**
+ * Le fil de conversation et les réactions de ses messages (MIN-147), servis
+ * ensemble — une réaction se rend sous son message, jamais séparément.
+ *
+ * `reactions` porte AUSSI celles du corps de la PR, sous `PR_BODY_COMMENT_ID` :
+ * le message qui ouvre le fil se réagit comme les autres.
+ */
 export async function fetchPullRequestCommentsApi(
   prId: string,
-): Promise<{ comments: PullRequestComment[] }> {
+): Promise<{ comments: PullRequestComment[]; reactions: ReviewCommentReaction[] }> {
   return parseJson(await fetch(`${prEndpoint(prId)}/comments`));
+}
+
+/**
+ * Pose ou retire une réaction sur un message du fil de conversation, ou sur le
+ * corps de la PR (`commentId: PR_BODY_COMMENT_ID`). `on` porte l'état VOULU, pas
+ * une bascule — même contrat que côté review.
+ */
+export async function setPrCommentReactionApi(
+  endpoint: PrEndpoint,
+  input: { commentId: number; content: ReviewReactionContent; on: boolean },
+): Promise<{ ok: true; on: boolean }> {
+  return parseJson(
+    await fetch(`${endpoint}/comments/reactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        comment_id: input.commentId,
+        content: input.content,
+        on: input.on,
+      }),
+    }),
+  );
 }
 
 /**

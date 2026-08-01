@@ -71,7 +71,7 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  * | `submitReview` (le verdict de la personne) | humain | `actorCall` |
  * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` depuis l'UI PR | humain | `actorCall` |
  * | `setReviewThreadResolved` | humain | `actorCall` |
- * | `setReviewCommentReaction` | humain | `actorCall` + `login` |
+ * | `setReviewCommentReaction`, `setConversationReaction` | humain | `actorCall` + `login` |
  *
  * Les trois méthodes de commentaire servent les DEUX identités : c'est le geste
  * qui décide, pas la méthode. Numo relit sous le bot ; la même méthode, appelée
@@ -326,6 +326,32 @@ export interface Forge {
     on: boolean;
     login: string | null;
   }): Promise<void>;
+  /**
+   * Réactions du FIL de conversation (MIN-147) : le corps de la PR — sous
+   * `PR_BODY_COMMENT_ID` — et tous ses commentaires. Le pendant exact des deux
+   * méthodes de review ci-dessus, sur l'autre surface : chez GitHub une PR est
+   * une issue, et ni ses messages ni son corps ne vivent là où vivent les
+   * commentaires de review.
+   *
+   * Côté GitLab il n'y a qu'une sorte de note, et les awards s'y adressent
+   * pareil : les deux paires y sont littéralement la même implémentation.
+   */
+  listConversationReactions(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    commentIds: number[];
+    viewerIsActor: boolean;
+  }): Promise<ReviewCommentReaction[]>;
+  setConversationReaction(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    commentId: number;
+    content: ReviewReactionContent;
+    on: boolean;
+    login: string | null;
+  }): Promise<void>;
 }
 
 const githubForge: Forge = {
@@ -396,6 +422,9 @@ const githubForge: Forge = {
       on: opts.on,
       login: opts.login,
     }),
+  // Une requête pour tout le fil, corps compris : les ids ne lui servent à rien.
+  listConversationReactions: github.listPullRequestConversationReactions,
+  setConversationReaction: github.setPullRequestConversationReaction,
 };
 
 const gitlabForge: Forge = {
@@ -430,6 +459,10 @@ const gitlabForge: Forge = {
   setReviewThreadResolved: gitlab.setMergeRequestDiscussionResolved,
   listReviewCommentReactions: gitlab.listMergeRequestNoteAwards,
   setReviewCommentReaction: gitlab.setMergeRequestNoteAward,
+  // Une note est une note : le fil de conversation et la review passent par les
+  // MÊMES appels, `awardsUrl` faisant seule la part du corps de la MR.
+  listConversationReactions: gitlab.listMergeRequestNoteAwards,
+  setConversationReaction: gitlab.setMergeRequestNoteAward,
 };
 
 /** Client du provider — la valeur vient de `RepoCloneTarget.provider` (DB). */

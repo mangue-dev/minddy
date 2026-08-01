@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/git/gitlab-rest";
 import {
   GITLAB_AWARD_NAMES,
+  PR_BODY_COMMENT_ID,
   reactionFromGitlabName,
   type ReviewCommentReaction,
   type ReviewReactionContent,
@@ -1001,11 +1002,19 @@ async function gitlabCurrentUsername(token: string): Promise<string | null> {
   return me?.username ?? null;
 }
 
+/**
+ * Collection d'awards d'un sujet : une NOTE, ou la merge request elle-même —
+ * `PR_BODY_COMMENT_ID` (MIN-147), le corps qui ouvre le fil de conversation.
+ *
+ * Rien d'autre ne distingue les deux surfaces côté GitLab : une note du fil et
+ * une note de review portent leurs awards sous la même URL, ce qui laisse
+ * `listMergeRequestNoteAwards` et `setMergeRequestNoteAward` servir les deux.
+ */
 function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
-  return (
-    `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${iid}` +
-    `/notes/${noteId}/award_emoji`
-  );
+  const base = `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${iid}`;
+  return noteId === PR_BODY_COMMENT_ID
+    ? `${base}/award_emoji`
+    : `${base}/notes/${noteId}/award_emoji`;
 }
 
 /**

@@ -50,6 +50,13 @@ import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import {
+  CommentReactionChips,
+  ReactionPicker,
+  reactionToggler,
+  useCommentReactions,
+  type CommentReactions,
+} from "@/components/pull-requests/pr-review-comments";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { UserAvatar } from "@/components/user-avatar";
@@ -74,6 +81,7 @@ import {
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
 
@@ -253,27 +261,38 @@ function ChecksBanner({
 }
 
 /**
- * Une entrée du fil : avatar, auteur, heure, corps markdown. Sert autant à la
- * description de la PR (le commentaire qui OUVRE le fil) qu'aux commentaires qui
- * suivent — côté GitHub c'est la même chose, et le fil ne se lit comme un fil que
- * si son premier message a la même forme que les autres.
+ * Une entrée du fil : avatar, auteur, heure, corps markdown, réactions. Sert
+ * autant à la description de la PR (le commentaire qui OUVRE le fil) qu'aux
+ * commentaires qui suivent — côté GitHub c'est la même chose, et le fil ne se lit
+ * comme un fil que si son premier message a la même forme que les autres.
+ *
+ * Cette égalité vaut aussi pour les réactions (MIN-147) : `commentId` vaut
+ * `PR_BODY_COMMENT_ID` pour la description, ce que le serveur traduit dans le
+ * sujet que chaque forge attend. Réagir marche donc PARTOUT dans la PR — le fil
+ * comme le diff — au lieu des seuls commentaires ancrés à une ligne de code.
  */
 function ThreadComment({
+  commentId,
   user,
   createdAt,
   body,
   onQuoteReply,
+  reactions,
 }: {
+  commentId: number;
   user: { login: string; avatar_url: string | null } | null;
   createdAt: string | null;
   body: string;
   /** Absent quand il n'y a pas de composer où citer : citer sans pouvoir
       répondre ne mène nulle part (MIN-144). */
   onQuoteReply?: () => void;
+  /** Absentes quand la forge n'a pas su les lire : on n'affiche alors rien. */
+  reactions?: CommentReactions;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   const now = useNow();
+  const list = reactions?.byComment.get(commentId) ?? [];
 
   return (
     <li className="group/comment flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
@@ -293,6 +312,18 @@ function ThreadComment({
           </span>
         ) : null}
         <span className="min-w-0 flex-1" />
+        {/* Le repli de l'en-tête, pour un message SANS réaction : dès qu'il en
+            porte une, la palette descend dans la bande de réactions, avec les
+            emoji qu'elle ajoute. Ici elle est révélée au survol, comme le
+            « Citer » à sa droite — une palette permanente sous chaque message
+            ferait un damier de boutons. Rendue quand même (et non montée au
+            survol) pour rester atteignable au clavier. */}
+        {reactions?.canReact && list.length === 0 ? (
+          <ReactionPicker
+            className="-my-1 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+            onPick={reactionToggler(reactions, commentId, list)}
+          />
+        ) : null}
         {onQuoteReply ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -300,7 +331,7 @@ function ThreadComment({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("quoteReply")}
-                className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+                className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
                 onClick={onQuoteReply}
               >
                 <Reply className="size-4" />
@@ -313,6 +344,9 @@ function ThreadComment({
       <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
         {body}
       </Markdown>
+      {reactions && list.length > 0 ? (
+        <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
+      ) : null}
     </li>
   );
 }
@@ -346,9 +380,12 @@ export function PrDetail({
     loading,
     refetch: refetchPr,
   } = usePullRequestQuery(item.prId, true);
-  const { comments, loading: commentsLoading, refetch: refetchComments } = usePrCommentsQuery(
-    item.prId,
-  );
+  const {
+    comments,
+    reactions: commentReactions,
+    loading: commentsLoading,
+    refetch: refetchComments,
+  } = usePrCommentsQuery(item.prId);
   const {
     comments: reviewComments,
     threads: reviewThreads,
@@ -383,6 +420,16 @@ export function PrDetail({
   // DISPARAÎT — c'est le bandeau qui explique, une fois, en haut.
   const canWrite = viewer?.capability === "write";
   const canComment = canWrite || viewer?.capability === "read";
+  // Réagir au fil (MIN-147) : même hook, mêmes chips, même palette que le diff —
+  // seule la route change. `canComment` (donc `read`) suffit : le retrait relit
+  // les réactions du message avec ce token, comme côté review.
+  const threadReactions = useCommentReactions(
+    prEndpoint(item.prId),
+    refetchComments,
+    commentReactions,
+    !!canComment,
+    "conversation",
+  );
   // « Et relancer Numo » n'existe que si un run porte déjà cette PR : c'est de
   // SES runs que la nouvelle hérite la branche (MIN-143). Une PR humaine, ou un
   // ticket dont la PR n'a jamais été ouverte par Numo, n'a rien à hériter.
@@ -913,6 +960,10 @@ export function PrDetail({
                 <ul className="flex flex-col gap-3">
                   {prDescription ? (
                     <ThreadComment
+                      // Le corps de la PR n'est pas un commentaire, mais il se
+                      // réagit comme un : le serveur traduit ce zéro dans le
+                      // sujet qu'attend chaque forge.
+                      commentId={PR_BODY_COMMENT_ID}
                       user={pr?.user ?? null}
                       createdAt={pr?.createdAt ?? null}
                       body={prDescription}
@@ -923,11 +974,13 @@ export function PrDetail({
                           ? () => quoteReply(prDescription, pr?.user?.login)
                           : undefined
                       }
+                      reactions={threadReactions}
                     />
                   ) : null}
                   {comments.map((c) => (
                     <ThreadComment
                       key={c.id}
+                      commentId={c.id}
                       user={c.user}
                       createdAt={c.created_at}
                       body={c.body}
@@ -936,6 +989,7 @@ export function PrDetail({
                           ? () => quoteReply(c.body ?? "", c.user?.login)
                           : undefined
                       }
+                      reactions={threadReactions}
                     />
                   ))}
                 </ul>
