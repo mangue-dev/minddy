@@ -22,6 +22,7 @@ import {
   syncIssueStatusFromPr,
 } from "@/lib/server/agent/issue-status-sync";
 import { runPrAiReview } from "./pr-ai-review";
+import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import {
   activePrReviewRun,
   createPrReviewRun,
@@ -62,6 +63,11 @@ import {
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
 import { imageMimeType } from "@/lib/diff-binary";
+import {
+  FORGE_ATTACHMENTS_BUCKET,
+  isForgeAssetId,
+  SIGNED_ASSET_HOST,
+} from "@/lib/forge-image-assets";
 
 /**
  * Gestes de review d'une pull request (MIN-143), indexés par PR et non par run.
@@ -651,6 +657,7 @@ export async function createPrCommentResponse(
   scope: PrScope,
   body: string,
   userId: string,
+  locale: string,
 ): Promise<NextResponse> {
   // Geste humain : il part du compte git de la personne, pas de `minddy-app[bot]`.
   const actor = await requireActor(scope, "read");
@@ -671,9 +678,77 @@ export async function createPrCommentResponse(
         scope.target.provider,
       );
     }
+    // `@numo` dans le message : la passe part APRÈS la publication et HORS du
+    // chemin de la réponse — comme `lib/server/add-comment.ts` le fait déjà pour
+    // un commentaire de ticket. Le message doit exister avant que Numo y réponde,
+    // et l'auteur n'a pas à attendre trois minutes pour voir le sien apparaître.
+    if (mentionsNumo(body)) {
+      await startNumoPrReview({
+        scope,
+        userId,
+        locale,
+        question: { author: actor.actor.login, body },
+      });
+    }
     return NextResponse.json({ comment });
   } catch (err) {
     return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Ce que `@numo` déclenche sur une pull request (MIN-162) : **la passe de
+ * relecture**, jamais un run de code.
+ *
+ * C'est la question qui restait ouverte au cadrage, et elle se tranche du côté
+ * du moindre pouvoir. Un run de code écrit dans le dépôt ; une mention, elle,
+ * peut venir de n'importe qui sachant commenter la PR — depuis minddy avec un
+ * simple accès en LECTURE au dépôt, et depuis github.com de tout collaborateur.
+ * Faire d'un `@numo` un droit d'écriture sur la branche, ce serait convertir en
+ * silence « peut commenter » en « peut pousser », à travers deux systèmes dont
+ * aucun n'a consenti à cette équivalence. Relancer Numo sur du code reste ce
+ * qu'il est aujourd'hui : un geste explicite, dans minddy, sous le menu Review.
+ *
+ * La passe, elle, ne fait qu'écrire des commentaires — et elle sait répondre à
+ * ce qui lui a été demandé, puisqu'on lui passe le message (`question`).
+ *
+ * Best-effort de bout en bout : une mention qui ne déclenche rien (plan sans
+ * agents, budget épuisé, passe déjà en cours) ne doit jamais faire échouer la
+ * publication du commentaire — il est déjà chez la forge.
+ */
+export async function startNumoPrReview(input: {
+  scope: PrScope;
+  userId: string;
+  locale: string;
+  question: { author: string | null; body: string };
+}): Promise<void> {
+  const { scope, userId } = input;
+  try {
+    await ensureAgentsAllowed(userId);
+    await ensureUsageBudget(userId);
+
+    // Une passe tourne déjà : elle lit le fil, donc elle lira aussi ce message.
+    // En ouvrir une seconde paierait deux fois le même diff.
+    if (await activePrReviewRun(scope.pr.id)) return;
+
+    const model = await resolvePrReviewModel({ userId });
+    const run = await createPrReviewRun({
+      pullRequestId: scope.pr.id,
+      userId,
+      model,
+    });
+    runPrReviewInBackground({
+      scope,
+      userId,
+      locale: input.locale,
+      model,
+      runId: run.id,
+      question: input.question,
+    });
+  } catch (err) {
+    // Y compris les refus de plan et de budget : ils ont un sens sur un CLIC,
+    // qui peut les afficher. Ici il n'y a pas d'écran à qui les dire.
+    console.error("[pr-actions] @numo mention ignored:", (err as Error).message);
   }
 }
 
@@ -1118,6 +1193,160 @@ export async function prFileBytesResponse(
       return NextResponse.json({ error: "File not found at this ref" }, { status: 404 });
     }
     return imageBytesResponse(bytes, contentType);
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+// ── Pièces jointes d'un commentaire de PR ────────────────────────────────────
+
+/** Même plafond que les pièces jointes de ticket (et que le bucket). */
+const MAX_FORGE_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+/** Les clés de stockage rejettent l'exotique ; le nom affiché, lui, le garde —
+    miroir du sanitizer de `lib/use-attachment-uploads`. */
+function sanitizeKeyPart(name: string): string {
+  const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
+  return (sanitized || "fichier").slice(-140);
+}
+
+/**
+ * Héberge un fichier destiné à un commentaire de pull request (MIN-162) et rend
+ * son URL PUBLIQUE — celle que le corps du commentaire portera.
+ *
+ * Publique, et pas signée : ce commentaire part chez la forge. Son lecteur, ce
+ * peut être une notification e-mail de GitHub ou quelqu'un qui n'a pas de compte
+ * minddy — une URL signée à durée de vie courte donnerait une image morte deux
+ * heures plus tard, sur un message qui, lui, reste.
+ *
+ * L'écriture passe par ICI et jamais par le navigateur : le bucket n'a aucune
+ * policy d'insertion, l'accès à la PR est vérifié avant, et le fichier atterrit
+ * sous un uuid non devinable. C'est ce qui empêche d'en faire un hébergeur
+ * gratuit — sans droit sur une PR, rien ne s'écrit.
+ *
+ * `read` et non `write` : joindre un fichier fait partie du geste de commenter,
+ * qui demande la même chose.
+ */
+export async function prAttachmentResponse(
+  scope: PrScope,
+  file: File,
+): Promise<NextResponse> {
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
+
+  if (file.size > MAX_FORGE_ATTACHMENT_BYTES) {
+    return NextResponse.json({ error: "File too large" }, { status: 413 });
+  }
+
+  const name = (file.name || "fichier").slice(-200);
+  const path = `${scope.pr.id}/${crypto.randomUUID()}/${sanitizeKeyPart(name)}`;
+  const service = getServiceClient();
+  const { error } = await service.storage
+    .from(FORGE_ATTACHMENTS_BUCKET)
+    .upload(path, await file.arrayBuffer(), {
+      contentType: file.type || "application/octet-stream",
+    });
+  if (error) {
+    console.error("[pr-actions] forge attachment upload failed:", error.message);
+    return NextResponse.json({ error: "Upload failed" }, { status: 502 });
+  }
+
+  const { data } = service.storage.from(FORGE_ATTACHMENTS_BUCKET).getPublicUrl(path);
+  return NextResponse.json({
+    url: data.publicUrl,
+    name,
+    // Le composer en déduit la forme markdown : `![](…)` pour une image, un lien
+    // nommé pour le reste. C'est le serveur qui sait ce qu'il a reçu.
+    isImage: (file.type || "").startsWith("image/"),
+  });
+}
+
+// ── Comptes mentionnables ────────────────────────────────────────────────────
+
+/**
+ * Les comptes de la forge qu'on peut mentionner sur cette PR (MIN-162).
+ *
+ * Lecture sur le token d'installation, comme les autres : la liste des
+ * collaborateurs ne dépend pas de qui regarde, et tout membre du projet minddy
+ * doit pouvoir écrire une mention sans compte git connecté.
+ *
+ * Un échec vaut **liste vide**, jamais une erreur : la permission « Members »
+ * peut manquer à l'installation (403), un tier GitLab peut refuser l'endpoint —
+ * et on écrit très bien un commentaire sans suggestion. Le composer, lui,
+ * n'insère jamais que ce qui a été tapé.
+ */
+export async function prMembersResponse(scope: PrScope): Promise<NextResponse> {
+  const members = await scope.forge.listRepoMembers(scope.call).catch((err) => {
+    console.error("[pr-actions] repo members unreadable:", (err as Error).message);
+    return [];
+  });
+  return NextResponse.json(
+    { members },
+    // Une liste de collaborateurs ne bouge pas pendant qu'on écrit un
+    // commentaire. `private` : elle décrit un dépôt souvent privé.
+    { headers: { "Cache-Control": "private, max-age=300" } },
+  );
+}
+
+// ── Images des commentaires ──────────────────────────────────────────────────
+
+/**
+ * Sert une image collée dans un commentaire de la PR (MIN-162).
+ *
+ * Le `<img>` du fil ne peut pas aller la chercher lui-même : l'URL que porte le
+ * corps markdown (`github.com/user-attachments/assets/<uuid>`) répond 404 sans
+ * une session GitHub — et minddy n'en a aucune, pas même via ses tokens d'App
+ * (mesuré ; la table est dans `lib/forge-image-assets`). Seule la version rendue
+ * par GitHub porte une URL signée servable, et son jeton ne vit que 300 s : elle
+ * se redemande à chaque chargement plutôt que de se coller dans une réponse qui
+ * survivrait à son expiration.
+ *
+ * Le paramètre est un **identifiant**, jamais une URL. C'est la garde qui compte
+ * ici : cette route fait un fetch serveur, et laisser le client dicter la cible
+ * en ferait un relais SSRF ouvert sur le réseau interne. Trois verrous en
+ * conséquence — l'id doit avoir la forme d'un uuid, l'URL résolue doit venir de
+ * ce que GitHub a rendu POUR CETTE PR (donc de nulle part ailleurs), et son hôte
+ * est vérifié une seconde fois avant le fetch. Le type MIME suit l'extension du
+ * chemin, comme pour les images du diff : jamais celui que l'hôte annonce.
+ *
+ * Lecture sur le token d'installation, comme toutes les lectures de PR : tout
+ * membre du projet minddy voit la PR, donc ses images, sans compte git connecté.
+ */
+export async function prCommentImageResponse(
+  scope: PrScope,
+  asset: string,
+): Promise<NextResponse> {
+  if (!isForgeAssetId(asset)) {
+    return NextResponse.json({ error: "Invalid asset id" }, { status: 400 });
+  }
+  try {
+    const assets = await scope.forge.listImageAssets(scope.call);
+    const url = assets.get(asset.toLowerCase());
+    // Rien de ce nom dans cette PR : 404, pas un fetch. C'est le verrou qui
+    // interdit à un appelant de choisir ce que le serveur va chercher.
+    if (!url) return NextResponse.json({ error: "Image not found" }, { status: 404 });
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return NextResponse.json({ error: "Image not found" }, { status: 404 });
+    }
+    if (parsed.protocol !== "https:" || parsed.hostname !== SIGNED_ASSET_HOST) {
+      return NextResponse.json({ error: "Image not found" }, { status: 404 });
+    }
+    const contentType = imageMimeType(parsed.pathname);
+    if (!contentType) {
+      return NextResponse.json({ error: "Not a previewable image" }, { status: 415 });
+    }
+
+    // Sans en-tête d'autorisation : l'URL EST le laissez-passer (jwt signé), et
+    // y joindre un token d'installation n'ajouterait rien qu'une fuite.
+    const res = await fetch(parsed.toString());
+    if (!res.ok) {
+      return NextResponse.json({ error: "Image unavailable" }, { status: 502 });
+    }
+    return imageBytesResponse(await res.arrayBuffer(), contentType);
   } catch (err) {
     return forgeErrorResponse(err);
   }
@@ -1588,34 +1817,55 @@ export async function prAiReviewResponse(
   // ne l'atteindrait plus.
   if (chosen) await rememberPrReviewModel(userId, model);
 
-  const recorder = openPrReviewRecorder(run.id);
+  runPrReviewInBackground({ scope, userId, locale, model, runId: run.id });
+  return NextResponse.json({ ok: true, review: run }, { status: 202 });
+}
 
-  // La passe part en tâche de fond, la réponse ne l'attend pas. C'est ce qui la
-  // rend REGARDABLE : l'écran reçoit tout de suite l'id de la session, s'abonne
-  // à son direct, et la review continue même si on quitte la page — trois
-  // minutes de requête suspendue, un onglet fermé, et les commentaires déjà
-  // posés seraient restés seuls, sans la synthèse qui les explique.
+/**
+ * Joue la passe DANS `after()` et solde la session, quelle que soit l'issue.
+ *
+ * Partagé par le bouton « Faire vérifier par Numo » et par la mention `@numo`
+ * (MIN-162) : c'est la même passe, et elle doit se raconter de la même façon
+ * dans le fil — la seule différence est le `question` qui l'a appelée.
+ *
+ * La passe part en tâche de fond, la réponse ne l'attend pas. C'est ce qui la
+ * rend REGARDABLE : l'écran reçoit tout de suite l'id de la session, s'abonne à
+ * son direct, et la review continue même si on quitte la page — trois minutes de
+ * requête suspendue, un onglet fermé, et les commentaires déjà posés seraient
+ * restés seuls, sans la synthèse qui les explique.
+ */
+function runPrReviewInBackground(input: {
+  scope: PrScope;
+  userId: string;
+  locale: string;
+  model: string;
+  runId: string;
+  question?: { author: string | null; body: string } | null;
+}): void {
+  const { scope, runId } = input;
+  const recorder = openPrReviewRecorder(runId);
   after(async () => {
     try {
       const result = await runPrAiReview({
         forge: scope.forge,
         call: scope.call,
         pr: scope.pr,
-        userId,
-        locale,
-        model,
+        userId: input.userId,
+        locale: input.locale,
+        model: input.model,
         recorder,
+        question: input.question ?? null,
       });
       if (!result.ok) {
         await recorder.failed(result.error);
-        await finishPrReviewRun(run.id, {
+        await finishPrReviewRun(runId, {
           status: "failed",
           headSha: result.headSha,
           error: result.error,
         });
         return;
       }
-      await finishPrReviewRun(run.id, {
+      await finishPrReviewRun(runId, {
         status: "done",
         headSha: result.headSha,
         verdict: result.verdict,
@@ -1628,11 +1878,9 @@ export async function prAiReviewResponse(
       // n'a plus personne à qui répondre en HTTP, elle se dit donc dans le fil.
       console.error("[pr-actions] ai review failed:", (err as Error).message);
       await recorder.failed("forge");
-      await finishPrReviewRun(run.id, { status: "failed", error: "forge" });
+      await finishPrReviewRun(runId, { status: "failed", error: "forge" });
     }
   });
-
-  return NextResponse.json({ ok: true, review: run }, { status: 202 });
 }
 
 /**

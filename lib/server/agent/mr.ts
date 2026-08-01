@@ -26,6 +26,7 @@ import type {
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
+  RepoMember,
   ReviewSubmission,
   ReviewThreadState,
   ReviewVerdict,
@@ -578,6 +579,41 @@ export async function listBranches(opts: {
     MAX_BRANCH_PAGES,
   );
   return branches.map((b) => b.name);
+}
+
+/** Même plafond que `pr.ts` (MAX_MEMBER_PAGES). */
+const MAX_MEMBER_PAGES = 2;
+
+/**
+ * Les comptes GitLab qu'on peut mentionner sur ce projet (MIN-162).
+ *
+ * `members/all` et non `members` : GitLab distingue les membres DIRECTS du
+ * projet de ceux qui en héritent par le groupe parent — et sur une instance
+ * organisée en groupes, la seconde liste est l'essentiel des gens. C'est le
+ * pendant exact de l'`affiliation=all` de GitHub.
+ *
+ * GitLab sert un `name` en plus du `username` : on le garde, la suggestion se
+ * cherche alors aussi bien par nom que par identifiant — mais c'est toujours
+ * `@username` qui s'insère, seul lui notifie.
+ */
+export async function listRepoMembers(opts: {
+  token: string;
+  repoFullName: string;
+}): Promise<RepoMember[]> {
+  const rows = await glPaged<{ username?: string; name?: string; avatar_url?: string | null }>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/members/all`,
+    opts.token,
+    MAX_MEMBER_PAGES,
+  );
+  return rows
+    .filter((r): r is { username: string; name?: string; avatar_url?: string | null } =>
+      !!r.username,
+    )
+    .map((r) => ({
+      login: r.username,
+      avatar_url: r.avatar_url ?? null,
+      name: r.name ?? null,
+    }));
 }
 
 /** Même plafond que `pr.ts` (MAX_PR_PAGES) pour le ménage des branches. */

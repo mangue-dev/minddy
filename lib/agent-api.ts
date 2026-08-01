@@ -772,6 +772,24 @@ export async function fetchPullRequestCommitsApi(
   return parseJson(await fetch(`${prEndpoint(prId)}/commits`));
 }
 
+/** Un compte de la forge, tel que le composer de commentaire le propose. */
+export interface RepoMember {
+  login: string;
+  avatar_url: string | null;
+  name: string | null;
+}
+
+/**
+ * Les comptes de la forge mentionnables sur cette PR (MIN-162). Jamais en
+ * erreur côté serveur : au pire une liste vide, et le composer n'en propose
+ * simplement aucune.
+ */
+export async function fetchPullRequestMembersApi(
+  prId: string,
+): Promise<{ members: RepoMember[] }> {
+  return parseJson(await fetch(`${prEndpoint(prId)}/members`));
+}
+
 /** Base des routes d'UN commit : son diff, et — comme une PR — ses fichiers. */
 export function prCommitEndpoint(prId: string, sha: string): PrEndpoint {
   return `${prEndpoint(prId)}/commits/${sha}`;

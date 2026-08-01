@@ -15,6 +15,7 @@ import type {
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
+  RepoMember,
   ReviewCommentReaction,
   ReviewReactionContent,
   ReviewSubmission,
@@ -92,6 +93,16 @@ export interface Forge {
   mergeMethods: readonly MergeMethod[];
   /** Noms des branches du dépôt (picker de branche de base au lancement). */
   listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
+  /**
+   * Les comptes de la FORGE qu'on peut mentionner sur ce dépôt (MIN-162) — pas
+   * les membres minddy : un `@` dans un commentaire de PR finit chez la forge,
+   * où il ne notifie que si c'est un compte de là-bas.
+   *
+   * Collaborateurs (`affiliation=all`) côté GitHub, membres du projet ET du
+   * groupe parent (`members/all`) côté GitLab : dans les deux cas, ce que la
+   * forge propose elle-même sous une arobase.
+   */
+  listRepoMembers(opts: { token: string; repoFullName: string }): Promise<RepoMember[]>;
   /** TOUTES les PR/MR du dépôt, tous états — le ménage des branches d'agent
       (MIN-102) a besoin des fermées pour choisir ET des ouvertes pour protéger.
       `truncated` : la pagination a été coupée, la liste n'est pas exhaustive. */
@@ -290,6 +301,24 @@ export interface Forge {
     number: number;
     body: string;
   }): Promise<PullRequestComment>;
+  /**
+   * Les images collées dans la PR — son corps, son fil, ses remarques de ligne —
+   * indexées par identifiant d'asset, chacune sous une URL RÉELLEMENT servable
+   * (MIN-162). C'est ce que le corps markdown ne donne pas : l'URL qu'il porte
+   * répond 404 à tout ce que minddy détient. Le détail est dans
+   * `lib/forge-image-assets` ; la route `/image` s'en sert pour proxifier.
+   *
+   * Table VIDE côté GitLab, et c'est un manque assumé, pas une équivalence :
+   * une image de note GitLab s'écrit `/uploads/<hash>/<fichier>`, un chemin
+   * RELATIF au projet — un autre mécanisme, qu'aucune mesure contre une vraie
+   * instance n'est venue confirmer ici. Une table vide rend la PR telle qu'elle
+   * se rendait avant ; l'inventer aurait rendu des liens morts.
+   */
+  listImageAssets(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<Map<string, string>>;
   listPullRequestReviewComments(opts: {
     token: string;
     repoFullName: string;
@@ -414,6 +443,7 @@ const githubForge: Forge = {
   provider: "github",
   mergeMethods: ["squash", "merge", "rebase"],
   listBranches: github.listBranches,
+  listRepoMembers: github.listRepoMembers,
   listPullRequests: github.listPullRequests,
   deleteBranch: github.deleteBranch,
   ensurePullRequest: github.ensurePullRequest,
@@ -448,6 +478,7 @@ const githubForge: Forge = {
   listPullRequestComments: github.listPullRequestComments,
   listTimeline: github.listPullRequestTimeline,
   createPullRequestComment: github.createPullRequestComment,
+  listImageAssets: github.listPullRequestImageAssets,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
   // GitHub exige `commit_id` = la TÊTE de la PR, relue à chaud à chaque envoi
   // (entre l'ouverture de la vue et l'envoi, l'agent a pu pousser — cf. pr.ts).
@@ -494,6 +525,7 @@ const gitlabForge: Forge = {
   // squash est un paramètre de l'appel merge.
   mergeMethods: ["squash", "merge"],
   listBranches: gitlab.listBranches,
+  listRepoMembers: gitlab.listRepoMembers,
   listPullRequests: gitlab.listPullRequests,
   deleteBranch: gitlab.deleteBranch,
   ensurePullRequest: gitlab.ensureMergeRequest,
@@ -518,6 +550,10 @@ const gitlabForge: Forge = {
   listPullRequestComments: gitlab.listMergeRequestNotes,
   listTimeline: gitlab.listMergeRequestTimeline,
   createPullRequestComment: gitlab.createMergeRequestNote,
+  // Cf. la doc de `listImageAssets` : le mécanisme d'image de GitLab est un
+  // chemin relatif au projet, pas un asset signé. Rien de mesuré, donc rien
+  // d'inventé — la MR se rend comme avant.
+  listImageAssets: async () => new Map<string, string>(),
   listPullRequestReviewComments: gitlab.listMergeRequestDiffComments,
   createPullRequestReviewComment: gitlab.createMergeRequestDiffComment,
   replyToPullRequestReviewComment: gitlab.replyToMergeRequestDiffComment,

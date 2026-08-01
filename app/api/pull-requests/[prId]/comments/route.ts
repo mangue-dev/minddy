@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 
 import {
   authorizePrRequest,
@@ -40,5 +41,5 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
-  return createPrCommentResponse(auth.scope, body, auth.userId);
+  return createPrCommentResponse(auth.scope, body, auth.userId, await getLocale());
 }

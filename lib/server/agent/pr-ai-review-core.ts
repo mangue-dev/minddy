@@ -176,9 +176,24 @@ export const AI_REVIEW_TOOL_PARAMETERS: Record<string, unknown> = {
 /** La langue dans laquelle la review est écrite — celle du demandeur. */
 const LANGUAGE_NAME: Record<string, string> = { fr: "French", en: "English" };
 
-export function buildReviewSystemPrompt(locale: string): string {
+export function buildReviewSystemPrompt(
+  locale: string,
+  /** La passe a-t-elle été déclenchée par une mention `@numo` dans le fil
+      (MIN-162) plutôt que par le bouton « Faire vérifier par Numo » ? Le message
+      qui l'a appelée est alors dans le contexte, sous sa propre section. */
+  askedByMention = false,
+): string {
   const language = LANGUAGE_NAME[locale] ?? LANGUAGE_NAME.en;
-  return `You are Numo, reviewing a pull request the way a senior engineer of this team would: you read the diff end to end, then you say what you actually think.
+  const mentioned = askedByMention
+    ? `
+
+Someone called you into this pull request by mentioning you in a comment. That comment is quoted at the top of the message below, under "What you were asked".
+- **Answer it first.** Open your summary by replying to what was actually asked, in one short paragraph, before anything else.
+- If it asks a question, answer the question. If it just says "review this", review it — that is the default.
+- You still review the diff either way, and you still anchor findings to lines: being asked something does not turn off the rest of the job.
+- **You cannot change the code.** You read, you comment, that is all. If what is asked is a modification, say what you would change and where, and say plainly that someone has to launch a run for it to happen.`
+    : "";
+  return `You are Numo, reviewing a pull request the way a senior engineer of this team would: you read the diff end to end, then you say what you actually think.${mentioned}
 
 Write the review in ${language}.
 
@@ -427,8 +442,26 @@ export function buildReviewUserMessage(input: {
   /** Ce qui a déjà été écrit sur la PR elle-même (fil, reviews, ancres). */
   conversation?: ReviewConversation | null;
   files: ReviewableFile[];
+  /** Le commentaire qui a mentionné `@numo` (MIN-162), quand c'est lui qui a
+      déclenché la passe. */
+  question?: { author: string | null; body: string } | null;
 }): string {
   const parts: string[] = [`# Pull request\n\n${input.title.trim() || "(untitled)"}`];
+
+  // EN TÊTE : c'est la demande, et le reste n'est que ce qu'il faut pour y
+  // répondre. Enfouie au milieu du contexte, elle se lirait comme un message
+  // parmi d'autres — or elle est la raison de la passe.
+  const question = input.question;
+  if (question?.body.trim()) {
+    parts.push(
+      `## What you were asked\n\n` +
+        `${question.author ? `@${question.author}` : "Someone"} wrote, on this pull request:\n\n` +
+        headTail(question.body.trim(), PR_BODY_MAX_CHARS)
+          .split("\n")
+          .map((line) => `> ${line}`)
+          .join("\n"),
+    );
+  }
 
   const body = (input.body ?? "").trim();
   if (body) {

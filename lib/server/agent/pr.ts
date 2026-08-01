@@ -1,6 +1,7 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
+import { collectSignedAssets } from "@/lib/forge-image-assets";
 import {
   summarizeGithubChecks,
   type ChecksSummary,
@@ -155,6 +156,19 @@ export interface CommitDiff {
   deletions: number;
   url: string | null;
   parentSha: string | null;
+}
+
+/**
+ * Un compte de la FORGE qu'on peut mentionner sur une PR (MIN-162) — pas un
+ * membre minddy : le commentaire part chez la forge, où un `@` ne désigne
+ * quelqu'un que s'il désigne un compte de là-bas.
+ */
+export interface RepoMember {
+  /** Le nom tel qu'il s'écrit après l'arobase — `@login`, brut. */
+  login: string;
+  avatar_url: string | null;
+  /** Nom affiché quand la forge en a un (GitLab), sinon le login seul. */
+  name: string | null;
 }
 
 /** Commentaire de conversation d'une PR (endpoint issues/{n}/comments de GitHub). */
@@ -682,6 +696,40 @@ export async function listBranches(opts: {
   return names;
 }
 
+/** Deux pages = 200 comptes. Au-delà, une liste de suggestions n'aide plus
+    personne : on tape trois lettres, on ne déroule pas un annuaire. */
+const MAX_MEMBER_PAGES = 2;
+
+/**
+ * Les comptes GitHub qu'on peut mentionner sur ce dépôt (MIN-162) — ses
+ * collaborateurs, `affiliation=all` (membres directs, hérités de l'organisation
+ * et sortants). C'est la liste que GitHub propose lui-même sous un `@`.
+ *
+ * Le token d'installation suffit : c'est une LECTURE, comme toutes celles de la
+ * vue PR. Elle demande la permission « Members » (lecture) sur l'installation —
+ * sans elle GitHub répond 403, et l'appelant rend une liste vide plutôt qu'une
+ * erreur : on écrit très bien un commentaire sans suggestion de mention.
+ */
+export async function listRepoMembers(opts: {
+  token: string;
+  repoFullName: string;
+}): Promise<RepoMember[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const members: RepoMember[] = [];
+  for (let page = 1; page <= MAX_MEMBER_PAGES; page++) {
+    const batch = await ghJson<Array<{ login?: string; avatar_url?: string }>>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/collaborators` +
+        `?affiliation=all&per_page=100&page=${page}`,
+      opts.token,
+    );
+    for (const c of batch) {
+      if (c.login) members.push({ login: c.login, avatar_url: c.avatar_url ?? null, name: null });
+    }
+    if (batch.length < 100) break;
+  }
+  return members;
+}
+
 /** Même esprit que MAX_BRANCH_PAGES : 500 PR suffisent à un ménage de branches,
     et l'ordre `updated desc` met les plus récentes — les seules encore vivantes
     dans la tête de l'utilisateur — sur la première page. */
@@ -1207,6 +1255,52 @@ export async function listPullRequestComments(opts: {
     opts.token,
   );
   return comments.map(toComment);
+}
+
+/**
+ * Les images des commentaires de la PR, indexées par uuid d'asset (MIN-162).
+ *
+ * `Accept: application/vnd.github.full+json` demande à GitHub de RENDRE le
+ * markdown : la réponse porte alors un `body_html` où chaque image collée est
+ * réécrite en URL signée, servable sans authentification — là où l'URL du corps
+ * brut (`github.com/user-attachments/assets/…`) répond 404 à tout ce que minddy
+ * détient. Le pourquoi, et la table de mesures, sont dans `lib/forge-image-assets`.
+ *
+ * Trois surfaces, parce qu'une image peut être n'importe où sur la PR : son
+ * CORPS, un message du fil, une remarque de ligne. Elles se lisent en parallèle
+ * et versent dans la même table — l'appelant cherche un uuid, pas un endroit.
+ *
+ * Best-effort à la surface : une lecture en échec retire des images de la table,
+ * elle ne fait pas tomber l'affichage de la PR.
+ */
+export async function listPullRequestImageAssets(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<Map<string, string>> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}`;
+  const rendered = { accept: "application/vnd.github.full+json" };
+
+  const [pr, comments, reviewComments] = await Promise.all([
+    ghJson<{ body_html?: string }>(`${base}/pulls/${opts.number}`, opts.token, rendered),
+    ghJson<Array<{ body_html?: string }>>(
+      `${base}/issues/${opts.number}/comments?per_page=100`,
+      opts.token,
+      rendered,
+    ),
+    ghJson<Array<{ body_html?: string }>>(
+      `${base}/pulls/${opts.number}/comments?per_page=100`,
+      opts.token,
+      rendered,
+    ),
+  ]);
+
+  return collectSignedAssets([
+    pr.body_html,
+    ...comments.map((c) => c.body_html),
+    ...reviewComments.map((c) => c.body_html),
+  ]);
 }
 
 const TIMELINE_PER_PAGE = 100;

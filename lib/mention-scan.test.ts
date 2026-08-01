@@ -13,7 +13,9 @@ const shape = (segments: MentionSegment[]) =>
       ? s.text
       : s.mention.type === "numo"
         ? "@numo"
-        : `@${s.mention.member.full_name}`,
+        : s.mention.type === "forge"
+          ? `@${s.mention.login}`
+          : `@${s.mention.member.full_name}`,
   );
 
 describe("mentionScanner", () => {

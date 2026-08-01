@@ -122,6 +122,12 @@ interface PrAiReviewInput {
   model: string;
   /** Le carnet de la session : phases, sources lues, points, synthèse, direct. */
   recorder: PrReviewRecorder;
+  /**
+   * Le commentaire qui a appelé Numo (MIN-162), quand la passe vient d'une
+   * mention `@numo` et non du bouton. La synthèse lui répond d'abord ; le reste
+   * de la review ne change pas.
+   */
+  question?: { author: string | null; body: string } | null;
 }
 
 /**
@@ -179,13 +185,14 @@ export async function runPrAiReview(input: PrAiReviewInput): Promise<PrAiReviewO
   await recorder.status("analyzing");
   const raw = await callReviewModel({
     model,
-    system: buildReviewSystemPrompt(input.locale),
+    system: buildReviewSystemPrompt(input.locale, !!input.question),
     user: buildReviewUserMessage({
       title: pr.title ?? input.pr.title ?? "",
       body: pr.body,
       issue: issue?.context ?? null,
       conversation,
       files,
+      question: input.question ?? null,
     }),
     userId: input.userId,
     // Le projet de la ligne de ledger est celui du TICKET, ou rien : un dépôt

@@ -25,16 +25,20 @@ export function MentionChip({
   id,
   label,
   avatarSeed,
+  avatarUrl,
   iconUrl,
   className,
 }: {
-  type: "member" | "project" | "numo";
+  type: "member" | "project" | "numo" | "forge";
   /** Membre : user_id. Projet : id du projet — c'est la graine de son orbe.
+      Forge : le login, qui est aussi la graine de son portrait de repli.
       Numo n'a rien à identifier : `NUMO_MENTION_ID` fait l'affaire. */
   id: string;
   label: string;
   /** Graine du portrait (elle n'est PAS toujours le user_id). */
   avatarSeed?: string | null;
+  /** Forge : le portrait servi par la forge — un vrai visage, pas une graine. */
+  avatarUrl?: string | null;
   /** Projet : le favicon importé, quand il y en a un. */
   iconUrl?: string | null;
   className?: string;
@@ -59,6 +63,11 @@ export function MentionChip({
     >
       {type === "member" ? (
         <UserAvatar seed={avatarSeed ?? id} className="size-4" />
+      ) : type === "forge" ? (
+        // Le compte de la forge porte SON portrait (celui de github.com), pas un
+        // avatar minddy généré : c'est bien lui qu'on cite, et il n'a pas de
+        // compte ici. `seed` reste le repli quand la forge n'en sert pas.
+        <UserAvatar url={avatarUrl} seed={id} className="size-4" />
       ) : type === "numo" ? (
         // Le visage de l'assistant, exactement celui qui signe ses réponses. Son
         // disque garde la couleur de marque : dans une pilule à l'encre, c'est

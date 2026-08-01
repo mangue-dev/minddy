@@ -17,10 +17,12 @@ import {
 import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
+  findPullRequestByNumber,
   resolveIssueForPr,
   upsertPullRequest,
   type PullRequestState,
 } from "@/lib/server/agent/pull-requests";
+import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import type { PrActionEventType } from "@/lib/pr-events";
 import type { AgentRun } from "@/lib/server/agent/runs";
 
@@ -40,7 +42,11 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *  - `pull_request_review_comment` → trace « commenté le code de la PR ». Une
  *    review de N remarques arrive en N events : ils se regroupent en une ligne
  *    (`collapsesInBurst`).
- *  - `issue_comment` (sur une PR) → trace « commenté la PR ».
+ *  - `issue_comment` (sur une PR) → trace « commenté la PR », et déclenche la
+ *    relecture de Numo si le message le MENTIONNE (MIN-162). Écrire `@numo`
+ *    depuis github.com fait donc la même chose que l'écrire depuis minddy — sauf
+ *    que la dépense est portée par le owner du projet du ticket lié, faute d'un
+ *    compte minddy derrière l'auteur (cf. `lib/server/agent/pr-mention`).
  *  - `issues` (opened/closed/reopened) → synchronisation unidirectionnelle des
  *    issues du dépôt vers les projets qui l'ont activée (MIN-97). Sens unique :
  *    minddy n'écrit jamais chez GitHub.
@@ -200,7 +206,9 @@ interface PullRequestReviewEvent {
 interface IssueCommentEvent {
   action?: string;
   issue?: { number?: number; pull_request?: unknown } | null;
-  comment?: { user?: GithubActor } | null;
+  /** `body` sert la mention `@numo` (MIN-162) : c'est le seul signal qu'on ait
+      d'un appel à Numo écrit depuis github.com. */
+  comment?: { body?: string | null; user?: GithubActor } | null;
   repository?: { full_name?: string };
   sender?: GithubActor;
 }
@@ -342,11 +350,50 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
 
 async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
   if (!isPullRequestComment(payload)) return;
-  await recordGithubGesture({
+  const actor = payload.comment?.user ?? payload.sender;
+  const number = payload.issue?.number;
+  const repoFullName = payload.repository?.full_name;
+
+  await recordGithubGesture({ type: "pr_commented", number, repoFullName, actor });
+
+  // `@numo` écrit DEPUIS github.com (MIN-162). Deux gardes avant d'y toucher :
+  //  · le bot de l'App, c'est Numo lui-même — le laisser s'appeler ferait boucler
+  //    la passe sur sa propre synthèse ;
+  //  · un commentaire posté depuis minddy revient ici par écho quelques secondes
+  //    plus tard, et la route a déjà lancé la passe. `isPrActionEcho` le
+  //    reconnaît sur l'événement qu'elle vient d'écrire — le même garde que pour
+  //    l'activité, sur le même geste.
+  if (
+    payload.action !== "created" ||
+    number == null ||
+    !repoFullName ||
+    isBot(actor) ||
+    !payload.comment?.body
+  ) {
+    return;
+  }
+  const pr = await findPullRequestByNumber({
+    provider: "github",
+    repoFullName,
+    number,
+  });
+  if (!pr) return;
+  const echo = await isPrActionEcho({
+    issueIds: [pr.issue_id],
     type: "pr_commented",
-    number: payload.issue?.number,
-    repoFullName: payload.repository?.full_name,
-    actor: payload.comment?.user ?? payload.sender,
+    prNumber: number,
+    provider: "github",
+    accountId: actorAccountId(actor),
+    login: actor?.login ?? null,
+  });
+  if (echo) return;
+
+  await handleForgeNumoMention({
+    provider: "github",
+    repoFullName,
+    prNumber: number,
+    body: payload.comment.body,
+    authorLogin: actor?.login ?? null,
   });
 }
 

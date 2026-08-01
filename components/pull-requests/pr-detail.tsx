@@ -43,13 +43,12 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { AutoTextarea } from "@/components/auto-textarea";
-import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
-import { Markdown } from "@/components/markdown";
+import { ForgeImageEndpoint, Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
+import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
@@ -534,7 +533,9 @@ export function PrDetail({
   const [aiReviewModel, setAiReviewModel] = useState("");
   const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<"activity" | "commits" | "files">("activity");
-  const composerRef = useRef<HTMLTextAreaElement>(null);
+  // « Citer » écrit dans le brouillon depuis l'extérieur du composer : ce
+  // compteur lui dit d'aller reprendre le curseur.
+  const [quoteFocus, setQuoteFocus] = useState(0);
 
   const isWorking = !!item.activeRunId;
   // Ce que CE compte git peut faire sur ce dépôt (MIN-144). Un geste humain part
@@ -739,13 +740,10 @@ export function PrDetail({
       .join("\n");
     const mention = login ? `@${login} ` : "";
     setCommentBody((d) => `${d.trim() ? `${d.trimEnd()}\n\n` : ""}${quoted}\n\n${mention}`);
-    // Après le rendu de la nouvelle valeur : focus, curseur à la fin (après la mention).
-    requestAnimationFrame(() => {
-      const el = composerRef.current;
-      if (!el) return;
-      el.focus();
-      el.setSelectionRange(el.value.length, el.value.length);
-    });
+    // Le composer n'est plus un `<textarea>` mais un champ à mentions (MIN-162) :
+    // le curseur ne se pose pas par `setSelectionRange` mais sur ce signal, que
+    // le champ lit APRÈS avoir reposé son contenu.
+    setQuoteFocus((n) => n + 1);
   };
 
   const submitComment = async () => {
@@ -794,6 +792,10 @@ export function PrDetail({
   const conversationCount = feed.filter((e) => e.kind !== "event").length;
 
   return (
+    // Une capture collée sur la forge n'est pas servable telle quelle (MIN-162) :
+    // l'enveloppe dit à TOUT le markdown du panneau — corps, fil, activité,
+    // remarques de ligne — de quelle PR il vient, et donc par quel proxy passer.
+    <ForgeImageEndpoint endpoint={prEndpoint(item.prId)}>
     <div className="flex h-full min-h-0 flex-col">
       {/* Header : retour (mobile) · identifiant · actions */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3 md:px-6">
@@ -1260,45 +1262,20 @@ export function PrDetail({
                 </ul>
               )}
 
-              {/* Composer — même carte que le composer d'issue (CommentComposer),
-                  sans mentions ni pièces jointes : un commentaire part sur GitHub,
-                  où ni l'un ni l'autre n'a de sens. ABSENT sans compte git : il
+              {/* Composer — mentions de comptes de forge, pièces jointes,
+                  aperçu markdown (MIN-162). ABSENT sans compte git : le message
                   partirait sous l'identité du bot (MIN-144). */}
               {canComment ? (
-              <div className="relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring">
-                <AutoTextarea
-                  ref={composerRef}
+                <PrCommentComposer
+                  prId={item.prId}
                   value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      void submitComment();
-                    }
-                  }}
+                  onChange={setCommentBody}
+                  onSubmit={() => void submitComment()}
+                  posting={posting}
                   placeholder={t("commentPlaceholder")}
-                  className="max-h-48 w-full overflow-y-auto bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+                  submitLabel={t("postComment")}
+                  focusSignal={quoteFocus}
                 />
-                <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
-                  <DictateButton
-                    onTranscription={(text) =>
-                      setCommentBody((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
-                    }
-                    disabled={posting}
-                  />
-                  {commentBody.trim() || posting ? (
-                    <Button
-                      size="sm"
-                      className="rounded-full px-4"
-                      onClick={() => void submitComment()}
-                      disabled={!commentBody.trim() || posting}
-                    >
-                      {posting ? <Spinner /> : null}
-                      {t("postComment")}
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
               ) : null}
             </TabsContent>
 
@@ -1533,5 +1510,6 @@ export function PrDetail({
         </DialogContent>
       </Dialog>
     </div>
+    </ForgeImageEndpoint>
   );
 }

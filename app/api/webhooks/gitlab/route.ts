@@ -17,10 +17,12 @@ import {
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
+  findPullRequestByNumber,
   resolveIssueForPr,
   upsertPullRequest,
   type PullRequestState,
 } from "@/lib/server/agent/pull-requests";
+import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { AgentRun } from "@/lib/server/agent/runs";
 
@@ -45,7 +47,8 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *    GitHub n'a d'ailleurs pas d'équivalent).
  * Le hook `Note Hook` (object_kind `note`) porte les COMMENTAIRES : sur une merge
  * request, ils tracent « commenté la MR » (message de fil) ou « commenté le code
- * de la MR » (note ancrée dans le diff). Le hook `Issue Hook` (object_kind
+ * de la MR » (note ancrée dans le diff), et déclenchent la relecture de Numo si
+ * le message le MENTIONNE (MIN-162, cf. `lib/server/agent/pr-mention`). Le hook `Issue Hook` (object_kind
  * `issue`) porte la synchronisation unidirectionnelle des issues du dépôt vers
  * les projets qui l'ont activée (MIN-97) — sens unique : minddy n'écrit jamais
  * chez GitLab. Tout autre object_kind est acquitté sans traitement.
@@ -323,7 +326,9 @@ interface NoteEvent {
   object_kind?: string;
   user?: GitlabUserPayload;
   project?: { path_with_namespace?: string };
-  object_attributes?: { noteable_type?: string; position?: unknown };
+  /** `note` porte le corps du message : c'est le seul signal d'un `@numo` écrit
+      depuis GitLab (MIN-162). */
+  object_attributes?: { noteable_type?: string; position?: unknown; note?: string | null };
   /** Présent quand la note porte sur une merge request. */
   merge_request?: { iid?: number };
 }
@@ -350,6 +355,35 @@ async function handleNote(payload: NoteEvent): Promise<void> {
     type,
     accountId: actorAccountId(payload.user),
     login: payload.user?.username ?? null,
+  });
+
+  // `@numo` écrit depuis GitLab (MIN-162) — le pendant exact du récepteur
+  // GitHub. L'anti-écho d'un message posté depuis minddy est celui que
+  // `recordForgePrGesture` vient d'appliquer : on le rejoue ici sur le même
+  // geste, parce que la trace et la passe ne se déclenchent pas au même endroit.
+  if (!payload.object_attributes?.note) return;
+  const pr = await findPullRequestByNumber({
+    provider: "gitlab",
+    repoFullName,
+    number: iid,
+  });
+  if (!pr) return;
+  const echo = await isPrActionEcho({
+    issueIds: [pr.issue_id],
+    type,
+    prNumber: iid,
+    provider: "gitlab",
+    accountId: actorAccountId(payload.user),
+    login: payload.user?.username ?? null,
+  });
+  if (echo) return;
+
+  await handleForgeNumoMention({
+    provider: "gitlab",
+    repoFullName,
+    prNumber: iid,
+    body: payload.object_attributes.note,
+    authorLogin: payload.user?.username ?? null,
   });
 }
 

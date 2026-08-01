@@ -1,6 +1,6 @@
 "use client";
 
-import type { ElementType, JSX } from "react";
+import { createContext, useContext, type ElementType, type JSX, type ReactNode } from "react";
 import ReactMarkdown, { type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -9,6 +9,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { memberLabel, mentionScanner } from "@/lib/mention-scan";
+import { forgeImageSrc } from "@/lib/forge-image-assets";
 import type { Member } from "@/lib/types";
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
@@ -36,14 +37,18 @@ function rehypeMentions(members: Member[]) {
             type: "element",
             tagName: "span",
             properties:
-              seg.mention.type === "numo"
-                ? { "data-mention-type": "numo" }
-                : {
+              // `member` en test, et non « pas numo » : le scanner sait aussi
+              // rendre des comptes de FORGE (MIN-162), qu'aucune liste de
+              // membres minddy ne produit ici — un commentaire de ticket ne cite
+              // que des gens d'ici.
+              seg.mention.type === "member"
+                ? {
                     "data-mention-type": "member",
                     "data-mention-id": seg.mention.member.user_id,
                     "data-mention-label": memberLabel(seg.mention.member),
                     "data-mention-seed": seg.mention.member.avatar_seed,
-                  },
+                  }
+                : { "data-mention-type": "numo" },
             children: [],
           },
     );
@@ -110,6 +115,35 @@ function rehypeChain(members?: Member[]): Options["rehypePlugins"] {
   return members ? [...chain, rehypeMentions(members)] : chain;
 }
 
+/**
+ * De quelle pull request ce markdown vient-il ? Rien, partout ailleurs.
+ *
+ * Une capture collée dans un commentaire de forge n'est pas servable telle
+ * quelle : son URL exige une session GitHub que minddy n'a pas, et il faut la
+ * faire passer par le proxy de SA pull request (MIN-162, `lib/forge-image-assets`).
+ * Le panneau PR en pose donc un autour de tout ce qu'il rend.
+ *
+ * Un contexte plutôt qu'une prop parce que ces surfaces sont nombreuses et
+ * profondes — corps de la PR, messages du fil, activité, remarques de ligne et
+ * leurs réponses, jusqu'au fond de la vue diff — et parce que la question qu'il
+ * répond est la même pour toutes : celle du panneau, pas celle du composant.
+ * Une seule enveloppe, et la surface suivante l'aura sans rien câbler.
+ */
+const ForgeImageContext = createContext<string | null>(null);
+
+export function ForgeImageEndpoint({
+  endpoint,
+  children,
+}: {
+  /** Base de la PR : `/api/pull-requests/{id}`. */
+  endpoint: string;
+  children: ReactNode;
+}) {
+  return (
+    <ForgeImageContext.Provider value={endpoint}>{children}</ForgeImageContext.Provider>
+  );
+}
+
 /** Renders markdown (GFM) with minimal, token-aware styling, plus the raw HTML
     GitHub allows in a comment (sanitized — cf. `rehypeChain`).
     Pass `members` to render "@Name" and "@numo" mentions as chips — the same
@@ -125,6 +159,9 @@ export function Markdown({
   className?: string;
   members?: Member[];
 }) {
+  // null hors d'un panneau de PR : les images d'un commentaire de ticket sont
+  // déjà servies par minddy, elles n'ont rien à proxifier.
+  const imageEndpoint = useContext(ForgeImageContext);
   return (
     <div
       className={cn(
@@ -173,10 +210,25 @@ export function Markdown({
           /* Images de commentaire (badges CI, captures collées) : elles arrivent
              surtout en HTML brut, et ne se rendaient donc pas du tout avant
              `rehypeRaw`. Bornées à la largeur du fil — une capture de rétine
-             pousserait la carte hors de l'écran. */
+             pousserait la carte hors de l'écran.
+
+             Une capture collée sur la forge, elle, passe par le proxy de la PR
+             quand on nous a dit de quelle PR ce texte vient : son URL d'origine
+             répond 404 à qui n'a pas de session GitHub (MIN-162). Le geste est
+             le même pour une balise markdown et pour un `<img>` brut — les deux
+             arrivent ici, après `rehypeRaw`. */
           img: ({ node, ...props }) => (
-            // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-            <img className="inline-block max-w-full rounded-md" loading="lazy" {...props} />
+            <img
+              className="inline-block max-w-full rounded-md"
+              loading="lazy"
+              // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+              {...props}
+              src={
+                imageEndpoint && typeof props.src === "string"
+                  ? forgeImageSrc(props.src, imageEndpoint)
+                  : props.src
+              }
+            />
           ),
           details: styled("details", "my-3"),
           summary: styled("summary", "cursor-pointer font-medium"),
