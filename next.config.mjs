@@ -118,6 +118,35 @@ const nextConfig = {
   async headers() {
     const headers = [];
 
+    // En-têtes de sécurité, toutes routes (MIN-118). HSTS ne vaut que sur une
+    // réponse HTTPS — inoffensif en dev, et la redirection HTTP→HTTPS est
+    // native Vercel. `preload` est dans l'en-tête mais le domaine n'est PAS
+    // soumis à hstspreload.org (quasi irréversible). La CSP se limite à
+    // `frame-ancestors`/`base-uri`/`form-action` : un `script-src` à nonces
+    // exigerait de réécrire la chaîne de rendu (scripts inline Next +
+    // theme-init-script) — chantier séparé si souhaité. Micro autorisé en
+    // self : la dictée de l'assistant s'en sert.
+    headers.push({
+      source: "/(.*)",
+      headers: [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=31536000; includeSubDomains; preload",
+        },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "DENY" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        {
+          key: "Permissions-Policy",
+          value: "camera=(), microphone=(self), geolocation=()",
+        },
+        {
+          key: "Content-Security-Policy",
+          value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        },
+      ],
+    });
+
     // Les pages publiques, dans leurs deux langues. Recopiées de
     // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
     // `lib/public-routes.test.ts` vérifie qu'elles ne divergent pas.

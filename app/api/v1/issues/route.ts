@@ -16,6 +16,12 @@ import { isPriority, isEffort } from "@/lib/issue-validation";
  * ignoré — la whitelist ci-dessous est le point d'enforcement (pas d'assignee,
  * de parent ni de statut pilotables de l'extérieur).
  */
+// Bornes (MIN-118), alignées sur le cœur de création : au-delà, refus explicite
+// (le cœur tronquerait en silence — mauvaise DX pour un intégrateur externe).
+const MAX_TITLE_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 65_536;
+const MAX_CATEGORIES = 50;
+
 export async function POST(request: NextRequest) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
@@ -33,7 +39,13 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    // Un corps non-objet (`null`, chaîne, tableau) est du JSON valide : refusé
+    // ici plutôt que de crasher sur un accès de champ plus bas.
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return publicApiError(400, "invalid_json", "Request body must be a JSON object.");
+    }
+    body = parsed as Record<string, unknown>;
   } catch {
     return publicApiError(400, "invalid_json", "Request body must be valid JSON.");
   }
@@ -43,6 +55,26 @@ export async function POST(request: NextRequest) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!title) {
     return publicApiError(422, "title_required", "A non-empty title is required.");
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    return publicApiError(
+      422,
+      "title_too_long",
+      `title must be at most ${MAX_TITLE_LENGTH} characters.`
+    );
+  }
+  if (body.description !== undefined && typeof body.description !== "string") {
+    return publicApiError(422, "invalid_description", "description must be a string.");
+  }
+  if (
+    typeof body.description === "string" &&
+    body.description.length > MAX_DESCRIPTION_LENGTH
+  ) {
+    return publicApiError(
+      422,
+      "description_too_long",
+      `description must be at most ${MAX_DESCRIPTION_LENGTH} characters.`
+    );
   }
   if (body.priority !== undefined && !isPriority(body.priority)) {
     return publicApiError(
@@ -72,6 +104,13 @@ export async function POST(request: NextRequest) {
       );
     }
     categoryIds = body.categories as string[];
+    if (categoryIds.length > MAX_CATEGORIES) {
+      return publicApiError(
+        422,
+        "too_many_categories",
+        `categories must contain at most ${MAX_CATEGORIES} ids.`
+      );
+    }
     if (categoryIds.length > 0) {
       const service = getServiceClient();
       const { data: known } = await service

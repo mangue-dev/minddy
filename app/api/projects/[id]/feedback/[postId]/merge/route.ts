@@ -22,7 +22,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const canonicalId = typeof body.canonical_id === "string" ? body.canonical_id : "";
+  // `null` est du JSON valide : lire body.canonical_id dessus ferait un 500.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
+  // Un uuid fait 36 caractères — au-delà de 64, ce n'est pas un id.
+  const canonicalId =
+    typeof body.canonical_id === "string" && body.canonical_id.length <= 64
+      ? body.canonical_id
+      : "";
   if (!canonicalId) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }

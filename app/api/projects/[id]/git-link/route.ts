@@ -196,7 +196,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (action === "bind") {
     const connectionId = (body as { connection_id?: unknown }).connection_id;
     const externalRepoId = (body as { external_repo_id?: unknown }).external_repo_id;
-    if (typeof connectionId !== "string" || typeof externalRepoId !== "string") {
+    // Bornes larges : un uuid de connexion et un id de dépôt de forge tiennent
+    // très en deçà — au-delà, ce ne sont pas des ids.
+    if (
+      typeof connectionId !== "string" ||
+      connectionId.length > 64 ||
+      typeof externalRepoId !== "string" ||
+      externalRepoId.length > 200
+    ) {
       return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
     }
     try {

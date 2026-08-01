@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
-import { createSupabaseFromRequest } from "@/lib/server/api-auth";
+import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
@@ -167,14 +167,12 @@ function mentionsNote(metadata: unknown): string {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = createSupabaseFromRequest(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // getAuthedUser plutôt qu'un getUser() direct : c'est lui qui porte la gate
+  // MFA globale (aal2) et le 503 « instance injoignable » — un compte protégé
+  // par TOTP ne doit pas pouvoir parler à l'assistant en aal1 (MIN-118).
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
 
   const rateLimit = checkSessionRateLimit(
     user.id,
@@ -201,16 +199,31 @@ export async function POST(request: NextRequest) {
 
   let body: AssistantChatRequest;
   try {
-    body = await request.json();
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as AssistantChatRequest;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { projectId, message, conversationId } = body;
+  // Champs racine coercés : des types farfelus ne doivent ni crasher ni finir
+  // dans une requête. Un uuid fait 36 caractères — au-delà de 100, corps forgé.
+  // Le message, lui, est borné par sanitizeAssistantMessageContent (12 000).
+  const projectId =
+    typeof body.projectId === "string" && body.projectId ? body.projectId : undefined;
+  const conversationId =
+    typeof body.conversationId === "string" && body.conversationId
+      ? body.conversationId
+      : undefined;
+  if ((projectId?.length ?? 0) > 100 || (conversationId?.length ?? 0) > 100) {
+    return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+  const message = typeof body.message === "string" ? body.message : "";
   let pageContext = parsePageContext(body.pageContext);
   const mentions = parseMentions(body.mentions);
   const command = parseCommand(body.command);
-  if (!message?.trim()) {
+  if (!message.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
   const sanitizedUserMessage = sanitizeAssistantMessageContent(message);

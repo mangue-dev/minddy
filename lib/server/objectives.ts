@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
+import { isValidColor } from "@/lib/category-colors";
 import {
   copyAttachmentsToProject,
   insertAttachments,
@@ -35,6 +36,7 @@ export type ObjectiveResult =
         | "nameRequired"
         | "invalidStatus"
         | "invalidDate"
+        | "invalidColor"
         | "attachmentInvalid"
         | "noFieldsToUpdate"
         | "projectNotFound"
@@ -43,6 +45,11 @@ export type ObjectiveResult =
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
     };
+
+// Bornes de longueur (MIN-118) : même plafond de nom que les titres de tickets ;
+// la description est du markdown libre, bornée comme le plan. Au-delà on tronque.
+const MAX_NAME_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 65_536;
 
 export async function createObjective({
   projectId,
@@ -64,8 +71,13 @@ export async function createObjective({
     return { ok: false, status: 400, errorKey: "nameRequired" };
   }
 
-  const row: Record<string, unknown> = { project_id: projectId, name };
-  if (typeof input.description === "string") row.description = input.description;
+  const row: Record<string, unknown> = {
+    project_id: projectId,
+    name: name.slice(0, MAX_NAME_LENGTH),
+  };
+  if (typeof input.description === "string") {
+    row.description = input.description.slice(0, MAX_DESCRIPTION_LENGTH);
+  }
   if (
     typeof input.status === "string" &&
     OBJECTIVE_STATUS_VALUES.includes(input.status as never)
@@ -76,7 +88,9 @@ export async function createObjective({
     row.lead_user_id = input.lead_user_id ?? null;
   }
   if (isDateOrNull(input.target_date)) row.target_date = input.target_date;
-  if (typeof input.color === "string" || input.color === null) {
+  // La couleur vient de la palette des catégories (hex #rrggbb) — une valeur
+  // hors format est ignorée, comme un statut inconnu.
+  if (isValidColor(input.color) || input.color === null) {
     row.color = input.color ?? null;
   }
 
@@ -167,11 +181,13 @@ export async function updateObjective({
     if (!name) {
       return { ok: false, status: 400, errorKey: "nameRequired" };
     }
-    updates.name = name;
+    updates.name = name.slice(0, MAX_NAME_LENGTH);
   }
   if ("description" in input) {
     updates.description =
-      typeof input.description === "string" ? input.description : null;
+      typeof input.description === "string"
+        ? input.description.slice(0, MAX_DESCRIPTION_LENGTH)
+        : null;
   }
   if ("status" in input) {
     if (
@@ -193,7 +209,11 @@ export async function updateObjective({
     updates.target_date = input.target_date;
   }
   if ("color" in input) {
-    updates.color = typeof input.color === "string" ? input.color : null;
+    // La couleur vient de la palette des catégories (hex #rrggbb).
+    if (input.color !== null && !isValidColor(input.color)) {
+      return { ok: false, status: 400, errorKey: "invalidColor" };
+    }
+    updates.color = input.color ?? null;
   }
 
   if (Object.keys(updates).length === 0) {

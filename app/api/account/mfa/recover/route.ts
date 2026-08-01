@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
 
   let body: { code?: string };
   try {
-    body = (await request.json()) as { code?: string };
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici, pas en 500 plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as { code?: string };
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
@@ -53,7 +56,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "MFA is not enabled" }, { status: 400 });
     }
 
-    const consumed = await consumeRecoveryCode(auth.user.id, body.code ?? "");
+    // Un code frappé fait une dizaine de caractères : bien au-delà, c'est un
+    // corps forgé — inutile de le normaliser et de le hacher.
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+    if (!code || code.length > 64) {
+      return NextResponse.json({ error: t("invalidRecoveryCode") }, { status: 400 });
+    }
+
+    const consumed = await consumeRecoveryCode(auth.user.id, code);
     if (!consumed) {
       return NextResponse.json({ error: t("invalidRecoveryCode") }, { status: 400 });
     }

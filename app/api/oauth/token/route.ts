@@ -47,20 +47,36 @@ const tokenSuccess = (pair: TokenPair) =>
     { status: 200, headers: HEADERS }
   );
 
+// Endpoint public : bornes sur le corps (MIN-118). Aucune valeur légitime ne
+// dépasse ça (redirect_uri ≤ 2000, code_verifier ≤ 128 par la RFC 7636) — un
+// champ hors gabarit est simplement ignoré, et manquera donc au grant (400).
+const MAX_BODY_FIELDS = 30;
+const MAX_FIELD_NAME_CHARS = 100;
+const MAX_FIELD_CHARS = 2048;
+
 /** form-urlencoded (spec) — tolère aussi un body JSON (clients laxistes). */
 async function parseBody(request: NextRequest): Promise<Record<string, string> | null> {
   const contentType = request.headers.get("content-type") ?? "";
+  const keep = (key: string, value: unknown): value is string =>
+    key.length <= MAX_FIELD_NAME_CHARS &&
+    typeof value === "string" &&
+    value.length <= MAX_FIELD_CHARS;
   try {
     if (contentType.includes("application/json")) {
       const json = (await request.json()) as Record<string, unknown>;
       return Object.fromEntries(
-        Object.entries(json).filter(([, v]) => typeof v === "string")
+        Object.entries(json)
+          .filter(([k, v]) => keep(k, v))
+          .slice(0, MAX_BODY_FIELDS)
       ) as Record<string, string>;
     }
     const form = await request.formData();
     const out: Record<string, string> = {};
+    let count = 0;
     for (const [key, value] of form.entries()) {
-      if (typeof value === "string") out[key] = value;
+      if (!keep(key, value)) continue;
+      if (++count > MAX_BODY_FIELDS) break;
+      out[key] = value;
     }
     return out;
   } catch {

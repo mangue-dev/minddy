@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { fetchOpenRouterKeyStatus } from "@/lib/server/openrouter-key";
 import { notifySpendGuard } from "@/lib/server/brrr";
 import { getAppConfigValue, setAppConfigValue } from "@/lib/server/app-config";
@@ -35,8 +36,7 @@ const ALERT_THRESHOLD = 90;
 const NOTIFIED_KEY = "spend_alert_notified";
 
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

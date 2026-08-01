@@ -68,6 +68,12 @@ export type UpdateIssueResult =
       rawMessage?: string;
     };
 
+// Bornes de longueur (MIN-118) : même plafond de titre que l'import CSV
+// (lib/import/normalize.ts) ; la description est du markdown libre, bornée
+// comme le plan. Au-delà on tronque — pas de clé d'erreur dédiée.
+const MAX_TITLE_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 65_536;
+
 export async function updateIssueFields({
   issueId,
   actorId,
@@ -95,11 +101,13 @@ export async function updateIssueFields({
     if (!title) {
       return { ok: false, status: 400, errorKey: "titleRequired" };
     }
-    updates.title = title;
+    updates.title = title.slice(0, MAX_TITLE_LENGTH);
   }
   if ("description" in input) {
     updates.description =
-      typeof input.description === "string" ? input.description : null;
+      typeof input.description === "string"
+        ? input.description.slice(0, MAX_DESCRIPTION_LENGTH)
+        : null;
   }
   if ("plan" in input) {
     const plan = typeof input.plan === "string" ? input.plan : null;

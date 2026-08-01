@@ -25,12 +25,14 @@ const registrationError = (code: string, description: string) =>
     { status: 400, headers: HEADERS }
   );
 
+// Endpoint public : chaque chaîne et chaque tableau est borné dès le schéma
+// (MIN-118) — les valeurs légitimes sont toutes bien en dessous.
 const BODY_SCHEMA = z.object({
-  redirect_uris: z.array(z.string()).min(1).max(10),
-  client_name: z.string().optional(),
-  token_endpoint_auth_method: z.string().optional(),
-  grant_types: z.array(z.string()).optional(),
-  response_types: z.array(z.string()).optional(),
+  redirect_uris: z.array(z.string().max(2000)).min(1).max(10),
+  client_name: z.string().max(400).optional(),
+  token_endpoint_auth_method: z.string().max(50).optional(),
+  grant_types: z.array(z.string().max(50)).max(10).optional(),
+  response_types: z.array(z.string().max(50)).max(10).optional(),
   logo_uri: z.string().url().max(2000).optional(),
   client_uri: z.string().url().max(2000).optional(),
 });

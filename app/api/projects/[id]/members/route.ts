@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
@@ -92,6 +93,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const rl = checkSessionRateLimit(auth.user.id, "project-members-write");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
   const t = await getTranslations("ApiErrors");
 
   let body: unknown;

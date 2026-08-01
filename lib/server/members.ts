@@ -59,7 +59,9 @@ export async function inviteMember({
 
   const normalized =
     typeof email === "string" ? email.trim().toLowerCase() : "";
-  if (!normalized || !normalized.includes("@")) {
+  // 254 = longueur maximale d'une adresse (RFC 5321) — au-delà, ce n'est pas
+  // un email, inutile d'interroger Supabase Auth avec.
+  if (!normalized || normalized.length > 254 || !normalized.includes("@")) {
     return { ok: false, status: 400, errorKey: "invalidEmail" };
   }
 

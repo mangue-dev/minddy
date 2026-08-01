@@ -152,7 +152,10 @@ export async function PATCH(request: NextRequest) {
 
   let body: { userId?: unknown; internal?: unknown };
   try {
-    body = (await request.json()) as { userId?: unknown; internal?: unknown };
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as { userId?: unknown; internal?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

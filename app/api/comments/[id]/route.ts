@@ -6,6 +6,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Borne de longueur (MIN-118) — même plafond que lib/server/add-comment.ts.
+const MAX_COMMENT_LENGTH = 65_536;
+
 /** PATCH /api/comments/[id] — edit (author-only, enforced by RLS). */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -20,7 +23,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const text = typeof (body as { body?: unknown })?.body === "string"
-    ? ((body as { body: string }).body).trim()
+    ? ((body as { body: string }).body).trim().slice(0, MAX_COMMENT_LENGTH)
     : "";
   if (!text) {
     return NextResponse.json({ error: t("commentEmpty") }, { status: 400 });

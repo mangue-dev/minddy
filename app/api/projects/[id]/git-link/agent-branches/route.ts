@@ -82,7 +82,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     !Array.isArray(branches) ||
     branches.length === 0 ||
     branches.length > MAX_BRANCHES_PER_REQUEST ||
-    !branches.every((b) => typeof b === "string" && b.length > 0)
+    // 255 = le plafond des noms de ref côté forges — au-delà, pas une branche.
+    !branches.every((b) => typeof b === "string" && b.length > 0 && b.length <= 255)
   ) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }

@@ -69,6 +69,9 @@ export type CategoryResult =
       rawMessage?: string;
     };
 
+// Borne de longueur du nom (MIN-118) — une étiquette reste courte, au-delà on tronque.
+const MAX_NAME_LENGTH = 200;
+
 export async function createCategory({
   projectId,
   actorId,
@@ -78,7 +81,8 @@ export async function createCategory({
   actorId: string;
   input: Record<string, unknown>;
 }): Promise<CategoryResult> {
-  const name = typeof input.name === "string" ? input.name.trim() : "";
+  const name =
+    typeof input.name === "string" ? input.name.trim().slice(0, MAX_NAME_LENGTH) : "";
   if (!name) {
     return { ok: false, status: 400, errorKey: "nameRequired" };
   }
@@ -141,7 +145,7 @@ export async function updateCategory({
   if (typeof input.name === "string") {
     const name = input.name.trim();
     if (!name) return { ok: false, status: 400, errorKey: "nameRequired" };
-    updates.name = name;
+    updates.name = name.slice(0, MAX_NAME_LENGTH);
   }
   if ("color" in input) {
     if (!isValidColor(input.color)) {

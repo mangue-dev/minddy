@@ -22,6 +22,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
+  // `null` est du JSON valide : lire body.action dessus ferait un 500.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
   const action = body.action;
   if (action !== "accept" && action !== "reject") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

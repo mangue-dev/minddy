@@ -41,10 +41,9 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * émis par le BOT de la GitHub App (`sender.type === "Bot"`) → on l'ignore ici.
  * Seules les actions faites par un HUMAIN sur GitHub produisent une activité.
  *
- * Fail-closed : secret présent + signature invalide → 401. Secret non déployé →
- * on acquitte sans traiter les events qui CRÉENT des lignes (`issues`,
- * `pull_request`) ; les autres, qui ne font que refléter un état déjà décidé
- * côté GitHub, restent traités (idempotent, best-effort).
+ * Fail-closed : signature invalide → 401. Secret non déployé → 503 sans rien
+ * traiter (GitHub re-livrera une fois le secret en place), aligné sur le
+ * récepteur GitLab.
  */
 
 /** action GitHub → pr_state minddy (null = event ignoré). */
@@ -326,49 +325,34 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
-  if (secret) {
-    const ok = verifyGithubSignature(
-      rawBody,
-      request.headers.get("x-hub-signature-256"),
-      secret,
-    );
-    if (!ok) {
-      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
-    }
+  // FAIL-CLOSED intégral (MIN-118), aligné sur le récepteur GitLab : sans
+  // secret déployé, AUCUN event n'est traité — même ceux qui ne font que
+  // refléter un état déjà décidé côté GitHub. Un `pr_state` forgé déclenche
+  // quand même des écritures (sync du statut d'issue, notifications) ; le
+  // fail-open partiel historique laissait cette porte ouverte. 503 plutôt que
+  // 200 : GitHub re-livrera une fois le secret déployé.
+  if (!secret) {
+    console.error("[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — event refused");
+    return NextResponse.json({ error: "webhook secret not configured" }, { status: 503 });
+  }
+
+  const ok = verifyGithubSignature(
+    rawBody,
+    request.headers.get("x-hub-signature-256"),
+    secret,
+  );
+  if (!ok) {
+    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
   const event = request.headers.get("x-github-event");
   try {
     if (event === "pull_request") {
-      // FAIL-CLOSED depuis MIN-143, comme la branche `issues` : cette branche
-      // CRÉE des lignes `pull_requests`. Sans secret déployé, la signature n'est
-      // pas vérifiée — n'importe qui connaissant le nom d'un dépôt lié pourrait
-      // forger une PR et la faire apparaître dans la liste d'un projet. Le
-      // fail-open historique ne vaut que pour les events qui reflètent un état
-      // déjà décidé côté provider.
-      if (!secret) {
-        console.warn(
-          "[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — pull_request event ignored",
-        );
-      } else {
-        await handlePullRequest(JSON.parse(rawBody) as PullRequestEvent);
-      }
+      await handlePullRequest(JSON.parse(rawBody) as PullRequestEvent);
     } else if (event === "pull_request_review") {
       await handlePullRequestReview(JSON.parse(rawBody) as PullRequestReviewEvent);
     } else if (event === "issues") {
-      // FAIL-CLOSED, contrairement au reste de ce récepteur : cette branche CRÉE
-      // des tickets dans un projet. Sans secret déployé, la signature n'est pas
-      // vérifiée — n'importe qui connaissant le nom d'un dépôt lié pourrait alors
-      // forger un `issues.opened` et écrire dans le projet. Les autres events ne
-      // font que refléter un état déjà décidé côté provider : leur fail-open
-      // historique reste sans danger.
-      if (!secret) {
-        console.warn(
-          "[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — issues event ignored",
-        );
-      } else {
-        await handleIssues(JSON.parse(rawBody));
-      }
+      await handleIssues(JSON.parse(rawBody));
     }
   } catch (err) {
     // Best-effort : on acquitte quand même pour que GitHub ne re-livre pas.

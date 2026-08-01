@@ -20,6 +20,12 @@ export interface SendOtpEmailParams {
 export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
+    // Le fallback console est un outil de DEV : en prod, un code valide écrit
+    // dans les logs Vercel est un secret qui fuit (MIN-118) — on échoue.
+    if (process.env.NODE_ENV === "production") {
+      console.error("[feedback-otp] RESEND_API_KEY is not set — OTP not sent");
+      return false;
+    }
     console.log(`[feedback-otp] (dev — no RESEND_API_KEY) code for ${params.to}: ${params.code}`);
     return true;
   }

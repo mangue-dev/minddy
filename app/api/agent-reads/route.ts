@@ -14,6 +14,10 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 
 export const runtime = "nodejs";
 
+// `issue_id` est un uuid : filtrer ici transforme un 500 Postgres en 400 propre
+// (et borne la chaîne au passage).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -36,12 +40,14 @@ export async function POST(request: NextRequest) {
 
   let body: { issueId?: string } = {};
   try {
-    body = (await request.json()) as { issueId?: string };
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) → issueId manquant, rejeté ci-dessous.
+    if (parsed && typeof parsed === "object") body = parsed as { issueId?: string };
   } catch {
     // corps invalide → issueId manquant, rejeté ci-dessous.
   }
   const issueId = typeof body.issueId === "string" ? body.issueId.trim() : "";
-  if (!issueId) {
+  if (!issueId || !UUID_RE.test(issueId)) {
     return NextResponse.json({ error: "issueId required" }, { status: 400 });
   }
 

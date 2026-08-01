@@ -21,13 +21,18 @@ export async function DELETE(request: NextRequest) {
 
   let body: { confirm?: string };
   try {
-    body = (await request.json()) as { confirm?: string };
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as { confirm?: string };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const email = auth.user.email ?? "";
-  const confirm = (body.confirm ?? "").trim().toLowerCase();
+  const confirm = (typeof body.confirm === "string" ? body.confirm : "")
+    .trim()
+    .toLowerCase();
   if (!email || confirm !== email.toLowerCase()) {
     return NextResponse.json({ error: "Confirmation mismatch" }, { status: 400 });
   }

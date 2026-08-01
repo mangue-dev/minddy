@@ -93,6 +93,13 @@ export function resolveIssueSource(params: {
   return "web";
 }
 
+// Bornes de longueur (MIN-118). Le cœur tronque en silence — même philosophie
+// que le drop silencieux des enums invalides — pour ne casser aucun appelant
+// (UI, MCP, Numo, import CSV) ; seul le plan garde son rejet explicite.
+const MAX_TITLE_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 65_536;
+const MAX_CATEGORY_REFS = 100;
+
 export async function createIssueForProject({
   projectId,
   projectName = null,
@@ -124,7 +131,8 @@ export async function createIssueForProject({
       payload client. Null = ce ticket ouvre sa propre série (voir seriesIdOf). */
   recurrenceSeriesId?: string | null;
 }): Promise<CreateIssueResult> {
-  const title = typeof input.title === "string" ? input.title.trim() : "";
+  const title =
+    typeof input.title === "string" ? input.title.trim().slice(0, MAX_TITLE_LENGTH) : "";
   if (!title) {
     return { ok: false, status: 400, errorKey: "titleRequired" };
   }
@@ -179,7 +187,9 @@ export async function createIssueForProject({
     row.remote_number = remote.number;
     row.remote_url = remote.url;
   }
-  if (typeof input.description === "string") row.description = input.description;
+  if (typeof input.description === "string") {
+    row.description = input.description.slice(0, MAX_DESCRIPTION_LENGTH);
+  }
   if (typeof input.plan === "string" && input.plan.trim()) {
     if (input.plan.length > MAX_PLAN_LENGTH) {
       return { ok: false, status: 400, errorKey: "planTooLong" };
@@ -304,10 +314,14 @@ export async function createIssueForProject({
   // foreign values out either way.
   let categoryIds: string[] = [];
   const requestedIds = Array.isArray(input.category_ids)
-    ? input.category_ids.filter((v): v is string => typeof v === "string")
+    ? input.category_ids
+        .filter((v): v is string => typeof v === "string")
+        .slice(0, MAX_CATEGORY_REFS)
     : [];
   const requestedNames = Array.isArray(input.category_names)
-    ? input.category_names.filter((v): v is string => typeof v === "string")
+    ? input.category_names
+        .filter((v): v is string => typeof v === "string")
+        .slice(0, MAX_CATEGORY_REFS)
     : [];
   if (requestedIds.length > 0 || requestedNames.length > 0) {
     const resolved = new Set<string>();

@@ -58,7 +58,20 @@ if ! git ls-remote --exit-code --heads origin production >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2. Typecheck gate — set -e aborts the deploy if this fails.
+# 2. Gates de qualité — set -e aborte le deploy si l'une échoue. Pas de CI
+# GitHub dans ce repo : ce script EST le pipeline, c'est ici que la suite de
+# tests et l'audit de sécurité doivent barrer la route (MIN-118).
+
+# 2a. Suite de tests vitest (jamais exécutée par le pipeline jusqu'ici).
+echo "→ Running tests..."
+npm run test
+
+# 2b. Audit des dépendances de PROD : toute vuln high/critical bloque le deploy.
+# `--omit=dev` : les outils de build/test ne sont pas exposés en prod.
+echo "→ Running npm audit (prod deps, high+)..."
+npm audit --omit=dev --audit-level=high
+
+# 2c. Typecheck.
 echo "→ Running typecheck..."
 npm run typecheck
 

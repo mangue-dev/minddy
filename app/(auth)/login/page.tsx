@@ -323,7 +323,7 @@ function LoginForm() {
                   className="h-10 bg-card"
                   autoComplete={isSignUp ? "new-password" : "current-password"}
                   required
-                  minLength={6}
+                  minLength={8}
                   placeholder={
                     isSignUp
                       ? t("passwordPlaceholderSignUp")
@@ -342,7 +342,7 @@ function LoginForm() {
                     className="h-10 bg-card"
                     autoComplete="new-password"
                     required
-                    minLength={6}
+                    minLength={8}
                     aria-label={t("confirmPassword")}
                     placeholder={t("confirmPasswordPlaceholder")}
                     value={confirmPassword}

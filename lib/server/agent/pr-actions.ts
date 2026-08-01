@@ -48,6 +48,15 @@ import {
  * cas normal, pas une panne.
  */
 
+/**
+ * Bornes des champs libres qui partent vers la forge (et, pour le message de
+ * review avec relance, dans le prompt du run) : GitHub coupe un corps de
+ * commentaire à 65 536 caractères — au-delà, la requête serait refusée.
+ */
+const MAX_COMMENT_BODY_LENGTH = 65_536;
+const MAX_PATH_LENGTH = 1024;
+const MAX_MODEL_ID_LENGTH = 200;
+
 /** Tout ce qu'il faut pour parler de CETTE PR à SA forge, avec un token frais. */
 export interface PrScope {
   pr: PullRequestRow;
@@ -342,7 +351,7 @@ export async function createPrCommentResponse(
   try {
     const comment = await scope.forge.createPullRequestComment({
       ...actorCall(actor.actor, scope),
-      body,
+      body: body.slice(0, MAX_COMMENT_BODY_LENGTH),
     });
     return NextResponse.json({ comment });
   } catch (err) {
@@ -465,9 +474,11 @@ export function parseReactionPayload(
     response: NextResponse.json({ error }, { status: 400 }),
   });
 
+  // `isSafeInteger` et pas `isInteger` : 1e300 est « entier » pour ce dernier,
+  // et finirait en notation exponentielle dans l'URL de la forge.
   if (
     typeof p.comment_id !== "number" ||
-    !Number.isInteger(p.comment_id) ||
+    !Number.isSafeInteger(p.comment_id) ||
     p.comment_id < 1
   ) {
     return bad("Invalid comment_id");
@@ -531,13 +542,16 @@ export function parseReviewCommentPayload(
     response: NextResponse.json({ error }, { status: 400 }),
   });
 
-  const body = typeof p.body === "string" ? p.body.trim() : "";
+  const body =
+    typeof p.body === "string" ? p.body.trim().slice(0, MAX_COMMENT_BODY_LENGTH) : "";
   if (!body) return bad("Comment required");
 
   if (p.in_reply_to != null) {
+    // `isSafeInteger` : même vigilance que `comment_id` — un « entier » géant
+    // sortirait en notation exponentielle dans l'URL de la forge.
     if (
       typeof p.in_reply_to !== "number" ||
-      !Number.isInteger(p.in_reply_to) ||
+      !Number.isSafeInteger(p.in_reply_to) ||
       p.in_reply_to < 1
     ) {
       return bad("Invalid in_reply_to");
@@ -545,8 +559,10 @@ export function parseReviewCommentPayload(
     return { ok: true, payload: { body, inReplyTo: p.in_reply_to } };
   }
 
-  if (typeof p.path !== "string" || !p.path) return bad("Path required");
-  if (typeof p.line !== "number" || !Number.isInteger(p.line) || p.line < 1) {
+  if (typeof p.path !== "string" || !p.path || p.path.length > MAX_PATH_LENGTH) {
+    return bad("Path required");
+  }
+  if (typeof p.line !== "number" || !Number.isSafeInteger(p.line) || p.line < 1) {
     return bad("Line required");
   }
   if (p.side !== "LEFT" && p.side !== "RIGHT") return bad("Invalid side");
@@ -819,7 +835,10 @@ export async function prReviewResponse(
   if (!verdict || !REVIEW_VERDICTS.includes(verdict)) {
     return NextResponse.json({ error: "Invalid verdict" }, { status: 400 });
   }
-  const message = typeof body.message === "string" ? body.message.trim() : "";
+  const message =
+    typeof body.message === "string"
+      ? body.message.trim().slice(0, MAX_COMMENT_BODY_LENGTH)
+      : "";
   // Un commentaire vide n'a rien à dire, et les deux forges le refusent ; une
   // approbation nue, elle, se passe très bien de message.
   if (!message && verdict !== "approve") {
@@ -862,7 +881,9 @@ export async function prReviewResponse(
     // refuser, et poster la review avant eux laisserait une review orpheline sur
     // la PR — dupliquée à chaque retry de l'utilisateur.
     const model =
-      typeof body.model === "string" && body.model.trim() ? body.model.trim() : undefined;
+      typeof body.model === "string" && body.model.trim()
+        ? body.model.trim().slice(0, MAX_MODEL_ID_LENGTH)
+        : undefined;
     const result = await launchAgentRun({
       issueId: scope.pr.issue_id,
       userId,

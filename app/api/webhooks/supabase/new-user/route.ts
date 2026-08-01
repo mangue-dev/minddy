@@ -64,6 +64,23 @@ interface AuthUserRecord {
   raw_app_meta_data?: { provider?: string } | null;
 }
 
+/** Une ligne `record`/`old_record` plausible — toute autre forme vaut absence. */
+function asAuthUserRecord(v: unknown): AuthUserRecord | null {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as AuthUserRecord) : null;
+}
+
+/** Ne retient des metadata que les trois clés de nom, en chaînes bornées —
+    c'est tout ce que `authDisplayName` lit, rien d'autre ne doit passer. */
+function sanitizeNameMeta(raw: unknown): AuthNameMeta | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const source = raw as Record<string, unknown>;
+  const meta: AuthNameMeta = {};
+  if (typeof source.display_name === "string") meta.display_name = source.display_name.slice(0, 200);
+  if (typeof source.full_name === "string") meta.full_name = source.full_name.slice(0, 200);
+  if (typeof source.name === "string") meta.name = source.name.slice(0, 200);
+  return meta;
+}
+
 export async function POST(request: NextRequest) {
   const expected = process.env.SUPABASE_WEBHOOK_SECRET;
   if (!expected) {
@@ -74,18 +91,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid secret" }, { status: 401 });
   }
 
+  // Corps invalide = 400 franc, hors du best-effort : Supabase envoie toujours
+  // un objet JSON — toute autre forme est une requête cassée, pas une alerte à
+  // acquitter.
+  let payload: { record?: unknown; old_record?: unknown };
   try {
-    const payload = (await request.json()) as {
-      type?: string;
-      record?: AuthUserRecord | null;
-      old_record?: AuthUserRecord | null;
-    };
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return NextResponse.json({ error: "invalid payload" }, { status: 400 });
+    }
+    payload = parsed as { record?: unknown; old_record?: unknown };
+  } catch {
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+  }
 
-    const record = payload.record ?? null;
+  try {
+    const record = asAuthUserRecord(payload.record);
     // La transition, et rien d'autre (voir l'en-tête du fichier). Un DELETE, qui
     // n'a pas de `record`, tombe de lui-même dans « pas confirmé ».
     const confirmed = Boolean(record?.email_confirmed_at);
-    const wasConfirmed = Boolean(payload.old_record?.email_confirmed_at);
+    const wasConfirmed = Boolean(asAuthUserRecord(payload.old_record)?.email_confirmed_at);
     if (!confirmed || wasConfirmed) {
       return NextResponse.json({
         ok: true,
@@ -93,15 +118,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const email = record?.email ?? null;
+    // Champs bornés avant de partir en push : le payload est authentifié par le
+    // secret, mais rien n'oblige à relayer des chaînes démesurées (254 = RFC 5321).
+    const email = typeof record?.email === "string" ? record.email.slice(0, 254) : null;
     if (email && DEMO_EMAIL.test(email)) {
       return NextResponse.json({ ok: true, skipped: "demo" });
     }
 
+    const provider = record?.raw_app_meta_data?.provider;
     await notifyNewUser({
       email,
-      metadata: record?.raw_user_meta_data ?? null,
-      provider: record?.raw_app_meta_data?.provider ?? "email",
+      metadata: sanitizeNameMeta(record?.raw_user_meta_data),
+      provider: typeof provider === "string" ? provider.slice(0, 64) : "email",
     });
   } catch (err) {
     // Best-effort : on acquitte quand même, une alerte ratée ne vaut pas une

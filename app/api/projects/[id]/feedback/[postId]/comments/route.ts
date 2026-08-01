@@ -20,6 +20,12 @@ export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
+// Server-side bounds (the composer already caps client-side): comment body,
+// number of @mentions, uuid-sized ids. Attachments are bounded downstream by
+// parseAttachmentsInput.
+const COMMENT_BODY_MAX = 10_000;
+const MAX_MENTIONS = 50;
+
 /** GET — the feedback post's internal comment thread. Service-role read gated by
     project membership: feedback stays RLS deny-all, so these team-only comments
     are read through the service client (never RLS), like the rest of the
@@ -85,13 +91,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     attachments?: unknown;
   };
 
+  const commentBody =
+    typeof input.body === "string" ? input.body.slice(0, COMMENT_BODY_MAX) : "";
   const result = await addCommentToFeedbackPost({
     postId,
     actorId: guard.userId,
-    body: typeof input.body === "string" ? input.body : "",
-    parentId: typeof input.parent_id === "string" ? input.parent_id : null,
+    body: commentBody,
+    parentId:
+      typeof input.parent_id === "string" ? input.parent_id.slice(0, 64) : null,
     mentionedUserIds: Array.isArray(input.mentioned_user_ids)
-      ? input.mentioned_user_ids.filter((v): v is string => typeof v === "string")
+      ? input.mentioned_user_ids
+          .filter((v): v is string => typeof v === "string")
+          .slice(0, MAX_MENTIONS)
       : [],
     attachments: input.attachments,
   });
@@ -102,7 +113,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   // @Numo → fire-and-forget agent reply, after the response is sent. Triggers:
   // an explicit @numo mention, or a reply posted right under a Numo comment.
-  const commentBody = typeof input.body === "string" ? input.body : "";
   const service = getServiceClient();
   const created = result.comment as {
     id: string;

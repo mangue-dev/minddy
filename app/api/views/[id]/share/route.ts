@@ -9,6 +9,11 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Borne du mot de passe (MIN-118) : scrypt hache ce qu'on lui donne — un mot de
+// passe démesuré coûterait du CPU pour rien. Refus plutôt que troncature : un
+// mot de passe tronqué en silence ne déverrouillerait jamais la vue.
+const MAX_PASSWORD_LENGTH = 256;
+
 /** GET /api/views/[id]/share — current share state ({ share: null } = private). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -39,6 +44,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { level, password } = (body ?? {}) as { level?: unknown; password?: unknown };
   if (level !== "password" && level !== "public") {
     return NextResponse.json({ error: t("invalidShareLevel") }, { status: 400 });
+  }
+  if (typeof password === "string" && password.length > MAX_PASSWORD_LENGTH) {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
   const result = await upsertViewShare({

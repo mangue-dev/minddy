@@ -50,6 +50,12 @@ export type ViewResult =
 
 const VIEW_SORTS: readonly ViewSort[] = ["manual", "priority", "created", "updated", "due"];
 
+// Bornes MIN-118 : le nom d'une vue reste court (tronqué au-delà), un filtre ne
+// référence jamais plus d'ids que ça, et un id (uuid ou sentinelle "@me") non plus.
+const MAX_NAME_LENGTH = 200;
+const MAX_FILTER_VALUES = 100;
+const MAX_ID_LENGTH = 100;
+
 const isViewSort = (v: unknown): v is ViewSort =>
   typeof v === "string" && (VIEW_SORTS as readonly string[]).includes(v);
 
@@ -77,7 +83,10 @@ function keepEnumValues<T extends string>(
         .join(", ")} (allowed: ${allowed.join(", ")})`
     );
   }
-  return kept;
+  if (kept.length > MAX_FILTER_VALUES) {
+    invalid.push(`filters.${key}: capped to ${MAX_FILTER_VALUES} values`);
+  }
+  return kept.slice(0, MAX_FILTER_VALUES);
 }
 
 /** Keep id strings — and null, which means "unassigned"/"no objective". */
@@ -93,7 +102,7 @@ function keepIdOrNullValues(
   const kept: (string | null)[] = [];
   const dropped: unknown[] = [];
   for (const v of raw) {
-    if (typeof v === "string" || v === null) kept.push(v);
+    if ((typeof v === "string" && v.length <= MAX_ID_LENGTH) || v === null) kept.push(v);
     else dropped.push(v);
   }
   if (dropped.length > 0) {
@@ -103,7 +112,10 @@ function keepIdOrNullValues(
         .join(", ")} (expected id strings or null)`
     );
   }
-  return kept;
+  if (kept.length > MAX_FILTER_VALUES) {
+    invalid.push(`filters.${key}: capped to ${MAX_FILTER_VALUES} values`);
+  }
+  return kept.slice(0, MAX_FILTER_VALUES);
 }
 
 /** Keep id strings only. */
@@ -115,7 +127,7 @@ function keepIdValues(key: string, raw: unknown, invalid: string[]): string[] | 
   const kept: string[] = [];
   const dropped: unknown[] = [];
   for (const v of raw) {
-    if (typeof v === "string") kept.push(v);
+    if (typeof v === "string" && v.length <= MAX_ID_LENGTH) kept.push(v);
     else dropped.push(v);
   }
   if (dropped.length > 0) {
@@ -125,7 +137,10 @@ function keepIdValues(key: string, raw: unknown, invalid: string[]): string[] | 
         .join(", ")} (expected id strings)`
     );
   }
-  return kept;
+  if (kept.length > MAX_FILTER_VALUES) {
+    invalid.push(`filters.${key}: capped to ${MAX_FILTER_VALUES} values`);
+  }
+  return kept.slice(0, MAX_FILTER_VALUES);
 }
 
 /**
@@ -232,7 +247,8 @@ export async function createView({
   actorId: string;
   input: Record<string, unknown>;
 }): Promise<ViewResult> {
-  const name = typeof input.name === "string" ? input.name.trim() : "";
+  const name =
+    typeof input.name === "string" ? input.name.trim().slice(0, MAX_NAME_LENGTH) : "";
   if (!name) {
     return { ok: false, status: 400, errorKey: "nameRequired" };
   }
@@ -293,7 +309,7 @@ export async function updateView({
     if (!name) {
       return { ok: false, status: 400, errorKey: "nameRequired" };
     }
-    updates.name = name;
+    updates.name = name.slice(0, MAX_NAME_LENGTH);
   }
   if ("filters" in input || "display" in input) {
     const sanitized = sanitizeViewConfig({ filters: input.filters, display: input.display });

@@ -1,4 +1,5 @@
 import { NextResponse, after, type NextRequest } from "next/server";
+import { verifyCronSecret } from "@/lib/server/cron-auth";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { drainAgentRuns } from "@/lib/server/agent/drain";
@@ -33,8 +34,7 @@ export const maxDuration = 800;
 const CRON_DRAIN_BUDGET_MS = 760_000;
 
 async function handle(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

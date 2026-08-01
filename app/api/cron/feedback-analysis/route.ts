@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { runFeedbackReview } from "@/lib/server/feedback/review";
 import { getAppConfigValue } from "@/lib/server/app-config";
@@ -21,8 +22,7 @@ const DEFAULT_JUNK_PURGE_DAYS = 30;
 const PURGE_BATCH = 200;
 
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

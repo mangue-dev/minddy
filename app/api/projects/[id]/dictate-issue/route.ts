@@ -331,6 +331,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+  // `null` est du JSON valide : lire body.mode dessus ferait un 500, pas un 400.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
   const mode = body.mode === "edit" ? ("edit" as const) : ("create" as const);
 

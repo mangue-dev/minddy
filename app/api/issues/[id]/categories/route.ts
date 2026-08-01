@@ -5,6 +5,9 @@ import { setIssueCategories } from "@/lib/server/set-issue-categories";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Borne du tableau (MIN-118) — un ticket ne porte jamais autant d'étiquettes.
+const MAX_CATEGORY_IDS = 100;
+
 /** PUT /api/issues/[id]/categories { category_ids } — replace the issue's category set. */
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -20,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
   const raw = (body as { category_ids?: unknown })?.category_ids;
   const requested = Array.isArray(raw)
-    ? raw.filter((v): v is string => typeof v === "string")
+    ? raw.filter((v): v is string => typeof v === "string").slice(0, MAX_CATEGORY_IDS)
     : [];
 
   const result = await setIssueCategories({

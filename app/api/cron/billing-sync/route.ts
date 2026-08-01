@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { reconcileStripeBillingAccounts } from "@/lib/server/billing-accounts";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
@@ -14,8 +15,7 @@ import { durationBucket } from "@/lib/analytics-sanitize";
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

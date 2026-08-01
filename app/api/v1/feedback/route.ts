@@ -28,6 +28,14 @@ import {
  * post est alors publié tel quel, sans modération, sans catégories et sans
  * fusion automatique (c'est un seul appel qui fait les trois).
  */
+// Bornes d'identité (MIN-118) : 254 = longueur maximale d'une adresse
+// (RFC 5321) ; external_id et name sont des identifiants/noms courts côté
+// client, jamais du texte libre. Au-delà, on refuse — même DX stricte que
+// title/body.
+const USER_EXTERNAL_ID_MAX = 255;
+const USER_EMAIL_MAX = 254;
+const USER_NAME_MAX = 200;
+
 export async function POST(request: NextRequest) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
@@ -45,7 +53,13 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    // Un corps non-objet (`null`, chaîne, tableau) est du JSON valide : refusé
+    // ici plutôt que de crasher sur un accès de champ plus bas.
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return publicApiError(400, "invalid_json", "Request body must be a JSON object.");
+    }
+    body = parsed as Record<string, unknown>;
   } catch {
     return publicApiError(400, "invalid_json", "Request body must be valid JSON.");
   }
@@ -101,8 +115,22 @@ export async function POST(request: NextRequest) {
       "user.external_id and/or user.email is required."
     );
   }
-  if (userEmail && !userEmail.includes("@")) {
+  if (externalId.length > USER_EXTERNAL_ID_MAX) {
+    return publicApiError(
+      422,
+      "external_id_too_long",
+      `user.external_id must be at most ${USER_EXTERNAL_ID_MAX} characters.`
+    );
+  }
+  if (userEmail && (userEmail.length > USER_EMAIL_MAX || !userEmail.includes("@"))) {
     return publicApiError(422, "invalid_email", "user.email must be a valid email address.");
+  }
+  if (userName.length > USER_NAME_MAX) {
+    return publicApiError(
+      422,
+      "name_too_long",
+      `user.name must be at most ${USER_NAME_MAX} characters.`
+    );
   }
 
   const feedbackUser = await upsertFeedbackUser({

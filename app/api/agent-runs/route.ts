@@ -171,6 +171,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ sessions });
 }
 
+// Bornes du POST carnet : la note est un texte libre (persistée en `prompt` du
+// run), le modèle et la branche des identifiants courts.
+const MAX_PROMPT_LENGTH = 20_000;
+const MAX_MODEL_LENGTH = 200;
+const MAX_BRANCH_LENGTH = 255;
+
 const LAUNCH_ERROR_STATUS: Record<string, number> = {
   issueNotFound: 404,
   noRepo: 409,
@@ -200,14 +206,21 @@ export async function POST(request: NextRequest) {
 
   let body: { projectId?: string; prompt?: string; model?: string; baseBranch?: string };
   try {
-    body = (await request.json()) as typeof body;
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const projectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
-  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-  if (!projectId) return NextResponse.json({ error: "projectId required" }, { status: 400 });
+  const prompt =
+    typeof body.prompt === "string" ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH) : "";
+  // Un uuid fait 36 caractères : au-delà de la marge, corps forgé.
+  if (!projectId || projectId.length > 64) {
+    return NextResponse.json({ error: "projectId required" }, { status: 400 });
+  }
   if (!prompt) {
     return NextResponse.json(
       { error: "promptRequired", code: "promptRequired" },
@@ -220,10 +233,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : undefined;
+  const model =
+    typeof body.model === "string" && body.model.trim()
+      ? body.model.trim().slice(0, MAX_MODEL_LENGTH)
+      : undefined;
   const baseBranch =
     typeof body.baseBranch === "string" && body.baseBranch.trim()
-      ? body.baseBranch.trim()
+      ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
 
   const result = await launchAgentRun({

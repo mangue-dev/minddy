@@ -18,6 +18,12 @@ type RouteContext = { params: Promise<{ id: string }> };
  * 1 voix — revoter est idempotent. Un post mergé ne se vote pas : voter le
  * canonique à la place (son id est retourné dans l'erreur).
  */
+// Bornes d'identité (MIN-118) — mêmes plafonds que POST /api/v1/feedback :
+// 254 = RFC 5321 pour l'email, external_id et name restent courts.
+const USER_EXTERNAL_ID_MAX = 255;
+const USER_EMAIL_MAX = 254;
+const USER_NAME_MAX = 200;
+
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await authenticateIntegration(request);
   if (!auth.ok) return auth.response;
@@ -35,7 +41,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    // Un corps non-objet (`null`, chaîne, tableau) est du JSON valide : refusé
+    // ici plutôt que de crasher sur un accès de champ plus bas.
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return publicApiError(400, "invalid_json", "Request body must be a JSON object.");
+    }
+    body = parsed as Record<string, unknown>;
   } catch {
     return publicApiError(400, "invalid_json", "Request body must be valid JSON.");
   }
@@ -51,11 +63,29 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { external_id, email, name } = userInput as Record<string, unknown>;
   const externalId = typeof external_id === "string" ? external_id.trim() : "";
   const userEmail = typeof email === "string" ? email.trim() : "";
+  const userName = typeof name === "string" ? name.trim() : "";
   if (!externalId && !userEmail) {
     return publicApiError(
       422,
       "user_identity_required",
       "user.external_id and/or user.email is required."
+    );
+  }
+  if (externalId.length > USER_EXTERNAL_ID_MAX) {
+    return publicApiError(
+      422,
+      "external_id_too_long",
+      `user.external_id must be at most ${USER_EXTERNAL_ID_MAX} characters.`
+    );
+  }
+  if (userEmail && (userEmail.length > USER_EMAIL_MAX || !userEmail.includes("@"))) {
+    return publicApiError(422, "invalid_email", "user.email must be a valid email address.");
+  }
+  if (userName.length > USER_NAME_MAX) {
+    return publicApiError(
+      422,
+      "name_too_long",
+      `user.name must be at most ${USER_NAME_MAX} characters.`
     );
   }
 
@@ -82,7 +112,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     projectId: auth.project.id,
     externalId: externalId || null,
     email: userEmail || null,
-    name: typeof name === "string" ? name.trim() : null,
+    name: userName || null,
     verifiedVia: "api",
   });
   if (!feedbackUser) {

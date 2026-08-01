@@ -11,6 +11,10 @@ import type { MyNotification } from "@/lib/types";
 /** Longueur de l'extrait de commentaire montré sous la ligne d'inbox. */
 const EXCERPT_MAX = 140;
 
+/** Borne des lots d'ids (MIN-118) — l'inbox n'affiche que 100 lignes, et les
+    gestes « tout » passent par `all` / `allRead`, pas par une liste d'ids. */
+const MAX_IDS = 500;
+
 const excerptOf = (body: string): string => {
   const flat = body.replace(/\s+/g, " ").trim();
   return flat.length > EXCERPT_MAX ? `${flat.slice(0, EXCERPT_MAX - 1)}…` : flat;
@@ -197,6 +201,9 @@ export async function PATCH(request: NextRequest) {
     read?: unknown;
   };
   const markRead = read !== false;
+  if (Array.isArray(ids) && ids.length > MAX_IDS) {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
   const validIds = Array.isArray(ids)
     ? ids.filter((v): v is string => typeof v === "string")
     : [];
@@ -239,6 +246,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const { ids, allRead } = (body ?? {}) as { ids?: unknown; allRead?: unknown };
+  if (Array.isArray(ids) && ids.length > MAX_IDS) {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
   const validIds = Array.isArray(ids)
     ? ids.filter((v): v is string => typeof v === "string")
     : [];

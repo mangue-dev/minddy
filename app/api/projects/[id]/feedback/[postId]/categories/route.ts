@@ -8,6 +8,10 @@ import { setFeedbackPostCategories } from "@/lib/server/feedback/set-post-catego
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
+// Plafond du jeu envoyé — bien au-delà d'un board réel, mais borne la requête
+// `.in(...)` côté base. Les ids sont des uuid : 64 caractères suffisent.
+const MAX_CATEGORY_IDS = 100;
+
 /** PUT /api/projects/[id]/feedback/[postId]/categories { category_ids }
     — remplace le jeu de catégories du post (MIN-52). Membre du projet requis. */
 export async function PUT(request: NextRequest, { params }: RouteContext) {
@@ -29,7 +33,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
   const raw = (body as { category_ids?: unknown })?.category_ids;
   const requested = Array.isArray(raw)
-    ? raw.filter((v): v is string => typeof v === "string")
+    ? raw
+        .filter((v): v is string => typeof v === "string" && v.length <= 64)
+        .slice(0, MAX_CATEGORY_IDS)
     : [];
 
   const result = await setFeedbackPostCategories({

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
   canUseSmartAssign,
   ensureProjectLimit,
@@ -12,6 +13,11 @@ import {
 import { seedDefaultCategories } from "@/lib/server/categories";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
+
+// Bornes de longueur (MIN-118) — mêmes plafonds que updateProjectSettings :
+// au-delà on tronque. La couleur est un jeton court, jamais un texte.
+const MAX_NAME_LENGTH = 200;
+const MAX_COLOR_LENGTH = 32;
 
 /** GET /api/projects — list the caller's accessible (owned + member) projects. */
 export async function GET(request: NextRequest) {
@@ -37,6 +43,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const rl = checkSessionRateLimit(auth.user.id, "project-create");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
   const t = await getTranslations("ApiErrors");
 
   let body: unknown;
@@ -47,9 +60,11 @@ export async function POST(request: NextRequest) {
   }
   const input = (body ?? {}) as Record<string, unknown>;
 
-  const name = typeof input.name === "string" ? input.name.trim() : "";
+  const name =
+    typeof input.name === "string" ? input.name.trim().slice(0, MAX_NAME_LENGTH) : "";
   const key = normalizeKey(typeof input.key === "string" ? input.key : "");
-  const color = typeof input.color === "string" ? input.color : null;
+  const color =
+    typeof input.color === "string" ? input.color.slice(0, MAX_COLOR_LENGTH) : null;
   const smartAssignEnabled = input.smart_assign_enabled === true;
   const autoAssignEnabled = input.auto_assign_enabled === true;
   // Id fourni par le client (wizard de création, MIN-62) : la graine de l'orbe

@@ -9,6 +9,7 @@ import {
 import {
   isWebhookEvent,
   isWebhookScope,
+  WEBHOOK_EVENTS,
   type WebhookEvent,
   type WebhookScope,
 } from "@/lib/server/webhooks";
@@ -43,6 +44,8 @@ export interface IntegrationSummary {
 }
 
 const MAX_NAME_LENGTH = 60;
+// Borne classique des URL (elle est persistée puis rejouée à chaque livraison).
+const MAX_WEBHOOK_URL_LENGTH = 2048;
 
 export async function listIntegrations(
   projectId: string
@@ -124,6 +127,9 @@ export async function updateIntegrationWebhook({
       return { ok: false, status: 400, errorKey: "webhookInvalidUrl" };
     }
     url = input.webhook_url.trim();
+    if (url.length > MAX_WEBHOOK_URL_LENGTH) {
+      return { ok: false, status: 400, errorKey: "webhookInvalidUrl" };
+    }
     try {
       const parsed = new URL(url);
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
@@ -132,7 +138,12 @@ export async function updateIntegrationWebhook({
     }
   }
 
-  if (!Array.isArray(input.webhook_events) || !input.webhook_events.every(isWebhookEvent)) {
+  // Plus long que la liste complète des événements = forcément des doublons.
+  if (
+    !Array.isArray(input.webhook_events) ||
+    input.webhook_events.length > WEBHOOK_EVENTS.length ||
+    !input.webhook_events.every(isWebhookEvent)
+  ) {
     return { ok: false, status: 400, errorKey: "webhookInvalidConfig" };
   }
   if (!isWebhookScope(input.webhook_scope)) {

@@ -34,7 +34,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const body = typeof payload.body === "string" ? payload.body.trim() : "";
+  // `?.` : un corps JSON `null` est valide côté parseur mais n'a pas de champs.
+  const body = typeof payload?.body === "string" ? payload.body.trim() : "";
   if (!body) return NextResponse.json({ error: "Comment required" }, { status: 400 });
 
   const auth = await authorizePrRequest(request, prId);

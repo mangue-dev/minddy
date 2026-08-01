@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { addCommentToIssue } from "@/lib/server/add-comment";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -16,6 +17,9 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+// Borne du tableau de mentions (MIN-118) — on ne mentionne jamais autant de monde.
+const MAX_MENTIONS = 50;
 
 /** GET /api/issues/[id]/comments — the issue's comment thread (RLS: project access). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -54,6 +58,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const rl = checkSessionRateLimit(auth.user.id, "issue-comment-create");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
   const t = await getTranslations("ApiErrors");
 
   let body: unknown;
@@ -75,7 +86,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     body: typeof input.body === "string" ? input.body : "",
     parentId: typeof input.parent_id === "string" ? input.parent_id : null,
     mentionedUserIds: Array.isArray(input.mentioned_user_ids)
-      ? input.mentioned_user_ids.filter((v): v is string => typeof v === "string")
+      ? input.mentioned_user_ids
+          .filter((v): v is string => typeof v === "string")
+          .slice(0, MAX_MENTIONS)
       : [],
     attachments: input.attachments,
   });

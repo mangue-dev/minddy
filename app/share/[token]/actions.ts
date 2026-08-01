@@ -46,9 +46,13 @@ export async function unlockShare(
     redirect(base || "/");
   }
 
+  // Borne avant scrypt (MIN-118) : un mot de passe non borné est un puits CPU,
+  // même sous le rate limit ci-dessus. Aligné sur la route PUT du partage
+  // (MAX_PASSWORD_LENGTH = 256). Au-delà, inutile de dériver : c'est faux.
   const password = formData.get("password");
   if (
     typeof password !== "string" ||
+    password.length > 256 ||
     !verifySharePassword(password, share.password_salt, share.password_hash)
   ) {
     return { error: "wrongPassword" };

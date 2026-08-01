@@ -22,6 +22,10 @@ import {
 
 const SANITIZED = "id, provider, key_prefix, base_url, created_at, last_used_at";
 
+// Bornes larges : une clé d'API réelle et une base URL tiennent très en dessous.
+const MAX_KEY_LENGTH = 1024;
+const MAX_BASE_URL_LENGTH = 2048;
+
 /** Efface le défaut modèle perso (obsolète quand le provider change). */
 async function clearDefaultModel(service: ReturnType<typeof getServiceClient>, userId: string) {
   await service
@@ -49,14 +53,20 @@ export async function POST(request: NextRequest) {
 
   let body: { key?: string; provider?: string; base_url?: string };
   try {
-    body = (await request.json()) as { key?: string; provider?: string; base_url?: string };
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as { key?: string; provider?: string; base_url?: string };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const key = (body.key ?? "").trim();
-  const provider = (body.provider ?? "").trim();
+  const key = typeof body.key === "string" ? body.key.trim() : "";
+  const provider = typeof body.provider === "string" ? body.provider.trim() : "";
   if (!key) return NextResponse.json({ error: "Missing key" }, { status: 400 });
+  if (key.length > MAX_KEY_LENGTH) {
+    return NextResponse.json({ error: "Invalid key" }, { status: 400 });
+  }
   if (!isKnownAgentProvider(provider)) {
     return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
   }
@@ -65,8 +75,8 @@ export async function POST(request: NextRequest) {
   const def = getAgentProvider(provider)!;
   let baseUrl: string | null = null;
   if (def.requiresBaseUrl) {
-    const raw = (body.base_url ?? "").trim();
-    if (!/^https?:\/\/.+/i.test(raw)) {
+    const raw = typeof body.base_url === "string" ? body.base_url.trim() : "";
+    if (raw.length > MAX_BASE_URL_LENGTH || !/^https?:\/\/.+/i.test(raw)) {
       return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
     }
     baseUrl = normalizeBaseUrl(raw);

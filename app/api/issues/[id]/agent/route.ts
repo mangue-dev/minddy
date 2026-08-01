@@ -46,6 +46,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ runs: data ?? [] });
 }
 
+// Bornes de longueur (MIN-118) : la consigne est persistée telle quelle dans
+// agent_runs ; modèle et branche sont des identifiants courts. Au-delà on tronque.
+const MAX_PROMPT_LENGTH = 20_000;
+const MAX_MODEL_LENGTH = 200;
+const MAX_BRANCH_LENGTH = 255;
+
 const LAUNCH_ERROR_STATUS: Record<string, number> = {
   issueNotFound: 404,
   noRepo: 409,
@@ -84,11 +90,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     // corps vide accepté
   }
-  const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : undefined;
-  const prompt = typeof body.prompt === "string" && body.prompt.trim() ? body.prompt.trim() : undefined;
+  const model =
+    typeof body.model === "string" && body.model.trim()
+      ? body.model.trim().slice(0, MAX_MODEL_LENGTH)
+      : undefined;
+  const prompt =
+    typeof body.prompt === "string" && body.prompt.trim()
+      ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH)
+      : undefined;
   const baseBranch =
     typeof body.baseBranch === "string" && body.baseBranch.trim()
-      ? body.baseBranch.trim()
+      ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
   // Niveau inconnu ignoré : le lancement retombe alors sur le défaut perso.
   const reasoningLevel = isReasoningLevel(body.reasoningLevel) ? body.reasoningLevel : undefined;

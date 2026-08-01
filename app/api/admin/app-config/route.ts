@@ -19,6 +19,9 @@ import { parseSubagentFavorites } from "@/lib/subagent-favorites";
  * getClaims), then require the caller to be a minddy admin. Returns the error
  * response to short-circuit with, or null when the caller is cleared.
  */
+/** Roomy bound — the longest legitimate value is the favorites JSON list. */
+const MAX_VALUE_LENGTH = 10_000;
+
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -53,7 +56,10 @@ export async function PATCH(request: NextRequest) {
 
   let body: { key?: unknown; value?: unknown };
   try {
-    body = await request.json();
+    const parsed: unknown = await request.json();
+    // Non-object body (null, string…): reject here instead of crashing below.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as { key?: unknown; value?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -67,6 +73,9 @@ export async function PATCH(request: NextRequest) {
       { error: "Value must be a string" },
       { status: 400 }
     );
+  }
+  if (value.length > MAX_VALUE_LENGTH) {
+    return NextResponse.json({ error: "Value too long" }, { status: 400 });
   }
 
   const trimmed = value.trim();

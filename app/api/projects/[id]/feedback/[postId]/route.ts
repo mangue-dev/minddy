@@ -42,6 +42,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
+  // `null` est du JSON valide : `"title" in body` dessus ferait un 500, pas un 400.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
 
   // Édition de la couche canonique (titre/corps/statut/réponse) + activité :
   // core partagé avec l'outil Numo respond_to_feedback.

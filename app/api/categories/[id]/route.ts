@@ -5,6 +5,9 @@ import { isValidColor } from "@/lib/category-colors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Borne de longueur du nom (MIN-118) — même plafond que lib/server/categories.ts.
+const MAX_NAME_LENGTH = 200;
+
 /** PATCH /api/categories/[id] — rename / recolor (RLS: project access). */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -26,7 +29,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     if (!name) {
       return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
     }
-    updates.name = name;
+    updates.name = name.slice(0, MAX_NAME_LENGTH);
   }
   if ("color" in input) {
     if (!isValidColor(input.color)) {

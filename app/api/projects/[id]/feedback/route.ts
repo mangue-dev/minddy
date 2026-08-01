@@ -7,6 +7,12 @@ import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Bornes de l'identité saisie : un email plus long que la RFC (254) n'existe
+// pas ; le nom est cosmétique, on le tronque. Titre/corps sont bornés par
+// createFeedbackPost (FEEDBACK_TITLE_MAX / FEEDBACK_BODY_MAX).
+const EMAIL_MAX = 254;
+const NAME_MAX = 200;
+
 /** GET — liste équipe (vraies identités) ; POST — saisie interne d'un feedback
     au nom d'un utilisateur final (canal 'internal', jamais anonyme). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -30,6 +36,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
+  // `null` est du JSON valide : lire body.title dessus ferait un 500, pas un 400.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
 
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!title) {
@@ -37,14 +47,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
   const user = (body.user ?? {}) as Record<string, unknown>;
   const email = typeof user.email === "string" ? user.email.trim() : "";
-  if (!email.includes("@")) {
+  if (!email.includes("@") || email.length > EMAIL_MAX) {
     return NextResponse.json({ error: t("feedbackUserRequired") }, { status: 400 });
   }
 
   const feedbackUser = await upsertFeedbackUser({
     projectId: id,
     email,
-    name: typeof user.name === "string" ? user.name : null,
+    name: typeof user.name === "string" ? user.name.slice(0, NAME_MAX) : null,
     verifiedVia: "api",
   });
   if (!feedbackUser) {

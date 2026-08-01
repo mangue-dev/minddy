@@ -40,6 +40,10 @@ export type AddCommentResult =
       rawMessage?: string;
     };
 
+// Borne de longueur (MIN-118) : un commentaire est du markdown libre, borné
+// comme le plan d'un ticket. Au-delà on tronque — pas de clé d'erreur dédiée.
+const MAX_COMMENT_LENGTH = 65_536;
+
 export async function addCommentToIssue({
   issueId,
   actorId,
@@ -64,7 +68,7 @@ export async function addCommentToIssue({
       "key name (mcp)" in the timeline instead of the user. */
   mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
-  const text = body.trim();
+  const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
   const mentioned = (mentionedUserIds ?? []).filter(
     (v): v is string => typeof v === "string"
   );
@@ -227,7 +231,7 @@ export async function addCommentToObjective({
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
-  const text = body.trim();
+  const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
   const mentioned = (mentionedUserIds ?? []).filter(
     (v): v is string => typeof v === "string"
   );
@@ -389,7 +393,7 @@ export async function addCommentToFeedbackPost({
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
-  const text = body.trim();
+  const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
   const mentioned = (mentionedUserIds ?? []).filter(
     (v): v is string => typeof v === "string"
   );

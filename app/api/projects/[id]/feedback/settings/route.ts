@@ -85,6 +85,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
+  // `null` est du JSON valide : lire body.enabled dessus ferait un 500.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
   if (typeof body.enabled === "boolean") {
     if (body.enabled) {
       const board = await enableBoardForProject(id);
@@ -175,6 +179,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+  }
+  // `null` est du JSON valide : lire body.action dessus ferait un 500.
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
   const board = await getBoardForProject(id);

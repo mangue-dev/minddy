@@ -11,6 +11,10 @@ type RouteContext = {
   params: Promise<{ id: string; postId: string; commentId: string }>;
 };
 
+// Same server-side bound as the comment-creation route (the composer already
+// caps client-side).
+const COMMENT_BODY_MAX = 10_000;
+
 /**
  * Edit / delete an internal feedback comment. Feedback is RLS deny-all, so
  * (unlike issue/objective comments, which go through /api/comments/[id] on the
@@ -64,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
   const text =
     typeof (body as { body?: unknown })?.body === "string"
-      ? ((body as { body: string }).body).trim()
+      ? ((body as { body: string }).body).trim().slice(0, COMMENT_BODY_MAX)
       : "";
   if (!text) return NextResponse.json({ error: t("commentEmpty") }, { status: 400 });
 

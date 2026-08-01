@@ -46,7 +46,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   let body: PrActionBody;
   try {
-    body = (await request.json()) as PrActionBody;
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as PrActionBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

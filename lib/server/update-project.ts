@@ -35,6 +35,11 @@ export type UpdateProjectResult =
         | "databaseError";
     };
 
+// Bornes de longueur (MIN-118) : au-delà on tronque, comme les règles Smart
+// Assign plus bas. La couleur est un jeton court (hex ou classe), jamais un texte.
+const MAX_NAME_LENGTH = 200;
+const MAX_COLOR_LENGTH = 32;
+
 export async function updateProjectSettings({
   projectId,
   actorId,
@@ -52,7 +57,7 @@ export async function updateProjectSettings({
   if (typeof input.name === "string") {
     const name = input.name.trim();
     if (!name) return { ok: false, status: 400, errorKey: "nameRequired" };
-    updates.name = name;
+    updates.name = name.slice(0, MAX_NAME_LENGTH);
   }
   if (typeof input.key === "string") {
     const key = normalizeKey(input.key);
@@ -62,7 +67,8 @@ export async function updateProjectSettings({
     updates.key = key;
   }
   if ("color" in input) {
-    updates.color = typeof input.color === "string" ? input.color : null;
+    updates.color =
+      typeof input.color === "string" ? input.color.slice(0, MAX_COLOR_LENGTH) : null;
   }
   if (typeof input.auto_assign_enabled === "boolean") {
     updates.auto_assign_enabled = input.auto_assign_enabled;

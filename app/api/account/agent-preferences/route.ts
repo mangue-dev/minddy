@@ -52,7 +52,10 @@ export async function PUT(request: NextRequest) {
   type PrefsBody = { default_model?: string | null; default_reasoning_level?: string | null };
   let body: PrefsBody;
   try {
-    body = (await request.json()) as PrefsBody;
+    const parsed: unknown = await request.json();
+    // Corps non-objet (null, chaîne…) : le `in` plus bas lèverait au lieu de refuser.
+    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    body = parsed as PrefsBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -67,7 +70,8 @@ export async function PUT(request: NextRequest) {
     if (model !== null && (typeof model !== "string" || !MODEL_ID_RE.test(model.trim()))) {
       return NextResponse.json({ error: "Invalid model" }, { status: 400 });
     }
-    patch.default_model = model;
+    // On stocke la forme que la regex a validée — pas les blancs autour.
+    patch.default_model = model === null ? null : model.trim();
   }
 
   if ("default_reasoning_level" in body) {

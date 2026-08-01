@@ -61,7 +61,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const message = (typeof payload.message === "string" ? payload.message : "").trim().slice(0, MAX_LEN);
+  // `?.` : un corps JSON `null` est valide côté parseur mais n'a pas de champs.
+  const message = (typeof payload?.message === "string" ? payload.message : "").trim().slice(0, MAX_LEN);
   if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
 
   const run = await getRun(runId);
