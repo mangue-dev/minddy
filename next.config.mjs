@@ -126,25 +126,46 @@ const nextConfig = {
     // exigerait de réécrire la chaîne de rendu (scripts inline Next +
     // theme-init-script) — chantier séparé si souhaité. Micro autorisé en
     // self : la dictée de l'assistant s'en sert.
+    const securityHeaders = (csp) => [
+      {
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains; preload",
+      },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(self), geolocation=()",
+      },
+      { key: "Content-Security-Policy", value: csp },
+    ];
+
+    const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'";
+
+    // ⚠ `/oauth/authorize` est EXCLU de cette entrée (un seul en-tête CSP par
+    // réponse : deux se cumulent en intersection, la plus stricte gagnerait).
+    // L'exclusion est ancrée sur `/` ou la fin — sans quoi une future route en
+    // `/oauth/authorize-…` sortirait en silence de TOUS ces en-têtes.
     headers.push({
-      source: "/(.*)",
-      headers: [
-        {
-          key: "Strict-Transport-Security",
-          value: "max-age=31536000; includeSubDomains; preload",
-        },
-        { key: "X-Content-Type-Options", value: "nosniff" },
-        { key: "X-Frame-Options", value: "DENY" },
-        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        {
-          key: "Permissions-Policy",
-          value: "camera=(), microphone=(self), geolocation=()",
-        },
-        {
-          key: "Content-Security-Policy",
-          value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-        },
-      ],
+      source: "/((?!oauth/authorize(?:/|$)).*)",
+      headers: securityHeaders(`${BASE_CSP}; form-action 'self'`),
+    });
+
+    // L'écran de consentement OAuth, et lui seul, sans `form-action`.
+    //
+    // Son formulaire (components/oauth/consent-card.tsx) POSTe vers
+    // /api/oauth/authorize, qui répond 303 vers le `redirect_uri` du client MCP
+    // — donc vers claude.ai, un localhost, ou un schéma applicatif : une cible
+    // cross-origin PAR CONSTRUCTION. Or Chrome et Safari appliquent
+    // `form-action` à la cible de la REDIRECTION qui suit un POST de formulaire
+    // (Firefox non — le comportement n'est pas spécifié). `form-action 'self'`
+    // ici bloquerait donc le retour au client sur deux navigateurs sur trois,
+    // c'est-à-dire tout le flux OAuth du MCP, seule voie d'accès depuis le
+    // retrait des clés `mdyk_`. Le reste de la CSP est identique.
+    headers.push({
+      source: "/oauth/authorize",
+      headers: securityHeaders(BASE_CSP),
     });
 
     // Les pages publiques, dans leurs deux langues. Recopiées de

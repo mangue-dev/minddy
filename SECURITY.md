@@ -58,8 +58,9 @@ par ce chemin.
   explicitement le rôle `authenticated` (plus aucune sur le rôle `public`, qui
   aurait inclus `anon`) — garde structurelle documentée dans
   [20260926091000_policy_tightening.sql](supabase/migrations/20260926091000_policy_tightening.sql).
-- **Binding d'auteur :** les inserts client (`issues`, `issue_relations`,
-  `comments`) exigent `created_by = auth.uid()` — pas d'usurpation d'auteur.
+- **Binding d'auteur :** les inserts client exigent que l'auteur soit l'appelant
+  — `created_by = auth.uid()` (`issues`, `issue_relations`), `author_id =
+  auth.uid()` (`comments`). Pas d'usurpation d'auteur.
 - **Pas de hard delete PostgREST** sur `issues`/`objectives`/`attachments` : la
   suppression passe par la corbeille et le nettoyage storage côté serveur
   ([lib/server/trash.ts](lib/server/trash.ts)).
@@ -114,6 +115,12 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 
 - `preload` est dans le header mais le domaine **n'est pas soumis** à
   hstspreload.org (quasi irréversible pour tout le domaine).
+- **Une seule exception :** `/oauth/authorize` (l'écran de consentement) sert la
+  même CSP **sans `form-action`**. Son formulaire POSTe vers
+  `/api/oauth/authorize`, qui répond 303 vers le `redirect_uri` du client MCP —
+  cross-origin par construction. Chrome et Safari appliquent `form-action` à la
+  cible de la redirection qui suit un POST de formulaire (Firefox non) :
+  `form-action 'self'` y bloquerait tout le flux OAuth du MCP.
 - La CSP se limite à `frame-ancestors`/`base-uri`/`form-action`. Une CSP à
   `script-src` strict (nonces) exigerait de réécrire la chaîne de rendu (scripts
   inline Next + theme-init-script) — **chantier séparé** si souhaité.
