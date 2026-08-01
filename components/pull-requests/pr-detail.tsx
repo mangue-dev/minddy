@@ -49,6 +49,7 @@ import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
+import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import {
   CommentReactionChips,
@@ -66,6 +67,7 @@ import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import {
   usePullRequestQuery,
   usePrCommentsQuery,
+  usePrCommitsQuery,
   usePrReviewCommentsQuery,
 } from "@/lib/use-agent-runs";
 import {
@@ -387,6 +389,12 @@ export function PrDetail({
     refetch: refetchComments,
   } = usePrCommentsQuery(item.prId);
   const {
+    commits,
+    truncated: commitsTruncated,
+    loading: commitsLoading,
+    refetch: refetchCommits,
+  } = usePrCommitsQuery(item.prId);
+  const {
     comments: reviewComments,
     threads: reviewThreads,
     reactions: reviewReactions,
@@ -411,7 +419,7 @@ export function PrDetail({
   // Numo relit la PR (MIN-141) : un appel modèle, donc long — le bouton Review
   // porte le spinner, comme les autres gestes de la barre.
   const [aiReviewing, setAiReviewing] = useState(false);
-  const [tab, setTab] = useState<"conversation" | "files">("conversation");
+  const [tab, setTab] = useState<"conversation" | "commits" | "files">("conversation");
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isWorking = !!item.activeRunId;
@@ -449,16 +457,18 @@ export function PrDetail({
 
   // Quand Numo termine (le run actif disparaît de la liste), rafraîchir diff +
   // commentaires. Les commentaires de ligne en font partie : Numo peut y avoir
-  // répondu, et un nouveau push change les lignes auxquelles ils s'ancrent.
+  // répondu, et un nouveau push change les lignes auxquelles ils s'ancrent. Les
+  // commits aussi : c'est le seul moment où la liste change sous les yeux.
   const prevWorking = useRef(isWorking);
   useEffect(() => {
     if (prevWorking.current && !isWorking) {
       void refetchPr();
       void refetchComments();
+      void refetchCommits();
       void refetchReviewComments();
     }
     prevWorking.current = isWorking;
-  }, [isWorking, refetchPr, refetchComments, refetchReviewComments]);
+  }, [isWorking, refetchPr, refetchComments, refetchCommits, refetchReviewComments]);
 
   const act = async (action: "merge" | "close" | "ready_for_review", method?: MergeMethod) => {
     if (acting) return;
@@ -931,12 +941,23 @@ export function PrDetail({
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
           {/* Onglets façon GitHub : le fil d'un côté, le code de l'autre. */}
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "conversation" | "files")}>
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as "conversation" | "commits" | "files")}
+          >
             <TabsList variant="line" className="justify-start p-0">
               <TabsTrigger value="conversation" className="gap-1.5">
                 {t("tabConversation")}
                 {comments.length > 0 ? (
                   <span className="text-xs text-muted-foreground">{comments.length}</span>
+                ) : null}
+              </TabsTrigger>
+              {/* Les commits AVANT les fichiers, comme sur GitHub : on lit ce qui
+                  compose la PR avant d'entrer dans le code qu'elle change. */}
+              <TabsTrigger value="commits" className="gap-1.5">
+                {t("tabCommits")}
+                {commits.length > 0 ? (
+                  <span className="text-xs text-muted-foreground">{commits.length}</span>
                 ) : null}
               </TabsTrigger>
               <TabsTrigger value="files" className="gap-1.5">
@@ -1035,6 +1056,16 @@ export function PrDetail({
                 </div>
               </div>
               ) : null}
+            </TabsContent>
+
+            <TabsContent value="commits" className="mt-4">
+              <PrCommits
+                prId={item.prId}
+                commits={commits}
+                truncated={commitsTruncated}
+                loading={commitsLoading}
+                provider={item.provider}
+              />
             </TabsContent>
 
             <TabsContent value="files" className="mt-4">

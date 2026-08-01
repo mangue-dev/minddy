@@ -9,7 +9,9 @@ import {
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchPullRequestApi,
+  fetchPrCommitDiffApi,
   fetchPullRequestCommentsApi,
+  fetchPullRequestCommitsApi,
   fetchPrReviewCommentsApi,
   isAgentRunWorking,
   type PrEndpoint,
@@ -263,6 +265,39 @@ export function usePrCommentsQuery(prId: string | null) {
     loading: isLoading,
     refetch,
   };
+}
+
+/**
+ * Commits d'une PR (onglet Commits). Pas de polling : une liste de commits ne
+ * bouge qu'à un push, et l'appelant la rafraîchit quand Numo finit de
+ * travailler — c'est le seul moment où elle change sous les yeux du lecteur.
+ */
+export function usePrCommitsQuery(prId: string | null) {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["pr-commits", prId],
+    queryFn: () => fetchPullRequestCommitsApi(prId as string),
+    enabled: !!prId,
+  });
+  return {
+    commits: data?.commits ?? [],
+    truncated: data?.truncated ?? false,
+    loading: isLoading,
+    refetch,
+  };
+}
+
+/**
+ * Diff d'UN commit de la PR. Interrogé seulement quand la vue est OUVERTE
+ * (`enabled`) : c'est un aller-retour de forge par commit regardé, et la
+ * plupart ne le sont jamais. Aucun polling — un commit est immuable.
+ */
+export function usePrCommitDiffQuery(prId: string, sha: string | null) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["pr-commit-diff", prId, sha],
+    queryFn: () => fetchPrCommitDiffApi(prId, sha as string),
+    enabled: !!sha,
+  });
+  return { diff: data ?? null, loading: isLoading };
 }
 
 /**

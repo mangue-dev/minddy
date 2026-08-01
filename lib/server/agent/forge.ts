@@ -9,6 +9,9 @@ import type {
   PullRequestRef,
   PullRequestFile,
   PullRequestComment,
+  PullRequestCommit,
+  CommitDiff,
+  CommitStats,
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
@@ -120,6 +123,32 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestFile[]>;
+  /** Les commits qui composent la PR, du plus ANCIEN au plus récent (l'ordre de
+      GitHub, normalisé côté GitLab). `truncated` : la pagination a été coupée —
+      la liste s'arrête aux 300 premiers, le reste se lit chez la forge.
+      Les champs que la forge ne sait pas remplir valent `null` (compte de
+      l'auteur et signature côté GitLab), jamais une valeur inventée. */
+  listPullRequestCommits(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<{ commits: PullRequestCommit[]; truncated: boolean }>;
+  /** Le poids (+/− lignes) de chaque commit, indexé par SHA — À PART de la
+      liste, parce qu'aucune des deux forges ne le sert avec : GitHub le rend
+      d'un coup en GraphQL, GitLab commit par commit (donc borné). Best-effort
+      chez l'appelant : sans stats, seul l'indicateur +/− manque. */
+  listPullRequestCommitStats(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<Map<string, CommitStats>>;
+  /** Le diff d'UN commit contre son premier parent, aux mêmes types que le diff
+      de la PR entière — la vue « ce que ce commit-là change ». */
+  getCommitDiff(opts: {
+    token: string;
+    repoFullName: string;
+    sha: string;
+  }): Promise<CommitDiff>;
   /** Diff CUMULÉ de la branche de travail contre sa base — la vue diff d'une
       session SANS PR (mêmes fichiers/patches que listPullRequestFiles, depuis le
       merge base). 404 provider si la branche n'a pas (encore) été poussée.
@@ -370,6 +399,9 @@ const githubForge: Forge = {
   ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
   listPullRequestFiles: github.listPullRequestFiles,
+  listPullRequestCommits: github.listPullRequestCommits,
+  listPullRequestCommitStats: github.listPullRequestCommitStats,
+  getCommitDiff: github.getCommitDiff,
   compareBranches: github.compareBranches,
   // Le compare GitHub est déjà branche-à-branche : la même fonction sert les
   // deux surfaces (le `number` de l'interface n'y est pas utilisé).
@@ -446,6 +478,9 @@ const gitlabForge: Forge = {
   ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
   listPullRequestFiles: gitlab.listMergeRequestChanges,
+  listPullRequestCommits: gitlab.listMergeRequestCommits,
+  listPullRequestCommitStats: gitlab.listMergeRequestCommitStats,
+  getCommitDiff: gitlab.getCommitDiff,
   compareBranches: gitlab.compareBranches,
   getBranchesMergeBaseSha: gitlab.getBranchesMergeBaseSha,
   getMergeBaseSha: gitlab.getMergeBaseSha,

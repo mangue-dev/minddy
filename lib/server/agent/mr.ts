@@ -19,6 +19,9 @@ import type {
   PullRequestRef,
   PullRequestFile,
   PullRequestComment,
+  PullRequestCommit,
+  CommitDiff,
+  CommitStats,
   PullRequestReviewComment,
   PullRequestReviewMessage,
   PullRequestReviewSummary,
@@ -352,6 +355,155 @@ export async function listMergeRequestChanges(opts: {
 }): Promise<PullRequestFile[]> {
   const diffs = await listRawDiffs(opts);
   return diffs.map(toPullRequestFile);
+}
+
+interface RawCommit {
+  id: string;
+  message?: string;
+  title?: string;
+  author_name?: string | null;
+  authored_date?: string | null;
+  created_at?: string | null;
+  web_url?: string | null;
+  parent_ids?: string[] | null;
+  /** Servi par le détail d'UN commit, jamais par la liste d'une MR. */
+  stats?: { additions?: number; deletions?: number } | null;
+}
+
+/** Même plafond que `pr.ts` : 3 pages de 100 commits, `truncated` au-delà. */
+const COMMITS_MAX_PAGES = 3;
+
+/**
+ * Les commits de la MR, du plus ANCIEN au plus récent — l'ordre de `pr.ts`, et
+ * donc celui que l'onglet Commits affiche des deux côtés. GitLab sert cette
+ * liste à l'envers (tête de branche d'abord) : on la retrie par date, la seule
+ * clé que les deux forges donnent.
+ *
+ * Ni compte de forge ni signature ici : l'API des commits d'une MR ne sert que
+ * le nom écrit dans le commit, et la vérification demanderait un appel PAR
+ * commit (`/repository/commits/{sha}/signature`). `author: null` +
+ * `verified: null` disent « on ne sait pas », que le rendu traite déjà.
+ */
+export async function listMergeRequestCommits(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
+  const raw = await glPaged<RawCommit>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/commits`,
+    opts.token,
+    COMMITS_MAX_PAGES,
+  );
+  const commits = raw
+    // La forge sert la tête de branche d'abord : l'inversion suffit dans le cas
+    // courant, et le tri qui suit ne fait que remettre d'aplomb les rebases (une
+    // date d'auteur peut y précéder celle du commit d'avant).
+    .reverse()
+    .map((c) => {
+      const authoredAt = c.authored_date ?? c.created_at ?? null;
+      return {
+        sha: c.id,
+        // `message` porte le titre ET le corps ; `title` seul est le repli des
+        // instances qui ne servent que lui sur cet endpoint.
+        message: c.message ?? c.title ?? "",
+        author: null,
+        authorName: c.author_name ?? null,
+        authoredAt,
+        // Certaines instances ne servent pas `web_url` ici : l'URL de commit est
+        // stable et se reconstruit, comme celle du compare.
+        url: c.web_url ?? `${GITLAB_HOST}/${opts.repoFullName}/-/commit/${c.id}`,
+        verified: null,
+        // Premier parent : la ligne principale d'un commit de fusion.
+        parentSha: c.parent_ids?.[0] ?? null,
+        // Comme chez GitHub, la liste ne porte pas de stats (`…CommitStats`).
+        additions: null,
+        deletions: null,
+      } satisfies PullRequestCommit;
+    })
+    // Tri STABLE, et une date illisible compare à 0 (règle de `Array.sort` sur
+    // NaN) : deux commits d'un même push partagent souvent la seconde, et
+    // l'ordre de la forge est alors le seul départage qu'on ait.
+    .sort((a, b) => Date.parse(a.authoredAt ?? "") - Date.parse(b.authoredAt ?? ""));
+  return { commits, truncated: raw.length >= COMMITS_MAX_PAGES * 100 };
+}
+
+/**
+ * Au-delà, on ne va pas chercher les stats : GitLab n'a pas l'équivalent du
+ * GraphQL de GitHub (aucun endpoint ne sert le poids de PLUSIEURS commits d'un
+ * coup), donc chaque commit coûte un aller-retour. Cinquante suffisent aux MR
+ * qu'on lit vraiment commit par commit ; au-delà, l'indicateur +/− disparaît et
+ * le diff d'un commit reste ouvrable — il porte ses propres chiffres.
+ */
+const MAX_STATS_COMMITS = 50;
+/** Requêtes de stats en vol : assez pour que 50 commits tiennent en ~10 tours. */
+const STATS_CONCURRENCY = 5;
+
+/**
+ * Le poids de chaque commit de la MR, indexé par SHA — le pendant du GraphQL de
+ * `pr.ts`, en beaucoup moins élégant : GitLab ne sert `stats` que sur le DÉTAIL
+ * d'un commit, donc un appel par commit, en parallèle borné.
+ *
+ * Best-effort commit par commit : un SHA illisible (commit élagué d'un
+ * force-push) n'ôte pas ses chiffres aux autres.
+ */
+export async function listMergeRequestCommitStats(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<Map<string, CommitStats>> {
+  const { commits } = await listMergeRequestCommits(opts);
+  const shas = commits.slice(0, MAX_STATS_COMMITS).map((c) => c.sha);
+  const stats = new Map<string, CommitStats>();
+
+  for (let i = 0; i < shas.length; i += STATS_CONCURRENCY) {
+    const slice = shas.slice(i, i + STATS_CONCURRENCY);
+    await Promise.all(
+      slice.map(async (sha) => {
+        try {
+          const commit = await glJson<RawCommit>(
+            `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/commits/${sha}`,
+            opts.token,
+          );
+          stats.set(sha, {
+            additions: commit.stats?.additions ?? 0,
+            deletions: commit.stats?.deletions ?? 0,
+          });
+        } catch (err) {
+          console.error("[mr] commit stats unreadable:", (err as Error).message);
+        }
+      }),
+    );
+  }
+  return stats;
+}
+
+/**
+ * Le diff d'UN commit contre son parent, au format neutre. Deux appels : les
+ * diffs d'un côté (paginés), le commit de l'autre — c'est lui qui porte les
+ * stats, l'URL web et le parent, qu'aucun des deux endpoints ne sert ensemble.
+ */
+export async function getCommitDiff(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<CommitDiff> {
+  const base = `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/commits/${opts.sha}`;
+  const [diffs, commit] = await Promise.all([
+    glPaged<RawDiff>(`${base}/diff`, opts.token, DIFFS_MAX_PAGES),
+    glJson<RawCommit>(base, opts.token),
+  ]);
+  const files = diffs.map(toPullRequestFile);
+  return {
+    files,
+    // `stats` manquant (instance ancienne) : les patches les portent déjà, on
+    // recompte plutôt que d'annoncer zéro.
+    additions:
+      commit.stats?.additions ?? files.reduce((n, f) => n + f.additions, 0),
+    deletions:
+      commit.stats?.deletions ?? files.reduce((n, f) => n + f.deletions, 0),
+    url: commit.web_url ?? `${GITLAB_HOST}/${opts.repoFullName}/-/commit/${opts.sha}`,
+    parentSha: commit.parent_ids?.[0] ?? null,
+  };
 }
 
 /**

@@ -649,6 +649,73 @@ export async function fetchPullRequestCommentsApi(
 }
 
 /**
+ * Un commit de la PR. DEUX auteurs, et ils ne disent pas la même chose :
+ * `author` est le COMPTE de la forge (avatar + login), quand elle a su rattacher
+ * l'email du commit ; `authorName` est le nom écrit DANS le commit, que git a
+ * toujours. Côté GitLab, dont l'API ne sert aucun compte sur cet endpoint, il
+ * n'y a jamais que le second — d'où le repli du rendu sur lui.
+ */
+export interface PullRequestCommit {
+  sha: string;
+  /** Message COMPLET : première ligne = titre, le reste = corps. */
+  message: string;
+  author: { login: string; avatar_url: string | null } | null;
+  authorName: string | null;
+  authoredAt: string | null;
+  url: string | null;
+  /** Signature vérifiée. `null` = INCONNU (GitLab ne le sert pas), pas « non ». */
+  verified: boolean | null;
+  /** Premier parent — le côté « avant » du diff de ce commit. */
+  parentSha: string | null;
+  /** Lignes ajoutées / retirées PAR CE COMMIT. `null` = la forge n'a pas su les
+      donner (GraphQL en échec, ou MR trop longue côté GitLab) : l'indicateur
+      +/− disparaît alors, mais le diff du commit reste ouvrable. */
+  additions: number | null;
+  deletions: number | null;
+}
+
+/**
+ * Les commits qui composent la PR, du plus ancien au plus récent — l'onglet
+ * Commits. `truncated` : la PR en a plus que ce que minddy liste d'un coup.
+ */
+export async function fetchPullRequestCommitsApi(
+  prId: string,
+): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
+  return parseJson(await fetch(`${prEndpoint(prId)}/commits`));
+}
+
+/** Base des routes d'UN commit : son diff, et — comme une PR — ses fichiers. */
+export function prCommitEndpoint(prId: string, sha: string): PrEndpoint {
+  return `${prEndpoint(prId)}/commits/${sha}`;
+}
+
+export interface PrCommitDiff {
+  files: PullRequestFile[];
+  additions: number;
+  deletions: number;
+  url: string | null;
+  parentSha: string | null;
+  message: string;
+  author: { login: string; avatar_url: string | null } | null;
+  authorName: string | null;
+  authoredAt: string | null;
+  provider?: RepoProviderId;
+}
+
+/**
+ * Le diff d'UN commit de la PR, contre son parent. Sert la vue « ce que ce
+ * commit change » — mêmes fichiers/patches que le diff de la PR, donc le même
+ * composant de rendu, à ceci près que le dépliage de contexte y résout le
+ * PARENT du commit (cf. `prCommitEndpoint`).
+ */
+export async function fetchPrCommitDiffApi(
+  prId: string,
+  sha: string,
+): Promise<PrCommitDiff> {
+  return parseJson(await fetch(prCommitEndpoint(prId, sha)));
+}
+
+/**
  * Pose ou retire une réaction sur un message du fil de conversation, ou sur le
  * corps de la PR (`commentId: PR_BODY_COMMENT_ID`). `on` porte l'état VOULU, pas
  * une bascule — même contrat que côté review.

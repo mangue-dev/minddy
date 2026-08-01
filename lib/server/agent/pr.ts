@@ -89,6 +89,54 @@ export interface PullRequestFile {
   previous_filename?: string;
 }
 
+/**
+ * Un commit de la PR — ce que l'onglet Commits montre.
+ *
+ * DEUX auteurs, qui ne disent pas la même chose : `author` est le COMPTE de la
+ * forge, quand elle a su rattacher l'email du commit à un utilisateur (c'est lui
+ * qui porte l'avatar et le login), tandis que `authorName` est le nom écrit DANS
+ * le commit, que git a toujours. Un commit poussé depuis une machine dont
+ * l'email n'est pas déclaré chez la forge n'a que le second — et côté GitLab,
+ * dont l'API de commits de MR ne sert aucun compte, il n'y a jamais que lui.
+ */
+export interface PullRequestCommit {
+  sha: string;
+  /** Message COMPLET : première ligne = titre, le reste = corps (souvent vide). */
+  message: string;
+  author: { login: string; avatar_url: string | null } | null;
+  authorName: string | null;
+  authoredAt: string | null;
+  url: string | null;
+  /** Signature vérifiée par la forge. `null` = INCONNU, pas « non signé » :
+      GitLab ne le sert pas sur cet endpoint (il faut un appel par commit). */
+  verified: boolean | null;
+  /**
+   * PREMIER parent — le côté « avant » du diff de ce commit seul. C'est lui qui
+   * adresse la version base d'un fichier au dépliage de contexte. `null` sur un
+   * commit racine (aucun parent), où il n'y a rien à déplier avant.
+   */
+  parentSha: string | null;
+  /** Lignes ajoutées / retirées PAR CE COMMIT. `null` = pas encore lu : aucune
+      des deux forges ne sert ces chiffres avec la liste (cf. `…CommitStats`). */
+  additions: number | null;
+  deletions: number | null;
+}
+
+/** Poids d'un commit, indexé par SHA — ce que la liste de commits ne porte pas. */
+export interface CommitStats {
+  additions: number;
+  deletions: number;
+}
+
+/** Le diff d'UN commit contre son parent : la vue « ce que ce commit change ». */
+export interface CommitDiff {
+  files: PullRequestFile[];
+  additions: number;
+  deletions: number;
+  url: string | null;
+  parentSha: string | null;
+}
+
 /** Commentaire de conversation d'une PR (endpoint issues/{n}/comments de GitHub). */
 export interface PullRequestComment {
   id: number;
@@ -359,6 +407,183 @@ export async function listPullRequestFiles(opts: {
     patch: f.patch,
     previous_filename: f.previous_filename,
   }));
+}
+
+interface RawCommit {
+  sha: string;
+  html_url?: string;
+  commit?: {
+    message?: string;
+    author?: { name?: string; date?: string } | null;
+    verification?: { verified?: boolean } | null;
+  } | null;
+  author?: { login?: string; avatar_url?: string } | null;
+  parents?: Array<{ sha?: string }>;
+}
+
+function toCommit(c: RawCommit): PullRequestCommit {
+  return {
+    sha: c.sha,
+    message: c.commit?.message ?? "",
+    author: c.author
+      ? { login: c.author.login ?? "", avatar_url: c.author.avatar_url ?? null }
+      : null,
+    authorName: c.commit?.author?.name ?? null,
+    authoredAt: c.commit?.author?.date ?? null,
+    url: c.html_url ?? null,
+    verified: c.commit?.verification?.verified ?? null,
+    // Premier parent seulement : sur un commit de fusion, c'est la ligne
+    // principale, et c'est contre elle que les deux forges diffent.
+    parentSha: c.parents?.[0]?.sha ?? null,
+    // La REST des commits ne porte PAS de stats (vérifié contre l'API) : elles
+    // arrivent d'ailleurs, et sont fusionnées par l'appelant.
+    additions: null,
+    deletions: null,
+  };
+}
+
+const COMMITS_PER_PAGE = 100;
+/** GitHub plafonne cet endpoint à 250 commits : trois pages le couvrent en
+    entier, et une PR qui en dépasse se lit chez la forge (`truncated` le dit). */
+const COMMITS_MAX_PAGES = 3;
+
+/**
+ * Les commits de la PR, du plus ANCIEN au plus récent — l'ordre que GitHub
+ * sert et qu'il affiche, celui dans lequel le travail s'est fait.
+ *
+ * Paginé pour la même raison que les commentaires de review : GitHub sert cette
+ * liste dans l'ordre chronologique, donc s'arrêter à la première page ferait
+ * disparaître les commits les plus RÉCENTS — précisément ceux qu'on vient
+ * regarder après un nouveau push de Numo.
+ */
+export async function listPullRequestCommits(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const commits: PullRequestCommit[] = [];
+  let truncated = false;
+  for (let page = 1; page <= COMMITS_MAX_PAGES; page++) {
+    const batch = await ghJson<RawCommit[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/commits` +
+        `?per_page=${COMMITS_PER_PAGE}&page=${page}`,
+      opts.token,
+    );
+    commits.push(...batch.map(toCommit));
+    // Page incomplète = dernière page.
+    if (batch.length < COMMITS_PER_PAGE) break;
+    if (page === COMMITS_MAX_PAGES) truncated = true;
+  }
+  return { commits, truncated };
+}
+
+interface RawCommitStats {
+  repository?: {
+    pullRequest?: {
+      commits?: {
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+        nodes?: Array<{
+          commit?: { oid?: string; additions?: number; deletions?: number } | null;
+        } | null>;
+      } | null;
+    } | null;
+  } | null;
+}
+
+const COMMIT_STATS_QUERY = `
+  query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+    repository(owner:$owner,name:$name){
+      pullRequest(number:$number){
+        commits(first:100, after:$cursor){
+          pageInfo{ hasNextPage endCursor }
+          nodes{ commit{ oid additions deletions } }
+        }
+      }
+    }
+  }`;
+
+/**
+ * Le poids de CHAQUE commit de la PR (+/− lignes), indexé par SHA.
+ *
+ * En GraphQL, et à part de la liste, parce que la REST ne sait pas le faire :
+ * `pulls/{n}/commits` ne porte aucune stat (vérifié contre l'API), et les
+ * obtenir en REST demanderait un `GET commits/{sha}` PAR commit. GraphQL les
+ * rend toutes en une requête — et sans permission de plus que la REST
+ * équivalente (même constat que les fils de review).
+ *
+ * L'appelant traite l'échec en best-effort : sans stats, la liste s'affiche
+ * quand même, seul l'indicateur +/− disparaît.
+ */
+export async function listPullRequestCommitStats(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<Map<string, CommitStats>> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const stats = new Map<string, CommitStats>();
+  let cursor: string | null = null;
+  for (let page = 1; page <= COMMITS_MAX_PAGES; page++) {
+    const data: RawCommitStats = await ghGraphql<RawCommitStats>(
+      opts.token,
+      COMMIT_STATS_QUERY,
+      { owner, name: repo, number: opts.number, cursor },
+    );
+    const connection = data.repository?.pullRequest?.commits;
+    for (const node of connection?.nodes ?? []) {
+      const c = node?.commit;
+      if (!c?.oid) continue;
+      stats.set(c.oid, { additions: c.additions ?? 0, deletions: c.deletions ?? 0 });
+    }
+    if (!connection?.pageInfo?.hasNextPage) break;
+    cursor = connection.pageInfo.endCursor ?? null;
+    if (!cursor) break;
+  }
+  return stats;
+}
+
+/**
+ * Le diff d'UN commit contre son parent — « ce que ce commit-là change », au
+ * même format que le diff de la PR entière (mêmes patches, même rendu).
+ *
+ * GitHub sert au plus 300 fichiers sur cet endpoint ; au-delà il faudrait
+ * paginer, mais un commit unique qui touche 300 fichiers ne se lit plus
+ * fichier par fichier de toute façon.
+ */
+export async function getCommitDiff(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<CommitDiff> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const commit = await ghJson<{
+    html_url?: string;
+    stats?: { additions?: number; deletions?: number };
+    parents?: Array<{ sha?: string }>;
+    files?: Array<{
+      filename: string;
+      status: string;
+      additions: number;
+      deletions: number;
+      patch?: string;
+      previous_filename?: string;
+    }>;
+  }>(`${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${opts.sha}`, opts.token);
+
+  return {
+    files: (commit.files ?? []).map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions,
+      patch: f.patch,
+      previous_filename: f.previous_filename,
+    })),
+    additions: commit.stats?.additions ?? 0,
+    deletions: commit.stats?.deletions ?? 0,
+    url: commit.html_url ?? null,
+    parentSha: commit.parents?.[0]?.sha ?? null,
+  };
 }
 
 /** Pages de 100 drainées au plus pour le picker de branche — au-delà, un dépôt

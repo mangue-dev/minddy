@@ -27,7 +27,7 @@ import {
   type PullRequestState,
 } from "./pull-requests";
 import { getRun } from "./runs";
-import type { PullRequestFile, ReviewVerdict } from "./pr";
+import type { PullRequestCommit, PullRequestFile, ReviewVerdict } from "./pr";
 import {
   isReviewReactionContent,
   PR_BODY_COMMENT_ID,
@@ -327,6 +327,210 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       viewer,
       mergeMethods: forge.mergeMethods,
     });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+// ── Commits ──────────────────────────────────────────────────────────────────
+
+/**
+ * Les commits qui composent la PR — l'onglet Commits, comme chez GitHub.
+ *
+ * À part du détail, et pas dans sa réponse : le détail se re-poll toutes les
+ * 15 s tant qu'une CI tourne, et les commits, eux, ne bougent qu'à un push. Y
+ * ajouter cet appel ferait payer un aller-retour de forge à chaque tour de
+ * polling pour une liste identique. Même arrangement que le fil de conversation.
+ *
+ * Lecture sur le token d'INSTALLATION comme toutes les autres : tout membre du
+ * projet minddy voit la PR, compte git connecté ou non.
+ */
+export async function prCommitsResponse(scope: PrScope): Promise<NextResponse> {
+  try {
+    const { commits, truncated } = await scope.forge.listPullRequestCommits(scope.call);
+    // Le poids de chaque commit vient d'un second appel (aucune forge ne le sert
+    // avec la liste). Best-effort : sans lui, la liste s'affiche telle quelle et
+    // seul l'indicateur +/− manque — le diff d'un commit reste ouvrable, et il
+    // porte ses propres chiffres.
+    const stats = await scope.forge
+      .listPullRequestCommitStats(scope.call)
+      .catch((err) => {
+        console.error("[pr-actions] commit stats unreadable:", (err as Error).message);
+        return new Map<string, { additions: number; deletions: number }>();
+      });
+    return NextResponse.json({
+      commits: commits.map((c) => {
+        const s = stats.get(c.sha);
+        return s ? { ...c, additions: s.additions, deletions: s.deletions } : c;
+      }),
+      truncated,
+    });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Un SHA de commit tel qu'il arrive d'une URL. Contraint AVANT tout appel : il
+ * finit interpolé dans une route de forge, et le token d'installation porte tout
+ * le périmètre de l'installation, pas ce seul dépôt (même vigilance que
+ * `in_reply_to` et `thread_id`).
+ */
+export function isCommitSha(raw: string): boolean {
+  return /^[0-9a-f]{7,64}$/i.test(raw);
+}
+
+/**
+ * Le commit `sha` **s'il appartient à cette PR**, sinon null.
+ *
+ * Cette validation est la même que celle du chemin dans `prFileSourceResponse`,
+ * et pour la même raison : sans elle, les routes de commit donneraient à lire le
+ * diff de n'importe quel commit du dépôt — y compris de branches que la PR ne
+ * touche pas.
+ */
+async function resolvePrCommit(
+  scope: PrScope,
+  sha: string,
+): Promise<PullRequestCommit | null> {
+  const { commits } = await scope.forge.listPullRequestCommits(scope.call);
+  return commits.find((c) => c.sha === sha) ?? null;
+}
+
+/** 404 partagé des trois routes de commit. */
+function commitNotFound(): NextResponse {
+  return NextResponse.json({ error: "Commit not found in this pull request" }, { status: 404 });
+}
+
+/**
+ * Le diff d'UN commit de la PR — ce que CE commit change, à l'écran, sans
+ * ouvrir la forge. Même forme que le diff de la PR (`files` + patches) : la vue
+ * diff est la même, et n'a rien à savoir de la différence.
+ */
+export async function prCommitDiffResponse(
+  scope: PrScope,
+  sha: string,
+): Promise<NextResponse> {
+  try {
+    const commit = await resolvePrCommit(scope, sha);
+    if (!commit) return commitNotFound();
+    const diff = await scope.forge.getCommitDiff({
+      token: scope.call.token,
+      repoFullName: scope.call.repoFullName,
+      sha: commit.sha,
+    });
+    return NextResponse.json({
+      ...diff,
+      message: commit.message,
+      author: commit.author,
+      authorName: commit.authorName,
+      authoredAt: commit.authoredAt,
+      provider: scope.target.provider,
+    });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Version AVANT-ce-commit d'un fichier de son diff — le dépliage de contexte de
+ * la vue diff d'un commit.
+ *
+ * Le ref est le PARENT du commit, et non le merge base de la PR : c'est ce qui
+ * distingue cette route de sa jumelle `prFileSourceResponse`. Déplier avec la
+ * base de la PR injecterait ici les lignes d'AVANT tous les autres commits — du
+ * code vrai, au mauvais endroit, ce qui est pire qu'un dépliage en échec.
+ */
+export async function prCommitFileSourceResponse(
+  scope: PrScope,
+  sha: string,
+  path: string,
+): Promise<NextResponse> {
+  try {
+    const commit = await resolvePrCommit(scope, sha);
+    if (!commit) return commitNotFound();
+
+    const diff = await scope.forge.getCommitDiff({
+      token: scope.call.token,
+      repoFullName: scope.call.repoFullName,
+      sha: commit.sha,
+    });
+    // Un fichier ajouté PAR ce commit n'a pas de version d'avant : son patch EST
+    // déjà le fichier entier.
+    const file = diff.files.find((f) => basePathOf(f) === path);
+    if (!file || file.status === "added") {
+      return NextResponse.json({ error: "File not found in this diff" }, { status: 404 });
+    }
+    const parent = diff.parentSha ?? commit.parentSha;
+    if (!parent) {
+      return NextResponse.json({ error: "Commit has no parent" }, { status: 409 });
+    }
+
+    const content = await scope.forge.getFileAtRef({
+      token: scope.call.token,
+      repoFullName: scope.call.repoFullName,
+      path,
+      ref: parent,
+    });
+    if (content === null) {
+      return NextResponse.json({ error: "File not found at parent commit" }, { status: 404 });
+    }
+    return NextResponse.json({ content });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Octets d'un fichier du diff d'un commit (images) — le pendant de
+ * `prFileBytesResponse`, aux deux refs de CE commit : son parent d'un côté,
+ * lui-même de l'autre. Mêmes trois gardes, dans le même ordre.
+ */
+export async function prCommitFileBytesResponse(
+  scope: PrScope,
+  sha: string,
+  filename: string,
+  side: FileSide,
+): Promise<NextResponse> {
+  const contentType = imageMimeType(filename);
+  if (!contentType) {
+    return NextResponse.json({ error: "Not a previewable image" }, { status: 415 });
+  }
+
+  try {
+    const commit = await resolvePrCommit(scope, sha);
+    if (!commit) return commitNotFound();
+
+    const diff = await scope.forge.getCommitDiff({
+      token: scope.call.token,
+      repoFullName: scope.call.repoFullName,
+      sha: commit.sha,
+    });
+    const file = diff.files.find((f) => f.filename === filename);
+    if (!file) {
+      return NextResponse.json({ error: "File not found in this diff" }, { status: 404 });
+    }
+    if (side === "base" && file.status === "added") {
+      return NextResponse.json({ error: "File has no base version" }, { status: 404 });
+    }
+    if (side === "head" && file.status === "removed") {
+      return NextResponse.json({ error: "File has no head version" }, { status: 404 });
+    }
+
+    const parent = diff.parentSha ?? commit.parentSha;
+    if (side === "base" && !parent) {
+      return NextResponse.json({ error: "Commit has no parent" }, { status: 409 });
+    }
+    const bytes = await scope.forge.getFileBytesAtRef({
+      token: scope.call.token,
+      repoFullName: scope.call.repoFullName,
+      path: side === "base" ? basePathOf(file) : file.filename,
+      // Les deux refs sont des SHA : la réponse est cachable (cf. imageBytesResponse).
+      ref: side === "base" ? (parent as string) : commit.sha,
+    });
+    if (bytes === null) {
+      return NextResponse.json({ error: "File not found at this ref" }, { status: 404 });
+    }
+    return imageBytesResponse(bytes, contentType);
   } catch (err) {
     return forgeErrorResponse(err);
   }
