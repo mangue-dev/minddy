@@ -2428,6 +2428,10 @@
         "label": "Smart assignment",
         "desc": "Assigns an issue that leaves triage with nobody on it."
       },
+      "conversation_title_model": {
+        "label": "Conversation titles",
+        "desc": "Names a Numo conversation in a few words, from its first message. A small model is enough."
+      },
       "web_search_enabled": {
         "label": "Web search",
         "desc": "Gives Numo and the agents a web search tool (OpenRouter plugin). Each search costs about $0.005, counted against the usage of whoever triggers it."

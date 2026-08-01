@@ -43,6 +43,10 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Titre d'une conversation Numo (lib/server/assistant/title.ts) : un appel de
+  // quelques dizaines de tokens par conversation neuve — un petit modèle suffit,
+  // et c'est exactement le genre d'appel où un gros ne se justifie pas.
+  { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
   // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },

@@ -29,6 +29,10 @@ import {
   buildSystemPrompt,
 } from "@/lib/server/assistant/prompt";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
+import {
+  fallbackConversationTitle,
+  generateConversationTitle,
+} from "@/lib/server/assistant/title";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled, withoutWebSearch } from "@/lib/server/web-search";
 import {
@@ -280,8 +284,12 @@ export async function POST(request: NextRequest) {
 
   // Create or fetch conversation
   let convId = conversationId;
+  // Résumé du titre par un petit modèle : lancé sans être attendu (la sidebar a
+  // déjà le repli tronqué), puis attendu avant de fermer le flux — c'est ce qui
+  // garantit qu'il aboutit sans retarder le premier token de la réponse.
+  let titleDone: Promise<void> | null = null;
   if (!convId) {
-    const title = sanitizedUserMessage.slice(0, 100);
+    const title = fallbackConversationTitle(sanitizedUserMessage);
     const { data: conv, error: convError } = await supabase
       .from("conversations")
       .insert({
@@ -299,6 +307,26 @@ export async function POST(request: NextRequest) {
       );
     }
     convId = conv.id;
+
+    const newConvId = conv.id as string;
+    titleDone = generateConversationTitle({
+      message: sanitizedUserMessage,
+      locale,
+      userId: user.id,
+      projectId,
+      conversationId: newConvId,
+    })
+      .then(async (generated) => {
+        if (!generated || generated === title) return;
+        await service
+          .from("conversations")
+          .update({ title: generated })
+          .eq("id", newConvId)
+          .eq("user_id", user.id);
+      })
+      .catch((err) => {
+        console.error("[numo-title] failed:", (err as Error).message);
+      });
   } else {
     // Check for concurrent generation
     let convQuery = supabase
@@ -557,6 +585,10 @@ export async function POST(request: NextRequest) {
           .update({ status: "idle", error_message: null })
           .eq("id", finalConvId);
 
+        // Le titre est parti au moment de la création : on ne le laisse pas
+        // pendre au-delà de la réponse (la fonction meurt avec le flux).
+        await titleDone;
+
         emitter.emit("done", {});
         emitter.close();
       } catch (err) {
@@ -568,6 +600,10 @@ export async function POST(request: NextRequest) {
           .from("conversations")
           .update({ status: "error", error_message: errorMessage })
           .eq("id", finalConvId);
+
+        // Idem sur le chemin d'erreur : une conversation qui a échoué garde son
+        // titre, c'est même ce qui permet de la retrouver pour réessayer.
+        await titleDone;
 
         emitter.emit("error", { message: errorMessage });
         emitter.close();

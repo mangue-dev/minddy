@@ -28,6 +28,8 @@ export interface ForcedToolCallRecord {
   /** Qui paye — dit par l'appelant, jamais déduit du projet (MIN-131). */
   billTo: AiUsageBillTo;
   projectId?: string | null;
+  /** Conversation Numo à laquelle rattacher la dépense, quand il y en a une. */
+  conversationId?: string | null;
 }
 
 export async function forcedToolCall(
@@ -101,6 +103,7 @@ export async function forcedToolCall(
         cost: u.cost,
         billTo: options.record.billTo,
         projectId: options.record.projectId ?? null,
+        conversationId: options.record.conversationId ?? null,
       });
     }
     const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;

@@ -2428,6 +2428,10 @@
         "label": "Assignation intelligente",
         "desc": "Assigne un ticket qui sort du triage sans personne dessus."
       },
+      "conversation_title_model": {
+        "label": "Titres des conversations",
+        "desc": "Nomme une conversation de Numo en quelques mots, d'après son premier message. Un petit modèle suffit."
+      },
       "web_search_enabled": {
         "label": "Recherche web",
         "desc": "Donne à Numo et aux agents un tool de recherche web (plugin OpenRouter). Chaque recherche coûte environ 0,005 $, comptés dans l'usage de la personne qui la déclenche."
