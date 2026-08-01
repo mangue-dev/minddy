@@ -35,7 +35,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  GitPullRequest,
   MessageSquare,
   Reply,
   Send,
@@ -48,6 +47,7 @@ import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -71,6 +71,7 @@ import {
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { prIdentifier } from "@/lib/repo-providers";
 
 /**
  * Panneau de détail d'une PR (MIN-66 + MIN-138 + MIN-143) : en-tête (ticket +
@@ -89,15 +90,6 @@ import { issueIdentifier } from "@/lib/issue-constants";
  * méthode principale est le squash, le chevron donne les autres méthodes que la
  * forge accepte).
  */
-
-function stateBadgeVariant(
-  state: PullRequestListItem["pr_state"],
-): "default" | "secondary" | "destructive" | "outline" {
-  if (state === "merged") return "default";
-  if (state === "closed") return "destructive";
-  if (state === "draft") return "outline";
-  return "secondary";
-}
 
 /** Pastille d'état d'un check. `pending` pulse : c'est le seul état qui bouge. */
 function CheckDot({ state, className }: { state: CheckState; className?: string }) {
@@ -264,6 +256,7 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
+  const format = useFormatter();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
 
@@ -322,14 +315,6 @@ export function PrDetail({
   // `item` vient de la liste (valeur DB, éventuellement en retard d'un webhook),
   // `pr` du GET de la forge (la vérité) : la forge gagne dès qu'elle a répondu.
   const isDraft = pr?.draft ?? item.pr_state === "draft";
-  const stateKey =
-    item.pr_state === "merged"
-      ? "stateMerged"
-      : item.pr_state === "closed"
-        ? "stateClosed"
-        : isDraft
-          ? "stateDraft"
-          : "stateOpen";
   const isTerminal = item.pr_state === "merged" || item.pr_state === "closed";
   const badgeState = isDraft && !isTerminal ? "draft" : item.pr_state;
   // Une CI rouge ne bloque le merge que dans minddy : GitHub le laisse passer si
@@ -480,9 +465,21 @@ export function PrDetail({
     }
   };
 
-  const identifier = item.issue && item.project
-    ? issueIdentifier(item.project.key, item.issue.number)
-    : `#${item.pr_number}`;
+  // Le nom de cette page est l'identifiant de la PR — pas celui du ticket, qui
+  // n'en est qu'une relation et se lit à sa droite. `pr_url` vient de la liste,
+  // `pr.url` de la forge : l'identifiant EST le lien vers la forge, ce qui
+  // remplace le « PR #30 ↗ » qui traînait sous le titre.
+  const identifier = prIdentifier(item.provider, item.pr_number);
+  const linkedIssue =
+    item.issue && item.project
+      ? issueIdentifier(item.project.key, item.issue.number)
+      : null;
+  const forgeUrl = pr?.url ?? item.pr_url;
+
+  // Le poids de la PR, d'un coup d'œil : GitHub le met à côté du titre, et c'est
+  // la première question qu'on se pose avant d'ouvrir l'onglet Fichiers.
+  const additions = files.reduce((n, f) => n + f.additions, 0);
+  const deletions = files.reduce((n, f) => n + f.deletions, 0);
 
   // La liste connaît l'auteur (colonne `author_login`) ; la forge le confirme.
   // Elle gagne dès qu'elle a répondu — même arbitrage que pour l'état.
@@ -505,36 +502,51 @@ export function PrDetail({
         >
           <ChevronLeft />
         </Button>
-        {item.issue && item.project ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
-            }}
-            className="font-mono text-sm text-muted-foreground outline-none hover:text-foreground hover:underline"
-          >
-            {identifier}
-          </button>
-        ) : (
-          <>
-            <span className="font-mono text-sm text-muted-foreground">{identifier}</span>
-            {/* Non rattachée : c'est un ÉTAT NORMAL depuis MIN-143 (le lien vient
-                d'une convention `MIN-42` dans la branche, le titre ou une ligne
-                Fixes — pas d'une devinette), mais il vaut mieux le dire que
-                laisser un blanc là où l'œil cherche un ticket. */}
-            <span className="text-xs text-muted-foreground/70">{t("noLinkedIssue")}</span>
-          </>
-        )}
+        <span className="flex min-w-0 items-center gap-1 font-mono text-sm">
+          {forgeUrl ? (
+            <a
+              href={forgeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 text-foreground outline-none hover:underline"
+            >
+              {identifier}
+            </a>
+          ) : (
+            <span className="shrink-0 text-foreground">{identifier}</span>
+          )}
+          {linkedIssue ? (
+            // Le chevron seul ne dit pas la relation : la survoler la nomme,
+            // exactement comme « › MIN-42 » sur un sous-ticket.
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
+                  }}
+                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground hover:underline"
+                >
+                  <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{linkedIssue}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{t("linkedIssue")}</TooltipContent>
+            </Tooltip>
+          ) : (
+            // Non rattachée : c'est un ÉTAT NORMAL depuis MIN-143 (le lien vient
+            // d'une convention `MIN-42` dans la branche, le titre ou une ligne
+            // Fixes — pas d'une devinette), mais il vaut mieux le dire que
+            // laisser un blanc là où l'œil cherche un ticket.
+            <span className="font-sans text-xs text-muted-foreground/70">
+              {t("noLinkedIssue")}
+            </span>
+          )}
+        </span>
         {/* Une PR terminale n'a plus d'actions : le badge prend la place qu'elles
             occupaient à droite, là où l'œil cherchait le bouton. Tant qu'elle est
             ouverte il reste à gauche, contre l'identifiant. */}
-        <Badge
-          variant={stateBadgeVariant(badgeState)}
-          icon={<GitPullRequest />}
-          className={cn(isTerminal && "ml-auto")}
-        >
-          {t(stateKey)}
-        </Badge>
+        <PrStateBadge state={badgeState} icon className={cn(isTerminal && "ml-auto")} />
         {/* Approbations : « n approbations », et la mention du blocage à côté du
             bouton Fusionner. Pas de « n/N » — le N vient de la protection de
             branche, qui coûte une permission GitHub hors périmètre. */}
@@ -766,18 +778,19 @@ export function PrDetail({
                   {item.project.name}
                 </span>
               ) : null}
-              {pr ? (
-                <a
-                  href={pr.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-brand hover:underline"
-                >
-                  <ExternalLink className="size-3" />
-                  {t(item.provider === "gitlab" ? "mrNumber" : "prNumber", {
-                    number: pr.number,
-                  })}
-                </a>
+              {/* Le diff en un chiffre, à la place qu'occupait « PR #30 ↗ » —
+                  l'identifiant, lui, est monté dans l'en-tête, où il est
+                  cliquable vers la forge. Muet tant que les fichiers n'ont pas
+                  répondu : « +0 −0 » se lirait comme une PR vide. */}
+              {files.length > 0 ? (
+                <span className="inline-flex items-center gap-1.5 font-medium tabular-nums">
+                  <span className="text-green-700 dark:text-green-500">
+                    +{format.number(additions)}
+                  </span>
+                  <span className="text-red-700 dark:text-red-500">
+                    −{format.number(deletions)}
+                  </span>
+                </span>
               ) : null}
             </div>
           </div>

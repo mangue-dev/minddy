@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
-  Badge,
   Button,
   Select,
   SelectContent,
@@ -15,17 +14,19 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { GitPullRequest } from "lucide-react";
+import { ChevronRight, GitPullRequest } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { NumoIcon } from "@/components/numo-icon";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
+import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { PullRequestListItem, PullRequestStateFilter } from "@/lib/agent-api";
+import { prIdentifier } from "@/lib/repo-providers";
+import type { PullRequestStateFilter } from "@/lib/agent-api";
 
 /**
  * Page Pull Requests (MIN-66, élargie par MIN-143) — vue liste/détail façon
@@ -43,17 +44,6 @@ import type { PullRequestListItem, PullRequestStateFilter } from "@/lib/agent-ap
 /** Valeur du filtre d'auteur : tous, Numo, ou un login de forge précis. */
 const AUTHOR_ALL = "__all__";
 const AUTHOR_NUMO = "__numo__";
-
-function stateVariant(
-  state: PullRequestListItem["pr_state"],
-): "default" | "secondary" | "destructive" | "outline" {
-  if (state === "merged") return "default";
-  if (state === "closed") return "destructive";
-  // Un brouillon est rangé dans « ouvertes » par le filtre — c'en est une — mais
-  // il ne se lit pas comme une PR proposée : le badge creux le distingue.
-  if (state === "draft") return "outline";
-  return "secondary";
-}
 
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
@@ -160,17 +150,6 @@ export function PullRequestsPage() {
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
-  const stateLabel = (state: PullRequestListItem["pr_state"]): string =>
-    t(
-      state === "merged"
-        ? "stateMerged"
-        : state === "closed"
-          ? "stateClosed"
-          : state === "draft"
-            ? "stateDraft"
-            : "stateOpen",
-    );
-
   return (
     <div className="flex h-full min-h-0">
       {/* ── Gauche : liste des PR ───────────────────────────────────────── */}
@@ -242,12 +221,14 @@ export function PullRequestsPage() {
         ) : (
           <div className="flex flex-col px-2 pb-4">
             {filtered.map((pr) => {
-              const identifier =
+              // L'identifiant de la PR d'abord — c'est CETTE ligne qu'on regarde ;
+              // le ticket lié se lit à droite, derrière un chevron qui dit la
+              // relation (même forme que le sous-ticket dans la carte d'issue).
+              const identifier = prIdentifier(pr.provider, pr.pr_number);
+              const linkedIssue =
                 pr.issue && pr.project
                   ? issueIdentifier(pr.project.key, pr.issue.number)
-                  : pr.provider === "gitlab"
-                    ? `!${pr.pr_number}`
-                    : `#${pr.pr_number}`;
+                  : null;
               return (
                 <button
                   key={pr.prId}
@@ -264,14 +245,18 @@ export function PullRequestsPage() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                      {identifier}
+                    <span className="flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+                      <span className="shrink-0 text-foreground">{identifier}</span>
+                      {linkedIssue ? (
+                        <>
+                          <ChevronRight className="size-3 shrink-0" aria-hidden />
+                          <span className="truncate">{linkedIssue}</span>
+                        </>
+                      ) : null}
                     </span>
                     {pr.activeRunId ? <Spinner className="size-3 shrink-0" /> : null}
                     <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                      <Badge variant={stateVariant(pr.pr_state)} className="h-5 px-2 text-[10px]">
-                        {stateLabel(pr.pr_state)}
-                      </Badge>
+                      <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
                       <span className="text-xs text-muted-foreground">{fmtDay(pr.updated_at)}</span>
                     </span>
                   </div>

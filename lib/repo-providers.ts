@@ -71,6 +71,19 @@ export function isRepoProviderId(value: unknown): value is RepoProviderId {
   return value === "github" || value === "gitlab";
 }
 
+/**
+ * Identifiant court d'une pull request, dans la notation de SA forge : `#30`
+ * chez GitHub, `!30` chez GitLab. C'est le nom propre de la PR — celui qu'on
+ * cherche des yeux dans la liste et dans l'en-tête ; le ticket lié, lui, n'est
+ * qu'une relation qu'on accroche à droite.
+ */
+export function prIdentifier(
+  provider: string | null | undefined,
+  number: number,
+): string {
+  return `${provider === "gitlab" ? "!" : "#"}${number}`;
+}
+
 /** Résout une valeur `provider` stockée en métadonnées, par défaut GitHub. */
 export function getRepoProvider(
   value: string | null | undefined,
