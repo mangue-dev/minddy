@@ -41,7 +41,12 @@ import {
   addIssueRelationApi,
   removeIssueRelationApi,
 } from "@/lib/issue-relations-api";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import {
+  GLOBAL_BOARD_KEY,
+  issueWrites,
+  patchIssueEverywhere,
+  removeIssueEverywhere,
+} from "@/lib/optimistic/issue-writes";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import {
@@ -127,37 +132,20 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   );
 
   // ── Optimistic cache patches (both boards) — replays feel instant ────────
+  //
+  // Les patchs eux-mêmes vivent dans lib/optimistic/issue-writes.ts, partagés
+  // avec les hooks d'écriture ; ici on ne fait qu'ouvrir l'entrée du registre
+  // qui les protège d'une réponse en retard, et la refermer au rejouage.
 
   const patchIssueCaches = useCallback(
-    (projectId: string, issueId: string, patch: Partial<Issue>) => {
-      queryClient.setQueryData<Issue[]>(["issues", projectId], (old) =>
-        old?.map((i) => (i.id === issueId ? { ...i, ...patch } : i))
-      );
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old
-          ? {
-              ...old,
-              issues: old.issues.map((i) =>
-                i.id === issueId ? { ...i, ...patch } : i
-              ),
-            }
-          : old
-      );
-    },
+    (projectId: string, issueId: string, patch: Partial<Issue>) =>
+      patchIssueEverywhere(queryClient, projectId, issueId, patch),
     [queryClient]
   );
 
   const removeIssueFromCaches = useCallback(
-    (projectId: string, issueId: string) => {
-      queryClient.setQueryData<Issue[]>(["issues", projectId], (old) =>
-        old?.filter((i) => i.id !== issueId)
-      );
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old
-          ? { ...old, issues: old.issues.filter((i) => i.id !== issueId) }
-          : old
-      );
-    },
+    (projectId: string, issueId: string) =>
+      removeIssueEverywhere(queryClient, projectId, issueId),
     [queryClient]
   );
 
@@ -186,32 +174,36 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     (entry: UndoEntry, direction: "undo" | "redo") => {
       const alias = aliasRef.current;
       switch (entry.kind) {
-        case "update":
-          patchIssueCaches(
-            entry.projectId,
-            resolveAliased(alias, entry.issueId),
-            (direction === "undo" ? entry.before : entry.after) as Partial<Issue>
-          );
+        case "update": {
+          const id = resolveAliased(alias, entry.issueId);
+          const patch = (
+            direction === "undo" ? entry.before : entry.after
+          ) as Partial<Issue>;
+          entry.pending = issueWrites.begin({ kind: "patch", id, patch });
+          patchIssueCaches(entry.projectId, id, patch);
           break;
-        case "categories":
-          patchIssueCaches(entry.projectId, resolveAliased(alias, entry.issueId), {
+        }
+        case "categories": {
+          const id = resolveAliased(alias, entry.issueId);
+          const patch = {
             category_ids: direction === "undo" ? entry.before : entry.after,
-          });
+          };
+          entry.pending = issueWrites.begin({ kind: "patch", id, patch });
+          patchIssueCaches(entry.projectId, id, patch);
           break;
+        }
         case "create":
           if (direction === "undo") {
-            removeIssueFromCaches(
-              entry.projectId,
-              resolveAliased(alias, entry.issueId)
-            );
+            const id = resolveAliased(alias, entry.issueId);
+            entry.pending = issueWrites.begin({ kind: "remove", id });
+            removeIssueFromCaches(entry.projectId, id);
           }
           break;
         case "delete":
           if (direction === "redo") {
-            removeIssueFromCaches(
-              entry.projectId,
-              resolveAliased(alias, entry.issueId)
-            );
+            const id = resolveAliased(alias, entry.issueId);
+            entry.pending = issueWrites.begin({ kind: "remove", id });
+            removeIssueFromCaches(entry.projectId, id);
           }
           break;
         case "relation-add":
@@ -227,6 +219,19 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       }
     },
     [patchIssueCaches, removeIssueFromCaches, removeRelationFromCaches]
+  );
+
+  /** Referme l'entrée du registre ouverte par le rejouage : `settled` quand
+      l'écriture a abouti (les réponses parties après elle font foi), oubliée
+      quand elle a échoué (l'invalidation qui suit rétablit la vérité). */
+  const closePending = useCallback(
+    (entry: UndoEntry, outcome: "settled" | "failed") => {
+      if (!entry.pending) return;
+      if (outcome === "settled") issueWrites.settle(entry.pending);
+      else issueWrites.fail(entry.pending);
+      entry.pending = undefined;
+    },
+    []
   );
 
   const invalidate = useCallback(
@@ -382,9 +387,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           }
           break;
       }
+      closePending(entry, "settled");
       invalidate(entry);
     },
-    [invalidate, recreate, readdRelation]
+    [closePending, invalidate, recreate, readdRelation]
   );
 
   const run = useCallback(
@@ -409,7 +415,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
 
       const queued = entry;
       queueRef.current = queueRef.current.then(async () => {
-        if (queued.dead) return;
+        if (queued.dead) {
+          closePending(queued, "failed");
+          return;
+        }
         try {
           // Never overtake the mutation being replayed (it may still be in flight).
           if (queued.settled) await queued.settled;
@@ -417,6 +426,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           // Entry dropped: it no longer applies (e.g. deleted elsewhere) and
           // keeping it would wedge the stack; invalidation restores the truth.
+          closePending(queued, "failed");
           retract(queued);
           toast.error(
             tRef.current(direction === "undo" ? "undoFailed" : "redoFailed", {
@@ -427,7 +437,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         }
       });
     },
-    [applyOptimistic, applyServer, retract, invalidate]
+    [applyOptimistic, applyServer, closePending, retract, invalidate]
   );
 
   useEffect(() => {

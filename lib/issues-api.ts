@@ -3,6 +3,7 @@
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import { rememberCreateProject } from "./last-create-project";
+import { applyPendingIssues } from "./optimistic/issue-writes";
 import type {
   CreateIssueInput,
   Issue,
@@ -27,8 +28,34 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchIssuesApi(projectId: string): Promise<Issue[]> {
-  return parseJson<Issue[]>(await fetch(`/api/projects/${projectId}/issues`));
+/** `signal` : celui que react-query fournit à sa `queryFn` — un refetch annulé
+    lâche vraiment sa requête au lieu de la laisser courir et répondre en retard
+    (MIN-156). */
+export async function fetchIssuesApi(
+  projectId: string,
+  signal?: AbortSignal
+): Promise<Issue[]> {
+  return parseJson<Issue[]>(
+    await fetch(`/api/projects/${projectId}/issues`, { signal })
+  );
+}
+
+/**
+ * La `queryFn` de `["issues", projectId]`, partagée par TOUS ses observateurs :
+ * le board du projet, les cartes du tableau de bord, l'entête et le
+ * préchargement au survol. Une seule fonction pour une seule clé — sans quoi le
+ * dernier observateur monté imposerait sa lecture, et une lecture qui saute
+ * l'overlay ramène le bug (MIN-156).
+ *
+ * Elle retient l'instant du DÉPART de la requête et fait traverser la réponse au
+ * registre d'écritures en attente : une réponse partie avant une écriture ne
+ * peut plus la défaire, quel que soit son ordre d'arrivée.
+ */
+export function issuesQueryFn(projectId: string) {
+  return async ({ signal }: { signal?: AbortSignal } = {}): Promise<Issue[]> => {
+    const startedAt = Date.now();
+    return applyPendingIssues(await fetchIssuesApi(projectId, signal), startedAt);
+  };
 }
 
 /** Les récurrences actives d'un projet (MIN-136) — un ticket vivant par série,

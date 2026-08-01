@@ -41,6 +41,7 @@ interface RunRow {
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
   prompt: string | null;
+  title: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
@@ -67,8 +68,12 @@ export interface AgentSessionListItem {
   status: AgentRunStatus;
   model: string | null;
   triggered_by: RunRow["triggered_by"];
-  /** Excerpt de la note (sessions CARNET, issue null) — leur « titre ». */
-  prompt: string | null;
+  /**
+   * Le titre d'une session CARNET (issue null) : le résumé écrit au lancement par
+   * le petit modèle, et à défaut l'excerpt de la note elle-même — un run lancé
+   * avant `agent_runs.title`, ou dont la génération a échoué.
+   */
+  noteTitle: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: RunRow["pr_state"];
@@ -100,7 +105,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, status, model, triggered_by, prompt, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url)",
+      "id, issue_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url)",
     )
     .order("created_at", { ascending: false });
 
@@ -131,7 +136,7 @@ export async function GET(request: NextRequest) {
         status: r.status,
         model: r.model,
         triggered_by: r.triggered_by,
-        prompt: r.issue_id ? null : noteExcerpt(r.prompt),
+        noteTitle: r.issue_id ? null : r.title?.trim() || noteExcerpt(r.prompt),
         pr_number: r.pr_number,
         pr_url: r.pr_url,
         pr_state: r.pr_state,

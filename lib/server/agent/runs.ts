@@ -88,6 +88,9 @@ export interface AgentRun {
   triggered_by: "button" | "chat" | "mention";
   created_by: string | null;
   prompt: string | null;
+  /** Résumé court de la note, pour les sessions CARNET. Null = pas de résumé
+   *  (run d'issue, dont le titre est celui du ticket ; ou génération échouée). */
+  title: string | null;
   model: string | null;
   model_forced: boolean;
   /** Niveau de raisonnement FIGÉ au lancement (MIN-122), comme le modèle : un run
@@ -147,6 +150,8 @@ export interface CreateRunInput {
   connectionId: string | null;
   createdBy: string;
   prompt?: string | null;
+  /** Résumé de la note (runs carnet) — cf. `AgentRun.title`. */
+  title?: string | null;
   model: string;
   modelForced: boolean;
   /** Niveau de raisonnement résolu au lancement (cf. `resolveReasoningLevel`). */
@@ -194,6 +199,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       triggered_by: input.triggeredBy,
       created_by: input.createdBy,
       prompt: input.prompt ?? null,
+      title: input.title ?? null,
       model: input.model,
       model_forced: input.modelForced,
       reasoning_level: input.reasoningLevel,

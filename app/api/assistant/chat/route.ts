@@ -29,10 +29,7 @@ import {
   buildSystemPrompt,
 } from "@/lib/server/assistant/prompt";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
-import {
-  fallbackConversationTitle,
-  generateConversationTitle,
-} from "@/lib/server/assistant/title";
+import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled, withoutWebSearch } from "@/lib/server/web-search";
 import {
@@ -289,7 +286,7 @@ export async function POST(request: NextRequest) {
   // garantit qu'il aboutit sans retarder le premier token de la réponse.
   let titleDone: Promise<void> | null = null;
   if (!convId) {
-    const title = fallbackConversationTitle(sanitizedUserMessage);
+    const title = fallbackShortTitle(sanitizedUserMessage);
     const { data: conv, error: convError } = await supabase
       .from("conversations")
       .insert({
@@ -309,12 +306,17 @@ export async function POST(request: NextRequest) {
     convId = conv.id;
 
     const newConvId = conv.id as string;
-    titleDone = generateConversationTitle({
-      message: sanitizedUserMessage,
+    titleDone = generateShortTitle({
+      text: sanitizedUserMessage,
+      kind: "conversation",
       locale,
-      userId: user.id,
-      projectId,
-      conversationId: newConvId,
+      usage: {
+        feature: "numo_chat",
+        // C'est l'auteur du message qui paye, comme le tour de chat qui suit.
+        userId: user.id,
+        projectId,
+        conversationId: newConvId,
+      },
     })
       .then(async (generated) => {
         if (!generated || generated === title) return;

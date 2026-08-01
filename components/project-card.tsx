@@ -26,7 +26,7 @@ import {
   MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
-import { fetchIssuesApi } from "@/lib/issues-api";
+import { issuesQueryFn } from "@/lib/issues-api";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
@@ -68,7 +68,7 @@ export function ProjectCard({ project }: { project: Project }) {
   // dashboard without this card owning a subscription.
   const { data } = useQuery({
     queryKey: ["issues", project.id],
-    queryFn: () => fetchIssuesApi(project.id),
+    queryFn: issuesQueryFn(project.id),
   });
   const issues = data ?? [];
   const isOpen = (status: string) =>

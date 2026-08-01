@@ -32,7 +32,7 @@ import { useCreate } from "@/lib/create-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { useMyInvitations } from "@/lib/use-invitations-query";
-import { fetchIssuesApi } from "@/lib/issues-api";
+import { issuesQueryFn } from "@/lib/issues-api";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -237,7 +237,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // (realtime-fresh) rather than as-of-the-snapshot.
   const { data: projectIssues } = useQuery({
     queryKey: ["issues", currentProjectId ?? ""],
-    queryFn: () => fetchIssuesApi(currentProjectId as string),
+    queryFn: issuesQueryFn(currentProjectId as string),
     enabled: !!currentProjectId,
   });
 

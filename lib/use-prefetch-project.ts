@@ -2,10 +2,10 @@
 
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { fetchIssuesApi } from "./issues-api";
+import { issuesQueryFn } from "./issues-api";
 import { fetchCategoriesApi } from "./categories-api";
 import { fetchMembersApi } from "./members-api";
-import { fetchObjectivesApi } from "./objectives-api";
+import { objectivesQueryFn } from "./objectives-api";
 import { fetchIssueRelationsApi } from "./issue-relations-api";
 
 /**
@@ -37,7 +37,7 @@ export function usePrefetchProject() {
       // bloquent pas le premier rendu du board.
       void queryClient.prefetchQuery({
         queryKey: ["issues", projectId],
-        queryFn: () => fetchIssuesApi(projectId),
+        queryFn: issuesQueryFn(projectId),
       });
       void queryClient.prefetchQuery({
         queryKey: ["categories", projectId],
@@ -49,7 +49,7 @@ export function usePrefetchProject() {
       });
       void queryClient.prefetchQuery({
         queryKey: ["objectives", projectId],
-        queryFn: () => fetchObjectivesApi(projectId),
+        queryFn: objectivesQueryFn(projectId),
       });
       void queryClient.prefetchQuery({
         queryKey: ["issue-relations", projectId],

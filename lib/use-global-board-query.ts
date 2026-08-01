@@ -3,13 +3,22 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
-import { fetchGlobalBoardApi } from "./global-board-api";
+import { globalBoardQueryFn } from "./global-board-api";
 import {
   createIssueApi,
   deleteIssueApi,
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import {
+  GLOBAL_BOARD_KEY,
+  insertIssueEverywhere,
+  issueWrites,
+  mergeServerIssue,
+  patchIssueEverywhere,
+  removeIssueEverywhere,
+  replaceIssueEverywhere,
+} from "./optimistic/issue-writes";
 import { trackEvent } from "./analytics";
 import {
   addIssueRelationApi,
@@ -30,14 +39,18 @@ import type {
   IssueUpdateInput,
 } from "./types";
 
-/** Cache key for the aggregate cross-project board (MIN-29). */
-export const GLOBAL_BOARD_KEY = ["me", "board"] as const;
+/** Cache key for the aggregate cross-project board (MIN-29). Défini dans
+    lib/optimistic/issue-writes.ts (que ce module importe), ré-exporté ici où
+    tout le reste de l'app va le chercher. */
+export { GLOBAL_BOARD_KEY };
 
 /**
  * The cross-project "My/All" kanban's data + writes. Edits go through the
- * by-id issue APIs (which are project-agnostic), optimistically patch this
- * aggregate cache, then invalidate both it and the touched project's
- * `["issues", projectId]` cache so the project board reflects the change too.
+ * by-id issue APIs (which are project-agnostic) and patch this aggregate cache
+ * AND the touched project's `["issues", projectId]` cache in place — la ligne
+ * serveur y est fusionnée au retour du PATCH plutôt qu'invalidée (MIN-156) :
+ * `/api/me/board` est une route lourde, et chaque refetch inutile était une
+ * fenêtre de plus pour qu'une réponse en retard écrase l'édition en cours.
  * Mirrors useIssuesQuery, including self-assign-on-start.
  */
 export function useGlobalBoardQuery() {
@@ -49,28 +62,12 @@ export function useGlobalBoardQuery() {
 
   const { data, isLoading } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
-    queryFn: fetchGlobalBoardApi,
+    queryFn: globalBoardQueryFn,
     // Pas de staleTime court : depuis MIN-89 le pont temps réel invalide cette
     // clé sur tout changement de ticket de N'IMPORTE lequel de mes projets (il
     // ne s'abonnait qu'au projet de l'URL, d'où ce rattrapage à l'horloge).
     // On garde donc le défaut global de 5 min — l'événement porte la fraîcheur.
   });
-
-  const patchCache = useCallback(
-    (issueId: string, patch: Partial<Issue>) => {
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old
-          ? {
-              ...old,
-              issues: old.issues.map((i) =>
-                i.id === issueId ? { ...i, ...patch } : i
-              ),
-            }
-          : old
-      );
-    },
-    [queryClient]
-  );
 
   const invalidate = useCallback(
     (projectId?: string) => {
@@ -109,8 +106,9 @@ export function useGlobalBoardQuery() {
       projectId: string,
       patchHasAssignee: boolean
     ) => {
-      const prev = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
-      const current = prev?.issues.find((i) => i.id === issueId);
+      const current = queryClient
+        .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
+        ?.issues.find((i) => i.id === issueId);
       const assignee = startAssignee(current, updates.status, patchHasAssignee);
       // Both server side-effects are mirrored here so the card doesn't flash:
       // starting an issue can self-assign it, and moving one to triage takes it
@@ -120,7 +118,14 @@ export function useGlobalBoardQuery() {
         ...(assignee ? { assignee_id: assignee } : {}),
         ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
       };
-      patchCache(issueId, patch as Partial<Issue>);
+      // Inscription au registre AVANT le patch (MIN-156) : à partir de là,
+      // aucune réponse de fetch partie plus tôt ne peut rejouer l'état d'avant.
+      const handle = issueWrites.begin({
+        kind: "patch",
+        id: issueId,
+        patch: patch as Partial<Issue>,
+      });
+      patchIssueEverywhere(queryClient, projectId, issueId, patch as Partial<Issue>);
       // Single record point for updateIssue/moveIssue/setIssueCycle — recorded
       // with the optimistic patch so an instant ⌘Z works; retracted on failure.
       const request = updateIssueApi(issueId, patch, {
@@ -138,15 +143,31 @@ export function useGlobalBoardQuery() {
           )
         : null;
       try {
-        await request;
-        invalidate(projectId);
+        // La ligne serveur entre dans les caches au lieu de les invalider :
+        // c'est CE refetch-là qui, multiplié par N en édition groupée, ouvrait
+        // la fenêtre de course. Le realtime porte le changement aux autres
+        // clients ; ici le cache est déjà exact.
+        const issue = await request;
+        mergeServerIssue(queryClient, projectId, issue);
+        issueWrites.settle(handle, issue);
       } catch (err) {
+        // Rollback ciblé : seuls les champs de CETTE écriture reviennent en
+        // arrière. Restaurer le board entier écrasait aussi les patchs
+        // optimistes des N-1 autres écritures du lot.
+        issueWrites.fail(handle);
         rec?.retract();
-        if (prev) queryClient.setQueryData(GLOBAL_BOARD_KEY, prev);
+        if (before) {
+          patchIssueEverywhere(
+            queryClient,
+            projectId,
+            issueId,
+            before as Partial<Issue>
+          );
+        }
         throw err;
       }
     },
-    [queryClient, patchCache, invalidate, startAssignee, record]
+    [queryClient, startAssignee, record]
   );
 
   // Inline card edits (status/priority/effort/assignee/due).
@@ -186,7 +207,14 @@ export function useGlobalBoardQuery() {
         queryClient
           .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
           ?.issues.find((i) => i.id === issueId)?.category_ids ?? [];
-      patchCache(issueId, { category_ids: categoryIds });
+      const handle = issueWrites.begin({
+        kind: "patch",
+        id: issueId,
+        patch: { category_ids: categoryIds },
+      });
+      patchIssueEverywhere(queryClient, projectId, issueId, {
+        category_ids: categoryIds,
+      });
       // No debounce here — rapid toggles coalesce in the undo stack itself.
       const changed =
         before.length !== categoryIds.length ||
@@ -204,14 +232,19 @@ export function useGlobalBoardQuery() {
         : null;
       try {
         await request;
-        invalidate(projectId);
+        // Le PUT ne renvoie pas la ligne : le jeu écrit EST la vérité, rien à
+        // refetcher (le realtime réconcilie les autres clients).
+        issueWrites.settle(handle);
       } catch (err) {
+        issueWrites.fail(handle);
         rec?.retract();
+        patchIssueEverywhere(queryClient, projectId, issueId, {
+          category_ids: before,
+        });
         toast.error((err as Error).message);
-        invalidate(projectId);
       }
     },
-    [queryClient, patchCache, invalidate, record]
+    [queryClient, record]
   );
 
   const deleteIssue = useCallback(
@@ -262,26 +295,19 @@ export function useGlobalBoardQuery() {
   // toast à l'échec. Le realtime réconcilie ; pas de refetch local.
   const createIssue = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
-      const projectKey = ["issues", projectId] as const;
       const optimistic = buildOptimisticIssue(
         input,
         projectId,
         user?.id ?? null,
         queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues ?? []
       );
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old ? { ...old, issues: [...old.issues, optimistic] } : old
-      );
-      queryClient.setQueryData<Issue[]>(projectKey, (old) =>
-        old ? [...old, optimistic] : old
-      );
+      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
+      insertIssueEverywhere(queryClient, projectId, optimistic);
       void createIssueApi(projectId, input).then(
         (issue) => {
-          const swap = (i: Issue) => (i.id === optimistic.id ? issue : i);
-          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-            old ? { ...old, issues: old.issues.map(swap) } : old
-          );
-          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.map(swap));
+          replaceIssueEverywhere(queryClient, projectId, optimistic.id, issue);
+          insertIssueEverywhere(queryClient, projectId, issue);
+          issueWrites.settle(handle, issue);
           record({
             kind: "create",
             projectId,
@@ -290,11 +316,8 @@ export function useGlobalBoardQuery() {
           });
         },
         (err) => {
-          const drop = (i: Issue) => i.id !== optimistic.id;
-          queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-            old ? { ...old, issues: old.issues.filter(drop) } : old
-          );
-          queryClient.setQueryData<Issue[]>(projectKey, (old) => old?.filter(drop));
+          issueWrites.fail(handle);
+          removeIssueEverywhere(queryClient, projectId, optimistic.id);
           toast.error((err as Error).message);
         }
       );

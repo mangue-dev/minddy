@@ -5,9 +5,13 @@ import { useCallback } from "react";
 import {
   createObjectiveApi,
   deleteObjectiveApi,
-  fetchObjectivesApi,
+  objectivesQueryFn,
   updateObjectiveApi,
 } from "./objectives-api";
+import {
+  objectiveWrites,
+  patchObjectiveCache,
+} from "./optimistic/issue-writes";
 import { effortToPoints, statusCompletionCredit } from "./cycle";
 import type { IssueEffort, IssueStatus } from "./issue-constants";
 import type {
@@ -23,7 +27,7 @@ export function useObjectivesQuery(projectId: string | null) {
 
   const { data, isLoading } = useQuery({
     queryKey: objectivesKey(projectId ?? ""),
-    queryFn: () => fetchObjectivesApi(projectId as string),
+    queryFn: objectivesQueryFn(projectId ?? ""),
     enabled: !!projectId,
   });
 
@@ -42,13 +46,59 @@ export function useObjectivesQuery(projectId: string | null) {
     [projectId, invalidate]
   );
 
+  /**
+   * Optimiste depuis MIN-156. Avant, le sélecteur d'état du panneau latéral
+   * (et les cartes de la page Objectifs) lisaient `objective.status` du cache
+   * et gardaient donc l'ancienne valeur jusqu'à la réponse du refetch : plus
+   * d'une seconde à afficher l'état d'avant, juste après l'avoir changé.
+   */
   const updateObjective = useCallback(
     async (objectiveId: string, updates: ObjectiveUpdateInput) => {
-      const objective = await updateObjectiveApi(objectiveId, updates);
-      invalidate();
-      return objective;
+      const pid = projectId;
+      const current = pid
+        ? queryClient
+            .getQueryData<Objective[]>(objectivesKey(pid))
+            ?.find((o) => o.id === objectiveId)
+        : undefined;
+      // L'inverse du PATCH, champ par champ : c'est là que le cache revient si
+      // le serveur refuse, sans toucher au reste de la ligne.
+      const before: Partial<Objective> = {};
+      if (current) {
+        for (const field of Object.keys(updates) as (keyof ObjectiveUpdateInput)[]) {
+          (before as Record<string, unknown>)[field] =
+            (current[field as keyof Objective] as unknown) ?? null;
+        }
+      }
+      const handle = objectiveWrites.begin({
+        kind: "patch",
+        id: objectiveId,
+        patch: updates as Partial<Objective>,
+      });
+      if (pid) {
+        patchObjectiveCache(
+          queryClient,
+          pid,
+          objectiveId,
+          updates as Partial<Objective>
+        );
+      }
+      try {
+        const objective = await updateObjectiveApi(objectiveId, updates);
+        // La ligne serveur entre dans le cache — pas d'invalidation : c'est ce
+        // refetch qui rejouait l'ancien état pendant une seconde.
+        if (pid) patchObjectiveCache(queryClient, pid, objectiveId, objective);
+        objectiveWrites.settle(handle, objective);
+        return objective;
+      } catch (err) {
+        objectiveWrites.fail(handle);
+        if (pid && current) {
+          patchObjectiveCache(queryClient, pid, objectiveId, before);
+        }
+        // Conservé : le toast d'erreur du panneau latéral le récupère.
+        throw err;
+      }
     },
-    [invalidate]
+    [projectId, queryClient]
   );
 
   const deleteObjective = useCallback(

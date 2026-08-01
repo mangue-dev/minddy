@@ -15,6 +15,11 @@ import { getSupabase } from "./supabase";
 import { useAuth } from "./auth-context";
 import { projectIdFromPath } from "./project-id-from-path";
 import { projectTopicIds } from "./realtime-topics";
+import {
+  GLOBAL_BOARD_KEY,
+  issueWrites,
+  objectiveWrites,
+} from "./optimistic/issue-writes";
 import { shouldCatchUpOnResume, wakeRealtime } from "./realtime-resume";
 import type { Project } from "./types";
 
@@ -62,7 +67,8 @@ const INVALIDATE_COALESCE_MS = 200;
 // Caches that aggregate several projects. A project event has to reach them too
 // or /home, /all, /statistics and the palette stay stale (MIN-89). Kept as
 // literals like every other key in this file; the owning modules are named.
-const GLOBAL_BOARD_KEY: QueryKey = ["me", "board"]; // lib/use-global-board-query.ts
+// (GLOBAL_BOARD_KEY vient de lib/optimistic/issue-writes.ts — c'est le module
+// qui sait aussi si l'événement est l'écho de notre propre écriture.)
 const HOME_SUMMARY_KEY: QueryKey = ["me", "summary"]; // lib/use-home-summary-query.ts
 const SEARCH_INDEX_KEY: QueryKey = ["me", "search-index"]; // lib/use-search-index.ts
 // Smart Assign mal réglé : la sidebar en porte la marque sur toutes les pages.
@@ -77,19 +83,26 @@ const ALL_AGENT_SESSIONS_KEY: QueryKey = ["agent-sessions", "all"];
 const ALL_PULL_REQUESTS_KEY: QueryKey = ["pull-requests", "all"];
 
 /**
- * Aggregates fed by any issue-shaped change, with the refetch policy each one
- * wants. The palette index is marked stale but NOT refetched: it is a 4 000-row
- * snapshot fetched once per tab on purpose, and it already revalidates itself
- * on open when stale (lib/use-search-index.ts). Refetching it on every write
- * would undo that design. The others are refetched only while mounted —
- * `invalidateQueries` leaves observer-less queries stale without a request.
+ * Vues DÉRIVÉES d'un ticket : leur appartenance aux listes est calculée en SQL,
+ * donc rien ne les patche localement — elles doivent être rafraîchies même sur
+ * l'écho de notre propre écriture (MIN-156). Le palier de la palette est marqué
+ * périmé mais PAS rafraîchi : c'est un instantané de 4 000 lignes chargé une
+ * fois par onglet, qui se revalide déjà à l'ouverture quand il est périmé
+ * (lib/use-search-index.ts). Les autres ne repartent au serveur que si elles
+ * sont montées — `invalidateQueries` laisse périmées les requêtes sans
+ * observateur, sans requête.
  */
-const ISSUE_AGGREGATE_KEYS: { key: QueryKey; refetch: RefetchMode }[] = [
-  { key: GLOBAL_BOARD_KEY, refetch: "active" },
+const ISSUE_DERIVED_KEYS: { key: QueryKey; refetch: RefetchMode }[] = [
   { key: HOME_SUMMARY_KEY, refetch: "active" },
   { key: STATS_KEY, refetch: "active" },
   { key: TRIAGE_COUNTS_KEY, refetch: "active" },
   { key: SEARCH_INDEX_KEY, refetch: "none" },
+];
+
+/** Tout ce qu'un changement de ticket bouge, board agrégé compris. */
+const ISSUE_AGGREGATE_KEYS: { key: QueryKey; refetch: RefetchMode }[] = [
+  { key: GLOBAL_BOARD_KEY, refetch: "active" },
+  ...ISSUE_DERIVED_KEYS,
 ];
 
 type RefetchMode = "active" | "none";
@@ -173,14 +186,34 @@ function keysForProjectEvent(
     // the side panel rides the same ["issues", projectId] cache.
     case "issues":
     case "issue_categories": // issues are cached hydrated with category_ids
-      return [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
+      // L'écho de NOTRE propre écriture (MIN-156) : les deux caches de tickets
+      // portent déjà la ligne serveur, fusionnée au retour du PATCH. Les
+      // rafraîchir ne pourrait rien apprendre — mais ouvrirait la fenêtre de
+      // course qu'on vient de fermer. Les événements des autres clients (Numo,
+      // MCP, coéquipiers) ne matchent aucune écriture locale et passent donc
+      // inchangés, comme les vues dérivées qu'on ne patche pas.
+      return issueWrites.wasJustWritten(
+        // La ligne du TICKET : c'est `id` sur `issues`, `issue_id` sur la table
+        // de liaison des catégories.
+        change.table === "issues"
+          ? (change.record ?? change.old_record)?.id
+          : issueIdOf(change),
+        change.record
+      )
+        ? ISSUE_DERIVED_KEYS
+        : [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
     case "issue_relations":
       return [active(["issue-relations", projectId]), active(GLOBAL_BOARD_KEY)];
     case "objectives":
-      return [
-        active(["objectives", projectId]),
-        { key: SEARCH_INDEX_KEY, refetch: "none" },
-      ];
+      return objectiveWrites.wasJustWritten(
+        (change.record ?? change.old_record)?.id,
+        change.record
+      )
+        ? [{ key: SEARCH_INDEX_KEY, refetch: "none" }]
+        : [
+            active(["objectives", projectId]),
+            { key: SEARCH_INDEX_KEY, refetch: "none" },
+          ];
     case "categories": // renames/deletes also affect chips on cached issues
       return [
         active(["categories", projectId]),

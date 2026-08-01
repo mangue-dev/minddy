@@ -118,7 +118,7 @@ export function AgentSessionDetail({
               {backButton}
               <NotebookPen className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate text-sm font-medium">
-                {item.prompt || t("noteSessionTitle")}
+                {item.noteTitle || t("noteSessionTitle")}
               </span>
             </div>
           }

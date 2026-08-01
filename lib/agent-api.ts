@@ -741,8 +741,9 @@ export interface AgentSessionListItem {
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
-  /** Excerpt de la note (sessions CARNET, `issue` null) — leur « titre ». */
-  prompt: string | null;
+  /** Titre d'une session CARNET (`issue` null) : le résumé écrit au lancement,
+   *  à défaut l'excerpt de la note. Cf. la route pour la cascade. */
+  noteTitle: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;

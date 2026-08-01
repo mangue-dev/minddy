@@ -9,7 +9,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchGlobalBoardApi } from "@/lib/global-board-api";
+import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import type { GlobalBoardResponse, Member } from "@/lib/types";
@@ -47,7 +47,7 @@ export function useNumoMembers(
 export function useNumoBoard(enabled: boolean) {
   return useQuery<GlobalBoardResponse>({
     queryKey: GLOBAL_BOARD_KEY,
-    queryFn: fetchGlobalBoardApi,
+    queryFn: globalBoardQueryFn,
     enabled,
     staleTime: 30_000,
   });

@@ -125,7 +125,7 @@ export function AgentsPage() {
           status: "queued",
           model: null,
           triggered_by: "button",
-          prompt: null,
+          noteTitle: null,
           pr_number: null,
           pr_url: null,
           pr_state: null,
@@ -384,7 +384,7 @@ export function AgentsPage() {
                     </span>
                   </div>
                   <span className="line-clamp-2 text-sm font-medium">
-                    {s.issue?.title ?? s.prompt ?? t("noteSessionTitle")}
+                    {s.issue?.title ?? s.noteTitle ?? t("noteSessionTitle")}
                   </span>
                   {s.project ? (
                     <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">

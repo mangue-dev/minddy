@@ -12,6 +12,7 @@ import type {
   IssueRelation,
   IssueUpdateInput,
 } from "@/lib/types";
+import type { PendingHandle } from "@/lib/optimistic/pending-writes";
 
 export const UNDO_STACK_LIMIT = 100;
 /** Consecutive category entries on the same issue merge within this window. */
@@ -90,6 +91,10 @@ export type UndoEntry = UndoAction & {
   settled?: Promise<unknown>;
   /** Set when the recorded write failed (entry retracted) — replays skip it. */
   dead?: boolean;
+  /** Entrée du registre d'écritures en attente ouverte par le rejouage
+      (MIN-156) : un ⌘Z subit exactement le même écrasement par une réponse en
+      retard qu'une édition directe. Refermée quand le rejouage a abouti. */
+  pending?: PendingHandle;
 };
 
 export function snapshotIssue(issue: Issue): IssueSnapshot {

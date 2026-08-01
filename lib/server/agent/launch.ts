@@ -21,6 +21,7 @@ import {
 import { drainAgentRuns } from "./drain";
 import { chainAgentDrain } from "./drain-chain";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
+import { generateShortTitle } from "@/lib/server/short-title";
 
 /**
  * Point d'entrée UNIQUE pour démarrer un run FROID (MIN-46 + MIN-68). Appelé par
@@ -146,6 +147,28 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   const quota = await checkAgentQuota(input.userId);
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
 
+  // Titre d'une session CARNET : sans ticket, la page Agents affichait la note
+  // brute sur deux lignes. Le résumé part MAINTENANT, en parallèle des résolutions
+  // qui suivent, et se pose sur le run à sa création — ainsi la session n'existe
+  // jamais sans son titre, et l'attente ne s'ajoute pas au lancement.
+  // Un run d'issue n'en a pas besoin : son titre est celui du ticket.
+  const titlePromise =
+    !issueId && input.prompt?.trim()
+      ? generateShortTitle({
+          text: input.prompt,
+          kind: "note",
+          // La note est écrite dans la langue de la personne, sans qu'on la
+          // connaisse ici : le modèle la reprend telle quelle.
+          locale: "auto",
+          usage: {
+            // Un titre de session est une dépense de l'agent, pas du chat.
+            feature: "agent_code",
+            userId: input.userId,
+            projectId,
+          },
+        }).catch(() => null)
+      : Promise.resolve(null);
+
   let model: string;
   try {
     model = await resolveAgentModel({ perRunModel: input.model, userId: input.userId });
@@ -181,6 +204,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       connectionId: link.connection_id,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
+      title: await titlePromise,
       model,
       modelForced: !!input.forced,
       reasoningLevel,

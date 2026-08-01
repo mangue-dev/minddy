@@ -56,7 +56,10 @@ import { useBulkActions } from "@/lib/bulk-actions-context";
 import { displayName } from "@/lib/display-name";
 import { fetchIssueApi, updateIssueApi } from "@/lib/issues-api";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import {
+  issueWrites,
+  mergeServerIssue,
+} from "@/lib/optimistic/issue-writes";
 import { patchSearchIndexIssue } from "@/lib/use-search-index";
 import {
   resolvePromptCopyAutoStart,
@@ -386,24 +389,35 @@ export function CommandPalette({
 
   // === Actions contextuelles des tickets (⌘; / →) ===
   // Chaque action ouvre un formulaire inline à un champ : le select s'ouvre
-  // auto-focus, choisir une option auto-soumet → PATCH + invalidation des caches
-  // du projet DU TICKET (son board, le board agrégé) et patch de l'index
-  // cross-projet, toast.
+  // auto-focus, choisir une option auto-soumet → PATCH, la ligne serveur est
+  // écrite dans les caches du projet DU TICKET, du board agrégé et de l'index
+  // cross-projet (jamais une invalidation — MIN-156), toast.
   const issueProvider = useMemo<ActionProvider>(() => {
     const update = async (
       issue: PaletteIssue,
       updates: Parameters<typeof updateIssueApi>[1],
       message: string
     ): Promise<ActionResult> => {
-      await updateIssueApi(issue.id, updates, {
-        surface: "palette",
-        previousStatus: issue.status,
+      const handle = issueWrites.begin({
+        kind: "patch",
+        id: issue.id,
+        patch: updates as Partial<Issue>,
       });
+      let updated;
+      try {
+        updated = await updateIssueApi(issue.id, updates, {
+          surface: "palette",
+          previousStatus: issue.status,
+        });
+      } catch (err) {
+        issueWrites.fail(handle);
+        throw err;
+      }
       // L'index est la source de la ligne dès qu'on n'est pas dans le projet du
       // ticket : sans ce patch, l'icône de statut resterait l'ancienne.
       patchSearchIndexIssue(queryClient, issue.id, updates as Partial<SearchIndexIssue>);
-      await queryClient.invalidateQueries({ queryKey: ["issues", issue.project_id] });
-      void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+      mergeServerIssue(queryClient, issue.project_id, updated);
+      issueWrites.settle(handle, updated);
       toast.success(message);
       // closeMenu:false → retour à la recherche, l'icône de statut se met à jour
       return { success: true, closeMenu: false };
@@ -581,16 +595,25 @@ export function CommandPalette({
             });
             await navigator.clipboard.writeText(prompt);
             if (autoStart) {
-              await updateIssueApi(
-                full.id,
-                { status: "in_progress" },
-                { surface: "palette", previousStatus: full.status }
-              );
-              patchSearchIndexIssue(queryClient, full.id, { status: "in_progress" });
-              await queryClient.invalidateQueries({
-                queryKey: ["issues", full.project_id],
+              const handle = issueWrites.begin({
+                kind: "patch",
+                id: full.id,
+                patch: { status: "in_progress" },
               });
-              void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+              let started;
+              try {
+                started = await updateIssueApi(
+                  full.id,
+                  { status: "in_progress" },
+                  { surface: "palette", previousStatus: full.status }
+                );
+              } catch (err) {
+                issueWrites.fail(handle);
+                throw err;
+              }
+              patchSearchIndexIssue(queryClient, full.id, { status: "in_progress" });
+              mergeServerIssue(queryClient, full.project_id, started);
+              issueWrites.settle(handle, started);
               toast.success(tIssueUI("promptCopiedMoved"));
             } else {
               toast.success(tIssueUI("promptCopied"));

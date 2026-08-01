@@ -9,7 +9,7 @@ import { Plus } from "lucide-react";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { useProjects } from "@/lib/projects-context";
-import { fetchGlobalBoardApi } from "@/lib/global-board-api";
+import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
@@ -38,7 +38,7 @@ export function LaunchAgentPicker({ sessions }: { sessions: AgentSessionListItem
 
   const { data, isLoading } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
-    queryFn: fetchGlobalBoardApi,
+    queryFn: globalBoardQueryFn,
     enabled: open,
     staleTime: 30_000,
   });

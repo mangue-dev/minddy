@@ -6,6 +6,7 @@ import type {
   ObjectiveUpdateInput,
 } from "./types";
 import { trackEvent } from "./analytics";
+import { applyPendingObjectives } from "./optimistic/issue-writes";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -23,8 +24,28 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchObjectivesApi(projectId: string): Promise<Objective[]> {
-  return parseJson<Objective[]>(await fetch(`/api/projects/${projectId}/objectives`));
+export async function fetchObjectivesApi(
+  projectId: string,
+  signal?: AbortSignal
+): Promise<Objective[]> {
+  return parseJson<Objective[]>(
+    await fetch(`/api/projects/${projectId}/objectives`, { signal })
+  );
+}
+
+/** La `queryFn` de `["objectives", projectId]` — même contrat que
+    `issuesQueryFn` : instant de départ retenu, réponse passée par l'overlay des
+    écritures en attente (MIN-156). */
+export function objectivesQueryFn(projectId: string) {
+  return async ({
+    signal,
+  }: { signal?: AbortSignal } = {}): Promise<Objective[]> => {
+    const startedAt = Date.now();
+    return applyPendingObjectives(
+      await fetchObjectivesApi(projectId, signal),
+      startedAt
+    );
+  };
 }
 
 export async function createObjectiveApi(

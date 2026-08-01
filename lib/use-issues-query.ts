@@ -6,10 +6,18 @@ import { toast } from "mangue-ui";
 import {
   createIssueApi,
   deleteIssueApi,
-  fetchIssuesApi,
+  issuesQueryFn,
   updateIssueApi,
 } from "./issues-api";
 import { setIssueCategoriesApi } from "./categories-api";
+import {
+  insertIssueEverywhere,
+  issueWrites,
+  mergeServerIssue,
+  patchIssueEverywhere,
+  removeIssueEverywhere,
+  replaceIssueEverywhere,
+} from "./optimistic/issue-writes";
 import { trackEvent } from "./analytics";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import { useAuth } from "./auth-context";
@@ -17,6 +25,7 @@ import { autoAssignOnStart } from "./auto-assign-on-start";
 import { leavesCycleOnStatus } from "./cycle";
 import { useUndoHistory, type UndoRecord } from "./undo/undo-context";
 import { buildBeforePatch, snapshotIssue } from "./undo/undo-core";
+import type { PendingHandle } from "./optimistic/pending-writes";
 import type {
   CreateIssueInput,
   Issue,
@@ -47,10 +56,14 @@ export function useIssuesQuery(projectId: string | null) {
   // Last flush PUT per issue (never-throwing) — chained into the next window's
   // `settled` so an undo can't overtake a still-in-flight flush.
   const catFlush = useRef(new Map<string, Promise<unknown>>());
+  // Les entrées du registre d'écritures ouvertes par la fenêtre (une par
+  // toggle) et le jeu de catégories d'avant, pour la refermer au flush (MIN-156).
+  const catHandles = useRef(new Map<string, PendingHandle[]>());
+  const catBefore = useRef(new Map<string, string[]>());
 
   const { data, isLoading, error } = useQuery({
     queryKey: issuesKey(projectId ?? ""),
-    queryFn: () => fetchIssuesApi(projectId as string),
+    queryFn: issuesQueryFn(projectId ?? ""),
     enabled: !!projectId,
   });
 
@@ -97,12 +110,19 @@ export function useIssuesQuery(projectId: string | null) {
         user?.id ?? null,
         queryClient.getQueryData<Issue[]>(key) ?? []
       );
+      // Inscrite au registre AVANT le patch (MIN-156) : une réponse de GET
+      // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
+      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       queryClient.setQueryData<Issue[]>(key, (old) => [...(old ?? []), optimistic]);
+      // Et dans le board agrégé s'il est chargé : sans ça, /all ignorerait la
+      // carte jusqu'à son prochain refetch (l'écho temps réel de notre propre
+      // création ne l'invalide plus — MIN-156).
+      insertIssueEverywhere(queryClient, pid, optimistic);
       void createIssueApi(pid, input).then(
         (issue) => {
-          queryClient.setQueryData<Issue[]>(key, (old) =>
-            (old ?? []).map((i) => (i.id === optimistic.id ? issue : i))
-          );
+          replaceIssueEverywhere(queryClient, pid, optimistic.id, issue);
+          insertIssueEverywhere(queryClient, pid, issue);
+          issueWrites.settle(handle, issue);
           record({
             kind: "create",
             projectId: pid,
@@ -111,9 +131,8 @@ export function useIssuesQuery(projectId: string | null) {
           });
         },
         (err) => {
-          queryClient.setQueryData<Issue[]>(key, (old) =>
-            (old ?? []).filter((i) => i.id !== optimistic.id)
-          );
+          issueWrites.fail(handle);
+          removeIssueEverywhere(queryClient, pid, optimistic.id);
           toast.error((err as Error).message);
         }
       );
@@ -122,13 +141,16 @@ export function useIssuesQuery(projectId: string | null) {
     [projectId, queryClient, user, record]
   );
 
-  // Optimistic: patch the cache immediately so edits (incl. inline card pickers)
-  // feel instant; persist, reconcile via invalidate, and revert on failure.
+  // Optimistic: patch the caches immediately so edits (incl. inline card
+  // pickers) feel instant; persist, reconcile with the server row, and revert
+  // the touched fields only on failure.
   const updateIssue = useCallback(
     async (issueId: string, updates: IssueUpdateInput) => {
-      const key = projectId ? issuesKey(projectId) : null;
-      const previous = key ? queryClient.getQueryData<Issue[]>(key) : undefined;
-      const current = previous?.find((i) => i.id === issueId);
+      const current = projectId
+        ? queryClient
+            .getQueryData<Issue[]>(issuesKey(projectId))
+            ?.find((i) => i.id === issueId)
+        : undefined;
       const assignee = startAssignee(current, updates.status, "assignee_id" in updates);
       // Les deux effets de bord serveur, reflétés localement : démarrer un
       // ticket peut se l'attribuer, et le passer en triage le sort du cycle
@@ -138,10 +160,15 @@ export function useIssuesQuery(projectId: string | null) {
         ...(assignee ? { assignee_id: assignee } : {}),
         ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
       };
-      if (key) {
-        queryClient.setQueryData<Issue[]>(key, (old) =>
-          (old ?? []).map((i) => (i.id === issueId ? { ...i, ...patch } : i))
-        );
+      // Registre d'abord (MIN-156), patch ensuite : entre les deux, aucune
+      // réponse en vol ne peut se glisser et rejouer l'état d'avant.
+      const handle = issueWrites.begin({
+        kind: "patch",
+        id: issueId,
+        patch: patch as Partial<Issue>,
+      });
+      if (projectId) {
+        patchIssueEverywhere(queryClient, projectId, issueId, patch as Partial<Issue>);
       }
       // The final patch (injected assignee included) against the pre-edit issue.
       const request = updateIssueApi(issueId, patch, {
@@ -170,15 +197,24 @@ export function useIssuesQuery(projectId: string | null) {
         // injecté, completed_at, cycle_id…) SANS refetch de tout le projet à
         // chaque édition de champ. Le realtime propage le changement aux autres
         // clients ; localement le cache est déjà exact.
-        if (key) {
-          queryClient.setQueryData<Issue[]>(key, (old) =>
-            (old ?? []).map((i) => (i.id === issueId ? { ...i, ...issue } : i))
-          );
-        }
+        if (projectId) mergeServerIssue(queryClient, projectId, issue);
+        issueWrites.settle(handle, issue);
         return issue;
       } catch (err) {
+        // Rollback CIBLÉ (MIN-156) : seuls les champs que cette écriture a
+        // touchés reviennent en arrière. Restaurer le tableau entier écrasait
+        // aussi les patchs optimistes des autres écritures du même lot — un
+        // seul échec faisait clignoter toute la sélection.
+        issueWrites.fail(handle);
         rec?.retract();
-        if (key) queryClient.setQueryData(key, previous);
+        if (projectId && before) {
+          patchIssueEverywhere(
+            queryClient,
+            projectId,
+            issueId,
+            before as Partial<Issue>
+          );
+        }
         throw err;
       }
     },
@@ -246,9 +282,9 @@ export function useIssuesQuery(projectId: string | null) {
       patch: { status?: Issue["status"]; position: number }
     ) => {
       if (!projectId) return;
-      const key = issuesKey(projectId);
-      const previous = queryClient.getQueryData<Issue[]>(key);
-      const moved = previous?.find((i) => i.id === issueId);
+      const moved = queryClient
+        .getQueryData<Issue[]>(issuesKey(projectId))
+        ?.find((i) => i.id === issueId);
       const assignee = startAssignee(moved, patch.status, false);
       // Mêmes reflets qu'au-dessus : auto-attribution au démarrage, sortie du
       // cycle sur un passage en triage.
@@ -257,9 +293,12 @@ export function useIssuesQuery(projectId: string | null) {
         ...(assignee ? { assignee_id: assignee } : {}),
         ...(leavesCycleOnStatus(moved, patch.status) ? { cycle_id: null } : {}),
       };
-      queryClient.setQueryData<Issue[]>(key, (old) =>
-        (old ?? []).map((i) => (i.id === issueId ? { ...i, ...write } : i))
-      );
+      const handle = issueWrites.begin({
+        kind: "patch",
+        id: issueId,
+        patch: write as Partial<Issue>,
+      });
+      patchIssueEverywhere(queryClient, projectId, issueId, write as Partial<Issue>);
       // Glisser-déposer : la surface qui dit si le kanban sert vraiment.
       const request = updateIssueApi(issueId, write, {
         surface: "kanban_drag",
@@ -283,10 +322,22 @@ export function useIssuesQuery(projectId: string | null) {
           )
         : null;
       try {
-        await request;
+        // Comme updateIssue : la ligne serveur remplace l'optimiste (position
+        // recalculée, completed_at, assigné injecté) sans refetch.
+        const issue = await request;
+        mergeServerIssue(queryClient, projectId, issue);
+        issueWrites.settle(handle, issue);
       } catch (err) {
+        issueWrites.fail(handle);
         rec?.retract();
-        queryClient.setQueryData(key, previous);
+        if (before) {
+          patchIssueEverywhere(
+            queryClient,
+            projectId,
+            issueId,
+            before as Partial<Issue>
+          );
+        }
         throw err;
       }
     },
@@ -300,14 +351,16 @@ export function useIssuesQuery(projectId: string | null) {
   // reconciled from the server.
   const setCategories = useCallback(
     async (issueId: string, categoryIds: string[]) => {
-      const key = projectId ? issuesKey(projectId) : null;
       // First toggle of a debounce window: record right away (an instant ⌘Z
       // must find the entry) with a `settled` the flush resolves. Subsequent
       // toggles only move the entry's `after`.
-      if (key && projectId && !catTimers.current.has(issueId)) {
+      if (projectId && !catTimers.current.has(issueId)) {
         const current = queryClient
-          .getQueryData<Issue[]>(key)
+          .getQueryData<Issue[]>(issuesKey(projectId))
           ?.find((i) => i.id === issueId);
+        // Le jeu d'avant la fenêtre : c'est là que le cache revient si le PUT
+        // groupé échoue, sans toucher aux autres champs du ticket.
+        catBefore.current.set(issueId, current?.category_ids ?? []);
         let resolve: () => void = () => {};
         const flushed = new Promise<void>((r) => {
           resolve = r;
@@ -330,12 +383,22 @@ export function useIssuesQuery(projectId: string | null) {
           held.rec.entry.after = categoryIds;
         }
       }
-      if (key) {
-        queryClient.setQueryData<Issue[]>(key, (old) =>
-          (old ?? []).map((i) =>
-            i.id === issueId ? { ...i, category_ids: categoryIds } : i
-          )
+      if (projectId) {
+        // Un toggle = une entrée au registre : elles se fusionnent par `seq`
+        // croissant, donc le dernier état gagne, et le lot entier se referme à
+        // la retombée du PUT groupé.
+        const handles = catHandles.current.get(issueId) ?? [];
+        handles.push(
+          issueWrites.begin({
+            kind: "patch",
+            id: issueId,
+            patch: { category_ids: categoryIds },
+          })
         );
+        catHandles.current.set(issueId, handles);
+        patchIssueEverywhere(queryClient, projectId, issueId, {
+          category_ids: categoryIds,
+        });
       }
       catLatest.current.set(issueId, categoryIds);
       const pending = catTimers.current.get(issueId);
@@ -348,6 +411,10 @@ export function useIssuesQuery(projectId: string | null) {
           catLatest.current.delete(issueId);
           const held = catRec.current.get(issueId);
           catRec.current.delete(issueId);
+          const handles = catHandles.current.get(issueId) ?? [];
+          catHandles.current.delete(issueId);
+          const rollbackTo = catBefore.current.get(issueId);
+          catBefore.current.delete(issueId);
           const request = setIssueCategoriesApi(issueId, ids);
           catFlush.current.set(
             issueId,
@@ -370,18 +437,26 @@ export function useIssuesQuery(projectId: string | null) {
                 }
                 held.resolve();
               }
-              invalidate();
+              // Le PUT ne renvoie pas la ligne : le jeu écrit EST la vérité.
+              // On referme les entrées et on laisse le realtime réconcilier
+              // (invalider ici relancerait le refetch qu'on cherche à éviter).
+              for (const handle of handles) issueWrites.settle(handle);
             })
             .catch((err) => {
+              for (const handle of handles) issueWrites.fail(handle);
               held?.rec.retract();
               held?.resolve();
+              if (projectId && rollbackTo) {
+                patchIssueEverywhere(queryClient, projectId, issueId, {
+                  category_ids: rollbackTo,
+                });
+              }
               toast.error((err as Error).message);
-              invalidate();
             });
         }, 300)
       );
     },
-    [projectId, queryClient, invalidate, record]
+    [projectId, queryClient, record]
   );
 
   return {
