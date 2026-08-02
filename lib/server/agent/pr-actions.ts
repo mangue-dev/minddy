@@ -13,6 +13,7 @@ import {
   type PrActionEventType,
 } from "@/lib/pr-events";
 import { hasRecentPrEvent } from "./pr-activity";
+import { broadcastPrChanged } from "./pr-live";
 import { ensureAgentsAllowed } from "@/lib/server/entitlements";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { ensureUsageBudget } from "@/lib/server/usage";
@@ -677,6 +678,11 @@ export async function setPrCommentReactionResponse(
       ...payload,
       login: actor.actor.login,
     });
+    // Direct (MIN-161). Les réactions sont le cas le PLUS dépendant de cette
+    // émission : GitHub ne livre aucun webhook de réaction — l'événement
+    // n'existe pas —, donc sans ce message, un coéquipier qui regarde la même PR
+    // ne verrait jamais la réaction qu'on vient de poser.
+    broadcastPrChanged(scope.pr.id, ["conversation"]);
     return NextResponse.json({ ok: true, on: payload.on });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -701,6 +707,10 @@ export async function createPrCommentResponse(
       ...actorCall(actor.actor, scope),
       body: body.slice(0, MAX_COMMENT_BODY_LENGTH),
     });
+    // Direct : le fil, chez tous ceux qui regardent cette PR. L'écho webhook
+    // dirait la même chose quelques secondes plus tard — trop tard pour une
+    // conversation, et jamais du tout si le webhook n'est pas déployé (dev).
+    broadcastPrChanged(scope.pr.id, ["conversation"]);
     // Trace « a commenté la PR » sur le ticket lié. APRÈS l'envoi : un message
     // que la forge a refusé n'existe pour personne.
     if (scope.pr.issue_id) {
@@ -891,6 +901,7 @@ export async function setPrReviewThreadResolvedResponse(
       ...actorCall(actor.actor, scope),
       ...payload,
     });
+    broadcastPrChanged(scope.pr.id, ["reviewComments"]);
     return NextResponse.json({ ok: true, resolved: payload.resolved });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -948,6 +959,9 @@ export async function setPrReviewCommentReactionResponse(
       ...payload,
       login: actor.actor.login,
     });
+    // Comme côté fil : GitHub ne livre aucun webhook de réaction, cette émission
+    // EST le seul chemin par lequel les autres lecteurs l'apprennent.
+    broadcastPrChanged(scope.pr.id, ["reviewComments"]);
     return NextResponse.json({ ok: true, on: payload.on });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -1024,9 +1038,13 @@ export async function createPrReviewCommentResponse(
   const actor = await requireActor(scope, "read");
   if (!actor.ok) return actor.response;
   const call = actorCall(actor.actor, scope);
-  /** « a commenté le code de la PR » — regroupé : relire, c'est enchaîner les
-      remarques, et une ligne par remarque noierait le journal du ticket. */
+  /** Ce qui suit une remarque publiée, sur les deux chemins (réponse dans un fil
+      ou ancre neuve) : le direct pour ceux qui regardent la PR, puis « a
+      commenté le code de la PR » sur le ticket — regroupé, parce que relire,
+      c'est enchaîner les remarques, et une ligne par remarque noierait le
+      journal du ticket. */
   const trace = async () => {
+    broadcastPrChanged(scope.pr.id, ["reviewComments"]);
     if (!scope.pr.issue_id) return;
     await recordPrActionEvent(
       scope.pr.issue_id,
@@ -1479,12 +1497,19 @@ export const REVIEW_VERDICTS: readonly ReviewVerdict[] = [
  * Propage un nouvel état de PR : la table (source de vérité de l'état), TOUS les
  * runs qui la portent (le garde `prMerged` du steer les lit, et n'en marquer
  * qu'un les laisserait sur un état périmé), puis le statut du ticket.
+ *
+ * La LISTE et le panneau du ticket, eux, n'ont rien à faire ici : l'écriture de
+ * `pull_requests` déclenche le trigger de diffusion (migration
+ * 20260929090000), qui les atteint chez tous les membres. Ce qui reste à pousser
+ * à la main, c'est le panneau OUVERT sur cette PR — son en-tête est lu chez la
+ * forge, pas en base.
  */
 async function propagatePrState(
   scope: PrScope,
   state: PullRequestState,
   actorId: string,
 ): Promise<void> {
+  broadcastPrChanged(scope.pr.id, ["pr"]);
   await upsertPullRequest({
     provider: scope.target.provider,
     repoFullName: scope.target.repoFullName,
@@ -1594,6 +1619,11 @@ export async function prLinkIssueResponse(
   if (!(await setPullRequestIssue(scope.pr.id, issueId))) {
     return linkRefusal("prAlreadyLinked", 409);
   }
+
+  // La liste et le panneau du ticket passent par le trigger (`issue_id` est une
+  // des colonnes qui diffusent) ; le panneau ouvert, lui, montre le ticket dans
+  // son en-tête, qui est servi par la forge.
+  broadcastPrChanged(scope.pr.id, ["pr"]);
 
   const status = issueStatusForPrState(scope.pr.state);
   await syncIssueStatusFromPr({ issueId, actorId: userId, prState: scope.pr.state });
@@ -1803,6 +1833,12 @@ export async function prReviewResponse(
     console.error("[pr-actions] review post failed:", (err as Error).message);
     published = "comment";
   }
+
+  // Direct : une review bouge trois surfaces — son message va dans le fil, ses
+  // remarques dans le diff, et son verdict change le compteur d'approbations que
+  // `prDetailResponse` sert avec l'en-tête. Émis même quand la forge a replié le
+  // verdict en commentaire : le message existe quand même.
+  broadcastPrChanged(scope.pr.id, ["conversation", "reviewComments", "pr"]);
 
   // Le verdict RÉEL est tracé côté minddy même quand la forge l'a replié en
   // commentaire : c'est là que l'utilisateur lira « a approuvé la PR ».

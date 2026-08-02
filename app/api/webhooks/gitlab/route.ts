@@ -22,8 +22,14 @@ import {
   findPullRequestByNumber,
   resolveIssueForPr,
   upsertPullRequest,
+  type PullRequestRow,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
+import {
+  broadcastPrChanged,
+  broadcastPrChangedByNumber,
+} from "@/lib/server/agent/pr-live";
+import type { PrLivePart } from "@/lib/pr-live";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -51,11 +57,23 @@ import { getServiceClient } from "@/lib/supabase-service";
  * le message le MENTIONNE (MIN-162, cf. `lib/server/agent/pr-mention`). Le hook `Issue Hook` (object_kind
  * `issue`) porte la synchronisation unidirectionnelle des issues du dépôt vers
  * les projets qui l'ont activée (MIN-97) — sens unique : minddy n'écrit jamais
- * chez GitLab. Tout autre object_kind est acquitté sans traitement.
+ * chez GitLab. Le hook `Emoji Hook` (object_kind `emoji`) porte les RÉACTIONS et
+ * n'écrit rien : il n'existe que pour le direct (MIN-161). C'est le seul chemin
+ * de réaction en temps réel des deux forges — GitHub n'a tout simplement pas
+ * d'événement de réaction. Le hook `Pipeline Hook` (object_kind `pipeline`) est
+ * traité de même, pour le bandeau CI. Tout autre object_kind est acquitté sans
+ * traitement.
  *
- * PRÉREQUIS : le hook du dépôt doit être abonné à `note_events` — c'est fait à sa
- * création et à chaque passage d'`ensureGitlabIssuesHook`, mais un dépôt lié
- * AVANT cette version garde un hook sans notes tant qu'il n'y repasse pas.
+ * DIRECT (MIN-161) : chaque chemin pousse un `changed` sur le topic de la MR,
+ * qui NOMME les parties touchées — le panneau ouvert va relire chez la forge,
+ * avec le token de celui qui regarde. Émis AVANT les gardes d'anti-écho
+ * (`isServiceAccount`, `isPrActionEcho`) : ces gardes protègent l'ACTIVITÉ du
+ * doublon, mais le fait que la MR ait bougé est vrai dans tous les cas.
+ *
+ * PRÉREQUIS : le hook du dépôt doit être abonné à `note_events`, `emoji_events`
+ * et `pipeline_events` — c'est fait à sa création et à chaque passage
+ * d'`ensureGitlabIssuesHook`, mais un dépôt lié AVANT cette version garde un
+ * hook sans eux tant qu'il n'y repasse pas.
  *
  * Anti-doublon : les actions minddy in-app (merge/close) sont faites avec le token
  * OAuth du COMPTE CONNECTÉ du dépôt — leur écho webhook porte ce compte comme
@@ -129,7 +147,7 @@ async function ingestMergeRequest(
   iid: number,
   attrs: MergeRequestAttributes,
   actor: GitlabUserPayload | undefined,
-): Promise<void> {
+): Promise<PullRequestRow | null> {
   const issueId = await resolveIssueForPr({
     provider: "gitlab",
     repoFullName,
@@ -138,7 +156,7 @@ async function ingestMergeRequest(
     body: attrs.description,
   });
   const isOpen = attrs.action === "open";
-  await upsertPullRequest({
+  return upsertPullRequest({
     provider: "gitlab",
     repoFullName,
     number: iid,
@@ -189,6 +207,24 @@ async function isServiceAccount(
   );
 }
 
+/**
+ * Direct d'un event qui ne connaît qu'un iid dans un dépôt. Sorti pour que
+ * chaque handler le pousse en une ligne, AVANT ses propres gardes d'anti-écho.
+ */
+async function broadcastGitlabPr(
+  repoFullName: string | undefined,
+  iid: number | undefined,
+  parts: PrLivePart[],
+): Promise<void> {
+  if (!repoFullName || iid == null) return;
+  await broadcastPrChangedByNumber({
+    provider: "gitlab",
+    repoFullName,
+    number: iid,
+    parts,
+  });
+}
+
 async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const attrs = payload.object_attributes ?? {};
   const action = attrs.action ?? "";
@@ -200,8 +236,17 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   // humain. Elle doit passer AVANT le garde `runs.length === 0` plus bas, qui
   // existe précisément pour ignorer les MR humaines — c'est ce garde qui les
   // rendait invisibles.
-  if (INGESTED_MR_ACTIONS.has(action)) {
-    await ingestMergeRequest(repoFullName, iid, attrs, payload.user);
+  const ingested = INGESTED_MR_ACTIONS.has(action)
+    ? await ingestMergeRequest(repoFullName, iid, attrs, payload.user)
+    : null;
+
+  // Direct : l'en-tête a bougé. `oldrev` est le seul `update` qui porte un PUSH
+  // — c'est là, et là seulement, que la liste des commits change.
+  const liveParts: PrLivePart[] = attrs.oldrev ? ["pr", "commits"] : ["pr"];
+  if (ingested) {
+    broadcastPrChanged(ingested.id, liveParts);
+  } else {
+    await broadcastGitlabPr(repoFullName, iid, liveParts);
   }
 
   const prState = gitlabMrStateForAction(payload);
@@ -308,6 +353,11 @@ async function handleNote(payload: NoteEvent): Promise<void> {
   const iid = payload.merge_request?.iid;
   const repoFullName = payload.project?.path_with_namespace;
   if (!type || iid == null || !repoFullName) return;
+  // Direct : la note est ancrée dans le diff (remarque de ligne) ou non (message
+  // de fil) — c'est exactement ce que `prActionForNote` vient de trancher.
+  await broadcastGitlabPr(repoFullName, iid, [
+    type === "pr_code_commented" ? "reviewComments" : "conversation",
+  ]);
   await recordForgePrGesture({
     provider: "gitlab",
     repoFullName,
@@ -347,6 +397,55 @@ async function handleNote(payload: NoteEvent): Promise<void> {
   });
 }
 
+/**
+ * Une RÉACTION, telle que GitLab la livre — `Emoji Hook` (object_kind `emoji`).
+ *
+ * C'est le seul chemin de réaction en direct des deux forges : GitHub n'a pas
+ * d'événement de réaction du tout (côté GitHub, seules les réactions posées
+ * DEPUIS minddy sont diffusées, par la route ; une réaction posée sur github.com
+ * n'arrive qu'au prochain rafraîchissement naturel — c'est un manque de la
+ * forge, dit plutôt que caché).
+ *
+ * Rien à écrire : une réaction ne trace pas d'activité et ne vit pas en base.
+ * Les deux surfaces sont poussées ensemble parce que le hook ne dit pas de façon
+ * fiable où pend l'award (fil ou remarque de ligne) — deux invalidations valent
+ * mieux qu'une lecture de plus, et le coalescing les absorbe.
+ */
+interface EmojiEvent {
+  object_kind?: string;
+  project?: { path_with_namespace?: string };
+  merge_request?: { iid?: number };
+}
+
+async function handleEmoji(payload: EmojiEvent): Promise<void> {
+  await broadcastGitlabPr(
+    payload.project?.path_with_namespace,
+    payload.merge_request?.iid,
+    ["conversation", "reviewComments"],
+  );
+}
+
+/**
+ * Un pipeline, tel que GitLab le livre — `Pipeline Hook`. Direct SEUL : l'état
+ * de la CI est lu chez la forge à chaque GET du détail, il n'est pas en base.
+ * Le hook ne porte la merge request que pour un pipeline DE merge request ; sur
+ * un pipeline de branche, il n'y a rien à rattacher et on n'émet rien (le poll
+ * de 15 s reste le filet).
+ */
+interface PipelineEvent {
+  object_kind?: string;
+  project?: { path_with_namespace?: string };
+  merge_request?: { iid?: number };
+}
+
+async function handlePipeline(payload: PipelineEvent): Promise<void> {
+  await broadcastGitlabPr(
+    payload.project?.path_with_namespace,
+    payload.merge_request?.iid,
+    ["pr"],
+  );
+}
+
 /** Actions `issue` synchronisées (MIN-97) — les éditions (`update`) et les
     suppressions ne le sont pas (v1 : ouverture / fermeture / réouverture). */
 const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen"]);
@@ -383,13 +482,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const payload = JSON.parse(rawBody) as MergeRequestEvent & NoteEvent;
-    // Merge Requests (agent), Notes (commentaires de MR) et Issues (synchro du
-    // dépôt lié) — tout autre object_kind est acquitté sans traitement.
+    const payload = JSON.parse(rawBody) as MergeRequestEvent &
+      NoteEvent &
+      EmojiEvent &
+      PipelineEvent;
+    // Merge Requests (agent), Notes (commentaires de MR), Issues (synchro du
+    // dépôt lié), Emoji et Pipeline (direct seul) — tout autre object_kind est
+    // acquitté sans traitement.
     if (payload.object_kind === "merge_request") {
       await handleMergeRequest(payload);
     } else if (payload.object_kind === "note") {
       await handleNote(payload);
+    } else if (payload.object_kind === "emoji") {
+      await handleEmoji(payload);
+    } else if (payload.object_kind === "pipeline") {
+      await handlePipeline(payload);
     } else if (payload.object_kind === "issue") {
       await handleIssue(payload);
     }

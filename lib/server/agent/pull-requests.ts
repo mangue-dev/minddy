@@ -176,6 +176,30 @@ export async function findPullRequestByNumber(opts: {
   return (data as PullRequestRow | null) ?? null;
 }
 
+/**
+ * PR d'un dépôt dont la TÊTE est ce commit. Sert le direct de la CI (MIN-161) :
+ * un event `status` GitHub ne porte qu'un SHA, jamais un numéro de PR, et le
+ * `check_suite` ne liste que les PR dont la base est dans le même dépôt (les
+ * forks n'y sont pas). Le SHA, lui, est toujours là.
+ *
+ * Plusieurs lignes possibles : deux PR ouvertes peuvent partager une tête (une
+ * même branche proposée sur deux bases).
+ */
+export async function findPullRequestsByHeadSha(opts: {
+  provider: RepoProviderId;
+  repoFullName: string;
+  headSha: string;
+}): Promise<PullRequestRow[]> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("pull_requests")
+    .select(PR_COLUMNS)
+    .eq("provider", opts.provider)
+    .eq("repo_full_name", opts.repoFullName)
+    .eq("head_sha", opts.headSha);
+  return (data ?? []) as unknown as PullRequestRow[];
+}
+
 /** Dépôt (provider + nom complet) d'un run, via sa liaison — ou null. */
 export async function repoForRun(run: {
   repo_link_id: string | null;

@@ -94,6 +94,7 @@ import {
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
+import { usePrLive } from "@/lib/use-pr-live";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import {
@@ -518,6 +519,11 @@ export function PrDetail({
     reactions: reviewReactions,
     refetch: refetchReviewComments,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
+  // Le direct de CETTE PR (MIN-161) : le serveur pousse « telle partie a bougé »
+  // sur `pull-request:{id}`, et ces quatre caches vont relire. C'est ce qui fait
+  // qu'un commentaire posté sur github.com, un commit poussé, une approbation ou
+  // un fil résolu atteignent le panneau ouvert sans rechargement.
+  usePrLive(item.prId);
 
   const [acting, setActing] = useState<
     null | "merge" | "close" | "reopen" | "ready_for_review"

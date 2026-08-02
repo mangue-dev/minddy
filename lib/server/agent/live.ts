@@ -50,10 +50,15 @@ export interface AgentLiveStream {
  * aussi la review d'une PR (`pr-review:{id}`), qui diffuse la même paire
  * `stream`/`event` sur son propre topic : le transport ne dépend pas de ce qui
  * est diffusé, seul le topic change.
+ *
+ * `changed` est le troisième, pour le direct d'une pull request
+ * (`pull-request:{id}`, MIN-161) : il ne transporte pas de contenu, seulement
+ * les parties qui ont bougé — le contenu d'une PR se lit chez la forge, avec le
+ * token de CELUI QUI REGARDE (cf. lib/pr-live.ts).
  */
 export async function broadcastToTopic(
   topic: string,
-  event: "stream" | "event",
+  event: "stream" | "event" | "changed",
   payload: Record<string, unknown>,
 ): Promise<void> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -380,6 +380,8 @@ interface GitlabHook {
   issues_events?: boolean;
   merge_requests_events?: boolean;
   note_events?: boolean;
+  emoji_events?: boolean;
+  pipeline_events?: boolean;
 }
 
 /**
@@ -387,11 +389,11 @@ interface GitlabHook {
  * d'issues. GitLab n'a pas d'endpoint global comme la GitHub App : le hook vit
  * SUR LE DÉPÔT, donc on le provisionne à l'activation.
  *
- * Absent → création (issues + merge requests + notes, jamais les pushs). Présent
- * → un PUT qui ne bascule QUE `issues_events`. Jamais de DELETE : le même hook
- * porte la synchro des MR de l'agent (MIN-69) et les commentaires de MR du
- * journal d'activité — le désactiver, c'est remettre `issues_events: false`, pas
- * supprimer la ligne.
+ * Absent → création (issues + merge requests + notes + réactions + pipelines,
+ * jamais les pushs). Présent → un PUT qui ne bascule QUE `issues_events`. Jamais
+ * de DELETE : le même hook porte la synchro des MR de l'agent (MIN-69), les
+ * commentaires de MR du journal d'activité et le direct des PR (MIN-161) — le
+ * désactiver, c'est remettre `issues_events: false`, pas supprimer la ligne.
  *
  * Renvoie l'id du hook (stocké en `issue_sync_hook_id`), ou null si aucun
  * secret n'est déployé — sans secret le récepteur est fail-closed, un hook
@@ -448,6 +450,13 @@ export async function ensureGitlabIssuesHook(
       // le journal d'activité du ticket — GitLab ne les livre que sous ce
       // drapeau, une MR commentée ne produit AUCUN `merge_request` event.
       note_events: true,
+      // Les RÉACTIONS (MIN-161). GitLab est la seule des deux forges à les
+      // livrer — GitHub n'a pas d'événement de réaction du tout —, et c'est ce
+      // drapeau qui les ouvre. Sans lui, réagir sur gitlab.com n'atteint le
+      // panneau ouvert qu'au prochain rafraîchissement.
+      emoji_events: true,
+      // La CI, pour le bandeau de checks en direct.
+      pipeline_events: true,
       push_events: false,
       enable_ssl_verification: true,
     });
@@ -462,6 +471,10 @@ export async function ensureGitlabIssuesHook(
     // Les notes, elles, s'ALIGNENT plutôt que se préserver : c'est ce passage
     // qui rattrape les dépôts liés avant l'arrivée des commentaires au journal.
     note_events: true,
+    // Même raisonnement pour les réactions et la CI (MIN-161) : c'est ce PUT qui
+    // rattrape les dépôts liés avant le direct, comme il l'a fait pour les notes.
+    emoji_events: true,
+    pipeline_events: true,
     push_events: false,
     enable_ssl_verification: true,
   });

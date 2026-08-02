@@ -312,6 +312,26 @@ function keysForProjectEvent(
         ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
       ];
     }
+    // Pull requests (MIN-161). Le trigger ne diffuse que les colonnes VISIBLES
+    // (état, titre, url, tête, ticket, fusion — voir la migration) : un balayage
+    // qui retamponne `synced_at` sur tout un dépôt reste muet.
+    //
+    // Trois caches, et ce ne sont pas les mêmes lecteurs : la LISTE (page Pull
+    // Requests, compteur de la barre latérale), l'EN-TÊTE d'un panneau dont la
+    // PR n'est pas celle que ce lecteur regarde — le topic `pull-request:{id}`
+    // ne l'atteint pas, il n'y est pas abonné —, et le panneau du TICKET, qui
+    // lit sa PR et son état dans `["agent-runs","issue",id]`
+    // (`useIssueAgentRunsQuery`).
+    case "pull_requests": {
+      const record = change.record ?? change.old_record;
+      const prId = typeof record?.id === "string" ? record.id : null;
+      const issueId = issueIdOf(change);
+      return [
+        active(ALL_PULL_REQUESTS_KEY),
+        ...(prId ? [active(["pull-request", prId])] : []),
+        ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
+      ];
+    }
     case "issue_events": {
       const issueId = issueIdOf(change);
       if (issueId) return [active(["events", issueId])];
@@ -358,6 +378,16 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
   ["agent-runs"],
+  // Le panneau d'une PR, ses quatre surfaces (MIN-161). En préfixe, et les
+  // quatre : les messages du topic `pull-request:{id}` sont ÉPHÉMÈRES — un
+  // onglet dormant ne les rejoue pas, il ne les a simplement pas eus. C'est donc
+  // ce rattrapage-ci qui remet le fil, les commits et les remarques à jour au
+  // retour au premier plan, et rien d'autre. Seules les requêtes MONTÉES
+  // repartent au serveur (cf. `catchUp`), soit un panneau au plus.
+  ["pull-request"],
+  ["pr-comments"],
+  ["pr-commits"],
+  ["pr-review-comments"],
   // The aggregates this project feeds — missed events while offline would
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,

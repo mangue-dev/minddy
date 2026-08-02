@@ -20,10 +20,17 @@ import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
   findPullRequestByNumber,
+  findPullRequestsByHeadSha,
   resolveIssueForPr,
   upsertPullRequest,
+  type PullRequestRow,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
+import {
+  broadcastPrChanged,
+  broadcastPrChangedByNumber,
+} from "@/lib/server/agent/pr-live";
+import type { PrLivePart } from "@/lib/pr-live";
 import type { PrActionEventType } from "@/lib/pr-events";
 
 /**
@@ -42,6 +49,13 @@ import type { PrActionEventType } from "@/lib/pr-events";
  *  - `pull_request_review_comment` → trace « commenté le code de la PR ». Une
  *    review de N remarques arrive en N events : ils se regroupent en une ligne
  *    (`collapsesInBurst`).
+ *  - `pull_request_review_thread` (resolved/unresolved) → n'écrit RIEN : la
+ *    résolution d'un fil vit chez la forge (MIN-139), pas chez minddy. L'event
+ *    n'est là que pour le direct — sans lui, résoudre un fil sur github.com ne
+ *    se voyait dans le panneau ouvert qu'au rechargement.
+ *  - `check_suite` (completed) / `status` → idem : rien à écrire, la CI n'est pas
+ *    en base. Ils poussent le direct pour que le bandeau CI se mette à jour sans
+ *    attendre le tour de poll suivant.
  *  - `issue_comment` (sur une PR) → trace « commenté la PR », et déclenche la
  *    relecture de Numo si le message le MENTIONNE (MIN-162). Écrire `@numo`
  *    depuis github.com fait donc la même chose que l'écrire depuis minddy — sauf
@@ -52,11 +66,22 @@ import type { PrActionEventType } from "@/lib/pr-events";
  *    minddy n'écrit jamais chez GitHub.
  * Tout autre event (ping, push…) est simplement acquitté.
  *
- * PRÉREQUIS D'INSTALLATION : `issue_comment` et `pull_request_review_comment`
- * doivent être cochés dans les événements auxquels la GitHub App s'abonne (page
- * de réglages de l'App) — ils n'exigent aucune permission de plus que les
- * Pull requests déjà accordées. Sans ça, les commentaires ne sont jamais livrés
- * et les lignes correspondantes n'apparaissent pas.
+ * DIRECT (MIN-161) : chaque chemin pousse en plus un `changed` sur le topic de
+ * la PR (`broadcastPrChanged*`), qui NOMME les parties touchées — le panneau
+ * ouvert va relire chez la forge, avec le token de celui qui regarde. Cette
+ * émission passe AVANT les gardes `isBot` / `isPrActionEcho` : ces gardes
+ * protègent l'ACTIVITÉ et les notifications du doublon, mais le fait que la PR
+ * ait bougé est vrai dans tous les cas, y compris quand l'acteur est le bot ou
+ * quand c'est l'écho de notre propre écriture. Coût assumé : un aller-retour de
+ * forge en trop pour l'auteur du geste, absorbé par le coalescing client.
+ *
+ * PRÉREQUIS D'INSTALLATION — les événements auxquels la GitHub App s'abonne
+ * (page de réglages de l'App). Aucun n'exige de permission au-delà des Pull
+ * requests déjà accordées ; sans eux, l'event n'est jamais livré :
+ *   `issue_comment`, `pull_request_review_comment` — les commentaires, sans quoi
+ *     les lignes d'activité correspondantes n'apparaissent pas ;
+ *   `pull_request_review_thread` — la résolution d'un fil en direct ;
+ *   `check_suite`, `status` — la CI en direct.
  *
  * Anti-doublon : les actions minddy in-app (merge/close/demande de changements)
  * sont déjà tracées côté route avec l'acteur HUMAIN précis. Leur écho webhook est
@@ -142,7 +167,7 @@ async function ingestPullRequest(
   repoFullName: string,
   number: number,
   pr: PullRequestPayload,
-): Promise<void> {
+): Promise<PullRequestRow | null> {
   const issueId = await resolveIssueForPr({
     provider: "github",
     repoFullName,
@@ -150,7 +175,7 @@ async function ingestPullRequest(
     title: pr.title,
     body: pr.body,
   });
-  await upsertPullRequest({
+  return upsertPullRequest({
     provider: "github",
     repoFullName,
     number,
@@ -211,8 +236,25 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // runs — ne parlent que du cycle de vie de l'agent, et une PR humaine n'en a
   // pas. C'est aussi ce qui rend le rattachement au ticket LISIBLE plus bas :
   // `applyForgePrToIssue` relit la ligne qu'on vient d'écrire.
-  if (payload.pull_request && INGESTED_PR_ACTIONS.has(action)) {
-    await ingestPullRequest(repoFullName, number, payload.pull_request);
+  const ingested =
+    payload.pull_request && INGESTED_PR_ACTIONS.has(action)
+      ? await ingestPullRequest(repoFullName, number, payload.pull_request)
+      : null;
+
+  // Direct : l'en-tête a bougé, et un `synchronize` a poussé des commits. Émis
+  // ICI, avant les gardes de cycle de vie plus bas — une PR sans run, un acteur
+  // bot, un écho de notre propre geste : dans tous ces cas la PR a bougé pour de
+  // vrai. On réutilise la ligne qu'on vient d'écrire plutôt que de la relire.
+  const liveParts: PrLivePart[] = action === "synchronize" ? ["pr", "commits"] : ["pr"];
+  if (ingested) {
+    broadcastPrChanged(ingested.id, liveParts);
+  } else {
+    await broadcastPrChangedByNumber({
+      provider: "github",
+      repoFullName,
+      number,
+      parts: liveParts,
+    });
   }
 
   const merged = !!payload.pull_request?.merged;
@@ -319,8 +361,29 @@ async function recordGithubGesture(opts: {
   });
 }
 
+/**
+ * Direct d'un event qui ne connaît qu'un numéro dans un dépôt. Sorti pour que
+ * chaque handler le pousse en une ligne, AVANT ses propres gardes d'anti-écho.
+ */
+async function broadcastGithubPr(
+  repoFullName: string | undefined,
+  number: number | undefined,
+  parts: PrLivePart[],
+): Promise<void> {
+  if (!repoFullName || number == null) return;
+  await broadcastPrChangedByNumber({ provider: "github", repoFullName, number, parts });
+}
+
 async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise<void> {
   if (payload.action !== "submitted") return;
+  // Une review bouge TROIS surfaces : son message va dans le fil, ses remarques
+  // dans le diff, et son verdict change le compteur d'approbations que
+  // `prDetailResponse` sert avec l'en-tête.
+  await broadcastGithubPr(payload.repository?.full_name, payload.pull_request?.number, [
+    "conversation",
+    "reviewComments",
+    "pr",
+  ]);
   await recordGithubGesture({
     type: prActionForReview(payload.review ?? {}),
     number: payload.pull_request?.number,
@@ -335,6 +398,8 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
   const number = payload.issue?.number;
   const repoFullName = payload.repository?.full_name;
 
+  // Direct : posté, modifié ou supprimé, le fil a changé.
+  await broadcastGithubPr(repoFullName, number, ["conversation"]);
   await recordGithubGesture({ type: "pr_commented", number, repoFullName, actor });
 
   // `@numo` écrit DEPUIS github.com (MIN-162). Deux gardes avant d'y toucher :
@@ -381,6 +446,15 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
 async function handlePullRequestReviewComment(
   payload: PullRequestReviewCommentEvent,
 ): Promise<void> {
+  // Le direct part sur les TROIS actions (created/edited/deleted) : une remarque
+  // modifiée ou retirée change le diff autant qu'une remarque posée. L'activité,
+  // elle, ne trace que la création — modifier son propre message n'est pas un
+  // geste à raconter sur le ticket.
+  await broadcastGithubPr(
+    payload.repository?.full_name,
+    payload.pull_request?.number,
+    ["reviewComments"],
+  );
   if (payload.action !== "created") return;
   await recordGithubGesture({
     type: "pr_code_commented",
@@ -388,6 +462,93 @@ async function handlePullRequestReviewComment(
     repoFullName: payload.repository?.full_name,
     actor: payload.comment?.user ?? payload.sender,
   });
+}
+
+/** Fil de remarques résolu ou rouvert sur github.com (MIN-139) — direct SEUL :
+    la résolution vit chez la forge, minddy n'en garde rien. */
+interface PullRequestReviewThreadEvent {
+  action?: string;
+  pull_request?: { number?: number };
+  repository?: { full_name?: string };
+}
+
+async function handlePullRequestReviewThread(
+  payload: PullRequestReviewThreadEvent,
+): Promise<void> {
+  if (payload.action !== "resolved" && payload.action !== "unresolved") return;
+  await broadcastGithubPr(
+    payload.repository?.full_name,
+    payload.pull_request?.number,
+    ["reviewComments"],
+  );
+}
+
+/**
+ * CI terminée — `check_suite` (GitHub Actions et compagnie) ou `status` (l'API
+ * historique, ce qu'utilisent encore beaucoup d'intégrations).
+ *
+ * Direct SEUL, comme les fils de remarques : l'état de la CI n'est pas en base,
+ * il est lu chez la forge à chaque GET du détail (`prDetailResponse`). Le
+ * `CHECKS_POLL_MS` de 15 s reste en place — ces events ne sont pas garantis, et
+ * c'est lui le filet.
+ *
+ * L'ancrage est le SHA et pas le numéro de PR : `status` n'en porte aucun, et
+ * `check_suite.pull_requests` omet les PR issues d'un fork. Le repli couvre les
+ * deux.
+ */
+interface CheckSuiteEvent {
+  action?: string;
+  check_suite?: {
+    head_sha?: string;
+    pull_requests?: Array<{ number?: number }>;
+  };
+  repository?: { full_name?: string };
+}
+
+interface StatusEvent {
+  sha?: string;
+  state?: string;
+  repository?: { full_name?: string };
+}
+
+async function broadcastChecksChanged(
+  repoFullName: string | undefined,
+  headSha: string | undefined,
+  numbers: number[],
+): Promise<void> {
+  if (!repoFullName) return;
+  if (numbers.length > 0) {
+    for (const number of numbers) {
+      await broadcastGithubPr(repoFullName, number, ["pr"]);
+    }
+    return;
+  }
+  if (!headSha) return;
+  const prs = await findPullRequestsByHeadSha({
+    provider: "github",
+    repoFullName,
+    headSha,
+  });
+  for (const pr of prs) broadcastPrChanged(pr.id, ["pr"]);
+}
+
+async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
+  // Seule la fin d'une suite change ce que le bandeau affiche : `requested` et
+  // `rerequested` ne font qu'annoncer un travail dont l'état est déjà « en cours ».
+  if (payload.action !== "completed") return;
+  await broadcastChecksChanged(
+    payload.repository?.full_name,
+    payload.check_suite?.head_sha,
+    (payload.check_suite?.pull_requests ?? [])
+      .map((p) => p.number)
+      .filter((n): n is number => n != null),
+  );
+}
+
+async function handleStatus(payload: StatusEvent): Promise<void> {
+  // `pending` est le départ d'un check, pas son résultat — mais il fait passer le
+  // bandeau à « en cours », ce que le lecteur doit voir aussi.
+  await broadcastChecksChanged(payload.repository?.full_name, payload.sha, []);
 }
 
 /** Actions `issues` synchronisées (MIN-97) — les éditions de titre/corps, les
@@ -434,8 +595,16 @@ export async function POST(request: NextRequest) {
       await handlePullRequestReviewComment(
         JSON.parse(rawBody) as PullRequestReviewCommentEvent,
       );
+    } else if (event === "pull_request_review_thread") {
+      await handlePullRequestReviewThread(
+        JSON.parse(rawBody) as PullRequestReviewThreadEvent,
+      );
     } else if (event === "issue_comment") {
       await handleIssueComment(JSON.parse(rawBody) as IssueCommentEvent);
+    } else if (event === "check_suite") {
+      await handleCheckSuite(JSON.parse(rawBody) as CheckSuiteEvent);
+    } else if (event === "status") {
+      await handleStatus(JSON.parse(rawBody) as StatusEvent);
     } else if (event === "issues") {
       await handleIssues(JSON.parse(rawBody));
     }
