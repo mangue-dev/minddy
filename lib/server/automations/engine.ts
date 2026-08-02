@@ -153,6 +153,11 @@ async function handleFailedVerification(params: {
   verdict: AgentRunVerdict;
   issue: IssueRow;
   projectKey: string;
+  /** Modèle réglé pour la TAILLE de ce ticket. À passer comme sur le chemin
+   *  normal : une reprise reste une étape de la même chaîne, sur le même
+   *  ticket — la reprendre avec un autre modèle que celui que l'utilisateur a
+   *  choisi pour cette taille n'aurait aucune raison d'être. */
+  model: string | null;
 }): Promise<boolean> {
   const { chain, verdict, issue } = params;
 
@@ -200,6 +205,7 @@ async function handleFailedVerification(params: {
     ]
       .filter(Boolean)
       .join("\n"),
+    model: params.model,
   });
   return true;
 }
@@ -298,6 +304,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
         verdict,
         issue,
         projectKey,
+        model: automationModelFor(ownerMeta, issue.effort),
       });
       return;
     }

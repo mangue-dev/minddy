@@ -23,6 +23,7 @@ const h = vi.hoisted(() => ({
   ownerMeta: null as Record<string, unknown> | null,
   chain: null as Record<string, unknown> | null,
   activeRun: null as unknown,
+  verdict: null as { ok: boolean; summary: string; blockers: string[] } | null,
 }));
 
 /** Double de chaîne PostgREST : tout renvoie `this`, seules les fins résolvent. */
@@ -82,8 +83,14 @@ vi.mock("./chain", () => ({
     played_rule_ids: [...chain.played_rule_ids, ruleId],
   })),
   openChain: vi.fn(async () => h.chain),
-  retryChain: vi.fn(async () => null),
-  lastVerdictOfChain: vi.fn(async () => null),
+  retryChain: vi.fn(
+    async (chain: { retries: number; played_rule_ids: string[] }, replay: string[]) => ({
+      ...chain,
+      retries: chain.retries + 1,
+      played_rule_ids: chain.played_rule_ids.filter((id) => !replay.includes(id)),
+    }),
+  ),
+  lastVerdictOfChain: vi.fn(async () => h.verdict),
 }));
 
 vi.mock("./actions", () => ({ runAction: vi.fn(async () => ({ kind: "launched" })) }));
@@ -144,6 +151,7 @@ beforeEach(() => {
   h.ownerMeta = { automation_preset: "implement-only" };
   h.chain = livingChain();
   h.activeRun = null;
+  h.verdict = null;
 });
 
 const finish = (outcome: "ok" | "failed") =>
@@ -190,6 +198,43 @@ describe("runAutomations — conclure une chaîne", () => {
     expect(actions.runAction).toHaveBeenCalledTimes(1);
     expect(report.haltChain).not.toHaveBeenCalled();
     expect(report.finishChain).not.toHaveBeenCalled();
+  });
+
+  it("la reprise après vérification en échec garde le modèle de la TAILLE", async () => {
+    // Une reprise est une étape de la MÊME chaîne sur le MÊME ticket : la
+    // relancer avec un autre modèle que celui réglé pour cette taille n'aurait
+    // aucune raison d'être — et le réglage de compte est justement celui que
+    // l'utilisateur voit et manipule.
+    h.ownerMeta = {
+      automation_preset: "loop-by-effort",
+      automation_models: { m: "vendor/m" },
+    };
+    h.verdict = { ok: false, summary: "Les tests ne passent pas.", blockers: ["lib/foo.ts"] };
+    h.chain = {
+      ...livingChain(),
+      preset: "loop-by-effort",
+      step: 3,
+      retries: 0,
+      played_rule_ids: [
+        "loop-by-effort:medium-plan",
+        "loop-by-effort:medium-implement",
+        "loop-by-effort:medium-verify",
+      ],
+    };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      chainId: "chain-1",
+      event: { type: "run_finished", intent: "verify", outcome: "ok" },
+    });
+
+    expect(actions.runAction).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(actions.runAction).mock.calls[0][0];
+    expect(call.model).toBe("vendor/m");
+    expect(call.action).toMatchObject({ type: "run_numo", mode: "implement" });
+    expect(call.extraPrompt).toContain("Les tests ne passent pas.");
+    expect(report.haltChain).not.toHaveBeenCalled();
   });
 
   it("un événement sans chaîne ne conclut rien du tout", async () => {
