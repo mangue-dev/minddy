@@ -18,10 +18,7 @@ import { ensureAgentsAllowed } from "@/lib/server/entitlements";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
-import {
-  issueStatusForPrState,
-  syncIssueStatusFromPr,
-} from "@/lib/server/agent/issue-status-sync";
+import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { runPrAiReview } from "./pr-ai-review";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import {
@@ -48,16 +45,14 @@ import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge
 import { findRunsForPr, syncPrState } from "./runs";
 import {
   findPullRequest,
-  hasLivePullRequest,
-  projectsForRepo,
   prStateFromRef,
   resolvePrForRun,
   rowProvider,
-  setPullRequestIssue,
   upsertPullRequest,
   type PullRequestRow,
   type PullRequestState,
 } from "./pull-requests";
+import { linkPullRequestToIssue, type PrLinkRefusal } from "./pr-link";
 import { getRun } from "./runs";
 import type { CommitExtras, PullRequestCommit, PullRequestFile, ReviewVerdict } from "./pr";
 import { commitAuthors } from "@/lib/commit-authors";
@@ -1552,6 +1547,13 @@ async function linkRefusal(
   return NextResponse.json({ error: t(code), code }, { status });
 }
 
+/** Refus du cœur partagé → clé du message rendu à l'écran. */
+const LINK_REFUSAL_KEYS = {
+  pr_already_linked: "prAlreadyLinked",
+  issue_already_linked: "issueAlreadyLinked",
+  issue_outside_repo: "issueOutsideRepo",
+} as const satisfies Record<PrLinkRefusal, string>;
+
 /**
  * `link_issue` — rattacher À LA MAIN un ticket à une PR qui n'en a pas (MIN-163).
  *
@@ -1576,6 +1578,10 @@ async function linkRefusal(
  * Le statut du ticket s'aligne ensuite sur l'état de la PR, par le même point de
  * passage que partout ailleurs : PR ouverte → `in_review`, brouillon →
  * `in_progress`, fusionnée → `done`, fermée → `todo`.
+ *
+ * La RÈGLE elle-même vit dans `linkPullRequestToIssue` — le MCP et Numo la
+ * partagent (MIN-163bis). Ce qui reste ici est ce qui est propre à HTTP :
+ * l'accès par la RLS, et la traduction des refus en codes de statut.
  */
 export async function prLinkIssueResponse(
   scope: PrScope,
@@ -1587,6 +1593,9 @@ export async function prLinkIssueResponse(
   if (!UUID_RE.test(issueId)) {
     return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
   }
+  // AVANT la lecture du ticket : sur une PR déjà rattachée, le geste est refusé
+  // quel que soit le ticket visé, et le dire tout de suite évite de répondre
+  // « ticket introuvable » à quelqu'un dont le vrai problème est ailleurs.
   if (scope.pr.issue_id) return linkRefusal("prAlreadyLinked", 409);
 
   // Client AUTHENTIFIÉ : sa RLS répond « rien » sur un ticket qu'il ne voit pas,
@@ -1607,33 +1616,27 @@ export async function prLinkIssueResponse(
     return NextResponse.json({ error: "Issue not found" }, { status: 404 });
   }
 
-  const provider = rowProvider(scope.pr);
-  const projects = await projectsForRepo(provider, scope.pr.repo_full_name);
-  if (!projects.some((p) => p.id === issue.project_id)) {
-    return linkRefusal("issueOutsideRepo", 400);
+  const result = await linkPullRequestToIssue({
+    pr: scope.pr,
+    issue: { id: issue.id, projectId: issue.project_id },
+    actorId: userId,
+  });
+  if (!result.ok) {
+    // `issue_outside_repo` est une demande MAL FORMÉE (400) ; les deux autres
+    // sont des conflits d'état (409).
+    return result.code === "issue_outside_repo"
+      ? linkRefusal("issueOutsideRepo", 400)
+      : linkRefusal(LINK_REFUSAL_KEYS[result.code], 409);
   }
-
-  if (await hasLivePullRequest(issueId)) {
-    return linkRefusal("issueAlreadyLinked", 409);
-  }
-
-  // C'est la base qui tranche : `false` = la PR a été rattachée entre-temps.
-  if (!(await setPullRequestIssue(scope.pr.id, issueId))) {
-    return linkRefusal("prAlreadyLinked", 409);
-  }
-
-  // La liste et le panneau du ticket passent par le trigger (`issue_id` est une
-  // des colonnes qui diffusent) ; le panneau ouvert, lui, montre le ticket dans
-  // son en-tête, qui est servi par la forge.
-  broadcastPrChanged(scope.pr.id, ["pr"]);
-
-  const status = issueStatusForPrState(scope.pr.state);
-  await syncIssueStatusFromPr({ issueId, actorId: userId, prState: scope.pr.state });
+  // Rejouer le geste sur le MÊME ticket reste un 409 ici : l'app n'offre le
+  // rattachement que sur une PR libre, donc y arriver, c'est que deux onglets
+  // se sont croisés — et l'écran doit le dire, pas faire comme si de rien.
+  if (result.already) return linkRefusal("prAlreadyLinked", 409);
 
   return NextResponse.json({
     ok: true,
     issue: { id: issue.id, number: issue.number, title: issue.title },
-    status,
+    status: result.status,
   });
 }
 

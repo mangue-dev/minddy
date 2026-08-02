@@ -32,7 +32,10 @@ import {
 } from "lucide-react";
 import { SearchMenu } from "@/components/search-menu";
 import { NumoIcon } from "@/components/numo-icon";
-import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
+import {
+  buildScratchpadPrompt,
+  sectionHeadingChain,
+} from "@/lib/scratchpad-prompt";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
 import { TASK_MARKER_BY_STATE } from "@/lib/scratchpad";
 import {
@@ -48,29 +51,36 @@ import { eventKey } from "@/lib/keyboard/event-key";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 
 /**
- * Ligne de titre markdown (niveau compris) de la SECTION dans laquelle vit le
- * bloc situé en `pos` — le dernier heading qui le précède, ou null si la tâche
- * traîne avant tout titre. Reprise telle quelle en tête du markdown copié /
+ * Les lignes de titre markdown (niveaux compris) des sections qui CONTIENNENT le
+ * bloc situé en `pos`, de la plus large à la plus étroite — vide si la tâche
+ * traîne avant tout titre. Reprises telles quelles en tête du markdown copié /
  * lancé : c'est ce qui permet au prompt de nommer la section (lib/scratchpad-prompt.ts).
+ *
+ * La hiérarchie compte : une tâche sous « ## Sidebar » est aussi une tâche de
+ * « # Pull requests », et le titre le plus proche ne suffit pas à la situer. La
+ * règle d'emboîtement vit dans `sectionHeadingChain` — ici on ne fait que lui
+ * lister les titres qui précèdent la tâche.
  */
-function sectionHeadingAt(
+function sectionHeadingsAt(
   editor: NodeViewProps["editor"],
   pos: number | undefined
-): string | null {
-  if (pos == null) return null;
+): string[] {
+  if (pos == null) return [];
   const doc = editor.state.doc;
-  if (pos < 0 || pos > doc.content.size) return null;
+  if (pos < 0 || pos > doc.content.size) return [];
   // La tâche vit dans une taskList : on remonte à son bloc de premier niveau,
-  // puis on balaie ses prédécesseurs à l'envers jusqu'au premier heading.
-  for (let i = doc.resolve(pos).index(0) - 1; i >= 0; i--) {
+  // puis on relève les headings qui le précèdent, dans l'ordre du document.
+  const before: Array<{ level: number; text: string }> = [];
+  const index = doc.resolve(pos).index(0);
+  for (let i = 0; i < index; i++) {
     const child = doc.child(i);
     if (child.type.name !== "heading") continue;
-    const text = child.textContent.trim();
-    if (!text) return null; // titre vide = pas de section nommable
-    const level = Math.min(6, Math.max(1, Number(child.attrs.level) || 2));
-    return `${"#".repeat(level)} ${text}`;
+    before.push({
+      level: Number(child.attrs.level) || 2,
+      text: child.textContent,
+    });
   }
-  return null;
+  return sectionHeadingChain(before);
 }
 
 /** Les quatre états d'une tâche, dans l'ordre du cycle de vie. */
@@ -137,9 +147,10 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
     startOnLaunch && resolvePromptCopyAutoStart(user?.user_metadata);
 
   // Le markdown que porte la ligne quand elle sort du carnet (copie ou agent) :
-  // la tâche telle quelle, marqueur compris, PRÉCÉDÉE du titre de sa section —
-  // seul moyen de dire à l'agent d'où elle vient (le prompt le reformule en
-  // clair, cf. lib/scratchpad-prompt.ts). Null si la ligne est vide.
+  // la tâche telle quelle, marqueur compris, PRÉCÉDÉE des titres des sections
+  // qui la contiennent — seul moyen de dire à l'agent d'où elle vient (le prompt
+  // les reformule en clair, cf. lib/scratchpad-prompt.ts). Null si la ligne est
+  // vide.
   //
   // Le marqueur est celui de l'état APRÈS le geste (comme le XML d'un ticket
   // copié, cf. issue-card.tsx) : une tâche que la passation démarre part en
@@ -149,8 +160,8 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
     const text = node.textContent.trim();
     if (!text) return null;
     const line = `- ${TASK_MARKER_BY_STATE[as]} ${text}`;
-    const heading = sectionHeadingAt(editor, getPos());
-    return heading ? `${heading}\n\n${line}` : line;
+    const headings = sectionHeadingsAt(editor, getPos());
+    return headings.length > 0 ? `${headings.join("\n\n")}\n\n${line}` : line;
   };
 
   const copyLine = () => {

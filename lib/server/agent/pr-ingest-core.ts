@@ -96,6 +96,43 @@ export function issueRefFromPr(input: IssueRefInput): string | null {
   );
 }
 
+/**
+ * Numéro d'une pull request DÉSIGNÉE À LA MAIN, ou null (MIN-163bis).
+ *
+ * Le rattachement conventionnel ci-dessus lit ce que la PR dit d'elle-même ;
+ * celui-ci lit ce qu'un HUMAIN (ou l'agent qui l'écoute) en dit : « lie la PR
+ * #42 au ticket MIN-12 », ou l'URL qu'il a copiée depuis son navigateur. Les
+ * quatre formes qu'on rencontre vraiment, et pas une de plus :
+ *
+ *  - `42`, et le nombre nu qu'un modèle renvoie parfois en JSON ;
+ *  - `#42` (GitHub) et `!42` (la syntaxe MR de GitLab) ;
+ *  - une URL de forge — `…/pull/42`, `…/pulls/42`, `…/-/merge_requests/42`,
+ *    avec ce qui suit (`/files`, `#discussion_r…`) qui ne change rien.
+ *
+ * Ce qui est refusé compte autant : une URL d'ISSUE (`…/issues/42`) n'est pas
+ * une PR, et la prendre pour telle rattacherait silencieusement la mauvaise
+ * chose — les deux numérotations cohabitent dans un même dépôt GitHub.
+ */
+export function parsePullRequestRef(
+  ref: string | number | null | undefined,
+): number | null {
+  const asNumber = (value: number): number | null =>
+    Number.isSafeInteger(value) && value > 0 ? value : null;
+
+  if (typeof ref === "number") return asNumber(ref);
+  if (typeof ref !== "string") return null;
+  const text = ref.trim();
+  if (!text) return null;
+
+  // L'URL d'abord : elle CONTIENT un nombre nu, et le motif court le prendrait.
+  const url = /\/(?:pull|pulls|merge_requests)\/(\d+)(?:[/?#]|$)/.exec(text);
+  if (url) return asNumber(Number.parseInt(url[1], 10));
+  if (/^https?:\/\//i.test(text)) return null;
+
+  const short = /^[#!]?(\d+)$/.exec(text);
+  return short ? asNumber(Number.parseInt(short[1], 10)) : null;
+}
+
 /** `"MIN-42"` → `{ key: "MIN", number: 42 }`. Null si la forme n'y est pas. */
 export function parseIssueRef(ref: string): { key: string; number: number } | null {
   const at = ref.lastIndexOf("-");

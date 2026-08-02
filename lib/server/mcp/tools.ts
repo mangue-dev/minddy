@@ -62,6 +62,11 @@ import {
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
+  linkPullRequestToIssue,
+  resolveProjectPullRequest,
+  type PrLinkRefusal,
+} from "@/lib/server/agent/pr-link";
+import {
   ensureCycles,
   fillCycleForUser,
   getCycleOverview,
@@ -109,6 +114,19 @@ const MAX_INLINE_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
 /** Plafond par fichier du diff renvoyé par minddy_get_pull_request — aligné sur
     le tool read_pull_request de Numo. */
 const MAX_PATCH_CHARS = 4000;
+
+/** Refus de rattachement d'une PR → ce que le modèle doit en comprendre. Le
+    `code` du cœur partagé EST le code d'erreur MCP : un seul vocabulaire. */
+const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
+  pr_already_linked:
+    "This pull request is already attached to another issue. The link is definitive: " +
+    "it cannot be replaced, and there is no unlink.",
+  issue_already_linked:
+    "This issue already carries a live (draft or open) pull request. Only ONE live pull " +
+    "request per issue — wait for it to be merged or closed.",
+  issue_outside_repo:
+    "This issue belongs to a project that does not link the repository of that pull request.",
+};
 
 /** Text-ish MIME → return the file as readable text rather than a base64 blob. */
 function isTextMime(mime: string): boolean {
@@ -737,6 +755,86 @@ export function registerMinddyTools(rawServer: McpServer): void {
       } catch (e) {
         return fail("github_error", (e as Error).message);
       }
+    }
+  );
+
+  server.registerTool(
+    "minddy_link_pull_request",
+    {
+      title: "Link pull request to issue",
+      description:
+        "Attach an existing pull request of the project's linked repository to a minddy " +
+        "issue, when it was not attached on its own. A PR normally finds its issue by " +
+        "CONVENTION at ingestion — the issue identifier in the branch name, the title, or a " +
+        "closing line ('Fixes MIND-42') of the description — so use this tool only for a PR " +
+        "that followed none of them and shows up with no issue. " +
+        "Identify the PR by number ('42', '#42', '!42' for a GitLab merge request) or by " +
+        "pasting its forge URL; the repository is the one the project links. " +
+        "Attaching also ALIGNS the issue's status on the state of the PR: open → in_review, " +
+        "draft → in_progress, merged → done, closed → todo (the response says which). " +
+        "The link is DEFINITIVE and there is no unlink: a PR that already carries another " +
+        "issue is refused, and so is an issue that already carries a live (draft or open) " +
+        "pull request — several TERMINAL pull requests on one issue are normal. Re-linking " +
+        "the same PR to the same issue is not an error, it just reports 'already: true'.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issue: ISSUE_REF,
+        pull_request: z
+          .union([z.string(), z.number()])
+          .describe(
+            "The pull request to attach: its number (42), '#42', '!42' for a GitLab " +
+              "merge request, or its full URL on the forge."
+          ),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in ref) return ref.error;
+
+      const found = await resolveProjectPullRequest({
+        projectId: scope.access.project.id,
+        ref: args.pull_request,
+        userId: scope.userId,
+      });
+      if ("error" in found) {
+        if (found.error === "invalid_ref") {
+          return fail(
+            "invalid_params",
+            "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
+          );
+        }
+        if (found.error === "no_repository") {
+          return fail("no_repository", "This project has no linked repository.");
+        }
+        return fail(
+          "pull_request_not_found",
+          "No pull request with that number in the repository linked to this project."
+        );
+      }
+
+      const result = await linkPullRequestToIssue({
+        pr: found.pr,
+        issue: { id: ref.issue.id, projectId: scope.access.project.id },
+        actorId: scope.userId,
+      });
+      if (!result.ok) return fail(result.code, LINK_REFUSALS[result.code]);
+
+      return ok({
+        linked: true,
+        already: result.already,
+        pull_request: {
+          number: found.pr.number,
+          url: found.pr.url,
+          state: found.pr.state,
+          title: found.pr.title,
+          repository: found.pr.repo_full_name,
+        },
+        issue: { id: ref.issue.id, identifier: ref.issue.identifier },
+        issue_status: result.status,
+      });
     }
   );
 

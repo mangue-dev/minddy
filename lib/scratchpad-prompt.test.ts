@@ -1,6 +1,59 @@
 import { describe, expect, it } from "vitest";
-import { buildScratchpadPrompt, splitTaskSection } from "@/lib/scratchpad-prompt";
+import {
+  buildScratchpadPrompt,
+  sectionHeadingChain,
+  splitTaskSection,
+} from "@/lib/scratchpad-prompt";
 import { SPACER_LINE } from "@/lib/scratchpad";
+
+describe("sectionHeadingChain", () => {
+  it("carries the sections that CONTAIN the task, widest first", () => {
+    expect(
+      sectionHeadingChain([
+        { level: 1, text: "Pull requests" },
+        { level: 2, text: "Sidebar" },
+      ])
+    ).toEqual(["# Pull requests", "## Sidebar"]);
+  });
+
+  it("skips the siblings a task does not live in", () => {
+    expect(
+      sectionHeadingChain([
+        { level: 1, text: "Pull requests" },
+        { level: 2, text: "Sidebar" },
+        { level: 3, text: "Détail" }, // fermée par la suivante
+        { level: 2, text: "MCP et Numo" },
+      ])
+    ).toEqual(["# Pull requests", "## MCP et Numo"]);
+    // Une section de premier rang plus loin dans la note ferme la précédente.
+    expect(
+      sectionHeadingChain([
+        { level: 1, text: "Pull requests" },
+        { level: 2, text: "Sidebar" },
+        { level: 1, text: "Carnet" },
+      ])
+    ).toEqual(["# Carnet"]);
+  });
+
+  it("gives nothing before the first heading", () => {
+    expect(sectionHeadingChain([])).toEqual([]);
+  });
+
+  it("does not name an empty heading, but still lets it close its rank", () => {
+    expect(
+      sectionHeadingChain([
+        { level: 1, text: "Pull requests" },
+        { level: 2, text: "   " },
+      ])
+    ).toEqual(["# Pull requests"]);
+    expect(
+      sectionHeadingChain([
+        { level: 1, text: "Pull requests" },
+        { level: 1, text: "" },
+      ])
+    ).toEqual([]);
+  });
+});
 
 describe("splitTaskSection", () => {
   it("pulls the section out of a task carried with its heading", () => {
@@ -18,6 +71,25 @@ describe("splitTaskSection", () => {
       );
     }
     expect(splitTaskSection("# A\n- [ ] x").section).toBe("A");
+  });
+
+  it("names the whole chain of sections a task was carried with", () => {
+    expect(
+      splitTaskSection("# Pull requests\n\n## Sidebar\n\n- [ ] restyle the select")
+    ).toEqual({
+      section: "Pull requests > Sidebar",
+      body: "- [ ] restyle the select",
+      isTask: true,
+    });
+  });
+
+  it("keeps titles that do not nest as a real section", () => {
+    const siblings = "## Deploy\n\n## Ideas\n\n- [ ] a";
+    expect(splitTaskSection(siblings)).toEqual({
+      section: null,
+      body: siblings,
+      isTask: false,
+    });
   });
 
   it("flags a lone task line as a task, without a section", () => {
@@ -62,6 +134,17 @@ describe("buildScratchpadPrompt", () => {
     expect(prompt).toContain("Work through the following task from my working notes.");
     expect(prompt).toContain("<notes>\n- [~] restart the cron\n</notes>");
     expect(prompt).toContain('This task is from the section named "Deploy".');
+  });
+
+  it("names a nested section by its full path, so it is nameable at all", () => {
+    const prompt = buildScratchpadPrompt(
+      "# Pull requests\n\n## Sidebar\n\n- [ ] restyle the select",
+      { section: true }
+    );
+    expect(prompt).toContain("<notes>\n- [ ] restyle the select\n</notes>");
+    expect(prompt).toContain(
+      'This task is from the section named "Pull requests > Sidebar".'
+    );
   });
 
   it("says nothing about a section for a task that has none", () => {

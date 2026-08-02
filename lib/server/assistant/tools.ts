@@ -1358,6 +1358,32 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "link_pull_request",
+      description:
+        "Attach an existing pull request of the project's linked repository to an issue, when it did not attach on its own. A PR normally finds its issue by CONVENTION at ingestion — the issue identifier in the branch name, the title, or a closing line ('Fixes MIND-42') of the description — so use this only for a PR the user points at that shows up with NO issue. Identify it by number ('42', '#42', '!42' for a GitLab merge request) or by the forge URL the user pasted; on the pull requests page, 'cette PR' is the one in context. Attaching also ALIGNS the issue's status on the state of the PR: open → in_review, draft → in_progress, merged → done, closed → todo — say which. The link is DEFINITIVE and cannot be undone: a PR already attached to another issue is refused, and so is an issue that already carries a live (draft or open) PR. Ask the user before attaching when you had to guess either side.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue to attach the pull request to (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "The pull request: its number ('42'), '#42', '!42' for a GitLab merge request, or its full URL on the forge.",
+          },
+        },
+        // Les DEUX sont requis : sur un petit modèle, un champ optionnel n'est
+        // pas rempli, et un rattachement à moitié désigné n'a aucun sens.
+        required: ["issue_id", "pull_request"],
+      },
+    },
+  },
 ];
 
 // Tools that operate on the requesting user's own account, not on a project —

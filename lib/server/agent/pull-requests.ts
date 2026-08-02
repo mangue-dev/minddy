@@ -200,21 +200,47 @@ export async function findPullRequestsByHeadSha(opts: {
   return (data ?? []) as unknown as PullRequestRow[];
 }
 
+export interface RepoRef {
+  provider: RepoProviderId;
+  repoFullName: string;
+}
+
+/** Ligne de liaison → dépôt, ou null si elle est incomplète (provider inconnu,
+    dépôt jamais choisi : la liaison existe avant que le dépôt soit désigné). */
+function repoFromLink(data: unknown): RepoRef | null {
+  const row = data as { provider: string; repo_full_name: string | null } | null;
+  if (!row?.repo_full_name || !isRepoProviderId(row.provider)) return null;
+  return { provider: row.provider, repoFullName: row.repo_full_name };
+}
+
+/**
+ * Dépôt lié à un projet — au plus UN (`project_git_links.project_id` est
+ * unique). L'inverse, lui, est multiple : plusieurs projets peuvent lier le même
+ * dépôt, ce que `projectsForRepo` sert.
+ */
+export async function repoForProject(projectId: string): Promise<RepoRef | null> {
+  const { data } = await getServiceClient()
+    .from("project_git_links")
+    .select("provider, repo_full_name")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  return repoFromLink(data);
+}
+
 /** Dépôt (provider + nom complet) d'un run, via sa liaison — ou null. */
 export async function repoForRun(run: {
   repo_link_id: string | null;
   project_id: string;
-}): Promise<{ provider: RepoProviderId; repoFullName: string } | null> {
-  const service = getServiceClient();
+}): Promise<RepoRef | null> {
   // `repo_link_id` est ON DELETE SET NULL : après un unlink, le run garde sa PR
   // mais plus son lien — on retombe alors sur la liaison COURANTE du projet.
-  const query = service.from("project_git_links").select("provider, repo_full_name");
-  const { data } = run.repo_link_id
-    ? await query.eq("id", run.repo_link_id).maybeSingle()
-    : await query.eq("project_id", run.project_id).maybeSingle();
-  const row = data as { provider: string; repo_full_name: string | null } | null;
-  if (!row?.repo_full_name || !isRepoProviderId(row.provider)) return null;
-  return { provider: row.provider, repoFullName: row.repo_full_name };
+  if (!run.repo_link_id) return repoForProject(run.project_id);
+  const { data } = await getServiceClient()
+    .from("project_git_links")
+    .select("provider, repo_full_name")
+    .eq("id", run.repo_link_id)
+    .maybeSingle();
+  return repoFromLink(data);
 }
 
 /**

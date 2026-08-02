@@ -11,55 +11,99 @@
 // cadrage « ce sont des notes, pas une spec ; demande avant de deviner » est le
 // même que pour un agent externe.
 //
-// Portée UNE TÂCHE : la ligne arrive précédée du titre de sa section (le seul
-// canal pour l'agent, cf. splitTaskSection) ; le prompt sort la section du bloc
-// <notes> et la nomme en clair — sans elle, une tâche isolée perd son contexte.
+// Portée UNE TÂCHE : la ligne arrive précédée des titres de sa section (le seul
+// canal pour l'agent, cf. splitTaskSection) ; le prompt les sort du bloc
+// <notes> et les nomme en clair — sans eux, une tâche isolée perd son contexte.
 
 import { stripScratchpadSpacers } from "@/lib/scratchpad";
 
 const HEADING_LINE = /^ {0,3}(#{1,6})\s+(.*)$/;
 const TASK_LINE = /^\s*[-*+]\s+\[[ xX~-]\]\s+\S/;
 
+/** Ce qui sépare les titres d'une chaîne de sections, une fois nommée en clair. */
+const SECTION_SEPARATOR = " > ";
+
 /**
- * Une tâche copiée ou lancée depuis le carnet voyage AVEC sa section : le
- * markdown porté est le titre de la section (tel quel, niveau compris) suivi de
- * la SEULE ligne de tâche — voir scratchpad-task.tsx. On le redécoupe ici pour
- * nommer la section en clair dans le prompt : « - [ ] relancer le cron » n'est
- * pas la même tâche selon qu'elle vit sous « Déploiement » ou sous « Idées ».
+ * La chaîne de titres qui CONTIENT une tâche, du plus large au plus étroit, lue
+ * dans les titres qui la précèdent (ordre du document, niveau + texte bruts).
+ * Retourne des lignes de titre markdown prêtes à précéder la tâche.
+ *
+ * Une tâche vit dans sa section ET dans toutes celles qui l'englobent : sortie
+ * du carnet avec le seul titre le plus proche, « ## Sidebar » ne dit pas de quoi
+ * — « # Pull requests » au-dessus le dit. On remonte donc de titre en titre en
+ * ne gardant que ceux de rang STRICTEMENT plus haut que le dernier retenu : un
+ * titre de même rang (ou plus profond) est un frère, ou le contenu d'un frère,
+ * et n'englobe rien.
+ *
+ * Un titre VIDE ne se nomme pas, mais ferme quand même son rang : ce qu'il porte
+ * n'a pas de section à ce niveau-là, seulement les titres au-dessus de lui.
+ */
+export function sectionHeadingChain(
+  headings: Array<{ level: number; text: string }>
+): string[] {
+  const chain: string[] = [];
+  let deepest = 7;
+  for (let i = headings.length - 1; i >= 0; i--) {
+    const level = Math.min(6, Math.max(1, Math.trunc(headings[i].level) || 2));
+    if (level >= deepest) continue;
+    deepest = level;
+    const text = headings[i].text.trim();
+    if (text) chain.unshift(`${"#".repeat(level)} ${text}`);
+    if (level === 1) break; // rien n'englobe un titre de premier rang
+  }
+  return chain;
+}
+
+/**
+ * Une tâche copiée ou lancée depuis le carnet voyage AVEC ses sections : le
+ * markdown porté est la chaîne de titres qui la contient (telle quelle, niveaux
+ * compris, cf. sectionHeadingChain) suivie de la SEULE ligne de tâche — voir
+ * scratchpad-task.tsx. On la redécoupe ici pour la nommer en clair dans le
+ * prompt : « - [ ] relancer le cron » n'est pas la même tâche selon qu'elle vit
+ * sous « Déploiement » ou sous « Idées », et « Sidebar » ne veut rien dire sans
+ * le « Pull requests » qui l'englobe — d'où le chemin entier, joint par « > ».
  *
  * C'est le seul canal disponible pour le run CARNET de numo : sa note est un
  * simple texte (éditable dans le composer, stocké en `agent_runs.prompt`), donc
  * la section doit voyager dedans — et le serveur la redécoupe avec cette même
  * fonction. Prompt copié et prompt de l'agent sont ainsi identiques.
  *
- * Tout autre contenu (pas de titre, de la prose, plusieurs tâches) ressort
- * inchangé, sans section.
+ * Les titres de tête doivent s'EMBOÎTER (rangs strictement croissants) : c'est
+ * ce que produit une chaîne de sections, et deux titres de même rang décrivent,
+ * eux, un vrai bout de note. Tout autre contenu (pas de titre, de la prose,
+ * plusieurs tâches) ressort inchangé, sans section.
  */
 export function splitTaskSection(notes: string): {
   section: string | null;
   body: string;
   isTask: boolean;
 } {
-  const lines = notes.split("\n");
-  const first = lines.findIndex((line) => line.trim() !== "");
-  if (first === -1) return { section: null, body: notes, isTask: false };
+  const lines = notes.split("\n").filter((line) => line.trim() !== "");
+  if (lines.length === 0) return { section: null, body: notes, isTask: false };
 
-  const heading = lines[first].match(HEADING_LINE);
-  if (!heading) {
-    const only = lines.filter((line) => line.trim() !== "");
-    return {
-      section: null,
-      body: notes,
-      isTask: only.length === 1 && TASK_LINE.test(only[0]),
-    };
+  const titles: string[] = [];
+  let level = 0;
+  let i = 0;
+  for (; i < lines.length; i++) {
+    const heading = lines[i].match(HEADING_LINE);
+    if (!heading) break;
+    const title = heading[2].trim();
+    if (!title || heading[1].length <= level) {
+      return { section: null, body: notes, isTask: false };
+    }
+    level = heading[1].length;
+    titles.push(title);
   }
 
-  const rest = lines.slice(first + 1).filter((line) => line.trim() !== "");
-  const title = heading[2].trim();
-  if (!title || rest.length !== 1 || !TASK_LINE.test(rest[0])) {
+  const rest = lines.slice(i);
+  if (rest.length !== 1 || !TASK_LINE.test(rest[0])) {
     return { section: null, body: notes, isTask: false };
   }
-  return { section: title, body: rest[0], isTask: true };
+  return {
+    section: titles.length > 0 ? titles.join(SECTION_SEPARATOR) : null,
+    body: rest[0],
+    isTask: true,
+  };
 }
 
 export function buildScratchpadPrompt(

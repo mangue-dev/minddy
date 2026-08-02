@@ -92,6 +92,11 @@ import {
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
+import {
+  linkPullRequestToIssue,
+  resolveProjectPullRequest,
+  type PrLinkRefusal,
+} from "@/lib/server/agent/pr-link";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import {
   runWebSearchTool,
@@ -152,6 +157,17 @@ function toolError(message: string): ToolExecution {
 function libError(r: { errorKey?: string; rawMessage?: string }): ToolExecution {
   return toolError(r.rawMessage ?? r.errorKey ?? "Request failed");
 }
+
+/** Refus de rattachement d'une PR, dits à Numo pour qu'il les relaie tels quels
+    plutôt que d'inventer une raison. */
+const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
+  pr_already_linked:
+    "This pull request is already attached to another issue. The link is definitive: it cannot be replaced, and there is no unlink.",
+  issue_already_linked:
+    "This issue already carries a live (draft or open) pull request. Only ONE live pull request per issue.",
+  issue_outside_repo:
+    "This issue belongs to a project that does not link the repository of that pull request.",
+};
 
 /** Readable message for a failed launch_code_agent (relayed to the user by Numo). */
 function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
@@ -963,6 +979,55 @@ export async function executeTool(
                 created_at: c.created_at,
               })),
             })),
+          },
+          success: true,
+        };
+      }
+
+      /**
+       * Rattacher à la main une PR restée orpheline (MIN-163bis). La règle et
+       * ses refus vivent dans `linkPullRequestToIssue`, partagés avec l'app et
+       * le MCP ; ici, on ne fait que le garde d'accès et la traduction.
+       */
+      case "link_pull_request": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        if (!scoped.ok) return toolError(scoped.error);
+
+        const found = await resolveProjectPullRequest({
+          projectId,
+          ref: args.pull_request as string | number | undefined,
+          userId: ctx.userId,
+        });
+        if ("error" in found) {
+          return toolError(
+            found.error === "invalid_ref"
+              ? "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
+              : found.error === "no_repository"
+                ? "This project has no linked repository."
+                : "No pull request with that number in the repository linked to this project."
+          );
+        }
+
+        const result = await linkPullRequestToIssue({
+          pr: found.pr,
+          issue: { id: issueId, projectId },
+          actorId: ctx.userId,
+        });
+        if (!result.ok) return toolError(PR_LINK_REFUSALS[result.code]);
+
+        return {
+          result: {
+            linked: true,
+            already: result.already,
+            pull_request: {
+              number: found.pr.number,
+              url: found.pr.url,
+              state: found.pr.state,
+              title: found.pr.title,
+            },
+            issue_id: issueId,
+            issue_status: result.status,
           },
           success: true,
         };

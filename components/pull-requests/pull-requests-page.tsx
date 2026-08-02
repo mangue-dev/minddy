@@ -5,16 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Skeleton,
   Spinner,
   cn,
 } from "mangue-ui";
-import { ChevronRight, GitPullRequest } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, GitPullRequest } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
@@ -27,6 +26,7 @@ import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-run
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { PullRequestStateFilter } from "@/lib/agent-api";
 
 /**
@@ -45,6 +45,30 @@ import type { PullRequestStateFilter } from "@/lib/agent-api";
 /** Valeur du filtre d'auteur : tous, Numo, ou un login de forge précis. */
 const AUTHOR_ALL = "__all__";
 const AUTHOR_NUMO = "__numo__";
+
+/**
+ * Les états servis par le filtre, dans l'ordre du menu.
+ *
+ * Une TABLE plutôt que quatre entrées écrites à la main : le menu et le libellé
+ * du bouton lisent la même source, donc ils ne peuvent pas diverger. Typée en
+ * `MessageKey` et non en `string` — une clé qui n'existe pas ne compile pas
+ * (cf. CLAUDE.md), là où un `Record<string, string>` afficherait sereinement
+ * « PullRequests.filterOpen » à l'écran.
+ */
+const STATE_FILTERS: ReadonlyArray<{
+  value: PullRequestStateFilter;
+  label: MessageKey<"PullRequests">;
+}> = [
+  { value: "open", label: "filterOpen" },
+  { value: "merged", label: "filterMerged" },
+  { value: "closed", label: "filterClosed" },
+  { value: "all", label: "filterAll" },
+];
+
+/** Le style commun des deux déclencheurs de filtre de la sidebar : un bouton
+    fantôme discret, la forme que prennent TOUS les filtres de l'app (barre du
+    board, en-tête de cycle) — pas un champ de formulaire. */
+const FILTER_TRIGGER = "px-2 font-normal text-muted-foreground hover:text-foreground";
 
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
@@ -163,46 +187,69 @@ export function PullRequestsPage() {
         <div className="flex items-center gap-2 px-4 pt-5 pb-3">
           <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
           <span className="text-sm tabular-nums text-muted-foreground">{filtered.length}</span>
-          {/* Pas de classe de largeur : le trigger est `w-fit`, il se cale donc
-              sur son libellé et tient sur la ligne du titre. */}
-          <Select
-            value={filter}
-            onValueChange={(v) => {
-              setFilter(v as PullRequestStateFilter);
-              setLimit(PULL_REQUESTS_PAGE);
-            }}
-          >
-            <SelectTrigger size="sm" className="ml-auto">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="open">{t("filterOpen")}</SelectItem>
-              <SelectItem value="merged">{t("filterMerged")}</SelectItem>
-              <SelectItem value="closed">{t("filterClosed")}</SelectItem>
-              <SelectItem value="all">{t("filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* `-mr-2` compense le padding du bouton : son libellé s'aligne alors
+              sur le bord droit de la liste, pas 8 px en-deçà. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-mr-2 ml-auto")}>
+                {t(STATE_FILTERS.find((s) => s.value === filter)?.label ?? "filterOpen")}
+                <ChevronDown aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {STATE_FILTERS.map((state) => (
+                <DropdownMenuItem
+                  key={state.value}
+                  onSelect={() => {
+                    setFilter(state.value);
+                    setLimit(PULL_REQUESTS_PAGE);
+                  }}
+                >
+                  {t(state.label)}
+                  {state.value === filter ? <Check className="ml-auto size-4" /> : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Filtre d'auteur — la seconde question qu'on se pose devant une liste
             où Numo et les humains cohabitent. Masqué tant qu'il n'y a qu'un seul
             auteur : il n'aurait rien à trancher. */}
         {authors.length > 1 ? (
-          <div className="px-4 pb-3">
-            <Select value={author} onValueChange={setAuthor}>
-              <SelectTrigger size="sm" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={AUTHOR_ALL}>{t("filterByAuthor")}</SelectItem>
-                <SelectItem value={AUTHOR_NUMO}>{t("filterNumoOnly")}</SelectItem>
+          <div className="flex px-4 pb-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-ml-2 max-w-full")}>
+                  {author === AUTHOR_ALL ? (
+                    <span className="min-w-0 truncate">{t("filterByAuthor")}</span>
+                  ) : author === AUTHOR_NUMO ? (
+                    <span className="min-w-0 truncate">{t("filterNumoOnly")}</span>
+                  ) : (
+                    // `GitLogin` tronque déjà le nom sans écraser sa pastille
+                    // « bot » — l'envelopper d'un `truncate` la couperait.
+                    <GitLogin login={author} />
+                  )}
+                  <ChevronDown aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-w-72">
+                <DropdownMenuItem onSelect={() => setAuthor(AUTHOR_ALL)}>
+                  {t("filterByAuthor")}
+                  {author === AUTHOR_ALL ? <Check className="ml-auto size-4" /> : null}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setAuthor(AUTHOR_NUMO)}>
+                  {t("filterNumoOnly")}
+                  {author === AUTHOR_NUMO ? <Check className="ml-auto size-4" /> : null}
+                </DropdownMenuItem>
                 {authors.map((a) => (
-                  <SelectItem key={a.login} value={a.login}>
+                  <DropdownMenuItem key={a.login} onSelect={() => setAuthor(a.login)}>
                     <GitLogin login={a.login} />
-                  </SelectItem>
+                    {a.login === author ? <Check className="ml-auto size-4" /> : null}
+                  </DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : null}
 

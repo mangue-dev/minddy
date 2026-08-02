@@ -36,7 +36,12 @@ export const MCP_SERVER_INSTRUCTIONS =
       "comment_id, to a comment, and minddy_get_attachment downloads one by id " +
       "(signed URL, or the bytes inline). An issue worked by minddy's code agent " +
       "carries a PULL REQUEST: minddy_get_pull_request reads it from the issue: " +
-      "state, branches, description and per-file diffs. " +
+      "state, branches, description and per-file diffs. A pull request of a linked " +
+      "repository normally finds its issue by CONVENTION (the identifier in the branch, " +
+      "the title, or a 'Fixes KEY-42' line); when it followed none of them and stayed " +
+      "unattached, minddy_link_pull_request attaches it after the fact, by PR number or " +
+      "URL, and aligns the issue's status on the state of the PR. That link is " +
+      "definitive — there is no unlink. " +
       "The key owner may have a " +
       "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
       "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +

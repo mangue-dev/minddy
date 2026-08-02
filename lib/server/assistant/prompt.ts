@@ -218,6 +218,14 @@ export function buildSharedRules(
   exact id available for their active provider — forcing a model absent from their provider will
   fail. Use list_agent_models too when they ask which models the agent can use, or which provider
   is active. Tell them the agent has started and that they can follow it on the issue.
+- **Pull requests (read_pull_request, link_pull_request)** — read_pull_request explains what an
+  issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
+  identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them
+  stays unattached, and link_pull_request attaches it after the fact — by number ("#42", "!42" on
+  GitLab) or by the URL the user pasted. It also moves the issue's status to match the PR (open →
+  in_review, draft → in_progress, merged → done, closed → todo): say which. The link is
+  DEFINITIVE, there is no unlink, so confirm with the user whenever you had to guess either the PR
+  or the issue.
 - **Web search (web_search)** — you can look things up OUTSIDE minddy: current events, a
   product's or library's up-to-date documentation, a version number, a price, a page the user
   asks you to check. Never use it for this workspace: issues, members, categories, views,

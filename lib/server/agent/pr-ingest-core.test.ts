@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
+import { issueRefFromPr, parseIssueRef, parsePullRequestRef } from "./pr-ingest-core";
 
 /**
  * MIN-143 — le rattachement PR ↔ ticket est la seule logique à vraie valeur de
@@ -108,5 +108,48 @@ describe("parseIssueRef", () => {
     expect(parseIssueRef("MIN")).toBeNull();
     expect(parseIssueRef("-42")).toBeNull();
     expect(parseIssueRef("MIN-abc")).toBeNull();
+  });
+});
+
+/**
+ * La référence de PR écrite à la main (MCP + Numo) : c'est elle qui traduit
+ * « lie la PR #42 » en une ligne de `pull_requests`. Ce qu'elle REFUSE porte
+ * autant que ce qu'elle accepte — une URL d'issue prise pour une PR
+ * rattacherait, sans un mot, un objet qui n'a rien à voir.
+ */
+describe("parsePullRequestRef", () => {
+  it("lit un numéro, nu ou préfixé", () => {
+    expect(parsePullRequestRef(42)).toBe(42);
+    expect(parsePullRequestRef("42")).toBe(42);
+    expect(parsePullRequestRef("  42 ")).toBe(42);
+    expect(parsePullRequestRef("#42")).toBe(42);
+    // `!42` est la syntaxe des merge requests GitLab.
+    expect(parsePullRequestRef("!42")).toBe(42);
+  });
+
+  it("lit une URL de forge, GitHub comme GitLab", () => {
+    expect(parsePullRequestRef("https://github.com/mangue-dev/minddy/pull/42")).toBe(42);
+    expect(parsePullRequestRef("https://github.com/o/r/pull/42/files")).toBe(42);
+    expect(parsePullRequestRef("https://github.com/o/r/pull/42#discussion_r1")).toBe(42);
+    expect(parsePullRequestRef("https://gitlab.com/g/p/-/merge_requests/7")).toBe(7);
+  });
+
+  it("refuse une URL qui ne désigne pas une pull request", () => {
+    // Les deux numérotations cohabitent dans un dépôt GitHub : l'issue 42 et la
+    // PR 42 sont deux objets différents.
+    expect(parsePullRequestRef("https://github.com/o/r/issues/42")).toBeNull();
+    expect(parsePullRequestRef("https://github.com/o/r")).toBeNull();
+  });
+
+  it("refuse ce qui n'est pas une référence", () => {
+    expect(parsePullRequestRef(null)).toBeNull();
+    expect(parsePullRequestRef(undefined)).toBeNull();
+    expect(parsePullRequestRef("")).toBeNull();
+    expect(parsePullRequestRef("   ")).toBeNull();
+    expect(parsePullRequestRef("MIN-42")).toBeNull();
+    expect(parsePullRequestRef("PR 42")).toBeNull();
+    expect(parsePullRequestRef(0)).toBeNull();
+    expect(parsePullRequestRef(-1)).toBeNull();
+    expect(parsePullRequestRef(4.2)).toBeNull();
   });
 });
