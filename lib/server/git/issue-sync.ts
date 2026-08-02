@@ -267,6 +267,9 @@ function toImportedIssue(
     priority: "none",
     effort: null,
     labels: [],
+    // Le backfill d'un dépôt lié ne rapproche personne : l'assigné GitHub est
+    // un compte de la forge, pas un membre du projet minddy.
+    assigneeId: null,
     dueDate: null,
     createdAt: null,
     completedAt: null,

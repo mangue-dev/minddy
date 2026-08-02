@@ -1,78 +1,121 @@
-// Generic CSV mapper — the documented minddy format, headers accepted in
-// English and French. Only a title column is required; everything else is
-// optional: description, status/statut, priority/priorité, effort (t-shirt or
-// points), labels/étiquettes (comma- or semicolon-separated), due date/
-// échéance, created, id/key/réf and parent for sub-issues.
+// Mapper générique — le format minddy documenté, en-têtes acceptés en anglais
+// et en français, et le filet des outils qui n'ont pas de mapper à eux (MIN-98) :
+// un export de tableau Trello ("Card Name", "Card Description", "List Name"),
+// le CSV qu'écrit `gh issue list` ("id,title,description,status,labels"), et un
+// export de base de données Notion, dont les colonnes sont les propriétés que
+// l'utilisateur a nommées lui-même.
 //
-// It is also what catches the tools without a mapper of their own (MIN-98):
-// a Trello board export ("Card Name", "Card Description", "List Name") and the
-// CSV a `gh issue list` command writes ("id,title,description,status,labels").
-// Both stay source "csv" — they are generic CSVs whose column names we happen
-// to know, not a format worth a dedicated mapper.
+// Ce sont tous la source "csv" : des CSV génériques dont il se trouve qu'on
+// connaît les noms de colonnes, pas des formats qui méritent un mapper.
+//
+// Notion mérite un mot : ses en-têtes n'ont RIEN de garanti — ce sont des
+// propriétés créées à la main, dans la langue de l'espace de travail. Les alias
+// ci-dessous couvrent celles des modèles fournis par Notion (« Task name »,
+// « Élément parent », « Date d'échéance »…) ; tout le reste est précisément le
+// travail de la passe du modèle, qui lit les valeurs et pas seulement les noms.
 
-import type { ImportedIssue } from "@/lib/import/types";
-import {
-  cell,
-  GENERIC_TITLE_HEADERS,
-  mapEffort,
-  mapPriority,
-  mapStatus,
-  MAX_TITLE_LENGTH,
-  parseDateValue,
-  splitLabels,
-  Warnings,
-  type CsvTable,
-} from "@/lib/import/normalize";
+import type { ColumnAliases } from "@/lib/import/types";
+import { GENERIC_TITLE_HEADERS } from "@/lib/import/normalize";
 
-export function mapGenericRows(table: CsvTable, warnings: Warnings): ImportedIssue[] {
-  const issues: ImportedIssue[] = [];
-
-  for (const row of table.rows) {
-    const title = cell(table, row, ...GENERIC_TITLE_HEADERS).slice(
-      0,
-      MAX_TITLE_LENGTH
-    );
-    if (!title) {
-      warnings.add("skippedNoTitle");
-      continue;
-    }
-
-    // "list name" is Trello's column, "state" GitHub's — an unknown list name
-    // falls back to backlog with a warning, which is the honest outcome for a
-    // board whose columns don't map onto minddy's statuses.
-    const status = mapStatus(
-      cell(table, row, "status", "statut", "etat", "list name", "list", "state"),
-      warnings
-    );
-    const key = cell(table, row, "id", "key", "cle", "ref", "card id", "number");
-
-    issues.push({
-      title,
-      description:
-        cell(table, row, "description", "desc", "card description", "body") || null,
-      status,
-      priority: mapPriority(cell(table, row, "priority", "priorite")),
-      effort: mapEffort(
-        cell(table, row, "effort", "estimate", "estimation", "points")
-      ),
-      labels: splitLabels(
-        cell(table, row, "labels", "etiquettes", "tags", "categories")
-      ),
-      dueDate: parseDateValue(
-        cell(table, row, "due date", "due", "echeance", "deadline")
-      ),
-      createdAt: parseDateValue(
-        cell(table, row, "created", "creation", "cree le", "created at", "date created")
-      ),
-      // Only read back for `done` issues on insert (lib/server/import-issues.ts),
-      // so a closing date on a still-open row is harmless.
-      completedAt: parseDateValue(
-        cell(table, row, "closed at", "completed at", "resolved at")
-      ),
-      externalKeys: key ? [key] : [],
-      parentExternalKey: cell(table, row, "parent") || null,
-    });
-  }
-
-  return issues;
-}
+export const GENERIC_COLUMN_ALIASES: ColumnAliases = [
+  ["title", GENERIC_TITLE_HEADERS],
+  ["description", ["description", "desc", "card description", "body", "notes"]],
+  // « list name » est la colonne Trello, « state » celle de GitHub, « statut de
+  // la tache » celle des modèles Notion français.
+  [
+    "status",
+    [
+      "status",
+      "statut",
+      "etat",
+      "statut de la tache",
+      "list name",
+      "list",
+      "state",
+      "colonne",
+      "column",
+      "etape",
+      "stage",
+    ],
+  ],
+  ["priority", ["priority", "priorite", "niveau de priorite", "importance"]],
+  [
+    "effort",
+    [
+      "effort",
+      "estimate",
+      "estimation",
+      "points",
+      "story points",
+      "effort level",
+      "niveau deffort",
+      "taille",
+      "size",
+      "complexite",
+    ],
+  ],
+  [
+    "labels",
+    ["labels", "etiquettes", "tags", "categories", "mots cles", "keywords"],
+  ],
+  [
+    "assignee",
+    [
+      "assignee",
+      "assigne",
+      "assignee a",
+      "responsable",
+      "owner",
+      "proprietaire",
+      "attribue a",
+      "affecte a",
+      "member",
+      "membre",
+      "personne",
+      "qui",
+    ],
+  ],
+  [
+    "dueDate",
+    [
+      "due date",
+      "due",
+      "echeance",
+      "deadline",
+      "date decheance",
+      "date limite",
+      "date de fin",
+    ],
+  ],
+  [
+    "createdAt",
+    [
+      "created",
+      "creation",
+      "cree le",
+      "created at",
+      "date created",
+      "created time",
+      "date de creation",
+    ],
+  ],
+  [
+    "completedAt",
+    [
+      "closed at",
+      "completed at",
+      "resolved at",
+      "completed on",
+      "completed",
+      "termine le",
+      "date de fin reelle",
+    ],
+  ],
+  ["externalKey", ["id", "key", "cle", "ref", "card id", "number", "identifiant"]],
+  // Notion référence son parent par TITRE, pas par identifiant : `applyMapping`
+  // le sait et prend le titre pour clé quand le fichier n'a pas de colonne d'id.
+  [
+    "parent",
+    ["parent", "parent item", "element parent", "parent task", "tache parente"],
+  ],
+];

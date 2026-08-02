@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { mapCsvToIssues } from "@/lib/import/parse";
+import { issuesFromMapping, mapCsvToIssues, prepareImport } from "@/lib/import/parse";
+import { mappingHasGaps, mergeMapping, sanitizeMapping } from "@/lib/import/mapping";
+import {
+  EMPTY_IMPORT_CONTEXT,
+  MAX_IMPORT_ISSUES,
+  type ImportContext,
+  type ImportMapping,
+} from "@/lib/import/types";
 import { parseDateValue } from "@/lib/import/normalize";
 
 const LINEAR_CSV = `ID,Team,Title,Description,Status,Estimate,Priority,Creator,Assignee,Labels,Created,Completed,Due Date,Parent issue
@@ -222,11 +229,34 @@ describe("edge cases", () => {
   });
 
   it("rejects imports above the issue cap", () => {
-    const rows = Array.from({ length: 1001 }, (_, i) => `Issue ${i}`).join("\n");
-    expect(mapCsvToIssues(`Title\n${rows}\n`)).toEqual({
+    const rows = Array.from({ length: MAX_IMPORT_ISSUES + 1 }, (_, i) => `Issue ${i}`);
+    expect(mapCsvToIssues(`Title\n${rows.join("\n")}\n`)).toEqual({
       ok: false,
       error: "tooManyIssues",
     });
+  });
+
+  it("takes a file of a few thousand rows without breaking a sweat", () => {
+    // Le plafond est un garde-fou, pas une limite technique : depuis que les
+    // colonnes ne sont comptées qu'une fois, préparer un gros fichier est un
+    // seul balayage — et c'est ce que l'aperçu refait à chaque retouche.
+    const header = "Title,Status,Priority,Assignee,Labels,Sprint";
+    const rows = Array.from(
+      { length: 3000 },
+      (_, i) =>
+        `Issue ${i},${i % 2 ? "In Progress" : "Done"},${i % 3 ? "High" : "Low"},` +
+        `person${i % 7}@corp.com,"bug, ui",S-${i % 12}`
+    );
+    const started = performance.now();
+    const result = prepareImport(`${header}\n${rows.join("\n")}\n`);
+    if (!result.ok) throw new Error(result.error);
+    const { issues } = issuesFromMapping(result.table, result.mapping);
+    const elapsed = performance.now() - started;
+
+    expect(issues).toHaveLength(3000);
+    expect(result.stats[3].distinctCount).toBe(7); // les 7 personnes, comptées une fois
+    // Large, mais ça casse net si un balayage par colonne revenait.
+    expect(elapsed).toBeLessThan(2000);
   });
 
   it("strips a BOM before parsing", () => {
@@ -245,5 +275,339 @@ describe("parseDateValue", () => {
   it("drops garbage instead of guessing", () => {
     expect(parseDateValue("not a date")).toBeNull();
     expect(parseDateValue("")).toBeNull();
+  });
+
+  // Notion écrit ses dates en toutes lettres, dans la langue de l'espace de
+  // travail, et une propriété « Date » peut porter une plage.
+  it("reads Notion's spelled-out dates, in French too", () => {
+    expect(parseDateValue("July 14, 2026")).toBe("2026-07-14T00:00:00.000Z");
+    expect(parseDateValue("14 juillet 2026")).toBe("2026-07-14T00:00:00.000Z");
+    expect(parseDateValue("3 février 2026")).toBe("2026-02-03T00:00:00.000Z");
+  });
+
+  it("keeps the start of a date range", () => {
+    expect(parseDateValue("14 juillet 2026 → 20 juillet 2026")).toBe(
+      "2026-07-14T00:00:00.000Z"
+    );
+    expect(parseDateValue("2026-02-01 → 2026-02-08")).toBe("2026-02-01");
+  });
+});
+
+// ── Notion ───────────────────────────────────────────────────────────────────
+// Un export de base de données Notion : les colonnes sont les propriétés que
+// l'utilisateur a créées, ici celles du modèle « Tâches » en français. Deux
+// singularités qui n'existent nulle part ailleurs : aucune colonne
+// d'identifiant, et un parent référencé PAR SON TITRE.
+
+const NOTION_CSV = `Nom de la tâche,Statut,Priorité,Étiquettes,Date d'échéance,Élément parent,Responsable
+Refondre l'onboarding,Pas commencé,Haute,"produit, UX",14 juillet 2026,,Marie Dupont
+Écrire les nouveaux textes,En cours,Moyenne,contenu,,Refondre l'onboarding,Ali Ben
+Migrer la base,Terminé,Basse,,,,Marie Dupont
+Nettoyer les vieux comptes,Bloqué,,infra,,,
+`;
+
+describe("Notion export", () => {
+  const result = mapCsvToIssues(NOTION_CSV);
+  if (!result.ok) throw new Error("expected ok");
+
+  it("reads the French property names of Notion's task template", () => {
+    const [first] = result.issues;
+    expect(result.issues).toHaveLength(4);
+    expect(first.title).toBe("Refondre l'onboarding");
+    expect(first.status).toBe("todo"); // « Pas commencé »
+    expect(first.priority).toBe("high");
+    expect(first.labels).toEqual(["produit", "UX"]);
+    expect(first.dueDate).toBe("2026-07-14T00:00:00.000Z");
+    expect(result.issues[2].status).toBe("done");
+  });
+
+  it("links a sub-task through the parent's TITLE, for want of an id", () => {
+    // Sans colonne d'identifiant, le titre en tient lieu : c'est la seule façon
+    // de relier « Élément parent », qui porte le titre du parent.
+    expect(result.issues[1].parentExternalKey).toBe("Refondre l'onboarding");
+    expect(result.issues[0].externalKeys).toEqual(["Refondre l'onboarding"]);
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ key: "parentNotFound" })
+    );
+  });
+
+  it("leaves a genuinely ambiguous status to the user, and says so", () => {
+    // minddy n'a pas de statut « bloqué » : on ne le devine pas, on le signale.
+    expect(result.issues[3].status).toBe("backlog");
+    expect(result.warnings).toContainEqual({
+      key: "unknownStatus",
+      value: "Bloqué",
+      count: 1,
+    });
+  });
+
+  it("ignores a column it has no field for, until someone places it", () => {
+    // « Responsable » n'est aliasé nulle part : la détection par en-têtes le
+    // laisse de côté, et c'est la passe du modèle (ou le tableau de
+    // correspondance) qui le récupère — cf. le test extraNote plus bas.
+    const { table, stats, mapping } = prepared(NOTION_CSV);
+    expect(mapping.columns[table.headers.indexOf("Responsable")]).toBe("assignee");
+    // Sans membre qui lui corresponde, la personne reste à placer.
+    expect(mapping.assigneeValues).toEqual({});
+    expect(mappingHasGaps(stats, mapping)).toBe(true);
+  });
+});
+
+// ── Le plan de lecture ───────────────────────────────────────────────────────
+
+function prepared(csv: string) {
+  const result = prepareImport(csv);
+  if (!result.ok) throw new Error(`expected ok, got ${result.error}`);
+  return result;
+}
+
+describe("import mapping", () => {
+  it("recovers an orphan column as categories or as a description note", () => {
+    const { table, mapping } = prepared(NOTION_CSV);
+    const at = (header: string) => table.headers.indexOf(header);
+
+    // Ce que la passe du modèle propose sur ce fichier : peu de valeurs
+    // distinctes et répétées → catégories ; une personne → note.
+    const columns = [...mapping.columns];
+    columns[at("Responsable")] = "extraNote";
+    columns[at("Étiquettes")] = "labels";
+
+    const { issues } = issuesFromMapping(table, { ...mapping, columns });
+    // Pas de description d'origine → pas de trait de séparation en tête.
+    expect(issues[0].description).toBe("Responsable : Marie Dupont");
+    expect(issues[3].description).toBeNull(); // colonne vide → rien d'ajouté
+
+    columns[at("Responsable")] = "extraLabels";
+    const asLabels = issuesFromMapping(table, { ...mapping, columns });
+    expect(asLabels.issues[0].labels).toEqual(["produit", "UX", "Marie Dupont"]);
+  });
+
+  it("appends the note under the description that was already there", () => {
+    const csv = `Title,Description,Sprint\nFix the login,Broken since v2,S-42\n`;
+    const { table, mapping } = prepared(csv);
+    const columns = [...mapping.columns];
+    columns[table.headers.indexOf("Sprint")] = "extraNote";
+
+    const { issues } = issuesFromMapping(table, { ...mapping, columns });
+    expect(issues[0].description).toBe("Broken since v2\n\n---\nSprint : S-42");
+  });
+
+  it("lets a hand-placed value beat the alias tables", () => {
+    const { table, mapping } = prepared(NOTION_CSV);
+    const { issues } = issuesFromMapping(table, {
+      ...mapping,
+      statusValues: { ...mapping.statusValues, bloque: "in_progress" },
+    });
+    expect(issues[3].status).toBe("in_progress");
+  });
+
+  it("reads efforts written in words", () => {
+    const csv = `Title,Taille\nRefonte,Large\nPetit correctif,Small\nAutre,3\n`;
+    const { table, mapping } = prepared(csv);
+    const { issues } = issuesFromMapping(table, mapping);
+    expect(issues.map((i) => i.effort)).toEqual(["l", "s", "m"]);
+  });
+
+  it("asks nothing of the model when the headers already say everything", () => {
+    // Un export Linear complet : chaque colonne est placée, chaque valeur
+    // traduite. Appeler un modèle pour le confirmer ne rapporterait rien.
+    const clean = `ID,Title,Description,Status,Priority,Labels,Created,Completed,Due Date,Parent issue,Estimate
+ENG-1,Fix login,,In Progress,Urgent,Bug,2026-01-05,,2026-02-01,,2
+`;
+    const { stats, mapping, source } = prepared(clean);
+    expect(source).toBe("linear");
+    expect(mappingHasGaps(stats, mapping)).toBe(false);
+  });
+});
+
+// ── Rendre les tickets à leurs propriétaires ─────────────────────────────────
+
+const TEAM: ImportContext = {
+  actorId: "u-marie",
+  categories: ["Bug", "Design", "Infra"],
+  members: [
+    { userId: "u-marie", email: "marie.dupont@corp.com", name: "Marie Dupont" },
+    { userId: "u-ali", email: "ali.ben@corp.com", name: "Ali Ben" },
+  ],
+};
+
+const TEAM_CSV = `Title,Assignee,Labels
+Refonte de l'onboarding,marie.dupont@corp.com,bugs
+Corriger le pied de page,"Dupont, Marie",Design
+Migrer la base,Ali Ben,infra
+Écrire la doc,Someone Else,rédaction
+Nettoyer les comptes,,
+`;
+
+describe("people and categories", () => {
+  const result = prepareImport(TEAM_CSV, TEAM);
+  if (!result.ok) throw new Error(result.error);
+
+  it("recognises a member by e-mail, by name, and by reversed name", () => {
+    const { issues } = issuesFromMapping(result.table, result.mapping);
+    expect(issues[0].assigneeId).toBe("u-marie"); // par e-mail
+    expect(issues[1].assigneeId).toBe("u-marie"); // « Dupont, Marie »
+    expect(issues[2].assigneeId).toBe("u-ali"); // par nom d'affichage
+    expect(issues[4].assigneeId).toBeNull(); // colonne vide
+  });
+
+  it("keeps an unknown person in the description rather than dropping them", () => {
+    const { issues, warnings } = issuesFromMapping(result.table, result.mapping);
+    expect(issues[3].assigneeId).toBeNull();
+    expect(issues[3].description).toBe("Assignee : Someone Else");
+    expect(warnings).toContainEqual({
+      key: "unknownAssignee",
+      value: "Someone Else",
+      count: 1,
+    });
+  });
+
+  it("lands a label on the category the project already has", () => {
+    const { issues } = issuesFromMapping(result.table, result.mapping);
+    // « bugs » → la catégorie « Bug » existante, pas une jumelle au pluriel ;
+    // « Design » et « infra » → leur catégorie, à la casse près.
+    expect(issues[0].labels).toEqual(["Bug"]);
+    expect(issues[1].labels).toEqual(["Design"]);
+    expect(issues[2].labels).toEqual(["Infra"]);
+    // Ce que le projet n'a pas reste tel quel : il sera créé.
+    expect(issues[3].labels).toEqual(["rédaction"]);
+  });
+
+  it("assigns nobody when the project has no members to match", () => {
+    const alone = prepareImport(TEAM_CSV);
+    if (!alone.ok) throw new Error(alone.error);
+    const { issues } = issuesFromMapping(alone.table, alone.mapping);
+    expect(issues.every((i) => i.assigneeId === null)).toBe(true);
+    // Et rien n'est perdu pour autant.
+    expect(issues[0].description).toBe("Assignee : marie.dupont@corp.com");
+  });
+
+  it("refuses an assignee who is not a member of the project", () => {
+    // Le plan vient du navigateur : un identifiant arbitraire ne doit pas
+    // pouvoir assigner un ticket à quelqu'un d'étranger au projet.
+    const forged = {
+      ...result.mapping,
+      assigneeValues: { "someone else": "u-intruder", "ali ben": "u-ali" },
+    };
+    const server = mapCsvToIssues(TEAM_CSV, forged, TEAM);
+    if (!server.ok) throw new Error("expected ok");
+    expect(server.issues[3].assigneeId).toBeNull();
+    expect(server.issues[2].assigneeId).toBe("u-ali");
+  });
+
+  it("drops a label the user chose not to import", () => {
+    const { issues } = issuesFromMapping(result.table, {
+      ...result.mapping,
+      labelValues: { ...result.mapping.labelValues, redaction: "" },
+    });
+    expect(issues[3].labels).toEqual([]);
+  });
+});
+
+describe("sanitizeMapping", () => {
+  const { table } = prepared(NOTION_CSV);
+  const columnCount = table.headers.length;
+
+  it("drops fields and enum values it does not know", () => {
+    const clean = sanitizeMapping(columnCount, EMPTY_IMPORT_CONTEXT, {
+      columns: ["title", "nonsense", "status"],
+      statusValues: { "pas commence": "todo", bizarre: "shipped" },
+      priorityValues: { haute: "high" },
+      effortValues: null,
+    });
+    expect(clean?.columns).toEqual([
+      "title",
+      "ignore",
+      "status",
+      "ignore",
+      "ignore",
+      "ignore",
+      "ignore",
+    ]);
+    expect(clean?.statusValues).toEqual({ "pas commence": "todo" });
+    expect(clean?.priorityValues).toEqual({ haute: "high" });
+    expect(clean?.effortValues).toEqual({});
+  });
+
+  it("always spans the columns of the file the SERVER re-read", () => {
+    // Un plan plus long que le fichier ne peut pas déborder, un plan plus court
+    // ne laisse pas de trous.
+    const long = sanitizeMapping(2, EMPTY_IMPORT_CONTEXT, {
+      columns: Array.from({ length: 40 }, () => "title"),
+    });
+    expect(long?.columns).toHaveLength(2);
+  });
+
+  it("refuses what is not a plan at all", () => {
+    expect(sanitizeMapping(3, EMPTY_IMPORT_CONTEXT, null)).toBeNull();
+    expect(sanitizeMapping(3, EMPTY_IMPORT_CONTEXT, { columns: "title" })).toBeNull();
+  });
+});
+
+describe("mergeMapping", () => {
+  const base: ImportMapping = {
+    columns: ["title", "ignore", "status"],
+    statusValues: { done: "done" },
+    priorityValues: {},
+    effortValues: {},
+    assigneeValues: {},
+    labelValues: {},
+  };
+  const empty = { statusValues: {}, priorityValues: {}, effortValues: {},
+    assigneeValues: {}, labelValues: {} };
+
+  it("only fills the gaps of a known export", () => {
+    const merged = mergeMapping(
+      { ...base, columns: [...base.columns] },
+      { ...empty, columns: ["description", "extraNote", "priority"],
+        statusValues: { done: "canceled", bloque: "todo" } },
+      { columnsWin: false }
+    );
+    expect(merged.columns).toEqual(["title", "extraNote", "status"]);
+    // Ce que les alias savaient traduire n'est jamais écrasé.
+    expect(merged.statusValues).toEqual({ done: "done", bloque: "todo" });
+  });
+
+  it("lets the model re-place the columns of a plain CSV", () => {
+    const merged = mergeMapping(
+      { ...base, columns: [...base.columns] },
+      { ...empty, columns: ["extraNote", "title", "status"] },
+      { columnsWin: true }
+    );
+    expect(merged.columns).toEqual(["extraNote", "title", "status"]);
+  });
+
+  it("keeps the detected columns when the proposal loses the title", () => {
+    const merged = mergeMapping(
+      { ...base, columns: [...base.columns] },
+      { ...empty, columns: ["description", "ignore", "status"] },
+      { columnsWin: true }
+    );
+    expect(merged.columns).toEqual(["title", "ignore", "status"]);
+  });
+});
+
+describe("a mapping travels to the server and back", () => {
+  it("replays the user's corrections on the raw file", () => {
+    // Ce que le commit fait : le serveur relit le CSV et rejoue le plan que
+    // l'aperçu a montré. Le résultat doit être celui de l'aperçu, pas celui de
+    // la détection.
+    const { table, mapping } = prepared(NOTION_CSV);
+    const columns = [...mapping.columns];
+    columns[table.headers.indexOf("Responsable")] = "extraLabels";
+
+    const server = mapCsvToIssues(NOTION_CSV, { ...mapping, columns });
+    expect(server.ok).toBe(true);
+    if (!server.ok) return;
+    expect(server.issues[0].labels).toContain("Marie Dupont");
+  });
+
+  it("refuses a plan that designates no title", () => {
+    const { mapping } = prepared(NOTION_CSV);
+    const columns = mapping.columns.map(() => "ignore" as const);
+    expect(mapCsvToIssues(NOTION_CSV, { ...mapping, columns })).toEqual({
+      ok: false,
+      error: "noTitleColumn",
+    });
   });
 });

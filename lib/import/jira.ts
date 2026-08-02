@@ -1,84 +1,38 @@
-// Jira CSV export mapper. Multi-value fields come as REPEATED columns
-// ("Labels", "Labels", …) — handled by cells(). Rows answer to both their
-// issue key (PROJ-12) and numeric issue id, because "Parent" references
-// either depending on the Jira version. Story points live in a custom-field
-// column whose exact header varies ("Custom field (Story Points)", …).
+// Jira CSV export — table d'alias, plus les deux singularités du format.
+//
+// 1. Les champs multi-valués sortent en colonnes RÉPÉTÉES ("Labels", "Labels",
+//    …). Rien à faire ici : un plan assigne les colonnes par index, donc les
+//    trois « Labels » visent le même champ et `applyMapping` les concatène.
+// 2. Une ligne répond À LA FOIS à sa clé (PROJ-12) et à son id numérique, parce
+//    que « Parent » référence l'une ou l'autre selon la version de Jira — d'où
+//    deux colonnes `externalKey`.
+//
+// Les points d'histoire vivent dans un champ maison dont l'en-tête exact varie
+// (« Custom field (Story Points) », « Story point estimate », …) : impossible à
+// aliaser, on le cherche.
 
-import type { ImportedIssue } from "@/lib/import/types";
-import {
-  cell,
-  cells,
-  effortFromPoints,
-  mapPriority,
-  mapStatus,
-  MAX_TITLE_LENGTH,
-  normalizeToken,
-  parseDateValue,
-  splitLabels,
-  Warnings,
-  type CsvTable,
-} from "@/lib/import/normalize";
+import type { ColumnAliases } from "@/lib/import/types";
+import type { CsvTable } from "@/lib/import/normalize";
 
-/** Resolutions that turn a "Done"-looking status into canceled / duplicate. */
-const RESOLUTION_OVERRIDES: Record<string, "canceled" | "duplicate"> = {
-  "wont do": "canceled",
-  "wont fix": "canceled",
-  declined: "canceled",
-  "cannot reproduce": "canceled",
-  duplicate: "duplicate",
-};
+export const JIRA_COLUMN_ALIASES: ColumnAliases = [
+  ["title", ["summary"]],
+  ["description", ["description"]],
+  ["status", ["status"]],
+  ["priority", ["priority"]],
+  ["resolution", ["resolution"]],
+  ["labels", ["labels"]],
+  ["assignee", ["assignee"]],
+  ["dueDate", ["due date"]],
+  ["createdAt", ["created"]],
+  ["completedAt", ["resolved"]],
+  ["externalKey", ["issue key", "issue id"]],
+  ["parent", ["parent key", "parent", "parent id"]],
+];
 
-export function mapJiraRows(table: CsvTable, warnings: Warnings): ImportedIssue[] {
-  // Locate the story-points column once — any header mentioning "story points".
-  let storyPointsHeader: string | null = null;
+/** Le nom normalisé de la colonne de points, s'il y en a une. */
+export function jiraStoryPointsHeader(table: CsvTable): string | null {
   for (const name of table.headerIndex.keys()) {
-    if (name.includes("story points")) {
-      storyPointsHeader = name;
-      break;
-    }
+    if (name.includes("story point")) return name;
   }
-
-  const issues: ImportedIssue[] = [];
-
-  for (const row of table.rows) {
-    const title = cell(table, row, "summary").slice(0, MAX_TITLE_LENGTH);
-    if (!title) {
-      warnings.add("skippedNoTitle");
-      continue;
-    }
-
-    let status = mapStatus(cell(table, row, "status"), warnings);
-    const resolution = RESOLUTION_OVERRIDES[normalizeToken(cell(table, row, "resolution"))];
-    if (status === "done" && resolution) status = resolution;
-
-    // Labels: repeated columns (one value each) and/or a joined single column.
-    const labels = [
-      ...new Set(cells(table, row, "labels").flatMap(splitLabels)),
-    ];
-
-    const externalKeys = [
-      cell(table, row, "issue key"),
-      cell(table, row, "issue id"),
-    ].filter(Boolean);
-
-    issues.push({
-      title,
-      description: cell(table, row, "description") || null,
-      status,
-      priority: mapPriority(cell(table, row, "priority")),
-      effort: storyPointsHeader
-        ? effortFromPoints(cell(table, row, storyPointsHeader))
-        : null,
-      labels,
-      dueDate: parseDateValue(cell(table, row, "due date")),
-      createdAt: parseDateValue(cell(table, row, "created")),
-      completedAt:
-        status === "done" ? parseDateValue(cell(table, row, "resolved")) : null,
-      externalKeys,
-      parentExternalKey:
-        cell(table, row, "parent key", "parent", "parent id") || null,
-    });
-  }
-
-  return issues;
+  return null;
 }

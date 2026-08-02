@@ -38,7 +38,15 @@ export async function forcedToolCall(
   userMessage: string,
   toolName: string,
   parameters: Record<string, unknown>,
-  options?: { xTitle?: string; logPrefix?: string; record?: ForcedToolCallRecord }
+  options?: {
+    xTitle?: string;
+    logPrefix?: string;
+    record?: ForcedToolCallRecord;
+    /** Défaut : 1024 — de quoi couvrir un verdict ou un titre. À relever pour
+     *  les sorties qui grandissent avec l'entrée (un plan de correspondance
+     *  porte une ligne par colonne du fichier). */
+    maxTokens?: number;
+  }
 ): Promise<Record<string, unknown> | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
@@ -72,7 +80,7 @@ export async function forcedToolCall(
         ],
         tool_choice: { type: "function", function: { name: toolName } },
         usage: { include: true },
-        max_tokens: 1024,
+        max_tokens: options?.maxTokens ?? 1024,
       }),
       signal: AbortSignal.timeout(45_000),
     });

@@ -5,6 +5,7 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { mapCsvToIssues } from "@/lib/import/parse";
 import { MAX_IMPORT_CSV_BYTES } from "@/lib/import/types";
+import { loadImportContext } from "@/lib/server/import-context";
 import { importIssuesIntoProject } from "@/lib/server/import-issues";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -15,10 +16,17 @@ export const maxDuration = 120;
 
 /**
  * POST /api/projects/[id]/import — import issues from a CSV export
- * (Linear / Jira / generic). Body: { csv: string }. The client already ran
- * the same mapCsvToIssues for its preview; the server re-runs it on the raw
- * text because the payload can't be trusted. Owner-only: a bad file creates
- * hundreds of issues at once.
+ * (Linear / Jira / Notion / generic). Body: `{ csv: string, mapping?: object }`.
+ * The client already ran the same mapCsvToIssues for its preview; the server
+ * re-runs it on the raw text because the payload can't be trusted. Owner-only:
+ * a bad file creates hundreds of issues at once.
+ *
+ * `mapping` est le plan de lecture que l'utilisateur a VU dans l'aperçu, après
+ * la proposition du modèle et ses propres corrections. Il est rejoué tel quel,
+ * mais nettoyé d'abord (`sanitizeMapping`, dans `mapCsvToIssues`) : il ne peut
+ * porter que des champs et des valeurs d'énumération connus, sur les colonnes
+ * du fichier tel que le serveur vient de le relire. Absent, la détection par
+ * en-têtes reprend la main.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -56,7 +64,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("importTooLarge") }, { status: 413 });
   }
 
-  const parsed = mapCsvToIssues(csv);
+  // Les membres et les catégories du projet, lus MAINTENANT : c'est contre
+  // cette liste que le plan reçu du navigateur est validé, donc elle ne peut
+  // pas venir de lui.
+  const context = await loadImportContext(id, auth.user.id);
+  const parsed = mapCsvToIssues(csv, (body as { mapping?: unknown }).mapping, context);
   if (!parsed.ok) {
     const key =
       parsed.error === "tooManyIssues"
@@ -86,6 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       created: commit.result.created,
       categories_created: commit.result.categoriesCreated,
       sub_issues_linked: commit.result.subIssuesLinked,
+      assigned: commit.result.assigned,
       warnings: parsed.warnings,
     },
     { status: 201 }

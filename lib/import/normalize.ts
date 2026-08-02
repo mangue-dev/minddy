@@ -10,6 +10,9 @@ import type {
 import type { ImportWarning, ImportWarningKey } from "@/lib/import/types";
 
 export interface CsvTable {
+  /** Libellés d'en-tête bruts, dans l'ordre du fichier — ce que l'utilisateur
+   *  lit dans le tableau de correspondance, et l'index d'une colonne. */
+  headers: string[];
   /** normalized header name → column indexes (repeated columns keep them all). */
   headerIndex: Map<string, number[]>;
   rows: string[][];
@@ -27,26 +30,19 @@ export const normalizeToken = (value: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** First non-empty value among the columns carrying one of these names. */
-export function cell(table: CsvTable, row: string[], ...names: string[]): string {
-  for (const name of names) {
-    for (const i of table.headerIndex.get(name) ?? []) {
-      const value = (row[i] ?? "").trim();
-      if (value) return value;
-    }
-  }
-  return "";
-}
-
-/** All non-empty values among the columns carrying this name (Jira multi-value). */
-export function cells(table: CsvTable, row: string[], name: string): string[] {
+/** All non-empty values of a row across these column indexes, in file order. */
+export function cells(row: string[], indexes: number[]): string[] {
   const values: string[] = [];
-  for (const i of table.headerIndex.get(name) ?? []) {
+  for (const i of indexes) {
     const value = (row[i] ?? "").trim();
     if (value) values.push(value);
   }
   return values;
 }
+
+/** First non-empty value among these column indexes. */
+export const cell = (row: string[], indexes: number[]): string =>
+  cells(row, indexes)[0] ?? "";
 
 export const hasHeader = (table: CsvTable, ...names: string[]): boolean =>
   names.some((n) => table.headerIndex.has(n));
@@ -54,14 +50,19 @@ export const hasHeader = (table: CsvTable, ...names: string[]): boolean =>
 /** Cap titles defensively — exports can carry pathological rows. */
 export const MAX_TITLE_LENGTH = 500;
 
-/** Headers accepted as the title column of a generic CSV (EN + FR + Trello's
- *  "Card Name"). Lives here, not in parse.ts, so the generic mapper can read
- *  the same list as `detectSource` without importing the entry point back:
- *  a file detected on one of these names must map on the same one. */
+/** Headers accepted as the title column of a generic CSV (EN + FR, Trello's
+ *  "Card Name", Notion's "Task name" / "Nom de la tâche"). Lives here, not in
+ *  parse.ts, so the generic mapper can read the same list as `detectSource`
+ *  without importing the entry point back: a file detected on one of these
+ *  names must map on the same one. */
 export const GENERIC_TITLE_HEADERS = [
   "title",
   "titre",
   "summary",
+  "task name",
+  "nom de la tache",
+  "task",
+  "tache",
   "name",
   "nom",
   "card name",
@@ -99,6 +100,23 @@ const STATUS_ALIASES: Record<string, IssueStatusValue> = {
   nouveau: "todo",
   reopened: "todo",
   "selected for development": "todo",
+  // Notion : la colonne « Statut » par défaut, et les noms d'étape les plus
+  // courants d'un tableau maison. Sans alias ils tombaient tous en backlog.
+  "not started": "todo",
+  "pas commence": "todo",
+  "pas commencee": "todo",
+  "non commence": "todo",
+  "a demarrer": "todo",
+  planned: "todo",
+  planifie: "todo",
+  planifiee: "todo",
+  ready: "todo",
+  pret: "todo",
+  prete: "todo",
+  "ready for dev": "todo",
+  "up next": "todo",
+  next: "todo",
+  "a traiter": "todo",
   "in progress": "in_progress",
   "en cours": "in_progress",
   doing: "in_progress",
@@ -114,6 +132,13 @@ const STATUS_ALIASES: Record<string, IssueStatusValue> = {
   "in qa": "in_review",
   testing: "in_review",
   "en test": "in_review",
+  "in testing": "in_review",
+  "ready for qa": "in_review",
+  "needs review": "in_review",
+  "pending review": "in_review",
+  "a valider": "in_review",
+  "en validation": "in_review",
+  "a relire": "in_review",
   done: "done",
   termine: "done",
   terminee: "done",
@@ -129,6 +154,14 @@ const STATUS_ALIASES: Record<string, IssueStatusValue> = {
   finished: "done",
   released: "done",
   livre: "done",
+  livree: "done",
+  shipped: "done",
+  deployed: "done",
+  deploye: "done",
+  deployee: "done",
+  merged: "done",
+  fusionne: "done",
+  delivered: "done",
   canceled: "canceled",
   cancelled: "canceled",
   annule: "canceled",
@@ -139,20 +172,28 @@ const STATUS_ALIASES: Record<string, IssueStatusValue> = {
   declined: "canceled",
   rejected: "canceled",
   abandonne: "canceled",
+  abandonnee: "canceled",
+  archived: "canceled",
+  archive: "canceled",
+  archivee: "canceled",
+  obsolete: "canceled",
   duplicate: "duplicate",
   doublon: "duplicate",
   duplique: "duplicate",
   dupliquee: "duplicate",
 };
 
-/** Map a raw status; unknown non-empty values fall back to backlog + warning. */
-export function mapStatus(raw: string, warnings: Warnings): IssueStatusValue {
-  if (!raw) return "backlog";
-  const mapped = STATUS_ALIASES[normalizeToken(raw)];
-  if (mapped) return mapped;
-  warnings.add("unknownStatus", raw);
-  return "backlog";
-}
+/**
+ * Le statut d'une valeur déjà normalisée, ou `null` si aucune table ne la
+ * connaît. Volontairement muet là-dessus : ce que la table d'alias ne sait pas
+ * placer est reporté au plan (`buildMapping`), donc au tableau de correspondance
+ * de l'aperçu, où l'utilisateur le tranche. Les termes franchement ambigus
+ * (« Bloqué », « En attente », « En pause ») ne sont PAS aliasés exprès —
+ * minddy n'a pas de statut pour ça, et deviner à sa place se paierait sur des
+ * dizaines de tickets.
+ */
+export const mapStatusToken = (token: string): IssueStatusValue | null =>
+  STATUS_ALIASES[token] ?? null;
 
 const PRIORITY_ALIASES: Record<string, IssuePriorityValue> = {
   urgent: "urgent",
@@ -183,11 +224,33 @@ const PRIORITY_ALIASES: Record<string, IssuePriorityValue> = {
   p4: "low",
 };
 
-/** Unknown or empty priorities map to "none" silently. */
-export const mapPriority = (raw: string): IssuePriorityValue =>
-  PRIORITY_ALIASES[normalizeToken(raw)] ?? "none";
+/** La priorité d'une valeur normalisée, `null` si inconnue (cf. `mapStatusToken`). */
+export const mapPriorityToken = (token: string): IssuePriorityValue | null =>
+  PRIORITY_ALIASES[token] ?? null;
 
 const EFFORT_VALUES = new Set(["xs", "s", "m", "l", "xl"]);
+
+/** Taille exprimée en toutes lettres — Notion, Asana et les tableaux maison. */
+const EFFORT_ALIASES: Record<string, IssueEffortValue> = {
+  "very small": "xs",
+  tiny: "xs",
+  "tres petit": "xs",
+  "tres petite": "xs",
+  small: "s",
+  petit: "s",
+  petite: "s",
+  medium: "m",
+  moyen: "m",
+  moyenne: "m",
+  large: "l",
+  grand: "l",
+  grande: "l",
+  "very large": "xl",
+  huge: "xl",
+  "tres grand": "xl",
+  "tres grande": "xl",
+  epic: "xl",
+};
 
 /** Story points → t-shirt (Linear/Jira exponential-ish scale). */
 export function effortFromPoints(raw: string): IssueEffortValue | null {
@@ -200,18 +263,22 @@ export function effortFromPoints(raw: string): IssueEffortValue | null {
   return "xl";
 }
 
-/** Direct t-shirt token, else points. */
-export function mapEffort(raw: string): IssueEffortValue | null {
-  const token = normalizeToken(raw);
-  if (EFFORT_VALUES.has(token)) return token as IssueEffortValue;
-  return effortFromPoints(raw);
-}
+/** Jeton t-shirt direct, ou taille en toutes lettres. Les valeurs CHIFFRÉES
+ *  restent hors dictionnaire : `effortFromPoints` les convertit à la volée. */
+export const mapEffortToken = (token: string): IssueEffortValue | null =>
+  EFFORT_VALUES.has(token)
+    ? (token as IssueEffortValue)
+    : (EFFORT_ALIASES[token] ?? null);
+
+/** Au-delà, un nom de catégorie n'est plus une étiquette mais une phrase — et
+ *  une colonne orpheline mal aiguillée en fabriquerait une par ligne. */
+export const MAX_LABEL_LENGTH = 60;
 
 /** Split a multi-label cell — Linear joins with ", ", generic CSVs use , or ;. */
 export const splitLabels = (raw: string): string[] =>
   raw
     .split(/[,;]/)
-    .map((l) => l.trim())
+    .map((l) => l.trim().slice(0, MAX_LABEL_LENGTH))
     .filter(Boolean);
 
 // ── Dates ────────────────────────────────────────────────────────────────────
@@ -220,31 +287,77 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:
 // Jira export format: "14/Jul/26 3:42 PM" or "14/Jul/2026".
 const JIRA_DATE_RE =
   /^(\d{1,2})\/([A-Za-z]{3})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?$/i;
+// Notion écrit ses dates en toutes lettres, dans la langue de l'espace de
+// travail, et dans l'ordre de cette langue : « July 14, 2026 » ou
+// « 14 juillet 2026 ». Les deux passent ici, et PAS par `new Date` : lui lit une
+// date sans heure dans le fuseau LOCAL, ce qui recule d'un jour toutes les
+// échéances d'un utilisateur à l'est de Greenwich.
 const MONTHS: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
   jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  january: 0, february: 1, march: 2, april: 3, june: 5, july: 6,
+  august: 7, september: 8, october: 9, november: 10, december: 11,
+  janvier: 0, fevrier: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+  juillet: 6, aout: 7, septembre: 8, octobre: 9, novembre: 10, decembre: 11,
+  sept: 8,
 };
+const TIME = String.raw`(?:[\s,]+(\d{1,2}):(\d{2})\s*(AM|PM)?)?`;
+// « 14 juillet 2026 », « 14 July 2026 »
+const DAY_FIRST_RE = new RegExp(String.raw`^(\d{1,2})\s+([^\d\s.,]+)\.?,?\s+(\d{4})${TIME}$`, "i");
+// « July 14, 2026 3:42 PM »
+const MONTH_FIRST_RE = new RegExp(String.raw`^([^\d\s.,]+)\.?\s+(\d{1,2}),?\s+(\d{4})${TIME}$`, "i");
+
+/** Une date en toutes lettres → ISO, en UTC. `null` si le mois est inconnu. */
+function fromParts(
+  day: string,
+  monthName: string,
+  year: string,
+  hour?: string,
+  minute?: string,
+  meridiem?: string
+): string | null {
+  const month = MONTHS[normalizeToken(monthName)];
+  if (month === undefined) return null;
+  let hours = hour ? Number(hour) : 0;
+  const upper = meridiem?.toUpperCase();
+  if (upper === "PM" && hours < 12) hours += 12;
+  if (upper === "AM" && hours === 12) hours = 0;
+  const date = new Date(
+    Date.UTC(Number(year), month, Number(day), hours, minute ? Number(minute) : 0)
+  );
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
 /** Best-effort ISO conversion; unparseable values are dropped (null). */
 export function parseDateValue(raw: string): string | null {
-  const value = raw.trim();
+  // Une plage Notion (« 14 juillet 2026 → 20 juillet 2026 ») : on garde le
+  // début, seule borne qui ait un sens pour une échéance ou une création.
+  const value = raw.split(/\s*(?:→|->|–)\s*/)[0].trim();
   if (!value) return null;
 
   if (ISO_RE.test(value)) return value.replace(" ", "T");
 
+  const dayFirst = DAY_FIRST_RE.exec(value);
+  if (dayFirst) {
+    const iso = fromParts(
+      dayFirst[1], dayFirst[2], dayFirst[3], dayFirst[4], dayFirst[5], dayFirst[6]
+    );
+    if (iso) return iso;
+  }
+
+  const monthFirst = MONTH_FIRST_RE.exec(value);
+  if (monthFirst) {
+    const iso = fromParts(
+      monthFirst[2], monthFirst[1], monthFirst[3], monthFirst[4], monthFirst[5], monthFirst[6]
+    );
+    if (iso) return iso;
+  }
+
   const jira = JIRA_DATE_RE.exec(value);
   if (jira) {
-    const month = MONTHS[jira[2].toLowerCase()];
-    if (month === undefined) return null;
     let year = Number(jira[3]);
     if (year < 100) year += 2000;
-    let hours = jira[4] ? Number(jira[4]) : 0;
-    const minutes = jira[5] ? Number(jira[5]) : 0;
-    const meridiem = jira[6]?.toUpperCase();
-    if (meridiem === "PM" && hours < 12) hours += 12;
-    if (meridiem === "AM" && hours === 12) hours = 0;
-    const date = new Date(Date.UTC(year, month, Number(jira[1]), hours, minutes));
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    return fromParts(jira[1], jira[2], String(year), jira[4], jira[5], jira[6]);
   }
 
   const parsed = new Date(value);

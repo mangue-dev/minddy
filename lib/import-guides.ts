@@ -10,9 +10,16 @@
  * couvrent exactement ce que ces exports produisent. Toucher à cette liste sans
  * vérifier `lib/import/import.test.ts` reviendrait à documenter un chemin qui
  * ne marche pas.
+ *
+ * Notion est le cas limite qui a justifié la passe de correspondance par
+ * modèle : ses colonnes sont les propriétés que l'utilisateur a créées et
+ * nommées lui-même, dans sa langue. Les alias couvrent celles des modèles
+ * fournis par Notion ; pour tout le reste, c'est le modèle qui lit les valeurs
+ * (`lib/server/import-mapping-ai.ts`), et le tableau de correspondance de
+ * l'aperçu qui laisse le dernier mot.
  */
 
-export type ImportGuideId = "linear" | "jira" | "github" | "trello";
+export type ImportGuideId = "linear" | "jira" | "notion" | "github" | "trello";
 
 export interface ImportGuide {
   id: ImportGuideId;
@@ -49,6 +56,14 @@ export const IMPORT_GUIDES: ImportGuide[] = [
     logo: "/import/jira.svg",
     docUrl:
       "https://support.atlassian.com/jira-cloud-administration/docs/export-issues/",
+  },
+  {
+    id: "notion",
+    // Marque monochrome comme GitHub : le « N » noir disparaîtrait sur fond sombre.
+    logo: "/import/notion-light.svg",
+    logoDark: "/import/notion-dark.svg",
+    label: "Notion",
+    docUrl: "https://www.notion.com/help/export-your-content",
   },
   {
     id: "github",

@@ -1,6 +1,7 @@
 "use client";
 
-import type { ImportSource, ImportWarning } from "@/lib/import/types";
+import type { CsvDigest } from "@/lib/import/digest";
+import type { ImportMapping, ImportSource, ImportWarning } from "@/lib/import/types";
 import { trackEvent } from "./analytics";
 
 export interface ImportCommitResponse {
@@ -8,20 +9,49 @@ export interface ImportCommitResponse {
   created: number;
   categories_created: number;
   sub_issues_linked: number;
+  /** Tickets rendus à un membre du projet. */
+  assigned: number;
   warnings: ImportWarning[];
 }
 
-/** POST the raw CSV text — the server re-parses it with the same mapper the
- *  preview used client-side. */
+/**
+ * Demande au modèle une correspondance de colonnes pour le fichier en cours de
+ * dépôt. N'envoie que le RÉSUMÉ du fichier, jamais le fichier.
+ *
+ * Ne lève jamais : la passe est un bonus. Une panne, un budget épuisé, un
+ * drapeau coupé — l'aperçu garde le plan déduit des en-têtes, l'utilisateur
+ * garde son tableau de correspondance.
+ */
+export async function fetchImportMappingApi(
+  projectId: string,
+  digest: CsvDigest
+): Promise<ImportMapping | null> {
+  try {
+    const response = await fetch(`/api/projects/${projectId}/import/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ digest }),
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { mapping?: ImportMapping | null };
+    return data.mapping ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** POST the raw CSV text plus the mapping the user validated — the server
+ *  re-parses the file and replays the same mapper the preview used. */
 export async function importIssuesApi(
   projectId: string,
-  csv: string
+  csv: string,
+  mapping: ImportMapping
 ): Promise<ImportCommitResponse> {
   trackEvent("import_started", { source: "csv" });
   const response = await fetch(`/api/projects/${projectId}/import`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ csv }),
+    body: JSON.stringify({ csv, mapping }),
   });
   const text = await response.text();
   let data: unknown = null;

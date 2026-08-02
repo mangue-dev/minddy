@@ -47,6 +47,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // quelques dizaines de tokens par conversation neuve — un petit modèle suffit,
   // et c'est exactement le genre d'appel où un gros ne se justifie pas.
   { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Correspondance des colonnes d'un import CSV (lib/server/import-mapping-ai.ts) :
+  // UN appel par fichier déposé, jamais par ligne — le modèle ne voit qu'un
+  // résumé des colonnes. C'est le prix d'un import qui ne perd rien, et le
+  // drapeau le coupe partout d'un coup (l'import retombe alors sur ses tables
+  // d'alias, comme avant).
+  { key: "import_map_enabled", kind: "flag", fallback: "true", group: "assistant" },
+  { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
   // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
