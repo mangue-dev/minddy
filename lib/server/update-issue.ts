@@ -16,6 +16,7 @@ import {
   insertEvents,
   stampForgeSync,
   stampViaAssistant,
+  stampViaAutomation,
   stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
@@ -82,6 +83,7 @@ export async function updateIssueFields({
   actorId,
   input,
   viaAssistant = false,
+  viaAutomation = false,
   mcpKeyId = null,
   forgeSync = null,
 }: {
@@ -90,6 +92,11 @@ export async function updateIssueFields({
   input: Record<string, unknown>;
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
+  /** L'écriture vient d'une AUTOMATISATION de projet (MIN-147) : la timeline
+      nomme alors la règle, et non le compte dont l'id signe techniquement
+      l'écriture (l'assigné du ticket, ou le propriétaire du projet). Se cumule
+      avec `viaAssistant` — c'est bien Numo qui agit, mais personne n'a cliqué. */
+  viaAutomation?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
   /** Attribue les événements à la forge ('github' | 'gitlab') quand l'écriture
@@ -372,7 +379,13 @@ export async function updateIssueFields({
     await insertEvents(
       service,
       stampForgeSync(
-        stampMcpKey(stampViaAssistant(events as EventRow[], viaAssistant), mcpKeyId),
+        stampMcpKey(
+          stampViaAutomation(
+            stampViaAssistant(events as EventRow[], viaAssistant),
+            viaAutomation
+          ),
+          mcpKeyId
+        ),
         forgeSync
       )
     );

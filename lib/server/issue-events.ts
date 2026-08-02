@@ -51,6 +51,15 @@ export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): Even
   return rows.map((r) => ({ ...r, via_assistant: true }));
 }
 
+/** Stamp a batch of events as written by a project AUTOMATION (MIN-147, no-op
+    when false). Se CUMULE avec `stampViaAssistant` : une étape de chaîne est
+    bien un geste de Numo, mais la timeline doit nommer la RÈGLE — sans ça un
+    statut posé par la boucle est indiscernable d'un run lancé à la main. */
+export function stampViaAutomation(rows: EventRow[], viaAutomation: boolean): EventRow[] {
+  if (!viaAutomation) return rows;
+  return rows.map((r) => ({ ...r, via_automation: true }));
+}
+
 /** Stamp a batch of events as MCP-triggered, attributed to the acting API key
     (no-op when falsy). */
 export function stampMcpKey(

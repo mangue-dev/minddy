@@ -173,6 +173,7 @@ async function handleFailedVerification(params: {
       actorId: chain.owner_id,
       input: { status: "triage" },
       viaAssistant: true,
+      viaAutomation: true,
     });
     return true;
   }

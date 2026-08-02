@@ -147,6 +147,9 @@ export async function runAction(params: {
         actorId: chain.owner_id,
         input: { status: action.status },
         viaAssistant: true,
+        // …et la RÈGLE, pas seulement Numo : sans ce drapeau, un statut posé par
+        // la boucle se lit dans la timeline comme un run lancé à la main.
+        viaAutomation: true,
       });
       return { kind: "continue" };
     case "await_human":

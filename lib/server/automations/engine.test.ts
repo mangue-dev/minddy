@@ -104,6 +104,7 @@ vi.mock("./report", () => ({
 const { runAutomations } = await import("./engine");
 const report = await import("./report");
 const actions = await import("./actions");
+const updateIssue = await import("@/lib/server/update-issue");
 
 /** Une chaîne vivante qui a déjà joué son unique étape d'implémentation. */
 function livingChain() {
@@ -235,6 +236,40 @@ describe("runAutomations — conclure une chaîne", () => {
     expect(call.action).toMatchObject({ type: "run_numo", mode: "implement" });
     expect(call.extraPrompt).toContain("Les tests ne passent pas.");
     expect(report.haltChain).not.toHaveBeenCalled();
+  });
+
+  it("la remise en triage est signée par l'AUTOMATISATION, pas par l'assigné", async () => {
+    // Sans `viaAutomation`, la timeline écrit « Numo a changé le statut » —
+    // indiscernable d'un run lancé à la main, alors que personne n'a cliqué.
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.verdict = { ok: false, summary: "Toujours pas.", blockers: [] };
+    h.chain = {
+      ...livingChain(),
+      preset: "loop-by-effort",
+      step: 5,
+      retries: 1, // reprise déjà consommée → deuxième échec = arrêt + triage
+      played_rule_ids: ["loop-by-effort:medium-verify"],
+    };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      chainId: "chain-1",
+      event: { type: "run_finished", intent: "verify", outcome: "ok" },
+    });
+
+    expect(report.haltChain).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "chain-1" }),
+      "verification_failed",
+      expect.anything(),
+    );
+    expect(updateIssue.updateIssueFields).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: { status: "triage" },
+        viaAssistant: true,
+        viaAutomation: true,
+      }),
+    );
   });
 
   it("un événement sans chaîne ne conclut rien du tout", async () => {
