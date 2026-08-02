@@ -7,6 +7,7 @@ import { ArrowDown, ArrowRight, Loader2, Mic, Square } from "lucide-react";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
 import { useAnalytics } from "@/lib/use-analytics";
+import { durationBucket } from "@/lib/analytics-sanitize";
 import {
   DEMO_AUDIO_BITS_PER_SECOND,
   DEMO_MAX_RECORDING_MS,
@@ -129,6 +130,8 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timersRef = useRef<ReturnType<typeof setInterval>[]>([]);
+  /** Départ du passage en cours — sert la tranche de durée mesurée. */
+  const startedAtRef = useRef(0);
   const mountedRef = useRef(true);
 
   const clearTimers = useCallback(() => {
@@ -218,7 +221,12 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
       setStatus("done");
       setRevealed(0);
       reveal();
-      track("landing_voice_demo_completed", { input });
+      // L'attente MESURÉE est celle du visiteur — du clic au ticket rempli, la
+      // phrase qui s'écrit comprise, pas la seule latence du serveur.
+      track("landing_voice_demo_completed", {
+        input,
+        duration_bucket: durationBucket(Date.now() - startedAtRef.current),
+      });
     },
     [reveal, track],
   );
@@ -233,6 +241,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
       setRevealed(0);
       setTranscript("");
       setStatus("processing");
+      startedAtRef.current = Date.now();
       track("landing_voice_demo_started", { input: "sample" });
 
       const request = fetch("/api/demo/dictate", {
@@ -364,6 +373,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
     setStream(mediaStream);
     setElapsedMs(0);
     setStatus("recording");
+    startedAtRef.current = Date.now();
     track("landing_voice_demo_started", { input: "mic" });
     recorder.start();
 

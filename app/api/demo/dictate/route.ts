@@ -64,8 +64,10 @@ import {
  *     sans déploiement.
  *
  * S'il fallait aller plus loin, ce serait une détection de bot devant la page —
- * mais ça se paye en poids sur la landing, et à ~0,003 $ le passage la dépense
- * reste très en dessous du coût de ce poids-là.
+ * mais ça se paye en poids sur la landing, et le passage coûte 0,0003 $ (mesuré
+ * au ledger : 0,0001 $ de transcription + 0,0002 $ de rangement). Le plafond
+ * journalier borne donc la dépense à ~0,15 $ par jour et par instance : très en
+ * dessous de ce que coûterait ce poids-là.
  *
  * ## Aucune entrée en texte libre
  *
@@ -174,10 +176,14 @@ export async function POST(request: NextRequest) {
         title: "minddy public demo",
       });
       transcript = result.text.trim();
+      // Les deux appels d'un passage partagent `runId` et la feature
+      // `landing_demo` : le tableau admin en fait UNE ligne (« la démo »), et
+      // son coût par run est le prix d'un passage. Le `seq` et le modèle
+      // distinguent la transcription du rangement dans le détail du run.
       usageRows.push({
         runId,
         seq: 0,
-        feature: "transcription",
+        feature: "landing_demo",
         model,
         promptTokens: result.inputTokens || null,
         completionTokens: result.outputTokens || null,
@@ -262,7 +268,7 @@ export async function POST(request: NextRequest) {
     usageRows.push({
       runId,
       seq: usageRows.length,
-      feature: "dictation",
+      feature: "landing_demo",
       model: data.model ?? model,
       generationId: data.id ?? null,
       promptTokens: u.promptTokens,

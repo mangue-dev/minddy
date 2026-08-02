@@ -29,7 +29,15 @@ export type AiFeature =
   | "sandbox_compute"
   | "web_search"
   | "pr_review"
-  | "import_map";
+  | "import_map"
+  /**
+   * Démo de dictée de la landing (MIN-150) : ses DEUX appels (transcription
+   * puis rangement) s'écrivent sous cette seule feature, sous un run_id
+   * commun. Une ligne = une démo jouée, son coût moyen par run = le prix d'un
+   * passage. Les ranger sous 'transcription'/'dictation' les mélangeait à la
+   * dictée des vrais comptes, et rendait les deux questions insolubles.
+   */
+  | "landing_demo";
 
 /** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

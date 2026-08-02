@@ -2715,7 +2715,9 @@
         "agent_code": "Numo agent",
         "sandbox_compute": "Agent sandbox",
         "web_search": "Web search",
-        "pr_review": "Numo's PR review"
+        "pr_review": "Numo's PR review",
+        "import_map": "Import column matching",
+        "landing_demo": "Public dictation demo"
       }
     },
     "quotas": {

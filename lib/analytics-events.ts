@@ -340,7 +340,10 @@ export interface AnalyticsEventProps {
    *  la phrase d'exemple : savoir laquelle des deux fait le « aha » décide de
    *  laquelle mettre en avant. Aucun texte dicté ne remonte, jamais. */
   landing_voice_demo_started: { input: "mic" | "sample" };
-  landing_voice_demo_completed: { input: "mic" | "sample" };
+  /** `duration_bucket` = l'attente entre le clic et le ticket rempli. Une démo
+   *  qui met dix secondes à répondre n'est plus une démo : c'est la mesure qui
+   *  le dira avant que quiconque s'en plaigne. */
+  landing_voice_demo_completed: { input: "mic" | "sample"; duration_bucket: string };
   landing_voice_demo_failed: { input: "mic" | "sample"; reason: string };
 
   // ── Recherche, raccourcis, divers ──

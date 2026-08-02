@@ -71,6 +71,12 @@ const FEATURES = [
   // Review d'une PR par Numo (MIN-141) : un appel, sur un modèle plus cher que
   // celui de l'agent — c'est la ligne qui répond à « combien coûte une review ? ».
   "pr_review",
+  // Correspondance des colonnes d'un import CSV (MIN-98) : un appel par fichier.
+  "import_map",
+  // Démo de dictée de la landing (MIN-150) : la SEULE ligne que personne ne
+  // paye — un visiteur sans compte, à qui la plateforme offre le passage. Un
+  // run = une démo jouée, donc « coût moyen / run » est le prix d'un passage.
+  "landing_demo",
 ] as const;
 type Feature = (typeof FEATURES)[number];
 
