@@ -60,8 +60,15 @@ export function ObjectivePicker({
       options={options}
       noneOption={{ label: tField("noObjective") }}
       trigger={
+        // Un objectif choisi montre SA puce, à sa couleur — comme ses options
+        // juste au-dessus, et comme le picker compact. La cible neutre ne reste
+        // que pour « aucun objectif », où il n'y a aucune couleur à suivre.
         <Button variant="outline" size={size}>
-          <Target className="text-muted-foreground" />
+          {current ? (
+            <Dot color={current.color} />
+          ) : (
+            <Target className="text-muted-foreground" />
+          )}
           {current ? current.name : tField("noObjective")}
         </Button>
       }

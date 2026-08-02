@@ -1,6 +1,6 @@
 "use client";
 
-import type { ElementType, JSX } from "react";
+import { useMemo, type ElementType, type JSX } from "react";
 import ReactMarkdown, { type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -8,7 +8,11 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
-import { memberLabel, mentionScanner } from "@/lib/mention-scan";
+import {
+  memberLabel,
+  mentionScanner,
+  type MentionScan,
+} from "@/lib/mention-scan";
 import { forgeImageSrc } from "@/lib/forge-image-assets";
 import { usePrEndpoint } from "@/lib/pr-endpoint-context";
 import type { Member } from "@/lib/types";
@@ -22,37 +26,32 @@ type HastNode = {
   children?: HastNode[];
 };
 
-/** Rehype plugin: turn "@Display Name" / "@numo" tokens into
+/** Rehype plugin: turn "@Display Name" / "@numo" / "@MIN-42" tokens into
     <span data-mention-*> so the renderer can swap in a MentionChip. Runs on the
     HTML AST, so surrounding markdown formatting is preserved. La règle de ce
-    qui EST une mention vient de lib/mention-scan — la même qu'applique le
-    composer pendant qu'on écrit. */
-function rehypeMentions(members: Member[]) {
-  const scan = mentionScanner(members);
-
+    qui EST une mention vient de lib/mention-scan — la même qu'applique le champ
+    pendant qu'on écrit. */
+function rehypeMentions(scan: MentionScan) {
   const split = (value: string): HastNode[] =>
-    scan(value).map((seg) =>
-      seg.mention === undefined
-        ? { type: "text", value: seg.text }
-        : {
-            type: "element",
-            tagName: "span",
-            properties:
-              // `member` en test, et non « pas numo » : le scanner sait aussi
-              // rendre des comptes de FORGE (MIN-162), qu'aucune liste de
-              // membres minddy ne produit ici — un commentaire de ticket ne cite
-              // que des gens d'ici.
-              seg.mention.type === "member"
-                ? {
-                    "data-mention-type": "member",
-                    "data-mention-id": seg.mention.member.user_id,
-                    "data-mention-label": memberLabel(seg.mention.member),
-                    "data-mention-seed": seg.mention.member.avatar_seed,
-                  }
-                : { "data-mention-type": "numo" },
-            children: [],
-          },
-    );
+    scan(value).map((seg) => {
+      if (seg.mention === undefined) return { type: "text", value: seg.text };
+      const mention = seg.mention;
+      // `member` en test, et non « pas numo » : le scanner sait aussi rendre des
+      // comptes de FORGE (MIN-162), qu'aucune liste de membres minddy ne produit
+      // ici — un commentaire de ticket ne cite que des gens d'ici. Ticket et
+      // objectif n'y arrivent pas non plus : c'est le scanner d'une DESCRIPTION
+      // qui les produit, et une description se rend dans son éditeur.
+      const properties =
+        mention.type === "member"
+          ? {
+              "data-mention-type": "member",
+              "data-mention-id": mention.member.user_id,
+              "data-mention-label": memberLabel(mention.member),
+              "data-mention-seed": mention.member.avatar_seed,
+            }
+          : { "data-mention-type": "numo" };
+      return { type: "element", tagName: "span", properties, children: [] };
+    });
 
   const walk = (node: HastNode) => {
     if (!node.children) return;
@@ -108,12 +107,12 @@ function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string
  *     data-mention-type="numo">` écrit à la main dans un commentaire ne se fasse
  *     pas passer pour une vraie mention.
  */
-function rehypeChain(members?: Member[]): Options["rehypePlugins"] {
+function rehypeChain(scan?: MentionScan): Options["rehypePlugins"] {
   const chain: NonNullable<Options["rehypePlugins"]> = [
     rehypeRaw,
     [rehypeSanitize, defaultSchema],
   ];
-  return members ? [...chain, rehypeMentions(members)] : chain;
+  return scan ? [...chain, rehypeMentions(scan)] : chain;
 }
 
 /** Renders markdown (GFM) with minimal, token-aware styling, plus the raw HTML
@@ -121,7 +120,11 @@ function rehypeChain(members?: Member[]): Options["rehypePlugins"] {
     Pass `members` to render "@Name" and "@numo" mentions as chips — the same
     chip as the Numo composer's (components/mention-chip). The array may be
     empty: it says "this surface carries mentions", and "@numo" is citable there
-    even when nobody else is. */
+    even when nobody else is.
+    Un commentaire ne cite que des GENS : les tickets et les objectifs ne se
+    citent que dans une description, qui n'a pas de rendu en lecture seule — sa
+    surface d'affichage EST son éditeur (components/markdown-editor), où les
+    pilules viennent du nœud tiptap. */
 export function Markdown({
   children,
   className,
@@ -134,6 +137,12 @@ export function Markdown({
   // null hors d'une vue de PR : les images d'un commentaire de ticket sont déjà
   // servies par minddy, elles n'ont rien à proxifier.
   const imageEndpoint = usePrEndpoint();
+  // Pas de membres = surface sans mentions : la chaîne rehype s'arrête au
+  // sanitizer, et un « @quelquechose » y reste du texte.
+  const scan = useMemo(
+    () => (members ? mentionScanner(members) : undefined),
+    [members],
+  );
   return (
     <div
       className={cn(
@@ -148,7 +157,7 @@ export function Markdown({
         // plans. Sans lui, un message écrit en trois lignes se rendait en un seul
         // paragraphe : la différence de « rendu de texte » la plus visible.
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={rehypeChain(members)}
+        rehypePlugins={rehypeChain(scan)}
         components={{
           p: styled("p", "my-3"),
           a: ({ node, ...props }) => (

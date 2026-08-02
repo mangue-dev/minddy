@@ -390,9 +390,11 @@
     "addContextMember": "Team member",
     "addContextProject": "Project",
     "addContextIssue": "Issue",
+    "addContextObjective": "Objective",
     "addContextMemberSearch": "Search a member…",
     "addContextProjectSearch": "Search a project…",
     "addContextIssueSearch": "Search an issue…",
+    "addContextObjectiveSearch": "Search an objective…",
     "addContextLoading": "Loading…",
     "slashCreateIssueLabel": "create issue",
     "slashCreateIssueDescription": "Numo gathers the context, then creates the issue"
@@ -1302,8 +1304,9 @@
     "keepEditing": "Keep editing"
   },
   "Picker": {
-    "search": "Search…",
-    "noResults": "No results"
+    "createNamed": "Create “{name}”",
+    "noResults": "No results",
+    "search": "Search…"
   },
   "Plan": {
     "tabDescription": "Description",

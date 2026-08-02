@@ -923,6 +923,7 @@ function FeedbackDetail({
         <PropertyRow label={tField("categories")}>
           <CategoryValue
             categories={categories}
+            projectId={projectId}
             value={post.category_ids}
             onChange={handleCategoriesChange}
           />

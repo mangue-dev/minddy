@@ -28,6 +28,10 @@ import {
   EffortIndicator,
 } from "@/components/issue-indicators";
 import { Dot } from "@/components/issue-property-fields";
+import {
+  useCategoryCreateOption,
+  useObjectiveCreateOption,
+} from "@/lib/use-picker-create";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import type { RecurrenceCadence } from "@/lib/recurrence";
@@ -163,6 +167,7 @@ export function CategoriesCompact({
   categories,
   value,
   onChange,
+  projectId,
   open,
   onOpenChange,
   shortcutHint,
@@ -170,6 +175,8 @@ export function CategoriesCompact({
   categories: Category[];
   value: string[];
   onChange: (ids: string[]) => void;
+  /** Projet où l'ajout rapide crée l'étiquette. */
+  projectId?: string | null;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -181,11 +188,17 @@ export function CategoriesCompact({
     label: c.name,
     icon: <Dot color={c.color} />,
   }));
+  const createOption = useCategoryCreateOption({
+    projectId,
+    categories,
+    onCreated: (category) => onChange([...value, category.id]),
+  });
   return (
     <SearchMultiSelect
       values={value}
       onChange={onChange}
       options={options}
+      createOption={createOption}
       tooltip={tField("categories")}
       open={open}
       onOpenChange={onOpenChange}
@@ -310,6 +323,7 @@ export function ObjectiveCompact({
   value,
   objectives,
   onChange,
+  projectId,
   open,
   onOpenChange,
   shortcutHint,
@@ -317,6 +331,8 @@ export function ObjectiveCompact({
   value: string | null;
   objectives: Objective[];
   onChange: (v: string | null) => void;
+  /** Projet où l'ajout rapide crée l'objectif. */
+  projectId?: string | null;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -327,12 +343,17 @@ export function ObjectiveCompact({
     label: o.name,
     icon: <Dot color={o.color} />,
   }));
+  const createOption = useObjectiveCreateOption({
+    projectId,
+    onCreated: (objective) => onChange(objective.id),
+  });
   return (
     <SearchSelect
       value={value}
       onChange={onChange}
       options={options}
       noneOption={{ label: tCommon("none") }}
+      createOption={createOption}
       tooltip={tField("objective")}
       open={open}
       onOpenChange={onOpenChange}

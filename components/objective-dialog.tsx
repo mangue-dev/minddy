@@ -19,6 +19,7 @@ import {
 import { Check } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
@@ -176,6 +177,7 @@ export function ObjectiveDialog({
   onUpdate,
   projects = [],
   projectId,
+  initialName,
   onCreateInProject,
 }: {
   open: boolean;
@@ -183,6 +185,9 @@ export function ObjectiveDialog({
   members: Member[];
   /** When set, the dialog edits this objective; otherwise it creates one. */
   objective?: Objective | null;
+  /** Nom prérempli à l'ouverture, en création : l'ajout rapide depuis un picker
+   *  d'objectif y passe le texte déjà tapé dans la recherche. */
+  initialName?: string;
   onCreate: (input: CreateObjectiveInput) => Promise<unknown>;
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
   /** All the user's projects — powers the "create in another project" split. */
@@ -228,6 +233,7 @@ export function ObjectiveDialog({
   const drafts = useDrafts("objective", projectId ?? null, open && composerEnabled);
   const uploads = useAttachmentUploads(() => `projects/${projectId ?? ""}`);
   const drop = useFileDrop(uploads.addFiles);
+  const mentions = useDescriptionMentions(projectId ?? null, members);
 
   const currentProject = projects.find((p) => p.id === projectId) ?? null;
   const otherProjects = projects.filter((p) => p.id !== projectId);
@@ -247,12 +253,12 @@ export function ObjectiveDialog({
             target_date: objective.target_date,
             color: objective.color,
           }
-        : EMPTY
+        : { ...EMPTY, name: initialName ?? "" }
     );
     editorNonEmptyRef.current = false;
     setActiveDraftId(null);
     setEditorKey((k) => k + 1);
-  }, [open, objective]);
+  }, [open, objective, initialName]);
 
   const closeAndReset = () => {
     setForm(EMPTY);
@@ -493,6 +499,7 @@ export function ObjectiveDialog({
             />
             <MarkdownEditor
               key={editorKey}
+              mentions={mentions}
               value={form.description}
               onCommit={(description) => setForm((f) => ({ ...f, description }))}
               onEmptyChange={(empty) => {

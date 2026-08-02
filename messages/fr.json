@@ -390,9 +390,11 @@
     "addContextMember": "Membre de l'équipe",
     "addContextProject": "Projet",
     "addContextIssue": "Ticket",
+    "addContextObjective": "Objectif",
     "addContextMemberSearch": "Chercher un membre…",
     "addContextProjectSearch": "Chercher un projet…",
     "addContextIssueSearch": "Chercher un ticket…",
+    "addContextObjectiveSearch": "Chercher un objectif…",
     "addContextLoading": "Chargement…",
     "slashCreateIssueLabel": "créer ticket",
     "slashCreateIssueDescription": "Numo réunit le contexte, puis crée le ticket"
@@ -1302,8 +1304,9 @@
     "keepEditing": "Continuer la rédaction"
   },
   "Picker": {
-    "search": "Rechercher…",
-    "noResults": "Aucun résultat"
+    "createNamed": "Créer « {name} »",
+    "noResults": "Aucun résultat",
+    "search": "Rechercher…"
   },
   "Plan": {
     "tabDescription": "Description",

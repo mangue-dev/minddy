@@ -1,10 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
 import { cn } from "mangue-ui";
+import {
+  MENTION_HYDRATION_META,
+  MentionNode,
+  MentionSuggest,
+  hydrateMentions,
+} from "@/components/markdown-mention";
+import type { MentionOption } from "@/components/mention-suggest";
+import type { MentionScan } from "@/lib/mention-scan";
+
+/**
+ * Ce qu'une description peut citer. Absent = surface sans mentions (le board
+ * public de feedback, où un « @ » ne doit désigner personne d'ici).
+ *
+ * `options` est la liste proposée après le « @ » ; `scan` est la règle qui
+ * retrouve les mentions d'un texte DÉJÀ écrit, pour leur reposer leur pilule à
+ * l'ouverture. Les deux se déduisent des mêmes sources (lib/use-mention-sources)
+ * mais restent distinctes : on ne propose que ce qui est citable ici, alors
+ * qu'on relit tout ce qui a pu l'être.
+ */
+export interface MarkdownEditorMentions {
+  options: MentionOption[];
+  scan: MentionScan;
+  /** Le premier « @ » tapé — charge la liste à ce moment-là. */
+  onQuery?: () => void;
+}
 
 /* Rendered-markdown typography — mirrors <Markdown> so the editing surface reads
    exactly like the committed description (same sizes, spacing, colors). */
@@ -40,6 +65,7 @@ export function MarkdownEditor({
   onCommit,
   onEmptyChange,
   onEdit,
+  mentions,
   placeholder = "Ajoute une description…",
   className,
 }: {
@@ -53,6 +79,8 @@ export function MarkdownEditor({
       de quoi ne pas remplacer le texte sous les doigts, ni recommitter un
       reflet périmé au blur. */
   onEdit?: () => void;
+  /** Ouvre le « @ » sur cette surface. Absent = pas de mentions du tout. */
+  mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
 }) {
@@ -62,10 +90,28 @@ export function MarkdownEditor({
     onEmptyChange?.(next);
   };
 
+  // Les extensions ne se construisent qu'une fois, mais la liste des citables
+  // arrive après coup (l'index se charge au temps mort) : l'extension lit donc
+  // une RÉFÉRENCE, jamais une capture.
+  const mentionsRef = useRef(mentions);
+  mentionsRef.current = mentions;
+  // Fixé au montage : basculer une surface de « sans mentions » à « avec »
+  // demanderait de reconstruire le schéma, ce qu'aucun appelant ne fait.
+  const [hasMentions] = useState(!!mentions);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      ...(hasMentions
+        ? [
+            MentionNode,
+            MentionSuggest.configure({
+              items: () => mentionsRef.current?.options ?? [],
+              onQuery: () => mentionsRef.current?.onQuery?.(),
+            }),
+          ]
+        : []),
       Markdown.configure({
         html: false,
         linkify: true,
@@ -76,8 +122,13 @@ export function MarkdownEditor({
     content: value,
     editorProps: { attributes: { class: PROSE } },
     onCreate: ({ editor }) => syncEmpty(editor.isEmpty),
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       syncEmpty(editor.isEmpty);
+      // Poser les pilules sur un texte déjà écrit n'est pas une frappe : sans
+      // cette garde, ouvrir un ticket dont la description cite quelqu'un le
+      // marquerait « modifié », et le panneau refuserait ensuite toute écriture
+      // distante sur un texte que personne n'a touché.
+      if (transaction.getMeta(MENTION_HYDRATION_META)) return;
       onEdit?.();
     },
     // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
@@ -90,6 +141,25 @@ export function MarkdownEditor({
         ).markdown.getMarkdown(),
       ),
   });
+
+  // Les pilules d'un texte déjà écrit se reposent à l'ouverture — et de nouveau
+  // quand la liste des citables arrive après coup. JAMAIS sous le caret : une
+  // description en cours de frappe ne doit pas se réécrire toute seule (même
+  // règle que le champ des commentaires).
+  //
+  // HORS de la phase de commit (`queueMicrotask`) : poser un nœud de mention
+  // monte une vue React, et tiptap la monte en `flushSync`. Appelé directement
+  // dans l'effet, React refuse — « flushSync was called from inside a lifecycle
+  // method » — et les pilules se posent au petit bonheur. Une microtâche
+  // s'exécute juste après le commit, donc hors de tout rendu.
+  const scan = mentions?.scan;
+  useEffect(() => {
+    if (!editor || !scan || editor.isFocused) return;
+    queueMicrotask(() => {
+      if (editor.isDestroyed || editor.isFocused) return;
+      hydrateMentions(editor, scan);
+    });
+  }, [editor, scan]);
 
   return (
     <div

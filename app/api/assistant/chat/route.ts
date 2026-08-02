@@ -52,6 +52,22 @@ const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
 const DEFAULT_MODEL = aiModelFallback("assistant_model");
 
+/** Ce qu'une pilule épinglée peut désigner, et ce qu'un « @ » peut citer. Les
+ *  deux tables sont côte à côte parce qu'elles se suivent : ce qui s'épingle au
+ *  bouton @ se cite aussi dans le texte. */
+const PINNED_KINDS: ReadonlySet<string> = new Set([
+  "issue",
+  "project",
+  "member",
+  "objective",
+]);
+const MENTION_TYPES: ReadonlySet<string> = new Set([
+  "member",
+  "project",
+  "issue",
+  "objective",
+]);
+
 /** Validate the untrusted client-sent page context (prompt-only trust: every
  *  write it could lead to is access-gated in executeTool / lib/server). */
 function parsePageContext(raw: unknown): AssistantPageContext | null {
@@ -80,7 +96,7 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
       .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
       .filter(
         (v) =>
-          (v.kind === "issue" || v.kind === "project" || v.kind === "member") &&
+          PINNED_KINDS.has(v.kind as string) &&
           typeof v.id === "string" &&
           v.id.length <= 100 &&
           typeof v.label === "string" &&
@@ -96,6 +112,9 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
           : {}),
         ...(typeof v.avatarSeed === "string" && v.avatarSeed.length <= 100
           ? { avatarSeed: v.avatarSeed }
+          : {}),
+        ...(typeof v.color === "string" && v.color.length <= 32
+          ? { color: v.color }
           : {}),
       }));
     return list.length > 0 ? list : undefined;
@@ -113,6 +132,7 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     issueTitle: pick("issueTitle"),
     objectiveId: pick("objectiveId"),
     objectiveName: pick("objectiveName"),
+    objectiveColor: pick("objectiveColor"),
     feedbackId: pick("feedbackId"),
     feedbackTitle: pick("feedbackTitle"),
     viewId: pick("viewId"),
@@ -132,7 +152,7 @@ function parseMentions(raw: unknown): AssistantMention[] {
     .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
     .filter(
       (v) =>
-        (v.type === "member" || v.type === "project") &&
+        MENTION_TYPES.has(v.type as string) &&
         typeof v.id === "string" &&
         v.id.length <= 100 &&
         typeof v.label === "string" &&
@@ -147,6 +167,9 @@ function parseMentions(raw: unknown): AssistantMention[] {
       ...(typeof v.avatarSeed === "string" && v.avatarSeed.length <= 100
         ? { avatarSeed: v.avatarSeed }
         : {}),
+      ...(typeof v.color === "string" && v.color.length <= 32
+        ? { color: v.color }
+        : {}),
     }));
 }
 
@@ -158,11 +181,12 @@ function mentionsNote(metadata: unknown): string {
     (metadata as { mentions?: unknown } | null)?.mentions
   );
   if (list.length === 0) return "";
-  const parts = list.map((m) =>
-    m.type === "member"
-      ? `@${m.label} = team member (user id: ${m.id})`
-      : `@${m.label} = project (id: ${m.id})`
-  );
+  const parts = list.map((m) => {
+    if (m.type === "member") return `@${m.label} = team member (user id: ${m.id})`;
+    if (m.type === "project") return `@${m.label} = project (id: ${m.id})`;
+    if (m.type === "issue") return `@${m.label} = issue (id: ${m.id})`;
+    return `@${m.label} = objective (id: ${m.id})`;
+  });
   return `\n\n[Mentions in this message: ${parts.join("; ")}]`;
 }
 

@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,6 +22,7 @@ import { createIssueApi } from "@/lib/issues-api";
 import { createObjectiveApi } from "@/lib/objectives-api";
 import {
   insertIssueEverywhere,
+  insertObjectiveEverywhere,
   issueWrites,
   removeIssueEverywhere,
   replaceIssueEverywhere,
@@ -39,6 +41,7 @@ import type {
   CreateIssueInput,
   CreateObjectiveInput,
   Issue,
+  Objective,
 } from "@/lib/types";
 
 // Deferred, like the assistant panel: keeps the create dialogs (markdown editor,
@@ -65,6 +68,13 @@ interface OpenIssueOptions {
 interface OpenObjectiveOptions {
   /** Same defaulting as {@link OpenIssueOptions.projectId}. */
   projectId?: string;
+  /** Préremplit le nom — l'ajout rapide depuis un picker d'objectif y passe le
+   *  texte tapé dans la recherche. */
+  name?: string;
+  /** Rappelé avec l'objectif créé, pour que le picker qui a ouvert le dialog le
+   *  lie à son ticket. Jamais rappelé pour une création dans un AUTRE projet
+   *  (bouton scindé) : l'objectif n'y est pas liable. */
+  onCreated?: (objective: Objective) => void;
 }
 
 interface CreateContextValue {
@@ -116,6 +126,12 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     assigneeId: string | null;
   }>({ objectiveId: null, assigneeId: null });
   const [objectiveOpen, setObjectiveOpen] = useState(false);
+  // Nom prérempli + destinataire de l'objectif créé, posés par l'ajout rapide
+  // d'un picker. Le rappel vit dans une ref : il ne redessine rien, et il est
+  // CONSOMMÉ à la création — une ouverture suivante (raccourci `O`, en-tête) ne
+  // doit pas relier son objectif au ticket d'avant.
+  const [objectiveName, setObjectiveName] = useState<string | undefined>(undefined);
+  const objectiveCreatedRef = useRef<((objective: Objective) => void) | null>(null);
 
   const { members } = useMembersQuery(target, !!target);
   const { categories } = useCategoriesQuery(target);
@@ -162,10 +178,27 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const createObjectiveGlobal = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
       const objective = await createObjectiveApi(projectId, input);
+      // Posé dans les deux caches qui le lisent (cache du projet + board
+      // cross-projet) avant d'invalider : un ticket lié à cet objectif dans la
+      // foulée affiche son nom et sa couleur tout de suite.
+      insertObjectiveEverywhere(queryClient, projectId, objective);
       void queryClient.invalidateQueries({ queryKey: ["objectives", projectId] });
       return objective;
     },
     [queryClient]
+  );
+
+  /** Création depuis le dialog, dans le projet visé : c'est celle que l'ajout
+   *  rapide d'un picker attend pour lier l'objectif à son ticket. */
+  const createObjectiveForTarget = useCallback(
+    async (projectId: string, input: CreateObjectiveInput) => {
+      const objective = await createObjectiveGlobal(projectId, input);
+      const notify = objectiveCreatedRef.current;
+      objectiveCreatedRef.current = null;
+      notify?.(objective);
+      return objective;
+    },
+    [createObjectiveGlobal]
   );
 
   const resolveTarget = useCallback(
@@ -212,6 +245,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       const pid = resolveTarget(opts?.projectId);
       if (!pid) return;
       setTarget(pid);
+      setObjectiveName(opts?.name?.trim() || undefined);
+      objectiveCreatedRef.current = opts?.onCreated ?? null;
       setObjectiveOpen(true);
     },
     [resolveTarget]
@@ -271,11 +306,16 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           />
           <ObjectiveDialog
             open={objectiveOpen}
-            onOpenChange={setObjectiveOpen}
+            onOpenChange={(next) => {
+              // Fermé sans créer : le rappel du picker meurt avec le dialog.
+              if (!next) objectiveCreatedRef.current = null;
+              setObjectiveOpen(next);
+            }}
             members={members}
             projects={projects}
             projectId={target}
-            onCreate={(input) => createObjectiveGlobal(target, input)}
+            initialName={objectiveName}
+            onCreate={(input) => createObjectiveForTarget(target, input)}
             onCreateInProject={createObjectiveGlobal}
             onUpdate={async () => {}}
           />
@@ -289,4 +329,11 @@ export function useCreate(): CreateContextValue {
   const ctx = useContext(CreateContext);
   if (!ctx) throw new Error("useCreate must be used within CreateProvider");
   return ctx;
+}
+
+/** Même contexte, mais toléré absent : les composants partagés avec le board
+ *  PUBLIC (les cartes) n'ont personne pour monter les dialogs de création, et
+ *  cachent simplement ce qui en dépend. */
+export function useCreateOptional(): CreateContextValue | null {
+  return useContext(CreateContext);
 }

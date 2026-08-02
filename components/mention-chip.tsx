@@ -11,14 +11,28 @@
 // sérialisation du composer, et le corps du commentaire tel qu'il est stocké) :
 // côté modèle comme côté serveur, c'est lui qui marque la mention.
 
+import { FileText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { NumoAvatar } from "@/components/actor-avatars";
+import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 
 /** L'id de la pseudo-entité « Numo » dans les listes de mentions : l'assistant
     n'est pas un compte, il n'a donc pas d'id à lui. */
 export const NUMO_MENTION_ID = "__numo__";
+
+/** Ce qu'une mention peut désigner. Les quatre premiers portent une FIGURE (un
+    portrait, une orbe, un visage) ; ticket et objectif n'en ont pas — ils
+    prennent la pastille d'icône des pilules de contexte de Numo, dans la même
+    teinte, pour qu'on lise la même chose des deux côtés du composer. */
+export type MentionChipType =
+  | "member"
+  | "project"
+  | "numo"
+  | "forge"
+  | "issue"
+  | "objective";
 
 export function MentionChip({
   type,
@@ -27,12 +41,14 @@ export function MentionChip({
   avatarSeed,
   avatarUrl,
   iconUrl,
+  color,
   className,
 }: {
-  type: "member" | "project" | "numo" | "forge";
+  type: MentionChipType;
   /** Membre : user_id. Projet : id du projet — c'est la graine de son orbe.
       Forge : le login, qui est aussi la graine de son portrait de repli.
-      Numo n'a rien à identifier : `NUMO_MENTION_ID` fait l'affaire. */
+      Ticket et objectif : leur id. Numo n'a rien à identifier :
+      `NUMO_MENTION_ID` fait l'affaire. */
   id: string;
   label: string;
   /** Graine du portrait (elle n'est PAS toujours le user_id). */
@@ -41,6 +57,8 @@ export function MentionChip({
   avatarUrl?: string | null;
   /** Projet : le favicon importé, quand il y en a un. */
   iconUrl?: string | null;
+  /** Objectif : SA couleur, celle que porte sa cible partout ailleurs. */
+  color?: string | null;
   className?: string;
 }) {
   return (
@@ -73,6 +91,19 @@ export function MentionChip({
         // disque garde la couleur de marque : dans une pilule à l'encre, c'est
         // ce qui dit d'un coup d'œil que la mention n'appelle pas une personne.
         <NumoAvatar className="size-4" iconClassName="size-3" />
+      ) : type === "issue" ? (
+        // Même pastille que la pilule de contexte « ticket » du composer, même
+        // bleu : ce que Numo a sous les yeux et ce qu'une description cite se
+        // reconnaissent au même signe.
+        <span className="flex size-4 items-center justify-center rounded-full bg-blue-500/12 text-blue-600 dark:text-blue-400">
+          <FileText className="size-2.5" />
+        </span>
+      ) : type === "objective" ? (
+        <ObjectiveIconBadge
+          color={color}
+          className="size-4 rounded-full"
+          iconClassName="size-2.5"
+        />
       ) : (
         <ProjectOrb seed={id} iconUrl={iconUrl} className="size-4 rounded-full" />
       )}

@@ -21,6 +21,7 @@ import {
 } from "@/lib/server/issue-events";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
+import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
   isSmartAssignEligibleStatus,
@@ -436,6 +437,19 @@ export async function updateIssueFields({
           api_key_id: mcpKeyId,
         },
       ]);
+    }
+
+    // Les gens qui viennent d'être cités dans la description. `before` sert de
+    // référence : relire une description ne repingue pas ceux qui y étaient déjà.
+    if ("description" in updates) {
+      await notifyDescriptionMentions(service, {
+        projectId: before.project_id as string,
+        actorId,
+        description: updates.description as string | null,
+        previousDescription: before.description as string | null,
+        issueId,
+        mcpKeyId,
+      });
     }
   };
   const deferSideEffects = () =>

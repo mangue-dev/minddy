@@ -106,6 +106,7 @@ import {
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
 import { useAskNumoTarget } from "@/lib/ask-numo-context";
+import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/attachments";
@@ -277,21 +278,22 @@ function EffortPick({
   );
 }
 
-function CategoryPick({
+/** Les pastilles telles qu'elles se lisent sur la carte — sans menu. C'est tout
+ *  ce que le board PUBLIC rend (aucun callback), et il n'a ni react-query ni
+ *  dialogs de création : le menu, avec ses hooks, vit dans le composant d'à
+ *  côté, qu'on ne monte que quand la carte est modifiable. */
+function CategoryDisplay({
   categories,
   selectedIds,
-  onChange,
 }: {
   categories: Category[];
   selectedIds: string[];
-  onChange?: (ids: string[]) => void;
 }) {
   const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
   const selected = categories.filter((c) => selectedIds.includes(c.id));
   const first = selected[0];
   const extra = Math.max(0, selected.length - 1);
-  const display = first ? (
+  return first ? (
     <span className="flex min-w-0 items-center gap-1.5 text-xs">
       <span
         className="size-2.5 shrink-0 rounded-full"
@@ -304,7 +306,55 @@ function CategoryPick({
   ) : (
     <span className="text-xs text-muted-foreground/60">{t("noneFem")}</span>
   );
+}
+
+function CategoryPick({
+  categories,
+  selectedIds,
+  onChange,
+  projectId,
+}: {
+  categories: Category[];
+  selectedIds: string[];
+  onChange?: (ids: string[]) => void;
+  /** Projet de la carte — ce que l'ajout rapide crée lui appartient. */
+  projectId?: string | null;
+}) {
+  const display = (
+    <CategoryDisplay categories={categories} selectedIds={selectedIds} />
+  );
   if (!onChange) return display;
+  return (
+    <CategoryPickMenu
+      categories={categories}
+      selectedIds={selectedIds}
+      onChange={onChange}
+      projectId={projectId}
+      display={display}
+    />
+  );
+}
+
+function CategoryPickMenu({
+  categories,
+  selectedIds,
+  onChange,
+  projectId,
+  display,
+}: {
+  categories: Category[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  projectId?: string | null;
+  display: React.ReactNode;
+}) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const createOption = useCategoryCreateOption({
+    projectId,
+    categories,
+    onCreated: (category) => onChange([...selectedIds, category.id]),
+  });
   const options: PickerOption[] = categories.map((c) => ({
     value: c.id,
     label: c.name,
@@ -321,6 +371,7 @@ function CategoryPick({
       values={selectedIds}
       onChange={onChange}
       options={options}
+      createOption={createOption}
       align="end"
       tooltip={tField("categories")}
       shortcutHint={KEY_FOR_FIELD.category}
@@ -794,6 +845,7 @@ export function IssueCardBody({
           categories={[...categoryMap.values()]}
           selectedIds={issue.category_ids}
           onChange={onSetCategories}
+          projectId={issue.project_id}
         />
       </div>
 

@@ -28,7 +28,7 @@ import {
   MentionSuggestions,
   filterMentions,
   type MentionOption,
-} from "@/components/assistant/mention-suggest";
+} from "@/components/mention-suggest";
 import {
   SlashMenu,
   filterCommands,
@@ -58,17 +58,25 @@ const COMMAND_PILL_CLASS =
 
 /** Ce qu'une enveloppe sait dire d'elle-même : de quoi la re-rendre sans rien
     d'autre que le DOM (une annulation ⌘Z peut la restituer bien après coup). */
+const MENTION_TYPES: ReadonlySet<string> = new Set([
+  "member",
+  "project",
+  "issue",
+  "objective",
+]);
+
 function mentionFromNode(node: HTMLElement): MentionOption | null {
   const type = node.dataset.mentionType;
   const id = node.dataset.mentionId;
   const label = node.dataset.mentionLabel;
-  if (!id || !label || (type !== "member" && type !== "project")) return null;
+  if (!id || !label || !type || !MENTION_TYPES.has(type)) return null;
   return {
-    type,
+    type: type as MentionOption["type"],
     id,
     label,
     ...(node.dataset.mentionSeed ? { avatarSeed: node.dataset.mentionSeed } : {}),
     ...(node.dataset.mentionIcon ? { iconUrl: node.dataset.mentionIcon } : {}),
+    ...(node.dataset.mentionColor ? { color: node.dataset.mentionColor } : {}),
   };
 }
 
@@ -347,6 +355,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         pill.dataset.mentionLabel = option.label;
         if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
         if (option.iconUrl) pill.dataset.mentionIcon = option.iconUrl;
+        if (option.color) pill.dataset.mentionColor = option.color;
         pill.className = MENTION_SLOT_CLASS;
         range.insertNode(pill);
 
@@ -390,6 +399,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           id: option.id,
           label: option.label,
           ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
+          ...(option.color ? { color: option.color } : {}),
         });
       }
       return out;
@@ -696,6 +706,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               label={option.label}
               avatarSeed={option.avatarSeed}
               iconUrl={option.iconUrl}
+              color={option.color}
             />,
             el,
             // Deux mentions de la MÊME personne dans un message : la clé prend

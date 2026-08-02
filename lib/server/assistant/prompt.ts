@@ -719,6 +719,9 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
         if (item.kind === "project") {
           return `  - Project "${item.label}" (id: ${item.id})`;
         }
+        if (item.kind === "objective") {
+          return `  - Objective "${item.label}" (id: ${item.id}) — that id is what objective_id fields take`;
+        }
         return `  - Team member ${item.label}${item.detail ? ` (${item.detail})` : ""} (user id: ${item.id}) — that id is what assignee fields take`;
       }),
       `When the request has no other explicit target, it is about these — use their ids directly, do not search for them.`

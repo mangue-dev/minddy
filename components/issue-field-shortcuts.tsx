@@ -21,6 +21,11 @@ import { CommandGroup, CommandItem } from "mangue-ui";
 import { useChordPrefix } from "@/lib/keyboard/keyboard-context";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { CommandAnchor } from "@/components/command-anchor";
+import { PickerCreateRow } from "@/components/search-select";
+import {
+  useCategoryCreateOption,
+  useObjectiveCreateOption,
+} from "@/lib/use-picker-create";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { Dot } from "@/components/issue-property-fields";
 import {
@@ -204,6 +209,22 @@ export function IssueShortcutMenu({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("IssueUI");
+  // Recherche tenue ici (et pas par cmdk) : les lignes « Ajouter… » en font le
+  // nom de ce qu'elles créent.
+  const [query, setQuery] = React.useState("");
+  const categoryCreate = useCategoryCreateOption({
+    projectId: issue.project_id,
+    categories,
+    onCreated: (category) => onSetCategories([...issue.category_ids, category.id]),
+  });
+  const objectiveCreate = useObjectiveCreateOption({
+    projectId: issue.project_id,
+    onCreated: (objective) => onUpdate({ objective_id: objective.id }),
+  });
+  // Chaque ouverture repart d'une recherche vide (le menu reste monté entre deux).
+  React.useEffect(() => {
+    if (!state) setQuery("");
+  }, [state]);
 
   if (!state) return null;
   const { field, position } = state;
@@ -371,9 +392,39 @@ export function IssueShortcutMenu({
     }
   }
 
+  // L'ajout rapide, sur les deux champs qui se créent depuis leur menu — le
+  // même geste que dans les pickers cliquables, ici au raccourci L / O.
+  const create =
+    field === "category"
+      ? categoryCreate
+      : field === "objective"
+        ? objectiveCreate
+        : undefined;
+
   return (
-    <CommandAnchor position={position} onClose={onClose}>
+    <CommandAnchor
+      position={position}
+      onClose={onClose}
+      searchValue={create ? query : undefined}
+      onSearchValueChange={create ? setQuery : undefined}
+      hideEmpty={!!create && query.trim() !== ""}
+    >
       <CommandGroup>{items}</CommandGroup>
+      {create && (
+        <PickerCreateRow
+          create={create}
+          query={query}
+          takenLabels={
+            field === "category"
+              ? categories.map((c) => c.name)
+              : objectives.map((o) => o.name)
+          }
+          onDone={() => {
+            setQuery("");
+            if (create.closeOnCreate) onClose();
+          }}
+        />
+      )}
     </CommandAnchor>
   );
 }

@@ -39,6 +39,8 @@ export interface AssistantContextChip {
   avatarSeed?: string;
   /** Projets : le favicon importé, quand le projet en a un. */
   iconUrl?: string | null;
+  /** Objectifs : leur couleur — celle que porte leur cible, ici comme ailleurs. */
+  color?: string | null;
   /** Épinglé à la main (bouton @) — retirable, là où l'ambiant s'éteint. */
   pinned?: boolean;
 }
@@ -115,6 +117,7 @@ export function contextChips(
       kind: "objective",
       label: ctx.objectiveName ?? t("contextObjective"),
       tooltip: t("contextObjective"),
+      color: ctx.objectiveColor ?? null,
     });
   }
 
@@ -161,6 +164,7 @@ export function contextChips(
           ? { avatarSeed: item.id }
           : {}),
       ...(item.kind === "project" ? { iconUrl: project?.icon_url ?? null } : {}),
+      ...(item.kind === "objective" ? { color: item.color ?? null } : {}),
       pinned: true,
     });
   }
@@ -181,7 +185,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
     "prRunId",
   ],
   issues: ["issueIds", "issueIdentifiers", "issueTitles"],
-  objective: ["objectiveId", "objectiveName"],
+  objective: ["objectiveId", "objectiveName", "objectiveColor"],
   feedback: ["feedbackId", "feedbackTitle"],
   view: ["viewId", "viewName", "onglet"],
   cycle: ["cycleId", "cycleLabel"],

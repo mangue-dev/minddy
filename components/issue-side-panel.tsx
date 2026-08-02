@@ -86,6 +86,7 @@ import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { IssueAttachmentsSection } from "@/components/issue-attachments-section";
 import { IssuePlan } from "@/components/issue-plan";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeamOverlay } from "@/components/agent-beam";
@@ -591,6 +592,8 @@ export function IssueSidePanel({
 
   // Voice editing (Numo): dictated commands become immediate field updates.
   // The draft fallbacks are for type-safety only — the mic lives inside the
+  const mentions = useDescriptionMentions(issue?.project_id ?? null, members);
+
   // panel, so dictation never runs without an open issue.
   const {
     busy: numoBusy,
@@ -919,6 +922,7 @@ export function IssueSidePanel({
                 >
                   <MarkdownEditor
                     key={`${issue.id}:${editorKey}`}
+                    mentions={mentions}
                     value={issue.description ?? ""}
                     onCommit={commitDescription}
                     onEdit={() => {
@@ -962,6 +966,7 @@ export function IssueSidePanel({
                   <PropertyRow label={tField("categories")}>
                     <CategoryValue
                       categories={categories}
+                      projectId={issue.project_id}
                       value={issue.category_ids}
                       onChange={(ids) => {
                         void onSetCategories(issue.id, ids).catch((err) =>
@@ -982,6 +987,7 @@ export function IssueSidePanel({
                     <ObjectiveValue
                       value={issue.objective_id}
                       objectives={objectives}
+                      projectId={issue.project_id}
                       onChange={(objective_id) => void patch({ objective_id })}
                     />
                   </PropertyRow>

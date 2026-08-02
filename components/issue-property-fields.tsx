@@ -23,6 +23,10 @@ import {
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { KEY_FOR_FIELD } from "@/components/issue-field-shortcuts";
+import {
+  useCategoryCreateOption,
+  useObjectiveCreateOption,
+} from "@/lib/use-picker-create";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { Category, Member, Objective } from "@/lib/types";
 
@@ -215,10 +219,13 @@ export function CategoryValue({
   categories,
   value,
   onChange,
+  projectId,
 }: {
   categories: Category[];
   value: string[];
   onChange: (ids: string[]) => void;
+  /** Projet où l'ajout rapide crée l'étiquette (absent : pas de ligne « Ajouter »). */
+  projectId?: string | null;
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -230,11 +237,17 @@ export function CategoryValue({
     label: c.name,
     icon: <Dot color={c.color} />,
   }));
+  const createOption = useCategoryCreateOption({
+    projectId,
+    categories,
+    onCreated: (category) => onChange([...value, category.id]),
+  });
   return (
     <SearchMultiSelect
       values={value}
       onChange={onChange}
       options={options}
+      createOption={createOption}
       align="end"
       tooltip={tField("categories")}
       shortcutHint={KEY_FOR_FIELD.category}
@@ -295,10 +308,13 @@ export function ObjectiveValue({
   value,
   objectives,
   onChange,
+  projectId,
 }: {
   value: string | null;
   objectives: Objective[];
   onChange: (v: string | null) => void;
+  /** Projet où l'ajout rapide crée l'objectif (absent : pas de ligne « Ajouter »). */
+  projectId?: string | null;
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -309,12 +325,17 @@ export function ObjectiveValue({
     label: o.name,
     icon: <Dot color={o.color} />,
   }));
+  const createOption = useObjectiveCreateOption({
+    projectId,
+    onCreated: (objective) => onChange(objective.id),
+  });
   return (
     <SearchSelect
       value={value}
       onChange={onChange}
       options={options}
       noneOption={{ label: tCommon("none") }}
+      createOption={createOption}
       align="end"
       tooltip={tField("objective")}
       shortcutHint={KEY_FOR_FIELD.objective}

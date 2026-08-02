@@ -5,6 +5,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
 import { isValidColor } from "@/lib/category-colors";
+import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import {
   copyAttachmentsToProject,
   insertAttachments,
@@ -156,6 +157,15 @@ export async function createObjective({
     stampMcpKey(stampViaAssistant(created, viaAssistant), mcpKeyId)
   );
 
+  // Les gens cités dans la description de l'objectif qui vient de naître.
+  await notifyDescriptionMentions(service, {
+    projectId,
+    actorId,
+    description: data.description as string | null,
+    objectiveId: data.id as string,
+    mcpKeyId,
+  });
+
   return { ok: true, objective: data };
 }
 
@@ -264,6 +274,19 @@ export async function updateObjective({
     service,
     stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId)
   );
+
+  // Les gens qui viennent d'être cités dans la description. La version d'avant
+  // sert de référence : relire une description ne repingue pas les anciens.
+  if ("description" in updates) {
+    await notifyDescriptionMentions(service, {
+      projectId: objective.project_id as string,
+      actorId,
+      description: updates.description as string | null,
+      previousDescription: objective.description as string | null,
+      objectiveId,
+      mcpKeyId,
+    });
+  }
 
   return { ok: true, objective: data };
 }

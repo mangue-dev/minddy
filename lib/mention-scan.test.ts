@@ -1,9 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { mentionScanner, type MentionSegment } from "./mention-scan";
+import {
+  contentMentionScanner,
+  mentionScanner,
+  type MentionIssue,
+  type MentionObjective,
+  type MentionSegment,
+} from "./mention-scan";
 import type { Member } from "./types";
 
 const member = (full_name: string, user_id = full_name.toLowerCase()) =>
   ({ user_id, full_name, email: null, avatar_seed: user_id }) as unknown as Member;
+
+const issue = (identifier: string): MentionIssue => ({
+  id: `id-${identifier}`,
+  project_id: "p1",
+  identifier,
+  title: `Titre de ${identifier}`,
+});
+
+const objective = (name: string): MentionObjective => ({
+  id: `id-${name}`,
+  project_id: "p1",
+  name,
+  color: "#3b82f6",
+});
 
 /** Une lecture compacte du découpage : le texte tel quel, une mention en
     « @Nom » (ou « @numo »). */
@@ -15,7 +35,11 @@ const shape = (segments: MentionSegment[]) =>
         ? "@numo"
         : s.mention.type === "forge"
           ? `@${s.mention.login}`
-          : `@${s.mention.member.full_name}`,
+          : s.mention.type === "issue"
+            ? `@${s.mention.issue.identifier}`
+            : s.mention.type === "objective"
+              ? `@${s.mention.objective.name}`
+              : `@${s.mention.member.full_name}`,
   );
 
 describe("mentionScanner", () => {
@@ -76,5 +100,74 @@ describe("mentionScanner", () => {
   it("enchaîne deux mentions collées par un espace", () => {
     const scan = mentionScanner([member("Jean"), member("Marie")]);
     expect(shape(scan("@Jean @Marie"))).toEqual(["@Jean", " ", "@Marie"]);
+  });
+});
+
+describe("contentMentionScanner", () => {
+  it("cite un ticket par son identifiant", () => {
+    const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
+    expect(shape(scan("bloqué par @MIN-42 depuis hier"))).toEqual([
+      "bloqué par ",
+      "@MIN-42",
+      " depuis hier",
+    ]);
+  });
+
+  it("laisse en texte un identifiant bien formé mais inconnu", () => {
+    const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
+    expect(shape(scan("voir @MIN-99"))).toEqual(["voir @MIN-99"]);
+  });
+
+  it("ne cite pas un ticket sans arobase", () => {
+    const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
+    expect(shape(scan("voir MIN-42"))).toEqual(["voir MIN-42"]);
+  });
+
+  it("ne prend pas « @MIN-42 » dans « @MIN-42x »", () => {
+    const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
+    expect(shape(scan("@MIN-42x"))).toEqual(["@MIN-42x"]);
+  });
+
+  it("cite un objectif par son nom", () => {
+    const scan = contentMentionScanner({ objectives: [objective("Refonte SEO")] });
+    expect(shape(scan("dans @Refonte SEO"))).toEqual(["dans ", "@Refonte SEO"]);
+  });
+
+  it("mêle personne, ticket et objectif dans un même texte", () => {
+    const scan = contentMentionScanner({
+      members: [member("Jean")],
+      issues: [issue("MIN-42")],
+      objectives: [objective("Refonte SEO")],
+    });
+    expect(shape(scan("@Jean voit @MIN-42 pour @Refonte SEO"))).toEqual([
+      "@Jean",
+      " voit ",
+      "@MIN-42",
+      " pour ",
+      "@Refonte SEO",
+    ]);
+  });
+
+  it("donne la personne, pas l'objectif, quand les deux portent le même nom", () => {
+    const scan = contentMentionScanner({
+      members: [member("Atlas")],
+      objectives: [objective("Atlas")],
+    });
+    const [first] = scan("@Atlas");
+    expect(first.mention?.type).toBe("member");
+  });
+
+  it("cite encore Numo dans une description", () => {
+    const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
+    expect(shape(scan("@numo regarde @MIN-42"))).toEqual([
+      "@numo",
+      " regarde ",
+      "@MIN-42",
+    ]);
+  });
+
+  it("ne fait pas une pilule de chaque « @ » sans aucune source", () => {
+    const scan = contentMentionScanner({});
+    expect(shape(scan("écris à @quelquun"))).toEqual(["écris à @quelquun"]);
   });
 });

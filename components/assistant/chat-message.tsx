@@ -159,6 +159,7 @@ function UserText({
                 ? projects.find((p) => p.id === part.id)?.icon_url
                 : null
             }
+            color={part.color}
             // Sur la bulle sombre, la teinte de marque ne passe pas : la pilule
             // s'éclaircit dans la couleur du texte qui l'entoure.
             className="bg-background/15 text-background"

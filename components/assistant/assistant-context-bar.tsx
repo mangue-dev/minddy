@@ -10,15 +10,25 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AtSign, ChevronLeft, ChevronRight, FileText, Folder, User } from "lucide-react";
+import {
+  AtSign,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Folder,
+  Target,
+  User,
+} from "lucide-react";
 import { Button, CommandGroup, CommandItem, cn } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { ContextPill } from "@/components/assistant/context-pill";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
+import { useMentionSources } from "@/lib/use-mention-sources";
 import { useProjects } from "@/lib/projects-context";
 import { useNumoBoard, useNumoMembers } from "@/lib/use-numo-mentionables";
 import type { AssistantContextChip } from "@/lib/assistant-context";
@@ -94,7 +104,7 @@ function HScroller({ children }: { children: React.ReactNode }) {
 
 // ── Bouton @ : ajouter du contexte ────────────────────────────────────
 
-type AddKind = "member" | "project" | "issue";
+type AddKind = "member" | "project" | "issue" | "objective";
 
 function AddContextButton({
   scopeProjectId,
@@ -118,6 +128,9 @@ function AddContextButton({
     scopeProjectId,
   );
   const board = useNumoBoard(open && kind === "issue");
+  // Les objectifs viennent de l'index de la palette — la même source que le
+  // « @ » du texte, donc la même liste des deux côtés du composer.
+  const mentionSources = useMentionSources(scopeProjectId);
 
   // Le panneau de Numo est un Sheet modal : react-remove-scroll bloque la molette
   // sur tout ce qui est porté à <body>. On porte donc le menu DANS le panneau,
@@ -157,6 +170,13 @@ function AddContextButton({
     { kind: "member", icon: <User className="size-4" />, label: t("addContextMember") },
     { kind: "project", icon: <Folder className="size-4" />, label: t("addContextProject") },
     { kind: "issue", icon: <FileText className="size-4" />, label: t("addContextIssue") },
+    // La cible reste NEUTRE ici : la ligne désigne la notion « un objectif »,
+    // pas un objectif dont on suivrait la couleur.
+    {
+      kind: "objective",
+      icon: <Target className="size-4" />,
+      label: t("addContextObjective"),
+    },
   ];
 
   const loading =
@@ -185,7 +205,9 @@ function AddContextButton({
               ? t("addContextProjectSearch")
               : kind === "issue"
                 ? t("addContextIssueSearch")
-                : t("addContext")
+                : kind === "objective"
+                  ? t("addContextObjectiveSearch")
+                  : t("addContext")
         }
         emptyText={loading ? t("addContextLoading") : undefined}
         // Plus large que le w-60 par défaut : à l'étape « ticket » on reconnaît
@@ -253,6 +275,29 @@ function AddContextButton({
                 >
                   <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-5" />
                   <span className="truncate">{p.name}</span>
+                </CommandItem>
+              ))}
+            {kind === "objective" &&
+              mentionSources.objectives.map((objective) => (
+                <CommandItem
+                  key={objective.id}
+                  value={`${objective.name} ${projectById.get(objective.project_id)?.name ?? ""}`}
+                  onSelect={() =>
+                    pick({
+                      kind: "objective",
+                      id: objective.id,
+                      label: objective.name,
+                      color: objective.color,
+                    })
+                  }
+                  className="gap-2"
+                >
+                  <ObjectiveIconBadge
+                    color={objective.color}
+                    className="size-4 rounded-full"
+                    iconClassName="size-2.5"
+                  />
+                  <span className="truncate">{objective.name}</span>
                 </CommandItem>
               ))}
             {kind === "issue" &&

@@ -20,6 +20,7 @@ import {
   type EventRow,
 } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
+import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
   isSmartAssignEligibleStatus,
@@ -423,6 +424,16 @@ export async function createIssueForProject({
         },
       ]);
     }
+
+    // Les gens cités dans la description du ticket qui vient de naître. Pas de
+    // version précédente : tout ce qui y figure est nouveau.
+    await notifyDescriptionMentions(service, {
+      projectId,
+      actorId,
+      description: data.description as string | null,
+      issueId: data.id as string,
+      mcpKeyId,
+    });
   };
   const deferSideEffects = () =>
     runSideEffects().catch((e) =>

@@ -55,9 +55,10 @@ import {
   withPinnedContext,
 } from "@/lib/assistant-context";
 import { useNumoMembers } from "@/lib/use-numo-mentionables";
+import { useMentionSources } from "@/lib/use-mention-sources";
 import { useProjects } from "@/lib/projects-context";
 import { displayName } from "@/lib/display-name";
-import type { MentionOption } from "@/components/assistant/mention-suggest";
+import type { MentionOption } from "@/components/mention-suggest";
 import type { SlashCommandOption } from "@/components/assistant/slash-menu";
 import type {
   AssistantCommandId,
@@ -215,6 +216,9 @@ export const AssistantShell = forwardRef<
   // frappe d'un « @ » (et reste ensuite en cache).
   const [mentionsWanted, setMentionsWanted] = useState(false);
   const { members } = useNumoMembers(mentionsWanted, projectId);
+  // Tickets et objectifs viennent de l'index de la palette, comme les mentions
+  // d'une description : il porte déjà tout, de tous mes projets.
+  const { issues, objectives, armNow } = useMentionSources(projectId);
   const mentionables = useMemo<MentionOption[]>(
     () => [
       ...members.map((m) => ({
@@ -231,8 +235,23 @@ export const AssistantShell = forwardRef<
         iconUrl: p.icon_url,
         keywords: [p.key],
       })),
+      // Le TITRE en second rang, et cherchable : on retrouve « le ticket sur
+      // les webhooks » sans en connaître le numéro.
+      ...issues.map((i) => ({
+        type: "issue" as const,
+        id: i.id,
+        label: i.identifier,
+        detail: i.title,
+        keywords: [i.title],
+      })),
+      ...objectives.map((o) => ({
+        type: "objective" as const,
+        id: o.id,
+        label: o.name,
+        color: o.color,
+      })),
     ],
-    [members, projects],
+    [members, projects, issues, objectives],
   );
 
   // Read by the send handlers without stale closures. The host may set the
@@ -760,7 +779,10 @@ export const AssistantShell = forwardRef<
                   noBorder={!hasMessages}
                   mentionables={mentionables}
                   onMentionQuery={(active) => {
-                    if (active) setMentionsWanted(true);
+                    if (active) {
+                      setMentionsWanted(true);
+                      armNow();
+                    }
                   }}
                   commands={slashCommands}
                   contextSlot={

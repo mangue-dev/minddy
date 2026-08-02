@@ -30,6 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import type {
@@ -54,10 +55,10 @@ const STYLES: Record<
     icon: Layers,
     tint: "bg-violet-500/12 text-violet-600 dark:text-violet-400",
   },
-  objective: {
-    icon: Target,
-    tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
-  },
+  // L'objectif ne prend PAS sa teinte ici : il porte la SIENNE, celle qu'il
+  // affiche partout ailleurs (voir plus bas, ObjectiveIconBadge). L'entrée reste
+  // pour que la table couvre toutes les natures de contexte.
+  objective: { icon: Target, tint: "" },
   feedback: {
     icon: MessagesSquare,
     tint: "bg-rose-500/12 text-rose-600 dark:text-rose-400",
@@ -137,6 +138,15 @@ export function ContextPill({
               seed={chip.avatarSeed ?? chip.label}
               iconUrl={chip.iconUrl}
               className={cn("size-5", INNER_RADIUS[radius], disabled && "grayscale")}
+            />
+          ) : chip.kind === "objective" && !disabled ? (
+            // Un objectif a une couleur à lui : sa cible la porte, ici comme sur
+            // le board et dans une description. Éteinte, la pilule retombe sur
+            // le gris commun — c'est l'extinction qu'on lit alors, pas l'objectif.
+            <ObjectiveIconBadge
+              color={chip.color}
+              className={cn("size-5", INNER_RADIUS[radius])}
+              iconClassName="h-3 w-3"
             />
           ) : (
             <span

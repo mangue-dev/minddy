@@ -226,6 +226,10 @@ function keysForProjectEvent(
       return [
         active(["categories", projectId]),
         active(["issues", projectId]),
+        // Une catégorie est recopiée dans le board cross-projet, comme un
+        // objectif : sans ça, celle qu'un coéquipier (ou Numo, ou l'ajout
+        // rapide d'un autre onglet) vient de créer n'existait pas sur `/all`.
+        active(GLOBAL_BOARD_KEY),
         { key: SEARCH_INDEX_KEY, refetch: "none" },
       ];
     case "views":

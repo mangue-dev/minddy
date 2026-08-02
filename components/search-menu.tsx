@@ -63,6 +63,10 @@ export type SearchMenuProps = {
   searchValue?: string;
   onSearchValueChange?: (value: string) => void;
   emptyText?: string;
+  /** Cache la ligne « Aucun résultat ». Les menus qui portent une ligne de
+   *  création la gardent visible quand rien ne matche : elle EST la réponse,
+   *  et un « aucun résultat » juste au-dessus ne dirait rien de plus. */
+  hideEmpty?: boolean;
   align?: "start" | "center" | "end";
   contentClassName?: string;
   /** Portal target. Dans un Sheet/Dialog modal, react-remove-scroll bloque la
@@ -86,6 +90,7 @@ export function SearchMenu({
   searchValue,
   onSearchValueChange,
   emptyText,
+  hideEmpty,
   align = "start",
   contentClassName,
   container,
@@ -118,7 +123,7 @@ export function SearchMenu({
         </DropdownSearchRow>
         <CommandSeparator className="my-1" />
         <CommandList>
-          <CommandEmpty>{emptyText ?? t("noResults")}</CommandEmpty>
+          {!hideEmpty && <CommandEmpty>{emptyText ?? t("noResults")}</CommandEmpty>}
           {children}
         </CommandList>
       </Command>

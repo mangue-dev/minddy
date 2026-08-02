@@ -75,7 +75,7 @@ export type AssistantSSEEvent =
  * que pour que Numo puisse nommer la chose sans re-résoudre son id.
  */
 export interface AssistantPinnedContext {
-  kind: "issue" | "project" | "member";
+  kind: "issue" | "project" | "member" | "objective";
   id: string;
   /** « MIN-42 », « minddy », « Clément » — ce qu'affiche la pilule. */
   label: string;
@@ -84,6 +84,9 @@ export interface AssistantPinnedContext {
   /** Membres : la graine du portrait (public.user_avatars), qui n'est PAS
       toujours le user_id — la déduire afficherait un autre visage. */
   avatarSeed?: string;
+  /** Objectifs : leur couleur — c'est elle que porte leur cible, ici comme
+      partout ailleurs dans l'application. */
+  color?: string | null;
 }
 
 /**
@@ -95,18 +98,20 @@ export interface AssistantPinnedContext {
 export type AssistantCommandId = "create-issue";
 
 /**
- * Une mention « @ » écrite DANS le message (membre de l'équipe ou projet),
- * résolue au moment de la frappe. Persistée sur `metadata.mentions` du message
- * utilisateur : elle sert à re-rendre la pilule dans la bulle, et à dire à Numo
- * qui/quoi ce nom désigne exactement.
+ * Une mention « @ » écrite DANS le message (membre de l'équipe, projet, ticket
+ * ou objectif), résolue au moment de la frappe. Persistée sur
+ * `metadata.mentions` du message utilisateur : elle sert à re-rendre la pilule
+ * dans la bulle, et à dire à Numo qui/quoi ce nom désigne exactement.
  */
 export interface AssistantMention {
-  type: "member" | "project";
+  type: "member" | "project" | "issue" | "objective";
   id: string;
   /** Le texte écrit après le « @ » dans le message. */
   label: string;
   /** Membres : la graine du portrait — voir AssistantPinnedContext.avatarSeed. */
   avatarSeed?: string;
+  /** Objectifs : leur couleur — voir AssistantPinnedContext.color. */
+  color?: string | null;
 }
 
 /**
@@ -139,6 +144,8 @@ export interface AssistantPageContext {
   /** The objective whose filtered board is displayed, when any. */
   objectiveId?: string;
   objectiveName?: string;
+  /** Sa couleur — ce que porte sa cible sur la pilule de contexte. */
+  objectiveColor?: string | null;
   /** The feedback post open in the team dashboard, when any (MIN-52). */
   feedbackId?: string;
   feedbackTitle?: string;

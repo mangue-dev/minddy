@@ -18,6 +18,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createPendingWrites } from "./pending-writes";
 import { patchSearchIndexIssue } from "../use-search-index";
 import type {
+  Category,
   GlobalBoardResponse,
   Issue,
   Objective,
@@ -31,6 +32,7 @@ export const GLOBAL_BOARD_KEY = ["me", "board"] as const;
 
 const issuesKey = (projectId: string) => ["issues", projectId] as const;
 const objectivesKey = (projectId: string) => ["objectives", projectId] as const;
+const categoriesKey = (projectId: string) => ["categories", projectId] as const;
 
 export const issueWrites = createPendingWrites<Issue>();
 export const objectiveWrites = createPendingWrites<Objective>();
@@ -199,6 +201,57 @@ export function mergeServerIssue(
  * objectif renommé restait affiché sous son ancien nom sur le board
  * cross-projet jusqu'à ce qu'autre chose fasse recharger la route.
  */
+/**
+ * Une catégorie qui vient de naître (ajout rapide depuis un picker) est écrite
+ * dans les DEUX caches qui la lisent, avant même le refetch : celui de son
+ * projet et la tranche `categories` du board cross-projet. Sans ça, la pastille
+ * que l'utilisateur vient de cocher n'a pas de nom ni de couleur à afficher
+ * jusqu'au retour du GET — un blanc d'une demi-seconde sur le geste le plus
+ * rapide de l'app.
+ */
+export function insertCategoryEverywhere(
+  queryClient: QueryClient,
+  projectId: string,
+  category: Category
+): void {
+  queryClient.setQueryData<Category[]>(categoriesKey(projectId), (old) =>
+    old && !old.some((c) => c.id === category.id) ? [...old, category] : old
+  );
+  queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) => {
+    // Tranche absente quand le projet n'avait AUCUNE catégorie (la route
+    // groupe les lignes, elle ne pose pas de clé vide) — c'est justement le
+    // projet où l'ajout rapide sert le plus.
+    const list = old?.categories[projectId] ?? [];
+    if (!old || list.some((c) => c.id === category.id)) return old;
+    return {
+      ...old,
+      categories: { ...old.categories, [projectId]: [...list, category] },
+    };
+  });
+}
+
+/** Le pendant pour un objectif fraîchement créé — mêmes deux caches que
+ *  {@link patchObjectiveEverywhere}, pour la même raison. */
+export function insertObjectiveEverywhere(
+  queryClient: QueryClient,
+  projectId: string,
+  objective: Objective
+): void {
+  queryClient.setQueryData<Objective[]>(objectivesKey(projectId), (old) =>
+    old && !old.some((o) => o.id === objective.id) ? [...old, objective] : old
+  );
+  queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) => {
+    // Même remarque que pour les catégories : premier objectif d'un projet =
+    // pas encore de tranche.
+    const list = old?.objectives[projectId] ?? [];
+    if (!old || list.some((o) => o.id === objective.id)) return old;
+    return {
+      ...old,
+      objectives: { ...old.objectives, [projectId]: [...list, objective] },
+    };
+  });
+}
+
 export function patchObjectiveEverywhere(
   queryClient: QueryClient,
   projectId: string,

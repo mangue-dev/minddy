@@ -68,7 +68,12 @@ function ObjectivesInner() {
   useAssistantContext(
     project
       ? openObjective
-        ? { projectId, objectiveId: openObjective.id, objectiveName: openObjective.name }
+        ? {
+            projectId,
+            objectiveId: openObjective.id,
+            objectiveName: openObjective.name,
+            objectiveColor: openObjective.color,
+          }
         : { projectId }
       : null
   );

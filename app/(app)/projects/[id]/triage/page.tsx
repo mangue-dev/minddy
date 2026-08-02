@@ -33,6 +33,7 @@ import {
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
@@ -71,6 +72,7 @@ export default function TriagePage() {
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
+  const mentions = useDescriptionMentions(projectId, members);
 
   const triageIssues = useMemo(
     () =>
@@ -397,6 +399,7 @@ export default function TriagePage() {
                   />
                   <MarkdownEditor
                     key={selected.id}
+                    mentions={mentions}
                     value={selected.description ?? ""}
                     onCommit={(markdown) => {
                       const next = markdown.trim() || null;
@@ -438,6 +441,7 @@ export default function TriagePage() {
                   <PropertyRow label={tField("categories")}>
                     <CategoryValue
                       categories={categories}
+                      projectId={selected.project_id}
                       value={selected.category_ids}
                       onChange={(ids) => {
                         void setCategories(selected.id, ids).catch((err) =>
@@ -456,6 +460,7 @@ export default function TriagePage() {
                     <ObjectiveValue
                       value={selected.objective_id}
                       objectives={objectives}
+                      projectId={selected.project_id}
                       onChange={(objective_id) => void patch(selected, { objective_id })}
                     />
                   </PropertyRow>

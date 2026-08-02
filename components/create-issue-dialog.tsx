@@ -15,6 +15,7 @@ import {
 } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -148,10 +149,15 @@ export function CreateIssueDialog({
   // typed but not yet committed (commit happens on blur) when the dialog closes.
   const editorNonEmptyRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  // Le contenu du dialog, pour savoir si le clavier lui appartient encore : un
+  // second dialog par-dessus (confirmation de brouillon, création d'objectif
+  // depuis le picker) doit garder ses touches pour lui.
+  const contentRef = useRef<HTMLDivElement>(null);
   const createMoreId = useId();
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
   const drafts = useDrafts("issue", projectId, open);
+  const mentions = useDescriptionMentions(projectId, members);
 
   // Account preference (Préférences → auto-attribution): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
@@ -211,6 +217,12 @@ export function CreateIssueDialog({
           el.isContentEditable)
       )
         return;
+      // Un dialog empilé par-dessus (le picker d'objectif ouvre celui de
+      // création d'objectif) piège le focus chez lui : sans ce garde-fou, une
+      // touche pressée là-haut ouvrirait un picker DERRIÈRE lui. Les poppers
+      // portalisés (les pickers eux-mêmes) sont hors du contenu du dialog, mais
+      // leur champ de recherche est un INPUT — déjà écarté juste au-dessus.
+      if (contentRef.current && el && !contentRef.current.contains(el)) return;
       const field = SHORTCUT_KEYS[eventKey(e)];
       if (!field) return;
       e.preventDefault();
@@ -468,6 +480,7 @@ export function CreateIssueDialog({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
+          ref={contentRef}
           className="p-8 sm:max-w-2xl"
           showCloseButton={false}
           onInteractOutside={keepOverlayOpenForPopper}
@@ -522,6 +535,7 @@ export function CreateIssueDialog({
               className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
             />
             <MarkdownEditor
+              mentions={mentions}
               key={editorKey}
               value={description}
               onCommit={setDescription}
@@ -557,6 +571,7 @@ export function CreateIssueDialog({
               />
               <CategoriesCompact
                 categories={categories}
+                projectId={projectId}
                 value={categoryIds}
                 onChange={setCategoryIds}
                 open={openPicker === "category"}
@@ -588,6 +603,7 @@ export function CreateIssueDialog({
                   setFields((f) => ({ ...f, objective_id }))
                 }
                 objectives={objectives}
+                projectId={projectId}
                 open={openPicker === "objective"}
                 onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
                 shortcutHint={KEY_FOR_FIELD.objective}

@@ -22,6 +22,7 @@ import {
 import { Check, ListTodo, Trash2, X } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import {
   AssigneeValue,
   DueDateValue,
@@ -302,6 +303,8 @@ export function ObjectiveSidePanel({
     [members]
   );
 
+  const mentions = useDescriptionMentions(projectId, members);
+
   if (!objective) return null;
 
   const patch = async (updates: ObjectiveUpdateInput) => {
@@ -442,6 +445,7 @@ export function ObjectiveSidePanel({
             >
               <MarkdownEditor
                 key={`${objective.id}:${editorKey}`}
+                mentions={mentions}
                 value={objective.description ?? ""}
                 onCommit={commitDescription}
                 onEdit={() => {
