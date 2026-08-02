@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
+  AutomationAvatar,
   McpAvatar,
   NumoAvatar,
   SmartAssignAvatar,
@@ -247,10 +248,20 @@ function EventRow({
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
   const viaSmartAssign = !!item.event.via_smart_assign;
-  const viaNumo = !viaSmartAssign && !!item.event.via_assistant;
-  const viaMcp = !viaSmartAssign && !viaNumo && !!item.event.via_mcp;
+  // Automatisation de projet (MIN-147) : le run part sous le compte de l'assigné
+  // — c'est de lui que viennent la clé, le quota et la langue — mais PERSONNE
+  // n'a cliqué. Sans ce drapeau la timeline écrivait « <assigné> a lancé l'agent
+  // Numo », un geste que cette personne n'a pas fait. Acteur à part et non
+  // « Numo » : la phrase nomme déjà l'agent lancé, c'est la RÈGLE qui l'a lancé.
+  const viaAutomation = !viaSmartAssign && !!item.event.via_automation;
+  const viaNumo = !viaSmartAssign && !viaAutomation && !!item.event.via_assistant;
+  const viaMcp = !viaSmartAssign && !viaAutomation && !viaNumo && !!item.event.via_mcp;
   const viaIntegration =
-    !viaSmartAssign && !viaNumo && !viaMcp && !!item.event.integration_id;
+    !viaSmartAssign &&
+    !viaAutomation &&
+    !viaNumo &&
+    !viaMcp &&
+    !!item.event.integration_id;
   // Synchro des issues du dépôt lié (MIN-97) : l'écriture porte techniquement
   // l'id du owner, mais c'est la forge qui a agi — elle tient lieu d'acteur.
   const forgeSync = item.event.forge_sync
@@ -277,7 +288,9 @@ function EventRow({
     ? forgeSync.displayName
     : viaSmartAssign
     ? "Smart Assign"
-    : viaNumo
+    : viaAutomation
+      ? t("automationActor")
+      : viaNumo
       ? "Numo"
       : forgeActor
         ? (forgeLogin?.name ?? getRepoProvider(forgeActor.provider).displayName)
@@ -302,6 +315,8 @@ function EventRow({
         <ForgeAvatar provider={forgeSync.id} />
       ) : viaSmartAssign ? (
         <SmartAssignAvatar />
+      ) : viaAutomation ? (
+        <AutomationAvatar />
       ) : viaNumo ? (
         <NumoAvatar />
       ) : forgeActor ? (

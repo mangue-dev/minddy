@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import {
+  AutomationAvatar,
   McpAvatar,
   NumoAvatar,
   SmartAssignAvatar,
@@ -98,6 +99,12 @@ function RowAvatar({
 }) {
   if (n.from_numo || AGENT_TYPES.includes(n.type)) {
     return <NumoAvatar className="size-8" iconClassName="size-5" />;
+  }
+  // `via_automation` (MIN-147) : la chaîne s'est garée ou arrêtée. Son acteur
+  // est la RÈGLE, comme dans la timeline — et sans ce test la ligne n'a ni
+  // acteur ni type reconnu, et retombe sur la bulle de commentaire du repli.
+  if (n.via_automation) {
+    return <AutomationAvatar className="size-8" iconClassName="size-4" />;
   }
   if (n.via_smart_assign) {
     return <SmartAssignAvatar className="size-8" iconClassName="size-4" />;

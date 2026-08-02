@@ -73,6 +73,14 @@ export function notifyChainOfRunEnd(run: AgentRun): void {
   const go = async () => {
     const { addChainSpend } = await import("./chain");
     await addChainSpend(run.chain_id as string, Number(run.cost_usd ?? 0));
+    // L'agent a posé une QUESTION (`ask_user`) et attend la réponse. Son TOUR
+    // s'est bien terminé — d'où le statut `completed` qui nous amène ici — mais
+    // son TRAVAIL, non. Enchaîner maintenant lancerait l'étape suivante par
+    // dessus une question restée sans réponse, et la question partirait avec le
+    // run. On cumule la dépense et on s'arrête là : la réponse remet le run en
+    // file (`queued`, non terminal), et c'est sa PROCHAINE fin — celle qui
+    // n'attend plus rien — qui fera avancer la chaîne.
+    if (run.awaiting_input) return;
     await schedule({
       issueId: run.issue_id as string,
       projectId: run.project_id,

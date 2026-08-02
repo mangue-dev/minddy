@@ -1,13 +1,14 @@
 import { cn } from "mangue-ui";
-import { Bot, WandSparkles } from "lucide-react";
+import { Bot, WandSparkles, Workflow } from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import { NumoFace } from "@/components/numo-face";
 
 /**
  * Les portraits des acteurs QUI NE SONT PAS DES PERSONNES : Numo, un agent
- * branché sur le serveur MCP, Smart Assign. Un compte a sa marque générée
- * (components/user-avatar.tsx) ; ces trois-là ont la leur, et elle doit être la
- * même partout — la timeline d'un ticket et l'inbox racontent la même action.
+ * branché sur le serveur MCP, Smart Assign, une automatisation de projet. Un
+ * compte a sa marque générée (components/user-avatar.tsx) ; ceux-là ont la
+ * leur, et elle doit être la même partout — la timeline d'un ticket et l'inbox
+ * racontent la même action.
  *
  * `className` dimensionne le disque (défaut `size-5`), `iconClassName` la marque
  * à l'intérieur : les deux ne suivent pas le même rapport selon la taille.
@@ -76,6 +77,25 @@ export function McpAvatar({
       ) : (
         <Bot className={cn("size-3.5", iconClassName)} />
       )}
+    </span>
+  );
+}
+
+/** Geste joué par une AUTOMATISATION de projet (MIN-147) — la règle tient lieu
+    d'acteur, jamais l'assigné dont le compte porte techniquement le lancement.
+    Le même glyphe que partout ailleurs dans la feature (barre de chaîne, entrée
+    « Automatiser » du menu, picker de préréglage) : une boucle se reconnaît au
+    même dessin sur toutes ses surfaces. */
+export function AutomationAvatar({
+  className,
+  iconClassName,
+}: {
+  className?: string;
+  iconClassName?: string;
+}) {
+  return (
+    <span aria-hidden className={disc(className)}>
+      <Workflow className={cn("size-3", iconClassName)} />
     </span>
   );
 }

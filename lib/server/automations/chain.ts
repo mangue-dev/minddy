@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
+import type { AgentRunVerdict } from "@/lib/server/agent/runs";
 
 /**
  * La CHAÎNE (MIN-147) — l'objet durable sans lequel rien du reste n'est
@@ -252,6 +253,27 @@ export async function retryChain(
     .select("*")
     .maybeSingle();
   return data ? toChain(data) : null;
+}
+
+/**
+ * Le dernier VERDICT rendu sur la chaîne (tool `report_verdict`). Deux lecteurs,
+ * et c'est pour ça qu'il est ici plutôt que chez l'un d'eux : le moteur, qui
+ * décide entre continuer, reprendre et rendre la main ; et le point d'arrêt
+ * humain, dont le commentaire doit DIRE ce que la vérification a conclu — sans
+ * quoi il annonce un plan « vérifié » sans le verdict de la vérification.
+ */
+export async function lastVerdictOfChain(chainId: string): Promise<AgentRunVerdict | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("verdict")
+    .eq("chain_id", chainId)
+    .not("verdict", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const verdict = (data as { verdict?: AgentRunVerdict | null } | null)?.verdict ?? null;
+  return verdict && typeof verdict.ok === "boolean" ? verdict : null;
 }
 
 /** Le dernier run de la chaîne — ce qu'une reprise humaine doit rejouer. */

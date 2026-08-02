@@ -2036,7 +2036,8 @@
     "integrationActor": "Integration {name}",
     "mcpFallback": "Agent",
     "integrationFallback": "unknown",
-    "boardActor": "The board"
+    "boardActor": "The board",
+    "automationActor": "The automation"
   },
   "ToolCall": {
     "loadingProjects": "Loading projects…",

@@ -186,6 +186,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   // La suite se rattache au DERNIER run de la chaîne : c'est l'événement que le
   // point d'arrêt avait interrompu, et il n'y a rien d'autre à quoi la rattacher.
+  // Pas de run du tout (une règle qui s'arrête avant d'en lancer un) : rien n'a
+  // échoué, et le dire déclencherait l'arrêt sur `run_failed` du moteur.
   const last = await lastRunOfChain(resumed.id);
   scheduleAutomations({
     issueId: id,
@@ -194,7 +196,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     event: {
       type: "run_finished",
       intent: last?.intent ?? "plan",
-      outcome: last?.status === "completed" ? "ok" : "failed",
+      outcome: !last || last.status === "completed" ? "ok" : "failed",
     },
   });
   return NextResponse.json({ ok: true, chain: publicChain(resumed) });

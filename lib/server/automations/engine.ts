@@ -28,6 +28,7 @@ import {
   advanceChain,
   chainForIssue,
   getChain,
+  lastVerdictOfChain,
   openChain,
   retryChain,
   type AgentChain,
@@ -289,7 +290,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
 
   // ── Le verdict d'une vérification prime sur les règles ────────────────────
   if (existing && params.event.type === "run_finished" && params.event.intent === "verify") {
-    const verdict = await verdictOfLastRun(existing.id);
+    const verdict = await lastVerdictOfChain(existing.id);
     if (verdict && !verdict.ok) {
       await handleFailedVerification({
         chain: existing,
@@ -309,9 +310,23 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     playedRuleIds: existing?.played_rule_ids ?? [],
   });
   if (!rule) {
-    // Plus rien à jouer : la chaîne est allée au bout. (Sans chaîne, c'est
-    // simplement un événement qui n'intéresse aucune règle.)
-    if (existing) await finishChain(existing);
+    // Plus rien à jouer — mais deux fins très différentes, qu'il faut distinguer
+    // ICI parce que c'est le seul endroit qui voit encore l'événement. Un run
+    // qui s'est terminé EN ÉCHEC ne matche aucune règle (les préréglages ne
+    // réagissent qu'à `outcome: "ok"`) : sans ce test, la chaîne se déclarait
+    // « allée au bout » — commentaire de rapport et analytics compris — alors
+    // que son étape venait de mourir. C'est aussi ce qui rend enfin exécutoire
+    // le motif `run_failed` (cf. `STOP_REASONS`), et ce que le routage de
+    // `requeueStuckRuns` vers `stampRun` promettait : un run abandonné par le
+    // balayeur ARRÊTE sa chaîne. (Sans chaîne, c'est simplement un événement
+    // qui n'intéresse aucune règle.)
+    if (existing) {
+      if (params.event.type === "run_finished" && params.event.outcome === "failed") {
+        await haltChain(existing, "run_failed");
+      } else {
+        await finishChain(existing);
+      }
+    }
     return;
   }
 
@@ -360,19 +375,4 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     // celui de la règle : c'est le réglage que l'utilisateur voit et manipule.
     model: automationModelFor(ownerMeta, issue.effort),
   });
-}
-
-/** Le verdict du dernier run de la chaîne (tool `report_verdict`). */
-async function verdictOfLastRun(chainId: string): Promise<AgentRunVerdict | null> {
-  const service = getServiceClient();
-  const { data } = await service
-    .from("agent_runs")
-    .select("verdict")
-    .eq("chain_id", chainId)
-    .not("verdict", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const verdict = (data as { verdict?: AgentRunVerdict | null } | null)?.verdict ?? null;
-  return verdict && typeof verdict.ok === "boolean" ? verdict : null;
 }

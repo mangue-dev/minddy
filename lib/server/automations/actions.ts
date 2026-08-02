@@ -9,7 +9,7 @@ import {
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { defaultLocale } from "@/i18n/config";
 import type { AutomationAction } from "@/lib/automations";
-import { parkChain, type AgentChain } from "./chain";
+import { lastVerdictOfChain, parkChain, type AgentChain } from "./chain";
 import { haltChain, notifyChain, postChainComment } from "./report";
 
 /**
@@ -111,7 +111,15 @@ async function runNumo(
 async function awaitHuman(chain: AgentChain): Promise<ActionOutcome> {
   const parked = await parkChain(chain.id);
   if (!parked) return { kind: "halted" };
-  await postChainComment(parked, "awaiting_human");
+  // Le verdict de l'étape qui amène ici — la vérification du plan. C'est
+  // exactement ce sur quoi on demande un feu vert : sans lui, le commentaire
+  // annonce « le plan est vérifié » sans dire ce que la vérification a conclu,
+  // et il faut ouvrir la session de l'agent pour le savoir.
+  const verdict = await lastVerdictOfChain(parked.id);
+  await postChainComment(parked, "awaiting_human", {
+    verdictSummary: verdict?.summary ?? null,
+    verdictBlockers: verdict?.blockers ?? [],
+  });
   await notifyChain(parked, "automation_paused");
   return { kind: "halted" };
 }
