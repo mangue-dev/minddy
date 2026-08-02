@@ -16,6 +16,7 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import { decryptUserAiKey } from "./byok-credentials";
+import { getOpenRouterModelInfo } from "./openrouter-index";
 
 /**
  * Résolution du modèle et de l'endpoint de l'agent de code (MIN-46).
@@ -111,6 +112,20 @@ export class AgentModelRequiredError extends Error {
   }
 }
 
+/** Modèle figé sur un run, et de qui vient ce choix. */
+export interface ResolvedAgentModel {
+  model: string;
+  /**
+   * Vrai quand le modèle vient de QUELQU'UN — override de run (choisi au
+   * lancement, ou forcé par Numo) ou défaut perso du compte. Faux quand il vient
+   * d'un défaut de minddy (frontier du provider, ou défaut racine).
+   *
+   * C'est la distinction que le plafond de plan applique (`ensureModelInPlan`) :
+   * minddy ne se refuse pas ses propres défauts.
+   */
+  chosenByUser: boolean;
+}
+
 /**
  * Résout le modèle à figer sur un run. `perRunModel` (override/forçage) gagne,
  * sinon le défaut perso, sinon le défaut frontier du provider BYOK, sinon —
@@ -120,21 +135,21 @@ export class AgentModelRequiredError extends Error {
 export async function resolveAgentModel(opts: {
   perRunModel?: string | null;
   userId: string;
-}): Promise<string> {
+}): Promise<ResolvedAgentModel> {
   const perRun = opts.perRunModel?.trim();
-  if (perRun) return perRun;
+  if (perRun) return { model: perRun, chosenByUser: true };
   const userDefault = await getUserDefaultModel(opts.userId);
-  if (userDefault) return userDefault;
+  if (userDefault) return { model: userDefault, chosenByUser: true };
   const byok = await getUserByok(opts.userId);
   // Défaut frontier du provider (openai/anthropic/google), réglable en /admin.
   const providerDefault = byok ? await resolveProviderDefaultModel(byok.provider) : undefined;
-  if (providerDefault) return providerDefault;
+  if (providerDefault) return { model: providerDefault, chosenByUser: false };
   // Générique BYOK : aucun défaut fiable → l'utilisateur doit choisir.
   if (byok && byok.provider !== "openrouter") {
     throw new AgentModelRequiredError(byok.provider);
   }
   // Quota minddy (plateforme) ou OpenRouter BYOK : défaut racine app_config.
-  return getRootDefaultModel();
+  return { model: await getRootDefaultModel(), chosenByUser: false };
 }
 
 // ── Endpoint (provider + base URL + clé) ─────────────────────────────────────
@@ -175,44 +190,10 @@ export async function userHasByokKey(userId: string): Promise<boolean> {
 }
 
 // ── Capacités par modèle, lues dans l'index OpenRouter ──────────────────────
-/** Ce que l'index /models nous apprend d'un modèle (fenêtre + entrées acceptées). */
-interface OpenRouterModelInfo {
-  contextLength: number | null;
-  /** `architecture.input_modalities` contient `image` → on peut lui MONTRER une
-   *  maquette (MIN-111). */
-  imageInput: boolean;
-}
-
-const orModelIndex = new Map<string, OpenRouterModelInfo>();
-let orModelsLoaded = false;
-
-/** Charge l'index /models UNE fois par process (best-effort : un échec laisse le
-    cache vide, les appelants retombent sur leur défaut conservateur). */
-async function loadOpenRouterIndex(apiKey: string): Promise<void> {
-  if (orModelsLoaded) return;
-  try {
-    const res = await fetch("https://openrouter.ai/api/v1/models", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (!res.ok) return;
-    const body = (await res.json()) as {
-      data?: Array<{
-        id: string;
-        context_length?: number;
-        architecture?: { input_modalities?: string[] };
-      }>;
-    };
-    for (const m of body.data ?? []) {
-      orModelIndex.set(m.id, {
-        contextLength: m.context_length && m.context_length > 0 ? m.context_length : null,
-        imageInput: (m.architecture?.input_modalities ?? []).includes("image"),
-      });
-    }
-    orModelsLoaded = true;
-  } catch {
-    // best-effort — les appelants retombent sur leur défaut
-  }
-}
+// L'index lui-même vit dans `openrouter-index.ts` : une seule lecture de
+// /models pour le catalogue du picker, ces deux capacités et les prix (donc le
+// multiplicateur de plan). Les deux fonctions ci-dessous restent ici parce que
+// c'est ici que la boucle de l'agent va les chercher.
 
 /**
  * Fenêtre de contexte (tokens) d'un modèle, pour dimensionner le seuil de
@@ -226,8 +207,7 @@ export async function getModelContextWindow(
   apiKey: string,
 ): Promise<number | null> {
   if (provider !== "openrouter") return null;
-  await loadOpenRouterIndex(apiKey);
-  return orModelIndex.get(model)?.contextLength ?? null;
+  return (await getOpenRouterModelInfo(model, apiKey))?.contextLength ?? null;
 }
 
 /**
@@ -245,8 +225,7 @@ export async function supportsImageInput(
   apiKey: string,
 ): Promise<boolean> {
   if (provider !== "openrouter") return false;
-  await loadOpenRouterIndex(apiKey);
-  return orModelIndex.get(model)?.imageInput ?? false;
+  return (await getOpenRouterModelInfo(model, apiKey))?.imageInput ?? false;
 }
 
 export type AgentKeyMode = "platform" | "byok";

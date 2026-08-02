@@ -85,23 +85,26 @@ function toRun(row: RunRow, viewerId?: string): PrReviewRun {
  *
  * Le catalogue est celui de la clé plateforme OpenRouter dans les trois cas —
  * la review tourne dessus, y compris pour un compte en BYOK (un id natif
- * `gpt-…` n'y serait pas routable). Ce que ça coûte reste borné par le budget
- * d'usage du déclencheur : choisir un gros modèle brûle SON budget plus vite,
- * ce n'est pas une porte ouverte.
+ * `gpt-…` n'y serait pas routable). Elle se paye donc TOUJOURS sur le quota
+ * minddy, ce qui la soumet aussi au plafond de modèle du plan — d'où
+ * `chosenByUser` : le plafond porte sur les deux premiers temps (un modèle
+ * nommé par quelqu'un), jamais sur le troisième. Le défaut d'instance vaut
+ * délibérément un modèle cher, et s'y heurter laisserait un compte Go sans
+ * aucun chemin vers une review.
  */
 export async function resolvePrReviewModel(opts: {
   perCall?: string | null;
   userId: string;
   /** Vrai quand on vient de demander explicitement le défaut de l'instance. */
   ignoreRemembered?: boolean;
-}): Promise<string> {
+}): Promise<{ model: string; chosenByUser: boolean }> {
   const perCall = opts.perCall?.trim();
-  if (perCall) return perCall;
+  if (perCall) return { model: perCall, chosenByUser: true };
   if (!opts.ignoreRemembered) {
     const remembered = await getUserPrReviewModel(opts.userId);
-    if (remembered) return remembered;
+    if (remembered) return { model: remembered, chosenByUser: true };
   }
-  return getInstancePrReviewModel();
+  return { model: await getInstancePrReviewModel(), chosenByUser: false };
 }
 
 /** Le défaut de l'instance seul (sans le choix du compte) — ce que l'UI affiche

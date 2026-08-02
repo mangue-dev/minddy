@@ -21,6 +21,29 @@ export interface BillingPlan {
   priceEurMonthly: number;
   /** Budget d'usage IA mensuel inclus, en USD de coût brut. */
   includedUsageUsd: number;
+  /**
+   * Modèle le plus cher que ce plan peut CHOISIR sur le quota minddy, exprimé en
+   * multiplicateur du modèle par défaut de minddy (cf. lib/model-multiplier.ts).
+   *
+   * Un budget en USD ne suffisait pas à protéger l'échelle : sur un plan à petit
+   * budget, un modèle à ×12 le vide en trois runs, et l'utilisateur découvre le
+   * plafond au moment où il tombe. Le multiplicateur, lui, se lit AVANT de
+   * lancer, dans le picker, à côté de chaque modèle.
+   *
+   * Ne s'applique QU'au quota minddy : en BYOK l'utilisateur paye ses tokens,
+   * le catalogue lui est ouvert en entier. Et jamais aux défauts de minddy
+   * eux-mêmes (`agent_model`, `pr_review_model`) : l'instance répond de ses
+   * propres choix, elle ne se les refuse pas.
+   *
+   * Ces valeurs sont ACCROCHÉES au défaut du moment. Calées sur
+   * deepseek-v4-flash (~0,21 $/Mtok), elles donnent à chaque plan une frontière
+   * qui se nomme : Go va jusqu'à Claude Haiku 4.5 (×14), Pro jusqu'à Sonnet 5
+   * (×29) et GPT-5.2 (×38), Opus 5 (×71) reste au BYOK. Changer `agent_model`
+   * en /admin déplace TOUTE l'échelle — un défaut deux fois plus cher divise
+   * tous les multiplicateurs par deux et ouvre les plafonds d'autant. Le jour
+   * où ça arrive, ces trois nombres se rejouent contre le nouveau baseline.
+   */
+  maxModelMultiplier: number;
   /** null = illimité. */
   maxProjects: number | null;
   /** null = illimité. */
@@ -38,6 +61,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     id: "free",
     priceEurMonthly: 0,
     includedUsageUsd: 0.5,
+    maxModelMultiplier: 5,
     maxProjects: 2,
     maxIssuesPerProject: 300,
     allowAgents: false,
@@ -47,6 +71,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     id: "go",
     priceEurMonthly: 8,
     includedUsageUsd: 5,
+    maxModelMultiplier: 15,
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,
@@ -57,6 +82,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     id: "pro",
     priceEurMonthly: 20,
     includedUsageUsd: 15,
+    maxModelMultiplier: 40,
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,

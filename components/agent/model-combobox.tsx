@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Button,
@@ -20,8 +21,10 @@ import {
 } from "mangue-ui";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
+import { formatMultiplier, isMultiplierWithinPlan } from "@/lib/model-multiplier";
 import {
   useAgentModelsQuery,
+  type AgentModel,
   type AgentModelsScope,
 } from "@/lib/use-agent-models-query";
 
@@ -32,9 +35,22 @@ import {
  * l'id du modèle. Saisie libre autorisée (`freeTextLabel`) : indispensable pour
  * un provider générique dont `/models` peut être vide/indisponible. On
  * filtre/score nous-mêmes (`shouldFilter={false}`) et on tronque à MAX_RESULTS.
+ *
+ * Chaque modèle porte son COÛT relatif au modèle par défaut de minddy (« ×2,4 »,
+ * cf. lib/model-multiplier.ts), et ceux qui dépassent le plafond du plan sont
+ * GRISÉS, pas cachés : savoir qu'un modèle existe et ce qu'il coûte est
+ * précisément ce qui donne une raison de changer de plan. Le serveur les refuse
+ * de son côté (`ensureModelInPlan`) — le grisé est une politesse, pas la serrure.
+ * Rien de tout ça n'apparaît quand le catalogue ne renvoie pas de plafond : BYOK
+ * (l'utilisateur paye ses tokens) et catalogue admin.
  */
 
 const MAX_RESULTS = 50;
+
+/** Nom affichable d'un plan : son id capitalisé (« go » → « Go »). */
+function planLabel(id: string | null): string {
+  return id ? id.charAt(0).toUpperCase() + id.slice(1) : "";
+}
 
 export function ModelCombobox({
   value,
@@ -78,7 +94,9 @@ export function ModelCombobox({
    */
   scope?: AgentModelsScope;
 }) {
-  const { provider, models, loading } = useAgentModelsQuery(scope);
+  const { provider, models, maxMultiplier, planId, loading } = useAgentModelsQuery(scope);
+  const locale = useLocale();
+  const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -104,6 +122,32 @@ export function ModelCombobox({
   const trimmed = query.trim();
   const showFreeText = trimmed.length > 0 && !models.some((m) => m.id === trimmed);
 
+  // Le plafond ne s'affiche que si le catalogue en renvoie un ET qu'au moins un
+  // modèle est situé dessus : sur une liste sans prix (index illisible), une
+  // note « au-delà de ×4… » n'expliquerait rien qui se voie.
+  const allowed = (m: AgentModel) =>
+    maxMultiplier == null || isMultiplierWithinPlan(m.multiplier, maxMultiplier);
+  const showCapHint =
+    maxMultiplier != null && results.some((m) => m.multiplier != null && !allowed(m));
+
+  /**
+   * Le « ×N » d'une ligne — muet tant que le catalogue ne situe pas ce modèle.
+   * `alwaysAllowed` pour l'option « défaut », qui échappe au plafond : sans lui,
+   * un défaut d'instance cher porterait la couleur des lignes refusées tout en
+   * restant cliquable.
+   */
+  const multiplierBadge = (m: AgentModel, alwaysAllowed = false) =>
+    maxMultiplier != null && m.multiplier != null ? (
+      <span
+        className={cn(
+          "shrink-0 text-xs tabular-nums",
+          alwaysAllowed || allowed(m) ? "text-muted-foreground/70" : "text-muted-foreground"
+        )}
+      >
+        {formatMultiplier(m.multiplier, locale)}
+      </span>
+    ) : null;
+
   const select = (next: string) => {
     onChange(next);
     setQuery("");
@@ -111,6 +155,10 @@ export function ModelCombobox({
   };
 
   // Rendu de l'option « défaut » : libellé + modèle résolu (logo + nom) en aparté.
+  // Son multiplicateur s'affiche comme celui des autres, mais elle n'est JAMAIS
+  // grisée : c'est un défaut de minddy, et minddy ne se refuse pas les siens
+  // (`pr_review_model` vaut délibérément un modèle cher).
+  const defaultEntry = defaultModelId ? models.find((m) => m.id === defaultModelId) : undefined;
   const defaultRow = (
     <span className="flex min-w-0 flex-1 items-center gap-2">
       {defaultModelId ? logoFor(defaultModelId) : null}
@@ -120,6 +168,7 @@ export function ModelCombobox({
           {formatModelName(defaultModelId)}
         </span>
       ) : null}
+      {defaultEntry ? <span className="ml-auto">{multiplierBadge(defaultEntry, true)}</span> : null}
     </span>
   );
 
@@ -217,9 +266,17 @@ export function ModelCombobox({
               <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
             </CommandItem>
             {results.map((m) => (
-              <CommandItem key={m.id} value={m.id} onSelect={() => select(m.id)}>
+              <CommandItem
+                key={m.id}
+                value={m.id}
+                // Hors plafond : la ligne reste LISIBLE (opacité de cmdk) mais
+                // n'est ni cliquable ni navigable au clavier.
+                disabled={!allowed(m)}
+                onSelect={() => select(m.id)}
+              >
                 {logoFor(m.id)}
                 <span className="flex-1 truncate">{formatModelName(m.id)}</span>
+                {multiplierBadge(m)}
                 <Check
                   className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")}
                 />
@@ -247,6 +304,15 @@ export function ModelCombobox({
               </div>
             ) : null}
           </CommandList>
+          {/* Ce qui explique le grisé. En pied de liste et hors du scroll : un
+              tooltip par ligne était impossible (une option désactivée n'émet
+              aucun événement pointer), et la raison doit rester lisible pendant
+              qu'on parcourt le catalogue. */}
+          {showCapHint && maxMultiplier != null ? (
+            <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+              {t("modelPlanCap", { plan: planLabel(planId), limit: maxMultiplier })}
+            </p>
+          ) : null}
         </Command>
       </PopoverContent>
     </Popover>

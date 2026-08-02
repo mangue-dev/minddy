@@ -8,7 +8,6 @@ import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
-import type { MessageKey } from "@/lib/i18n-keys";
 import { unechoedMessages } from "@/lib/agent-pending";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 import {
@@ -31,6 +30,7 @@ import {
   useAgentRunQuery,
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
+import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
@@ -43,17 +43,6 @@ import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 import { AgentChangesBar } from "./agent-changes-bar";
 import { AgentDiffSheet } from "./agent-diff-sheet";
-
-/** Codes d'erreur bruts des routes agent (lancement ET reprise) → clés i18n Agent. */
-const AGENT_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
-  noRepo: "errorNoRepo",
-  unsupportedProvider: "errorUnsupportedProvider",
-  alreadyRunning: "errorAlreadyRunning",
-  quotaExceeded: "errorQuotaExceeded",
-  noModelForProvider: "errorNoModelForProvider",
-  supersededRun: "errorSupersededRun",
-  prMerged: "errorPrMerged",
-};
 
 /**
  * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait
@@ -152,11 +141,7 @@ export function AgentConversation({
   const queryClient = useQueryClient();
 
   /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
-  const agentErrorMessage = (err: unknown): string => {
-    const msg = (err as Error).message;
-    const key = AGENT_ERROR_KEYS[msg];
-    return key ? t(key) : msg;
-  };
+  const agentErrorMessage = useAgentErrorMessage();
 
   /**
    * Rafraîchit les runs de l'ancrage (issue OU run carnet) ET la liste globale des

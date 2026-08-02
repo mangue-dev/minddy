@@ -810,6 +810,37 @@ describe("buildAgentSystemPrompt — section Delegation", () => {
     expect(prompt).toContain("Strong One");
   });
 
+  it("dit au parent ce que chaque modèle COÛTE, et jusqu'où va le plan", () => {
+    // Le parent choisit un modèle pour ses filles tout seul : sans le ×N, c'est
+    // le seul choix coûteux de la session fait à l'aveugle.
+    const prompt = buildAgentSystemPrompt({
+      anchor: "issue",
+      subagents: {
+        favorites: [
+          { ...FAVORITES[0], multiplier: 1 },
+          { ...FAVORITES[1], multiplier: 29 },
+        ],
+        models: true,
+        maxMultiplier: 40,
+      },
+    });
+    expect(prompt).toContain("· ×1 · suggested thinking_effort");
+    // Sans niveau conseillé, le ×N enchaîne directement sur le use-case.
+    expect(prompt).toContain("· ×29 —");
+    expect(prompt).toMatch(/drains its usage budget ten times faster/);
+    expect(prompt).toMatch(/Models above ×40 are not available/);
+  });
+
+  it("ne parle pas d'échelle de coût quand rien n'est situé (BYOK)", () => {
+    const prompt = buildAgentSystemPrompt({
+      anchor: "issue",
+      subagents: { favorites: FAVORITES, models: true, maxMultiplier: null },
+    });
+    expect(prompt).toContain("Favorites for sub-agents");
+    expect(prompt).not.toContain("×");
+    expect(prompt).not.toMatch(/plan ceiling|not available on this account's plan/);
+  });
+
   it("tait les favoris quand le run ne peut pas changer de modèle, et le DIT", () => {
     const prompt = buildAgentSystemPrompt({
       anchor: "issue",

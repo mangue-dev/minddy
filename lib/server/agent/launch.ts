@@ -8,6 +8,8 @@ import { getProjectLink } from "@/lib/server/git/repo-links";
 import { REPO_PROVIDERS, isRepoProviderId } from "@/lib/repo-providers";
 import { insertEvents } from "@/lib/server/issue-events";
 import { resolveAgentModel, resolveReasoningLevel, AgentModelRequiredError } from "./model";
+import { ensureModelInPlan } from "./model-plan";
+import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { checkAgentQuota, type AgentQuota } from "./quota";
 import {
   createRun,
@@ -44,11 +46,31 @@ export type LaunchError =
   | "alreadyRunning"
   | "quotaExceeded"
   | "noModelForProvider"
+  | "modelAbovePlan"
   | "promptRequired";
+
+/**
+ * De quoi écrire « Claude Opus 5 (×12) dépasse le plafond de votre plan Go (×4) ».
+ * Le picker grise déjà ces modèles : ce refus-ci n'arrive qu'à un modèle choisi
+ * AVANT (défaut perso enregistré, puis downgrade ou plafond réajusté), et il
+ * doit donc se suffire à lui-même.
+ */
+export interface ModelAbovePlan {
+  model: string;
+  multiplier: number;
+  limit: number;
+  planId: string;
+}
 
 export type LaunchResult =
   | { ok: true; run: AgentRun }
-  | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
+  | {
+      ok: false;
+      error: LaunchError;
+      run?: AgentRun;
+      quota?: AgentQuota;
+      modelLimit?: ModelAbovePlan;
+    };
 
 export interface LaunchAgentInput {
   /**
@@ -171,10 +193,31 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   let model: string;
   try {
-    model = await resolveAgentModel({ perRunModel: input.model, userId: input.userId });
+    const resolved = await resolveAgentModel({ perRunModel: input.model, userId: input.userId });
+    model = resolved.model;
+    // Plafond de modèle du plan (quota minddy uniquement) : il porte sur ce que
+    // l'utilisateur a CHOISI — pas sur les défauts de minddy, dont l'instance
+    // répond. Le picker grise déjà ces modèles ; ce refus attrape le cas où le
+    // choix précède la contrainte (défaut perso enregistré, puis downgrade).
+    if (resolved.chosenByUser) {
+      await ensureModelInPlan({ userId: input.userId, model, mode: quota.mode });
+    }
   } catch (err) {
     if (err instanceof AgentModelRequiredError) {
       return { ok: false, error: "noModelForProvider" };
+    }
+    if (isPlanLimitError(err) && err.code === "model_above_plan") {
+      const p = err.params ?? {};
+      return {
+        ok: false,
+        error: "modelAbovePlan",
+        modelLimit: {
+          model: String(p.model ?? ""),
+          multiplier: Number(p.multiplier ?? 0),
+          limit: Number(p.limit ?? 0),
+          planId: String(p.plan ?? ""),
+        },
+      };
     }
     throw err;
   }

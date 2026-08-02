@@ -1,6 +1,9 @@
 import "server-only";
 
 import { getRootDefaultModel, resolveAgentApiKey, resolveProviderDefaultModel } from "./model";
+import { getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
+import { listOpenRouterIndex } from "./openrouter-index";
+import { modelCostMultiplier, type ModelPricing } from "@/lib/model-multiplier";
 import {
   getAgentProvider,
   normalizeBaseUrl,
@@ -15,17 +18,29 @@ import {
  * unique partagée par la route `/api/agent/models` (picker UI) ET le tool
  * `list_agent_models` de Numo (assistant) — même liste, même cache, même défaut.
  *
- * On ne renvoie que `{ id, name }` par modèle (+ le slug provider et le défaut
- * effectif) : le picker reformate via `formatModelName`, et Numo n'a besoin que
- * de l'id exact pour forcer un modèle au lancement. Cache process par
- * `provider|baseUrl` (la liste est identique pour tous les comptes d'un même
- * endpoint) ; sur échec on sert le cache périmé, sinon une liste vide (la saisie
- * libre reste autorisée en aval).
+ * On ne renvoie que `{ id, name, multiplier? }` par modèle (+ le slug provider,
+ * le défaut effectif et le plafond du plan) : le picker reformate via
+ * `formatModelName`, et Numo n'a besoin que de l'id exact pour forcer un modèle
+ * au lancement. Cache process par `provider|baseUrl` (la liste est identique
+ * pour tous les comptes d'un même endpoint) ; sur échec on sert le cache périmé,
+ * sinon une liste vide (la saisie libre reste autorisée en aval).
+ *
+ * Le multiplicateur, lui, n'est JAMAIS caché avec la liste : il se recalcule à
+ * chaque appel depuis le baseline du moment (`app_config.agent_model`, qu'un
+ * admin change quand il veut). Figé dans le cache, il aurait continué une heure
+ * durant à situer les modèles sur une échelle qui n'existe plus.
  */
 
 export interface AgentModelEntry {
   id: string;
   name: string;
+  /**
+   * Coût d'usage relatif au modèle par défaut de minddy (cf.
+   * lib/model-multiplier.ts). Absent quand il ne veut rien dire : provider BYOK
+   * (prix inconnus de nous, et de toute façon payés par l'utilisateur), modèle
+   * hors catalogue OpenRouter, ou baseline gratuit.
+   */
+  multiplier?: number;
 }
 
 export interface AgentModelsCatalog {
@@ -33,6 +48,14 @@ export interface AgentModelsCatalog {
   /** Modèle par défaut du provider actif (frontier BYOK ou défaut racine), ou null (générique). */
   defaultModel: string | null;
   models: AgentModelEntry[];
+  /**
+   * Plafond de multiplicateur du plan, ou `null` quand aucun ne s'applique :
+   * BYOK (l'utilisateur paye ses tokens) et catalogue admin. `null` = le picker
+   * n'affiche ni multiplicateur ni grisé.
+   */
+  maxMultiplier?: number | null;
+  /** Plan du compte — pour nommer le plafond dans l'UI (« votre plan Go »). */
+  planId?: string;
 }
 
 const TTL_MS = 60 * 60 * 1000;
@@ -45,23 +68,15 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
   return models.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** OpenRouter : catalogue public (Bearer optionnel), filtré au tool-calling. */
-async function listOpenRouter(baseUrl: string, apiKey?: string): Promise<AgentModelEntry[]> {
-  const headers: Record<string, string> = {};
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  const res = await fetch(`${baseUrl}/models`, { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = (await res.json()) as {
-    data?: Array<{ id: string; name?: string; supported_parameters?: string[] }>;
-  };
-  const models = (body.data ?? [])
-    .filter((m) => {
-      if (!m.id) return false;
-      const params = m.supported_parameters;
-      return !params?.length || params.includes("tools");
-    })
-    .map((m) => ({ id: m.id, name: m.name ?? m.id }));
-  return sortById(models);
+/**
+ * OpenRouter : le catalogue vient de l'index partagé (`openrouter-index.ts`),
+ * filtré au tool-calling. Une seule lecture de `/models` sert ici, les capacités
+ * de la boucle et les prix du plafond de plan.
+ */
+async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
+  const index = await listOpenRouterIndex(apiKey);
+  if (index.length === 0) throw new Error("empty index");
+  return sortById(index.filter((m) => m.tools).map((m) => ({ id: m.id, name: m.name })));
 }
 
 /** Endpoint OpenAI-compatible `/models` (OpenAI, Google, générique). */
@@ -99,7 +114,7 @@ async function loadModels(
   const strategy = getAgentProvider(provider)?.listStrategy ?? "openrouter";
   switch (strategy) {
     case "openrouter":
-      return listOpenRouter(baseUrl, apiKey);
+      return listOpenRouter(apiKey);
     case "anthropic":
       return listAnthropic(baseUrl, apiKey);
     case "openai":
@@ -111,21 +126,49 @@ async function loadModels(
 }
 
 /**
+ * Situe chaque modèle sur l'échelle du baseline et joint le plafond du plan.
+ * `limit` absent (BYOK, admin) → la liste ressort telle quelle : ni
+ * multiplicateur affiché, ni modèle grisé.
+ */
+async function withMultipliers(
+  models: AgentModelEntry[],
+  limit: ModelPlanLimit | null,
+): Promise<Pick<AgentModelsCatalog, "models" | "maxMultiplier" | "planId">> {
+  if (!limit?.baseline) return { models, maxMultiplier: null };
+  const index = await listOpenRouterIndex();
+  const pricing = new Map<string, ModelPricing | null>(index.map((m) => [m.id, m.pricing]));
+  return {
+    models: models.map((m) => {
+      const multiplier = modelCostMultiplier(pricing.get(m.id), limit.baseline);
+      return multiplier == null ? m : { ...m, multiplier };
+    }),
+    maxMultiplier: limit.maxMultiplier,
+    planId: limit.planId,
+  };
+}
+
+/**
  * Catalogue de modèles du provider ACTIF de l'utilisateur (BYOK ou clé
  * plateforme OpenRouter). Si aucune clé plateforme n'est configurée, on liste
  * quand même OpenRouter en public. Ne lève jamais : sur échec upstream, renvoie
  * le cache périmé s'il existe, sinon une liste vide.
+ *
+ * Les multiplicateurs et le plafond ne sont joints QU'en mode plateforme : en
+ * BYOK, l'utilisateur paye ses propres tokens — lui afficher une échelle de coût
+ * minddy et griser la moitié du catalogue serait faux deux fois.
  */
 export async function getAgentModelsForUser(userId: string): Promise<AgentModelsCatalog> {
   // Provider actif : BYOK du compte, ou clé plateforme OpenRouter.
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
+  let mode: "platform" | "byok" = "platform";
   try {
     const endpoint = await resolveAgentApiKey(userId);
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
+    mode = endpoint.mode;
   } catch {
     // Pas de clé plateforme : liste OpenRouter publique (baseUrl déjà par défaut).
   }
@@ -136,18 +179,40 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   const defaultModel =
     providerDefault ?? (provider === "generic" ? null : await getRootDefaultModel());
 
+  const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
+
   const cacheKey = `${provider}|${baseUrl}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) {
-    return { provider, defaultModel, models: hit.models };
+    return { provider, defaultModel, ...(await withMultipliers(hit.models, limit)) };
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
     cache.set(cacheKey, { at: Date.now(), models });
-    return { provider, defaultModel, models };
+    return { provider, defaultModel, ...(await withMultipliers(models, limit)) };
   } catch {
-    return { provider, defaultModel, models: hit?.models ?? [] };
+    return { provider, defaultModel, ...(await withMultipliers(hit?.models ?? [], limit)) };
   }
+}
+
+/**
+ * Catalogue de la review de PR : celui de la clé PLATEFORME, plus le plafond du
+ * compte. La review tourne toujours sur cette clé, donc toujours sur le quota
+ * minddy — le plafond s'y applique même à un compte en BYOK, qui verra donc des
+ * multiplicateurs ici alors que son picker d'agent n'en montre aucun. Ce n'est
+ * pas une incohérence : ce sont deux dépenses différentes, l'une la sienne,
+ * l'autre celle de minddy.
+ */
+export async function getPrReviewModelCatalog(userId: string): Promise<AgentModelsCatalog> {
+  const [models, limit] = await Promise.all([
+    getPlatformModelCatalog(),
+    getModelPlanLimit(userId),
+  ]);
+  return {
+    provider: DEFAULT_AGENT_PROVIDER,
+    defaultModel: null,
+    ...(await withMultipliers(models, limit)),
+  };
 }
 
 /**
@@ -176,7 +241,7 @@ export async function getPlatformModelCatalog(): Promise<AgentModelEntry[]> {
   if (hit && Date.now() - hit.at < TTL_MS) return hit.models;
 
   try {
-    const models = await listOpenRouter(baseUrl, apiKey);
+    const models = await listOpenRouter(apiKey);
     cache.set(cacheKey, { at: Date.now(), models });
     return models;
   } catch {

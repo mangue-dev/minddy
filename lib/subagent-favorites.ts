@@ -45,6 +45,12 @@ export interface FavoriteSubagentModel {
  *
  * Aucune ligne `app_config` n'est semée pour cette clé : tant que l'admin n'a
  * rien réglé, c'est cette liste qui tourne.
+ *
+ * La liste est ÉTAGÉE en coût (cf. `scopeSubagentModels`, qui la taille au
+ * plafond du plan avant de la servir) : chaque palier doit garder au moins deux
+ * entrées, sinon déléguer perd son sens — un parent qui n'a le choix qu'entre
+ * son propre modèle et rien ne délègue plus, il exécute. D'où le cran
+ * intermédiaire : sans lui, un compte Go ne voyait plus que DeepSeek.
  */
 export const DEFAULT_SUBAGENT_FAVORITES: FavoriteSubagentModel[] = [
   {
@@ -53,6 +59,13 @@ export const DEFAULT_SUBAGENT_FAVORITES: FavoriteSubagentModel[] = [
     use_case:
       "Cheap and fast. Default choice for exploration, greps, reading a lot of files, and any mechanical task.",
     thinking_effort: "low",
+  },
+  {
+    id: "anthropic/claude-haiku-4.5",
+    label: "Claude Haiku 4.5",
+    use_case:
+      "Good at code for a fraction of Sonnet. The middle gear: a real change in a file or two, a focused fix, a test to write.",
+    thinking_effort: "medium",
   },
   {
     id: "anthropic/claude-sonnet-5",

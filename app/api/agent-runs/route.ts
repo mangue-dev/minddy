@@ -184,13 +184,20 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   alreadyRunning: 409,
   quotaExceeded: 402,
   noModelForProvider: 400,
+  modelAbovePlan: 403,
   promptRequired: 400,
 };
 
 function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
   const status = LAUNCH_ERROR_STATUS[result.error] ?? 400;
   return NextResponse.json(
-    { error: result.error, code: result.error, run: result.run, quota: result.quota },
+    {
+      error: result.error,
+      code: result.error,
+      run: result.run,
+      quota: result.quota,
+      modelLimit: result.modelLimit,
+    },
     { status },
   );
 }

@@ -3,11 +3,13 @@ import "server-only";
 import os from "node:os";
 
 import { getAppConfigValue } from "@/lib/server/app-config";
+import { isMultiplierWithinPlan } from "@/lib/model-multiplier";
 import {
   DEFAULT_SUBAGENT_FAVORITES,
   parseSubagentFavorites,
   type FavoriteSubagentModel,
 } from "@/lib/subagent-favorites";
+import type { AgentModelsCatalog } from "./models-catalog";
 
 /**
  * Réglages des sous-agents (MIN-112) : la liste « Favorites for sub-agents » et le
@@ -73,6 +75,62 @@ export async function maxParallelSubagents(): Promise<number> {
   return Math.min(MAX_PARALLEL, Math.max(MIN_PARALLEL, cpus));
 }
 
+/** Un favori, situé sur l'échelle de coût du run — `undefined` = non situable. */
+export type ScopedFavorite = FavoriteSubagentModel & { multiplier?: number };
+
+/**
+ * Ce qu'un run a le droit de donner à ses filles : le catalogue et les favoris
+ * PASSÉS AU PLAFOND DE PLAN du compte qui paye.
+ *
+ * Sans ce tri, `spawn_agent` était le trou dans la raquette : le picker grise
+ * Opus pour un compte Go, mais l'agent parent, lui, se voyait offrir tout le
+ * catalogue tool-calling et pouvait déléguer dessus — sur le quota minddy, et
+ * sans que personne ne l'ait choisi. Le plafond doit valoir pour tout ce qui
+ * dépense, y compris quand c'est un modèle qui décide.
+ *
+ * Le plafond ne s'applique évidemment qu'au quota minddy : en BYOK, le catalogue
+ * ne porte pas de `maxMultiplier` et rien n'est retiré.
+ */
+export interface SubagentModelScope {
+  /** Ids que la fille peut vraiment tourner. */
+  allowedIds: string[];
+  /** Ids connus du catalogue mais au-dessus du plafond : refusés en le DISANT. */
+  abovePlanIds: string[];
+  /** Favoris qui tiennent dans le plafond — ce que le prompt annonce. */
+  favorites: ScopedFavorite[];
+  /** Plafond du plan, ou null (BYOK) — pour l'expliquer au parent. */
+  maxMultiplier: number | null;
+}
+
+export function scopeSubagentModels(opts: {
+  favorites: FavoriteSubagentModel[];
+  catalog: Pick<AgentModelsCatalog, "models" | "maxMultiplier">;
+}): SubagentModelScope {
+  const max = opts.catalog.maxMultiplier ?? null;
+  const multipliers = new Map(
+    opts.catalog.models.flatMap((m) => (m.multiplier == null ? [] : [[m.id, m.multiplier]] as const)),
+  );
+  const within = (id: string) => max == null || isMultiplierWithinPlan(multipliers.get(id), max);
+
+  const allowedIds: string[] = [];
+  const abovePlanIds: string[] = [];
+  for (const m of opts.catalog.models) (within(m.id) ? allowedIds : abovePlanIds).push(m.id);
+
+  return {
+    allowedIds,
+    abovePlanIds,
+    // Un favori que le catalogue ne situe pas reste servi : on ne retire pas une
+    // valeur sûre parce que l'index des prix était illisible ce jour-là.
+    favorites: opts.favorites
+      .filter((f) => within(f.id))
+      .map((f) => {
+        const multiplier = multipliers.get(f.id);
+        return multiplier == null ? f : { ...f, multiplier };
+      }),
+    maxMultiplier: max,
+  };
+}
+
 /**
  * Résolveur du champ `model` de `spawn_agent`, construit pour UN run.
  *
@@ -84,29 +142,47 @@ export async function maxParallelSubagents(): Promise<number> {
  * n'a pas pu être chargé : un favori curaté est une valeur sûre.
  *
  * Un id inventé revient en ERREUR DE TOOL avec la liste des favoris, jamais en 400
- * du provider — celui-ci brûlerait un round de la fille pour rien.
+ * du provider — celui-ci brûlerait un round de la fille pour rien. Un modèle qui
+ * existe mais dépasse le plafond du plan se refuse À PART, en le nommant : lui
+ * répondre « inconnu du catalogue » serait faux, et l'agent le retenterait sous
+ * une autre orthographe au lieu d'en choisir un autre.
  */
 export function makeSubagentModelResolver(opts: {
   favorites: FavoriteSubagentModel[];
-  /** Ids du catalogue du run (vide = catalogue indisponible). */
+  /** Ids du catalogue du run PASSÉS AU PLAFOND (vide = catalogue indisponible). */
   catalogIds: string[];
+  /** Ids du catalogue écartés par le plafond du plan. */
+  abovePlanIds?: string[];
+  /** Le plafond lui-même, pour le dire au parent. */
+  maxMultiplier?: number | null;
 }): (raw: string) => { ok: true; id: string } | { ok: false; error: string } {
   const catalog = new Set(opts.catalogIds);
+  const abovePlan = new Set(opts.abovePlanIds ?? []);
   const byLabel = new Map(opts.favorites.map((f) => [f.label.toLowerCase(), f.id]));
   const favoriteIds = new Set(opts.favorites.map((f) => f.id));
+  const list = () => opts.favorites.map((f) => `${f.id} (${f.label})`).join(", ");
 
   return (raw: string) => {
     const value = raw.trim();
     const byName = byLabel.get(value.toLowerCase());
     if (byName) return { ok: true, id: byName };
     if (favoriteIds.has(value) || catalog.has(value)) return { ok: true, id: value };
-    const list = opts.favorites.map((f) => `${f.id} (${f.label})`).join(", ");
+    if (abovePlan.has(value)) {
+      return {
+        ok: false,
+        error:
+          `${value} is above this account's plan ceiling` +
+          (opts.maxMultiplier != null ? ` (×${opts.maxMultiplier} its default model)` : "") +
+          `, so it cannot run on this account's usage budget. ` +
+          `Available favorites: ${list()}. Omit \`model\` to run the sub-agent on your own model.`,
+      };
+    }
     return {
       ok: false,
       error:
         `Unknown model ${JSON.stringify(value)} — it is not in this session's model catalogue ` +
         `(models that cannot call tools are excluded from it, and a sub-agent needs tools). ` +
-        `Favorites for sub-agents: ${list}. Omit \`model\` to run the sub-agent on your own model.`,
+        `Favorites for sub-agents: ${list()}. Omit \`model\` to run the sub-agent on your own model.`,
     };
   };
 }

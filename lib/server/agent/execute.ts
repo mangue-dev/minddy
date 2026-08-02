@@ -55,6 +55,7 @@ import {
 import {
   getSubagentFavorites,
   makeSubagentModelResolver,
+  scopeSubagentModels,
   maxParallelSubagents,
 } from "./subagent-config";
 import { getAgentModelsForUser } from "./models-catalog";
@@ -1232,15 +1233,22 @@ export async function executeAgentRun(
     // une heure et ne lève jamais) : c'est lui qui valide un id, et il FILTRE sur le
     // tool-calling — un sous-agent qui ne sait pas appeler d'outil ne peut rien faire.
     const subagentModels = provider === "openrouter";
-    const [subagentFavorites, subagentMaxParallel, subagentCatalog] = await Promise.all([
+    const [rawFavorites, subagentMaxParallel, subagentCatalog] = await Promise.all([
       getSubagentFavorites().catch(() => []),
       maxParallelSubagents().catch(() => 2),
       subagentModels && run.created_by
-        ? getAgentModelsForUser(run.created_by)
-            .then((c) => c.models.map((m) => m.id))
-            .catch(() => [] as string[])
-        : Promise.resolve([] as string[]),
+        ? getAgentModelsForUser(run.created_by).catch(() => null)
+        : Promise.resolve(null),
     ]);
+    // Le plafond de modèle du plan vaut AUSSI pour les filles : le catalogue
+    // servi ici est déjà passé au tamis, et les favoris hors plafond sortent du
+    // prompt. Sans ça, `spawn_agent` rouvrait par le bas ce que le picker ferme
+    // par le haut — sur le quota minddy, et décidé par un modèle.
+    const subagentScope = scopeSubagentModels({
+      favorites: rawFavorites,
+      catalog: subagentCatalog ?? { models: [], maxMultiplier: null },
+    });
+    const subagentFavorites = subagentScope.favorites;
 
     // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
@@ -1262,7 +1270,11 @@ export async function executeAgentRun(
         webSearch: webSearchAllowed,
         applyPatch: usesApplyPatch(run.model),
         images: imageInput,
-        subagents: { favorites: subagentFavorites, models: subagentModels },
+        subagents: {
+          favorites: subagentFavorites,
+          models: subagentModels,
+          maxMultiplier: subagentScope.maxMultiplier,
+        },
       });
       const contextMsg = issue
         ? buildAgentContextMessage({
@@ -1834,7 +1846,9 @@ export async function executeAgentRun(
         ? {
             resolveModel: makeSubagentModelResolver({
               favorites: subagentFavorites,
-              catalogIds: subagentCatalog,
+              catalogIds: subagentScope.allowedIds,
+              abovePlanIds: subagentScope.abovePlanIds,
+              maxMultiplier: subagentScope.maxMultiplier,
             }),
           }
         : {}),

@@ -26,10 +26,17 @@ import { lengthBucket } from "./analytics-sanitize";
  */
 export class ApiError extends Error {
   code?: string;
-  constructor(message: string, code?: string) {
+  /**
+   * Détail structuré que le message brut ne porte pas — aujourd'hui le
+   * `modelLimit` d'un refus `modelAbovePlan` (modèle, multiplicateur, plafond,
+   * plan), dont l'écran a besoin pour dire lequel et jusqu'où.
+   */
+  details?: Record<string, unknown>;
+  constructor(message: string, code?: string, details?: Record<string, unknown>) {
     super(message);
     this.name = "ApiError";
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -42,9 +49,11 @@ async function parseJson<T>(response: Response): Promise<T> {
     data = null;
   }
   if (!response.ok) {
-    const payload = data as { error?: string; code?: string } | null;
+    const payload = data as
+      | { error?: string; code?: string; modelLimit?: Record<string, unknown> }
+      | null;
     const message = payload?.error || text.trim() || "Request failed";
-    throw new ApiError(message, payload?.code);
+    throw new ApiError(message, payload?.code, payload?.modelLimit);
   }
   return data as T;
 }

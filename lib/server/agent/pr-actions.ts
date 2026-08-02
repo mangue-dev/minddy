@@ -15,6 +15,7 @@ import {
 import { hasRecentPrEvent } from "./pr-activity";
 import { broadcastPrChanged } from "./pr-live";
 import { ensureAgentsAllowed } from "@/lib/server/entitlements";
+import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
@@ -780,7 +781,11 @@ export async function startNumoPrReview(input: {
     const running = await activePrReviewRun(scope.pr.id);
     if (running) return running;
 
-    const model = await resolvePrReviewModel({ userId });
+    const { model, chosenByUser } = await resolvePrReviewModel({ userId });
+    // La review se paye toujours sur la clé plateforme, donc sur le quota
+    // minddy : le plafond de modèle du plan s'y applique, BYOK ou pas. Un refus
+    // rejoint ceux du plan et du budget ci-dessus — journalisé, mention ignorée.
+    if (chosenByUser) await ensureModelInPlan({ userId, model, mode: "platform" });
     const run = await createPrReviewRun({
       pullRequestId: scope.pr.id,
       userId,
@@ -1419,12 +1424,18 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   unsupportedProvider: 409,
   alreadyRunning: 409,
   quotaExceeded: 402,
+  modelAbovePlan: 403,
 };
 
 function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
   const status = LAUNCH_ERROR_STATUS[result.error] ?? 400;
   return NextResponse.json(
-    { error: result.error, code: result.error, quota: result.quota },
+    {
+      error: result.error,
+      code: result.error,
+      quota: result.quota,
+      modelLimit: result.modelLimit,
+    },
     { status },
   );
 }
@@ -1913,13 +1924,24 @@ export async function prAiReviewResponse(
   // (on résout comme d'habitude, sans rien toucher).
   const chosen = requestedModel?.trim();
   if (requestedModel !== undefined && !chosen) await rememberPrReviewModel(userId, null);
-  const model = await resolvePrReviewModel({
+  const { model, chosenByUser } = await resolvePrReviewModel({
     perCall: chosen,
     userId,
     // Le choix retenu ne doit pas revenir par la fenêtre quand on vient
     // justement de demander le défaut.
     ignoreRemembered: requestedModel !== undefined && !chosen,
   });
+  // Plafond de modèle du plan : la review tourne sur la clé plateforme, donc sur
+  // le quota minddy, y compris pour un compte en BYOK. Refusé AVANT d'ouvrir la
+  // session — sans ça, l'écran s'abonnerait à une passe qui ne partira pas.
+  if (chosenByUser) {
+    try {
+      await ensureModelInPlan({ userId, model, mode: "platform" });
+    } catch (err) {
+      if (isPlanLimitError(err)) return planLimitResponse(err);
+      throw err;
+    }
+  }
   const run = await createPrReviewRun({ pullRequestId: scope.pr.id, userId, model });
   // Le choix n'est retenu que s'il a été FAIT : figer le défaut de l'instance
   // sur le compte le gèlerait à la valeur du jour, et un changement en /admin

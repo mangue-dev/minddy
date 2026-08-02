@@ -31,6 +31,8 @@ const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
 export interface AgentModel {
   id: string;
   name: string;
+  /** Coût d'usage relatif au modèle par défaut de minddy (lib/model-multiplier.ts). */
+  multiplier?: number;
 }
 
 export const agentModelsQueryKey = ["agent-models"] as const;
@@ -40,20 +42,38 @@ interface AgentModelsResult {
   /** Modèle par défaut du provider actif (frontier BYOK ou défaut racine), ou null. */
   defaultModel: string | null;
   models: AgentModel[];
+  /**
+   * Plafond de multiplicateur du plan, ou null quand aucun ne s'applique (BYOK,
+   * catalogue admin) — le picker n'affiche alors ni multiplicateur ni grisé.
+   */
+  maxMultiplier: number | null;
+  /** Plan du compte, pour le nommer dans l'explication du plafond. */
+  planId: string | null;
 }
 
 async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsResult> {
+  const empty = {
+    provider: DEFAULT_AGENT_PROVIDER,
+    defaultModel: null,
+    models: [],
+    maxMultiplier: null,
+    planId: null,
+  };
   const res = await fetch(SCOPE_ENDPOINTS[scope]);
-  if (!res.ok) return { provider: DEFAULT_AGENT_PROVIDER, defaultModel: null, models: [] };
+  if (!res.ok) return empty;
   const data = (await res.json()) as {
     provider?: AgentProviderId;
     defaultModel?: string | null;
     models?: AgentModel[];
+    maxMultiplier?: number | null;
+    planId?: string | null;
   };
   return {
     provider: data.provider ?? DEFAULT_AGENT_PROVIDER,
     defaultModel: data.defaultModel ?? null,
     models: data.models ?? [],
+    maxMultiplier: data.maxMultiplier ?? null,
+    planId: data.planId ?? null,
   };
 }
 
@@ -68,6 +88,8 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     provider: data?.provider ?? DEFAULT_AGENT_PROVIDER,
     defaultModel: data?.defaultModel ?? null,
     models: data?.models ?? [],
+    maxMultiplier: data?.maxMultiplier ?? null,
+    planId: data?.planId ?? null,
     loading: isLoading,
   };
 }

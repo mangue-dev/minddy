@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
+import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
+import { userHasByokKey } from "@/lib/server/agent/model";
+import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 
 /**
  * Préférences agent de l'utilisateur (MIN-46) : son modèle par défaut, et son
@@ -72,6 +75,22 @@ export async function PUT(request: NextRequest) {
     }
     // On stocke la forme que la regex a validée — pas les blancs autour.
     patch.default_model = model === null ? null : model.trim();
+    // Plafond de modèle du plan : on refuse d'ENREGISTRER ce qui serait refusé
+    // au lancement. Le picker grise déjà ces modèles ; ici on ferme la saisie
+    // libre, et on évite surtout d'écrire une préférence qui bloquerait ensuite
+    // tous les runs du compte. Rien à vérifier en BYOK : ce sont ses tokens.
+    if (patch.default_model) {
+      try {
+        await ensureModelInPlan({
+          userId: auth.user.id,
+          model: patch.default_model as string,
+          mode: (await userHasByokKey(auth.user.id)) ? "byok" : "platform",
+        });
+      } catch (err) {
+        if (isPlanLimitError(err)) return planLimitResponse(err);
+        throw err;
+      }
+    }
   }
 
   if ("default_reasoning_level" in body) {

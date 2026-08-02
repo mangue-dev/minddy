@@ -21,6 +21,7 @@ const {
   getSubagentFavorites,
   makeSubagentModelResolver,
   maxParallelSubagents,
+  scopeSubagentModels,
   SUBAGENT_FAVORITES_CONFIG_KEY,
   SUBAGENT_MAX_PARALLEL_CONFIG_KEY,
 } = await import("./subagent-config");
@@ -135,5 +136,68 @@ describe("makeSubagentModelResolver", () => {
     // qu'il peut simplement omettre le champ.
     expect(out.error).toMatch(/cannot call tools are excluded/);
     expect(out.error).toMatch(/Omit `model`/);
+  });
+
+  it("refuse un modèle HORS PLAFOND à part, sans le dire inconnu", () => {
+    // « Inconnu du catalogue » sur un modèle qui existe enverrait l'agent le
+    // retenter sous une autre orthographe, un round à chaque fois.
+    const capped = makeSubagentModelResolver({
+      favorites,
+      catalogIds: ["deepseek/cheap"],
+      abovePlanIds: ["anthropic/opus"],
+      maxMultiplier: 15,
+    });
+    const out = capped("anthropic/opus");
+    expect(out.ok).toBe(false);
+    if (out.ok) throw new Error("unreachable");
+    expect(out.error).toMatch(/above this account's plan ceiling/);
+    expect(out.error).toContain("×15");
+    expect(out.error).not.toMatch(/Unknown model/);
+    expect(out.error).toMatch(/Omit `model`/);
+  });
+});
+
+describe("scopeSubagentModels", () => {
+  const favorites = [
+    { id: "deepseek/cheap", label: "Cheap One", use_case: "exploration" },
+    { id: "anthropic/strong", label: "Strong One", use_case: "code" },
+  ];
+  const catalog = {
+    models: [
+      { id: "deepseek/cheap", name: "Cheap", multiplier: 1 },
+      { id: "mistral/mid", name: "Mid", multiplier: 6 },
+      { id: "anthropic/strong", name: "Strong", multiplier: 29 },
+    ],
+  };
+
+  it("retire du catalogue ET des favoris ce que le plan ne paye pas", () => {
+    // Le trou que ça bouche : le picker grise Strong pour un compte Go, mais
+    // l'agent parent pouvait déléguer dessus — sur le même quota.
+    const scope = scopeSubagentModels({ favorites, catalog: { ...catalog, maxMultiplier: 15 } });
+    expect(scope.allowedIds).toEqual(["deepseek/cheap", "mistral/mid"]);
+    expect(scope.abovePlanIds).toEqual(["anthropic/strong"]);
+    expect(scope.favorites.map((f) => f.id)).toEqual(["deepseek/cheap"]);
+  });
+
+  it("situe chaque favori retenu, pour que le parent voie ce qu'il dépense", () => {
+    const scope = scopeSubagentModels({ favorites, catalog: { ...catalog, maxMultiplier: 40 } });
+    expect(scope.favorites.map((f) => f.multiplier)).toEqual([1, 29]);
+  });
+
+  it("ne retire RIEN sans plafond (BYOK) : ce sont les tokens de l'utilisateur", () => {
+    const scope = scopeSubagentModels({ favorites, catalog: { ...catalog, maxMultiplier: null } });
+    expect(scope.abovePlanIds).toEqual([]);
+    expect(scope.favorites.map((f) => f.id)).toEqual(["deepseek/cheap", "anthropic/strong"]);
+  });
+
+  it("garde les favoris que le catalogue ne situe pas", () => {
+    // Index des prix illisible → aucun multiplicateur → on n'interdit rien sur
+    // une ignorance, exactement comme le picker.
+    const scope = scopeSubagentModels({
+      favorites,
+      catalog: { models: [{ id: "deepseek/cheap", name: "Cheap" }], maxMultiplier: 15 },
+    });
+    expect(scope.favorites.map((f) => f.id)).toEqual(["deepseek/cheap", "anthropic/strong"]);
+    expect(scope.abovePlanIds).toEqual([]);
   });
 });

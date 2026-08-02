@@ -17,7 +17,6 @@ import {
   toast,
 } from "mangue-ui";
 import { Check, ChevronsUpDown } from "lucide-react";
-import type { MessageKey } from "@/lib/i18n-keys";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -27,18 +26,10 @@ import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useProjects } from "@/lib/projects-context";
 import type { Project } from "@/lib/types";
-
-/** Codes d'erreur du lancement carnet → clés i18n Agent (miroir AgentConversation). */
-const LAUNCH_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
-  noRepo: "errorNoRepo",
-  unsupportedProvider: "errorUnsupportedProvider",
-  quotaExceeded: "errorQuotaExceeded",
-  noModelForProvider: "errorNoModelForProvider",
-  promptRequired: "errorPromptRequired",
-};
 
 const MAX_RESULTS = 50;
 
@@ -161,6 +152,7 @@ export function NoteCompose({
   onLaunched: (run: AgentRunSummary) => void;
 }) {
   const t = useTranslations("Agent");
+  const agentErrorMessage = useAgentErrorMessage();
   const queryClient = useQueryClient();
   const { projects } = useProjects();
 
@@ -204,8 +196,7 @@ export function NoteCompose({
       // Refusé (pas de dépôt lié, quota…) : la run n'existe pas → on retire la
       // bulle plutôt que de laisser croire au lancement.
       setLaunchText(null);
-      const key = LAUNCH_ERROR_KEYS[(err as Error).message];
-      toast.error(key ? t(key) : (err as Error).message);
+      toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
     }

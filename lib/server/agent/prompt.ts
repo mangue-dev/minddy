@@ -66,12 +66,20 @@ export function buildAgentSystemPrompt(input: {
    * suit `subagentToolsFor` : à false, le champ `model` de `spawn_agent` n'existe
    * pas et le prompt ne parle donc pas de favoris.
    *
-   * Les favoris viennent d'`app_config`, donc identiques pour tous les runs : le
-   * préfixe système reste partagé et le prompt caching de `caching.ts` tient.
+   * Les favoris viennent d'`app_config`, mais sont ensuite TAILLÉS au plafond de
+   * modèle du plan (`scopeSubagentModels`) : le préfixe système ne se décline
+   * donc plus qu'en une poignée de variantes — une par palier de plafond, plus
+   * le BYOK — au lieu d'être strictement unique. Le prompt caching de
+   * `caching.ts` tient toujours à l'intérieur d'un palier, ce qui est le prix à
+   * payer pour ne pas annoncer au parent des modèles que le compte ne peut pas
+   * se payer : il les essaierait, et brûlerait un round par refus.
    */
   subagents?: {
-    favorites: FavoriteSubagentModel[];
+    /** `multiplier` = coût relatif au modèle par défaut (lib/model-multiplier.ts). */
+    favorites: Array<FavoriteSubagentModel & { multiplier?: number }>;
     models: boolean;
+    /** Plafond du plan, quand il y en a un (quota minddy). */
+    maxMultiplier?: number | null;
     /** Bibliothèque de templates rendue. Défaut : `describeTemplates()`. */
     templates?: string;
   };
@@ -125,18 +133,32 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 - \`spawn_agent\` — hand a defined piece of work to a SUB-AGENT (a child session with its own context) and get a report back. It does not block, and there is no tool to wait for it. \`agent_status\` / \`list_agents\` — look in on them. See Delegating below.`
     : "";
 
+  // Le « ×N » n'est pas décoratif : le parent choisit un modèle par lui-même, et
+  // c'était jusqu'ici le seul choix coûteux de la session fait à l'aveugle — la
+  // seule indication étant « most expensive » en prose dans un use-case.
+  const costCeiling = input.subagents?.maxMultiplier;
+  const costScaleNote =
+    input.subagents?.favorites.some((f) => f.multiplier != null)
+      ? `
+\`×N\` is what a model costs against this account's DEFAULT model, per token: ×10 drains its usage budget ten times faster for the same work. Delegating a grep to a ×30 model is money burnt — match the model to the job.${
+          costCeiling != null
+            ? ` Models above ×${costCeiling} are not available on this account's plan; they are left out of the list above and refused if you ask for one.`
+            : ""
+        }`
+      : "";
+
   const favoritesBlock =
     input.subagents && input.subagents.models && input.subagents.favorites.length > 0
       ? `
 
 ### Favorites for sub-agents
-Pass one of these in \`model\` — by its id or by its name — to run a sub-agent on something other than your own model. Any tool-capable model of the catalogue also works; these are the ones curated for this job.
+Pass one of these in \`model\` — by its id or by its name — to run a sub-agent on something other than your own model. Any tool-capable model of the catalogue also works${costCeiling != null ? ` as long as it stays under the ceiling below` : ""}; these are the ones curated for this job.
 ${input.subagents.favorites
   .map(
     (f) =>
-      `- **${f.label}** (\`${f.id}\`)${f.thinking_effort ? ` · suggested thinking_effort: \`${f.thinking_effort}\`` : ""} — ${f.use_case}`,
+      `- **${f.label}** (\`${f.id}\`)${f.multiplier != null ? ` · ×${f.multiplier}` : ""}${f.thinking_effort ? ` · suggested thinking_effort: \`${f.thinking_effort}\`` : ""} — ${f.use_case}`,
   )
-  .join("\n")}`
+  .join("\n")}${costScaleNote}`
       : "";
 
   const delegationSection = input.subagents

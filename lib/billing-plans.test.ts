@@ -29,3 +29,24 @@ describe("nextBillingPlanId", () => {
     }
   });
 });
+
+describe("maxModelMultiplier", () => {
+  it("laisse toujours passer le modèle par défaut de minddy", () => {
+    // Le baseline vaut ×1 par construction : un plafond en dessous fermerait
+    // l'agent à ce plan-là, y compris sur le modèle que minddy résout tout seul.
+    for (const plan of BILLING_PLANS) {
+      expect(plan.maxModelMultiplier).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("monte avec le budget d'usage", () => {
+    // L'ordre des deux échelles doit rester le même : un plan qui donnerait plus
+    // de budget mais moins de choix de modèle serait un downgrade déguisé.
+    for (let i = 1; i < BILLING_PLANS.length; i++) {
+      const prev = BILLING_PLANS[i - 1];
+      const plan = BILLING_PLANS[i];
+      if (plan.includedUsageUsd <= prev.includedUsageUsd) continue;
+      expect(plan.maxModelMultiplier).toBeGreaterThan(prev.maxModelMultiplier);
+    }
+  });
+});

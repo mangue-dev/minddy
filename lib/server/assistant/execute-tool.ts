@@ -184,6 +184,12 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
       return "Monthly code-agent usage limit reached. Add your own OpenRouter key (BYOK) in Account settings for unlimited usage.";
     case "noModelForProvider":
       return "The active provider has no default model, so a model must be chosen. Call list_agent_models to find an available model id for this provider, then relaunch with that model (or the user can set a default in Account settings).";
+    case "modelAbovePlan":
+      // Numo relaie ce refus tel quel : c'est lui qui a pu forcer le modèle, et
+      // il doit pouvoir en proposer un autre sans que l'utilisateur devine.
+      return r.modelLimit
+        ? `The model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's default model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Call list_agent_models to pick a model within the ceiling, or the user can upgrade their plan.`
+        : "That model is above the usage ceiling of the user's plan. Call list_agent_models to pick a cheaper one.";
     default:
       return "Could not launch the code agent.";
   }

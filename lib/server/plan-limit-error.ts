@@ -16,7 +16,8 @@ export type PlanLimitCode =
   | "issue_limit_reached"
   | "members_pro_only"
   | "agents_not_in_plan"
-  | "usage_budget_exceeded";
+  | "usage_budget_exceeded"
+  | "model_above_plan";
 
 export class PlanLimitError extends Error {
   readonly status = 403;
@@ -43,6 +44,7 @@ const PLAN_LIMIT_I18N_KEYS: Record<PlanLimitCode, MessageKey<"ApiErrors">> = {
   members_pro_only: "membersProOnly",
   agents_not_in_plan: "agentsNotInPlan",
   usage_budget_exceeded: "usageBudgetExceeded",
+  model_above_plan: "modelAbovePlan",
 };
 
 /** Réponse 403 localisée d'une PlanLimitError (contexte requête uniquement). */
