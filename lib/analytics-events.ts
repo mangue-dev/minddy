@@ -334,7 +334,12 @@ export interface AnalyticsEventProps {
       | "comparison"
       | "changelog";
   };
-  landing_section_viewed: { section: string };
+  // `landing_section_viewed` a été retiré (MIN-150) : catalogué à sa création,
+  // il n'a JAMAIS eu d'émetteur, et PostHog n'en a donc jamais reçu un seul.
+  // Un nom qui traîne ici se lit comme une mesure existante — on croit pouvoir
+  // interroger « quelles sections sont vues », et la réponse vide passe pour
+  // une absence de trafic. Le rétablir = une ligne ici + un composant client
+  // qui l'émet, les deux dans le même geste.
   landing_faq_opened: { question_index: number };
   /** Démo de dictée jouable (MIN-150). `input` distingue la prise au micro de
    *  la phrase d'exemple : savoir laquelle des deux fait le « aha » décide de
@@ -596,7 +601,6 @@ const EVENT_NAMES = [
   // Site public
   "landing_viewed",
   "landing_cta_clicked",
-  "landing_section_viewed",
   "landing_faq_opened",
   "landing_voice_demo_started",
   "landing_voice_demo_completed",
