@@ -515,15 +515,22 @@ export async function syncRepoPullRequests(opts: {
 
   const projects = await projectsForRepo(opts.provider, opts.repoFullName);
   const rows: Record<string, unknown>[] = [];
-  /** PR dont l'état a CHANGÉ depuis la dernière lecture — le trou d'un webhook. */
-  const drifted: Array<{ number: number; state: PullRequestState }> = [];
+  /** PR dont l'état a CHANGÉ depuis la dernière lecture — le trou d'un webhook.
+      `at` = sa dernière activité chez la forge, la clé de rejeu (cf. plus bas). */
+  const drifted: Array<{ number: number; state: PullRequestState; at: number }> = [];
   for (const pull of pulls) {
     const before = knownByNumber.get(pull.number);
     const state = prStateFromRef(pull);
     // Seulement les lignes DÉJÀ connues : au premier balayage d'un dépôt qu'on
     // vient de lier, tout est nouveau, et rien de ce qui s'y est passé avant
     // minddy ne doit bouger un ticket.
-    if (before && before.state !== state) drifted.push({ number: pull.number, state });
+    if (before && before.state !== state) {
+      drifted.push({
+        number: pull.number,
+        state,
+        at: Date.parse(pull.updatedAt ?? pull.createdAt ?? "") || 0,
+      });
+    }
     const issueId =
       before?.issue_id ??
       (await resolveIssueForPr({
@@ -577,6 +584,15 @@ export async function syncRepoPullRequests(opts: {
   // naturelle, et doit y trouver l'état à jour, pas celui qu'on vient de
   // corriger. Rien à raconter en activité (`actionType: null`) — on répare un
   // état, on n'a pas vu le geste qui l'a produit.
+  //
+  // Du PLUS ANCIEN au plus récent : plusieurs PR d'un MÊME ticket peuvent avoir
+  // dérivé ensemble (un ticket en enchaîne légitimement plusieurs au fil des
+  // runs — cf. `hasLivePullRequest`), et chacune réécrit le statut de ce ticket.
+  // Le dernier rejeu gagne : sans ordre, c'est un hasard, et les deux forges
+  // listent par fraîcheur DÉCROISSANTE — la plus vieille avait donc le dernier
+  // mot, et un ticket dont la dernière PR est fusionnée repartait « à faire »
+  // sur une PR refusée d'avant. On rejoue dans l'ordre où les états ont bougé.
+  drifted.sort((a, b) => a.at - b.at);
   for (const { number, state } of drifted) {
     await reconcileDriftedPr(opts.provider, opts.repoFullName, number, state);
   }

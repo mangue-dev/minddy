@@ -207,8 +207,10 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   if (number == null || !repoFullName) return;
 
   // Ingestion D'ABORD (MIN-143) : la PR existe chez minddy, qu'elle vienne de
-  // Numo ou d'un humain. Les gardes qui suivent — `mapPrState`, puis les runs —
-  // ne parlent que du cycle de vie de l'agent, et une PR humaine n'en a pas.
+  // Numo ou d'un humain. Les gardes qui suivent — l'état pilotant, puis les
+  // runs — ne parlent que du cycle de vie de l'agent, et une PR humaine n'en a
+  // pas. C'est aussi ce qui rend le rattachement au ticket LISIBLE plus bas :
+  // `applyForgePrToIssue` relit la ligne qu'on vient d'écrire.
   if (payload.pull_request && INGESTED_PR_ACTIONS.has(action)) {
     await ingestPullRequest(repoFullName, number, payload.pull_request);
   }
