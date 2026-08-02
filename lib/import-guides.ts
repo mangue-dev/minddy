@@ -60,6 +60,10 @@ export const IMPORT_GUIDES: ImportGuide[] = [
   {
     id: "notion",
     // Marque monochrome comme GitHub : le « N » noir disparaîtrait sur fond sombre.
+    // Tracé repris de `@lobehub/icons` (Notion/components/Mono), la source des
+    // marques de `public/agents/` — la variante claire est le tracé en #111, la
+    // sombre le même en #fff. Son `fill-rule="evenodd"` n'est pas décoratif :
+    // sans lui le « N » n'est pas détouré et le logo devient un bloc plein.
     logo: "/import/notion-light.svg",
     logoDark: "/import/notion-dark.svg",
     label: "Notion",
