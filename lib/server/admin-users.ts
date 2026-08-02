@@ -64,13 +64,29 @@ export async function fetchAdminUsers(params: {
   return { rows, total: rows.length > 0 ? Number(rows[0].total_count) || 0 : 0 };
 }
 
+/**
+ * Les comptes qui ont posé une clé BYOK. L'étape « clé » de l'onboarding se
+ * coche dessus (MIN-149) : sans cet ensemble, l'entonnoir d'admin compterait
+ * bloqués sur cette étape des comptes qui l'ont franchie.
+ *
+ * Lue en entier plutôt que filtrée sur la page : `user_ai_keys` ne porte qu'une
+ * ligne par compte en BYOK — un sous-ensemble minuscule des comptes — et une
+ * seule lecture sert les deux routes d'admin quelle que soit leur pagination.
+ */
+export async function fetchByokUserIds(): Promise<Set<string>> {
+  const { data, error } = await getServiceClient().from("user_ai_keys").select("user_id");
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((row) => (row as { user_id: string }).user_id));
+}
+
 /** L'état d'onboarding d'un compte, résolu comme la home le résout. */
-export function onboardingOf(row: AdminUserRpcRow) {
+export function onboardingOf(row: AdminUserRpcRow, byokUserIds: ReadonlySet<string>) {
   const meta = row.meta ?? {};
   const state = resolveOnboardingState({
     meta,
     projectCount: Number(row.projects_owned) + Number(row.projects_member),
     issueCount: Number(row.issues_accessible),
+    hasAiKey: byokUserIds.has(row.user_id),
     cyclesEnabled: resolveCyclePrefs(meta).enabled,
   });
   return {

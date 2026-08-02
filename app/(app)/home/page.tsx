@@ -89,9 +89,13 @@ export default function HomePage() {
                 : t("welcomeNoName")
               : greeting}
           </h1>
+          {/* Le nombre d'étapes vient de l'état, pas de la traduction : il était
+              écrit en toutes lettres (« Quatre étapes ») et démentait
+              l'indicateur « Étape 4 sur 5 » de la carte juste en dessous dès
+              qu'une étape s'ajoutait (MIN-149). */}
           {onboarding.showCard && (
             <p className="mt-1 text-sm text-muted-foreground">
-              {t("onboardingSubtitle")}
+              {t("onboardingSubtitle", { n: onboarding.totalCount })}
             </p>
           )}
         </div>

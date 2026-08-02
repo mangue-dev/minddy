@@ -23,18 +23,25 @@ export const FAQ_KEYS = [
 ] as const;
 
 /**
- * Les quatre premières portent sur l'argent ; `mcp` et `byok` ferment les deux
- * objections que le tableau laisse ouvertes — brancher SES agents par MCP n'est
- * gardé par aucun plan (seul l'agent Numo l'est), et une clé perso lève le
- * plafond d'usage sans lever la porte de plan.
+ * `byok` EN PREMIER (MIN-149). Il fermait la liste, à la place d'une réserve
+ * qu'on concède une fois le prix accepté. C'est l'inverse : pour qui code avec
+ * des agents toute la journée et paye déjà ses tokens, « l'agent peut tourner
+ * sur votre clé » est ce qui rend le reste de la page lisible — l'abonnement
+ * achète minddy, l'usage inclus est la commodité de qui ne veut pas s'embêter.
+ * La section « Votre clé, votre inférence » le dit plus haut sur la page ; la
+ * question reste ici parce qu'elle porte les deux réserves (la clé ne vaut que
+ * pour l'agent, et elle ne lève pas la garde de plan).
+ *
+ * Suivent les questions d'argent, puis `mcp` — la dernière objection que le
+ * tableau laisse ouverte : brancher SES agents n'est gardé par aucun plan.
  */
 export const PRICING_FAQ_KEYS = [
+  "byok",
   "usage",
   "overage",
   "change",
   "refund",
   "mcp",
-  "byok",
 ] as const;
 
 /**

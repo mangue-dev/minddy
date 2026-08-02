@@ -5,6 +5,7 @@ import { toast } from "mangue-ui";
 import { useAuth } from "./auth-context";
 import { useProjects } from "./projects-context";
 import { useHomeSummaryQuery } from "./use-home-summary-query";
+import { useAiKeysQuery } from "./use-ai-keys-query";
 import { resolveCyclePrefs } from "./cycle-prefs";
 import { useAnalytics } from "./use-analytics";
 import {
@@ -56,6 +57,23 @@ export function useOnboarding(): UseOnboardingResult {
 
   const meta = user?.user_metadata as Record<string, unknown> | undefined;
 
+  /**
+   * L'étape « clé » (MIN-149) se coche sur une donnée réelle, donc il faut lire
+   * les clés du compte — mais UNIQUEMENT quand l'onboarding peut s'afficher.
+   * Les deux conditions se calculent sans cette lecture (c'est ce qui rend le
+   * garde-fou possible) : le compte n'a pas passé l'onboarding, et il est soit
+   * déjà entré dedans, soit encore vierge. Les signaux sont attendus avant de
+   * conclure « vierge », sinon la requête partirait pour tout le monde le temps
+   * d'un rendu.
+   */
+  const signalsReady = !!user && !projectsLoading && !summaryLoading;
+  const onboardingPossible =
+    signalsReady &&
+    meta?.[ONBOARDING_DISMISSED_META_KEY] !== true &&
+    (meta?.[ONBOARDING_STARTED_META_KEY] === true ||
+      (projects.length === 0 && counts.total === 0));
+  const { keys, loading: keysLoading } = useAiKeysQuery({ enabled: onboardingPossible });
+
   const effectiveMeta = useMemo(() => {
     if (pendingSteps.length === 0 && !pendingDismiss && !pendingStart) {
       return meta ?? null;
@@ -75,15 +93,16 @@ export function useOnboarding(): UseOnboardingResult {
         meta: effectiveMeta,
         projectCount: projects.length,
         issueCount: counts.total,
+        hasAiKey: keys.length > 0,
         // Source de vérité des cycles : les métadonnées du compte, pas le board.
         // `GET /api/me/summary` ne fait que les refléter — s'appuyer sur lui
         // ferait attendre un refetch avant que l'étape se coche.
         cyclesEnabled: resolveCyclePrefs(effectiveMeta).enabled,
       }),
-    [effectiveMeta, projects.length, counts.total],
+    [effectiveMeta, projects.length, counts.total, keys.length],
   );
 
-  const loading = !user || projectsLoading || summaryLoading;
+  const loading = !user || projectsLoading || summaryLoading || keysLoading;
 
   /**
    * Grave l'entrée en onboarding sur le compte, une seule fois, dès que la

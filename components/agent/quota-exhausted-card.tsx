@@ -66,7 +66,9 @@ export function QuotaExhaustedCard({
           ) : null}
           {!byok ? (
             <Button asChild size="sm" variant="ghost">
-              <Link href="/settings">{t("quotaUseOwnKey")}</Link>
+              {/* Sur l'onglet, pas sur la page : « utiliser ma clé » doit
+                  tomber sur le champ de clé, pas sur le profil (MIN-149). */}
+              <Link href="/settings?tab=agent">{t("quotaUseOwnKey")}</Link>
             </Button>
           ) : null}
         </div>

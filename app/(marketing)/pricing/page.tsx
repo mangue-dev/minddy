@@ -4,6 +4,7 @@ import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { PricingPlans } from "@/components/marketing/pricing-plans";
 import { PricingComparison } from "@/components/marketing/pricing-comparison";
+import { SectionByok } from "@/components/marketing/section-byok";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { StructuredData } from "@/components/marketing/structured-data";
@@ -50,6 +51,11 @@ export default async function PricingPage() {
           <PricingPlans headingLevel={2} />
         </div>
       </section>
+
+      {/* Juste après les cartes, avant le tableau : c'est la réponse à la
+          question que les prix viennent de poser (MIN-149). L'usage inclus est
+          une commodité ; qui a déjà une clé n'a pas à être compté. */}
+      <SectionByok />
 
       <section className="border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">

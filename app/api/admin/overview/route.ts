@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import { getServiceClient } from "@/lib/supabase-service";
-import { fetchAdminUsers, onboardingOf } from "@/lib/server/admin-users";
+import { fetchAdminUsers, fetchByokUserIds, onboardingOf } from "@/lib/server/admin-users";
 import {
   resolvePlanFromBillingAccount,
   type BillingAccount,
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   const tz = requested && IANA_TZ.test(requested) ? requested : "UTC";
 
   const service = getServiceClient();
-  const [totalsRes, accountsRes, page] = await Promise.all([
+  const [totalsRes, accountsRes, page, byokUserIds] = await Promise.all([
     service.rpc("get_admin_user_totals", { p_tz: tz }),
     service
       .from("billing_accounts")
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         "user_id, admin_override_plan_id, stripe_plan_id, stripe_subscription_status",
       ),
     fetchAdminUsers({ search: null, limit: FUNNEL_SCAN_LIMIT, offset: 0 }),
+    fetchByokUserIds(),
   ]);
 
   if (totalsRes.error) {
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
   const funnel = { started: 0, completed: 0, dismissed: 0 };
   for (const row of page.rows) {
     if (row.is_internal) continue;
-    const state = onboardingOf(row);
+    const state = onboardingOf(row, byokUserIds);
     if (!state.started) continue;
     funnel.started++;
     if (state.allComplete) funnel.completed++;

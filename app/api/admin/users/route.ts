@@ -5,6 +5,7 @@ import { isAdminUser } from "@/lib/server/admin";
 import { getUserUsage } from "@/lib/server/usage";
 import {
   fetchAdminUsers,
+  fetchByokUserIds,
   nameOf,
   onboardingOf,
   setUserInternal,
@@ -101,10 +102,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
   }
 
-  const seeds = await fetchAvatarSeeds(
-    getServiceClient(),
-    page.rows.map((row) => row.user_id)
-  );
+  const [seeds, byokUserIds] = await Promise.all([
+    fetchAvatarSeeds(
+      getServiceClient(),
+      page.rows.map((row) => row.user_id)
+    ),
+    fetchByokUserIds(),
+  ]);
 
   const users: AdminUserRow[] = await Promise.all(
     page.rows.map(async (row) => {
@@ -123,7 +127,7 @@ export async function GET(request: NextRequest) {
         projectsOwned: Number(row.projects_owned),
         issues: Number(row.issues_accessible),
         issuesCreated: Number(row.issues_created),
-        onboarding: onboardingOf(row),
+        onboarding: onboardingOf(row, byokUserIds),
         billing: resolved.billing,
         usage: {
           budgetUsd: resolved.budgetUsd,

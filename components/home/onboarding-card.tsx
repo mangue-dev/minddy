@@ -32,6 +32,7 @@ import type { OnboardingStepId } from "@/lib/onboarding";
 import type { UseOnboardingResult } from "@/lib/use-onboarding";
 import { OnboardingStepRow } from "@/components/home/onboarding-step-row";
 import { OnboardingMcpStep } from "@/components/home/onboarding-mcp-step";
+import { OnboardingKeyStep } from "@/components/home/onboarding-key-step";
 import { OnboardingImportDialog } from "@/components/home/onboarding-import-dialog";
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 
@@ -80,12 +81,14 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
     project: t("projectTitle"),
     tickets: t("ticketsTitle"),
     mcp: t("mcpTitle"),
+    key: t("keyTitle"),
     cycles: t("cyclesTitle"),
   };
   const description: Record<OnboardingStepId, string> = {
     project: t("projectDesc"),
     tickets: t("ticketsDesc"),
     mcp: t("mcpDesc"),
+    key: t("keyDesc"),
     cycles: t("cyclesDesc"),
   };
 
@@ -293,6 +296,17 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                       <OnboardingMcpStep
                         onDone={() => void acknowledge("mcp")}
                         onSkip={() => void acknowledge("mcp")}
+                        busy={busy}
+                      />
+                    )}
+
+                    {/* L'étape se coche de toute façon seule dès qu'une clé
+                        existe ; l'acquitter tout de suite évite d'attendre le
+                        refetch. */}
+                    {currentStepId === "key" && (
+                      <OnboardingKeyStep
+                        onDone={() => void acknowledge("key")}
+                        onSkip={() => void acknowledge("key")}
                         busy={busy}
                       />
                     )}

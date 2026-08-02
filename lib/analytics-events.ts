@@ -64,6 +64,10 @@ export interface AnalyticsEventProps {
   /** Étape « connecter un agent » : lequel. Dit pour qui écrire la doc MCP
    *  en premier. */
   onboarding_mcp_agent_selected: { agent: string };
+  /** Étape « votre clé d'API » (MIN-149) : le compte est arrivé avec sa clé.
+   *  C'est la mesure de l'argument BYOK — combien de nouveaux comptes payent
+   *  déjà leurs tokens ailleurs et n'ont pas à être comptés ici. */
+  onboarding_ai_key_added: NoProps;
   onboarding_dismissed: { last_step: string; completed_count: number };
   onboarding_completed: { steps_acknowledged: number };
 
@@ -387,6 +391,7 @@ const EVENT_NAMES = [
   "onboarding_import_provider_selected",
   "onboarding_join_opened",
   "onboarding_mcp_agent_selected",
+  "onboarding_ai_key_added",
   "onboarding_dismissed",
   "onboarding_completed",
   // Projets

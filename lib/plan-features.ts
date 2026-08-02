@@ -29,6 +29,13 @@ export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): 
       ? t("featureUnlimitedIssues")
       : t("featureMaxIssues", { n: plan.maxIssuesPerProject }),
     ...(plan.allowAgents ? [t("featureAgents")] : []),
+    // Le BYOK suit l'agent parce qu'il ne vaut QUE pour lui (`resolveAgentApiKey`
+    // n'est appelé que par la boucle de l'agent) et qu'il est gardé par la même
+    // condition : `checkAgentQuota` refuse un run sans `allowAgents`, clé perso
+    // ou non. C'est l'argument central du prix (MIN-149) — l'abonnement achète
+    // minddy, l'inférence de l'agent peut rester chez vous — donc il se lit sur
+    // la carte, pas seulement en FAQ.
+    ...(plan.allowAgents ? [t("featureByok")] : []),
     ...(plan.allowMembers ? [t("featureMembers")] : []),
   ];
 }

@@ -1,12 +1,12 @@
 // minddy — MIN-74 : onboarding du nouveau compte.
 //
-// Quatre étapes, franchies sur `/home` : créer ou rejoindre son premier projet,
+// Cinq étapes, franchies sur `/home` : créer ou rejoindre son premier projet,
 // faire entrer ses premiers tickets (à la main ou par import CSV, MIN-98),
-// connecter un agent au serveur MCP, activer les cycles. Deux d'entre elles se
-// cochent SEULES à partir d'une donnée réelle (le projet existe, un ticket
-// existe) ; les autres sont acquittées explicitement par l'utilisateur —
-// importer son backlog et connecter un agent sont des propositions, pas des
-// obligations.
+// connecter un agent au serveur MCP, poser sa clé d'API (MIN-149), activer les
+// cycles. Trois d'entre elles se cochent SEULES à partir d'une donnée réelle (le
+// projet existe, un ticket existe, une clé est enregistrée) ; les autres sont
+// acquittées explicitement par l'utilisateur — importer son backlog, connecter
+// un agent et apporter sa clé sont des propositions, pas des obligations.
 //
 // RIEN NE BLOQUE. C'est la leçon d'AutoKap, dont l'onboarding exigeait une
 // connexion GitHub dès l'étape 1 : un seul onboarding complété en 120 jours.
@@ -16,7 +16,12 @@
 // cycles : pas de table, pas de migration. Server-safe (aucun import React) —
 // le résolveur est partageable avec un route handler si le besoin vient.
 
-export const ONBOARDING_STEPS = ["project", "tickets", "mcp", "cycles"] as const;
+export const ONBOARDING_STEPS = ["project", "tickets", "mcp", "key", "cycles"] as const;
+
+/** Les quatre étapes d'avant MIN-149, dans leur ordre d'alors. Elles servent à
+ *  reconnaître un compte qui avait DÉJÀ fini son onboarding quand `key` s'y est
+ *  ajoutée — cf. `isCompleted` ci-dessous. */
+const PRE_KEY_STEPS = ONBOARDING_STEPS.filter((id) => id !== "key");
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 
@@ -37,6 +42,8 @@ export const ONBOARDING_STARTED_META_KEY = "onboarding_started";
 export interface OnboardingSignals {
   projectCount: number;
   issueCount: number;
+  /** Une clé BYOK est enregistrée sur le compte (`user_ai_keys`). */
+  hasAiKey: boolean;
   cyclesEnabled: boolean;
 }
 
@@ -118,6 +125,7 @@ export function resolveOnboardingState({
   meta,
   projectCount,
   issueCount,
+  hasAiKey,
   cyclesEnabled,
 }: OnboardingSignals & {
   meta: Record<string, unknown> | null | undefined;
@@ -127,6 +135,19 @@ export function resolveOnboardingState({
 
   const isCompleted = (id: OnboardingStepId): boolean => {
     if (acknowledged.has(id)) return true;
+    // `key` est arrivée APRÈS les quatre autres (MIN-149). Un compte qui avait
+    // déjà franchi celles-là avait fini son onboarding : lui rendre sa home
+    // confisquée pour une étape ajoutée après coup serait exactement la
+    // reconfiscation contre laquelle `onboarding_started` existe. Le test se
+    // fait sur les quatre étapes d'alors, pas sur `allComplete` — qui compte
+    // `key` et tournerait en rond.
+    //
+    // Pendant l'onboarding lui-même, cette branche ne peut pas mordre : les
+    // cycles sont opt-in (`resolveCyclePrefs`), donc la dernière étape n'est
+    // jamais franchie avant qu'on arrive à `key`.
+    if (id === "key") {
+      return hasAiKey || PRE_KEY_STEPS.every((step) => isCompleted(step));
+    }
     switch (id) {
       case "project":
         return projectCount > 0;

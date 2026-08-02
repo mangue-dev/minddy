@@ -14,6 +14,7 @@ const FRESH = {
   meta: null,
   projectCount: 0,
   issueCount: 0,
+  hasAiKey: false,
   cyclesEnabled: false,
 };
 
@@ -30,7 +31,7 @@ describe("resolveOnboardingState", () => {
     expect(state.currentStepId).toBe("project");
     expect(state.currentStepNumber).toBe(1);
     expect(state.completedCount).toBe(0);
-    expect(state.totalCount).toBe(4);
+    expect(state.totalCount).toBe(5);
     expect(state.allComplete).toBe(false);
     expect(state.eligible).toBe(true);
     expect(state.visible).toBe(true);
@@ -93,8 +94,34 @@ describe("resolveOnboardingState", () => {
       ...withTickets,
       meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
     });
-    expect(acknowledged.currentStepId).toBe("cycles");
+    expect(acknowledged.currentStepId).toBe("key");
     expect(acknowledged.currentStepNumber).toBe(4);
+  });
+
+  it("ticks the key step from the real signal, not an acknowledgement", () => {
+    // Une clé BYOK enregistrée franchit l'étape sans rien acquitter — c'est
+    // exactement ce que l'étape demandait (MIN-149).
+    const state = resolveOnboardingState({
+      ...FRESH,
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
+      projectCount: 1,
+      issueCount: 1,
+      hasAiKey: true,
+    });
+    expect(completedIds(state)).toEqual(["project", "tickets", "mcp", "key"]);
+    expect(state.currentStepId).toBe("cycles");
+    expect(state.currentStepNumber).toBe(5);
+  });
+
+  it("lets the key step be skipped like the MCP one", () => {
+    const state = resolveOnboardingState({
+      ...FRESH,
+      meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp", "key"] },
+      projectCount: 1,
+      issueCount: 1,
+    });
+    expect(state.currentStepId).toBe("cycles");
+    expect(state.currentStepNumber).toBe(5);
   });
 
   it("ticks the cycles step when cycles are enabled, with no acknowledgement", () => {
@@ -109,11 +136,12 @@ describe("resolveOnboardingState", () => {
       meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
       projectCount: 1,
       issueCount: 1,
+      hasAiKey: false,
       cyclesEnabled: true,
     });
     expect(state.allComplete).toBe(true);
     expect(state.currentStepId).toBeNull();
-    expect(state.currentStepNumber).toBe(4);
+    expect(state.currentStepNumber).toBe(5);
     expect(state.visible).toBe(false);
   });
 
@@ -121,14 +149,18 @@ describe("resolveOnboardingState", () => {
     // LE test de non-régression des refontes d'étapes. Ces comptes-là ont
     // acquitté `mcp` du temps où les étapes s'appelaient autrement : leur home
     // ne doit pas se faire reconfisquer par un découpage changé après coup.
+    // Depuis MIN-149 il couvre aussi `key`, ajoutée APRÈS eux et qu'ils n'ont
+    // évidemment jamais acquittée : sans exemption, une étape neuve rendrait
+    // leur onboarding incomplet et leur reprendrait leur home.
     for (const acknowledged of [["mcp"], ["import", "mcp"], ["issue", "import", "mcp"]]) {
       const state = resolveOnboardingState({
         meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: acknowledged },
         projectCount: 2,
         issueCount: 40,
+        hasAiKey: false,
         cyclesEnabled: true,
       });
-      expect(completedIds(state)).toEqual(["project", "tickets", "mcp", "cycles"]);
+      expect(completedIds(state)).toEqual(["project", "tickets", "mcp", "key", "cycles"]);
       expect(state.allComplete).toBe(true);
       expect(state.visible).toBe(false);
     }
@@ -143,6 +175,7 @@ describe("resolveOnboardingState", () => {
       meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["import"] },
       projectCount: 1,
       issueCount: 0,
+      hasAiKey: false,
       cyclesEnabled: false,
     });
     expect(completedIds(state)).toEqual(["project", "tickets"]);
@@ -168,6 +201,7 @@ describe("resolveOnboardingState", () => {
       meta: null,
       projectCount: 4,
       issueCount: 120,
+      hasAiKey: false,
       cyclesEnabled: false,
     });
     expect(state.allComplete).toBe(false);
@@ -213,7 +247,7 @@ describe("resolveOnboardingState", () => {
       { [ONBOARDING_DISMISSED_META_KEY]: "true" },
     ]) {
       const state = resolveOnboardingState({ ...FRESH, meta });
-      expect(state.totalCount).toBe(4);
+      expect(state.totalCount).toBe(5);
       expect(state.dismissed).toBe(false);
       expect(state.visible).toBe(true);
     }
@@ -235,10 +269,14 @@ describe("withAcknowledgedStep", () => {
     expect(
       withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["mcp"] }, "mcp")
     ).toEqual(["mcp"]);
-    // L'ordre canonique, pas l'ordre d'arrivée : tickets précède mcp.
+    // L'ordre canonique, pas l'ordre d'arrivée : tickets précède mcp, et `key`
+    // s'intercale entre mcp et cycles.
     expect(
       withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["mcp"] }, "tickets")
     ).toEqual(["tickets", "mcp"]);
+    expect(
+      withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["cycles", "mcp"] }, "key")
+    ).toEqual(["mcp", "key", "cycles"]);
   });
 
   it("drops unknown ids already stored rather than propagating them", () => {

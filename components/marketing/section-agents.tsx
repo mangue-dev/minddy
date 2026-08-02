@@ -120,8 +120,14 @@ export async function SectionAgents() {
               ))}
             </ul>
 
+            {/* Ce que coûte l'agent, et à qui. La deuxième phrase est le seul
+                endroit de la landing où le BYOK se dit (MIN-149) : elle suit
+                celle qui annonce le plan payant, parce que c'est là qu'un dev
+                qui a déjà une clé se demande ce qu'on va lui compter. Le détail
+                complet est la section « Votre clé, votre inférence » de
+                /pricing. */}
             <p className="mt-5 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
-              {t("agentsPlanNote")}
+              {t("agentsPlanNote")} {t("agentsByokNote")}
             </p>
           </Reveal>
         </div>
