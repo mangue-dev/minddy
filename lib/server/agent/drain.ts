@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { claimRun, requeueStuckRuns } from "./runs";
 import { executeAgentRun } from "./execute";
 import { stopSandboxByName } from "./sandbox";
+import { currentDeploymentScope } from "./deployment";
 
 /**
  * Drain des runs de l'agent (MIN-46) — le worker. Auto-budgété sous les 300s de
@@ -74,14 +75,37 @@ export async function reapIdleSandboxes(
   return { reaped };
 }
 
-/** True s'il existe au moins un run queued et dû maintenant. */
+/**
+ * Restreint une requête de file au périmètre du déploiement courant (MIN-165).
+ * Les DEUX requêtes de file passent par ici : si elles divergeaient, un drain
+ * verrait du travail dû qu'il n'a pas le droit de claim et bouclerait à vide.
+ *
+ * Générique NON contraint, avec le cast à l'intérieur : contraindre `Q` sur la
+ * forme de `is`/`eq` fait exploser l'inférence sur le builder Postgrest (TS2589),
+ * et renvoyer une interface minimale ferait perdre `order`/`limit` à l'appelant.
+ */
+function scopeToDeployment<Q>(query: Q, scope: string | null): Q {
+  const q = query as unknown as {
+    is(column: string, value: null): unknown;
+    eq(column: string, value: string): unknown;
+  };
+  return (scope === null
+    ? q.is("deployment_url", null)
+    : q.eq("deployment_url", scope)) as Q;
+}
+
+/** True s'il existe au moins un run queued et dû maintenant, DANS LE PÉRIMÈTRE
+ *  du déploiement courant (MIN-165) — un preview ne chaîne pas sur les runs de
+ *  la prod, la prod ne chaîne pas sur ceux d'un preview. */
 export async function hasDueAgentWork(service: SupabaseClient): Promise<boolean> {
-  const { data } = await service
-    .from("agent_runs")
-    .select("id")
-    .eq("status", "queued")
-    .lte("not_before", new Date().toISOString())
-    .limit(1);
+  const { data } = await scopeToDeployment(
+    service
+      .from("agent_runs")
+      .select("id")
+      .eq("status", "queued")
+      .lte("not_before", new Date().toISOString()),
+    currentDeploymentScope(),
+  ).limit(1);
   return ((data ?? []) as Array<{ id: string }>).length > 0;
 }
 
@@ -94,6 +118,12 @@ export async function drainAgentRuns(
   },
 ): Promise<{ claimed: number }> {
   const deadline = Date.now() + (opts?.budgetMs ?? DRAIN_TIME_BUDGET_MS);
+  // Périmètre du déploiement (MIN-165) : résolu UNE fois, il ne bouge pas d'un
+  // tour de boucle à l'autre. `requeueStuckRuns` et `reapIdleSandboxes` restent
+  // GLOBAUX : ni le requeue d'un claim mort ni la coupe d'une microVM au repos
+  // ne dépendent de la logique d'agent, et les scoper laisserait la VM d'un run
+  // preview tourner jusqu'au timeout de session.
+  const scope = currentDeploymentScope();
   let claimed = 0;
 
   await requeueStuckRuns(service);
@@ -103,11 +133,14 @@ export async function drainAgentRuns(
   );
 
   while (deadline - Date.now() >= MIN_CHUNK_BUDGET_MS) {
-    const { data } = await service
-      .from("agent_runs")
-      .select("id")
-      .eq("status", "queued")
-      .lte("not_before", new Date().toISOString())
+    const { data } = await scopeToDeployment(
+      service
+        .from("agent_runs")
+        .select("id")
+        .eq("status", "queued")
+        .lte("not_before", new Date().toISOString()),
+      scope,
+    )
       .order("not_before", { ascending: true })
       .limit(10);
     const rows = (data ?? []) as Array<{ id: string }>;

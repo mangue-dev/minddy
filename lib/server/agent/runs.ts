@@ -10,6 +10,7 @@ import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
 import type { SubagentRecord } from "./subagent";
 import { broadcastRunEvent } from "./live";
+import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 
@@ -124,6 +125,10 @@ export interface AgentRun {
   interrupt_requested: boolean;
   /** microVM coupée par le reaper (null = vivante/inconnue). */
   sandbox_stopped_at: string | null;
+  /** Déploiement qui a le droit de drainer ce run (MIN-165). Null = la file
+   *  commune (prod + local) ; sinon le `VERCEL_URL` d'un preview, seul à le
+   *  reprendre — cf. `deployment.ts`. */
+  deployment_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -210,6 +215,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       pr_url: input.prUrl ?? null,
       pr_state: input.prState ?? null,
       run_id: randomUUID(),
+      // Affinité de déploiement (MIN-165) : posée UNE fois, à la création. Tous
+      // les chunks d'un run lancé depuis un preview restent sur ce déploiement.
+      deployment_url: currentDeploymentScope(),
     })
     .select("*")
     .single();
