@@ -5,7 +5,7 @@
     "open": "Task notebook",
     "openAria": "Open task notebook (G then N)",
     "tasksLeft": "{count, plural, one {# task left} other {# tasks left}}",
-    "homeMore": "{count, plural, one {# more task in the notebook} other {# more tasks in the notebook}}",
+    "homeOpen": "Open the notebook",
     "placeholder": "Write, or type '/' for commands…",
     "slashTask": "Task",
     "slashDictate": "Dictate a task",

@@ -7,14 +7,19 @@ import {
   type RefCallback,
 } from "react";
 
-/** Height/width of the soft fade zone at each scrollable edge. */
+/** Default height/width of the soft fade zone at each scrollable edge. */
 const FADE = "2rem";
 
-function maskImage(start: boolean, end: boolean, axis: "x" | "y"): string | undefined {
+function maskImage(
+  start: boolean,
+  end: boolean,
+  axis: "x" | "y",
+  fade: string
+): string | undefined {
   if (!start && !end) return undefined;
   const dir = axis === "y" ? "to bottom" : "to right";
-  const from = start ? `transparent, #000 ${FADE}` : "#000";
-  const to = end ? `#000 calc(100% - ${FADE}), transparent` : "#000";
+  const from = start ? `transparent, #000 ${fade}` : "#000";
+  const to = end ? `#000 calc(100% - ${fade}), transparent` : "#000";
   return `linear-gradient(${dir}, ${from}, ${to})`;
 }
 
@@ -27,9 +32,22 @@ function maskImage(start: boolean, end: boolean, axis: "x" | "y"): string | unde
  * Merge `ref` with any other ref on the scroll element and spread `scrollProps`
  * (an `onScroll` handler + the mask `style`) onto it. The mask only changes when
  * an edge crosses its threshold, so scrolling stays cheap.
+ *
+ * Works the same on a box that only CLIPS (`overflow: hidden`): nothing scrolls,
+ * so only the trailing edge ever fades — which is exactly the "there is more
+ * text below" of a preview (components/home/home-scratchpad-section.tsx). Such a
+ * preview wants a longer ramp than a scroller's edge hint, hence `fade`.
  */
-export function useScrollFade<T extends HTMLElement>(axis: "x" | "y" = "y") {
+export function useScrollFade<T extends HTMLElement>(
+  axis: "x" | "y" = "y",
+  fade: string = FADE
+) {
   const elRef = useRef<T | null>(null);
+  // Le nœud est AUSSI un état : l'élément observé peut n'arriver qu'après le
+  // premier rendu (un aperçu qui ne se monte qu'une fois ses données là, cf.
+  // l'accueil), et l'effet doit alors se rejouer pour l'observer. Avec la seule
+  // ref, il tournait une fois dans le vide et plus rien ne mesurait jamais.
+  const [node, setNode] = useState<T | null>(null);
   const [edges, setEdges] = useState({ start: false, end: false });
 
   const update = useCallback(() => {
@@ -45,14 +63,15 @@ export function useScrollFade<T extends HTMLElement>(axis: "x" | "y" = "y") {
     );
   }, [axis]);
 
-  const ref = useCallback<RefCallback<T>>((node) => {
-    elRef.current = node;
+  const ref = useCallback<RefCallback<T>>((el) => {
+    elRef.current = el;
+    setNode(el);
   }, []);
 
   // Recompute when the container resizes or its content changes (add/remove/
   // reorder), so the trailing fade appears/disappears without a scroll event.
   useEffect(() => {
-    const el = elRef.current;
+    const el = node;
     if (!el) return;
     update();
     const ro = new ResizeObserver(update);
@@ -63,9 +82,9 @@ export function useScrollFade<T extends HTMLElement>(axis: "x" | "y" = "y") {
       ro.disconnect();
       mo.disconnect();
     };
-  }, [update]);
+  }, [node, update]);
 
-  const mask = maskImage(edges.start, edges.end, axis);
+  const mask = maskImage(edges.start, edges.end, axis, fade);
   const scrollProps = {
     onScroll: update,
     style: mask

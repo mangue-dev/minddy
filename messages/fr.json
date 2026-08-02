@@ -5,7 +5,7 @@
     "open": "Carnet de tâches",
     "openAria": "Ouvrir le carnet de tâches (G puis N)",
     "tasksLeft": "{count, plural, one {# tâche à faire} other {# tâches à faire}}",
-    "homeMore": "{count, plural, one {# autre tâche dans le carnet} other {# autres tâches dans le carnet}}",
+    "homeOpen": "Ouvrir le carnet",
     "placeholder": "Écrivez, ou tapez « / » pour les commandes…",
     "slashTask": "Tâche",
     "slashDictate": "Dicter une tâche",
