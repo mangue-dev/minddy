@@ -161,8 +161,9 @@ export async function fetchIssueAgentRunsApi(
 }
 
 /** État de la chaîne d'automatisation d'un ticket (MIN-147), vue client.
-    JAMAIS d'USD : `budgetUsed` est une part (0→1) de son plafond, et
-    `estimate.shareOfMonthlyBudget` une part du budget mensuel du plan. */
+    JAMAIS d'USD : `estimate.shareOfMonthlyBudget` est une part du budget mensuel
+    du plan. Une chaîne n'a plus de plafond propre — elle ne s'interrompt pas sur
+    la dépense, seul le quota du compte borne (cf. lib/automations). */
 export interface IssueChainState {
   id: string;
   status: "running" | "awaiting_human" | "stopped" | "completed" | "failed";
@@ -170,7 +171,6 @@ export interface IssueChainState {
   step: number;
   retries: number;
   stopReason: string | null;
-  budgetUsed: number | null;
   createdAt: string;
   updatedAt: string;
 }

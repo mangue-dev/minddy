@@ -5,9 +5,10 @@ import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 
 /**
  * La CHAÎNE (MIN-147) — l'objet durable sans lequel rien du reste n'est
- * possible : ni le budget par parcours, ni le point d'arrêt humain, ni le bouton
- * « arrêter ». Elle porte l'étape courante, les règles déjà jouées, la dépense
- * cumulée, le plafond, le nombre de reprises et le motif d'arrêt.
+ * possible : ni le point d'arrêt humain, ni le bouton « arrêter », ni le rapport
+ * de fin. Elle porte l'étape courante, les règles déjà jouées, la dépense
+ * cumulée (pour la DIRE, pas pour couper), le nombre de reprises et le motif
+ * d'arrêt.
  *
  * Service client de bout en bout (aucune policy d'écriture sur `agent_chains`).
  *
@@ -35,6 +36,9 @@ export interface AgentChain {
   played_rule_ids: string[];
   retries: number;
   spent_usd: number;
+  /** LEGACY : plus jamais posé. Une chaîne ne s'interrompt plus sur un plafond —
+   *  seul le quota du compte borne la dépense (cf. l'en-tête de lib/automations).
+   *  La colonne reste pour ne pas migrer une table pour un champ mort. */
   budget_usd: number | null;
   stop_reason: string | null;
   created_at: string;
@@ -70,7 +74,6 @@ export async function openChain(input: {
   issueId: string;
   ownerId: string;
   preset: string | null;
-  budgetUsd: number | null;
 }): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data, error } = await service
@@ -80,7 +83,6 @@ export async function openChain(input: {
       issue_id: input.issueId,
       owner_id: input.ownerId,
       preset: input.preset,
-      budget_usd: input.budgetUsd,
     })
     .select("*")
     .single();
@@ -172,16 +174,6 @@ export async function addChainSpend(chainId: string, usd: number): Promise<numbe
   return next;
 }
 
-/**
- * Reste-t-il du budget ? `null` (pas de plafond) = oui. C'est le même test que
- * fait la boucle d'exécution avec `run.budget_usd` — ici il sert AVANT de lancer
- * l'étape suivante, là-bas il l'interrompt en vol.
- */
-export function chainBudgetRemaining(chain: AgentChain): number | null {
-  if (chain.budget_usd == null) return null;
-  return Math.max(0, chain.budget_usd - chain.spent_usd);
-}
-
 /** Gare la chaîne : elle attend un feu vert humain explicite. */
 export async function parkChain(chainId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
@@ -209,7 +201,7 @@ export async function resumeChain(chainId: string): Promise<AgentChain | null> {
 }
 
 /**
- * Arrête la chaîne. `reason` est un CODE (`budget`, `quota`, `interrupted`,
+ * Arrête la chaîne. `reason` est un CODE (`quota`, `interrupted`,
  * `verification_failed`, `noRepo`, `run_failed`…), jamais une phrase : c'est le
  * commentaire de rapport qui le traduit, dans la langue du lecteur.
  */

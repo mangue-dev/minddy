@@ -139,26 +139,10 @@ import {
   type AgentCheckpoint,
 } from "./runs";
 import { checkAgentQuota } from "./quota";
-import { chainBudgetRemaining, getChain } from "@/lib/server/automations/chain";
-
 /** Le plus serré des plafonds fournis (les absents ne bornent rien). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
   const defined = values.filter((v): v is number => v != null && Number.isFinite(v));
   return defined.length > 0 ? Math.min(...defined) : undefined;
-}
-
-/** Ce qu'il reste à dépenser à la chaîne du run, s'il en a une (MIN-147). */
-async function chainBudgetLeft(chainId: string | null): Promise<number | undefined> {
-  if (!chainId) return undefined;
-  try {
-    const chain = await getChain(chainId);
-    if (!chain) return undefined;
-    return chainBudgetRemaining(chain) ?? undefined;
-  } catch {
-    // Un plafond illisible ne doit pas empêcher le run de tourner : le quota du
-    // compte reste, lui, toujours vérifié.
-    return undefined;
-  }
 }
 
 /**
@@ -1975,16 +1959,14 @@ export async function executeAgentRun(
     // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
     // round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
     const quotaNow = await checkAgentQuota(run.created_by ?? "").catch(() => null);
-    // Trois plafonds, le plus serré gagne (MIN-147) : le QUOTA du compte, celui
-    // que la règle a posé sur CE run, et ce qu'il reste à la CHAÎNE. C'est ce qui
-    // rend « plafond par run » exécutoire plutôt qu'affiché : le dépassement
-    // ressort en `budget_exhausted`, déjà un chemin terminal, que le crochet de
-    // fin de run voit passer comme les autres.
-    // En BYOK le quota est illimité — la chaîne, elle, garde son plafond.
+    // Deux plafonds, le plus serré gagne : le QUOTA du compte, et celui que
+    // l'appelant a éventuellement posé sur CE run. Une chaîne d'automatisation
+    // n'en ajoute PAS un troisième (MIN-147) : la couper au milieu laisserait un
+    // ticket à moitié fait sans explication lisible — c'est le quota, global et
+    // visible, qui borne la dépense.
     const budgetUsd = minDefined(
       quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
       run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd)),
-      await chainBudgetLeft(run.chain_id),
     );
 
     // Chrono de la boucle : c'est depuis ici que se mesure le budget restant d'un

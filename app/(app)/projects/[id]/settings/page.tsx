@@ -26,7 +26,6 @@ import {
   Trash2,
   Users,
   WandSparkles,
-  Workflow,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -43,7 +42,6 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
-import { ProjectAutomationsSection } from "@/components/settings/project-automations-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
@@ -334,12 +332,6 @@ export default function ProjectSettingsPage() {
         ? t("smartAssignIncompleteTab")
         : undefined,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
-    },
-    {
-      value: "automations",
-      label: t("automationsTab"),
-      icon: Workflow,
-      content: <ProjectAutomationsSection project={project} isOwner={isOwner} />,
     },
     {
       value: "feedback",

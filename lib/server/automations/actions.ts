@@ -9,7 +9,7 @@ import {
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { defaultLocale } from "@/i18n/config";
 import type { AutomationAction } from "@/lib/automations";
-import { chainBudgetRemaining, parkChain, type AgentChain } from "./chain";
+import { parkChain, type AgentChain } from "./chain";
 import { haltChain, notifyChain, postChainComment } from "./report";
 
 /**
@@ -55,24 +55,12 @@ async function localeOf(userId: string): Promise<string> {
   return defaultLocale;
 }
 
-/**
- * Le plafond du run : ce qui reste à la chaîne, éventuellement resserré par le
- * plafond que la règle a posé sur CETTE étape. `undefined` (pas de plafond) ne
- * peut venir que d'une chaîne sans budget — l'estimation en pose toujours un.
- */
-function runBudget(chain: AgentChain, actionBudget: number | null | undefined): number | null {
-  const chainLeft = chainBudgetRemaining(chain);
-  const candidates = [chainLeft, actionBudget ?? null].filter(
-    (v): v is number => v != null,
-  );
-  return candidates.length > 0 ? Math.min(...candidates) : null;
-}
-
 async function runNumo(
   chain: AgentChain,
   action: Extract<AutomationAction, { type: "run_numo" }>,
   issue: IssueForLaunch,
   extraPrompt: string | null,
+  model: string | null,
 ): Promise<ActionOutcome> {
   const locale = await localeOf(chain.owner_id);
   // Mode `custom` : la consigne de la règle EST le message. Les trois autres
@@ -101,10 +89,11 @@ async function runNumo(
     triggeredBy: "automation",
     intent: action.mode === "custom" ? "custom" : intentForLaunchMode(action.mode),
     prompt,
-    model: action.model ?? null,
+    // Le modèle par TAILLE de ticket (réglage de compte) l'emporte sur celui de
+    // la règle : c'est celui que l'utilisateur voit et manipule.
+    model: model ?? action.model ?? null,
     reasoningLevel: action.reasoningLevel ?? null,
     chainId: chain.id,
-    budgetUsd: runBudget(chain, action.budgetUsd),
   });
 
   if (!result.ok) {
@@ -133,11 +122,13 @@ export async function runAction(params: {
   issue: IssueForLaunch;
   /** Consigne ajoutée à l'étape (le rapport d'une vérification en échec). */
   extraPrompt?: string | null;
+  /** Modèle réglé pour la TAILLE de ce ticket (Compte → Automatisations). */
+  model?: string | null;
 }): Promise<ActionOutcome> {
   const { chain, action, issue } = params;
   switch (action.type) {
     case "run_numo":
-      return runNumo(chain, action, issue, params.extraPrompt ?? null);
+      return runNumo(chain, action, issue, params.extraPrompt ?? null, params.model ?? null);
     case "set_status":
       // Repasse par le cœur d'écriture ordinaire : c'est lui qui écrit
       // l'activité, les notifications et la synchro du feedback. Il redéclenche

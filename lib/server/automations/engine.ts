@@ -7,14 +7,16 @@ import { canUseAutomations } from "@/lib/server/entitlements";
 import { activeRunForIssue, type AgentRunVerdict } from "@/lib/server/agent/runs";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import {
+  automationModelFor,
   findImplementRule,
+  isAutomationEffortEnabled,
   MAX_CHAIN_STEPS,
   MAX_VERIFICATION_RETRIES,
   nextRule,
   parseAutomationOverride,
-  parseAutomations,
   presetOfRules,
   rulesForIssue,
+  rulesForProject,
   rulesToReplayOnRetry,
   simulateChain,
   type AutomationEvent,
@@ -24,14 +26,12 @@ import {
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import {
   advanceChain,
-  chainBudgetRemaining,
   chainForIssue,
   getChain,
   openChain,
   retryChain,
   type AgentChain,
 } from "./chain";
-import { estimateChainCost } from "./estimate";
 import { runAction } from "./actions";
 import { captureChainStarted, finishChain, haltChain } from "./report";
 
@@ -110,6 +110,21 @@ async function resolveChainOwner(
     .eq("user_id", assigneeId)
     .maybeSingle();
   return data ? assigneeId : ownerId;
+}
+
+/**
+ * Le `user_metadata` du propriétaire du projet — c'est là que vit son préréglage
+ * d'automatisation. Best-effort : un compte illisible vaut « aucun préréglage »
+ * (donc aucune règle, donc rien ne se déclenche), jamais une panne.
+ */
+async function ownerMetadata(ownerId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { data } = await getServiceClient().auth.admin.getUserById(ownerId);
+    return (data?.user?.user_metadata ?? null) as Record<string, unknown> | null;
+  } catch (err) {
+    console.error("[automations] owner metadata read failed:", (err as Error).message);
+    return null;
+  }
 }
 
 async function categoryIdsOf(issueId: string): Promise<string[]> {
@@ -238,7 +253,18 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   const issue = issueRow as IssueRow;
 
   const override = parseAutomationOverride(issue.automation_override);
-  const rules = rulesForIssue(parseAutomations(project.automations), override);
+  const ownerMeta = await ownerMetadata(project.owner_id as string);
+  // Cascade ticket > projet > compte : le forçage du ticket gagne, sinon les
+  // règles écrites sur le projet (API/MCP), sinon le préréglage du PROPRIÉTAIRE
+  // du projet — c'est lui qui paie et lui seul qui a pu armer ce projet.
+  const rules = rulesForIssue(rulesForProject(project.automations, ownerMeta), override);
+
+  // Efforts couverts : un ticket d'une taille éteinte au compte ne déclenche
+  // rien. Testé APRÈS les règles (l'un dit quoi jouer, l'autre sur quoi), et
+  // AVANT tout le reste — c'est un refus, pas un arrêt : si une chaîne tournait
+  // déjà, elle a été ouverte quand la taille était autorisée, et on la laisse
+  // finir plutôt que de l'abandonner à mi-parcours.
+  if (!existing && !isAutomationEffortEnabled(ownerMeta, issue.effort)) return;
   if (rules.length === 0) {
     if (existing && existing.status === "running") await haltChain(existing, "disabled");
     return;
@@ -297,24 +323,11 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
       project.owner_id as string,
       issue.assignee_id,
     );
-    const estimate = await estimateChainCost({
-      projectId: project.id as string,
-      ownerId,
-      rules,
-      issue: facts,
-      // Depuis l'événement DÉCLENCHEUR : au moment où le crochet appelle, le
-      // ticket porte encore son ancien statut en base.
-      from: params.event,
-    });
     chain = await openChain({
       projectId: project.id as string,
       issueId: issue.id,
       ownerId,
       preset: presetOfRules(rules),
-      // Un plafond de zéro n'est pas un plafond serré, c'est une chaîne morte
-      // avant sa première étape : dans ce cas (estimation impossible), on
-      // n'en pose aucun et on laisse le quota du compte faire son office.
-      budgetUsd: estimate.budgetUsd > 0 ? estimate.budgetUsd : null,
     });
     // Null = une autre chaîne est née entre-temps (index unique). On rend la
     // main : c'est elle qui pilote maintenant.
@@ -325,14 +338,12 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     });
   }
 
-  // ── Les garde-fous, juste avant de dépenser ───────────────────────────────
+  // ── Le garde-fou, juste avant de dépenser ─────────────────────────────────
+  // Un seul : le compteur d'étapes (anti-runaway). PAS de plafond de dépense —
+  // couper une chaîne au milieu n'est pas lisible pour qui la regarde ; c'est le
+  // quota du compte qui borne, globalement et visiblement.
   if (chain.step >= MAX_CHAIN_STEPS) {
     await haltChain(chain, "max_steps");
-    return;
-  }
-  const remaining = chainBudgetRemaining(chain);
-  if (remaining !== null && remaining <= 0) {
-    await haltChain(chain, "budget");
     return;
   }
 
@@ -345,6 +356,9 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     chain: advanced,
     action: rule.then[0],
     issue: { ...issue, project_key: projectKey },
+    // Modèle choisi par TAILLE de ticket (réglage de compte). Il l'emporte sur
+    // celui de la règle : c'est le réglage que l'utilisateur voit et manipule.
+    model: automationModelFor(ownerMeta, issue.effort),
   });
 }
 

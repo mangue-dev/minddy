@@ -14,8 +14,8 @@ import { scheduleAutomations } from "@/lib/server/automations/engine";
 import { estimateChainCost } from "@/lib/server/automations/estimate";
 import {
   parseAutomationOverride,
-  parseAutomations,
   rulesForIssue,
+  rulesForProject,
   simulateChain,
   simulatedRunModes,
 } from "@/lib/automations";
@@ -53,7 +53,8 @@ interface IssueRow {
   automation_override: unknown;
 }
 
-/** Vue client d'une chaîne — jamais d'USD, seulement sa part du budget. */
+/** Vue client d'une chaîne — jamais d'USD.
+ *  Aucune part de plafond : il n'y en a plus (cf. lib/automations). */
 function publicChain(chain: AgentChain) {
   return {
     id: chain.id,
@@ -62,11 +63,6 @@ function publicChain(chain: AgentChain) {
     step: chain.step,
     retries: chain.retries,
     stopReason: chain.stop_reason,
-    /** Part du plafond de la chaîne déjà consommée, 0→1. */
-    budgetUsed:
-      chain.budget_usd && chain.budget_usd > 0
-        ? Math.min(1, chain.spent_usd / chain.budget_usd)
-        : null,
     createdAt: chain.created_at,
     updatedAt: chain.updated_at,
   };
@@ -99,8 +95,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     service.from("issue_categories").select("category_id").eq("issue_id", id),
   ]);
 
+  // Même cascade que le moteur : ticket > projet > préréglage du propriétaire.
+  const ownerMeta = project
+    ? ((await service.auth.admin.getUserById(project.owner_id as string)).data?.user
+        ?.user_metadata ?? null)
+    : null;
   const rules = rulesForIssue(
-    parseAutomations(project?.automations),
+    rulesForProject(project?.automations, ownerMeta as Record<string, unknown> | null),
     parseAutomationOverride(issue.automation_override),
   );
   const facts = {

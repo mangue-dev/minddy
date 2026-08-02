@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  AUTOMATION_EFFORTS_META_KEY,
+  AUTOMATION_MODELS_META_KEY,
+  AUTOMATION_PRESET_IDS,
+  AUTOMATION_PRESET_META_KEY,
+  automationEffortKey,
+  automationModelFor,
+  isAutomationEffortEnabled,
+  DEFAULT_STEP_COST_USD,
+  effortCostFactor,
   MAX_CHAIN_STEPS,
   nextRule,
+  stepCostUsd,
+  resolveAutomationPreset,
+  rulesForProject,
   parseAutomationOverride,
   parseAutomations,
   presetOfRules,
@@ -9,12 +21,14 @@ import {
   rulesForIssue,
   rulesToReplayOnRetry,
   simulateChain,
+  simulateIssueLifetime,
   simulatedRunModes,
   type AutomationEvent,
   type AutomationIssueFacts,
   type AutomationRule,
 } from "@/lib/automations";
 import type { IssueEffort } from "@/lib/issue-constants";
+import { EFFORT_POINTS, effortToPoints } from "@/lib/cycle";
 
 /**
  * La matrice par effort de MIN-147 est un JEU DE RÈGLES, pas un `switch` : ce
@@ -138,6 +152,41 @@ describe("une règle déjà jouée ne rematche pas", () => {
   });
 });
 
+describe("simulateIssueLifetime — ce que ça coûte sur la vie du ticket", () => {
+  it("compte les DEUX chaînes d'un préréglage plan + vérification", () => {
+    // Elles sont séparées par le travail d'un humain : une chaîne partie de
+    // « à faire » ne voit jamais l'entrée en revue.
+    const rules = presetRules("plan-and-verify");
+    expect(simulatedRunModes(simulateChain(rules, facts("m")))).toEqual(["plan"]);
+    expect(simulatedRunModes(simulateIssueLifetime(rules, facts("m")))).toEqual([
+      "plan",
+      "verify",
+    ]);
+  });
+
+  it("un préréglage qui ne réagit qu'à la revue n'est pas GRATUIT", () => {
+    const rules = presetRules("verify-only");
+    expect(simulateChain(rules, facts("m"))).toHaveLength(0);
+    expect(simulatedRunModes(simulateIssueLifetime(rules, facts("m")))).toEqual(["verify"]);
+  });
+
+  it("ne change rien quand toutes les règles partent du même statut", () => {
+    const rules = presetRules("loop-by-effort");
+    for (const effort of ["xs", "m", "xl"] as const) {
+      expect(simulatedRunModes(simulateIssueLifetime(rules, facts(effort)))).toEqual(
+        simulatedRunModes(simulateChain(rules, facts(effort), { throughHumanStop: true })),
+      );
+    }
+  });
+
+  it("une règle désactivée n'ouvre pas de chaîne", () => {
+    const rules = presetRules("plan-and-verify").map((r) =>
+      r.id.endsWith(":verify") ? { ...r, enabled: false } : r,
+    );
+    expect(simulatedRunModes(simulateIssueLifetime(rules, facts("m")))).toEqual(["plan"]);
+  });
+});
+
 describe("rulesToReplayOnRetry", () => {
   it("démarque l'implémentation et sa vérification, jamais le plan", () => {
     const ids = rulesToReplayOnRetry(presetRules("loop-by-effort"));
@@ -148,7 +197,22 @@ describe("rulesToReplayOnRetry", () => {
   });
 });
 
-describe("les deux autres préréglages", () => {
+describe("les préréglages à une seule étape", () => {
+  it("chacun ne joue QUE son étape — c'est ce qui les distingue", () => {
+    expect(walk(presetRules("plan-only"), facts("m"))).toEqual(["plan"]);
+    expect(walk(presetRules("implement-only"), facts("m"))).toEqual(["implement"]);
+  });
+
+  it("implement-only saute les deux filets, quel que soit l'effort", () => {
+    const rules = presetRules("implement-only");
+    for (const effort of ["xs", "s", "m", "l", "xl", null] as const) {
+      const modes = simulatedRunModes(simulateIssueLifetime(rules, facts(effort)));
+      expect(modes).toEqual(["implement"]);
+      expect(modes).not.toContain("plan");
+      expect(modes).not.toContain("verify");
+    }
+  });
+
   it("plan-only n'écrit qu'un plan, verify-only ne réagit qu'à l'entrée en revue", () => {
     expect(walk(presetRules("plan-only"), facts("m"))).toEqual(["plan"]);
     const verify = presetRules("verify-only");
@@ -163,9 +227,40 @@ describe("les deux autres préréglages", () => {
   });
 
   it("presetOfRules reconnaît un préréglage intact et rien d'autre", () => {
-    expect(presetOfRules(presetRules("loop-by-effort"))).toBe("loop-by-effort");
+    for (const id of AUTOMATION_PRESET_IDS) {
+      expect(presetOfRules(presetRules(id))).toBe(id);
+    }
     expect(presetOfRules(presetRules("loop-by-effort").slice(1))).toBeNull();
     expect(presetOfRules([])).toBeNull();
+  });
+});
+
+describe("préréglage plan-and-verify — encadrer le travail humain", () => {
+  const rules = presetRules("plan-and-verify");
+
+  it("cadre à l'entrée en « à faire », contrôle à l'entrée en revue", () => {
+    expect(walk(rules, facts("m"))).toEqual(["plan"]);
+    expect(
+      nextRule(rules, {
+        event: { type: "status_changed", from: "in_progress", to: "in_review" },
+        issue: { ...facts("m"), status: "in_review" },
+        playedRuleIds: [],
+      })?.id,
+    ).toBe("plan-and-verify:verify");
+  });
+
+  it("n'implémente JAMAIS — c'est tout l'intérêt du préréglage", () => {
+    const modes = rules.flatMap((r) =>
+      r.then.map((a) => (a.type === "run_numo" ? a.mode : a.type)),
+    );
+    expect(modes).toEqual(["plan", "verify"]);
+    expect(modes).not.toContain("implement");
+  });
+
+  it("ne dépend d'aucun effort : les deux règles valent pour tous", () => {
+    for (const effort of ["xs", "s", "m", "l", "xl", null] as const) {
+      expect(walk(rules, facts(effort))).toEqual(["plan"]);
+    }
   });
 });
 
@@ -213,10 +308,137 @@ describe("parseAutomations — tolérante par construction", () => {
   });
 
   it("un survol de la base : les préréglages relus par le parseur sont eux-mêmes", () => {
-    for (const id of ["loop-by-effort", "plan-only", "verify-only"] as const) {
+    // Sur la LISTE, pas sur trois ids écrits en dur : un préréglage ajouté doit
+    // entrer dans ce test tout seul.
+    for (const id of AUTOMATION_PRESET_IDS) {
       const rules = presetRules(id);
       expect(parseAutomations(JSON.parse(JSON.stringify(rules)))).toEqual(rules);
     }
+  });
+});
+
+describe("coût d'une étape — la taille du ticket compte autant que l'étape", () => {
+  it("un XS coûte moins qu'un M, un XL davantage — sur la même étape", () => {
+    expect(stepCostUsd("plan", "xs")).toBeLessThan(stepCostUsd("plan", "m"));
+    expect(stepCostUsd("plan", "xl")).toBeGreaterThan(stepCostUsd("plan", "m"));
+    expect(stepCostUsd("implement", "xl")).toBeGreaterThan(stepCostUsd("implement", "l"));
+  });
+
+  it("le M est la référence, et l'effort absent compte comme un M", () => {
+    expect(effortCostFactor("m")).toBe(1);
+    expect(effortCostFactor(null)).toBe(effortCostFactor("m"));
+    expect(stepCostUsd("implement", "m")).toBe(DEFAULT_STEP_COST_USD.implement);
+  });
+
+  it("l'échelle est celle des points du produit, pas une deuxième", () => {
+    // Deux endroits qui pèsent un ticket doivent le peser pareil.
+    for (const effort of ["xs", "s", "m", "l", "xl"] as const) {
+      expect(effortCostFactor(effort)).toBeCloseTo(
+        effortToPoints(effort) / EFFORT_POINTS.m,
+        10,
+      );
+    }
+  });
+
+  it("le facteur est monotone : jamais deux tailles au même prix", () => {
+    const factors = (["xs", "s", "m", "l", "xl"] as const).map(effortCostFactor);
+    for (let i = 1; i < factors.length; i++) {
+      expect(factors[i]).toBeGreaterThan(factors[i - 1]);
+    }
+  });
+
+  it("un parcours complet de XL coûte nettement plus qu'un de XS", () => {
+    const rules = presetRules("loop-by-effort");
+    const total = (effort: "xs" | "xl") =>
+      simulatedRunModes(simulateIssueLifetime(rules, facts(effort))).reduce(
+        (sum, mode) => sum + stepCostUsd(mode, effort),
+        0,
+      );
+    // Un XS n'implémente que ; un XL joue quatre étapes, chacune plus chère.
+    expect(total("xl")).toBeGreaterThan(total("xs") * 5);
+  });
+});
+
+describe("personnalisation par taille de ticket", () => {
+  it("toutes les tailles sont couvertes par défaut — c'est le retrait qui est un geste", () => {
+    for (const effort of ["xs", "s", "m", "l", "xl"] as const) {
+      expect(isAutomationEffortEnabled(null, effort)).toBe(true);
+      expect(isAutomationEffortEnabled({}, effort)).toBe(true);
+    }
+  });
+
+  it("seul un `false` explicite éteint une taille", () => {
+    const meta = { [AUTOMATION_EFFORTS_META_KEY]: { xl: false, xs: true } };
+    expect(isAutomationEffortEnabled(meta, "xl")).toBe(false);
+    expect(isAutomationEffortEnabled(meta, "xs")).toBe(true);
+    expect(isAutomationEffortEnabled(meta, "m")).toBe(true);
+  });
+
+  it("un ticket SANS taille suit la ligne du M, comme partout ailleurs", () => {
+    expect(automationEffortKey(null)).toBe("m");
+    expect(isAutomationEffortEnabled({ [AUTOMATION_EFFORTS_META_KEY]: { m: false } }, null)).toBe(
+      false,
+    );
+    expect(automationModelFor({ [AUTOMATION_MODELS_META_KEY]: { m: "x/y" } }, null)).toBe("x/y");
+  });
+
+  it("le modèle par taille : absent = le défaut du compte", () => {
+    const meta = { [AUTOMATION_MODELS_META_KEY]: { xs: "cheap/model", xl: "  " } };
+    expect(automationModelFor(meta, "xs")).toBe("cheap/model");
+    expect(automationModelFor(meta, "xl")).toBeNull();
+    expect(automationModelFor(meta, "l")).toBeNull();
+    expect(automationModelFor(null, "m")).toBeNull();
+  });
+
+  it("des métadonnées corrompues ne cassent rien", () => {
+    // La CARTE elle-même illisible → on retombe sur les défauts.
+    for (const junk of [42, "oui", null, []]) {
+      expect(isAutomationEffortEnabled({ [AUTOMATION_EFFORTS_META_KEY]: junk }, "xs")).toBe(true);
+      expect(automationModelFor({ [AUTOMATION_MODELS_META_KEY]: junk }, "xs")).toBeNull();
+    }
+    // Une VALEUR du bon type mais absurde dans une carte lisible : seul ce qui
+    // n'est pas une chaîne non vide est écarté (un id de modèle est du texte
+    // libre — le catalogue tranche à l'usage, pas ici).
+    const meta = { [AUTOMATION_MODELS_META_KEY]: { xs: 42, s: "", m: "vendor/model" } };
+    expect(automationModelFor(meta, "xs")).toBeNull();
+    expect(automationModelFor(meta, "s")).toBeNull();
+    expect(automationModelFor(meta, "m")).toBe("vendor/model");
+  });
+});
+
+describe("cascade ticket > projet > compte", () => {
+  const meta = { automation_preset: "plan-only" };
+
+  it("sans règles sur le projet, c'est le préréglage du propriétaire qui gouverne", () => {
+    expect(rulesForProject(null, meta)).toEqual(presetRules("plan-only"));
+    expect(rulesForProject([], meta)).toEqual(presetRules("plan-only"));
+  });
+
+  it("des règles écrites sur le projet (API/MCP) DÉROGENT au préréglage", () => {
+    const written = presetRules("verify-only");
+    expect(rulesForProject(JSON.parse(JSON.stringify(written)), meta)).toEqual(written);
+  });
+
+  it("aucun préréglage au compte = aucune règle, donc rien ne se déclenche", () => {
+    expect(rulesForProject(null, null)).toEqual([]);
+    expect(rulesForProject(null, {})).toEqual([]);
+    expect(rulesForProject(null, { automation_preset: "inconnu" })).toEqual([]);
+  });
+
+  it("resolveAutomationPreset ne laisse passer qu'un id connu", () => {
+    for (const id of AUTOMATION_PRESET_IDS) {
+      expect(resolveAutomationPreset({ [AUTOMATION_PRESET_META_KEY]: id })).toBe(id);
+    }
+    expect(resolveAutomationPreset({ [AUTOMATION_PRESET_META_KEY]: 42 })).toBeNull();
+    expect(resolveAutomationPreset(undefined)).toBeNull();
+  });
+
+  it("le forçage du ticket gagne sur les deux", () => {
+    const projectLevel = rulesForProject(null, meta);
+    expect(rulesForIssue(projectLevel, { disabled: true })).toEqual([]);
+    expect(rulesForIssue(projectLevel, { preset: "implement-only" })).toEqual(
+      presetRules("implement-only"),
+    );
   });
 });
 

@@ -24,7 +24,9 @@ import type { MessageKey } from "@/lib/i18n-keys";
 /** Libellés des préréglages — les mêmes que l'écran de réglages du projet. */
 const PRESET_LABEL_KEYS: Record<AutomationPresetId, MessageKey<"Automations">> = {
   "loop-by-effort": "presetLoopByEffort",
+  "plan-and-verify": "presetPlanAndVerify",
   "plan-only": "presetPlanOnly",
+  "implement-only": "presetImplementOnly",
   "verify-only": "presetVerifyOnly",
 };
 

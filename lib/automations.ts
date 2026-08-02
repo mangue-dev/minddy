@@ -29,6 +29,7 @@ import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AgentLaunchMode } from "@/lib/server/agent/launch-message";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import { hasPlanTasks } from "@/lib/plan";
+import { EFFORT_POINTS, effortToPoints } from "@/lib/cycle";
 
 /**
  * Garde-fou anti-runaway : au-delà, la chaîne s'arrête quoi qu'en disent les
@@ -47,12 +48,14 @@ export const MAX_CHAIN_STEPS = 8;
 export const MAX_VERIFICATION_RETRIES = 1;
 
 /**
- * Marge du plafond de dépense d'une chaîne, appliquée à son estimation. Une
- * estimation est une médiane : la moitié des chaînes la dépassent. Le plafond
- * n'est pas là pour tenir la moyenne, il est là pour arrêter les dérives — d'où
- * le facteur 2 plutôt qu'un ajustement fin qui couperait des chaînes saines.
+ * PAS de plafond de dépense par chaîne — décision assumée. Couper une chaîne en
+ * plein milieu laisse un ticket à moitié fait et un utilisateur qui ne comprend
+ * pas pourquoi : le travail s'arrête sans que personne ne l'ait demandé, entre
+ * deux étapes qu'il croyait enchaînées. Ce qui borne la dépense reste le QUOTA
+ * DU COMPTE (`checkAgentQuota`) : global, visible dans les réglages, et le même
+ * pour tous les usages de l'IA. Une chaîne dit ce qu'elle a coûté quand elle
+ * finit (cf. `postChainComment`) ; elle ne s'interrompt pas là-dessus.
  */
-export const CHAIN_BUDGET_MARGIN = 2;
 
 // ── Déclencheurs ─────────────────────────────────────────────────────────────
 
@@ -104,8 +107,6 @@ export interface AutomationRunAction {
   prompt?: string;
   model?: string | null;
   reasoningLevel?: ReasoningLevel | null;
-  /** Plafond de CE run, en USD. `null` = seul le plafond de la chaîne borne. */
-  budgetUsd?: number | null;
 }
 
 export type AutomationAction =
@@ -156,6 +157,35 @@ export const DEFAULT_STEP_COST_USD: Record<AgentLaunchMode | "custom", number> =
   verify: 0.1,
   custom: 0.2,
 };
+
+/**
+ * Facteur de coût d'une étape selon l'EFFORT du ticket, la référence étant le M.
+ *
+ * Planifier un XS et planifier un XL ne coûtent pas la même chose — ni le plan,
+ * ni le code, ni la relecture. Un coût par étape indépendant de la taille donnait
+ * une estimation plate (« XS et XL, 2 % chacun »), donc fausse aux deux bouts :
+ * elle surestimait les petits tickets et surtout SOUS-ESTIMAIT les gros. Le
+ * second bout est le grave : le plafond d'une chaîne dérive de cette estimation,
+ * et un XL budgété comme un M s'arrête sur « budget » au milieu du travail.
+ *
+ * L'échelle n'est pas inventée ici : c'est `EFFORT_POINTS` (Fibonacci
+ * xs1 s2 m3 l5 xl8), déjà la mesure de taille du produit pour la capacité des
+ * cycles. Un effort non renseigné compte comme un M, comme partout ailleurs.
+ * Deux endroits qui pèsent un ticket doivent le peser pareil.
+ *
+ * (L'estimation reste un AFFICHAGE : rien ne s'interrompt dessus.)
+ */
+export function effortCostFactor(effort: IssueEffort | null | undefined): number {
+  return effortToPoints(effort) / EFFORT_POINTS.m;
+}
+
+/** Coût de repli d'une étape SUR CE TICKET — mode × taille. */
+export function stepCostUsd(
+  mode: AgentLaunchMode | "custom",
+  effort: IssueEffort | null | undefined,
+): number {
+  return DEFAULT_STEP_COST_USD[mode] * effortCostFactor(effort);
+}
 
 // ── Le ticket, tel que les règles le lisent ──────────────────────────────────
 
@@ -327,6 +357,43 @@ export function simulateChain(
   return steps;
 }
 
+/**
+ * Tout ce que les règles jouent sur la VIE d'un ticket, et non sur une seule
+ * chaîne. Deux règles peuvent réagir à deux statuts différents — « écris le plan
+ * à l'entrée en à faire » et « vérifie à l'entrée en revue » — et ce sont alors
+ * DEUX chaînes, ouvertes à deux moments, séparées par le travail d'un humain.
+ *
+ * `simulateChain` n'en voit qu'une : partie de « à faire », elle s'arrête avant
+ * la revue. Un préréglage plan+vérification s'estimait donc à une étape au lieu
+ * de deux, et un préréglage qui ne réagit qu'à l'entrée en revue s'affichait
+ * carrément GRATUIT. Pour un écran dont toute la raison d'être est de dire ce
+ * que ça coûte, c'était le pire endroit où se tromper.
+ *
+ * On ouvre donc une chaîne par statut auquel une règle réagit. Réserve connue :
+ * un jeu de règles qui utiliserait `set_status` vers un statut qu'une AUTRE
+ * règle guette compterait cette suite deux fois. Aucun préréglage ne le fait, et
+ * ceci est une estimation — pas une facture.
+ */
+export function simulateIssueLifetime(
+  rules: readonly AutomationRule[],
+  issue: AutomationIssueFacts,
+): SimulatedStep[] {
+  const entries: IssueStatus[] = [];
+  for (const rule of rules) {
+    if (!rule.enabled || rule.when.type !== "status_changed") continue;
+    for (const status of rule.when.to) {
+      if (!entries.includes(status)) entries.push(status);
+    }
+  }
+  return entries.flatMap((status) =>
+    simulateChain(
+      rules,
+      { ...issue, status },
+      { throughHumanStop: true, from: { type: "status_changed", from: null, to: status } },
+    ),
+  );
+}
+
 /** Les modes de run qu'un parcours joue, dans l'ordre (estimation, affichage). */
 export function simulatedRunModes(steps: readonly SimulatedStep[]): (AgentLaunchMode | "custom")[] {
   return steps
@@ -438,9 +505,6 @@ function parseAction(raw: unknown): AutomationAction | null {
       if (typeof obj.reasoningLevel === "string" && (REASONING as readonly string[]).includes(obj.reasoningLevel)) {
         action.reasoningLevel = obj.reasoningLevel as ReasoningLevel;
       }
-      if (typeof obj.budgetUsd === "number" && Number.isFinite(obj.budgetUsd) && obj.budgetUsd > 0) {
-        action.budgetUsd = obj.budgetUsd;
-      }
       // Un mode `custom` sans consigne n'a rien à demander à l'agent.
       if (action.mode === "custom" && !action.prompt) return null;
       return action;
@@ -502,7 +566,18 @@ export function parseAutomations(raw: unknown): AutomationRule[] {
 
 // ── Préréglages ──────────────────────────────────────────────────────────────
 
-export const AUTOMATION_PRESET_IDS = ["loop-by-effort", "plan-only", "verify-only"] as const;
+/**
+ * Ordre d'affichage : les deux qui enchaînent plusieurs étapes d'abord, puis les
+ * trois qui n'en jouent qu'une — rangées dans l'ordre de la boucle
+ * (planifier, implémenter, vérifier).
+ */
+export const AUTOMATION_PRESET_IDS = [
+  "loop-by-effort",
+  "plan-and-verify",
+  "plan-only",
+  "implement-only",
+  "verify-only",
+] as const;
 export type AutomationPresetId = (typeof AUTOMATION_PRESET_IDS)[number];
 
 export function isAutomationPresetId(value: unknown): value is AutomationPresetId {
@@ -616,6 +691,34 @@ function loopByEffortRules(): AutomationRule[] {
   ];
 }
 
+/**
+ * Encadrer le travail humain : l'agent cadre AVANT, contrôle APRÈS, et n'écrit
+ * jamais le code. Le seul préréglage où les deux bouts de la boucle tournent
+ * sans le milieu — pour les équipes qui veulent l'aide de l'agent sur ce qui se
+ * relit (un plan, un diff) sans lui confier le clavier.
+ */
+function planAndVerifyRules(): AutomationRule[] {
+  const p = "plan-and-verify";
+  return [
+    {
+      id: `${p}:write`,
+      name: "Écrire le plan à l'entrée en « à faire »",
+      enabled: true,
+      when: { type: "status_changed", to: ["todo"] },
+      if: {},
+      then: [run("plan", "medium")],
+    },
+    {
+      id: `${p}:verify`,
+      name: "Vérifier l'implémentation à l'entrée en revue",
+      enabled: true,
+      when: { type: "status_changed", to: ["in_review"] },
+      if: {},
+      then: [run("verify", "low")],
+    },
+  ];
+}
+
 function planOnlyRules(): AutomationRule[] {
   return [
     {
@@ -625,6 +728,24 @@ function planOnlyRules(): AutomationRule[] {
       when: { type: "status_changed", to: ["todo"] },
       if: {},
       then: [run("plan", "medium")],
+    },
+  ];
+}
+
+/**
+ * Droit au code : ni plan avant, ni vérification après. Le préréglage le moins
+ * cher et le seul sans filet — c'est ce que sa description doit dire, parce que
+ * sur un ticket mal décrit, personne ne relit avant la PR.
+ */
+function implementOnlyRules(): AutomationRule[] {
+  return [
+    {
+      id: "implement-only:implement",
+      name: "Implémenter à l'entrée en « à faire »",
+      enabled: true,
+      when: { type: "status_changed", to: ["todo"] },
+      if: {},
+      then: [run("implement", "medium")],
     },
   ];
 }
@@ -649,7 +770,9 @@ export interface AutomationPreset {
 
 export const AUTOMATION_PRESETS: AutomationPreset[] = [
   { id: "loop-by-effort", rules: loopByEffortRules },
+  { id: "plan-and-verify", rules: planAndVerifyRules },
   { id: "plan-only", rules: planOnlyRules },
+  { id: "implement-only", rules: implementOnlyRules },
   { id: "verify-only", rules: verifyOnlyRules },
 ];
 
@@ -671,6 +794,122 @@ export function presetOfRules(rules: readonly AutomationRule[]): AutomationPrese
     if (ids.every((id, i) => rules[i]?.id === id)) return preset.id;
   }
   return null;
+}
+
+// ── Le préréglage, au COMPTE ─────────────────────────────────────────────────
+
+/**
+ * Préférence de compte (Compte → Automatisations) : le préréglage qui gouverne
+ * TOUS les projets dont je suis propriétaire. Stockée dans le `user_metadata`
+ * Supabase, comme `numo_default_status` et les réglages de cycle.
+ *
+ * Au compte et non au projet, parce qu'on ne reconfigure pas la même boucle à
+ * chaque nouveau projet. L'objection habituelle — « un réglage de compte
+ * piloterait des tickets dont il ne paie pas le dépôt » — ne tient pas ici : le
+ * préréglage lu est celui du PROPRIÉTAIRE du projet, qui est aussi celui qui
+ * paie (`billTo: projectOwner`) et le seul à pouvoir armer un projet. Payeur et
+ * configurateur restent la même personne.
+ *
+ * Ce qui reste au projet, c'est l'INTERRUPTEUR : `projects.automations_enabled`,
+ * un par projet — allumer la boucle sur son dépôt de production n'est pas la
+ * même décision que sur un bac à sable.
+ */
+export const AUTOMATION_PRESET_META_KEY = "automation_preset";
+
+/** Le préréglage du compte, ou `null` — aucun, donc rien ne se déclenche. */
+export function resolveAutomationPreset(
+  meta: Record<string, unknown> | null | undefined,
+): AutomationPresetId | null {
+  const raw = meta?.[AUTOMATION_PRESET_META_KEY];
+  return isAutomationPresetId(raw) ? raw : null;
+}
+
+// ── Personnalisation par EFFORT, au compte ───────────────────────────────────
+
+/**
+ * Deux réglages par taille de ticket, à côté du préréglage :
+ *   • sur quels efforts la boucle a le droit de tourner ;
+ *   • avec quel modèle, effort par effort.
+ *
+ * C'est ce qui remplace l'éditeur de règles : on garde la personnalisation qui
+ * compte — « pas d'automatisation sur mes XL », « un petit modèle sur mes XS » —
+ * sans demander de lire neuf lignes `quand/si/alors`. Ce qu'on y perd, et c'est
+ * assumé : le modèle ne se choisit plus par PHASE (planifier vs vérifier), mais
+ * par taille. Les préréglages continuent de doser le RAISONNEMENT par phase.
+ *
+ * L'effort non renseigné n'a pas sa ligne : il suit celle du M, comme partout
+ * ailleurs (règles du mode `m`, points de cycle, facteur de coût).
+ */
+export const AUTOMATION_EFFORTS_META_KEY = "automation_efforts";
+export const AUTOMATION_MODELS_META_KEY = "automation_models";
+
+/** La ligne de réglages que suit un ticket : la sienne, ou celle du M. */
+export function automationEffortKey(effort: IssueEffort | null | undefined): IssueEffort {
+  return effort ?? "m";
+}
+
+const ALL_EFFORTS: readonly IssueEffort[] = ["xs", "s", "m", "l", "xl"];
+
+/**
+ * Les efforts sur lesquels la boucle tourne. Défaut : TOUS — quelqu'un qui
+ * choisit un préréglage veut qu'il s'applique ; c'est le retrait qui est un
+ * geste, pas l'inclusion. Seul un `false` explicite éteint une taille.
+ */
+export function resolveAutomationEfforts(
+  meta: Record<string, unknown> | null | undefined,
+): Record<IssueEffort, boolean> {
+  const raw = meta?.[AUTOMATION_EFFORTS_META_KEY];
+  const map = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  return Object.fromEntries(ALL_EFFORTS.map((e) => [e, map[e] !== false])) as Record<
+    IssueEffort,
+    boolean
+  >;
+}
+
+export function isAutomationEffortEnabled(
+  meta: Record<string, unknown> | null | undefined,
+  effort: IssueEffort | null | undefined,
+): boolean {
+  return resolveAutomationEfforts(meta)[automationEffortKey(effort)];
+}
+
+/** Modèle choisi par effort. Absent = le défaut du compte, comme un lancement manuel. */
+export function resolveAutomationModels(
+  meta: Record<string, unknown> | null | undefined,
+): Partial<Record<IssueEffort, string>> {
+  const raw = meta?.[AUTOMATION_MODELS_META_KEY];
+  const map = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const out: Partial<Record<IssueEffort, string>> = {};
+  for (const effort of ALL_EFFORTS) {
+    const value = map[effort];
+    if (typeof value === "string" && value.trim()) out[effort] = value.trim();
+  }
+  return out;
+}
+
+export function automationModelFor(
+  meta: Record<string, unknown> | null | undefined,
+  effort: IssueEffort | null | undefined,
+): string | null {
+  return resolveAutomationModels(meta)[automationEffortKey(effort)] ?? null;
+}
+
+/**
+ * Les règles qui gouvernent un PROJET : celles écrites sur le projet si elles
+ * existent, sinon celles du préréglage de son propriétaire.
+ *
+ * `projects.automations` n'est plus la source normale — c'est une DÉROGATION,
+ * qu'aucun écran n'écrit et que seuls l'API et le serveur MCP posent. La garder
+ * coûte cette ligne-ci et évite d'enfermer les cas particuliers.
+ */
+export function rulesForProject(
+  projectRules: unknown,
+  ownerMeta: Record<string, unknown> | null | undefined,
+): AutomationRule[] {
+  const written = parseAutomations(projectRules);
+  if (written.length > 0) return written;
+  const preset = resolveAutomationPreset(ownerMeta);
+  return preset ? presetRules(preset) : [];
 }
 
 // ── Forçage par ticket ───────────────────────────────────────────────────────

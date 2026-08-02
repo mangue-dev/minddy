@@ -32,7 +32,6 @@ export type ChainReportKind = "awaiting_human" | "completed" | "stopped";
  *  sur une phrase générique plutôt que sur le code brut. */
 const STOP_REASONS: Record<Locale, Record<string, string>> = {
   fr: {
-    budget: "le plafond de dépense de la chaîne a été atteint",
     quota: "le budget d'usage IA du compte est épuisé",
     verification_failed: "la vérification de l'implémentation a échoué deux fois",
     interrupted: "quelqu'un a interrompu le run en cours",
@@ -49,7 +48,6 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     entitlement: "les automatisations ne sont pas incluses dans le plan du projet",
   },
   en: {
-    budget: "the chain hit its spending cap",
     quota: "the account's AI usage budget is spent",
     verification_failed: "the implementation failed its own check twice",
     interrupted: "someone interrupted the running session",

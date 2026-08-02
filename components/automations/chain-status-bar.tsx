@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Progress, Spinner, toast } from "mangue-ui";
+import { Button, Spinner, toast } from "mangue-ui";
 import { OctagonX, PauseCircle, Workflow } from "lucide-react";
 import { postIssueAutomationApi } from "@/lib/agent-api";
 import { issueChainQueryKey, useIssueChainQuery } from "@/lib/use-agent-runs";
@@ -11,8 +11,10 @@ import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * La barre d'état d'une chaîne d'automatisation sur un ticket (MIN-147) : où
- * elle en est, ce qu'elle a consommé de son plafond, et les deux seuls gestes
- * qu'un humain a sur elle — continuer, arrêter.
+ * elle en est, et les deux seuls gestes qu'un humain a sur elle — continuer,
+ * arrêter. Pas de jauge de dépense : une chaîne n'a plus de plafond propre, elle
+ * ne s'interrompt pas là-dessus (cf. l'en-tête de lib/automations). Ce qu'elle a
+ * coûté se dit à la fin, dans son commentaire de rapport.
  *
  * Elle bouge SEULE : la query qui la nourrit ne poll pas, c'est le trigger
  * realtime sur `agent_chains` qui l'invalide (cf. lib/realtime-provider.tsx).
@@ -60,7 +62,7 @@ export function ChainStatusBar({ issueId }: { issueId: string }) {
         : OctagonX;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border px-3 py-2.5">
+    <div className="rounded-lg border border-border px-3 py-2.5">
       <div className="flex items-center gap-2">
         <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <p className="min-w-0 flex-1 truncate text-sm">
@@ -92,16 +94,6 @@ export function ChainStatusBar({ issueId }: { issueId: string }) {
           </div>
         )}
       </div>
-
-      {/* Le plafond, en PART consommée — jamais en dollars. */}
-      {chain.budgetUsed !== null && (
-        <div className="flex items-center gap-2">
-          <Progress value={Math.round(chain.budgetUsed * 100)} className="h-1.5 flex-1" />
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {t("chainBudget", { percent: `${Math.round(chain.budgetUsed * 100)} %` })}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

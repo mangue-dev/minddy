@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   User,
+  Workflow,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
@@ -22,6 +23,7 @@ import { AccountProfileSection } from "@/components/settings/account-profile-sec
 import { AccountSecuritySection } from "@/components/settings/account-security-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
+import { AccountAutomationsSection } from "@/components/settings/account-automations-section";
 import { AccountNotificationsSection } from "@/components/settings/account-notifications-section";
 import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
@@ -33,6 +35,7 @@ import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt"
 
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
+  const tAutomations = useTranslations("Automations");
   const { user } = useAuth();
   // La pastille d'attention de l'onglet « Sécurité » (MIN-132) : tant que la 2FA
   // est inactive, la recommandation doit être visible depuis les autres onglets.
@@ -69,6 +72,14 @@ export default function AccountSettingsPage() {
       label: t("cyclesTab"),
       icon: IterationCw,
       content: <AccountCyclesSection />,
+    },
+    // Les automatisations juste après les cycles : les deux disent comment le
+    // travail avance tout seul, l'un pour moi, l'autre pour l'agent.
+    {
+      value: "automations",
+      label: tAutomations("title"),
+      icon: Workflow,
+      content: <AccountAutomationsSection />,
     },
     {
       value: "inbox",

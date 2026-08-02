@@ -26,6 +26,12 @@ import {
   resolveCyclePrefs,
   type CyclePrefs,
 } from "@/lib/cycle-prefs";
+import {
+  AUTOMATION_PRESET_META_KEY,
+  isAutomationPresetId,
+  resolveAutomationPreset,
+  type AutomationPresetId,
+} from "@/lib/automations";
 import { emailLocalPart } from "@/lib/display-name";
 
 /**
@@ -48,6 +54,9 @@ export interface AccountSettings {
   prompt_copy_auto_start: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
+  /** Préréglage d'automatisation (MIN-147) : la boucle Numo appliquée à TOUS les
+   *  projets dont ce compte est propriétaire. `null` = aucun. */
+  automation_preset: AutomationPresetId | null;
 }
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -77,6 +86,7 @@ function toSettings(
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
     cycles: resolveCyclePrefs(meta),
+    automation_preset: resolveAutomationPreset(meta),
   };
 }
 
@@ -152,6 +162,18 @@ export async function updateAccountSettings({
       return { ok: false, error: "prompt_copy_auto_start must be a boolean." };
     }
     next[PROMPT_COPY_AUTO_START_META_KEY] = input.prompt_copy_auto_start;
+  }
+
+  // Préréglage d'automatisation (MIN-147). `null` l'efface — c'est la façon de
+  // dire « plus aucune boucle », sans avoir à éteindre chaque projet.
+  if ("automation_preset" in input) {
+    if (input.automation_preset === null) {
+      delete next[AUTOMATION_PRESET_META_KEY];
+    } else if (isAutomationPresetId(input.automation_preset)) {
+      next[AUTOMATION_PRESET_META_KEY] = input.automation_preset;
+    } else {
+      return { ok: false, error: "automation_preset is not a known preset." };
+    }
   }
 
   // Cycles (MIN-32) — same flat input keys as the meta keys.
