@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
-import { VoiceDictationFigure } from "./voice-dictation-figure";
+import { VoiceDemo } from "./voice-demo";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /**
@@ -115,8 +115,11 @@ export async function SectionSpeed() {
             </Reveal>
           </header>
 
+          {/* Jouable, pas illustré (MIN-150) : le visiteur parle et regarde les
+              champs se remplir. La figure statique qui tenait cette place
+              disait la même chose sans la faire ressentir. */}
           <Reveal>
-            <VoiceDictationFigure />
+            <VoiceDemo />
           </Reveal>
 
           {/* Les grilles à filets (`gap-px` sur un fond `bg-border`) entrent d'un

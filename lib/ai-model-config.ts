@@ -80,6 +80,11 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // Voix (dictée → ticket)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
   { key: "transcription_model", kind: "model", fallback: "openai/whisper-large-v3", group: "voice" },
+  // Démo de dictée de la landing (MIN-150) : le seul appel IA qu'on offre à un
+  // visiteur SANS COMPTE. Le drapeau la coupe partout d'un coup, sans
+  // déploiement — c'est le garde-fou du dernier recours si l'endpoint ouvert
+  // se fait tirer dessus (les autres, par IP et par jour, sont dans la route).
+  { key: "demo_dictation_enabled", kind: "flag", fallback: "true", group: "voice" },
   // Board de feedback
   { key: "feedback_classify_enabled", kind: "flag", fallback: "true", group: "feedback" },
   { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback" },

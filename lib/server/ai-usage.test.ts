@@ -128,6 +128,22 @@ describe("imputation des lignes ai_usage", () => {
     expect(String(errorSpy.mock.calls[0][0])).toContain("run sans created_by");
   });
 
+  it("n'impute à personne EN SILENCE quand la plateforme offre l'appel", async () => {
+    // MIN-150 — la démo de dictée de la landing tourne sans compte : il n'y a
+    // personne à qui imputer, et ce n'est pas une anomalie. Confondre les deux
+    // reviendrait à s'habituer à voir cette erreur-là dans les journaux.
+    await recordAiUsage({
+      runId: newRunId(),
+      feature: "transcription",
+      billTo: { platform: "landing voice demo" },
+      cost: 0.0015,
+    });
+
+    expect(inserted[0].user_id).toBeNull();
+    expect(inserted[0].billed_reason).toBe("platform");
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it("tranche ligne par ligne dans un lot mixte", async () => {
     // Un même insert peut porter des lignes de provenances différentes : la
     // résolution est par ligne, pas par lot — un repli ne déteint pas sur ses

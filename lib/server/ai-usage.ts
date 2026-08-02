@@ -102,6 +102,14 @@ export type AiUsageBillTo =
    */
   | { projectOwner: string }
   /**
+   * La PLATEFORME paye, délibérément : un appel qu'on offre à quelqu'un qui n'a
+   * pas de compte (la démo de dictée de la landing, MIN-150). Comme
+   * `unattributed`, la ligne n'entre dans le budget de personne — mais elle se
+   * distingue en base, et ne se journalise PAS en erreur : c'est une dépense
+   * décidée, pas une fuite. Le motif dit laquelle.
+   */
+  | { platform: string }
+  /**
    * Personne ne paye — la ligne existe pour la compta, mais n'entre dans le
    * compteur d'aucun budget. Le motif est journalisé en erreur : c'est une
    * anomalie qu'on assume bruyamment, jamais un défaut tranquille.
@@ -129,7 +137,7 @@ export interface AiUsageInput {
 }
 
 /** Motif d'imputation écrit en base — 1:1 avec le check de la migration. */
-type BilledReason = "trigger" | "project_owner" | "unattributed";
+type BilledReason = "trigger" | "project_owner" | "platform" | "unattributed";
 
 function toRow(input: AiUsageInput) {
   return {
@@ -197,8 +205,9 @@ async function resolveProjectOwners(projectIds: string[]): Promise<Map<string, s
  *
  * L'imputation vient de `billTo` et de nulle part ailleurs (MIN-131) : un appel
  * avec déclencheur paye au déclencheur, un appel sans déclencheur nommable doit
- * demander le owner du projet, et tout ce qui n'entre dans aucun des deux cas
- * s'écrit `unattributed` — compté pour personne, mais journalisé en erreur.
+ * demander le owner du projet, un appel offert à un visiteur sans compte
+ * s'annonce `platform`, et tout ce qui n'entre dans aucun des trois s'écrit
+ * `unattributed` — compté pour personne, mais journalisé en erreur.
  */
 export async function recordAiUsage(
   input: AiUsageInput | AiUsageInput[]
@@ -232,6 +241,9 @@ export async function recordAiUsage(
             `[ai-usage] ${row.feature}: owner introuvable pour le projet ${billTo.projectOwner} — ligne non imputée`
           );
         }
+      } else if ("platform" in billTo) {
+        // Dépense offerte, décidée : rien à imputer, et rien à signaler.
+        row.billed_reason = "platform";
       } else {
         const reason =
           "unattributed" in billTo ? billTo.unattributed : "déclencheur annoncé mais vide";

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { cn } from "mangue-ui";
+// Sous-chemin et pas le baril `mangue-ui` : ce composant est monté par la démo
+// publique de la landing, où le baril tirerait framer-motion, cmdk et vaul dans
+// le bundle initial (cf. `lib/public-client-messages.ts`, même chasse).
+import { cn } from "mangue-ui/lib/utils";
 
 const BAR_COUNT = 16;
 const FFT_SIZE = 64;

@@ -336,6 +336,12 @@ export interface AnalyticsEventProps {
   };
   landing_section_viewed: { section: string };
   landing_faq_opened: { question_index: number };
+  /** Démo de dictée jouable (MIN-150). `input` distingue la prise au micro de
+   *  la phrase d'exemple : savoir laquelle des deux fait le « aha » décide de
+   *  laquelle mettre en avant. Aucun texte dicté ne remonte, jamais. */
+  landing_voice_demo_started: { input: "mic" | "sample" };
+  landing_voice_demo_completed: { input: "mic" | "sample" };
+  landing_voice_demo_failed: { input: "mic" | "sample"; reason: string };
 
   // ── Recherche, raccourcis, divers ──
   search_opened: { source: string };
@@ -589,6 +595,9 @@ const EVENT_NAMES = [
   "landing_cta_clicked",
   "landing_section_viewed",
   "landing_faq_opened",
+  "landing_voice_demo_started",
+  "landing_voice_demo_completed",
+  "landing_voice_demo_failed",
   // Divers
   "search_opened",
   "search_result_selected",
