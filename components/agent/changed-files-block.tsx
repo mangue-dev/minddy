@@ -113,7 +113,7 @@ export function ChangedFilesBlock({
           </CollapsibleTrigger>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
-        <CollapsibleContent className="data-[state=open]:animate-[collapsible-down_220ms_ease-out]">
+        <CollapsibleContent>
           <div className="flex flex-col px-1 pb-1.5">
             {files.map((f) => (
               <FileRow key={`${f.status}:${f.path}`} file={f} onOpenFile={onOpenFile} />

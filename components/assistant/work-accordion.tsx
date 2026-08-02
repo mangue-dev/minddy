@@ -78,11 +78,7 @@ export function WorkAccordion({
           messages. Toujours visible (ouvert comme fermé), elle ne se déplace pas —
           le contenu s'anime en dessous. */}
       <div className="border-t border-border" />
-      {/* La classe d'ouverture est répétée ICI À DESSEIN : mangue-ui la déclare bien
-          sur CollapsibleContent, mais son scanner Tailwind ne l'émet pas (collée à
-          un `${}`), d'où l'absence d'animation à l'OUVERTURE. La citer proprement
-          dans notre source force la génération de l'utilitaire. Ne pas retirer. */}
-      <CollapsibleContent className="data-[state=open]:animate-[collapsible-down_220ms_ease-out]">
+      <CollapsibleContent>
         <div className="flex flex-col gap-3 pt-3">{children}</div>
       </CollapsibleContent>
     </Collapsible>

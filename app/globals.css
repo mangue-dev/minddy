@@ -450,59 +450,6 @@ nav[aria-label="Navigation"]
   max-height: none !important;
 }
 
-/* Effet « shimmer » sur du texte (agent : dernière action en cours, accordéon de
-   tool-calls fermé). Une bande claire balaie un texte estompé — piloté par
-   `currentColor`, donc s'adapte à la couleur héritée (muted/destructive) et au
-   thème. Retiré si l'utilisateur préfère moins d'animation. */
-/* Plage 0→100% avec un dégradé TROIS FOIS plus large (300%) + no-repeat.
-   Le 300% n'est pas cosmétique, c'est ce qui rend la boucle FLUIDE. Avec 200%, la
-   bande claire (à 50% du dégradé) se retrouve sur le bord droit à la position 0% et
-   sur le bord gauche à 100% : elle est à moitié visible aux DEUX extrémités, donc à
-   chaque tour elle se téléportait de gauche à droite — le saut qu'on voyait.
-   À 300%, la bande est hors du texte aux deux bouts (à 1.5×largeur à droite au
-   départ, à −0.5×largeur à gauche à l'arrivée) : les deux extrémités sont
-   visuellement IDENTIQUES (texte uniformément estompé), donc le raccord est
-   invisible. La bande entre par la droite, balaie, sort par la gauche, et la courte
-   respiration entre deux passages est voulue. À toute position l'image couvre
-   toujours tout le texte (aucun trou transparent). */
-@keyframes text-shimmer {
-  from {
-    background-position: 0% center;
-  }
-  to {
-    background-position: 100% center;
-  }
-}
-.text-shimmer {
-  /* NB : `background-clip: text` exige `color: transparent`, ce qui rend
-     `currentColor` transparent (il RÉSOUT vers `color`) → on n'utilise donc PAS
-     currentColor mais les tokens de thème directement. Base = muted-foreground
-     (couleur normale des labels), bande = foreground (plus clair) qui balaie. */
-  background-image: linear-gradient(
-    90deg,
-    var(--muted-foreground) 0%,
-    var(--muted-foreground) 35%,
-    var(--foreground) 50%,
-    var(--muted-foreground) 65%,
-    var(--muted-foreground) 100%
-  );
-  background-size: 300% 100%;
-  background-repeat: no-repeat;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: text-shimmer 2.4s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .text-shimmer {
-    animation: none;
-    background: none;
-    color: var(--muted-foreground);
-    -webkit-text-fill-color: var(--muted-foreground);
-  }
-}
-
 /* ─── Sélection du texte des bulles de conversation (agent + Numo) ────────
    Deux règles empêchent la sélection : le reset global `user-select: none` de
    mangue-ui, ET — surtout — Streamdown (rendu markdown de l'assistant) qui pose

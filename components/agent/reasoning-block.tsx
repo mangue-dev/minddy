@@ -66,7 +66,7 @@ export function ReasoningBlock({
       <CollapsibleTrigger className="w-full outline-hidden transition-colors hover:text-foreground">
         {row}
       </CollapsibleTrigger>
-      <CollapsibleContent className="data-[state=open]:animate-[collapsible-down_220ms_ease-out]">
+      <CollapsibleContent>
         <p className="ml-5 whitespace-pre-wrap py-1 text-xs text-muted-foreground">{trace}</p>
       </CollapsibleContent>
     </Collapsible>

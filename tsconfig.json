@@ -15,30 +15,7 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./*"],
-      // Accès MODULE PAR MODULE à mangue-ui, pour le site public (MIN-100).
-      //
-      // mangue-ui s'importe normalement par son baril : `index.ts` fait
-      // `export *` sur une soixantaine de modules — dont la palette (cmdk), le
-      // carrousel (embla), le sélecteur de couleur (react-colorful), le tiroir
-      // (vaul) et le shell d'app (framer-motion). Un seul `import { cn } from
-      // "mangue-ui"` faisait donc entrer tout cela dans le bundle INITIAL des
-      // pages publiques : mesuré sur /legal — une colonne de texte, une nav, un
-      // pied de page — 388 Ko gzippés de JavaScript, dont ~120 Ko de composants
-      // que le site public ne rend jamais.
-      //
-      // `optimizePackageImports` de Next ne peut rien y faire : il réécrit les
-      // imports nommés vers les sous-chemins du paquet, et le champ `exports` de
-      // mangue-ui n'expose que `.` et ses feuilles de style — il n'y a aucun
-      // sous-chemin à viser. Cet alias les ouvre, côté minddy seulement, en
-      // résolvant vers le fichier plutôt que par `exports`.
-      //
-      // À savoir : ces chemins suivent l'arborescence INTERNE de mangue-ui
-      // (`src/lib/utils`, `src/components/ui/button`…). Une version du paquet qui
-      // déplace un fichier casse le build sur un « Module not found » explicite,
-      // pas en silence. Le correctif définitif est chez mangue-ui (`"./*":
-      // "./src/*"` dans ses `exports`) ; d'ici là, cet alias tient.
-      "mangue-ui/*": ["./node_modules/mangue-ui/src/*"]
+      "@/*": ["./*"]
     }
   },
   "include": [

@@ -125,7 +125,7 @@ export function SubagentBlock({
       <CollapsibleTrigger className="w-full outline-hidden transition-colors hover:text-foreground">
         {row}
       </CollapsibleTrigger>
-      <CollapsibleContent className="data-[state=open]:animate-[collapsible-down_220ms_ease-out]">
+      <CollapsibleContent>
         <div className="ml-5 py-1 text-xs text-muted-foreground">
           <p className="mb-1 flex items-center gap-1.5 font-medium">
             {t("subagentReportLabel")}
