@@ -10,6 +10,8 @@ import {
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
 import {
+  githubPrState,
+  githubPrStateForAction,
   isPullRequestComment,
   prActionForPullRequest,
   prActionForReview,
@@ -20,11 +22,9 @@ import {
   findPullRequestByNumber,
   resolveIssueForPr,
   upsertPullRequest,
-  type PullRequestState,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import type { PrActionEventType } from "@/lib/pr-events";
-import type { AgentRun } from "@/lib/server/agent/runs";
 
 /**
  * POST /api/webhooks/github — récepteur webhook de la GitHub App (MIN-47/MIN-46).
@@ -67,21 +67,6 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * traiter (GitHub re-livrera une fois le secret en place), aligné sur le
  * récepteur GitLab.
  */
-
-/** action GitHub → pr_state minddy (null = event ignoré). */
-function mapPrState(action: string, merged: boolean): AgentRun["pr_state"] | null {
-  switch (action) {
-    case "closed":
-      return merged ? "merged" : "closed";
-    case "reopened":
-    case "ready_for_review":
-      return "open";
-    case "converted_to_draft":
-      return "draft";
-    default:
-      return null;
-  }
-}
 
 interface GithubActor {
   /** Id du compte — la clé d'identité, immuable au renommage (MIN-154). */
@@ -133,9 +118,9 @@ interface PullRequestEvent {
 
 /**
  * Actions qui décrivent un état de PR à INGÉRER (MIN-143). Plus large que
- * `mapPrState`, qui ne pilote que le cycle de vie des runs et du ticket : ici on
- * tient à jour la PR elle-même — son titre, sa tête, son état — et une PR
- * modifiée ou repoussée est une PR qui a changé.
+ * `githubPrStateForAction`, qui ne pilote que le cycle de vie des runs et du
+ * ticket : ici on tient à jour la PR elle-même — son titre, sa tête, son état —
+ * et une PR modifiée ou repoussée est une PR qui a changé.
  */
 const INGESTED_PR_ACTIONS = new Set([
   "opened",
@@ -146,13 +131,6 @@ const INGESTED_PR_ACTIONS = new Set([
   "converted_to_draft",
   "ready_for_review",
 ]);
-
-/** État minddy de la PR telle que le payload la décrit. */
-function payloadPrState(pr: PullRequestPayload): PullRequestState {
-  if (pr.merged || pr.merged_at) return "merged";
-  if (pr.state === "closed") return "closed";
-  return pr.draft ? "draft" : "open";
-}
 
 /**
  * Enregistre la PR chez minddy — de Numo ou d'un humain, c'est le même fait du
@@ -176,7 +154,7 @@ async function ingestPullRequest(
     provider: "github",
     repoFullName,
     number,
-    state: payloadPrState(pr),
+    state: githubPrState(pr),
     url: pr.html_url ?? null,
     title: pr.title ?? null,
     authorLogin: pr.user?.login ?? null,
@@ -236,15 +214,16 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   }
 
   const merged = !!payload.pull_request?.merged;
-  const prState = mapPrState(action, merged);
+  // L'état vient du PAYLOAD, pas de l'action seule (MIN-164) : une PR rouverte
+  // peut être restée brouillon, et `reopened` valait « ouverte » en dur.
+  const prState = githubPrStateForAction(action, payload.pull_request ?? {});
   // Activité : ouvrir, pousser des commits, accepter (merge) ou refuser (close)
   // depuis GitHub. Le geste in-app fait par Numo passe par le bot de l'App →
   // ignoré (déjà tracé côté agent ou route).
   const actionType = prActionForPullRequest(action, merged);
-  // Deux axes indépendants (même forme que le récepteur GitLab) : `opened` et
-  // `synchronize` ne changent AUCUN état de run — ils ne font que raconter. Les
-  // sortir ici, comme le faisait le `if (!prState) return`, revenait à ne jamais
-  // les tracer.
+  // Deux axes indépendants (même forme que le récepteur GitLab) : `synchronize`
+  // ne change AUCUN état de run — il ne fait que raconter. Le sortir ici, comme
+  // le faisait le `if (!prState) return`, revenait à ne jamais le tracer.
   if (!prState && !actionType) return;
 
   const runs = prState
@@ -277,7 +256,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   }
 
   // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
-  // merged→done, closed→todo, reopened/ready_for_review→in_review.
+  // merged→done, closed→todo, ouverte→in_review, brouillon→in_progress.
   if (prState) {
     for (const run of runs) {
       // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.

@@ -70,6 +70,7 @@ function prEventKey(
     | "Rejected"
     | "ChangesRequested"
     | "Opened"
+    | "Reopened"
     | "Committed"
     | "Commented"
     | "CodeCommented"
@@ -135,6 +136,8 @@ export function describeEvent(
   // ou par les webhooks GitHub/GitLab (acteur = login de la forge).
   if (e.type === "pr_opened")
     return t(prEventKey(e, "Opened"), { number: e.to_value ?? "" });
+  if (e.type === "pr_reopened")
+    return t(prEventKey(e, "Reopened"), { number: e.to_value ?? "" });
   if (e.type === "pr_committed")
     return t(prEventKey(e, "Committed"), { number: e.to_value ?? "" });
   if (e.type === "pr_commented")

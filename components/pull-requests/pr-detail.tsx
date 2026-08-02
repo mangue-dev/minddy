@@ -39,6 +39,7 @@ import {
   Gitlab,
   MessageSquare,
   Reply,
+  RotateCcw,
   Send,
   X,
 } from "lucide-react";
@@ -518,7 +519,9 @@ export function PrDetail({
     refetch: refetchReviewComments,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
 
-  const [acting, setActing] = useState<null | "merge" | "close" | "ready_for_review">(null);
+  const [acting, setActing] = useState<
+    null | "merge" | "close" | "reopen" | "ready_for_review"
+  >(null);
   // Le merge se confirme AVEC sa méthode : la porter dans l'état de confirmation
   // évite qu'un clic sur « fusionner quand même » retombe sur le squash par défaut.
   const [confirmAction, setConfirmAction] = useState<
@@ -577,6 +580,10 @@ export function PrDetail({
   const isDraft = pr?.draft ?? item.pr_state === "draft";
   const isTerminal = item.pr_state === "merged" || item.pr_state === "closed";
   const badgeState = isDraft && !isTerminal ? "draft" : item.pr_state;
+  // Fermée n'est pas fini : les deux forges rouvrent, et une PR fermée par
+  // erreur ne se rattrapait que sur github.com (MIN-164). Fusionnée, en
+  // revanche, est définitif — la forge refuse, et il n'y a rien à proposer.
+  const canReopen = canWrite && item.pr_state === "closed";
   // Une CI rouge ne bloque le merge que dans minddy : GitHub le laisse passer si
   // la branche n'est pas protégée, d'où l'échappatoire « fusionner quand même ».
   const checksFailing = checks?.state === "failure";
@@ -646,7 +653,10 @@ export function PrDetail({
     return review.mine ? review : null;
   })();
 
-  const act = async (action: "merge" | "close" | "ready_for_review", method?: MergeMethod) => {
+  const act = async (
+    action: "merge" | "close" | "reopen" | "ready_for_review",
+    method?: MergeMethod,
+  ) => {
     if (acting) return;
     setActing(action);
     setConfirmAction(null);
@@ -657,7 +667,9 @@ export function PrDetail({
           ? t("mergedToast")
           : action === "close"
             ? t("closedToast")
-            : t("readyForReviewToast"),
+            : action === "reopen"
+              ? t("reopenedToast")
+              : t("readyForReviewToast"),
       );
       onRefetchList();
       await refetchPr();
@@ -930,8 +942,13 @@ export function PrDetail({
         </span>
         {/* Une PR terminale n'a plus d'actions : le badge prend la place qu'elles
             occupaient à droite, là où l'œil cherchait le bouton. Tant qu'elle est
-            ouverte il reste à gauche, contre l'identifiant. */}
-        <PrStateBadge state={badgeState} icon className={cn(isTerminal && "ml-auto")} />
+            ouverte — ou seulement fermée, donc rouvrable — il reste à gauche,
+            contre l'identifiant. */}
+        <PrStateBadge
+          state={badgeState}
+          icon
+          className={cn(isTerminal && !canReopen && "ml-auto")}
+        />
         {/* Approbations : « n approbations », et la mention du blocage à côté du
             bouton Fusionner. Pas de « n/N » — le N vient de la protection de
             branche, qui coûte une permission GitHub hors périmètre. */}
@@ -953,7 +970,23 @@ export function PrDetail({
           </span>
         ) : null}
 
-        {!isTerminal ? (
+        {isTerminal ? (
+          // Le seul geste qui reste à une PR fermée. Sans confirmation : rouvrir
+          // ne détruit rien, et le bouton d'à côté la referme.
+          canReopen ? (
+            <div className="ml-auto flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void act("reopen")}
+                disabled={!!acting}
+              >
+                {acting === "reopen" ? <Spinner /> : <RotateCcw />}
+                {t("reopen")}
+              </Button>
+            </div>
+          ) : null
+        ) : (
           <div className="ml-auto flex items-center gap-1.5">
             {mergeBlockedByRepo ? (
               <span className="text-xs text-muted-foreground">{t("mergeBlockedByRepo")}</span>
@@ -1124,7 +1157,7 @@ export function PrDetail({
               </div>
             )}
           </div>
-        ) : null}
+        )}
       </div>
 
       <div

@@ -996,8 +996,10 @@ async function buildInheritedPrContext(
       number,
       title: pr?.title ?? null,
       body: pr?.body ?? null,
-      // PR illisible → on se rabat sur l'état figé au lancement.
-      state: pr ? (pr.merged ? "merged" : pr.state) : run.pr_state,
+      // Le vocabulaire minddy, pas celui de la forge (MIN-164) : dire `open`
+      // d'un brouillon cacherait à l'agent que ce travail n'a jamais été
+      // proposé. PR illisible → on se rabat sur l'état figé au lancement.
+      state: pr ? prStateFromRef(pr) : run.pr_state,
       comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
       lineThreads: toPrLineThreads(reviewComments, reviewThreads),
       previousSummary,
@@ -1340,7 +1342,7 @@ export async function executeAgentRun(
      * GitLab se raconterait en vocabulaire GitHub.
      */
     const recordAgentPrEvent = async (
-      type: "pr_opened" | "pr_committed",
+      type: "pr_opened" | "pr_reopened" | "pr_committed",
       prNumber: number,
     ): Promise<void> => {
       if (!run.issue_id || !run.created_by) return;
@@ -1379,7 +1381,11 @@ export async function executeAgentRun(
     ): Promise<void> => {
       prState.number = pr.number;
       prState.url = pr.url;
-      prState.state = pr.merged ? "merged" : ((pr.state as AgentRun["pr_state"]) ?? "open");
+      // Le MÊME calcul que celui qui alimente `pull_requests` dix lignes plus
+      // bas (MIN-164) : le run le refaisait à la main, sans lire `draft`, et les
+      // deux colonnes d'état divergeaient dès qu'une PR brouillon passait par
+      // ici — rouverte, ou déjà ouverte par un humain sur la branche du run.
+      prState.state = prStateFromRef(pr);
       await emit("pr_opened", { number: pr.number, url: pr.url });
       await stampRun(run.id, {
         pr_number: pr.number,
@@ -1423,7 +1429,10 @@ export async function executeAgentRun(
         // compte qui a lié le dépôt (GitLab), donc l'écho porte une identité de
         // machine ou celle d'un tiers — or c'est Numo qui a ouvert. Les deux
         // récepteurs écartent d'ailleurs leur propre écho.
-        if (kind === "opened") await recordAgentPrEvent("pr_opened", pr.number);
+        // Ouvrir et ROUVRIR sont deux faits distincts (MIN-164) : la réouverture
+        // ne se racontait pas du tout, et le ticket repassait en revue sans que
+        // rien ne dise ce qui l'y avait remis.
+        await recordAgentPrEvent(kind === "opened" ? "pr_opened" : "pr_reopened", pr.number);
         await postPrComment(run, issue.identifier, kind, pr.url, commentLocale, target.provider);
       }
     };

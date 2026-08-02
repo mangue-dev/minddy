@@ -20,7 +20,7 @@ import {
  *
  *  GET  → metadata PR + fichiers + checks + approbations + méthodes de merge,
  *         ou `{ pr: null, files: [] }` si le run n'a pas (encore) de PR.
- *  POST → merge | close | ready_for_review | review (cf. la route par prId).
+ *  POST → merge | close | reopen | ready_for_review | review (cf. la route par prId).
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (
     action !== "merge" &&
     action !== "close" &&
+    action !== "reopen" &&
     action !== "review" &&
     action !== "ready_for_review"
   ) {

@@ -1,18 +1,84 @@
 import type { PrActionEventType } from "@/lib/pr-events";
+import type { PullRequestState } from "./pull-requests";
 
 /**
- * La règle PURE qui dit quel événement de forge devient quelle ligne d'activité
- * de ticket. Elle vit ici, et pas dans les `route.ts` : un fichier de route
- * Next.js ne peut exporter que ses handlers, donc rien de ce qu'il contient
- * n'est testable — or c'est exactement le genre de table de correspondance qui
- * se trompe en silence (une action mal orthographiée ne lève rien, elle ne
- * trace simplement jamais rien).
+ * Les règles PURES qui disent, d'un événement de forge, quel ÉTAT il décrit et
+ * quelle ligne d'ACTIVITÉ il devient. Elles vivent ici, et pas dans les
+ * `route.ts` : un fichier de route Next.js ne peut exporter que ses handlers,
+ * donc rien de ce qu'il contient n'est testable — or c'est exactement le genre
+ * de table de correspondance qui se trompe en silence (une action mal
+ * orthographiée ne lève rien, elle ne trace simplement jamais rien).
  *
  * Ce qui reste dans les routes : la vérification de signature, la résolution des
  * runs et l'écriture. Ici, uniquement des fonctions sans effet de bord.
+ *
+ * L'ÉTAT s'y est ajouté par MIN-164, et pour la même raison : chaque récepteur
+ * traduisait « ce que la forge dit » en état minddy à sa façon, et deux de ces
+ * traductions oubliaient le brouillon. Une PR est dans UN état ; il ne peut y
+ * avoir qu'une seule fonction pour le dire, par forge.
  */
 
 // ── GitHub ───────────────────────────────────────────────────────────────────
+
+/** Ce que la règle d'état lit d'une pull request GitHub. */
+export interface GithubPrStateInput {
+  state?: string;
+  draft?: boolean;
+  merged?: boolean;
+  merged_at?: string | null;
+}
+
+/**
+ * État minddy d'une pull request GitHub, tel que le payload la décrit.
+ *
+ * L'ordre porte tout : GitHub FERME une PR en la fusionnant (`state: "closed"`
+ * + `merged: true`), donc fusionnée l'emporte ; et un brouillon n'est un
+ * brouillon que tant qu'il est ouvert — GitHub garde `draft: true` sur une PR
+ * brouillon fermée, et l'annoncer « brouillon » cacherait qu'elle est morte.
+ *
+ * `merged_at` sert de repli : l'endpoint *list* de l'API ne renvoie pas `merged`
+ * (cf. `toRef` dans `pr.ts`), et certains payloads de webhook non plus.
+ */
+export function githubPrState(pr: GithubPrStateInput): PullRequestState {
+  if (pr.merged || pr.merged_at) return "merged";
+  if (pr.state === "closed") return "closed";
+  return pr.draft ? "draft" : "open";
+}
+
+/**
+ * Actions `pull_request` dont l'état PILOTE le cycle de vie du run et du ticket
+ * — plus étroit que les actions simplement INGÉRÉES (`edited`, `synchronize` :
+ * la PR change, son état non).
+ *
+ * `opened` en fait partie : une PR humaine qui cite un ticket doit le mettre en
+ * revue comme le ferait Numo, et comme le fait déjà le récepteur GitLab avec son
+ * action `open`. Sans elle, ouvrir une PR n'avait d'effet que sur GitLab alors
+ * que la fusionner en avait des deux côtés (MIN-143) — le même geste, deux
+ * comportements selon la forge.
+ */
+const STATE_DRIVING_PR_ACTIONS = new Set([
+  "opened",
+  "closed",
+  "reopened",
+  "ready_for_review",
+  "converted_to_draft",
+]);
+
+/**
+ * action `pull_request` + payload → état à écrire, ou null (action qui ne décrit
+ * aucun changement d'état).
+ *
+ * L'état vient du PAYLOAD, jamais de l'action seule : GitHub laisse rouvrir une
+ * PR restée brouillon, et `reopened` valait « ouverte » en dur — le ticket
+ * partait alors en revue pour un travail que personne n'a proposé, ce que
+ * MIN-138 avait justement tranché.
+ */
+export function githubPrStateForAction(
+  action: string,
+  pr: GithubPrStateInput,
+): PullRequestState | null {
+  return STATE_DRIVING_PR_ACTIONS.has(action) ? githubPrState(pr) : null;
+}
 
 /**
  * action `pull_request` → événement d'activité (null = action non tracée).
@@ -22,6 +88,11 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * sha avant/après, jamais le nombre de commits, d'où une phrase qui ne compte
  * rien. Les autres actions (`edited`, `labeled`, `assigned`…) sont du bruit de
  * forge, pas des faits du ticket.
+ *
+ * `converted_to_draft` / `ready_for_review` restent dehors : ils changent l'ÉTAT
+ * (et donc le statut du ticket, qui se raconte tout seul), mais minddy n'a pas
+ * d'événement pour la bascule brouillon — la PR, elle, la montre dans sa propre
+ * activité (`pr-timeline`).
  */
 export function prActionForPullRequest(
   action: string,
@@ -30,6 +101,8 @@ export function prActionForPullRequest(
   switch (action) {
     case "opened":
       return "pr_opened";
+    case "reopened":
+      return "pr_reopened";
     case "synchronize":
       return "pr_committed";
     case "closed":
@@ -82,6 +155,72 @@ export function isPullRequestComment(payload: {
 
 // ── GitLab ───────────────────────────────────────────────────────────────────
 
+/** Ce que la règle d'état lit d'un `object_attributes` de merge request. */
+export interface GitlabMrStateInput {
+  state?: string;
+  /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
+  draft?: boolean;
+  /** Le nom du brouillon avant GitLab 14 : encore servi par les instances auto-hébergées. */
+  work_in_progress?: boolean;
+}
+
+/**
+ * État minddy d'une merge request GitLab, tel que le payload la décrit.
+ *
+ * `locked` est un état TRANSITOIRE (une fusion en cours), pas un quatrième
+ * état de vie : il tombe donc du côté ouvert, comme dans `toRef` (`mr.ts`).
+ *
+ * Les DEUX noms du brouillon sont lus : GitLab a renommé `work_in_progress` en
+ * `draft` en 14.0, et une instance auto-hébergée plus ancienne n'envoie que
+ * l'ancien. N'en lire qu'un rendait le brouillon invisible sur ces instances.
+ */
+export function gitlabMrState(attrs: GitlabMrStateInput): PullRequestState {
+  if (attrs.state === "merged") return "merged";
+  if (attrs.state === "closed") return "closed";
+  return attrs.draft || attrs.work_in_progress ? "draft" : "open";
+}
+
+/** Ce que la règle d'état lit d'un événement `merge_request` complet. */
+export interface GitlabMrStateEvent {
+  object_attributes?: GitlabMrStateInput & { action?: string };
+  /** Champs modifiés par un `update` (présents seulement sur cette action). */
+  changes?: { title?: unknown; draft?: unknown };
+}
+
+/**
+ * action `merge_request` + payload → état à écrire, ou null.
+ *
+ * Le BROUILLON n'a pas d'action dédiée chez GitLab, contrairement aux
+ * `converted_to_draft` / `ready_for_review` de GitHub : il est porté par le
+ * préfixe `Draft:` du titre, et sa bascule arrive en `action: "update"` — la
+ * même action qu'un changement de description ou d'étiquette. On ne relit donc
+ * l'état sur un `update` que s'il TOUCHE au titre ou au brouillon, sinon une
+ * simple retouche de description réécrirait l'état (et, en cascade, le statut du
+ * ticket) à chaque édition.
+ */
+export function gitlabMrStateForAction(
+  payload: GitlabMrStateEvent,
+): PullRequestState | null {
+  const attrs = payload.object_attributes ?? {};
+  switch (attrs.action) {
+    case "merge":
+    case "close":
+    case "open":
+    case "reopen":
+      return gitlabMrState(attrs);
+    case "update": {
+      const changes = payload.changes ?? {};
+      if (changes.draft === undefined && changes.title === undefined) return null;
+      // Une MR déjà fermée ou fusionnée dont on retouche le titre reste ce
+      // qu'elle est : seule une MR VIVANTE bascule en brouillon.
+      if (attrs.state !== "opened" && attrs.state !== "locked") return null;
+      return gitlabMrState(attrs);
+    }
+    default:
+      return null;
+  }
+}
+
 /** Ce que la règle GitLab lit d'un `object_attributes` de merge request. */
 export interface GitlabMrActionInput {
   action?: string;
@@ -105,6 +244,8 @@ export function prActionForMergeRequest(
   switch (attrs.action) {
     case "open":
       return "pr_opened";
+    case "reopen":
+      return "pr_reopened";
     case "merge":
       return "pr_accepted";
     case "close":
@@ -157,6 +298,7 @@ export function isServiceAccountGesture(type: PrActionEventType): boolean {
     type === "pr_accepted" ||
     type === "pr_rejected" ||
     type === "pr_opened" ||
+    type === "pr_reopened" ||
     type === "pr_committed"
   );
 }

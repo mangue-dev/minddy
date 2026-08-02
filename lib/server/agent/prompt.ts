@@ -480,10 +480,16 @@ export function buildInheritedPrMessage(input: {
   pr: InheritedPrContext;
 }): string {
   const { pr, repo } = input;
-  const reopened =
+  // Ce que l'état de la PR change pour la session qui hérite. Le vocabulaire est
+  // celui de minddy (`prStateFromRef`), pas celui de la forge : le brouillon en
+  // fait partie depuis MIN-164 — il se lisait `open`, et l'agent croyait donc
+  // reprendre un travail déjà proposé à la relecture.
+  const stateNote =
     pr.state === "closed"
       ? " The pull request was REJECTED (closed) — the reviewer refused this work as it stands; address their objections, and the harness will reopen the pull request when it pushes your changes."
-      : "";
+      : pr.state === "draft"
+        ? " The pull request is still a DRAFT — nobody has proposed this work for review yet, so the comments below (if any) are not a review verdict."
+        : "";
 
   const summaryBlock = pr.previousSummary?.trim()
     ? `\n\n## What the previous session did (its own summary)\n${cap(pr.previousSummary.trim(), 4000)}`
@@ -504,7 +510,7 @@ export function buildInheritedPrMessage(input: {
     : "";
 
   return `# This ticket already carries work in progress
-The working branch **${repo.workBranch}** already carries committed work, and pull request **#${pr.number}**${pr.title ? ` ("${pr.title}")` : ""} exists on it.${reopened}
+The working branch **${repo.workBranch}** already carries committed work, and pull request **#${pr.number}**${pr.title ? ` ("${pr.title}")` : ""} exists on it.${stateNote}
 
 You are a FRESH session: you did NOT write that code and you have none of the previous conversation — only what follows. So do NOT start the ticket over. **First read the current state of the branch**: run \`git diff ${repo.defaultBranch}\` to see everything this branch already changed, then \`read_file\` what matters. Only then act. Keep iterating on the SAME branch — the harness pushes ${repo.workBranch} and pull request #${pr.number} follows it.
 

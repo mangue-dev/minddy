@@ -2,10 +2,15 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Événements d'activité tracés pour la vie d'une pull request / merge request :
- * l'ouvrir, y pousser des commits, la commenter (fil ou code), et les gestes de
- * review — approuver, demander des changements, accepter (merge), refuser
- * (close). Partagé entre l'émission (agent + routes in-app + webhooks
+ * l'ouvrir, la rouvrir, y pousser des commits, la commenter (fil ou code), et
+ * les gestes de review — approuver, demander des changements, accepter (merge),
+ * refuser (close). Partagé entre l'émission (agent + routes in-app + webhooks
  * GitHub/GitLab) et le rendu du journal d'activité (timeline).
+ *
+ * `pr_reopened` a manqué jusqu'à MIN-164 : c'était la seule transition du cycle
+ * de vie sans ligne. Le ticket disait « refusée » puis repassait en revue sans
+ * que rien n'explique pourquoi — et la réouverture faite par Numo ne se racontait
+ * pas du tout (`registerPr` n'émettait `pr_opened` que sur une vraie ouverture).
  */
 export const PR_ACTION_EVENT_TYPES = [
   "pr_approved",
@@ -13,6 +18,7 @@ export const PR_ACTION_EVENT_TYPES = [
   "pr_rejected",
   "pr_changes_requested",
   "pr_opened",
+  "pr_reopened",
   "pr_committed",
   "pr_commented",
   "pr_code_commented",

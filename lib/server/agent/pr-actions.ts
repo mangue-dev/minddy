@@ -49,6 +49,7 @@ import {
   findPullRequest,
   hasLivePullRequest,
   projectsForRepo,
+  prStateFromRef,
   resolvePrForRun,
   rowProvider,
   setPullRequestIssue,
@@ -1604,18 +1605,18 @@ export async function prLinkIssueResponse(
   });
 }
 
-/** merge / close / ready_for_review — les gestes qui changent l'état de la PR. */
+/** merge / close / reopen / ready_for_review — les gestes qui changent l'état de la PR. */
 export async function prStateActionResponse(
   scope: PrScope,
-  action: "merge" | "close" | "ready_for_review",
+  action: "merge" | "close" | "reopen" | "ready_for_review",
   body: PrActionBody,
   userId: string,
 ): Promise<NextResponse> {
   const { forge, call } = scope;
-  // Merger, refuser ou proposer une PR change l'ÉTAT du dépôt : `write`, et
-  // rien d'autre. La protection de branche coûterait une permission GitHub hors
-  // périmètre, la forge refuse le reste toute seule, et `mergeableState ===
-  // "blocked"` le dit déjà dans l'UI.
+  // Merger, refuser, rouvrir ou proposer une PR change l'ÉTAT du dépôt :
+  // `write`, et rien d'autre. La protection de branche coûterait une permission
+  // GitHub hors périmètre, la forge refuse le reste toute seule, et
+  // `mergeableState === "blocked"` le dit déjà dans l'UI.
   const actor = await requireActor(scope, "write");
   if (!actor.ok) return actor.response;
   const myCall = actorCall(actor.actor, scope);
@@ -1643,6 +1644,28 @@ export async function prStateActionResponse(
         );
       }
       return NextResponse.json({ ok: true, pr_state: "merged" });
+    }
+
+    if (action === "reopen") {
+      // Les deux forges savent rouvrir, et l'adaptateur le fait déjà pour
+      // l'agent (`execute.ts`) — seul le geste HUMAIN manquait (MIN-164). Une PR
+      // fermée par erreur ne se rattrapait que sur github.com.
+      const reopened = await forge.reopenPullRequest(myCall);
+      // L'état vient de la PR RENVOYÉE, pas d'un « open » supposé : GitHub rend
+      // son brouillon à une PR qui l'était avant d'être fermée, et le ticket
+      // doit alors revenir « en cours », pas « en revue ».
+      const state = prStateFromRef(reopened);
+      await propagatePrState(scope, state, userId);
+      if (scope.pr.issue_id) {
+        await recordPrActionEvent(
+          scope.pr.issue_id,
+          userId,
+          "pr_reopened",
+          scope.pr.number,
+          scope.target.provider,
+        );
+      }
+      return NextResponse.json({ ok: true, pr_state: state });
     }
 
     if (action === "ready_for_review") {

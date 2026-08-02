@@ -350,6 +350,64 @@ export async function resolveIssueForPr(opts: {
 // ── Balayage d'un dépôt ──────────────────────────────────────────────────────
 
 /**
+ * Rejoue, sur UNE PR dont l'état a dérivé, ce que le webhook aurait fait s'il
+ * était arrivé (MIN-164) : `agent_runs.pr_state` recalé, statut du ticket aligné.
+ *
+ * Exactement la forme des deux récepteurs — les runs d'abord, la PR humaine
+ * ensuite — parce que c'est le même fait qu'on rattrape. Ce qu'on ne rejoue
+ * PAS : l'activité et les notifications. On constate un état, on n'a pas vu le
+ * geste ; écrire « untel a fusionné » des heures après coup, sans savoir qui ni
+ * quand, dirait plus que ce qu'on sait.
+ *
+ * `applyForgePrToIssue` arrive par import DYNAMIQUE : `pr-activity` importe ce
+ * module (`findPullRequestByNumber`), et le cycle statique casserait l'ordre
+ * d'évaluation. Le balayage n'est pas un chemin chaud — il ne passe qu'au
+ * rattrapage.
+ */
+async function reconcileDriftedPr(
+  provider: RepoProviderId,
+  repoFullName: string,
+  number: number,
+  state: PullRequestState,
+): Promise<void> {
+  try {
+    const { syncPrState } = await import("./runs");
+    const runs = await syncPrState({
+      repoFullName,
+      prNumber: number,
+      prState: state,
+      provider,
+    });
+    if (runs.length === 0) {
+      const { applyForgePrToIssue } = await import("./pr-activity");
+      await applyForgePrToIssue({
+        provider,
+        repoFullName,
+        prNumber: number,
+        prState: state,
+        actionType: null,
+        accountId: null,
+        login: null,
+      });
+      return;
+    }
+    const { syncIssueStatusFromPr } = await import("./issue-status-sync");
+    for (const run of runs) {
+      // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+      if (run.createdBy && run.issueId) {
+        await syncIssueStatusFromPr({
+          issueId: run.issueId,
+          actorId: run.createdBy,
+          prState: state,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[pull-requests] state reconcile failed:", (err as Error).message);
+  }
+}
+
+/**
  * Fenêtre de fraîcheur du balayage paresseux. Un webhook perdu ne doit pas
  * laisser la liste fausse pour toujours ; un cron qui balaierait TOUS les dépôts
  * liés coûterait cher pour ce seul rattrapage. On resynchronise donc à la
@@ -419,6 +477,12 @@ export async function stampRepoSync(
  * poser, ou un balayage précédent l'avoir lu sur une branche depuis supprimée.
  * On ne résout donc que les PR qui n'en ont pas.
  *
+ * Il RÉCONCILIE aussi (MIN-164) : jusqu'ici il recalait `pull_requests.state` et
+ * s'arrêtait là — un merge dont le webhook s'était perdu laissait le run et le
+ * ticket faux POUR TOUJOURS, y compris après le passage du filet censé le
+ * réparer. Les états qui ont bougé depuis la dernière lecture repartent donc
+ * dans `syncPrState` et le statut du ticket.
+ *
  * Renvoie le nombre de PR vues et si la pagination a été coupée. Best-effort :
  * une forge en panne ne doit pas faire tomber la page.
  */
@@ -436,22 +500,32 @@ export async function syncRepoPullRequests(opts: {
   const service = getServiceClient();
   const { data: existing } = await service
     .from("pull_requests")
-    .select("number, issue_id")
+    .select("number, issue_id, state")
     .eq("provider", opts.provider)
     .eq("repo_full_name", opts.repoFullName);
-  const issueByNumber = new Map(
-    ((existing ?? []) as Array<{ number: number; issue_id: string | null }>).map((r) => [
-      r.number,
-      r.issue_id,
-    ]),
+  const knownByNumber = new Map(
+    (
+      (existing ?? []) as Array<{
+        number: number;
+        issue_id: string | null;
+        state: PullRequestState;
+      }>
+    ).map((r) => [r.number, r]),
   );
 
   const projects = await projectsForRepo(opts.provider, opts.repoFullName);
   const rows: Record<string, unknown>[] = [];
+  /** PR dont l'état a CHANGÉ depuis la dernière lecture — le trou d'un webhook. */
+  const drifted: Array<{ number: number; state: PullRequestState }> = [];
   for (const pull of pulls) {
-    const known = issueByNumber.get(pull.number) ?? null;
+    const before = knownByNumber.get(pull.number);
+    const state = prStateFromRef(pull);
+    // Seulement les lignes DÉJÀ connues : au premier balayage d'un dépôt qu'on
+    // vient de lier, tout est nouveau, et rien de ce qui s'y est passé avant
+    // minddy ne doit bouger un ticket.
+    if (before && before.state !== state) drifted.push({ number: pull.number, state });
     const issueId =
-      known ??
+      before?.issue_id ??
       (await resolveIssueForPr({
         provider: opts.provider,
         repoFullName: opts.repoFullName,
@@ -465,7 +539,7 @@ export async function syncRepoPullRequests(opts: {
         provider: opts.provider,
         repoFullName: opts.repoFullName,
         number: pull.number,
-        state: prStateFromRef(pull),
+        state,
         url: pull.url,
         title: pull.title ?? null,
         authorLogin: pull.user?.login ?? null,
@@ -498,6 +572,14 @@ export async function syncRepoPullRequests(opts: {
     { onConflict: "provider,repo_full_name" },
   );
   if (stampError) console.error("[pull-requests] sweep stamp failed:", stampError.message);
+
+  // APRÈS l'écriture des lignes : la réconciliation relit la PR par sa clé
+  // naturelle, et doit y trouver l'état à jour, pas celui qu'on vient de
+  // corriger. Rien à raconter en activité (`actionType: null`) — on répare un
+  // état, on n'a pas vu le geste qui l'a produit.
+  for (const { number, state } of drifted) {
+    await reconcileDriftedPr(opts.provider, opts.repoFullName, number, state);
+  }
 
   return { count: pulls.length, truncated };
 }

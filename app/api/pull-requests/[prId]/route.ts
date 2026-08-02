@@ -17,6 +17,7 @@ import {
  *         de merge offertes par la forge.
  *  POST → { action: 'merge', method? }
  *       | { action: 'close' }
+ *       | { action: 'reopen' }                               → fermée → rouverte (MIN-164)
  *       | { action: 'ready_for_review' }                     → brouillon → prête
  *       | { action: 'review', verdict, message, relaunch?, model? }
  *       | { action: 'ai_review', model? }                    → Numo relit (MIN-141)
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (
     action !== "merge" &&
     action !== "close" &&
+    action !== "reopen" &&
     action !== "review" &&
     action !== "ai_review" &&
     action !== "ready_for_review" &&

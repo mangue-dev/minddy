@@ -532,7 +532,7 @@ export function prFileRawUrl(
 
 export async function actOnPullRequestApi(
   prId: string,
-  action: "merge" | "close" | "ready_for_review",
+  action: "merge" | "close" | "reopen" | "ready_for_review",
   method?: MergeMethod,
 ): Promise<{ ok: true; pr_state: string }> {
   trackEvent("pr_review_submitted", { verdict: action });

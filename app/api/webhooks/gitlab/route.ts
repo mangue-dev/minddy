@@ -10,6 +10,8 @@ import {
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
 import {
+  gitlabMrState,
+  gitlabMrStateForAction,
   isServiceAccountGesture,
   prActionForMergeRequest,
   prActionForNote,
@@ -20,11 +22,9 @@ import {
   findPullRequestByNumber,
   resolveIssueForPr,
   upsertPullRequest,
-  type PullRequestState,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import { getServiceClient } from "@/lib/supabase-service";
-import type { AgentRun } from "@/lib/server/agent/runs";
 
 /**
  * POST /api/webhooks/gitlab — récepteur webhook GitLab (MIN-69), pendant de
@@ -38,7 +38,7 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  *    (la review in-app reflète le vrai état côté GitLab) ET, pour un geste fait
  *    DIRECTEMENT sur GitLab, trace « ouvert / accepté / refusé la MR » dans
  *    l'activité de l'issue liée. L'action `update` sert la bascule BROUILLON
- *    (MIN-138) — GitLab n'a pas d'action dédiée, cf. `mapMrState` — et, quand elle
+ *    (MIN-138) — GitLab n'a pas d'action dédiée, cf. `gitlabMrStateForAction` — et, quand elle
  *    porte un `oldrev`, le PUSH : « a commité sur la MR ».
  *  - action `approved` / `approval` → trace « approuvé la MR ». GitLab n'a PAS de
  *    review « request changes » native : `pr_changes_requested` ne vient que de
@@ -67,39 +67,6 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * Fail-closed intégral : token invalide → 401 ; secret non déployé → acquitté
  * SANS traitement (ce récepteur mute l'état, il n'accepte rien d'invérifiable).
  */
-
-/**
- * action GitLab → pr_state minddy (null = pas de changement d'état à écrire).
- *
- * Le BROUILLON n'a pas d'action dédiée chez GitLab, contrairement aux
- * `converted_to_draft` / `ready_for_review` de GitHub : il est porté par le
- * préfixe `Draft:` du titre, et sa bascule arrive en `action: "update"` avec
- * `object_attributes.draft`. On ne lit donc ce booléen que sur un `update` qui
- * TOUCHE au titre ou au brouillon — sinon une simple retouche de description
- * réécrirait `pr_state` (et, en cascade, le statut du ticket) à chaque édition.
- * Le garde `state === opened` protège en plus les MR déjà fermées ou fusionnées.
- */
-function mapMrState(payload: MergeRequestEvent): AgentRun["pr_state"] | null {
-  const attrs = payload.object_attributes ?? {};
-  switch (attrs.action) {
-    case "merge":
-      return "merged";
-    case "close":
-      return "closed";
-    case "open":
-    case "reopen":
-      return attrs.draft ? "draft" : "open";
-    case "update": {
-      const changes = payload.changes ?? {};
-      const touchesDraft = changes.draft !== undefined || changes.title !== undefined;
-      if (!touchesDraft) return null;
-      if (attrs.state !== "opened" && attrs.state !== "locked") return null;
-      return attrs.draft ? "draft" : "open";
-    }
-    default:
-      return null;
-  }
-}
 
 interface GitlabUserPayload {
   id?: number;
@@ -141,18 +108,11 @@ interface MergeRequestEvent {
 
 /**
  * Actions qui décrivent un état de MR à INGÉRER (MIN-143) — plus large que
- * `mapMrState`, qui ne pilote que le cycle de vie des runs et du ticket. `update`
- * en fait partie : chez GitLab c'est aussi ce qui porte un nouveau push, un
- * changement de titre ou la bascule brouillon.
+ * `gitlabMrStateForAction`, qui ne pilote que le cycle de vie des runs et du
+ * ticket. `update` en fait partie : chez GitLab c'est aussi ce qui porte un
+ * nouveau push, un changement de titre ou la bascule brouillon.
  */
 const INGESTED_MR_ACTIONS = new Set(["open", "reopen", "close", "merge", "update"]);
-
-/** État minddy de la MR telle que le payload la décrit. */
-function payloadMrState(attrs: MergeRequestAttributes): PullRequestState {
-  if (attrs.state === "merged") return "merged";
-  if (attrs.state === "closed") return "closed";
-  return attrs.draft || attrs.work_in_progress ? "draft" : "open";
-}
 
 /**
  * Enregistre la MR chez minddy — de Numo ou d'un humain, c'est le même fait du
@@ -182,7 +142,7 @@ async function ingestMergeRequest(
     provider: "gitlab",
     repoFullName,
     number: iid,
-    state: payloadMrState(attrs),
+    state: gitlabMrState(attrs),
     url: attrs.url ?? null,
     title: attrs.title ?? null,
     authorLogin: isOpen ? (actor?.username ?? null) : undefined,
@@ -244,7 +204,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     await ingestMergeRequest(repoFullName, iid, attrs, payload.user);
   }
 
-  const prState = mapMrState(payload);
+  const prState = gitlabMrStateForAction(payload);
   const actionType = prActionForMergeRequest(attrs);
   if (!prState && !actionType) return;
 
