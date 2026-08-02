@@ -80,7 +80,12 @@ import {
 } from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH, appendScratchpadTasks } from "@/lib/scratchpad";
 import { effortToPoints, statusCompletionCredit, todayISO } from "@/lib/cycle";
-import { issueIdentifier, type IssueEffort, type IssueStatus } from "@/lib/issue-constants";
+import {
+  issueIdentifier,
+  isClosedStatus,
+  type IssueEffort,
+  type IssueStatus,
+} from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
 import {
   ok,
@@ -947,7 +952,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       // Progression : done/total restent des comptes bruts de tickets pour le
       // label, mais percent est pondéré par l'effort en points Fibonacci
       // (effortToPoints) avec crédit partiel par statut — même calcul que
-      // objectiveProgress dans lib/use-objectives-query.ts (MIN-56).
+      // objectiveProgress dans lib/use-objectives-query.ts (MIN-56). `done`
+      // compte tous les statuts CLOS (done, canceled, duplicate), comme le
+      // pourcentage qui les crédite déjà à 100 % : un ticket annulé est réglé.
       const progress = new Map<
         string,
         { done: number; total: number; totalPoints: number; earnedPoints: number }
@@ -957,7 +964,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         const entry =
           progress.get(id) ?? { done: 0, total: 0, totalPoints: 0, earnedPoints: 0 };
         entry.total += 1;
-        if (issue.status === "done") entry.done += 1;
+        if (isClosedStatus(issue.status as IssueStatus)) entry.done += 1;
         const points = effortToPoints(issue.effort as IssueEffort | null);
         entry.totalPoints += points;
         entry.earnedPoints += points * statusCompletionCredit(issue.status as IssueStatus);

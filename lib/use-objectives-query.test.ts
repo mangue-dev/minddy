@@ -34,6 +34,26 @@ describe("objectiveProgress", () => {
     expect(total).toBe(3);
   });
 
+  it("counts closed issues — canceled and duplicate — as dealt with", () => {
+    // Le compteur dit la même chose que la barre : un ticket annulé est réglé,
+    // sinon un objectif à 100 % affichait « 1/3 ».
+    const { done, total, percent } = objectiveProgress("obj", [
+      issue("done", "m"),
+      issue("canceled", "m"),
+      issue("duplicate", "m"),
+    ]);
+    expect({ done, total, percent }).toEqual({ done: 3, total: 3, percent: 100 });
+  });
+
+  it("leaves open issues out of the done count", () => {
+    const { done, total } = objectiveProgress("obj", [
+      issue("canceled", "m"),
+      issue("in_review", "m"),
+      issue("triage", "m"),
+    ]);
+    expect({ done, total }).toEqual({ done: 1, total: 3 });
+  });
+
   it("grants partial effort credit for in-flight statuses", () => {
     // in_progress = 10%, in_review = 50% of the issue's points.
     expect(objectiveProgress("obj", [issue("in_progress", "m")]).percent).toBe(10);

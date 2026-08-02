@@ -13,6 +13,7 @@ import {
   patchObjectiveEverywhere,
 } from "./optimistic/issue-writes";
 import { effortToPoints, statusCompletionCredit } from "./cycle";
+import { isClosedStatus } from "./issue-constants";
 import type { IssueEffort, IssueStatus } from "./issue-constants";
 import type {
   CreateObjectiveInput,
@@ -124,12 +125,18 @@ export function useObjectivesQuery(projectId: string | null) {
 
 /**
  * Auto progress from linked issues. `done`/`total` stay raw issue counts
- * (fully-done issues over all linked) for the label, but `percent` — the fill
+ * (closed issues over all linked) for the label, but `percent` — the fill
  * of the progress bar — is the sum of finished EFFORT over total effort, in
  * hidden Fibonacci points (effortToPoints, xs1 s2 m3 l5 xl8, unsized = m), the
  * same weighting the cycle's progression ring uses (cycleCompletionPercent):
  * an XL done + an XS left reads 89 %, not 50 %. Work in flight earns partial
  * credit (statusCompletionCredit) instead of counting for nothing until "done".
+ *
+ * `done` counts every CLOSED status (done, canceled, duplicate), not just
+ * "done": an objective whose remaining issues were all cancelled is finished,
+ * and the count has to say the same thing as the bar — statusCompletionCredit
+ * already grades a closed issue at 100 %, so counting only "done" showed
+ * "3/5" next to 100 %.
  */
 export function objectiveProgress(
   objectiveId: string,
@@ -137,7 +144,7 @@ export function objectiveProgress(
 ): { done: number; total: number; percent: number } {
   const linked = issues.filter((i) => i.objective_id === objectiveId);
   const total = linked.length;
-  const done = linked.filter((i) => i.status === "done").length;
+  const done = linked.filter((i) => isClosedStatus(i.status as IssueStatus)).length;
   let totalPoints = 0;
   let earnedPoints = 0;
   for (const i of linked) {
