@@ -24,6 +24,7 @@
  *   issue_created_server, issue_updated_server (source web/mcp/api/agent),
  *   subscription_activated/updated/cancelled/payment_failed (webhook Stripe),
  *   agent_run_started/completed/failed, agent_pr_opened,
+ *   automation_chain_started, automation_chain_finished (MIN-147),
  *   mcp_tool_called, mcp_session_started, oauth_grant_created,
  *   public_feedback_created, public_feedback_voted,
  *   import_completed, cron_executed.

@@ -172,6 +172,7 @@ export async function GET(request: NextRequest) {
       api_key_agent: keyActor?.agent ?? null,
       api_key_name: keyActor?.name ?? null,
       via_smart_assign: !!n.via_smart_assign,
+      via_automation: !!n.via_automation,
       comment_excerpt: comment ? excerptOf(comment.body as string) : null,
     };
   });

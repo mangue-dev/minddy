@@ -35,6 +35,10 @@ export interface EventRow {
       per-member rules. False on the deterministic paths (solo project, no rule
       written, model call failed) — the timeline words the two differently. */
   smart_assign_ai?: boolean;
+  /** True when the write came from a project AUTOMATION (MIN-147); the timeline
+      then names the automation instead of the account whose id technically
+      signs the write (the issue's assignee, or the project owner). */
+  via_automation?: boolean;
   /** Provider ('github' | 'gitlab') when the write came from the linked repo's
       issue sync (MIN-97); the timeline then shows the forge as the actor. The
       actor_id stays set — the write needs a project member behind it. */

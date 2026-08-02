@@ -316,6 +316,18 @@ function keysForProjectEvent(
         ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
       ];
     }
+    // Chaînes d'automatisation (MIN-147). C'est la seule surface du produit où
+    // la péremption est CERTAINE : une chaîne avance toute seule pendant
+    // plusieurs minutes, sans que personne ne touche à rien — sans cet
+    // événement, sa barre d'état est fausse dès la seconde qui suit son
+    // ouverture. Le trigger ne diffuse que les transitions visibles (statut,
+    // étape, dépense, motif d'arrêt — voir la migration).
+    case "agent_chains": {
+      const issueId = issueIdOf(change);
+      return issueId
+        ? [active(["agent-chain", "issue", issueId]), active(["agent-runs", "issue", issueId])]
+        : [];
+    }
     // Pull requests (MIN-161). Le trigger ne diffuse que les colonnes VISIBLES
     // (état, titre, url, tête, ticket, fusion — voir la migration) : un balayage
     // qui retamponne `synced_at` sur tout un dépôt reste muet.
@@ -382,6 +394,10 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
   ["agent-runs"],
+  // La chaîne d'automatisation d'un ticket (MIN-147) : en préfixe, comme les
+  // runs — un onglet qui a dormi pendant qu'une chaîne se déroulait doit
+  // retrouver son étape réelle, pas celle d'avant la coupure.
+  ["agent-chain"],
   // Le panneau d'une PR, ses quatre surfaces (MIN-161). En préfixe, et les
   // quatre : les messages du topic `pull-request:{id}` sont ÉPHÉMÈRES — un
   // onglet dormant ne les rejoue pas, il ne les a simplement pas eus. C'est donc

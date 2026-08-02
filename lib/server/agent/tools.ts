@@ -726,6 +726,36 @@ const MINDDY_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "report_verdict",
+      description:
+        "Report the RESULT of the verification step you were asked to run. Call it exactly once, at the very end of your turn, after you have actually looked at the code — never before, and never instead of doing the work. `ok` is the whole point: true means the work matches the plan and you found nothing that must be fixed; false means it does not, and the run will be retried with your summary as its instruction. Say WHY in `summary`, and list the concrete things that must change in `blockers` (empty array when ok is true). This tool is only available inside an automated chain — nobody reads a verdict outside one.",
+      parameters: {
+        type: "object",
+        properties: {
+          ok: {
+            type: "boolean",
+            description: "Does the work pass? false when anything must be fixed before it ships.",
+          },
+          summary: {
+            type: "string",
+            description: "Two or three sentences: what you checked, and what you concluded.",
+          },
+          blockers: {
+            type: "array",
+            items: { type: "string" },
+            description: "One line per thing that must change. Empty array when ok is true.",
+          },
+        },
+        // Les trois dans `required` À DESSEIN : un champ hors `required` d'un
+        // tool call n'est tout simplement pas répondu par un petit modèle — et
+        // c'est justement un petit modèle qui vérifie un diff.
+        required: ["ok", "summary", "blockers"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "read_scratchpad",
       description:
         "Re-read the launcher's notebook (their personal cross-project notes doc): the full markdown, plus every checkbox task parsed with a stable 0-based task_index, its text and its state (pending '- [ ]', in_progress '- [~]', completed '- [x]', cancelled '- [-]'), and `rev`, the doc's version. Anything you were shown of it at session start is a SNAPSHOT — call this whenever fresh state matters, and ALWAYS right before update_scratchpad_task or set_scratchpad so your indices and rev are current.",
@@ -922,6 +952,12 @@ export function agentToolsFor(opts: {
    * seulement le choix du modèle qui disparaît.
    */
   subagentModels?: boolean;
+  /**
+   * Le run est-il une étape d'une CHAÎNE d'automatisation (MIN-147) ? Seul ce
+   * cas sert `report_verdict` : hors chaîne, personne ne lit un verdict, et un
+   * tool sans lecteur est une invitation à s'en servir pour rien.
+   */
+  chain?: boolean;
 }): AgentToolDef[] {
   const patch = usesApplyPatch(opts.model);
   const tools = opts.anchor === "issue" ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS;
@@ -930,6 +966,7 @@ export function agentToolsFor(opts: {
       const name = t.function.name;
       if (name === "web_search") return opts.webSearch;
       if (name === "apply_patch") return patch;
+      if (name === "report_verdict") return opts.chain === true;
       if (STRING_EDIT_TOOLS.has(name)) return !patch;
       return true;
     })

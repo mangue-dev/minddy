@@ -2,7 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { canUseSmartAssign } from "@/lib/server/entitlements";
+import { canUseAutomations, canUseSmartAssign } from "@/lib/server/entitlements";
+import { parseAutomations } from "@/lib/automations";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import type { Project } from "@/lib/types";
 
@@ -32,6 +33,7 @@ export type UpdateProjectResult =
         | "projectNotFound"
         | "ownerOnly"
         | "smartAssignNotAllowed"
+        | "automationsNotAllowed"
         | "databaseError";
     };
 
@@ -90,6 +92,25 @@ export async function updateProjectSettings({
       return { ok: false, status: 403, errorKey: "smartAssignNotAllowed" };
     }
     updates.smart_assign_enabled = input.smart_assign_enabled;
+  }
+  // Automatisations (MIN-147). Même forme que le voisin, gate différente :
+  // `canUseAutomations` exige AUSSI `allowAgents`, puisqu'une règle lance des
+  // runs d'agent. Les RÈGLES, elles, s'écrivent sans gate — les désarmer ne
+  // coûte rien, c'est l'interrupteur qui laisse passer la dépense.
+  if (typeof input.automations_enabled === "boolean") {
+    if (
+      input.automations_enabled &&
+      !(await canUseAutomations(access.project.owner_id))
+    ) {
+      return { ok: false, status: 403, errorKey: "automationsNotAllowed" };
+    }
+    updates.automations_enabled = input.automations_enabled;
+  }
+  if ("automations" in input) {
+    // `parseAutomations` est la validation : tolérante par construction, elle
+    // laisse tomber ce qu'elle ne comprend pas plutôt que de refuser tout
+    // l'enregistrement pour une règle mal formée.
+    updates.automations = parseAutomations(input.automations);
   }
 
   const service = getServiceClient();

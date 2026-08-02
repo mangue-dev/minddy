@@ -7,6 +7,7 @@ import { ChevronLeft, GitPullRequest, NotebookPen } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { PR_STATE_STYLES } from "@/components/pull-requests/pr-state-badge";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 
@@ -152,6 +153,12 @@ export function AgentSessionDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {/* La chaîne d'automatisation du ticket (MIN-147) : c'est ELLE qui a lancé
+          la session qu'on regarde, et c'est d'ici qu'on la continue ou l'arrête —
+          sans avoir à repasser par le panneau du ticket. */}
+      <div className="shrink-0 px-4 pt-3 empty:hidden">
+        <ChainStatusBar issueId={issue.id} />
+      </div>
       <AgentConversation
         key={issue.id}
         issueId={issue.id}

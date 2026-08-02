@@ -53,13 +53,26 @@ export interface LaunchMessageIssue {
  */
 export function launchPromptVariantForMode(
   mode: AgentLaunchMode,
-  issue: Pick<LaunchMessageIssue, "plan" | "effort">
+  issue: Pick<LaunchMessageIssue, "plan" | "effort">,
+  /**
+   * Le lancement est une étape d'une CHAÎNE d'automatisation (MIN-147). Seules
+   * les deux VÉRIFICATIONS changent alors : elles doivent finir par un appel à
+   * `report_verdict`, la seule chose que la chaîne sait lire pour décider de la
+   * suite. Le reste est identique — un plan écrit par une chaîne est un plan.
+   *
+   * À noter : « vérifier le plan » de la chaîne, c'est `mode: "plan"` sur un
+   * ticket qui en a DÉJÀ un — `agentPlanPromptVariant` rend `reviewPlan`, dont
+   * `chainVerifyPlan` est la variante à verdict.
+   */
+  fromChain = false
 ): AgentLaunchPromptVariant {
   switch (mode) {
-    case "plan":
-      return agentPlanPromptVariant(issue);
+    case "plan": {
+      const variant = agentPlanPromptVariant(issue);
+      return fromChain && variant === "reviewPlan" ? "chainVerifyPlan" : variant;
+    }
     case "verify":
-      return "verifyImplementation";
+      return fromChain ? "chainVerifyImplementation" : "verifyImplementation";
     default:
       return agentLaunchPromptVariant(issue);
   }
@@ -97,6 +110,8 @@ export async function buildAgentLaunchMessage(input: {
   projectKey: string;
   locale?: string | null;
   extra?: string | null;
+  /** Étape d'une chaîne d'automatisation — cf. `launchPromptVariantForMode`. */
+  fromChain?: boolean;
 }): Promise<string> {
   const locale = resolveLocale(input.locale);
   const messages = (await import(`../../../messages/${locale}.json`)).default;
@@ -110,7 +125,9 @@ export async function buildAgentLaunchMessage(input: {
     identifier: issueIdentifier(input.projectKey, input.issue.number),
     title: input.issue.title,
   });
-  const body = t(launchPromptVariantForMode(input.mode, input.issue));
+  const body = t(
+    launchPromptVariantForMode(input.mode, input.issue, input.fromChain === true)
+  );
   const extra = input.extra?.trim();
 
   return extra ? `${head}\n\n${body}\n\n${extra}` : `${head}\n\n${body}`;

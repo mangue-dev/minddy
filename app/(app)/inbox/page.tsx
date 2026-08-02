@@ -47,6 +47,8 @@ const LINE_KEYS: Record<NotificationType, string> = {
   feedback_new: "lineFeedbackNew",
   pr_reviewed: "linePrReviewed",
   pr_merged: "linePrMerged",
+  automation_paused: "lineAutomationPaused",
+  automation_stopped: "lineAutomationStopped",
 };
 
 type InboxFilter = "all" | "unread" | "mentions";

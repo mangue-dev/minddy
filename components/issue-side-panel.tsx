@@ -42,6 +42,7 @@ import { SubIssuesSection } from "@/components/sub-issues-section";
 import { RelationsSection } from "@/components/relations-section";
 import { AgentChatModal } from "@/components/agent/agent-chat-modal";
 import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
+import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -535,6 +536,15 @@ export function IssueSidePanel({
     onVerifyWithAgent: verifyWithAgent,
     onCustomWithAgent: () => setCustomTarget("launch"),
     onOpenSession: () => setChatOpen(true),
+    // « Automatiser » (MIN-147) : le forçage vit sur le ticket, donc il s'écrit
+    // par le même chemin que ses autres champs.
+    automationOverride: issue?.automation_override ?? null,
+    onSetAutomationOverride: issue
+      ? (next) =>
+          void onUpdate(issue.id, { automation_override: next }).catch((err) =>
+            toast.error((err as Error).message),
+          )
+      : undefined,
   });
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
@@ -862,6 +872,15 @@ export function IssueSidePanel({
               className="w-full shrink-0 overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
               placeholder={t("titlePlaceholder")}
             />
+
+            {/* La chaîne d'automatisation, quand il y en a une (MIN-147). Sous le
+                titre et non dans l'en-tête : ce n'est pas un état d'une ligne,
+                c'est un travail en cours avec deux gestes à offrir. Elle se
+                masque toute seule quand la chaîne est finie.
+                PAS derrière `agentsEnabled` : une chaîne qui EXISTE est un fait,
+                et le cas qui mérite le plus d'être montré est justement celui
+                d'une chaîne arrêtée FAUTE de dépôt lié. */}
+            <ChainStatusBar issueId={issue.id} />
 
             <Tabs
               value={tab}

@@ -8,6 +8,7 @@ import {
   fetchAgentSessionsApi,
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
+  fetchIssueAutomationApi,
   fetchPullRequestApi,
   fetchPrCommitDiffApi,
   fetchPullRequestCommentsApi,
@@ -48,6 +49,37 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     runs: data?.runs ?? [],
     /** La PR du ticket, quel que soit son état — null s'il n'en a aucune. */
     pullRequest: data?.pullRequest ?? null,
+    loading: isLoading,
+  };
+}
+
+/** Clé de cache de la chaîne d'automatisation d'un ticket (MIN-147). */
+export function issueChainQueryKey(issueId: string) {
+  return ["agent-chain", "issue", issueId] as const;
+}
+
+/**
+ * Chaîne d'automatisation d'un ticket. AUCUN polling, à la différence de ses
+ * voisines : une chaîne vit plusieurs minutes sans que personne ne touche à
+ * rien, et c'est exactement pour ça qu'elle a un trigger realtime dédié
+ * (`case "agent_chains"` dans lib/realtime-provider.tsx) — le direct la fait
+ * bouger, un timer ne ferait que payer des requêtes pour rien.
+ *
+ * `refetchOnMount: always` quand même : le realtime ne rejoue pas ce qui s'est
+ * passé pendant que l'onglet dormait.
+ */
+export function useIssueChainQuery(issueId: string | null) {
+  const { data, isLoading } = useQuery({
+    queryKey: issueChainQueryKey(issueId ?? ""),
+    queryFn: () => fetchIssueAutomationApi(issueId as string),
+    enabled: !!issueId,
+    refetchOnMount: "always",
+  });
+  return {
+    enabled: data?.enabled ?? false,
+    chain: data?.chain ?? null,
+    plannedModes: data?.plannedModes ?? [],
+    estimate: data?.estimate ?? null,
     loading: isLoading,
   };
 }

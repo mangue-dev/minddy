@@ -19,7 +19,14 @@ export type AgentLaunchPromptVariant =
   | "default"
   | "writePlan"
   | "reviewPlan"
-  | "verifyImplementation";
+  | "verifyImplementation"
+  /** Les deux mêmes vérifications, jouées par une CHAÎNE (MIN-147). Elles ne
+   *  disent rien de plus sur le travail : elles ajoutent l'obligation d'appeler
+   *  `report_verdict`, sans quoi la chaîne n'a rien à lire pour décider de la
+   *  suite. Écrire un plan n'en a pas de variante — il n'y a pas de verdict à
+   *  rendre sur un plan qu'on vient d'écrire. */
+  | "chainVerifyPlan"
+  | "chainVerifyImplementation";
 
 /**
  * Choisit la variante du prompt pré-écrit du composer de lancement selon l'issue.

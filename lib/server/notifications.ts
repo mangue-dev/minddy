@@ -28,6 +28,9 @@ export interface NotificationRow {
   /** L'affectation vient de Smart Assign (`actor_id` null) : l'inbox nomme la
       fonctionnalité au lieu de dire « Quelqu'un ». */
   via_smart_assign?: boolean;
+  /** La ligne vient d'une automatisation de projet (MIN-147) — même raison que
+      le drapeau ci-dessus : sans lui, l'inbox dit « Quelqu'un ». */
+  via_automation?: boolean;
 }
 
 /** The agent types displace each other: one live agent notification per issue. */

@@ -31,6 +31,8 @@ import { scheduleCycleCapture } from "@/lib/server/cycles";
 import { statusAllowsCycle } from "@/lib/cycle";
 import type { IssueStatus } from "@/lib/issue-constants";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
+import { scheduleStatusAutomations } from "@/lib/server/automations/hooks";
+import { parseAutomationOverride } from "@/lib/automations";
 import { captureServerEvent } from "./posthog";
 import { resolveIssueSource } from "./create-issue";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -172,6 +174,16 @@ export async function updateIssueFields({
       return { ok: false, status: 400, errorKey: "invalidPosition" };
     }
     updates.position = input.position;
+  }
+  // Forçage des automatisations sur CE ticket (MIN-147). `null` = il suit les
+  // règles du projet ; toute autre forme passe par le parseur, qui rend `null`
+  // sur ce qu'il ne comprend pas — un override illisible vaut « pas d'override »,
+  // jamais un refus d'enregistrement.
+  if ("automation_override" in input) {
+    updates.automation_override =
+      input.automation_override === null
+        ? null
+        : parseAutomationOverride(input.automation_override);
   }
   if ("cycle_id" in input) {
     if (input.cycle_id !== null && typeof input.cycle_id !== "string") {
@@ -504,6 +516,15 @@ export async function updateIssueFields({
   // (done→shipped, in_progress→in_progress ; toute autre transition = no-op).
   if ("status" in updates && updates.status !== before.status) {
     scheduleFeedbackStatusSync(issueId, updates.status, actorId);
+    // Automatisations (MIN-147) : le changement de statut est l'un des deux
+    // seuls événements dont la boucle a besoin. Même contrat que ses voisins —
+    // hors chemin critique, et no-op silencieux si le monde a bougé.
+    scheduleStatusAutomations({
+      issueId,
+      projectId: before.project_id as string,
+      from: (before.status as IssueStatus | null) ?? null,
+      to: updates.status as IssueStatus,
+    });
   }
 
   // Analytics serveur (MIN-78) : même raison que pour la création — une bonne

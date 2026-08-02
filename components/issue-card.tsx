@@ -1196,6 +1196,12 @@ export function IssueCard({
     onVerifyWithAgent: verifyWithAgent,
     onCustomWithAgent: () => setCustomTarget("launch"),
     onOpenSession: openAgentSession,
+    // « Automatiser » (MIN-147) : la MÊME entrée que dans le panneau latéral —
+    // le hook ne rend que des actions, c'est ici qu'elle reçoit ses callbacks,
+    // et l'oublier la ferait apparaître à un seul endroit.
+    automationOverride: issue.automation_override ?? null,
+    onSetAutomationOverride: (next) =>
+      onUpdateIssue(issue.id, { automation_override: next }),
   });
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,

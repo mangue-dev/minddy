@@ -69,6 +69,10 @@ export function categoryOfNotificationType(
     // plutôt qu'une sixième, qui serait un réglage de plus à gérer pour rien.
     case "pr_reviewed":
     case "pr_merged":
+    // Une chaîne d'automatisation, c'est Numo qui travaille : même bascule que
+    // ses runs, plutôt qu'une sixième catégorie à gérer pour rien.
+    case "automation_paused":
+    case "automation_stopped":
       return "agent";
     case "feedback_new":
       return "feedback";

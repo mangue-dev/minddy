@@ -160,6 +160,48 @@ export async function fetchIssueAgentRunsApi(
   return parseJson(await fetch(`/api/issues/${issueId}/agent`));
 }
 
+/** État de la chaîne d'automatisation d'un ticket (MIN-147), vue client.
+    JAMAIS d'USD : `budgetUsed` est une part (0→1) de son plafond, et
+    `estimate.shareOfMonthlyBudget` une part du budget mensuel du plan. */
+export interface IssueChainState {
+  id: string;
+  status: "running" | "awaiting_human" | "stopped" | "completed" | "failed";
+  preset: string | null;
+  step: number;
+  retries: number;
+  stopReason: string | null;
+  budgetUsed: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IssueAutomationState {
+  enabled: boolean;
+  chain: IssueChainState | null;
+  /** Les étapes que les règles joueraient sur ce ticket, dans l'ordre. */
+  plannedModes: ("plan" | "implement" | "verify" | "custom")[];
+  estimate: { shareOfMonthlyBudget: number; fromHistory: boolean } | null;
+}
+
+export async function fetchIssueAutomationApi(
+  issueId: string,
+): Promise<IssueAutomationState> {
+  return parseJson(await fetch(`/api/issues/${issueId}/automation`));
+}
+
+export async function postIssueAutomationApi(
+  issueId: string,
+  action: "resume" | "stop",
+): Promise<{ ok: true; chain: IssueChainState | null }> {
+  return parseJson(
+    await fetch(`/api/issues/${issueId}/automation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    }),
+  );
+}
+
 export async function launchAgentRunApi(
   issueId: string,
   body: {

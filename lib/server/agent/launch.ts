@@ -19,6 +19,7 @@ import {
   bumpRunActivity,
   ActiveRunExistsError,
   type AgentRun,
+  type AgentRunTrigger,
 } from "./runs";
 import { drainAgentRuns } from "./drain";
 import { chainAgentDrain } from "./drain-chain";
@@ -84,7 +85,7 @@ export interface LaunchAgentInput {
    *  ticket). L'appelant a déjà vérifié l'appartenance au projet. */
   projectId?: string | null;
   userId: string;
-  triggeredBy: "button" | "chat" | "mention";
+  triggeredBy: AgentRunTrigger;
   /** Consigne libre en plus de l'issue (optionnelle) — ou LA note (run carnet). */
   prompt?: string | null;
   /** Modèle explicite = override/forçage (numo ou l'utilisateur). */
@@ -113,6 +114,14 @@ export interface LaunchAgentInput {
    * consigne libre, dont on ne sait pas si elle est du travail.
    */
   intent?: AgentLaunchIntent;
+  /**
+   * Étape d'une CHAÎNE d'automatisation (MIN-147). Le run porte l'id de sa
+   * chaîne — c'est par lui que le crochet de fin de run la retrouve — et le
+   * plafond de dépense que la chaîne lui accorde, rendu exécutoire par la boucle
+   * (`min(quota, run, chaîne)`) et pas seulement affiché.
+   */
+  chainId?: string | null;
+  budgetUsd?: number | null;
 }
 
 /** Ce que le lancement fait au statut du ticket : cf. `intentStartsWork`. */
@@ -253,6 +262,12 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       reasoningLevel,
       keyMode: quota.mode,
       triggeredBy: input.triggeredBy,
+      // Persisté depuis MIN-147 : sans lui, la chaîne ne peut pas savoir ce que
+      // le run qui vient de finir FAISAIT. `undefined` vaut « implémenter »,
+      // comme partout ailleurs (cf. `intentStartsWork`).
+      intent: input.intent ?? "implement",
+      chainId: input.chainId ?? null,
+      budgetUsd: input.budgetUsd ?? null,
       branchName: inherited?.branchName ?? null,
       baseBranch: inherited ? inherited.baseBranch : input.baseBranch ?? null,
       prNumber: inherited?.prNumber ?? null,
@@ -278,6 +293,10 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
         actor_id: input.userId,
         type: "agent_launched",
         to_value: model,
+        // Acteur TECHNIQUE vs acteur AFFICHÉ (MIN-147) : le run part sous le
+        // compte qui paye et dont vient la clé, mais c'est l'automatisation que
+        // la timeline doit nommer — même vocabulaire que `via_smart_assign`.
+        ...(input.triggeredBy === "automation" ? { via_automation: true } : {}),
       },
     ]);
 

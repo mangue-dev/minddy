@@ -58,6 +58,11 @@ export interface IssueToolContext {
   /** Le modèle du run accepte-t-il une image en entrée ? (cf. `supportsImageInput`).
    *  Faux → `read_attachment` se comporte exactement comme avant MIN-111. */
   imageInput?: boolean;
+  /** Run COURANT — la ligne sur laquelle `report_verdict` écrit son verdict. */
+  runId?: string | null;
+  /** Chaîne d'automatisation du run (MIN-147). C'est elle qui décide si
+   *  `report_verdict` est servi : hors chaîne, personne ne lit un verdict. */
+  chainId?: string | null;
 }
 
 /** Noms des tools ticket (routés vers ce module par execute.ts). */
@@ -68,6 +73,7 @@ export const ISSUE_TOOL_NAMES = new Set([
   "update_issue",
   "write_issue_plan",
   "create_issue",
+  "report_verdict",
 ]);
 
 /** Derniers commentaires renvoyés par défaut (le fil complet sur demande). */
@@ -485,6 +491,59 @@ async function createIssue(
   };
 }
 
+/** Cap du verdict écrit en base — un rapport, pas une dissertation. */
+const VERDICT_SUMMARY_MAX_CHARS = 2000;
+const VERDICT_BLOCKER_MAX_CHARS = 400;
+const VERDICT_MAX_BLOCKERS = 20;
+
+/**
+ * `report_verdict` (MIN-147) : ce que l'étape de vérification d'une chaîne
+ * conclut. Écrit sur `agent_runs.verdict` du run COURANT — c'est ce que le
+ * moteur lit pour décider entre « on continue », « on reprend une fois » et
+ * « on rend la main en triage ».
+ *
+ * Servi uniquement quand le run porte une chaîne (`agentToolsFor({ chain })`) ;
+ * le refus ci-dessous n'attrape donc qu'un appel halluciné, mais il vaut mieux
+ * une erreur explicite qu'un verdict écrit nulle part.
+ */
+async function reportVerdict(
+  ctx: IssueToolContext,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  if (!ctx.chainId || !ctx.runId) {
+    return {
+      result: {
+        error:
+          "report_verdict is only available inside an automated chain. Just answer normally.",
+      },
+      success: false,
+    };
+  }
+  if (typeof args.ok !== "boolean") {
+    return { result: { error: "ok (boolean) is required." }, success: false };
+  }
+  const summary = typeof args.summary === "string" ? args.summary.trim() : "";
+  if (!summary) {
+    return { result: { error: "summary (what you checked and concluded) is required." }, success: false };
+  }
+  const blockers = (Array.isArray(args.blockers) ? args.blockers : [])
+    .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
+    .slice(0, VERDICT_MAX_BLOCKERS)
+    .map((b) => b.trim().slice(0, VERDICT_BLOCKER_MAX_CHARS));
+
+  const service = getServiceClient();
+  const { error } = await service
+    .from("agent_runs")
+    .update({
+      verdict: { ok: args.ok, summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS), blockers },
+    })
+    .eq("id", ctx.runId);
+  if (error) {
+    return { result: { error: `Verdict not saved: ${error.message}` }, success: false };
+  }
+  return { result: { ok: true, recorded: args.ok ? "pass" : "fail" }, success: true };
+}
+
 /** Exécute un tool ticket. L'appelant a déjà routé sur `ISSUE_TOOL_NAMES`. */
 export async function executeIssueTool(
   ctx: IssueToolContext,
@@ -505,6 +564,8 @@ export async function executeIssueTool(
         return await writeIssuePlan(ctx, args);
       case "create_issue":
         return await createIssue(ctx, args);
+      case "report_verdict":
+        return await reportVerdict(ctx, args);
       default:
         return { result: { error: `Unknown issue tool: ${name}` }, success: false };
     }

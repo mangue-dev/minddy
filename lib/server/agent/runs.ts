@@ -7,12 +7,16 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
+// Type SEUL (donc effacé à la compilation) : `launch.ts` importe ce module, la
+// dépendance ne doit pas exister à l'exécution.
+import type { AgentLaunchIntent } from "./launch";
 import type { AgentChatMessage, AgentEventType } from "./agent-loop";
 import type { SubagentRecord } from "./subagent";
 import { broadcastRunEvent } from "./live";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
+import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
 
 /**
  * Accès données des runs de l'agent de code (MIN-46) : création, claim CAS,
@@ -39,6 +43,24 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
   "failed",
   "canceled",
 ]);
+
+/**
+ * Qui a lancé le run. `automation` (MIN-147) est le quatrième : une règle de
+ * projet, pas un geste — c'est ce qui distingue, dans l'analytics comme dans
+ * l'UI, une chaîne qui se déroule d'un clic sur « lancer Numo ».
+ */
+export type AgentRunTrigger = "button" | "chat" | "mention" | "automation";
+
+/**
+ * Ce que l'agent a répondu au tool `report_verdict` (MIN-147), servi aux seules
+ * étapes de vérification d'une chaîne. C'est ce que le moteur lit pour décider
+ * entre « on continue », « on reprend une fois » et « on rend la main ».
+ */
+export interface AgentRunVerdict {
+  ok: boolean;
+  summary: string;
+  blockers: string[];
+}
 
 /** Contenu sérialisé du checkpoint (repris tel quel au chunk suivant). */
 export interface AgentCheckpoint {
@@ -86,7 +108,7 @@ export interface AgentRun {
   repo_link_id: string | null;
   connection_id: string | null;
   status: AgentRunStatus;
-  triggered_by: "button" | "chat" | "mention";
+  triggered_by: AgentRunTrigger;
   created_by: string | null;
   prompt: string | null;
   /** Résumé court de la note, pour les sessions CARNET. Null = pas de résumé
@@ -129,6 +151,17 @@ export interface AgentRun {
    *  commune (prod + local) ; sinon le `VERCEL_URL` d'un preview, seul à le
    *  reprendre — cf. `deployment.ts`. */
   deployment_url: string | null;
+  /** Chaîne d'automatisation (MIN-147) dont ce run est une étape. Null = run
+   *  ordinaire, lancé à la main. */
+  chain_id: string | null;
+  /** Plafond de dépense de CE run, en USD. Null = seuls le quota et le plafond
+   *  de la chaîne bornent. */
+  budget_usd: number | null;
+  /** Ce qu'on DEMANDAIT à ce run. Persisté depuis MIN-147 : sans lui, la chaîne
+   *  ne peut pas savoir ce que le run qui vient de finir faisait. */
+  intent: AgentLaunchIntent | null;
+  /** Verdict d'une étape de vérification (cf. `AgentRunVerdict`). */
+  verdict: AgentRunVerdict | null;
   created_at: string;
   updated_at: string;
 }
@@ -162,7 +195,12 @@ export interface CreateRunInput {
   /** Niveau de raisonnement résolu au lancement (cf. `resolveReasoningLevel`). */
   reasoningLevel: ReasoningLevel;
   keyMode: "platform" | "byok";
-  triggeredBy: "button" | "chat" | "mention";
+  triggeredBy: AgentRunTrigger;
+  /** Étape d'une chaîne d'automatisation (MIN-147) : son id et son plafond. */
+  chainId?: string | null;
+  budgetUsd?: number | null;
+  /** Ce qu'on demande au run — persisté, contrairement à avant MIN-147. */
+  intent?: AgentLaunchIntent | null;
   /**
    * Branche à reprendre (au lieu d'en générer une neuve) : une run froide qui
    * hérite de la PR de l'issue repart de SA branche → même PR mise à jour (MIN-68).
@@ -215,6 +253,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       pr_url: input.prUrl ?? null,
       pr_state: input.prState ?? null,
       run_id: randomUUID(),
+      chain_id: input.chainId ?? null,
+      budget_usd: input.budgetUsd ?? null,
+      intent: input.intent ?? null,
       // Affinité de déploiement (MIN-165) : posée UNE fois, à la création. Tous
       // les chunks d'un run lancé depuis un preview restent sur ce déploiement.
       deployment_url: currentDeploymentScope(),
@@ -237,6 +278,10 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       reasoning_level: input.reasoningLevel,
       key_mode: input.keyMode,
       triggered_by: input.triggeredBy,
+      // Ce que le run DEMANDE (MIN-147) : sans ça, une chaîne d'automatisation
+      // ne se lit dans l'analytics que comme une rafale de lancements.
+      intent: input.intent ?? "implement",
+      in_chain: !!input.chainId,
       scope: input.issueId ? "issue" : "notebook",
       has_base_branch: !!input.baseBranch,
       resumes_pr: input.prNumber != null,
@@ -430,6 +475,8 @@ export interface StampFields {
   interrupt_requested?: boolean;
   sandbox_stopped_at?: string | null;
   awaiting_input?: boolean;
+  /** Verdict d'une étape de vérification de chaîne (tool `report_verdict`). */
+  verdict?: AgentRunVerdict | null;
 }
 
 /**
@@ -486,6 +533,13 @@ export async function stampRun(
       },
       groups: { project: run.project_id },
     });
+    // Automatisations (MIN-147) : le MÊME passage obligé sert de crochet de fin
+    // de run. `execute.ts` a huit chemins de repos, pas quatre — fin de tour,
+    // budget épuisé, erreur LLM, interruption ×2, garde-fou anti-runaway, erreur
+    // d'amorçage ×2 — et tous convergent ici. La garde de transition ci-dessus
+    // assure qu'un seul gagne, donc un seul avancement de chaîne. Le re-queue de
+    // steering (`queued`, non terminal) en est exclu d'office.
+    if (run.chain_id) notifyChainOfRunEnd(run);
   }
   return run;
 }
@@ -553,15 +607,19 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
         .eq("id", row.id)
         .eq("status", "running");
     } else {
-      await service
-        .from("agent_runs")
-        .update({
+      // Passe par `stampRun` et non par un `.update()` brut : c'est lui qui
+      // porte l'analytics de fin ET le crochet de chaîne (MIN-147). Un run de
+      // chaîne abandonné par le balayeur doit arrêter sa chaîne, pas la laisser
+      // attendre un événement qui ne viendra jamais.
+      await stampRun(
+        row.id,
+        {
           status: "failed",
           error_message: "Agent run stuck (exceeded max attempts)",
           checkpoint: null,
-        })
-        .eq("id", row.id)
-        .eq("status", "running");
+        },
+        { guard: ["running"] },
+      );
       await notifyAgentRun(row, "agent_failed");
     }
   }

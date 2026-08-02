@@ -14,9 +14,6 @@ import {
   ColorInput,
   ConfirmDeleteDialog,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Skeleton,
   Spinner,
   Switch,
@@ -31,7 +28,6 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Info,
   MessagesSquare,
   RefreshCw,
   Sparkles,
@@ -46,6 +42,7 @@ import {
   fetchCustomDomainApi,
 } from "@/components/custom-domain-section";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
+import { HelpHint } from "@/components/settings/help-hint";
 
 /**
  * Onglet Feedback des settings (MIN-37). Deux canaux publics cumulables — le
@@ -87,27 +84,6 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     | null;
   if (!response.ok) throw new Error(data?.error || "error");
   return data as T;
-}
-
-/** Petit ⓘ qui ouvre l'explication détaillée — sort la prose des réglages. */
-function HelpHint({ children }: { children: ReactNode }) {
-  const t = useTranslations("Settings");
-  return (
-    <Popover>
-      <PopoverTrigger
-        aria-label={t("feedbackLearnMore")}
-        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 outline-hidden transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <Info className="size-3.5" />
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="max-w-xs text-xs leading-relaxed text-muted-foreground"
-      >
-        {children}
-      </PopoverContent>
-    </Popover>
-  );
 }
 
 /** Pastille d'état : point coloré + libellé, pour lire le statut d'un coup. */

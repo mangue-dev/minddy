@@ -4,6 +4,7 @@ import type { CycleIntensity } from "./cycle-prefs";
 import type { RepoProviderId } from "./repo-providers";
 import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
+import type { AutomationOverride, AutomationRule } from "./automations";
 
 export interface Objective {
   id: string;
@@ -90,7 +91,11 @@ export type NotificationType =
   /** Someone reviewed (approved / requested changes on) a PR the agent opened for me. */
   | "pr_reviewed"
   /** A PR the agent opened for me was merged on the forge. */
-  | "pr_merged";
+  | "pr_merged"
+  /** Une chaîne d'automatisation attend un feu vert humain (MIN-147). */
+  | "automation_paused"
+  /** Une chaîne d'automatisation s'est arrêtée : budget, quota, vérif en échec. */
+  | "automation_stopped";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {
@@ -125,6 +130,9 @@ export interface MyNotification {
   api_key_name: string | null;
   /** The assignment was made by Smart Assign (no human actor). */
   via_smart_assign: boolean;
+  /** La ligne vient d'une automatisation de projet (MIN-147) — même raison que
+      `via_smart_assign` : sans ça l'inbox lit un acteur nul et dit « Quelqu'un ». */
+  via_automation: boolean;
   /** First characters of the comment that triggered a mention/comment row. */
   comment_excerpt: string | null;
 }
@@ -253,6 +261,10 @@ export interface IssueEvent {
       quand Smart Assign a tranché sans IA (projet solo, aucune règle écrite,
       appel en échec) : la timeline ne dit pas la même phrase. */
   smart_assign_ai?: boolean;
+  /** L'événement a été produit par une automatisation de projet (MIN-147) — la
+      timeline affiche l'automatisation comme acteur, pas l'utilisateur dont
+      l'id sert techniquement d'auteur de l'écriture. */
+  via_automation?: boolean;
   /** Provider ('github' | 'gitlab') quand l'événement vient de la synchro des
       issues du dépôt lié (MIN-97) — la timeline affiche la forge comme acteur,
       pas le membre dont l'id sert techniquement d'auteur de l'écriture. */
@@ -317,6 +329,12 @@ export interface Project {
   /** When the review is on but the owner's AI budget is spent: publish without
       review instead of holding the feedback back. */
   feedback_review_skip_over_budget: boolean;
+  /** Automatisations de projet (MIN-147) : l'interrupteur général de la boucle
+      Numo enchaînée. Off = les règles restent écrites mais rien ne se déclenche. */
+  automations_enabled: boolean;
+  /** Les règles `quand … si … alors …`, telles que `parseAutomations` les lit.
+      Livrées par un préréglage, éditables ensuite. */
+  automations: AutomationRule[];
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -341,6 +359,8 @@ export interface ProjectUpdateInput {
   smart_assign_rules?: Record<string, string>;
   feedback_review_enabled?: boolean;
   feedback_review_skip_over_budget?: boolean;
+  automations_enabled?: boolean;
+  automations?: AutomationRule[];
 }
 
 export interface Member {
@@ -631,6 +651,9 @@ export interface Issue {
   /** Id du premier ticket de la série, hérité par chaque occurrence — de quoi
       retrouver l'historique d'une récurrence. Null hors série. */
   recurrence_series_id: string | null;
+  /** Forçage des automatisations sur CE ticket (MIN-147). Null = il suit les
+      règles du projet ; sinon il s'en retire, ou il joue un autre préréglage. */
+  automation_override?: AutomationOverride | null;
   position: number;
   created_by: string | null;
   /** Set when the issue was created through a project integration (Feedback API). */
@@ -812,6 +835,8 @@ export interface IssueUpdateInput {
   /** Setting a cycle assigns the issue to the cycle's owner as a side-effect
       (never bumps status); null removes it from its cycle. */
   cycle_id?: string | null;
+  /** Forçage des automatisations sur ce ticket (MIN-147) ; null = suit le projet. */
+  automation_override?: AutomationOverride | null;
 }
 
 export type ViewSort = "manual" | "priority" | "created" | "updated" | "due";

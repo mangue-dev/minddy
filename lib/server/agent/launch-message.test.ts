@@ -37,6 +37,21 @@ describe("launchPromptVariantForMode", () => {
     expect(launchPromptVariantForMode("verify", issue)).toBe("verifyImplementation");
     expect(launchPromptVariantForMode("verify", planned)).toBe("verifyImplementation");
   });
+
+  it("dans une chaîne : les deux VÉRIFICATIONS passent en variante à verdict", () => {
+    expect(launchPromptVariantForMode("verify", issue, true)).toBe(
+      "chainVerifyImplementation",
+    );
+    // « Vérifier le plan » = mode `plan` sur un ticket qui en a déjà un.
+    expect(launchPromptVariantForMode("plan", planned, true)).toBe("chainVerifyPlan");
+  });
+
+  it("dans une chaîne : ÉCRIRE un plan et IMPLÉMENTER ne changent pas", () => {
+    // Rien à juger sur un plan qu'on vient d'écrire, ni sur du code qu'on vient
+    // de poser : le verdict est le geste de la vérification, pas du travail.
+    expect(launchPromptVariantForMode("plan", issue, true)).toBe("writePlan");
+    expect(launchPromptVariantForMode("implement", planned, true)).toBe("planExists");
+  });
 });
 
 describe("intentForLaunchMode", () => {

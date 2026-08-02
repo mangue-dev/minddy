@@ -1,0 +1,364 @@
+import "server-only";
+
+import { after } from "next/server";
+
+import { getServiceClient } from "@/lib/supabase-service";
+import { canUseAutomations } from "@/lib/server/entitlements";
+import { activeRunForIssue, type AgentRunVerdict } from "@/lib/server/agent/runs";
+import { updateIssueFields } from "@/lib/server/update-issue";
+import {
+  findImplementRule,
+  MAX_CHAIN_STEPS,
+  MAX_VERIFICATION_RETRIES,
+  nextRule,
+  parseAutomationOverride,
+  parseAutomations,
+  presetOfRules,
+  rulesForIssue,
+  rulesToReplayOnRetry,
+  simulateChain,
+  type AutomationEvent,
+  type AutomationIssueFacts,
+  type AutomationRule,
+} from "@/lib/automations";
+import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
+import {
+  advanceChain,
+  chainBudgetRemaining,
+  chainForIssue,
+  getChain,
+  openChain,
+  retryChain,
+  type AgentChain,
+} from "./chain";
+import { estimateChainCost } from "./estimate";
+import { runAction } from "./actions";
+import { captureChainStarted, finishChain, haltChain } from "./report";
+
+/**
+ * Le MOTEUR des automatisations (MIN-147), calqué sur `lib/server/smart-assign.ts` :
+ * un point d'entrée fire-and-forget qui ne fait rien d'autre que programmer le
+ * travail après la réponse, et une exécution qui RE-VÉRIFIE TOUT au moment où
+ * elle tourne. Le monde a pu bouger entre la programmation et l'exécution —
+ * interrupteur coupé, projet supprimé, ticket re-trié, budget épuisé, run relancé
+ * à la main — et chacun de ces cas doit être un no-op silencieux, pas une panne.
+ *
+ * Il ne joue QU'UNE règle par événement (cf. `nextRule`) : l'action lancée
+ * produira elle-même l'événement suivant, soit en finissant son run (crochet de
+ * fin de run), soit en changeant le statut (crochet de statut). C'est ce qui rend
+ * la boucle observable — chaque étape laisse une trace en base avant la suivante.
+ */
+
+export interface AutomationRunParams {
+  issueId: string;
+  projectId: string;
+  event: AutomationEvent;
+  /**
+   * Chaîne concernée quand l'appelant la connaît (crochet de fin de run,
+   * reprise humaine). Absent → celle du ticket, s'il en a une vivante.
+   */
+  chainId?: string | null;
+}
+
+/**
+ * Point d'entrée fire-and-forget. Hors du chemin critique, comme
+ * `scheduleSmartAssign` — et avec le même filet que `update-issue` : hors d'une
+ * requête (le moteur s'appelle lui-même en cascade), `after()` lève, et le
+ * travail part alors directement.
+ */
+export function scheduleAutomations(params: AutomationRunParams): void {
+  const go = () =>
+    runAutomations(params).catch((e) =>
+      console.error("[automations] run failed:", (e as Error).message),
+    );
+  try {
+    after(go);
+  } catch {
+    void go();
+  }
+}
+
+interface IssueRow {
+  id: string;
+  number: number;
+  title: string;
+  plan: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  effort: IssueEffort | null;
+  assignee_id: string | null;
+  automation_override: unknown;
+}
+
+/**
+ * Acteur TECHNIQUE de la chaîne : l'assigné du ticket s'il est de l'équipe,
+ * sinon le owner du projet. C'est de lui que viennent la clé BYOK, le quota, la
+ * langue et les notifications — pas de qui a cliqué, puisque personne n'a cliqué.
+ * L'acteur AFFICHÉ, lui, est l'automatisation (`via_automation`).
+ */
+async function resolveChainOwner(
+  projectId: string,
+  ownerId: string,
+  assigneeId: string | null,
+): Promise<string> {
+  if (!assigneeId || assigneeId === ownerId) return ownerId;
+  const service = getServiceClient();
+  const { data } = await service
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", assigneeId)
+    .maybeSingle();
+  return data ? assigneeId : ownerId;
+}
+
+async function categoryIdsOf(issueId: string): Promise<string[]> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("issue_categories")
+    .select("category_id")
+    .eq("issue_id", issueId);
+  return ((data ?? []) as Array<{ category_id: string }>).map((r) => r.category_id);
+}
+
+/**
+ * Une vérification d'implémentation qui dit NON. Une reprise, et une seule : la
+ * relance porte le rapport en consigne, donc elle sait quoi corriger ; un
+ * deuxième échec sur le même sujet dit que le ticket a besoin d'un humain, pas
+ * d'un tour de plus — arrêt, ticket en triage, rapport en commentaire.
+ *
+ * Rend `true` quand il a pris la main : le moteur ne consulte alors pas les
+ * règles (elles rejoueraient l'étape suivante d'un travail qu'on vient de juger
+ * non fait).
+ */
+async function handleFailedVerification(params: {
+  chain: AgentChain;
+  rules: readonly AutomationRule[];
+  verdict: AgentRunVerdict;
+  issue: IssueRow;
+  projectKey: string;
+}): Promise<boolean> {
+  const { chain, verdict, issue } = params;
+
+  if (chain.retries >= MAX_VERIFICATION_RETRIES) {
+    await haltChain(chain, "verification_failed", {
+      verdictSummary: verdict.summary,
+      verdictBlockers: verdict.blockers,
+    });
+    // Le ticket remonte en triage : c'est l'endroit du produit qui dit
+    // « quelqu'un doit regarder ça », et la chaîne n'a plus rien à en faire.
+    await updateIssueFields({
+      issueId: issue.id,
+      actorId: chain.owner_id,
+      input: { status: "triage" },
+      viaAssistant: true,
+    });
+    return true;
+  }
+
+  const retried = await retryChain(chain, rulesToReplayOnRetry(params.rules));
+  if (!retried) return true;
+
+  // On rejoue la règle d'implémentation — celle que `retryChain` vient de
+  // démarquer — avec le rapport de vérification en consigne supplémentaire.
+  const rule = findImplementRule(params.rules, {
+    issue: factsOf(issue, await categoryIdsOf(issue.id)),
+    playedRuleIds: retried.played_rule_ids,
+  });
+  if (!rule) {
+    await haltChain(retried, "verification_failed", {
+      verdictSummary: verdict.summary,
+      verdictBlockers: verdict.blockers,
+    });
+    return true;
+  }
+  const advanced = await advanceChain(retried, rule.id);
+  if (!advanced) return true;
+  await runAction({
+    chain: advanced,
+    action: rule.then[0],
+    issue: { ...issue, project_key: params.projectKey },
+    extraPrompt: [
+      verdict.summary,
+      ...(verdict.blockers ?? []).map((b) => `- ${b}`),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
+  return true;
+}
+
+function factsOf(issue: IssueRow, categoryIds: string[]): AutomationIssueFacts {
+  return {
+    status: issue.status,
+    effort: issue.effort,
+    priority: issue.priority,
+    plan: issue.plan,
+    assigneeId: issue.assignee_id,
+    categoryIds,
+  };
+}
+
+export async function runAutomations(params: AutomationRunParams): Promise<void> {
+  const service = getServiceClient();
+
+  // ── Le monde, re-vérifié à l'exécution ────────────────────────────────────
+  const { data: project } = await service
+    .from("projects")
+    .select("id, key, owner_id, automations_enabled, automations")
+    .eq("id", params.projectId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!project) return;
+
+  const existing = params.chainId
+    ? await getChain(params.chainId)
+    : await chainForIssue(params.issueId);
+
+  if (!project.automations_enabled) {
+    // L'interrupteur a été coupé pendant qu'une chaîne tournait : on ne la laisse
+    // pas en suspens, on l'arrête en le disant.
+    if (existing && existing.status === "running") await haltChain(existing, "disabled");
+    return;
+  }
+  if (!(await canUseAutomations(project.owner_id as string))) {
+    if (existing && existing.status === "running") await haltChain(existing, "entitlement");
+    return;
+  }
+
+  const { data: issueRow } = await service
+    .from("issues")
+    .select(
+      "id, number, title, plan, status, priority, effort, assignee_id, automation_override",
+    )
+    .eq("id", params.issueId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!issueRow) return;
+  const issue = issueRow as IssueRow;
+
+  const override = parseAutomationOverride(issue.automation_override);
+  const rules = rulesForIssue(parseAutomations(project.automations), override);
+  if (rules.length === 0) {
+    if (existing && existing.status === "running") await haltChain(existing, "disabled");
+    return;
+  }
+
+  // Une chaîne garée attend un HUMAIN : rien d'automatique ne la fait repartir.
+  // La route de reprise la remet en `running` AVANT de rappeler le moteur.
+  if (existing && existing.status !== "running") return;
+
+  // Un run TRAVAILLE déjà sur le ticket : la chaîne est au milieu d'une étape,
+  // et rien ne doit être décidé maintenant. Ce garde-fou est ICI, avant même de
+  // regarder les règles, et pas juste avant de lancer : un changement de statut
+  // manuel pendant qu'un run tourne ne matche aucune règle, et sans ce retour
+  // la chaîne serait déclarée TERMINÉE alors que son étape court encore. (Sur le
+  // chemin normal, `stampRun` a déjà rendu le run terminal quand le crochet
+  // appelle : il n'y a donc rien d'actif et ce test laisse passer.)
+  if (await activeRunForIssue(issue.id)) return;
+
+  const categoryIds = await categoryIdsOf(issue.id);
+  const facts = factsOf(issue, categoryIds);
+  const projectKey = (project.key as string) ?? "";
+
+  // ── Le verdict d'une vérification prime sur les règles ────────────────────
+  if (existing && params.event.type === "run_finished" && params.event.intent === "verify") {
+    const verdict = await verdictOfLastRun(existing.id);
+    if (verdict && !verdict.ok) {
+      await handleFailedVerification({
+        chain: existing,
+        rules,
+        verdict,
+        issue,
+        projectKey,
+      });
+      return;
+    }
+  }
+
+  // ── Ce qui reste à jouer ──────────────────────────────────────────────────
+  const rule = nextRule(rules, {
+    event: params.event,
+    issue: facts,
+    playedRuleIds: existing?.played_rule_ids ?? [],
+  });
+  if (!rule) {
+    // Plus rien à jouer : la chaîne est allée au bout. (Sans chaîne, c'est
+    // simplement un événement qui n'intéresse aucune règle.)
+    if (existing) await finishChain(existing);
+    return;
+  }
+
+  // ── La chaîne ─────────────────────────────────────────────────────────────
+  let chain = existing;
+  if (!chain) {
+    const ownerId = await resolveChainOwner(
+      project.id as string,
+      project.owner_id as string,
+      issue.assignee_id,
+    );
+    const estimate = await estimateChainCost({
+      projectId: project.id as string,
+      ownerId,
+      rules,
+      issue: facts,
+      // Depuis l'événement DÉCLENCHEUR : au moment où le crochet appelle, le
+      // ticket porte encore son ancien statut en base.
+      from: params.event,
+    });
+    chain = await openChain({
+      projectId: project.id as string,
+      issueId: issue.id,
+      ownerId,
+      preset: presetOfRules(rules),
+      // Un plafond de zéro n'est pas un plafond serré, c'est une chaîne morte
+      // avant sa première étape : dans ce cas (estimation impossible), on
+      // n'en pose aucun et on laisse le quota du compte faire son office.
+      budgetUsd: estimate.budgetUsd > 0 ? estimate.budgetUsd : null,
+    });
+    // Null = une autre chaîne est née entre-temps (index unique). On rend la
+    // main : c'est elle qui pilote maintenant.
+    if (!chain) return;
+    captureChainStarted(chain, {
+      effort: issue.effort,
+      plannedSteps: simulateChain(rules, facts, { throughHumanStop: true }).length,
+    });
+  }
+
+  // ── Les garde-fous, juste avant de dépenser ───────────────────────────────
+  if (chain.step >= MAX_CHAIN_STEPS) {
+    await haltChain(chain, "max_steps");
+    return;
+  }
+  const remaining = chainBudgetRemaining(chain);
+  if (remaining !== null && remaining <= 0) {
+    await haltChain(chain, "budget");
+    return;
+  }
+
+  // ── L'étape ───────────────────────────────────────────────────────────────
+  // Compare-and-set : si un autre l'a jouée entre-temps, on ne lance rien.
+  const advanced = await advanceChain(chain, rule.id);
+  if (!advanced) return;
+
+  await runAction({
+    chain: advanced,
+    action: rule.then[0],
+    issue: { ...issue, project_key: projectKey },
+  });
+}
+
+/** Le verdict du dernier run de la chaîne (tool `report_verdict`). */
+async function verdictOfLastRun(chainId: string): Promise<AgentRunVerdict | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("verdict")
+    .eq("chain_id", chainId)
+    .not("verdict", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const verdict = (data as { verdict?: AgentRunVerdict | null } | null)?.verdict ?? null;
+  return verdict && typeof verdict.ok === "boolean" ? verdict : null;
+}

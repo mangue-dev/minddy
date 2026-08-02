@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
+import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
 /**
  * « Interrompre la réponse en cours » d'une session d'agent (MIN-46). Pose le
@@ -31,6 +32,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (WORKING.includes(run.status)) {
     await requestInterrupt(runId);
   }
+
+  // Un « stop » humain ARRÊTE la chaîne (MIN-147), il ne la fait pas avancer :
+  // c'est le geste de quelqu'un qui veut que ça cesse, pas une fin d'étape. Il
+  // faut le dire ICI — le crochet de fin de run ne peut pas le déduire,
+  // `clearInterrupt` ayant déjà effacé le drapeau quand `stampRun` s'exécute.
+  if (run.chain_id) stopChainOnInterrupt(run.chain_id);
 
   return NextResponse.json({ ok: true, status: run.status });
 }
