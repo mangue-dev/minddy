@@ -242,7 +242,15 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
 
   // Direct : l'en-tête a bougé. `oldrev` est le seul `update` qui porte un PUSH
   // — c'est là, et là seulement, que la liste des commits change.
-  const liveParts: PrLivePart[] = attrs.oldrev ? ["pr", "commits"] : ["pr"];
+  //
+  // Le FIL bouge aussi, pour la même raison que côté GitHub : la conversation
+  // porte l'ACTIVITÉ de la MR (MIN-159), que GitLab écrit en notes `system`
+  // relues par `listMergeRequestTimeline` — « added 3 commits », « approved
+  // this merge request », « merged ». Ces phrases naissent d'un event
+  // `merge_request` et se rendent DANS le fil.
+  const liveParts: PrLivePart[] = attrs.oldrev
+    ? ["pr", "conversation", "commits"]
+    : ["pr", "conversation"];
   if (ingested) {
     broadcastPrChanged(ingested.id, liveParts);
   } else {

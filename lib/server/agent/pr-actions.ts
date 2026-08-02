@@ -1501,15 +1501,17 @@ export const REVIEW_VERDICTS: readonly ReviewVerdict[] = [
  * La LISTE et le panneau du ticket, eux, n'ont rien à faire ici : l'écriture de
  * `pull_requests` déclenche le trigger de diffusion (migration
  * 20260929090000), qui les atteint chez tous les membres. Ce qui reste à pousser
- * à la main, c'est le panneau OUVERT sur cette PR — son en-tête est lu chez la
- * forge, pas en base.
+ * à la main, c'est le panneau OUVERT sur cette PR — son en-tête ET son fil sont
+ * lus chez la forge, pas en base : fusionner, refuser, rouvrir ou proposer une
+ * PR pose un fait dans la timeline (« a fusionné », « a rouvert »), que le fil
+ * rend au titre de l'ACTIVITÉ de la PR (MIN-159).
  */
 async function propagatePrState(
   scope: PrScope,
   state: PullRequestState,
   actorId: string,
 ): Promise<void> {
-  broadcastPrChanged(scope.pr.id, ["pr"]);
+  broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
   await upsertPullRequest({
     provider: scope.target.provider,
     repoFullName: scope.target.repoFullName,

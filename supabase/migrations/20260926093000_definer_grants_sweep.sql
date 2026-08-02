@@ -27,16 +27,28 @@
 -- d'aujourd'hui ET pour celles de demain (la prochaine `revoke … from public`
 -- écrite de bonne foi sera rattrapée au prochain passage de cette migration).
 --
--- L'allowlist tient en cinq noms, et ce sont les seuls definers que
--- `authenticated` DOIT pouvoir exécuter :
---   - can_access_project / is_project_member / is_project_owner : appelées
---     depuis les policies RLS elles-mêmes — le contrôle de privilège d'une
---     expression de policy se fait au nom de l'appelant, les révoquer casserait
---     toutes les lectures RLS ;
---   - can_watch_agent_run / can_watch_numo_comment : idem pour les policies de
---     `realtime.messages`.
--- Toutes les cinq ne répondent que sur l'accès de l'APPELANT (`auth.uid()`) :
--- les exposer ne révèle rien qu'il ne sache déjà.
+-- L'allowlist épargne les seuls definers que `authenticated` DOIT pouvoir
+-- exécuter — ceux qu'une expression de POLICY appelle, dont le contrôle de
+-- privilège se fait au nom de l'appelant et non du propriétaire :
+--   - can_access_project / is_project_member / is_project_owner, nommées : ce
+--     sont les policies RLS des tables, et les révoquer casserait toutes les
+--     lectures ;
+--   - toute la famille `can_watch_*`, par MOTIF : ce sont les branches de
+--     `members_receive_broadcasts` sur `realtime.messages`, une par topic privé.
+-- Les unes comme les autres ne répondent que sur l'accès de l'APPELANT
+-- (`auth.uid()`) : les exposer ne lui révèle rien qu'il ne sache déjà.
+--
+-- POURQUOI UN MOTIF ET PLUS UNE LISTE (MIN-161). L'allowlist a d'abord tenu en
+-- cinq noms, et une liste ne peut pas connaître les fonctions écrites APRÈS
+-- elle : `can_watch_pr_review` (20260927090000) est arrivée ensuite et s'est
+-- retrouvée du mauvais côté du balai. Une branche de policy qui LÈVE ne vaut
+-- pas « faux » — elle fait tomber l'expression entière, et PostgreSQL ne
+-- garantit aucun court-circuit sur `or`. Une seule fonction non exécutable a
+-- donc fermé la réception broadcast de TOUTE l'application, pour tous les
+-- topics et tous les comptes, sans que rien ne le signale (le détail de la
+-- mesure est dans 20260929091000_realtime_watch_grants). Ce fichier s'annonce
+-- « safe to re-run » : le rejouer avec la liste d'origine reproduirait la
+-- panne à l'identique. Le motif, lui, vaut pour les topics de demain.
 --
 -- Les fonctions trigger sont hors sujet (non appelables via PostgREST, et le
 -- privilège d'un trigger se vérifie à la création, pas au déclenchement).
@@ -58,10 +70,14 @@ begin
       and p.proname not in (
         'can_access_project',
         'is_project_member',
-        'is_project_owner',
-        'can_watch_agent_run',
-        'can_watch_numo_comment'
+        'is_project_owner'
       )
+      -- Les gardes de topic de `members_receive_broadcasts`, par famille plutôt
+      -- que par nom : `can_watch_agent_run`, `can_watch_numo_comment`,
+      -- `can_watch_pr_review`, `can_watch_pull_request`, et celles du prochain
+      -- topic privé. Le `\_` est un underscore littéral (l'échappement par
+      -- défaut de LIKE), pas un joker.
+      and p.proname not like 'can\_watch\_%'
       -- Jamais une fonction appartenant à une extension : ses grants sont
       -- l'affaire de l'extension, pas la nôtre.
       and not exists (

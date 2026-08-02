@@ -245,7 +245,18 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // ICI, avant les gardes de cycle de vie plus bas — une PR sans run, un acteur
   // bot, un écho de notre propre geste : dans tous ces cas la PR a bougé pour de
   // vrai. On réutilise la ligne qu'on vient d'écrire plutôt que de la relire.
-  const liveParts: PrLivePart[] = action === "synchronize" ? ["pr", "commits"] : ["pr"];
+  //
+  // Le FIL en fait partie, et pas seulement l'en-tête : depuis MIN-159 la
+  // conversation porte l'ACTIVITÉ de la PR, lue dans la timeline de la forge
+  // (`prCommentsResponse` → `listTimeline`). « a poussé 3 commits », « a
+  // fusionné », « a renommé », « a mis en revue » : chacun de ces faits naît
+  // d'un event `pull_request` et se rend DANS le fil. Sans `conversation`, le
+  // commit poussé apparaissait dans l'onglet Commits mais pas dans la
+  // conversation, jusqu'au rechargement.
+  const liveParts: PrLivePart[] =
+    action === "synchronize"
+      ? ["pr", "conversation", "commits"]
+      : ["pr", "conversation"];
   if (ingested) {
     broadcastPrChanged(ingested.id, liveParts);
   } else {
@@ -375,15 +386,22 @@ async function broadcastGithubPr(
 }
 
 async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise<void> {
-  if (payload.action !== "submitted") return;
   // Une review bouge TROIS surfaces : son message va dans le fil, ses remarques
   // dans le diff, et son verdict change le compteur d'approbations que
   // `prDetailResponse` sert avec l'en-tête.
+  //
+  // Le direct part sur les TROIS actions (submitted/edited/dismissed), comme
+  // pour les remarques de ligne, et AVANT le garde ci-dessous : RETIRER une
+  // approbation (`dismissed`) change le compteur de l'en-tête autant que la
+  // poser, et pose un `review_dismissed` dans le fil ; `edited` en réécrit le
+  // corps. L'ACTIVITÉ, elle, ne trace que la review soumise — dénoncer sa
+  // propre review n'est pas un geste à raconter sur le ticket.
   await broadcastGithubPr(payload.repository?.full_name, payload.pull_request?.number, [
     "conversation",
     "reviewComments",
     "pr",
   ]);
+  if (payload.action !== "submitted") return;
   await recordGithubGesture({
     type: prActionForReview(payload.review ?? {}),
     number: payload.pull_request?.number,
