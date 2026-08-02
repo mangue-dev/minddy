@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { Button, cn, transitions } from "mangue-ui";
 import { useNewVersion } from "@/lib/use-new-version";
 
@@ -20,7 +20,7 @@ import { useNewVersion } from "@/lib/use-new-version";
  */
 export function NewVersionBanner() {
   const t = useTranslations("NewVersion");
-  const { visible, dismiss, refresh } = useNewVersion();
+  const { visible, dismiss, refresh, refreshing } = useNewVersion();
 
   return (
     // La région live est montée EN PERMANENCE, vide tant qu'il n'y a rien à
@@ -55,7 +55,26 @@ export function NewVersionBanner() {
             className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-lg"
           >
             <p className="text-sm text-card-foreground">{t("title")}</p>
-            <Button size="sm" onClick={refresh}>
+            {/*
+              Deux signes de vie, sans lesquels le bouton passe pour inerte :
+
+              — le survol. Le variant `default` de mangue-ui ne recolore QUE
+                rendu en lien (`[a]:hover:bg-primary/80`, soit `:is(a):hover`
+                une fois compilé) ; sur un vrai <button>, il ne se passe rien.
+                On rétablit la teinte que la librairie applique elle-même à ses
+                boutons pleins (`send-button-with-cost`), et le curseur main,
+                que Tailwind v4 ne met plus sur `button`.
+              — le clic. Le rechargement n'affiche rien pendant sa seconde de
+                latence : le spinner et l'état désactivé la remplissent, et
+                évitent le second clic.
+            */}
+            <Button
+              size="sm"
+              onClick={refresh}
+              disabled={refreshing}
+              className="cursor-pointer enabled:hover:bg-primary/90"
+            >
+              {refreshing && <Loader2 className="animate-spin" />}
               {t("refresh")}
             </Button>
             <button

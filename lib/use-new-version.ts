@@ -64,7 +64,13 @@ export function useNewVersion() {
     setDismissedCommit(serverCommit);
   }, [serverCommit]);
 
+  // Un rechargement complet met une seconde ou deux à repeindre, et pendant ce
+  // temps la page reste EXACTEMENT dans l'état où le clic l'a laissée : sans
+  // cet état, le bouton a l'air mort et on reclique. L'état ne redescend
+  // jamais à `false` — ce qui l'éteint, c'est le nouveau document.
+  const [refreshing, setRefreshing] = useState(false);
   const refresh = useCallback(() => {
+    setRefreshing(true);
     window.location.reload();
   }, []);
 
@@ -76,5 +82,6 @@ export function useNewVersion() {
     }),
     dismiss,
     refresh,
+    refreshing,
   };
 }
