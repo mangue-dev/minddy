@@ -2,15 +2,22 @@ import type { CSSProperties } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
-import { ScreenshotSlot } from "./screenshot-slot";
+import { AgentLoopFigure } from "./agent-loop-figure";
 import { TrackedCta } from "./tracked-cta";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
 /**
- * Hero de la landing (MIN-73). Promesse en une phrase, deux actions, la capture
- * du produit. Le mot accentué passe en Instrument Serif italique — la même
- * respiration typographique que le reste de la marque.
+ * Hero de la landing (MIN-73). Promesse en une phrase, deux actions, une image.
+ * Le mot accentué passe en Instrument Serif italique — la même respiration
+ * typographique que le reste de la marque.
+ *
+ * CE QU'IL PROMET (MIN-148). Le titre portait le tracker (« Un tracker complet,
+ * et pourtant évident ») et l'image montrait un board : les deux premiers écrans
+ * nous plaçaient sur le terrain de Linear, où un board ressemble forcément à un
+ * board. Il porte maintenant la boucle — vous écrivez le ticket, l'agent prend
+ * la suite — et l'image la montre (`agent-loop-figure.tsx`). Le tracker n'a pas
+ * disparu : il est passé juste dessous, en réassurance (`section-tracker.tsx`).
  *
  * Le shader n'est PAS rendu ici : il est posé au niveau de la page pour partir
  * du haut du document et passer derrière la navbar (voir `hero-shader.tsx`).
@@ -138,15 +145,15 @@ export async function Hero() {
           </p>
         </div>
 
-        {/* SANS DÉLAI, contrairement au reste de la cascade (MIN-88). La
-            capture est l'élément LCP : tout ce qui retarde son PREMIER PAINT
-            est compté dans la métrique, animation d'entrée comprise. Mesuré,
-            sa place en fin de cascade (≈ 0,95 s d'attente) pesait à elle seule
-            ~1,2 s de « render delay » sur le LCP. Elle garde son fondu — même
-            durée, même courbe, même plancher d'opacité que le titre — mais
-            elle le joue en même temps que lui au lieu d'attendre son tour. */}
+        {/* SANS DÉLAI, contrairement au reste de la cascade (MIN-88). C'était
+            une capture, donc le second candidat LCP : mesuré, sa place en fin de
+            cascade (≈ 0,95 s d'attente) pesait ~1,2 s de « render delay ». La
+            figure n'est plus une image et le titre reste le seul candidat
+            sérieux, mais on garde le départ à 0 s et le plancher d'opacité de
+            `hero-reveal-media` : rien à y gagner à retarder ce qui est déjà
+            gratuit, et le titre reste éligible dès la première frame. */}
         <div className="hero-reveal hero-reveal-media mt-14 sm:mt-20">
-          <ScreenshotSlot id="heroBoard" priority />
+          <AgentLoopFigure />
         </div>
       </div>
     </section>

@@ -34,12 +34,12 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       // sur les blocs qui les ont absorbés : ces liens — et ceux déjà partagés —
       // tombent toujours au bon endroit.
       { href: "/#tracker", labelKey: "navMenu_tracker_title" },
-      { href: "/#speed", labelKey: "footerSpeed" },
-      { href: "/#voice", labelKey: "footerVoice" },
-      { href: "/#scratchpad", labelKey: "footerScratchpad" },
       { href: "/#agents", labelKey: "footerAgents" },
       { href: "/#workflow", labelKey: "navHowItWorks" },
       { href: "/#numo", labelKey: "footerNumo" },
+      { href: "/#speed", labelKey: "footerSpeed" },
+      { href: "/#voice", labelKey: "footerVoice" },
+      { href: "/#scratchpad", labelKey: "footerScratchpad" },
       { href: "/#feedback", labelKey: "footerFeedback" },
       { href: "/#more", labelKey: "footerMore" },
       { href: "/pricing", labelKey: "navPricing" },

@@ -54,9 +54,9 @@ type NavLink = {
  */
 const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "tracker", href: "/#tracker", icon: LayoutGrid },
-  { key: "speed", href: "/#speed", icon: Zap },
   { key: "agents", href: "/#agents", icon: Plug },
   { key: "numo", href: "/#numo", icon: null },
+  { key: "speed", href: "/#speed", icon: Zap },
   { key: "feedback", href: "/#feedback", icon: MessagesSquare },
   { key: "more", href: "/#more", icon: Boxes },
   // La seule entrée qui mène à une PAGE et non à une section de la landing

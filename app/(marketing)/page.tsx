@@ -38,18 +38,17 @@ export default async function LandingPage() {
           `relative isolate` du layout marketing (<main> n'est pas positionné). */}
       <HeroShader />
       <Hero />
-      {/* Six sections de contenu au lieu de neuf, dans l'ordre de la
-          démonstration : le produit d'abord (c'est un vrai tracker), la vitesse
-          ensuite (peu de gestes, pas seulement peu d'écrans), l'IA en troisième
-          (elle s'y branche, elle ne le remplace pas), puis ce qui entre depuis
-          l'extérieur, puis le rappel que le reste est déjà là.
-          L'ancienne page ouvrait sur quatre sections d'IA — dont trois
-          racontaient le même geste — et ne montrait le tracker qu'en 8ᵉ
-          position, sous un titre « Tout ce qu'il faut. Rien de plus. » que tout
-          ce qui précédait contredisait. */}
+      {/* Six sections de contenu, dans l'ordre de la démonstration : le hero
+          promet la boucle agent, le tracker rassure aussitôt (« et dessous,
+          c'est un vrai tracker »), la section Agents prouve la promesse, la
+          vitesse suit, puis ce qui entre depuis l'extérieur, puis le rappel que
+          le reste est déjà là.
+          Agents est passée devant Speed (MIN-148) : la preuve doit suivre la
+          promesse, pas attendre deux sections. Le menu « Produit » de la nav se
+          lit comme le plan de cette page, il suit le même ordre. */}
       <SectionTracker />
-      <SectionSpeed />
       <SectionAgents />
+      <SectionSpeed />
       <SectionFeedback />
       <SectionMore />
       <SectionPricingTeaser />

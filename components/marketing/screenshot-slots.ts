@@ -130,6 +130,11 @@ const SLOTS = {
     ratio: "16/10",
     src: null,
   },
+  // AUCUNE SECTION NE LE PLACE depuis MIN-148 : la section tracker, devenue un
+  // temps de réassurance, montre le board plutôt que le cycle. L'emplacement
+  // reste ici, et sa capture publiée avec lui — la chaîne `captures/` sait le
+  // produire (`captures/shots/cycle/`), et la page qui en aura besoin n'aura
+  // rien à refaire.
   featureCycle: {
     id: "featureCycle",
     route: "/home (bloc cycle) ou la page cycle",

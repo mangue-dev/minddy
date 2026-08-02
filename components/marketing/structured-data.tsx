@@ -37,8 +37,8 @@ import type { MessageKey } from "@/lib/i18n-keys";
  * erreur du Rich Results Test, et c'est la seule façon de ne pas l'introduire.
  */
 
-/** Les six domaines du produit, tels que la nav les nomme déjà. */
-const FEATURE_KEYS = ["tracker", "speed", "agents", "numo", "feedback", "more"] as const;
+/** Les six domaines du produit, tels que la nav les nomme déjà — même ordre. */
+const FEATURE_KEYS = ["tracker", "agents", "numo", "speed", "feedback", "more"] as const;
 
 const LANG_TAG: Record<Locale, string> = { en: "en-US", fr: "fr-FR" };
 

@@ -12,13 +12,17 @@ import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealHeading } from "./reveal";
 
 /**
- * §2 — « Le tracker ». Ex-`#features`, remontée juste après le hero.
+ * §2 — « Et dessous, c'est un vrai tracker ». Ex-`#features`.
  *
- * C'était la dernière section de contenu : la page traversait quatre sections
- * d'IA avant de montrer le produit, et le titre « Tout ce qu'il faut. Rien de
- * plus. » arrivait après six sections qui le contredisaient. En position 2 il
- * ouvre au lieu de conclure — le titre n'a pas eu besoin d'être réécrit, juste
- * déplacé.
+ * ELLE RASSURE, ELLE NE CONVAINC PAS (MIN-148). Le hero vend la boucle agent —
+ * la seule vraie raison de changer d'outil. Ce qui suit répond à la question
+ * qu'on se pose juste après : « oui, mais est-ce que ça tient comme tracker ? »
+ * D'où l'ordre (elle vient tout de suite), le format (une capture, six cartes,
+ * on ne s'attarde pas) et le titre, qui ne cherche plus à emporter la décision.
+ *
+ * C'est aussi ici qu'a atterri la capture du board, chassée du hero : un board
+ * ressemble forcément à un board, ce qui en fait une mauvaise première image et
+ * une bonne preuve de sérieux.
  *
  * La palette ⌘K n'est plus ici : elle ouvre `<SectionSpeed>`, avec sa capture.
  * Ce qui reste est bien le tracker — les écrans où l'on regarde les tickets,
@@ -56,11 +60,15 @@ export async function SectionTracker() {
 
         {/* Une seule capture depuis que la palette est partie : elle prend donc
             toute la largeur utile plutôt que la moitié d'une grille à deux
-            colonnes, où elle serait restée seule à côté d'un vide. */}
+            colonnes, où elle serait restée seule à côté d'un vide.
+
+            Le board plutôt que le cycle : c'est l'écran que tout le monde sait
+            lire, donc celui qui prouve le plus vite qu'il y a bien un tracker
+            là-dessous. Le cycle, lui, est dit par sa carte juste en dessous. */}
         <Reveal as="figure" className="mx-auto mb-12 flex max-w-4xl flex-col gap-3 sm:mb-16">
-          <ScreenshotSlot id="featureCycle" />
+          <ScreenshotSlot id="heroBoard" />
           <figcaption className="text-center text-sm text-muted-foreground">
-            {t("featuresCaptionCycle")}
+            {t("featuresCaptionBoard")}
           </figcaption>
         </Reveal>
 
