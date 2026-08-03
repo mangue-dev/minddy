@@ -536,6 +536,16 @@ export function PrDetail({
   const [submitting, setSubmitting] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
   const [relaunch, setRelaunch] = useState(true);
+  /**
+   * Les deux modes de « demander des changements » (le dialogue les rend en
+   * onglets, et seule cette demande-là en a deux) :
+   *  · `write`    — on écrit la consigne. Elle sert de VERDICT sur la forge et de
+   *                 prompt à Numo : c'est le geste historique ;
+   *  · `findings` — on ne l'écrit pas, on demande à Numo de reprendre les
+   *                 remarques DÉJÀ laissées sur la PR. Rien n'est publié au nom
+   *                 de la personne : le texte est une consigne, pas une review.
+   */
+  const [reviewMode, setReviewMode] = useState<"write" | "findings">("write");
   // Modèle de la run à lancer — vide = le défaut du compte (MIN-68 : relancer Numo
   // est un lancement à froid, il a donc son propre choix de modèle).
   const [model, setModel] = useState("");
@@ -675,13 +685,45 @@ export function PrDetail({
   const openReview = (verdict: ReviewVerdict) => {
     setReviewVerdict(verdict);
     setReviewMessage("");
+    setReviewMode("write");
     // La relance n'a de sens que sur une demande de changements, et c'est là son
     // comportement attendu : cochée d'office.
     setRelaunch(verdict === "request_changes" && canRelaunch);
   };
 
+  /**
+   * Bascule de mode. Le prompt de « corriger les remarques » est PRÉ-ÉCRIT mais
+   * reste éditable : c'est un point de départ, pas un formulaire. On ne l'écrase
+   * que si la personne n'a rien écrit d'autre — revenir sur ses pas ne doit pas
+   * effacer sa consigne.
+   */
+  const switchReviewMode = (next: "write" | "findings") => {
+    setReviewMode(next);
+    if (next === "findings") {
+      // Corriger les remarques, c'est forcément faire travailler Numo.
+      setRelaunch(true);
+      if (!reviewMessage.trim()) setReviewMessage(t("reviewFindingsPrompt"));
+    } else if (reviewMessage.trim() === t("reviewFindingsPrompt")) {
+      setReviewMessage("");
+    }
+  };
+
+  // Mode « corriger les remarques » : pas de verdict, donc aucune identité git
+  // requise — c'est ce qui rend le bouton utilisable sans compte connecté. En
+  // mode « écrire », le verdict ne part que si on a un compte pour le signer.
+  const postVerdict = reviewMode === "write" && !!canComment;
+  // La relance est le seul effet possible quand aucun verdict ne part : sans
+  // elle, le geste ne ferait rien du tout.
+  const relaunching = canRelaunch && (reviewMode === "findings" || relaunch) && !item.busyRunId;
+  // Ni verdict à publier, ni Numo à lancer : le bouton n'a RIEN à faire (pas de
+  // compte git, et une PR que Numo n'a jamais touchée — ou qu'il travaille
+  // déjà). On le désactive plutôt que de laisser partir une requête que le
+  // serveur refusera en `noEffect`.
+  const reviewHasNoEffect =
+    reviewVerdict === "request_changes" && !postVerdict && !relaunching;
+
   const submitReview = async () => {
-    if (!reviewVerdict || submitting) return;
+    if (!reviewVerdict || submitting || reviewHasNoEffect) return;
     const message = reviewMessage.trim();
     // Approuver sans un mot est légitime ; commenter ou demander des changements
     // sans rien dire ne l'est pas (et les deux forges refusent un corps vide).
@@ -691,14 +733,20 @@ export function PrDetail({
       const result = await submitPullRequestReviewApi(item.prId, {
         verdict: reviewVerdict,
         message,
-        relaunch: canRelaunch && relaunch && reviewVerdict === "request_changes",
+        relaunch: relaunching && reviewVerdict === "request_changes",
+        postVerdict,
         model: model || undefined,
       });
-      // La forge a refusé de publier le verdict (une App ne peut pas approuver sa
-      // propre PR) : il est parti en commentaire, et minddy le garde de son côté.
-      // Le dire, plutôt que de laisser croire à une pastille verte sur GitHub.
+      // Trois issues, trois messages : le verdict est passé, la forge l'a replié
+      // en commentaire (une App ne peut pas approuver sa propre PR — le dire,
+      // plutôt que de laisser croire à une pastille verte), ou il n'y en avait
+      // pas à donner et c'est Numo qui part travailler.
       toast.success(
-        result.published === "comment" ? t("selfReviewBlocked") : t("reviewSubmittedToast"),
+        result.published === "none"
+          ? t("sendToNumo")
+          : result.published === "comment"
+            ? t("selfReviewBlocked")
+            : t("reviewSubmittedToast"),
       );
       setReviewVerdict(null);
       setReviewMessage("");
@@ -1010,8 +1058,20 @@ export function PrDetail({
               <span className="text-xs text-muted-foreground">{t("mergeBlockedByRepo")}</span>
             ) : null}
 
-            {/* Review — les trois verdicts, chacun ouvrant le même dialogue,
-                puis la review de Numo (MIN-141), séparée parce qu'elle ne
+            {/* « Demander des changements » a QUITTÉ le menu : c'est le seul
+                geste de review qui ne se contente pas de parler — il peut faire
+                travailler Numo —, et cette moitié-là ne demande AUCUNE identité
+                git. L'enterrer sous un chevron réservé aux comptes connectés
+                faisait perdre l'action à ceux qui n'ont justement qu'elle. Le
+                dialogue s'adapte : avec un compte, le verdict part aussi. */}
+            <Button variant="outline" size="sm" onClick={() => openReview("request_changes")}>
+              <NumoIcon animated={false} />
+              {t("reviewRequestChanges")}
+            </Button>
+
+            {/* Review — les verdicts qui ne font que PARLER (approuver,
+                commenter), donc réservés à qui a un compte git pour les signer ;
+                puis la relecture par Numo (MIN-141), séparée parce qu'elle ne
                 demande rien et part au clic.
 
                 « Faire vérifier par Numo » RESTE quel que soit le compte git :
@@ -1032,10 +1092,6 @@ export function PrDetail({
                   <DropdownMenuItem onSelect={() => openReview("approve")}>
                     <Check />
                     {t("reviewApprove")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => openReview("request_changes")}>
-                    <NumoIcon animated={false} />
-                    {t("reviewRequestChanges")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => openReview("comment")}>
                     <MessageSquare />
@@ -1067,11 +1123,16 @@ export function PrDetail({
                 onClick={openAiReviewDialog}
               >
                 {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
+                {/* Mêmes quatre libellés que l'entrée du menu : c'est le MÊME
+                    geste, et c'est ici la seule affordance de qui n'a pas de
+                    compte git — elle ne doit pas en dire moins. */}
                 {aiReviewActive
                   ? t("numoReviewRunning")
                   : reviewUpToDate
                     ? t("numoReviewUpToDateShort")
-                    : t("aiReview")}
+                    : reviewSession.run
+                      ? t("numoReviewRerun")
+                      : t("aiReview")}
               </Button>
             )}
 
@@ -1551,16 +1612,69 @@ export function PrDetail({
               )}
             </DialogTitle>
           </DialogHeader>
+          {/* Les deux modes d'une demande de changements. Le second existe
+              parce que la consigne est presque toujours la MÊME — « reprends ce
+              qu'on t'a écrit et corrige-le » — et qu'on la retapait à la main
+              alors que les remarques sont déjà sur la PR, lisibles par l'agent.
+              Absents des deux autres verdicts : approuver et commenter ne font
+              que parler, ils n'ont qu'un mode. */}
+          {reviewVerdict === "request_changes" ? (
+            <Tabs
+              value={reviewMode}
+              onValueChange={(v) => switchReviewMode(v as "write" | "findings")}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="write" className="flex-1">
+                  {t("reviewModeWrite")}
+                </TabsTrigger>
+                {canRelaunch ? (
+                  <TabsTrigger value="findings" className="flex-1">
+                    {t("reviewModeFindings")}
+                  </TabsTrigger>
+                ) : (
+                  // Numo n'a jamais poussé sur cette PR : il n'a pas de branche à
+                  // reprendre, donc rien à y corriger. Désactivé AVEC sa raison —
+                  // un onglet muet laisserait chercher.
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0} className="flex-1">
+                        <TabsTrigger value="findings" disabled className="w-full">
+                          {t("reviewModeFindings")}
+                        </TabsTrigger>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {t("reviewFindingsUnavailable")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TabsList>
+            </Tabs>
+          ) : null}
+
           <Textarea
             value={reviewMessage}
             onChange={(e) => setReviewMessage(e.target.value)}
             placeholder={t(
               reviewVerdict === "approve" ? "reviewApprovePlaceholder" : "reviewPlaceholder",
             )}
-            rows={4}
+            rows={reviewMode === "findings" ? 5 : 4}
             autoFocus
             className="resize-none bg-card"
           />
+
+          {/* Ce que ce mode fait VRAIMENT, dit une fois : le texte est une
+              consigne pour Numo, pas une review — rien ne part sous votre nom. */}
+          {reviewVerdict === "request_changes" && reviewMode === "findings" ? (
+            <p className="text-xs text-muted-foreground">{t("reviewFindingsHint")}</p>
+          ) : null}
+
+          {/* Sans compte git, le verdict n'a personne pour le signer (MIN-144) :
+              seule la relance part. Le dire ici plutôt que de laisser croire à
+              une review publiée. */}
+          {reviewVerdict === "request_changes" && reviewMode === "write" && !canComment ? (
+            <p className="text-xs text-muted-foreground">{t("reviewNoVerdictHint")}</p>
+          ) : null}
 
           {/* Le geste que minddy a et que GitHub n'a pas : la demande de
               changements peut relancer Numo sur cette même PR (MIN-68).
@@ -1568,7 +1682,7 @@ export function PrDetail({
               les runs PRÉCÉDENTS du ticket, et une PR humaine n'en a aucun — il
               repartirait d'une branche neuve au lieu de reprendre celle-ci. Le
               geste est masqué plutôt que cassé. */}
-          {reviewVerdict === "request_changes" && canRelaunch ? (
+          {reviewVerdict === "request_changes" && reviewMode === "write" && canRelaunch ? (
             item.busyRunId ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1596,7 +1710,7 @@ export function PrDetail({
           <DialogFooter className="sm:justify-between">
             {/* Nouvelle run = nouveau choix de modèle (identique à un premier
                 lancement) ; vide = le modèle par défaut du compte. */}
-            {reviewVerdict === "request_changes" && canRelaunch && relaunch && !item.busyRunId ? (
+            {reviewVerdict === "request_changes" && relaunching ? (
               <ModelCombobox
                 variant="compact"
                 value={model}
@@ -1622,14 +1736,18 @@ export function PrDetail({
               </Button>
               <Button
                 disabled={
-                  submitting || (!reviewMessage.trim() && reviewVerdict !== "approve")
+                  submitting ||
+                  reviewHasNoEffect ||
+                  (!reviewMessage.trim() && reviewVerdict !== "approve")
                 }
                 onClick={() => void submitReview()}
               >
                 {submitting ? <Spinner /> : null}
-                {reviewVerdict === "request_changes" && canRelaunch && relaunch && !item.busyRunId
-                  ? t("sendToNumo")
-                  : t("reviewSubmit")}
+                {reviewMode === "findings"
+                  ? t("reviewFixSubmit")
+                  : reviewVerdict === "request_changes" && relaunching
+                    ? t("sendToNumo")
+                    : t("reviewSubmit")}
               </Button>
             </div>
           </DialogFooter>

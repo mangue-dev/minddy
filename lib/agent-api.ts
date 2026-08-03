@@ -667,8 +667,23 @@ export type ReviewVerdict = "approve" | "request_changes" | "comment";
  */
 export async function submitPullRequestReviewApi(
   prId: string,
-  input: { verdict: ReviewVerdict; message: string; relaunch?: boolean; model?: string },
-): Promise<{ ok: true; published: "review" | "comment"; run?: { id: string } }> {
+  input: {
+    verdict: ReviewVerdict;
+    message: string;
+    relaunch?: boolean;
+    /** `false` = ne rien publier au nom de la personne : le message est une
+     *  consigne pour Numo, pas un verdict (mode « corriger les remarques »).
+     *  Défaut `true` — le geste historique. */
+    postVerdict?: boolean;
+    model?: string;
+  },
+): Promise<{
+  ok: true;
+  /** `none` = aucun verdict n'a été donné (voulu), `comment` = la forge l'a
+   *  replié faute de pouvoir le porter (auto-review). */
+  published: "review" | "comment" | "none";
+  run?: { id: string };
+}> {
   trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
     await fetch(prEndpoint(prId), {

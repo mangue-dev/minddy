@@ -1549,6 +1549,20 @@ export interface PrActionBody {
   model?: string;
   verdict?: string;
   relaunch?: boolean;
+  /**
+   * Poster le VERDICT sur la forge ? Défaut `true` (le geste historique).
+   *
+   * `false` = « fais corriger par Numo, ne dis rien à ma place » : le message
+   * n'est plus un texte de review, c'est une CONSIGNE pour l'agent. Deux raisons
+   * de pouvoir le dire :
+   *  - le mode « corriger les remarques » pré-écrit une consigne destinée à
+   *    Numo ; la publier comme review posterait un texte robotique sous le nom
+   *    de la personne ;
+   *  - un verdict de forge exige l'identité git de la personne (MIN-144), pas la
+   *    relance de Numo. Les souder faisait perdre les DEUX à qui n'a pas de
+   *    compte — alors que seul le premier en a besoin.
+   */
+  postVerdict?: boolean;
   method?: string;
   /** `link_issue` : le ticket à rattacher à cette PR (MIN-163). */
   issueId?: string;
@@ -1790,14 +1804,28 @@ export async function prReviewResponse(
   // Relancer Numo n'a de sens que sur une demande de changements : il lui faut
   // une consigne, et approuver ne demande rien.
   const relaunch = !!body.relaunch && verdict === "request_changes";
+  // Approuver ou commenter, c'est PARLER : sans verdict à publier il ne reste
+  // rien. Seule une demande de changements a un second effet (la relance).
+  const postVerdict = body.postVerdict !== false || verdict !== "request_changes";
+  if (!postVerdict && !relaunch) {
+    return NextResponse.json({ error: "Nothing to do", code: "noEffect" }, { status: 400 });
+  }
 
   // AVANT `launchAgentRun` : un refus d'identité qui arriverait après laisserait
   // une run lancée sans review — même raisonnement que l'ordre lancement-puis-
   // review plus bas. Le verdict part du compte de la personne : c'est ce qui
   // fait que la case verte de GitHub se coche enfin pour de vrai (une App ne
   // peut pas approuver sa propre PR — 422, d'où le repli de MIN-138).
-  const actor = await requireActor(scope, "read");
-  if (!actor.ok) return actor.response;
+  //
+  // Pas de verdict à poster ⇒ pas d'identité à exiger : faire corriger par Numo
+  // est un geste d'AGENT, comme « faire vérifier par Numo ». C'est ce qui rend le
+  // bouton utilisable sans compte git.
+  let actor: Extract<ForgeActor, { kind: "actor" }> | null = null;
+  if (postVerdict) {
+    const resolved = await requireActor(scope, "read");
+    if (!resolved.ok) return resolved.response;
+    actor = resolved.actor;
+  }
 
   let launchedRunId: string | null = null;
   if (relaunch) {
@@ -1839,14 +1867,19 @@ export async function prReviewResponse(
     launchedRunId = result.run.id;
   }
 
-  let published: "review" | "comment" = "review";
+  // `none` : rien n'a été dit sur la forge, et c'était voulu — la PR ne porte
+  // que le travail de Numo. L'écran le distingue d'un verdict replié en
+  // commentaire (`comment`), qui, lui, est un repli subi.
+  let published: "review" | "comment" | "none" = postVerdict ? "review" : "none";
   try {
-    const result = await scope.forge.submitReview({
-      ...actorCall(actor.actor, scope),
-      verdict,
-      body: message,
-    });
-    published = result.published;
+    if (actor) {
+      const result = await scope.forge.submitReview({
+        ...actorCall(actor, scope),
+        verdict,
+        body: message,
+      });
+      published = result.published;
+    }
   } catch (err) {
     // Avec relance : best-effort. La run est lancée et PORTE déjà le message
     // (prompt) — un échec de la forge ici ne doit pas faire croire que la
@@ -1864,8 +1897,10 @@ export async function prReviewResponse(
   broadcastPrChanged(scope.pr.id, ["conversation", "reviewComments", "pr"]);
 
   // Le verdict RÉEL est tracé côté minddy même quand la forge l'a replié en
-  // commentaire : c'est là que l'utilisateur lira « a approuvé la PR ».
-  if (scope.pr.issue_id) {
+  // commentaire : c'est là que l'utilisateur lira « a approuvé la PR ». Rien à
+  // tracer quand aucun verdict n'a été donné : la relance, elle, se raconte par
+  // l'événement de lancement de l'agent.
+  if (scope.pr.issue_id && postVerdict) {
     await recordPrActionEvent(
       scope.pr.issue_id,
       userId,
