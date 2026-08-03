@@ -860,6 +860,45 @@ export function PrDetail({
   // Elle gagne dès qu'elle a répondu — même arbitrage que pour l'état.
   const author = pr?.user ?? item.author;
 
+  /**
+   * « X veut fusionner 3 commits dans main depuis routine/audit » — la ligne que
+   * GitHub pose sous le titre, et la seule qui dise les DEUX branches : jusqu'ici
+   * minddy ne les affichait nulle part, alors que c'est ce qui répond à « ça part
+   * où, ça vient d'où ? » avant de fusionner.
+   *
+   * Le compte de commits vient de la forge quand elle le sert (GitHub le met dans
+   * le GET d'une PR) ; sinon — GitLab — de la liste de commits déjà chargée pour
+   * son onglet, et seulement si elle est ENTIÈRE : une liste tronquée annoncerait
+   * un chiffre faux, et mieux vaut taire la phrase que mentir sur son chiffre.
+   *
+   * Le sujet est le nom de l'agent sur une PR de Numo : le compte de la forge y
+   * est le bot de la GitHub App, que minddy ne montre jamais (règle d'identité).
+   */
+  const commitCount =
+    pr?.commitCount ?? (commitsTruncated || commits.length === 0 ? null : commits.length);
+  const mergeSummary: React.ReactNode =
+    pr?.base && pr?.head && commitCount !== null && (item.runId || author)
+      ? t.rich(item.pr_state === "merged" ? "mergedCommits" : "wantsToMerge", {
+          login: item.runId ? t("numoAuthor") : parseForgeLogin(author?.login ?? "").name,
+          count: commitCount,
+          base: pr.base,
+          head: pr.head,
+          author: (chunks) => (
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              {chunks}
+              {/* Le compte de la forge est un bot, et ce n'est pas Numo : la
+                  pastille se pose sur le NOM, comme partout ailleurs. */}
+              {!item.runId && author && parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
+            </span>
+          ),
+          branch: (chunks) => (
+            <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+              {chunks}
+            </span>
+          ),
+        })
+      : null;
+
   // Corps GitHub de la PR, sans le suffixe auto « 🤖 Généré par l'agent numo… »
   // (redondant avec le badge « Généré par Numo »).
   const prDescription = (pr?.body ?? "").replace(/\n*🤖[^\n]*$/u, "").trim();
@@ -1208,12 +1247,23 @@ export function PrDetail({
                     seed={author.login}
                     className="size-4"
                   />
-                  {/* La phrase finit par le login dans les deux langues : la
-                      pastille se pose donc après elle, pas au milieu. */}
-                  {t("openedBy", { login: parseForgeLogin(author.login).name })}
-                  {parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
+                  {/* La phrase de fusion NOMME déjà l'auteur (« X veut fusionner
+                      3 commits dans main… ») : redire « Ouverte par X » juste à
+                      côté ferait doublon. Le repli garde le nom seul, tant que
+                      les branches ou le compte de commits manquent — la phrase
+                      finit alors par le login dans les deux langues, et la
+                      pastille de bot se pose après elle, pas au milieu. */}
+                  {mergeSummary ?? (
+                    <>
+                      {t("openedBy", { login: parseForgeLogin(author.login).name })}
+                      {parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
+                    </>
+                  )}
                 </span>
               ) : null}
+              {/* PR de Numo : le badge a pris la place de l'auteur, la phrase se
+                  pose donc à côté — c'est elle qui porte les branches. */}
+              {item.runId && mergeSummary ? <span>{mergeSummary}</span> : null}
               {item.project ? (
                 <span className="inline-flex items-center gap-1.5">
                   <ProjectOrb

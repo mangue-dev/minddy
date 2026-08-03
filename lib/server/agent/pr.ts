@@ -41,6 +41,11 @@ export interface PullRequestRef {
   base?: string;
   /** SHA de la tête — ancre immuable pour calculer le merge base (getMergeBaseSha). */
   headSha?: string;
+  /** Nombre de commits de la PR, tel que la forge le compte. GitHub le sert avec
+      le GET d'UNE PR (jamais avec la liste) ; GitLab ne le sert nulle part et le
+      laisse `undefined` — l'appelant retombe alors sur la longueur de la liste
+      de commits. */
+  commitCount?: number;
   /** Auteur et date d'ouverture : le `body` ouvre le fil comme un commentaire, il lui faut son en-tête. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
@@ -314,6 +319,7 @@ interface RawPull {
   body?: string | null;
   head?: { ref?: string; sha?: string };
   base?: { ref?: string };
+  commits?: number;
   user?: { login?: string; avatar_url?: string } | null;
   created_at?: string;
   updated_at?: string;
@@ -338,6 +344,7 @@ function toRef(pr: RawPull): PullRequestRef {
     head: pr.head?.ref,
     base: pr.base?.ref,
     headSha: pr.head?.sha,
+    commitCount: pr.commits,
     user: pr.user ? { login: pr.user.login ?? "", avatar_url: pr.user.avatar_url ?? null } : null,
     createdAt: pr.created_at,
     updatedAt: pr.updated_at,

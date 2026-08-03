@@ -11,8 +11,6 @@ import {
   type QueuedRunRow,
 } from "@/lib/server/agent/deployment";
 import { notifyAgentRun } from "@/lib/server/agent/runs";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Worker de l'agent de code (MIN-46). Draine les runs dus (auto-budget 270s sous
@@ -123,20 +121,7 @@ async function handle(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  const startedAt = Date.now();
   const summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
-  // Santé du worker (MIN-78) : un cron qui ne réclame plus rien, ou qui frôle
-  // les 300 s, est un incident silencieux — invisible dans les stats produit.
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "agent-drain",
-      claimed: summary.claimed,
-      duration_bucket: durationBucket(Date.now() - startedAt),
-      trigger: request.method === "POST" ? "chain" : "schedule",
-    },
-  });
 
   // Répartition (MIN-165) : seule la PROD réveille les autres déploiements. Un
   // preview kické arrive ici avec VERCEL_ENV=preview et ne fait que son drain —

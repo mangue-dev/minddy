@@ -450,6 +450,10 @@ export interface PullRequestRef {
   /** SHA de tête — le diff EXACT servi. Comparé au SHA qu'a relu la dernière
    *  review de Numo pour savoir si relancer aurait quelque chose de neuf à lire. */
   headSha?: string;
+  /** Combien de commits la PR porte, d'après la forge. GitHub le compte lui-même ;
+      GitLab ne le sert pas et laisse le champ absent (l'appelant retombe alors sur
+      la longueur de la liste de commits, tant qu'elle n'est pas tronquée). */
+  commitCount?: number;
   /** Auteur et date d'ouverture : le `body` ouvre le fil de conversation comme un commentaire. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;

@@ -26,8 +26,7 @@
  *   agent_run_started/completed/failed, agent_pr_opened,
  *   automation_chain_started, automation_chain_finished (MIN-147),
  *   mcp_tool_called, mcp_session_started, oauth_grant_created,
- *   public_feedback_created, public_feedback_voted,
- *   import_completed, cron_executed.
+ *   public_feedback_created, public_feedback_voted, import_completed.
  */
 
 /** Valeurs primitives acceptées après sanitisation (optionnelles par confort). */

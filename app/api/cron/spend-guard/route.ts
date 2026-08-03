@@ -3,8 +3,6 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { fetchOpenRouterKeyStatus } from "@/lib/server/openrouter-key";
 import { notifySpendGuard } from "@/lib/server/brrr";
 import { getAppConfigValue, setAppConfigValue } from "@/lib/server/app-config";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Cron HORAIRE (Vercel Cron, vercel.json) : le garde-fou de dépense (MIN-92).
@@ -40,21 +38,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const startedAt = Date.now();
   const status = await fetchOpenRouterKeyStatus();
 
   // Pas de plafond posé sur la clé, ou clé illisible : rien à garder. On le dit
   // plutôt que de laisser croire que la surveillance tourne.
   if (!status || !status.limit || status.limit <= 0) {
-    captureServerEvent({
-      distinctId: "cron",
-      event: "cron_executed",
-      properties: {
-        job: "spend-guard",
-        duration_bucket: durationBucket(Date.now() - startedAt),
-        skipped: status ? "no_limit" : "unreadable",
-      },
-    });
     return NextResponse.json({ ok: true, skipped: status ? "no_limit" : "unreadable" });
   }
 
@@ -78,18 +66,6 @@ export async function GET(request: NextRequest) {
     await setAppConfigValue(NOTIFIED_KEY, marker);
     notified = true;
   }
-
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "spend-guard",
-      duration_bucket: durationBucket(Date.now() - startedAt),
-      percent,
-      crossed,
-      notified,
-    },
-  });
 
   return NextResponse.json({
     ok: true,

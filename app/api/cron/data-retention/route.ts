@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { runRetentionSweep } from "@/lib/server/retention";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Cron nocturne (Vercel Cron, vercel.json) : applique les durées de conservation
@@ -24,21 +22,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const startedAt = Date.now();
   const result = await runRetentionSweep();
-  const deleted = result.steps.reduce((n, s) => n + (s.deleted ?? 0), 0);
-
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "data-retention",
-      duration_bucket: durationBucket(Date.now() - startedAt),
-      ok: result.ok,
-      deleted,
-      failed_steps: result.steps.filter((s) => s.deleted === null).map((s) => s.step),
-    },
-  });
-
   return NextResponse.json(result);
 }

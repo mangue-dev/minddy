@@ -3,8 +3,6 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { runFeedbackReview } from "@/lib/server/feedback/review";
 import { getAppConfigValue } from "@/lib/server/app-config";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Cron horaire (Vercel Cron, vercel.json) : passe de revue IA du feedback
@@ -26,7 +24,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const startedAt = Date.now();
   const review = await runFeedbackReview();
 
   const service = getServiceClient();
@@ -40,14 +37,6 @@ export async function GET(request: NextRequest) {
     service.from("feedback_sessions").delete().lt("expires_at", now),
   ]);
 
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "feedback-analysis",
-      duration_bucket: durationBucket(Date.now() - startedAt),
-    },
-  });
   return NextResponse.json({ ok: true, review, purged });
 }
 

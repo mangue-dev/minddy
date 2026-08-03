@@ -2404,6 +2404,8 @@
     "filterByAuthor": "All authors",
     "filterNumoOnly": "Opened by the Numo agent",
     "openedBy": "Opened by {login}",
+    "wantsToMerge": "<author>{login}</author> wants to merge {count, plural, one {# commit} other {# commits}} into <branch>{base}</branch> from <branch>{head}</branch>",
+    "mergedCommits": "<author>{login}</author> merged {count, plural, one {# commit} other {# commits}} into <branch>{base}</branch> from <branch>{head}</branch>",
     "numoAuthor": "Numo agent",
     "noLinkedIssue": "No linked issue",
     "linkedIssue": "Open the linked issue",

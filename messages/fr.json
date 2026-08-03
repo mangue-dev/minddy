@@ -2404,6 +2404,8 @@
     "filterByAuthor": "Tous les auteurs",
     "filterNumoOnly": "Ouvertes par l'agent Numo",
     "openedBy": "Ouverte par {login}",
+    "wantsToMerge": "<author>{login}</author> veut fusionner {count, plural, one {# commit} other {# commits}} dans <branch>{base}</branch> depuis <branch>{head}</branch>",
+    "mergedCommits": "<author>{login}</author> a fusionné {count, plural, one {# commit} other {# commits}} dans <branch>{base}</branch> depuis <branch>{head}</branch>",
     "numoAuthor": "Agent Numo",
     "noLinkedIssue": "Aucun ticket lié",
     "linkedIssue": "Ouvrir le ticket lié",

@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { reconcileStripeBillingAccounts } from "@/lib/server/billing-accounts";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Cron horaire (Vercel Cron, vercel.json) : reconciliation billing — re-tire
@@ -19,16 +17,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const startedAt = Date.now();
   const result = await reconcileStripeBillingAccounts();
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "billing-sync",
-      duration_bucket: durationBucket(Date.now() - startedAt),
-      ...result,
-    },
-  });
   return NextResponse.json({ ok: true, ...result });
 }

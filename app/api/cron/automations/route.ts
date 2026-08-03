@@ -10,8 +10,6 @@ import {
 import { activeRunForIssue } from "@/lib/server/agent/runs";
 import { haltChain } from "@/lib/server/automations/report";
 import { runAutomations } from "@/lib/server/automations/engine";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 import type { AutomationSource } from "@/lib/automations";
 import type { IssueStatus } from "@/lib/issue-constants";
 
@@ -69,7 +67,6 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const startedAt = Date.now();
   const due = await duePendingChains(SWEEP_LIMIT);
   let expired = 0;
   let revived = 0;
@@ -139,19 +136,6 @@ async function handle(request: NextRequest) {
       console.error("[automations-cron] revive failed:", chain.id, (err as Error).message);
     }
   }
-
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "automations",
-      due: due.length,
-      started,
-      expired,
-      revived,
-      duration_bucket: durationBucket(Date.now() - startedAt),
-    },
-  });
 
   return NextResponse.json({ ok: true, due: due.length, started, expired, revived });
 }

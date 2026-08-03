@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { syncFxRates } from "@/lib/server/fx";
-import { captureServerEvent } from "@/lib/server/posthog";
-import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
  * Cron quotidien (Vercel Cron, vercel.json) : le taux USD→EUR du jour, écrit
@@ -24,17 +22,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const startedAt = Date.now();
   const result = await syncFxRates();
-  captureServerEvent({
-    distinctId: "cron",
-    event: "cron_executed",
-    properties: {
-      job: "fx-rate",
-      duration_bucket: durationBucket(Date.now() - startedAt),
-      ok: result.ok,
-      inserted: result.inserted,
-    },
-  });
   return NextResponse.json(result);
 }
