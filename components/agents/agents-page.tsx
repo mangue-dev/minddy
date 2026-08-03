@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Skeleton, cn } from "mangue-ui";
-import { NotebookPen } from "lucide-react";
+import { GitPullRequest, NotebookPen } from "lucide-react";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { EmptyState } from "@/components/empty-state";
 import { AgentStatusBadge } from "@/components/agents/agent-status-badge";
@@ -46,10 +46,41 @@ function useIsWideViewport(): boolean {
 /**
  * Clé STABLE d'une session dans la liste : l'issue pour une session de ticket
  * (ses runs successives partagent la clé), le run lui-même pour une session
- * CARNET (MIN-84, `issue` null — le run EST la session).
+ * CARNET (MIN-84) ou de RELECTURE (MIN-168) — là, le run EST la session : pas de
+ * lignée, et deux relectures de la même PR sont deux conversations distinctes.
  */
 function sessionKey(s: AgentSessionListItem): string {
   return s.issue?.id ?? s.runId;
+}
+
+/**
+ * L'étiquette d'ancrage d'une session, à gauche de sa carte : l'identifiant du
+ * ticket, « Carnet », ou « Analyse de PR ». Les trois occupent la même place et
+ * répondent à la même question — de quoi cette session parle-t-elle ?
+ */
+function SessionAnchorBadge({ session }: { session: AgentSessionListItem }) {
+  const t = useTranslations("Agents");
+  if (session.issue && session.project) {
+    return (
+      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        {issueIdentifier(session.project.key, session.issue.number)}
+      </span>
+    );
+  }
+  if (session.pullRequest) {
+    return (
+      <span className="flex shrink-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+        <GitPullRequest className="size-3.5" />
+        {t("prBadge")}
+      </span>
+    );
+  }
+  return (
+    <span className="flex shrink-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+      <NotebookPen className="size-3.5" />
+      {t("noteBadge")}
+    </span>
+  );
 }
 
 /**
@@ -80,10 +111,12 @@ export function AgentsPage() {
   const isWide = useIsWideViewport();
 
   // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?issue=<issueId> présélectionne
-  // la session de cette issue ; ?compose=<issueId> l'ouvre en brouillon de
-  // lancement ; ?compose=note ouvre le brouillon carnet.
+  // la session de cette issue ; ?run=<runId> celle d'un run précis (une relecture
+  // de PR, MIN-168 — sa clé de session EST son run) ; ?compose=<issueId> l'ouvre
+  // en brouillon de lancement ; ?compose=note ouvre le brouillon carnet.
   const searchParams = useSearchParams();
   const issueParam = searchParams.get("issue");
+  const runParam = searchParams.get("run");
   const composeParam = searchParams.get("compose");
 
   const draft = useAgentComposeDraft();
@@ -96,9 +129,11 @@ export function AgentsPage() {
       : composeParam === NOTE_COMPOSE_PARAM);
 
   const [selectedKey, setSelectedKey] = useState<string | null>(
-    composeParam ?? issueParam,
+    composeParam ?? issueParam ?? runParam,
   );
-  const [mobileDetail, setMobileDetail] = useState(!!composeParam || !!issueParam);
+  const [mobileDetail, setMobileDetail] = useState(
+    !!composeParam || !!issueParam || !!runParam,
+  );
   // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
   // Id de la run tout juste lancée depuis le brouillon : on garde le volet monté
@@ -126,6 +161,7 @@ export function AgentsPage() {
           model: null,
           triggered_by: "button",
           noteTitle: null,
+          pullRequest: null,
           pr_number: null,
           pr_url: null,
           pr_state: null,
@@ -180,6 +216,11 @@ export function AgentsPage() {
     setSelectedKey(issueParam);
     setMobileDetail(true);
   }, [issueParam]);
+  useEffect(() => {
+    if (!runParam) return;
+    setSelectedKey(runParam);
+    setMobileDetail(true);
+  }, [runParam]);
 
   // Transition terminée : la run lancée figure dans la liste → on efface le
   // brouillon et on sélectionne sa session (issue pour un brouillon issue, le run
@@ -330,10 +371,6 @@ export function AgentsPage() {
 
             {sessions.map((s) => {
               const key = sessionKey(s);
-              const identifier =
-                s.issue && s.project
-                  ? issueIdentifier(s.project.key, s.issue.number)
-                  : null;
               const unread = isAgentSessionUnread(s, reads);
               // Question posée, réponse attendue → le non-lu passe au JAUNE.
               const awaiting = unread && s.awaitingInput;
@@ -361,17 +398,7 @@ export function AgentsPage() {
                         aria-label={awaiting ? t("awaitingAnswer") : t("unread")}
                       />
                     )}
-                    {identifier ? (
-                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                        {identifier}
-                      </span>
-                    ) : (
-                      // Session CARNET : la note remplace le ticket.
-                      <span className="flex shrink-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                        <NotebookPen className="size-3.5" />
-                        {t("noteBadge")}
-                      </span>
-                    )}
+                    <SessionAnchorBadge session={s} />
                     <span className="ml-auto flex shrink-0 items-center gap-1.5">
                       <AgentStatusBadge
                         status={s.status}

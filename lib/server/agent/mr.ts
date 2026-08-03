@@ -97,6 +97,22 @@ async function glPaged<T>(
   maxPages: number,
   stopWhen?: (all: T[]) => boolean,
 ): Promise<T[]> {
+  return (await glPagedBounded<T>(baseUrl, token, maxPages, stopWhen)).items;
+}
+
+/**
+ * La même pagination, mais qui DIT si elle s'est arrêtée au plafond (MIN-168).
+ * Une liste coupée sans le dire ne se distingue pas d'une liste complète, et
+ * l'appelant conclut alors sur ce qu'il a vu comme si c'était tout.
+ * `stopWhen` ne compte pas comme une troncature : là, c'est l'appelant qui a
+ * décidé qu'il en avait assez.
+ */
+async function glPagedBounded<T>(
+  baseUrl: string,
+  token: string,
+  maxPages: number,
+  stopWhen?: (all: T[]) => boolean,
+): Promise<{ items: T[]; truncated: boolean }> {
   const all: T[] = [];
   let page: number | null = 1;
   let fetched = 0;
@@ -114,11 +130,12 @@ async function glPaged<T>(
     }
     if (!res.ok) throw new GitlabApiError(errorMessage(data, res.status), res.status);
     all.push(...((data as T[]) ?? []));
-    if (stopWhen?.(all)) break;
+    if (stopWhen?.(all)) return { items: all, truncated: false };
     page = gitlabNextPage(res);
     fetched++;
   }
-  return all;
+  // Il restait une page à lire quand le plafond a coupé.
+  return { items: all, truncated: page != null && fetched >= maxPages };
 }
 
 interface RawMr {
@@ -354,9 +371,13 @@ export async function listMergeRequestChanges(opts: {
   token: string;
   repoFullName: string;
   number: number;
-}): Promise<PullRequestFile[]> {
-  const diffs = await listRawDiffs(opts);
-  return diffs.map(toPullRequestFile);
+}): Promise<{ files: PullRequestFile[]; truncated: boolean }> {
+  const { items, truncated } = await glPagedBounded<RawDiff>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/diffs`,
+    opts.token,
+    DIFFS_MAX_PAGES,
+  );
+  return { files: items.map(toPullRequestFile), truncated };
 }
 
 interface RawCommit {

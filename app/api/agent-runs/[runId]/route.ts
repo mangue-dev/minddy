@@ -16,6 +16,9 @@ function sanitizeRun(run: AgentRun) {
     id: run.id,
     project_id: run.project_id,
     issue_id: run.issue_id,
+    // Ce qui dit à la conversation qu'elle regarde une RELECTURE (MIN-168) : pas
+    // de branche à pousser, donc pas de « créer une pull request » à proposer.
+    pull_request_id: run.pull_request_id,
     status: run.status,
     model: run.model,
     model_forced: run.model_forced,

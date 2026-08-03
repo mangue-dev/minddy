@@ -45,12 +45,17 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     // Une PR existe → son diff fait foi (même source que la page Pull requests).
     if (run.pr_number != null) {
-      const files = await forge.listPullRequestFiles({
+      const { files, truncated } = await forge.listPullRequestFiles({
         token: target.token,
         repoFullName: target.repoFullName,
         number: run.pr_number,
       });
-      return NextResponse.json({ files, provider: target.provider, url: run.pr_url });
+      return NextResponse.json({
+        files,
+        truncated,
+        provider: target.provider,
+        url: run.pr_url,
+      });
     }
 
     // `head` est forcément là (garde plus haut) — TS ne le déduit pas du combiné.

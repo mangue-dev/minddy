@@ -71,7 +71,7 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  * | --- | --- | --- |
  * | `ensurePullRequest`, `reopenPullRequest` (execute.ts) | agent | `target.token` |
  * | `deleteBranch` (branch-cleanup.ts) | agent | `target.token` |
- * | commentaires de la review de Numo (pr-ai-review.ts) | agent | `scope.call` |
+ * | commentaires de la relecture de Numo (pr-tools.ts) | agent | token du run |
  * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | humain | `actorCall` |
  * | `submitReview` (le verdict de la personne) | humain | `actorCall` |
  * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` depuis l'UI PR | humain | `actorCall` |
@@ -130,11 +130,15 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestRef>;
+  /** Fichiers du diff, avec leurs patches. PAGINÉ et BORNÉ (MIN-168) :
+      `truncated` dit que la liste s'arrête au plafond — une PR de 300 fichiers
+      dont on n'en montrait 100 sans le dire faisait conclure sur un tiers du
+      changement. */
   listPullRequestFiles(opts: {
     token: string;
     repoFullName: string;
     number: number;
-  }): Promise<PullRequestFile[]>;
+  }): Promise<{ files: PullRequestFile[]; truncated: boolean }>;
   /** Les commits qui composent la PR, du plus ANCIEN au plus récent (l'ordre de
       GitHub, normalisé côté GitLab). `truncated` : la pagination a été coupée —
       la liste s'arrête aux 300 premiers, le reste se lit chez la forge.

@@ -660,7 +660,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const forge = forgeFor(target.provider);
 
       try {
-        const [pr, files, reviewComments, reviewThreads] = await Promise.all([
+        const [pr, diff, reviewComments, reviewThreads] = await Promise.all([
           forge.getPullRequest({
             token: target.token,
             repoFullName: target.repoFullName,
@@ -724,7 +724,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               : null,
             repository: target.repoFullName,
             issue: { id: ref.issue.id, identifier: ref.issue.identifier },
-            files: files.map((f) => ({
+            files: diff.files.map((f) => ({
               filename: f.filename,
               status: f.status,
               additions: f.additions,
@@ -735,6 +735,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
                   ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
                   : f.patch ?? null,
             })),
+            // La pagination de la forge a coupé la liste : le dire plutôt que de
+            // laisser conclure sur ce qui a été vu.
+            files_truncated: diff.truncated,
             // Fils de review ancrés au code. Un fil périmé (`outdated`) n'a plus
             // d'ancre fiable — son `diff_hunk` est la seule trace du code visé.
             review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({

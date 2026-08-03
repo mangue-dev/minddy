@@ -192,6 +192,74 @@ export async function cloneRepo(
 }
 
 /**
+ * Clone le dépôt pour RELIRE une pull request (MIN-168) : base d'abord, puis la
+ * tête de la PR, en LECTURE SEULE — aucune branche de travail n'est créée, rien
+ * ne sera commité ni poussé depuis cette microVM.
+ *
+ * La tête est cherchée par sa **ref serveur** (`refs/pull/<n>/head` chez GitHub,
+ * `refs/merge-requests/<iid>/head` chez GitLab) et non par le nom de branche : sur
+ * une PR de FORK, `head_branch` n'existe pas dans le dépôt de base, et un fetch
+ * dessus ne trouverait rien — l'agent se retrouverait sur la base, sans diff, à
+ * relire du vide en croyant relire la PR. La ref serveur, elle, pointe le commit
+ * de tête d'où qu'il vienne.
+ *
+ * Repli sur le nom de branche quand la ref n'existe pas (dépôt miroir, instance
+ * qui ne la publie pas) ; échec explicite si les deux manquent, plutôt qu'une
+ * session muette sur la mauvaise référence.
+ *
+ * Le clone reste shallow : `git diff <base>` marche (c'est un diff d'arbres), les
+ * diffs à trois points et un `git log` profond n'ont pas d'historique commun à
+ * parcourir — le prompt le dit à l'agent.
+ */
+export async function clonePullRequest(
+  sandbox: Sandbox,
+  opts: {
+    authUrl: string;
+    baseBranch: string;
+    /** Ref serveur de la tête (cf. `pullRequestHeadRef`). */
+    headRef: string;
+    /** Nom de branche de tête, quand on le connaît : le repli. */
+    headBranch: string | null;
+    /** Nom local sous lequel la tête est checkoutée. */
+    localBranch: string;
+  },
+): Promise<void> {
+  const wipe = await runShell(sandbox, `rm -rf ${sq(REPO_DIR)}`, { cwd: SANDBOX_HOME });
+  if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
+
+  const clone = await runShell(
+    sandbox,
+    `git clone --depth 1 --branch ${sq(opts.baseBranch)} ${sq(opts.authUrl)} ${sq(REPO_DIR)}`,
+    { cwd: SANDBOX_HOME, timeoutMs: 180_000 },
+  );
+  if (clone.exitCode !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
+
+  const fallback = opts.headBranch?.trim()
+    ? [
+        `  echo "head ref ${opts.headRef} unavailable, falling back to the branch" >&2`,
+        `  git fetch --depth 1 ${sq(opts.authUrl)} ${sq(`${opts.headBranch.trim()}:${opts.localBranch}`)}`,
+      ]
+    : [`  exit 1`];
+  const setup = [
+    `set -e`,
+    // Identité neutre : aucun commit ne part d'ici, mais git refuse certaines
+    // opérations de lecture-écriture d'index sans elle.
+    `git config user.email 'agent@minddy.app'`,
+    `git config user.name 'minddy agent'`,
+    `if git fetch --depth 1 ${sq(opts.authUrl)} ${sq(`${opts.headRef}:${opts.localBranch}`)} 2>/dev/null; then`,
+    `  :`,
+    `else`,
+    ...fallback,
+    `fi`,
+    `git checkout ${sq(opts.localBranch)}`,
+  ].join("\n");
+  const head = await runShell(sandbox, setup, { timeoutMs: 120_000 });
+  if (head.exitCode !== 0) {
+    throw new Error(`pull request checkout failed: ${head.stderr || head.stdout}`);
+  }
+}
+
+/**
  * Sha du tip de la BASE tel que le clone l'a rapporté (`refs/remotes/origin/<base>`,
  * créé par `git clone --branch <base>` et intact après la reprise d'une branche de
  * travail). C'est le point de comparaison du détecteur de travail ci-dessous.

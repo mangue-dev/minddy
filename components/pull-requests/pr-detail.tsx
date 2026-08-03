@@ -60,8 +60,7 @@ import {
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
 import {
-  PrReviewActivity,
-  PrReviewLiveCard,
+  PrReviewCard,
 } from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
@@ -559,7 +558,6 @@ export function PrDetail({
   const [quoteFocus, setQuoteFocus] = useState(0);
   // Le message auquel ce brouillon répond, avec la citation qu'il a insérée —
   // c'est elle qui atteste, à l'envoi, qu'on répond toujours à ce message-là.
-  const [replyTo, setReplyTo] = useState<{ commentId: number; quoted: string } | null>(null);
 
   const isWorking = !!item.activeRunId;
   // Ce que CE compte git peut faire sur ce dépôt (MIN-144). Un geste humain part
@@ -636,28 +634,16 @@ export function PrDetail({
     !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
 
   /**
-   * La carte de session à montrer dans le fil, ou rien. Trois cas seulement, et
-   * ils s'excluent :
-   *  - la passe TOURNE → on montre ce qu'elle fait, à la place du futur message ;
-   *  - elle est finie mais son message n'est pas encore redescendu de la forge →
-   *    la carte tient la place le temps du refetch, sinon le fil clignote ;
-   *  - elle a ÉCHOUÉ (ou a été interrompue) → rien n'a été publié, donc aucun
-   *    message ne viendra le dire. Réservé à qui l'a demandée : pour les autres,
-   *    c'est une ligne rouge sur laquelle ils ne peuvent rien.
+   * La carte de la session de relecture, ou rien : elle est là dès qu'une
+   * session existe sur cette PR, et elle y RESTE une fois terminée (MIN-168).
+   *
+   * Avant, elle disparaissait à l'arrivée du message de verdict — elle ne servait
+   * qu'à tenir la place de ce message. Maintenant elle mène ailleurs : à la
+   * session qui a produit la review, et à la conversation qu'on peut y continuer.
+   * L'effacer ferait disparaître la seule porte d'entrée vers ce qui s'est
+   * réellement passé.
    */
-  const reviewCard = (() => {
-    const review = reviewSession.review;
-    if (!review) return null;
-    if (aiReviewActive) return review;
-    if (review.status === "done") {
-      // Sans id de message, on ne saura JAMAIS dire qu'il est arrivé : la carte
-      // resterait à vie. Le commentaire est sur la forge de toute façon — c'est
-      // lui qui parle, pas la carte.
-      if (review.summaryCommentId === null) return null;
-      return comments.some((c) => c.id === review.summaryCommentId) ? null : review;
-    }
-    return review.mine ? review : null;
-  })();
+  const reviewCard = reviewSession.run;
 
   const act = async (
     action: "merge" | "close" | "reopen" | "ready_for_review",
@@ -771,15 +757,11 @@ export function PrDetail({
    * Deux repères, et le second rattrape ce que le premier ne voit pas :
    *  · le compte sous lequel il écrit chez la forge (`viewer.numoLogin`) —
    *    complet, mais GitHub seulement : côté GitLab il n'a pas d'identité à lui
-   *    (MIN-146), ses gestes partent du compte de qui a lié le dépôt ;
-   *  · le message de synthèse de la session courante, qu'on connaît par son id
-   *    quelle que soit la forge. Il ne couvre que la dernière passe, mais c'est
-   *    justement celle à laquelle on répond.
+   *    (MIN-146), ses gestes partent du compte de qui a lié le dépôt — et un
+   *    message de Numo s'y lit alors comme un message de cette personne.
    */
-  const isNumoComment = (commentId: number, login?: string | null): boolean => {
-    if (viewer?.numoLogin && login === viewer.numoLogin) return true;
-    return reviewSession.review?.summaryCommentId === commentId;
-  };
+  const isNumoComment = (login?: string | null): boolean =>
+    !!viewer?.numoLogin && login === viewer.numoLogin;
 
   /**
    * « Citer » — et, sur un message de Numo, **lui répondre**.
@@ -791,23 +773,19 @@ export function PrDetail({
    * celle qui relance la passe. Répondre à Numo, c'est donc le rappeler, sans
    * avoir à savoir qu'il faut l'écrire.
    *
-   * L'id du message cité voyage avec le brouillon (`replyTo`) : la passe le
-   * relira pour savoir à QUOI on répond. Le corps le contient déjà en citation,
-   * mais tronqué et noyé dans le reste — l'id, lui, désigne le message entier.
+   * La citation suffit à dire à quoi on répond : depuis MIN-168, la relecture est
+   * une SESSION qui lit tout le fil (et garde le sien en contexte) — l'id du
+   * message cité, que l'ancienne passe recevait à part, n'apprenait plus rien.
    */
-  const quoteReply = (commentId: number, body: string, login?: string | null) => {
+  const quoteReply = (body: string, login?: string | null) => {
     const quoted = body
       .trim()
       .split("\n")
       .map((line) => `> ${line}`)
       .join("\n");
-    const numo = isNumoComment(commentId, login);
+    const numo = isNumoComment(login);
     const mention = numo ? "@Numo " : login ? `@${login} ` : "";
     setCommentBody((d) => `${d.trim() ? `${d.trimEnd()}\n\n` : ""}${quoted}\n\n${mention}`);
-    // Gardé AVEC sa citation : à l'envoi, on ne transmet l'id que si le
-    // brouillon la porte encore. Citer puis tout effacer puis écrire autre chose
-    // ne doit pas faire croire à Numo qu'on répondait à ce message-là.
-    setReplyTo({ commentId, quoted });
     // Le composer n'est plus un `<textarea>` mais un champ à mentions (MIN-162) :
     // le curseur ne se pose pas par `setSelectionRange` mais sur ce signal, que
     // le champ lit APRÈS avoir reposé son contenu.
@@ -819,13 +797,8 @@ export function PrDetail({
     if (!body || posting) return;
     setPosting(true);
     try {
-      // L'id du message cité ne part QUE si le brouillon porte encore sa
-      // citation : citer, tout effacer, puis écrire autre chose ne répond plus
-      // à ce message-là.
-      const answering = replyTo && body.includes(replyTo.quoted) ? replyTo.commentId : undefined;
-      const { review } = await postPullRequestCommentApi(item.prId, body, answering);
+      const { review } = await postPullRequestCommentApi(item.prId, body);
       setCommentBody("");
-      setReplyTo(null);
       await refetchComments();
       // Le message MENTIONNAIT Numo : sa passe est déjà ouverte côté serveur
       // (MIN-162). On va la chercher tout de suite — c'est ce qui fait
@@ -1080,7 +1053,7 @@ export function PrDetail({
                       ? t("numoReviewRunning")
                       : reviewUpToDate
                         ? t("numoReviewUpToDateShort")
-                        : reviewSession.review
+                        : reviewSession.run
                           ? t("numoReviewRerun")
                           : t("aiReview")}
                   </DropdownMenuItem>
@@ -1354,7 +1327,7 @@ export function PrDetail({
                       // n'y en a pas, et le geste ne mènerait nulle part.
                       onQuoteReply={
                         canComment
-                          ? () => quoteReply(PR_BODY_COMMENT_ID, prDescription, pr?.user?.login)
+                          ? () => quoteReply(prDescription, pr?.user?.login)
                           : undefined
                       }
                       reactions={threadReactions}
@@ -1383,41 +1356,18 @@ export function PrDetail({
                         body={c.body}
                         onQuoteReply={
                           canComment
-                            ? () => quoteReply(c.id, c.body ?? "", c.user?.login)
+                            ? () => quoteReply(c.body ?? "", c.user?.login)
                             : undefined
                         }
-                        quotingNumo={isNumoComment(c.id, c.user?.login)}
+                        quotingNumo={isNumoComment(c.user?.login)}
                         reactions={threadReactions}
-                        // Le message de VERDICT de Numo porte le déroulé de sa
-                        // passe : ce qu'il a lu, les points qu'il a posés. Replié
-                        // sous le même accordéon que le fil de l'agent — la review
-                        // vit avec son message, pas dans un écran à côté.
-                        activity={
-                          reviewSession.review &&
-                          reviewSession.review.summaryCommentId === c.id ? (
-                            <PrReviewActivity
-                              review={reviewSession.review}
-                              events={reviewSession.events}
-                              // Les points ancrés se rendent alors avec leur
-                              // extrait de code, comme dans le reste du fil.
-                              comments={reviewComments}
-                            />
-                          ) : null
-                        }
                       />
                     );
                   })}
-                  {/* La passe EN COURS prend la place que son message occupera :
-                      c'est là que le lecteur regarde, et c'est là que le verdict
-                      tombera. Elle s'efface dès que le vrai message arrive. */}
-                  {reviewCard ? (
-                    <PrReviewLiveCard
-                      review={reviewCard}
-                      events={reviewSession.events}
-                      live={reviewSession.live}
-                      active={aiReviewActive}
-                    />
-                  ) : null}
+                  {/* La session de relecture, à la place où son verdict tombe —
+                      et cliquable : c'est par là qu'on va voir ce que l'agent a
+                      lu, et qu'on lui répond. */}
+                  {reviewCard ? <PrReviewCard run={reviewCard} /> : null}
                 </ul>
               )}
 

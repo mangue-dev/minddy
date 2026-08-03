@@ -97,14 +97,34 @@ export interface AgentCheckpoint {
    * chunk d'attente, juste pour lui faire redire qu'il attend.
    */
   parkedForSubagents?: boolean;
+  /**
+   * Commentaires de ligne déjà posés par CE run sur sa pull request (MIN-168).
+   * Le plafond est « 5 par run », pas « 5 par tour » : le compteur doit donc
+   * survivre au découpage en chunks ET au tour suivant, et le checkpoint est le
+   * seul état du run qui traverse les deux.
+   */
+  prInlineComments?: number;
 }
 
 export interface AgentRun {
   id: string;
   project_id: string;
-  /** Null = run « carnet » (MIN-84) : ancré au projet + une instruction libre,
-   *  sans ticket. Aucune lignée : chaque run carnet est sa propre conversation. */
+  /** Null = run « carnet » (MIN-84) ou run de PULL REQUEST (MIN-168) : ancré au
+   *  projet + une instruction libre, sans ticket. Aucune lignée : chaque run de
+   *  ce genre est sa propre conversation. */
   issue_id: string | null;
+  /**
+   * Pull request RELUE par ce run (MIN-168) — le troisième ancrage, à côté du
+   * ticket et du carnet. Non nul ⇒ session de review : lecture seule sur le
+   * dépôt, écriture uniquement en commentaires de PR.
+   */
+  pull_request_id: string | null;
+  /**
+   * Le sha que cette review a LU. C'est lui qui répond à « relancer aurait-il
+   * quelque chose de nouveau à lire ? » — la tête courante vit dans
+   * `pull_requests.head_sha` et ne dit rien de ce qui a été relu.
+   */
+  pr_head_sha: string | null;
   repo_link_id: string | null;
   connection_id: string | null;
   status: AgentRunStatus;
@@ -182,8 +202,12 @@ const MAX_CRASH_ATTEMPTS = 2;
 
 export interface CreateRunInput {
   projectId: string;
-  /** Null = run carnet (MIN-84), sans ticket. */
+  /** Null = run carnet (MIN-84) ou run de pull request (MIN-168), sans ticket. */
   issueId: string | null;
+  /** Pull request relue par ce run (MIN-168). Exclusif avec `issueId`. */
+  pullRequestId?: string | null;
+  /** Sha de la tête de cette PR au lancement — ce que la review aura lu. */
+  prHeadSha?: string | null;
   repoLinkId: string | null;
   connectionId: string | null;
   createdBy: string;
@@ -214,15 +238,33 @@ export interface CreateRunInput {
 }
 
 /**
- * Levée par `createRun` quand l'index unique `idx_agent_runs_active_issue` refuse
- * l'insertion : une autre run de l'issue est devenue active entre le pré-check et
- * l'INSERT. C'est le même refus que le garde applicatif, gagné par la base.
+ * Levée par `createRun` quand un index unique partiel refuse l'insertion :
+ * `idx_agent_runs_active_issue` (une autre run de l'issue est devenue active
+ * entre le pré-check et l'INSERT) ou `idx_agent_runs_active_pr` (MIN-168, même
+ * règle sur une pull request). C'est le même refus que le garde applicatif,
+ * gagné par la base.
  */
 export class ActiveRunExistsError extends Error {
   constructor() {
-    super("An agent run is already active on this issue");
+    super("An agent run is already active on this anchor");
     this.name = "ActiveRunExistsError";
   }
+}
+
+/**
+ * Ancrage d'un run, tel que l'analytics le nomme. Trois valeurs depuis MIN-168 :
+ * une session de review n'est ni un run de ticket ni un run carnet, et les
+ * confondre ferait lire les reviews comme des sessions de code.
+ */
+function runScope(run: {
+  issueId?: string | null;
+  issue_id?: string | null;
+  pullRequestId?: string | null;
+  pull_request_id?: string | null;
+}): "issue" | "notebook" | "pr" {
+  if (run.issueId ?? run.issue_id) return "issue";
+  if (run.pullRequestId ?? run.pull_request_id) return "pr";
+  return "notebook";
 }
 
 /** Code Postgres d'une violation de contrainte d'unicité. */
@@ -236,6 +278,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     .insert({
       project_id: input.projectId,
       issue_id: input.issueId,
+      pull_request_id: input.pullRequestId ?? null,
+      pr_head_sha: input.prHeadSha ?? null,
       repo_link_id: input.repoLinkId,
       connection_id: input.connectionId,
       status: "queued",
@@ -282,7 +326,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       // ne se lit dans l'analytics que comme une rafale de lancements.
       intent: input.intent ?? "implement",
       in_chain: !!input.chainId,
-      scope: input.issueId ? "issue" : "notebook",
+      scope: runScope(input),
       has_base_branch: !!input.baseBranch,
       resumes_pr: input.prNumber != null,
       project_id: input.projectId,
@@ -328,6 +372,70 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
     .limit(1)
     .maybeSingle();
   return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * Run ACTIF (queued/running) de la PULL REQUEST, ou null (MIN-168). Même règle
+ * que pour un ticket, pour la même raison : deux sessions de review sur le même
+ * diff, c'est deux fois la dépense pour deux fois le même avis — et deux jeux de
+ * commentaires sur la PR. L'index partiel unique `idx_agent_runs_active_pr` en
+ * garantit au plus un ; le tri + `limit(1)` reste le garde-fou (`maybeSingle`
+ * lèverait au lieu de répondre si des données antérieures en portaient deux).
+ */
+export async function activeRunForPullRequest(
+  pullRequestId: string,
+): Promise<AgentRun | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("pull_request_id", pullRequestId)
+    .in("status", ACTIVE_STATUSES)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * La DERNIÈRE session de review de cette pull request, quel que soit son état —
+ * c'est elle que la carte du fil et le menu Review montrent. `viewerId` n'est pas
+ * demandé : contrairement à l'ancienne passe, un run de PR est visible de tous
+ * les membres du projet (cf. la policy de MIN-168).
+ */
+export async function latestRunForPullRequest(
+  pullRequestId: string,
+): Promise<AgentRun | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("pull_request_id", pullRequestId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * Le sha relu par la dernière review TERMINÉE de cette PR. Comparé à la tête
+ * courante par l'écran : tant qu'ils sont égaux, relancer repaierait un run
+ * entier pour exactement le même code.
+ */
+export async function lastReviewedShaForPullRequest(
+  pullRequestId: string,
+): Promise<string | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("pr_head_sha")
+    .eq("pull_request_id", pullRequestId)
+    .eq("status", "completed")
+    .not("pr_head_sha", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { pr_head_sha?: string | null } | null)?.pr_head_sha ?? null;
 }
 
 /**
@@ -467,6 +575,8 @@ export interface StampFields {
   pr_number?: number | null;
   pr_url?: string | null;
   pr_state?: AgentRun["pr_state"];
+  /** Sha relu par une session de relecture, recalé sur la forge à l'amorce. */
+  pr_head_sha?: string | null;
   cost_usd?: number;
   outcome?: string | null;
   error_message?: string | null;
@@ -524,7 +634,7 @@ export async function stampRun(
         model: run.model ?? "default",
         key_mode: run.key_mode,
         triggered_by: run.triggered_by,
-        scope: run.issue_id ? "issue" : "notebook",
+        scope: runScope(run),
         opened_pr: run.pr_number != null,
         duration_bucket: run.created_at
           ? durationBucket(Date.now() - Date.parse(run.created_at))

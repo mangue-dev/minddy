@@ -258,3 +258,84 @@ describe("agentToolsFor — les tools de délégation du parent", () => {
     expect(description).toMatch(/report is ALL you get back/);
   });
 });
+
+/**
+ * MIN-168 : le jeu d'une session de RELECTURE. Ce qui compte ici n'est pas ce
+ * qu'il contient mais ce qu'il ne contient PAS : la lecture seule d'une review
+ * est une propriété du JEU DE TOOLS, pas une phrase de prompt qu'un modèle peut
+ * ignorer. Un `edit_file` qui reviendrait par erreur dans ce jeu suffirait à
+ * faire écrire l'agent dans le dépôt de quelqu'un.
+ */
+describe("agentToolsFor — ancrage pull request", () => {
+  const served = names({ anchor: "pr", webSearch: true, model: "openai/gpt-5.6-luna" });
+
+  it("n'offre AUCUN moyen d'écrire dans le dépôt", () => {
+    for (const tool of [
+      ...STRING_EDIT,
+      "apply_patch",
+      "move_file",
+      "delete_file",
+      "create_pr",
+    ]) {
+      expect(served).not.toContain(tool);
+    }
+  });
+
+  it("n'offre ni délégation, ni jobs de fond, ni checklist, ni question", () => {
+    for (const tool of [
+      ...SUBAGENT_CONTROL_TOOLS,
+      "run_background",
+      "update_plan",
+      "ask_user",
+      "report_verdict",
+      "web_search",
+    ]) {
+      expect(served).not.toContain(tool);
+    }
+  });
+
+  it("n'offre aucune écriture minddy ni le carnet", () => {
+    for (const tool of [
+      "update_issue",
+      "write_issue_plan",
+      "create_issue",
+      "read_scratchpad",
+      "add_scratchpad_tasks",
+      "update_scratchpad_task",
+      "set_scratchpad",
+    ]) {
+      expect(served).not.toContain(tool);
+    }
+  });
+
+  it("offre les lecteurs, le shell, les lecteurs minddy et les trois écritures de PR", () => {
+    for (const tool of [
+      "read_file",
+      "list_dir",
+      "glob",
+      "grep",
+      "run_command",
+      "search_issues",
+      "read_issue",
+      "read_attachment",
+      "comment_pr_line",
+      "comment_pr",
+      "reply_pr_thread",
+    ]) {
+      expect(served).toContain(tool);
+    }
+    expect(new Set(served).size).toBe(served.length);
+  });
+
+  it("cible par défaut le ticket de la PR pour `read_issue`", () => {
+    const readIssue = agentToolsFor({ anchor: "pr", webSearch: false }).find(
+      (t) => t.function.name === "read_issue",
+    );
+    expect(readIssue?.function.description).toContain("this pull request implements");
+  });
+
+  it("`report_verdict` reste absent même dans une chaîne", () => {
+    const inChain = names({ anchor: "pr", webSearch: false, chain: true });
+    expect(inChain).not.toContain("report_verdict");
+  });
+});

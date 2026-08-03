@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
 
 import {
   authorizePrRequest,
@@ -23,8 +22,9 @@ import {
  *       | { action: 'ai_review', model? }                    → Numo relit (MIN-141)
  *       | { action: 'link_issue', issueId }                  → rattache un ticket (MIN-163)
  *
- * `ai_review` rend un 202 avec la SESSION de review (`pr_review_runs`) : la
- * passe se joue en tâche de fond et se regarde en direct sur `./ai-review`.
+ * `ai_review` rend un 202 avec la SESSION d'agent ancrée à cette PR (MIN-168) :
+ * l'agent clone la branche, lit le code et commente, et la session se regarde
+ * dans `/agents` — `./ai-review` en donne l'état pour le fil de la PR.
  *
  * Les anciennes routes `agent-runs/[runId]/pr/*` sont devenues des façades de
  * celles-ci : le corps de chaque geste vit dans `lib/server/agent/pr-actions`,
@@ -80,9 +80,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
   }
   if (action === "ai_review") {
-    // La review est écrite dans la langue du demandeur — celle du cookie de
-    // locale, comme tout le reste de ce que minddy lui rend.
-    return prAiReviewResponse(auth.scope, auth.userId, await getLocale(), body.model);
+    // La langue n'est plus un paramètre : une session d'agent écrit dans celle de
+    // son lanceur, résolue au premier chunk comme pour toutes les autres.
+    return prAiReviewResponse(auth.scope, auth.userId, body.model);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }

@@ -3,7 +3,7 @@
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
-import type { PrReviewEvent, PrReviewRun } from "@/lib/pr-review-run";
+import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import type {
@@ -72,6 +72,9 @@ export interface AgentRunSummary {
   triggered_by: "button" | "chat" | "mention";
   /** Prompt de lancement (bulle « originelle » de la conversation). */
   prompt: string | null;
+  /** Non nul = session de RELECTURE (MIN-168) : lecture seule sur le dépôt, donc
+   *  ni branche, ni pull request à ouvrir depuis la conversation. */
+  pull_request_id: string | null;
   /** Branche COPIÉE au lancement (choisie en compose, sinon le défaut du dépôt).
       Null tant que le premier chunk ne l'a pas stampée sur une run sans héritage. */
   base_branch: string | null;
@@ -694,7 +697,7 @@ export async function submitPullRequestReviewApi(
 export async function requestPullRequestAiReviewApi(
   prId: string,
   model?: string,
-): Promise<{ ok: true; review: PrReviewRun }> {
+): Promise<{ ok: true; review: PrReviewRunSummary }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
     await fetch(prEndpoint(prId), {
@@ -705,20 +708,7 @@ export async function requestPullRequestAiReviewApi(
   );
 }
 
-/** L'état de la review de Numo sur une PR : la session, son fil, et de quoi
- *  décider s'il y a lieu d'en relancer une (`reviewedHeadSha`). */
-export interface PrReviewSession {
-  review: PrReviewRun | null;
-  events: PrReviewEvent[];
-  /** SHA relu par la dernière passe terminée — comparé à la tête courante. */
-  reviewedHeadSha: string | null;
-  model: {
-    /** Défaut réglé en /admin : ce que vaut « défaut » dans le picker. */
-    instance: string;
-    /** Dernier choix du compte, ou null s'il n'en a jamais fait. */
-    preferred: string | null;
-  };
-}
+export type { PrReviewRunSummary, PrReviewSession };
 
 export async function fetchPullRequestAiReviewApi(prId: string): Promise<PrReviewSession> {
   return parseJson(await fetch(`${prEndpoint(prId)}/ai-review`));
@@ -1059,8 +1049,12 @@ export interface AgentSessionListItem {
   pr_state: "draft" | "open" | "merged" | "closed" | null;
   created_at: string;
   updated_at: string;
-  /** Null = session CARNET (MIN-84) : le run est sa propre session. */
+  /** Null = session CARNET (MIN-84) ou session de RELECTURE (MIN-168) : le run
+   *  est alors sa propre session. */
   issue: { id: string; number: number; title: string } | null;
+  /** La pull request que cette session RELIT (MIN-168) — badge « Analyse de PR ».
+   *  Distinct de `pr_number`, qui est la PR qu'un run de code a OUVERTE. */
+  pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
   project: { id: string; key: string; name: string; icon_url: string | null } | null;
   /** Un run de l'issue TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
@@ -1161,15 +1155,12 @@ export function isAgentRunAwaitingInput(
 export async function postPullRequestCommentApi(
   prId: string,
   body: string,
-  /** Le message auquel celui-ci répond, quand il a été écrit en le CITANT. Sert
-      de contexte à Numo quand la réponse le rappelle (MIN-162). */
-  replyTo?: number,
-): Promise<{ comment: PullRequestComment; review?: PrReviewSession["review"] }> {
+): Promise<{ comment: PullRequestComment; review?: PrReviewRunSummary | null }> {
   return parseJson(
     await fetch(`${prEndpoint(prId)}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body, ...(replyTo !== undefined ? { replyTo } : {}) }),
+      body: JSON.stringify({ body }),
     }),
   );
 }

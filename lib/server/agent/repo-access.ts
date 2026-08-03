@@ -83,6 +83,37 @@ export async function resolveRepoCloneTargetForRepo(opts: {
   provider: RepoProvider;
   repoFullName: string;
 }): Promise<RepoCloneTarget | null> {
+  const link = await resolveProjectLinkForRepo(opts);
+  return link ? targetFromLink(link.row) : null;
+}
+
+/** Liaison projet↔dépôt retenue pour un utilisateur, SANS mint de token. */
+export interface ResolvedRepoLink {
+  linkId: string;
+  connectionId: string;
+  projectId: string;
+  provider: RepoProvider;
+  repoFullName: string;
+  defaultBranch: string;
+  /** Ligne brute, pour `targetFromLink` — évite une seconde requête. */
+  row: GitLinkRow;
+}
+
+/**
+ * La liaison projet↔dépôt par laquelle CET utilisateur atteint ce dépôt, sans
+ * minter de token (MIN-168) : le lancement d'une review a besoin du PROJET
+ * porteur du run — c'est lui que la RLS des runs interroge — bien avant d'avoir
+ * besoin de parler à la forge.
+ *
+ * Même règle de choix que `resolveRepoCloneTargetForRepo`, dont c'est désormais
+ * la première moitié : le premier lien dont le projet est ACCESSIBLE. Sans ce
+ * filtre, un membre d'un projet quelconque agirait sur un dépôt lié ailleurs.
+ */
+export async function resolveProjectLinkForRepo(opts: {
+  userId: string;
+  provider: RepoProvider;
+  repoFullName: string;
+}): Promise<ResolvedRepoLink | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("project_git_links")
@@ -92,10 +123,18 @@ export async function resolveRepoCloneTargetForRepo(opts: {
 
   const rows = (data ?? []) as GitLinkRow[];
   for (const row of rows) {
-    if (!row.project_id) continue;
+    if (!row.project_id || !row.repo_full_name) continue;
     const access = await getProjectAccess(opts.userId, row.project_id);
     if (!access) continue;
-    return targetFromLink(row);
+    return {
+      linkId: row.id,
+      connectionId: row.connection_id,
+      projectId: row.project_id,
+      provider: opts.provider,
+      repoFullName: row.repo_full_name,
+      defaultBranch: row.default_branch ?? "main",
+      row,
+    };
   }
   return null;
 }

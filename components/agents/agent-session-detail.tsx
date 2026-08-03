@@ -111,6 +111,47 @@ export function AgentSessionDetail({
       </Button>
     );
 
+  // ── Session de RELECTURE (MIN-168) : conversation d'UN run, en-tête = la PR ──
+  // Même volet qu'une session carnet — le run EST la session, il n'y a pas de
+  // lignée à parcourir —, avec le badge et le lien de la pull request relue. La
+  // reprise conversationnelle passe donc par le même chemin (`noteRunId` +
+  // /steer) : répondre ici fait poster un nouveau commentaire sur la PR.
+  const reviewed = item.pullRequest;
+  if (!issue && reviewed) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <AgentConversation
+          key={item.runId}
+          noteRunId={item.runId}
+          active
+          showUnread={false}
+          headerTitle={
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {backButton}
+              <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                <GitPullRequest className="size-3.5" />
+                {t("prBadge")}
+              </span>
+              <span className="truncate text-sm font-medium">
+                {reviewed.title?.trim() || `#${reviewed.number}`}
+              </span>
+            </div>
+          }
+          headerActions={
+            reviewed.url ? (
+              <Button asChild size="sm" variant="outline">
+                <a href={reviewed.url} target="_blank" rel="noreferrer">
+                  <GitPullRequest className="size-3.5" />
+                  {t("openPullRequest")}
+                </a>
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
+
   // ── Session CARNET : conversation d'UN run, en-tête = excerpt de la note ────
   if (!issue) {
     return (

@@ -3,7 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
-import { byokDefaultModelKey } from "@/lib/ai-model-config";
+import { aiModelFallback, byokDefaultModelKey } from "@/lib/ai-model-config";
 import {
   DEFAULT_AGENT_PROVIDER,
   getProviderDefaultModel,
@@ -150,6 +150,81 @@ export async function resolveAgentModel(opts: {
   }
   // Quota minddy (plateforme) ou OpenRouter BYOK : défaut racine app_config.
   return { model: await getRootDefaultModel(), chosenByUser: false };
+}
+
+// ── Modèle de RELECTURE (MIN-141, porté ici par MIN-168) ────────────────────
+// Une session de review est un run comme les autres, mais son modèle ne se
+// résout pas comme celui d'un run de code : `pr_review_model` est
+// DÉLIBÉRÉMENT distinct d'`agent_model` — faire relire du code par le modèle qui
+// vient de l'écrire donne un second avis identique, et c'est toute la raison
+// d'être de la passe.
+
+/** Clé `app_config` du modèle de review — le défaut de l'instance, réglable en /admin. */
+export const PR_REVIEW_MODEL_CONFIG_KEY = "pr_review_model";
+
+/**
+ * Le modèle qui va relire, en trois temps : ce qui a été choisi POUR CETTE
+ * SESSION, sinon le dernier choix du compte, sinon le défaut de l'instance.
+ *
+ * Le catalogue est celui de la clé plateforme OpenRouter dans les trois cas — la
+ * review tourne dessus, y compris pour un compte en BYOK (un id natif `gpt-…` n'y
+ * serait pas routable). Elle se paye donc TOUJOURS sur le quota minddy, ce qui la
+ * soumet aussi au plafond de modèle du plan — d'où `chosenByUser` : le plafond
+ * porte sur les deux premiers temps (un modèle nommé par quelqu'un), jamais sur
+ * le troisième. Le défaut d'instance vaut délibérément un modèle cher, et s'y
+ * heurter laisserait un compte Go sans aucun chemin vers une review.
+ */
+export async function resolvePrReviewModel(opts: {
+  perCall?: string | null;
+  userId: string;
+  /** Vrai quand on vient de demander explicitement le défaut de l'instance. */
+  ignoreRemembered?: boolean;
+}): Promise<ResolvedAgentModel> {
+  const perCall = opts.perCall?.trim();
+  if (perCall) return { model: perCall, chosenByUser: true };
+  if (!opts.ignoreRemembered) {
+    const remembered = await getUserPrReviewModel(opts.userId);
+    if (remembered) return { model: remembered, chosenByUser: true };
+  }
+  return { model: await getInstancePrReviewModel(), chosenByUser: false };
+}
+
+/** Le défaut de l'instance seul (sans le choix du compte) — ce que l'UI affiche
+ *  en aparté sur l'option « modèle par défaut » du picker. */
+export async function getInstancePrReviewModel(): Promise<string> {
+  return (
+    (await getAppConfigValue(PR_REVIEW_MODEL_CONFIG_KEY))?.trim() ||
+    aiModelFallback(PR_REVIEW_MODEL_CONFIG_KEY)
+  );
+}
+
+/** Dernier modèle de review choisi par ce compte, ou null. */
+export async function getUserPrReviewModel(userId: string): Promise<string | null> {
+  const { data } = await getServiceClient()
+    .from("user_agent_preferences")
+    .select("pr_review_model")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as { pr_review_model: string | null } | null)?.pr_review_model ?? null;
+}
+
+/**
+ * Retient le modèle choisi : la fois d'après, « faire vérifier par Numo » repart
+ * de là. `null` efface le choix — c'est ce que veut dire « revenir au défaut de
+ * minddy » dans le picker, et sans ça le choix retenu gagnerait pour toujours.
+ * Best-effort — un choix non mémorisé ne doit pas empêcher la review.
+ */
+export async function rememberPrReviewModel(
+  userId: string,
+  model: string | null,
+): Promise<void> {
+  try {
+    await getServiceClient()
+      .from("user_agent_preferences")
+      .upsert({ user_id: userId, pr_review_model: model }, { onConflict: "user_id" });
+  } catch (err) {
+    console.error("[agent-model] remember review model failed:", (err as Error).message);
+  }
 }
 
 // ── Endpoint (provider + base URL + clé) ─────────────────────────────────────

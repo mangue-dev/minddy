@@ -59,7 +59,6 @@ export async function handleForgeNumoMention(opts: {
   prNumber: number;
   body: string | null | undefined;
   authorLogin: string | null;
-  locale?: string;
 }): Promise<void> {
   const body = opts.body ?? "";
   if (!mentionsNumo(body)) return;
@@ -91,7 +90,6 @@ export async function handleForgeNumoMention(opts: {
     await startNumoPrReview({
       scope,
       userId,
-      locale: opts.locale ?? "fr",
       question: { author: opts.authorLogin, body },
     });
   } catch (err) {

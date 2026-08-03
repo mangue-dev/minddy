@@ -7,13 +7,21 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectLink } from "@/lib/server/git/repo-links";
 import { REPO_PROVIDERS, isRepoProviderId } from "@/lib/repo-providers";
 import { insertEvents } from "@/lib/server/issue-events";
-import { resolveAgentModel, resolveReasoningLevel, AgentModelRequiredError } from "./model";
+import {
+  resolveAgentModel,
+  resolveReasoningLevel,
+  resolvePrReviewModel,
+  AgentModelRequiredError,
+} from "./model";
 import { ensureModelInPlan } from "./model-plan";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { checkAgentQuota, type AgentQuota } from "./quota";
+import { loadPrRunContext, type PrRunContext } from "./pr-run";
+import { resolveProjectLinkForRepo } from "./repo-access";
 import {
   createRun,
   activeRunForIssue,
+  activeRunForPullRequest,
   inheritableWorkForIssue,
   insertRunMessage,
   bumpRunActivity,
@@ -43,6 +51,8 @@ import { generateShortTitle } from "@/lib/server/short-title";
 
 export type LaunchError =
   | "issueNotFound"
+  | "prNotFound"
+  | "prIncomplete"
   | "noRepo"
   | "unsupportedProvider"
   | "alreadyRunning"
@@ -82,6 +92,14 @@ export interface LaunchAgentInput {
    * chaque lancement est une conversation autonome.
    */
   issueId?: string | null;
+  /**
+   * Pull request d'ancrage (MIN-168) : le run RELIT cette PR — il clone sa
+   * branche de tête, lit le code et commente, sans jamais écrire dans le dépôt.
+   * Exclusif avec `issueId` : une session de review n'occupe pas un ticket.
+   * Le projet porteur est résolu ici, à partir du dépôt de la PR et des projets
+   * accessibles à `userId`.
+   */
+  pullRequestId?: string | null;
   /** Projet du run carnet. Ignoré quand `issueId` est fourni (le projet vient du
    *  ticket). L'appelant a déjà vérifié l'appartenance au projet. */
   projectId?: string | null;
@@ -125,14 +143,19 @@ export interface LaunchAgentInput {
   budgetUsd?: number | null;
 }
 
-/** Ce que le lancement fait au statut du ticket : cf. `intentStartsWork`. */
-export type AgentLaunchIntent = "implement" | "plan" | "verify" | "custom";
+/**
+ * Ce que le lancement fait au statut du ticket : cf. `intentStartsWork`.
+ * `review` (MIN-168) est le seul qui ne parle pas d'un ticket du tout : il relit
+ * une pull request.
+ */
+export type AgentLaunchIntent = "implement" | "plan" | "verify" | "custom" | "review";
 
 /**
  * Le lancement fait-il DÉMARRER le ticket ? Seul « implémenter » est du travail
- * neuf : cadrer vient avant, vérifier vient après, et une consigne écrite par
- * l'utilisateur (`custom`) peut être n'importe quoi — aucun des trois ne doit
- * déplacer le ticket. `undefined` (appelant historique) vaut « implémenter ».
+ * neuf : cadrer vient avant, vérifier vient après, une consigne écrite par
+ * l'utilisateur (`custom`) peut être n'importe quoi, et relire (`review`) ne
+ * touche même pas au dépôt — aucun des quatre ne doit déplacer le ticket.
+ * `undefined` (appelant historique) vaut « implémenter ».
  */
 export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean {
   return intent === undefined || intent === "implement";
@@ -140,6 +163,11 @@ export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean
 
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
   const service = getServiceClient();
+
+  // Ancrage PULL REQUEST (MIN-168) : chemin à part de bout en bout — le projet
+  // vient du dépôt, le modèle de `pr_review_model`, et rien n'est écrit sur un
+  // ticket (ni statut, ni événement, ni héritage de branche).
+  if (input.pullRequestId) return launchPrReviewRun(input, input.pullRequestId);
 
   const issueId = input.issueId ?? null;
   let projectId: string;
@@ -330,6 +358,131 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   return { ok: true, run };
 }
 
+/**
+ * Lance une session de RELECTURE d'une pull request (MIN-168).
+ *
+ * Le chemin est distinct de bout en bout, et chaque écart au lancement d'un run
+ * de ticket est une décision :
+ *  - **le projet vient du DÉPÔT**, pas d'un ticket : une PR appartient à un
+ *    dépôt, que plusieurs projets peuvent lier. On retient le premier lien dont
+ *    le projet est accessible au lanceur (`resolveProjectLinkForRepo`) — c'est
+ *    lui qui portera la RLS du run, et donc la visibilité de la session ;
+ *  - **le modèle vient de `resolvePrReviewModel`**, délibérément distinct du
+ *    modèle d'écriture (cf. `model.ts`) ;
+ *  - **aucune écriture sur un ticket** : ni `agent_launched`, ni changement de
+ *    statut, ni héritage de branche. La PR liée peut porter un ticket ; relire
+ *    n'est pas travailler dessus ;
+ *  - **un run actif par PR**, même règle que par ticket, pour la même raison.
+ *
+ * Les branches de la PR sont un PRÉREQUIS : sans elles, la sandbox n'a rien à
+ * cloner. On refuse au lancement (`prIncomplete`) plutôt qu'au premier chunk —
+ * un run mort-né coûte un claim et laisse une session vide à l'écran.
+ */
+async function launchPrReviewRun(
+  input: LaunchAgentInput,
+  pullRequestId: string,
+): Promise<LaunchResult> {
+  const pr = await loadPrRunContext(pullRequestId);
+  if (!pr) return { ok: false, error: "prNotFound" };
+  if (!isRepoProviderId(pr.provider) || !REPO_PROVIDERS[pr.provider].capabilities.write) {
+    return { ok: false, error: "unsupportedProvider" };
+  }
+  // La base est indispensable (c'est elle qu'on clone, et le diff s'y adosse) ;
+  // la tête, elle, se retrouve par la ref serveur de la PR même sur un fork —
+  // d'où la seule exigence portée ici.
+  if (!pr.baseBranch) return { ok: false, error: "prIncomplete" };
+
+  const link = await resolveProjectLinkForRepo({
+    userId: input.userId,
+    provider: pr.provider,
+    repoFullName: pr.repoFullName,
+  });
+  // Aucun projet accessible ne lie ce dépôt : du point de vue du lanceur, cette
+  // PR n'existe pas. Même réponse que partout ailleurs (MIN-143).
+  if (!link) return { ok: false, error: "prNotFound" };
+
+  const active = await activeRunForPullRequest(pullRequestId);
+  if (active) return { ok: false, error: "alreadyRunning", run: active };
+
+  const quota = await checkAgentQuota(input.userId);
+  if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
+
+  const { model, chosenByUser } = await resolvePrReviewModel({
+    perCall: input.model,
+    userId: input.userId,
+  });
+  // La review tourne sur la clé plateforme, donc sur le quota minddy : le
+  // plafond de modèle du plan s'y applique, BYOK ou pas.
+  if (chosenByUser) {
+    try {
+      await ensureModelInPlan({ userId: input.userId, model, mode: "platform" });
+    } catch (err) {
+      if (isPlanLimitError(err) && err.code === "model_above_plan") {
+        const p = err.params ?? {};
+        return {
+          ok: false,
+          error: "modelAbovePlan",
+          modelLimit: {
+            model: String(p.model ?? ""),
+            multiplier: Number(p.multiplier ?? 0),
+            limit: Number(p.limit ?? 0),
+            planId: String(p.plan ?? ""),
+          },
+        };
+      }
+      throw err;
+    }
+  }
+
+  const reasoningLevel = await resolveReasoningLevel({
+    perRunLevel: input.reasoningLevel,
+    userId: input.userId,
+  });
+
+  let run: AgentRun;
+  try {
+    run = await createRun({
+      projectId: link.projectId,
+      issueId: null,
+      pullRequestId,
+      // Le sha RELU par cette session : figé au lancement, comparé plus tard à la
+      // tête courante pour savoir si relancer aurait quelque chose de neuf à lire.
+      prHeadSha: pr.headSha,
+      repoLinkId: link.linkId,
+      connectionId: link.connectionId,
+      createdBy: input.userId,
+      prompt: input.prompt ?? null,
+      // Titre de la session : celui de la pull request. Pas de résumé à générer —
+      // contrairement à une note, une PR a déjà un titre écrit pour être lu.
+      title: prSessionTitle(pr),
+      model,
+      modelForced: !!input.forced,
+      reasoningLevel,
+      keyMode: quota.mode,
+      triggeredBy: input.triggeredBy,
+      intent: "review",
+      // La base sert de point de comparaison à `git diff` dans la sandbox.
+      baseBranch: pr.baseBranch,
+    });
+  } catch (err) {
+    // Course perdue contre un lancement concurrent : l'index unique a tranché.
+    if (err instanceof ActiveRunExistsError) {
+      const winner = await activeRunForPullRequest(pullRequestId);
+      return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
+    }
+    throw err;
+  }
+
+  kickAgentDrain(getServiceClient());
+  return { ok: true, run };
+}
+
+/** Titre lisible d'une session de review — celui de la PR, à défaut son numéro. */
+function prSessionTitle(pr: PrRunContext): string {
+  const title = pr.title?.trim();
+  return title ? `#${pr.number} ${title}` : `#${pr.number}`;
+}
+
 export type ContinueResult =
   | { ok: true; run: AgentRun; continued: boolean }
   | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
@@ -347,9 +500,16 @@ export type ContinueResult =
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
 ): Promise<ContinueResult> {
-  // Chemin conversationnel d'ISSUE uniquement (@numo, chat) : un run carnet se
+  // Chemins conversationnels : un ticket (@numo dans un commentaire, chat numo)
+  // et, depuis MIN-168, une PULL REQUEST (@numo dans son fil) — une session de
+  // review qui tourne LIT déjà la PR, donc la question lui parvient en steering
+  // au lieu d'ouvrir une seconde session sur le même diff. Un run carnet, lui, se
   // reprend par SA conversation (/steer), jamais par ce raccourci.
-  const active = input.issueId ? await activeRunForIssue(input.issueId) : null;
+  const active = input.issueId
+    ? await activeRunForIssue(input.issueId)
+    : input.pullRequestId
+      ? await activeRunForPullRequest(input.pullRequestId)
+      : null;
   if (active) {
     const text = (input.prompt ?? "").trim();
     if (text) await insertRunMessage(active.id, input.userId, text);

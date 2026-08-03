@@ -1,6 +1,6 @@
 import "server-only";
 
-import { after, NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTranslations } from "next-intl/server";
 
@@ -15,27 +15,26 @@ import {
 import { hasRecentPrEvent } from "./pr-activity";
 import { broadcastPrChanged } from "./pr-live";
 import { ensureAgentsAllowed } from "@/lib/server/entitlements";
-import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
-import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
+import {
+  isPlanLimitError,
+  planLimitResponse,
+  PlanLimitError,
+} from "@/lib/server/plan-limit-error";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { ensureUsageBudget } from "@/lib/server/usage";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import {
+  continueOrLaunchAgentRun,
+  launchAgentRun,
+  type LaunchResult,
+} from "@/lib/server/agent/launch";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import { runPrAiReview } from "./pr-ai-review";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import {
-  activePrReviewRun,
-  createPrReviewRun,
-  finishPrReviewRun,
   getInstancePrReviewModel,
   getUserPrReviewModel,
-  lastFinishedPrReviewRun,
-  latestPrReviewRun,
-  openPrReviewRecorder,
-  prReviewEvents,
   rememberPrReviewModel,
-  resolvePrReviewModel,
-} from "./pr-review-runs";
-import type { PrReviewRun } from "@/lib/pr-review-run";
+} from "./model";
+import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
@@ -43,7 +42,13 @@ import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
 import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
-import { findRunsForPr, syncPrState } from "./runs";
+import {
+  findRunsForPr,
+  lastReviewedShaForPullRequest,
+  latestRunForPullRequest,
+  syncPrState,
+  type AgentRun,
+} from "./runs";
 import {
   findPullRequest,
   prStateFromRef,
@@ -375,12 +380,13 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     // ont besoin du SHA de tête, donc d'un deuxième temps. Une lecture
     // d'approbations en échec (tier GitLab sans l'API, permission retirée) ne
     // doit pas faire tomber la vue PR : elle vaut null, pas zéro.
-    const [pr, files, reviews, viewer] = await Promise.all([
+    const [pr, diff, reviews, viewer] = await Promise.all([
       forge.getPullRequest(call),
       forge.listPullRequestFiles(call),
       forge.listReviews(call).catch(() => null),
       resolveViewer(scope),
     ]);
+    const files = diff.files;
 
     // `checks: null` = INCONNU (permission refusée, appel en échec), distinct de
     // `checks.total === 0` = « ce dépôt n'a pas de CI ». `checksError` dit
@@ -703,11 +709,6 @@ export async function createPrCommentResponse(
   scope: PrScope,
   body: string,
   userId: string,
-  locale: string,
-  /** Le message que ce commentaire CITAIT, quand il est né d'un « Citer »
-      (MIN-162). Sert de contexte à Numo, et à rien d'autre : la forge, elle,
-      n'a pas de fil sur cette surface. */
-  replyTo?: number | null,
 ): Promise<NextResponse> {
   // Geste humain : il part du compte git de la personne, pas de `minddy-app[bot]`.
   const actor = await requireActor(scope, "read");
@@ -740,12 +741,7 @@ export async function createPrCommentResponse(
       ? await startNumoPrReview({
           scope,
           userId,
-          locale,
-          question: {
-            author: actor.actor.login,
-            body,
-            replyToCommentId: replyTo ?? null,
-          },
+          question: { author: actor.actor.login, body },
         })
       : null;
     // La session part DANS la réponse : c'est le seul moment où l'écran peut
@@ -759,8 +755,8 @@ export async function createPrCommentResponse(
 }
 
 /**
- * Ce que `@numo` déclenche sur une pull request (MIN-162) : **la passe de
- * relecture**, jamais un run de code.
+ * Ce que `@numo` déclenche sur une pull request (MIN-162) : **une session de
+ * RELECTURE**, jamais un run de code.
  *
  * C'est la question qui restait ouverte au cadrage, et elle se tranche du côté
  * du moindre pouvoir. Un run de code écrit dans le dépôt ; une mention, elle,
@@ -771,49 +767,45 @@ export async function createPrCommentResponse(
  * aucun n'a consenti à cette équivalence. Relancer Numo sur du code reste ce
  * qu'il est aujourd'hui : un geste explicite, dans minddy, sous le menu Review.
  *
- * La passe, elle, ne fait qu'écrire des commentaires — et elle sait répondre à
- * ce qui lui a été demandé, puisqu'on lui passe le message (`question`).
+ * Depuis MIN-168 la relecture est un vrai run d'agent — sandbox, tools,
+ * conversation — mais la distinction TIENT : son jeu de tools n'a aucune
+ * édition, et le harnais ne commite ni ne pousse pour elle. Une mention ouvre
+ * donc bien la surface la moins puissante des deux.
+ *
+ * Une session qui TOURNE déjà reçoit la question en steering plutôt que d'en
+ * ouvrir une seconde sur le même diff : elle est encore en train de lire, elle
+ * peut donc en tenir compte.
  *
  * Best-effort de bout en bout : une mention qui ne déclenche rien (plan sans
- * agents, budget épuisé, passe déjà en cours) ne doit jamais faire échouer la
+ * agents, budget épuisé, quota atteint) ne doit jamais faire échouer la
  * publication du commentaire — il est déjà chez la forge.
  */
 export async function startNumoPrReview(input: {
   scope: PrScope;
   userId: string;
-  locale: string;
-  question: { author: string | null; body: string; replyToCommentId?: number | null };
-}): Promise<PrReviewRun | null> {
+  question: { author: string | null; body: string };
+}): Promise<PrReviewRunSummary | null> {
   const { scope, userId } = input;
   try {
     await ensureAgentsAllowed(userId);
     await ensureUsageBudget(userId);
 
-    // Une passe tourne déjà : elle lit le fil, donc elle lira aussi ce message.
-    // En ouvrir une seconde paierait deux fois le même diff. On rend LA sienne :
-    // c'est bien celle que l'écran doit montrer.
-    const running = await activePrReviewRun(scope.pr.id);
-    if (running) return running;
+    // La question part comme PROMPT du run, avec qui l'a posée : l'amorce la
+    // place en tête du contexte (« What you were asked »), et c'est à elle que la
+    // synthèse répond d'abord.
+    const prompt = `${input.question.author ? `@${input.question.author}` : "Someone"} wrote this in a comment on this pull request:\n\n${input.question.body.trim()}`;
 
-    const { model, chosenByUser } = await resolvePrReviewModel({ userId });
-    // La review se paye toujours sur la clé plateforme, donc sur le quota
-    // minddy : le plafond de modèle du plan s'y applique, BYOK ou pas. Un refus
-    // rejoint ceux du plan et du budget ci-dessus — journalisé, mention ignorée.
-    if (chosenByUser) await ensureModelInPlan({ userId, model, mode: "platform" });
-    const run = await createPrReviewRun({
+    // Une session tourne déjà : le message lui parvient en STEERING plutôt que
+    // d'ouvrir une seconde relecture du même diff — elle est encore en train de
+    // lire, elle peut donc en tenir compte.
+    const result = await continueOrLaunchAgentRun({
       pullRequestId: scope.pr.id,
       userId,
-      model,
+      triggeredBy: "mention",
+      intent: "review",
+      prompt,
     });
-    runPrReviewInBackground({
-      scope,
-      userId,
-      locale: input.locale,
-      model,
-      runId: run.id,
-      question: input.question,
-    });
-    return run;
+    return result.ok ? toReviewRunSummary(result.run) : null;
   } catch (err) {
     // Y compris les refus de plan et de budget : ils ont un sens sur un CLIC,
     // qui peut les afficher. Ici il n'y a pas d'écran à qui les dire.
@@ -1119,10 +1111,11 @@ export async function prFileSourceResponse(
 ): Promise<NextResponse> {
   const { forge, call } = scope;
   try {
-    const [pr, files] = await Promise.all([
+    const [pr, diff] = await Promise.all([
       forge.getPullRequest(call),
       forge.listPullRequestFiles(call),
     ]);
+    const files = diff.files;
     const base = pr.base;
     const head = pr.headSha ?? pr.head;
     if (!base || !head) {
@@ -1224,11 +1217,11 @@ export async function prFileBytesResponse(
   }
 
   try {
-    const [pr, files] = await Promise.all([
+    const [pr, diff] = await Promise.all([
       forge.getPullRequest(call),
       forge.listPullRequestFiles(call),
     ]);
-    const file = files.find((f) => f.filename === filename);
+    const file = diff.files.find((f) => f.filename === filename);
     if (!file) {
       return NextResponse.json({ error: "File not found in this diff" }, { status: 404 });
     }
@@ -1889,12 +1882,12 @@ export async function prReviewResponse(
 }
 
 /**
- * « Faire vérifier par Numo » (MIN-141) : une passe de review sur le diff, qui
- * dépose des commentaires de ligne et une synthèse sur la PR.
+ * « Faire vérifier par Numo » (MIN-141, devenu un RUN d'agent par MIN-168) :
+ * l'agent clone la branche de la PR, lit le diff, ouvre le code que le diff ne
+ * montre pas, puis dépose ses commentaires de ligne et sa synthèse.
  *
  * Offerte sur TOUTE pull request, pas seulement sur celles que Numo a ouvertes :
- * relire est un geste de forge (comme approuver ou commenter), pas un geste
- * d'agent — il ne demande ni branche à hériter ni run précédent, juste un diff.
+ * relire ne demande ni branche à hériter ni run précédent, juste une PR.
  *
  * Deux gardes EN PRÉ-VOL, dans cet ordre :
  *  1. **le plan** — faire relire du code par Numo est un geste d'agent, vendu à
@@ -1903,19 +1896,16 @@ export async function prReviewResponse(
  *     mais une garde d'UI n'est pas une garde : c'est ici que ça se refuse ;
  *  2. **le budget d'usage** — comme partout où un clic déclenche un appel LLM :
  *     c'est le déclencheur qui paye.
+ * Le troisième refus (plafond de modèle du plan) et le garde « une session à la
+ * fois » vivent dans `launchAgentRun`, avec le reste du lancement.
  *
- * La réponse n'ATTEND PLUS la review : elle ouvre la session (`pr_review_runs`),
- * rend son id en 202, et la passe se joue dans `after()`. Ce qui change pour
- * l'utilisateur : il voit Numo lire, réfléchir et écrire au lieu de fixer un
- * spinner pendant trois minutes, et fermer l'onglet n'interrompt plus une passe
- * à moitié postée. Les échecs (clé absente, réponse hors format, forge tombée)
- * n'ont donc plus de code HTTP à porter : ils s'écrivent dans le fil de la
- * session, avec leur code, et l'écran les traduit.
+ * La réponse n'attend pas la relecture : elle rend le run en 202, et la session
+ * se joue dans le drain, comme n'importe quelle session de l'agent — elle
+ * continue si on ferme l'onglet, et elle se regarde dans `/agents`.
  */
 export async function prAiReviewResponse(
   scope: PrScope,
   userId: string,
-  locale: string,
   requestedModel?: string | null,
 ): Promise<Response> {
   try {
@@ -1926,142 +1916,132 @@ export async function prAiReviewResponse(
     throw err;
   }
 
-  // Une passe tourne déjà sur cette PR : on rend la sienne plutôt que d'en
-  // ouvrir une deuxième. Deux tours de modèle sur le même diff, c'est deux fois
-  // la dépense pour deux fois le même avis — et deux jeux de commentaires.
-  const running = await activePrReviewRun(scope.pr.id);
-  if (running) return NextResponse.json({ ok: true, review: running }, { status: 202 });
-
   // Trois cas, et ils sont distincts : un modèle NOMMÉ (on le prend et on le
   // retient), la chaîne VIDE (« revenir au défaut de minddy » — on efface le
   // choix retenu, sans quoi il gagnerait pour toujours), et l'absence de champ
   // (on résout comme d'habitude, sans rien toucher).
   const chosen = requestedModel?.trim();
   if (requestedModel !== undefined && !chosen) await rememberPrReviewModel(userId, null);
-  const { model, chosenByUser } = await resolvePrReviewModel({
-    perCall: chosen,
+
+  const result = await launchAgentRun({
+    pullRequestId: scope.pr.id,
     userId,
-    // Le choix retenu ne doit pas revenir par la fenêtre quand on vient
-    // justement de demander le défaut.
-    ignoreRemembered: requestedModel !== undefined && !chosen,
+    triggeredBy: "button",
+    intent: "review",
+    // `undefined` (pas de champ) et `""` (« reviens au défaut ») veulent tous
+    // deux dire « résous comme d'habitude » côté lancement : c'est l'effacement
+    // ci-dessus qui porte la différence.
+    model: chosen || null,
+    forced: !!chosen,
   });
-  // Plafond de modèle du plan : la review tourne sur la clé plateforme, donc sur
-  // le quota minddy, y compris pour un compte en BYOK. Refusé AVANT d'ouvrir la
-  // session — sans ça, l'écran s'abonnerait à une passe qui ne partira pas.
-  if (chosenByUser) {
-    try {
-      await ensureModelInPlan({ userId, model, mode: "platform" });
-    } catch (err) {
-      if (isPlanLimitError(err)) return planLimitResponse(err);
-      throw err;
-    }
+  if (!result.ok) return await prLaunchErrorResponse(result);
+
+  // Le choix n'est retenu que s'il a été FAIT, et seulement si le lancement a
+  // abouti : figer le défaut de l'instance sur le compte le gèlerait à la valeur
+  // du jour, et un changement en /admin ne l'atteindrait plus.
+  if (chosen) await rememberPrReviewModel(userId, result.run.model ?? chosen);
+
+  return NextResponse.json(
+    { ok: true, review: toReviewRunSummary(result.run) },
+    { status: 202 },
+  );
+}
+
+/** Statuts HTTP des refus de lancement d'une relecture. */
+const PR_LAUNCH_ERROR_STATUS: Record<string, number> = {
+  prNotFound: 404,
+  prIncomplete: 409,
+  noRepo: 409,
+  unsupportedProvider: 409,
+  alreadyRunning: 409,
+  quotaExceeded: 402,
+  noModelForProvider: 400,
+  modelAbovePlan: 403,
+};
+
+/** Refus de lancement → message LOCALISÉ, quand on en a un à donner. */
+const PR_LAUNCH_ERROR_KEYS: Partial<Record<string, MessageKey<"ApiErrors">>> = {
+  prNotFound: "prReviewPrNotFound",
+  prIncomplete: "prReviewPrIncomplete",
+};
+
+async function prLaunchErrorResponse(
+  result: Extract<LaunchResult, { ok: false }>,
+): Promise<Response> {
+  // Une session tourne déjà : on rend LA sienne, en 202 — c'est bien celle que
+  // l'écran doit montrer, et ce n'est pas une erreur du point de vue de qui
+  // clique. Deux sessions sur le même diff, c'est deux fois la dépense pour deux
+  // fois le même avis, et deux jeux de commentaires.
+  if (result.error === "alreadyRunning" && result.run) {
+    return NextResponse.json(
+      { ok: true, review: toReviewRunSummary(result.run) },
+      { status: 202 },
+    );
   }
-  const run = await createPrReviewRun({ pullRequestId: scope.pr.id, userId, model });
-  // Le choix n'est retenu que s'il a été FAIT : figer le défaut de l'instance
-  // sur le compte le gèlerait à la valeur du jour, et un changement en /admin
-  // ne l'atteindrait plus.
-  if (chosen) await rememberPrReviewModel(userId, model);
+  // Le plafond de modèle du plan est refusé DANS le lancement (c'est là que le
+  // modèle se résout) : on lui rend ici la réponse localisée qu'il aurait eue
+  // s'il avait été levé en pré-vol, plutôt qu'un code brut dans un toast.
+  if (result.error === "modelAbovePlan" && result.modelLimit) {
+    return planLimitResponse(
+      new PlanLimitError("model_above_plan", {
+        model: result.modelLimit.model,
+        multiplier: result.modelLimit.multiplier,
+        limit: result.modelLimit.limit,
+        plan: result.modelLimit.planId,
+      }),
+    );
+  }
+  const key = PR_LAUNCH_ERROR_KEYS[result.error];
+  const t = key ? await getTranslations("ApiErrors") : null;
+  return NextResponse.json(
+    {
+      error: t && key ? t(key) : result.error,
+      code: result.error,
+      quota: result.quota,
+      modelLimit: result.modelLimit,
+    },
+    { status: PR_LAUNCH_ERROR_STATUS[result.error] ?? 400 },
+  );
+}
 
-  runPrReviewInBackground({ scope, userId, locale, model, runId: run.id });
-  return NextResponse.json({ ok: true, review: run }, { status: 202 });
+/** Un run d'agent → ce que le fil de la PR en montre (cf. `lib/pr-review-session`). */
+function toReviewRunSummary(run: AgentRun): PrReviewRunSummary {
+  return {
+    runId: run.id,
+    status: run.status,
+    working: run.status === "queued" || run.status === "running",
+    model: run.model,
+    createdAt: run.created_at,
+    completedAt: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,
+  };
 }
 
 /**
- * Joue la passe DANS `after()` et solde la session, quelle que soit l'issue.
+ * L'état de la relecture de Numo sur cette PR : la dernière session, et de quoi
+ * décider s'il y a lieu d'en relancer une.
  *
- * Partagé par le bouton « Faire vérifier par Numo » et par la mention `@numo`
- * (MIN-162) : c'est la même passe, et elle doit se raconter de la même façon
- * dans le fil — la seule différence est le `question` qui l'a appelée.
+ * `reviewedHeadSha` est le SHA que la dernière session TERMINÉE a lu. L'écran le
+ * compare à la tête courante : tant qu'ils sont égaux, relancer repaierait un run
+ * entier pour exactement le même code, et l'entrée du menu se grise. C'est le
+ * serveur qui le dit, pas l'écran qui le devine.
  *
- * La passe part en tâche de fond, la réponse ne l'attend pas. C'est ce qui la
- * rend REGARDABLE : l'écran reçoit tout de suite l'id de la session, s'abonne à
- * son direct, et la review continue même si on quitte la page — trois minutes de
- * requête suspendue, un onglet fermé, et les commentaires déjà posés seraient
- * restés seuls, sans la synthèse qui les explique.
- */
-function runPrReviewInBackground(input: {
-  scope: PrScope;
-  userId: string;
-  locale: string;
-  model: string;
-  runId: string;
-  question?: {
-    author: string | null;
-    body: string;
-    replyToCommentId?: number | null;
-  } | null;
-}): void {
-  const { scope, runId } = input;
-  const recorder = openPrReviewRecorder(runId);
-  after(async () => {
-    try {
-      const result = await runPrAiReview({
-        forge: scope.forge,
-        call: scope.call,
-        pr: scope.pr,
-        userId: input.userId,
-        locale: input.locale,
-        model: input.model,
-        recorder,
-        question: input.question ?? null,
-      });
-      if (!result.ok) {
-        await recorder.failed(result.error);
-        await finishPrReviewRun(runId, {
-          status: "failed",
-          headSha: result.headSha,
-          error: result.error,
-        });
-        return;
-      }
-      await finishPrReviewRun(runId, {
-        status: "done",
-        headSha: result.headSha,
-        verdict: result.verdict,
-        inlineComments: result.inlineComments,
-        summaryCommentId: result.summaryCommentId,
-      });
-      await recorder.status("finished");
-    } catch (err) {
-      // Une panne de forge en cours de passe (token expiré, dépôt retiré) : elle
-      // n'a plus personne à qui répondre en HTTP, elle se dit donc dans le fil.
-      console.error("[pr-actions] ai review failed:", (err as Error).message);
-      await recorder.failed("forge");
-      await finishPrReviewRun(runId, { status: "failed", error: "forge" });
-    }
-  });
-}
-
-/**
- * L'état de la review de Numo sur cette PR : la dernière session, son flux, et
- * de quoi décider s'il y a lieu d'en relancer une.
- *
- * `reviewedHeadSha` est le SHA que la dernière passe TERMINÉE a lu. L'écran le
- * compare à la tête courante : tant qu'ils sont égaux, relancer repaierait un
- * tour de modèle pour exactement le même code, et l'entrée du menu se grise.
- * C'est le serveur qui le dit, pas l'écran qui le devine.
- *
- * `defaultModel` est le modèle qui partirait au prochain clic — dernier choix du
- * compte, sinon le défaut de l'instance : ce que le picker doit présenter comme
- * sélectionné.
+ * `model.instance` est le défaut réglé en /admin (ce que « défaut » veut dire
+ * dans le picker) ; `model.preferred` est le dernier choix du compte.
  */
 export async function prReviewRunResponse(
   scope: PrScope,
   userId: string,
 ): Promise<NextResponse> {
-  const [run, lastFinished, instance, preferred] = await Promise.all([
-    latestPrReviewRun(scope.pr.id, userId),
-    lastFinishedPrReviewRun(scope.pr.id),
+  const [run, reviewedHeadSha, instance, preferred] = await Promise.all([
+    latestRunForPullRequest(scope.pr.id),
+    lastReviewedShaForPullRequest(scope.pr.id),
     getInstancePrReviewModel(),
     getUserPrReviewModel(userId),
   ]);
-  const events = run ? await prReviewEvents(run.id) : [];
-  return NextResponse.json({
-    review: run,
-    events,
-    reviewedHeadSha: lastFinished?.headSha ?? null,
-    // `instance` = le défaut réglé en /admin (ce que « défaut » veut dire dans le
-    // picker) ; `preferred` = le dernier choix du compte, ou null.
+  const session: PrReviewSession = {
+    run: run ? toReviewRunSummary(run) : null,
+    reviewedHeadSha,
     model: { instance, preferred },
-  });
+  };
+  return NextResponse.json(session);
 }

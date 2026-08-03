@@ -5,6 +5,7 @@ import {
   buildInheritedBranchMessage,
   buildInheritedPrMessage,
   buildNotebookContextMessage,
+  buildPrReviewContextMessage,
   buildSubagentSystemPrompt,
   toPrLineThreads,
 } from "./prompt";
@@ -925,5 +926,224 @@ describe("buildSubagentSystemPrompt", () => {
     expect(buildSubagentSystemPrompt({ mode: "implement", webSearch: false })).not.toContain(
       "web_search",
     );
+  });
+});
+
+/**
+ * L'ancrage PULL REQUEST (MIN-168). Deux moitiés, et chacune répare un défaut
+ * mesuré de la passe qu'elle remplace :
+ *  - le prompt système ne décrit AUCUN tool d'écriture (la lecture seule est
+ *    structurelle : jeu de tools + harnais), et il ordonne d'ouvrir le code que
+ *    le diff ne montre pas — l'erreur de jointure était hors de portée avant ;
+ *  - l'amorce ne porte PAS le diff (l'agent le lit dans le dépôt) mais tout ce
+ *    que le dépôt ne contient pas : le plan, la discussion, la CI, et le
+ *    sommaire des fichiers avec son éventuelle troncature.
+ */
+describe("buildAgentSystemPrompt — ancrage pull request", () => {
+  const prompt = buildAgentSystemPrompt({ anchor: "pr", locale: "fr" });
+
+  it("n'annonce aucun tool d'écriture, de git ni de délégation", () => {
+    for (const tool of [
+      "edit_file",
+      "apply_edits",
+      "write_file",
+      "apply_patch",
+      "move_file",
+      "delete_file",
+      "create_pr",
+      "run_background",
+      "spawn_agent",
+      "agent_status",
+      "update_plan",
+      "ask_user",
+      "report_verdict",
+      "update_issue",
+      "write_issue_plan",
+      "create_issue",
+      "read_scratchpad",
+      "set_scratchpad",
+    ]) {
+      expect(prompt).not.toContain(tool);
+    }
+    expect(prompt).toMatch(/You cannot change the code, and that is structural/);
+  });
+
+  it("décrit ses trois écritures de PR et ses lecteurs", () => {
+    for (const tool of [
+      "comment_pr_line",
+      "comment_pr",
+      "reply_pr_thread",
+      "read_file",
+      "grep",
+      "glob",
+      "list_dir",
+      "run_command",
+      "read_issue",
+      "search_issues",
+      "read_attachment",
+    ]) {
+      expect(prompt).toContain(tool);
+    }
+  });
+
+  it("impose l'exploration hors diff, puis UNE synthèse après les ancres", () => {
+    expect(prompt).toMatch(/OPEN the code the diff does not show/);
+    expect(prompt).toMatch(/follow|other callers/i);
+    expect(prompt).toMatch(/Line comments first/);
+    expect(prompt).toMatch(/Then ONE summary/);
+    // Le verdict reste dans le corps : aucune approbation de forge (MIN-141).
+    expect(prompt).toMatch(/no way to approve or to request changes/);
+  });
+
+  it("reprend la substance de la relecture : bugs, jointures, sécurité, restes", () => {
+    expect(prompt).toContain("**Bugs.**");
+    expect(prompt).toContain("**Joint errors.**");
+    expect(prompt).toContain("**Security and data.**");
+    expect(prompt).toContain("**Leftovers.**");
+    // Le plan comme référence, l'écart argumenté qui n'est pas une faute, et le
+    // point déjà soulevé qu'on ne redit pas.
+    expect(prompt).toMatch(/Departing from the plan is not a defect in itself/);
+    expect(prompt).toMatch(/Do not say again what has already been said/);
+    // Une PR propre mérite zéro point.
+    expect(prompt).toMatch(/A clean change deserves a summary that says so and zero line comments/);
+  });
+
+  it("écrit dans la langue du lanceur", () => {
+    expect(prompt).toContain("in French");
+    expect(buildAgentSystemPrompt({ anchor: "pr", locale: "en" })).toContain("in English");
+  });
+});
+
+describe("buildPrReviewContextMessage", () => {
+  const base = {
+    repo: { fullName: "acme/app" },
+    pr: {
+      number: 12,
+      title: "Add search",
+      body: "Adds a search box.",
+      state: "open",
+      headBranch: "feat/search",
+      baseBranch: "main",
+    },
+    files: [
+      { filename: "lib/search.ts", status: "modified", additions: 12, deletions: 3 },
+      {
+        filename: "lib/new.ts",
+        previous_filename: "lib/old.ts",
+        status: "renamed",
+        additions: 1,
+        deletions: 1,
+      },
+    ],
+  };
+
+  it("dit où le code est, et n'injecte PAS le diff", () => {
+    const msg = buildPrReviewContextMessage(base);
+    expect(msg).toContain("acme/app");
+    expect(msg).toContain("feat/search");
+    expect(msg).toContain("git diff origin/main");
+    expect(msg).not.toContain("```diff");
+  });
+
+  it("porte le ticket, son plan et ce qui s'est dit dessus", () => {
+    const msg = buildPrReviewContextMessage({
+      ...base,
+      issue: {
+        identifier: "MIN-42",
+        title: "Search",
+        description: "Users need search.",
+        plan: "## Contexte\n\n- [x] poser le champ",
+        comments: [{ author: "Clément", body: "On a finalement gardé le debounce." }],
+      },
+    });
+    expect(msg).toContain("MIN-42: Search");
+    expect(msg).toContain("Its implementation plan");
+    expect(msg).toContain("poser le champ");
+    expect(msg).toContain("On a finalement gardé le debounce.");
+    expect(msg).toMatch(/an explained departure is not a defect/);
+  });
+
+  it("porte les fils ancrés et leur état RÉSOLU", () => {
+    const msg = buildPrReviewContextMessage({
+      ...base,
+      lineThreads: toPrLineThreads(
+        [
+          {
+            id: 1,
+            body: "Et le cas nul ?",
+            path: "lib/search.ts",
+            line: 12,
+            side: "RIGHT",
+            in_reply_to_id: null,
+            diff_hunk: "@@ -1 +1 @@\n+const x = 1;",
+            user: { login: "clement" },
+            created_at: "2026-08-01T10:00:00Z",
+          },
+        ],
+        [{ rootCommentId: 1, threadId: "T_1", resolved: true, resolvedBy: "alice" }],
+      ),
+      comments: [{ author: "clement", body: "Prêt pour relecture." }],
+      reviews: [{ author: "alice", about: "changes requested", body: "Manque un test." }],
+    });
+    expect(msg).toContain("lib/search.ts:12");
+    expect(msg).toContain("RESOLVED");
+    expect(msg).toContain("Prêt pour relecture.");
+    expect(msg).toContain("Manque un test.");
+    expect(msg).toMatch(/do not raise them again/);
+  });
+
+  it("porte la CI, et signale un échec plutôt que de le noyer", () => {
+    const msg = buildPrReviewContextMessage({
+      ...base,
+      checks: {
+        state: "failure",
+        passing: 2,
+        total: 3,
+        checks: [
+          { name: "typecheck", state: "failure", description: "2 errors" },
+          { name: "lint", state: "success" },
+        ],
+      },
+    });
+    expect(msg).toContain("2/3 checks passing");
+    expect(msg).toContain("something is failing");
+    expect(msg).toContain("typecheck");
+    // Les checks VERTS ne sont pas listés un par un : ils n'apprennent rien.
+    expect(msg).not.toContain("lint");
+  });
+
+  it("liste les fichiers avec leurs compteurs et le renommage", () => {
+    const msg = buildPrReviewContextMessage(base);
+    expect(msg).toContain("Files changed (2 files · +13 −4)");
+    expect(msg).toContain("`lib/search.ts`");
+    expect(msg).toContain("(renamed from lib/old.ts)");
+  });
+
+  it("DIT que la liste de la forge a été coupée", () => {
+    const msg = buildPrReviewContextMessage({ ...base, filesTruncated: true });
+    expect(msg).toContain("Files changed (2+ files");
+    expect(msg).toMatch(/own listing was cut off/);
+    expect(msg).toContain("--stat");
+  });
+
+  it("met la question en TÊTE quand quelqu'un a appelé Numo", () => {
+    const msg = buildPrReviewContextMessage({
+      ...base,
+      question: "@alice wrote this in a comment on this pull request:\n\n@numo pourquoi ce debounce ?",
+    });
+    // EN TÊTE, littéralement : la demande ouvre le message, le contexte suit.
+    expect(msg.startsWith("# What you were asked")).toBe(true);
+    expect(msg).toContain("> @numo pourquoi ce debounce ?");
+    expect(msg).toMatch(/Answer it first/);
+  });
+
+  it("parle le vocabulaire de la forge", () => {
+    const msg = buildPrReviewContextMessage({
+      ...base,
+      pr: { ...base.pr, term: "merge request" },
+      comments: [{ author: "clement", body: "Prêt." }],
+    });
+    expect(msg).toContain("Merge request #12");
+    expect(msg).toContain("The merge request thread");
   });
 });

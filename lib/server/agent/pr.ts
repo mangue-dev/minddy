@@ -425,34 +425,63 @@ export async function getPullRequest(opts: {
   return toRef(pr);
 }
 
-/** Fichiers de la PR avec leurs patches (unified diff) — alimente la review in-app. */
+const FILES_PER_PAGE = 100;
+/**
+ * GitHub plafonne cet endpoint à 3 000 fichiers : trente pages le couvrent en
+ * entier. Une PR qui en dépasse existe (une migration de dépôt, un lockfile
+ * régénéré), et c'est justement là que la troncature doit se DIRE — un lecteur
+ * qui ignore ce qu'il n'a pas vu conclut sur ce qu'il a vu.
+ */
+const FILES_MAX_PAGES = 30;
+
+/**
+ * Fichiers de la PR avec leurs patches (unified diff) — alimente la review
+ * in-app, la vue diff et l'amorce d'une session de relecture.
+ *
+ * PAGINÉ (MIN-168). Une seule page en servait 100 et n'en disait rien : au-delà,
+ * les fichiers suivants disparaissaient sans laisser de trace — l'appelant ne
+ * pouvait même pas savoir qu'il lui en manquait. `truncated` est la moitié qui
+ * manquait : il dit que la liste s'arrête au plafond, pas que le dépôt s'arrête
+ * là.
+ */
 export async function listPullRequestFiles(opts: {
   token: string;
   repoFullName: string;
   number: number;
-}): Promise<PullRequestFile[]> {
+}): Promise<{ files: PullRequestFile[]; truncated: boolean }> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const files = await ghJson<
-    Array<{
-      filename: string;
-      status: string;
-      additions: number;
-      deletions: number;
-      patch?: string;
-      previous_filename?: string;
-    }>
-  >(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/files?per_page=100`,
-    opts.token,
-  );
-  return files.map((f) => ({
-    filename: f.filename,
-    status: f.status,
-    additions: f.additions,
-    deletions: f.deletions,
-    patch: f.patch,
-    previous_filename: f.previous_filename,
-  }));
+  const files: PullRequestFile[] = [];
+  let truncated = false;
+  for (let page = 1; page <= FILES_MAX_PAGES; page++) {
+    const batch = await ghJson<
+      Array<{
+        filename: string;
+        status: string;
+        additions: number;
+        deletions: number;
+        patch?: string;
+        previous_filename?: string;
+      }>
+    >(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/files` +
+        `?per_page=${FILES_PER_PAGE}&page=${page}`,
+      opts.token,
+    );
+    files.push(
+      ...batch.map((f) => ({
+        filename: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        patch: f.patch,
+        previous_filename: f.previous_filename,
+      })),
+    );
+    // Page incomplète = dernière page.
+    if (batch.length < FILES_PER_PAGE) break;
+    if (page === FILES_MAX_PAGES) truncated = true;
+  }
+  return { files, truncated };
 }
 
 interface RawCommit {

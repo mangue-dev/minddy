@@ -290,7 +290,11 @@ export function AgentConversation({
   // « Créer une pull request » a du sens quand la session est reprennable ET qu'aucune
   // PR n'existe encore : la barre de changements montre alors le bouton (si du travail
   // a été poussé). Sinon l'en-tête porte déjà « ouvrir la PR ».
-  const canCreatePr = steerable && liveRun?.pr_number == null;
+  // Une session de RELECTURE n'a rien à livrer : elle n'écrit pas dans le dépôt
+  // et n'a pas `create_pr`. Lui proposer le bouton enverrait à l'agent une
+  // consigne qu'il ne peut que refuser.
+  const canCreatePr =
+    steerable && liveRun?.pr_number == null && liveRun?.pull_request_id == null;
   // Les fichiers des blocs « fichiers changés » ouvrent la vue diff de la session
   // DANS la conversation (note scratchpad : voir le diff pendant que l'agent
   // modifie, sans attendre la PR) — le Sheet montre le travail poussé, PR ou pas.

@@ -37,6 +37,7 @@ type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled"
 interface RunRow {
   id: string;
   issue_id: string | null;
+  pull_request_id: string | null;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
@@ -51,6 +52,8 @@ interface RunRow {
   awaiting_input: boolean;
   issue: { id: string; number: number; title: string } | null;
   project: { id: string; key: string; name: string; icon_url: string | null } | null;
+  /** PR RELUE par ce run (MIN-168). Null partout ailleurs. */
+  pull_request: { id: string; number: number; title: string | null; url: string | null } | null;
 }
 
 /** Cap de l'excerpt de note renvoyé comme titre d'une session carnet. */
@@ -79,8 +82,15 @@ export interface AgentSessionListItem {
   pr_state: RunRow["pr_state"];
   created_at: string;
   updated_at: string;
-  /** Null = session carnet (MIN-84). */
+  /** Null = session carnet (MIN-84) ou session de RELECTURE (MIN-168). */
   issue: RunRow["issue"];
+  /**
+   * La pull request que cette session RELIT (MIN-168) — non nul ⇒ badge
+   * « Analyse de PR » et titre de la PR, là où une session de ticket montre son
+   * identifiant. Ce n'est PAS la PR qu'un run de code aurait ouverte : celle-là
+   * vit dans `pr_number` / `pr_url` / `pr_state`, et les deux ne se mélangent pas.
+   */
+  pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
   project: RunRow["project"];
   /** Un run de l'issue TRAVAILLE (queued/running) → « Numo travaille ». */
   working: boolean;
@@ -105,7 +115,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url)",
+      "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url), pull_request:pull_requests(id, number, title, url)",
     )
     .order("created_at", { ascending: false });
 
@@ -116,8 +126,13 @@ export async function GET(request: NextRequest) {
   // écartée. Le laisser passer le ferait lire comme une session CARNET — même
   // forme (issue nulle), titre de repli compris — pour un ticket qui n'existe
   // plus à l'écran. Restaurer le ticket ramène sa session telle quelle.
+  // Même raisonnement pour une session de RELECTURE dont la PR n'est plus
+  // lisible (dépôt délié depuis) : sans elle, la session n'a plus ni titre ni
+  // badge et se lirait comme une session carnet, pour une PR qui n'est plus là.
   const rows = ((data ?? []) as unknown as RunRow[]).filter(
-    (r) => r.issue_id === null || r.issue !== null,
+    (r) =>
+      (r.issue_id === null || r.issue !== null) &&
+      (r.pull_request_id === null || r.pull_request !== null),
   );
   // Les lignes arrivent triées par created_at DESC : le 1er run vu par issue est la
   // DERNIÈRE session en date — c'est elle le représentant (badge fidèle à l'état de
@@ -125,6 +140,10 @@ export async function GET(request: NextRequest) {
   // si le run a échoué à l'amorçage). `working` = un run quelconque de l'issue
   // travaille. Un run CARNET (issue_id null) est sa propre session : clé par run —
   // sans quoi toutes les sessions carnet fusionneraient sous la clé null.
+  // Une session de RELECTURE (MIN-168) est sa propre session, comme un run
+  // carnet : elle n'a pas de lignée, et deux relectures successives de la même PR
+  // sont deux conversations distinctes — la première a déjà commenté, la seconde
+  // relit un autre diff. La clé est donc le run, pas la PR.
   const byIssue = new Map<string, AgentSessionListItem>();
   for (const r of rows) {
     const sessionKey = r.issue_id ?? `run:${r.id}`;
@@ -136,13 +155,20 @@ export async function GET(request: NextRequest) {
         status: r.status,
         model: r.model,
         triggered_by: r.triggered_by,
-        noteTitle: r.issue_id ? null : r.title?.trim() || noteExcerpt(r.prompt),
+        // Le titre d'une session sans ticket : celui de la PR pour une
+        // relecture, sinon le résumé de la note (à défaut, son excerpt).
+        noteTitle: r.issue_id
+          ? null
+          : r.pull_request?.title?.trim() ||
+            r.title?.trim() ||
+            noteExcerpt(r.prompt),
         pr_number: r.pr_number,
         pr_url: r.pr_url,
         pr_state: r.pr_state,
         created_at: r.created_at,
         updated_at: r.updated_at,
         issue: r.issue,
+        pullRequest: r.pull_request,
         project: r.project,
         working: isWorking,
         runCount: 1,

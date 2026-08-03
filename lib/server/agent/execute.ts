@@ -18,6 +18,7 @@ import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import {
   getOrCreateAgentSandbox,
   cloneRepo,
+  clonePullRequest,
   commitAndPush,
   revParseHead,
   changedFiles,
@@ -108,9 +109,23 @@ import {
   buildNotebookContextMessage,
   buildInheritedPrMessage,
   buildInheritedBranchMessage,
+  buildPrReviewContextMessage,
   toPrLineThreads,
+  type AgentAnchor,
   type AgentRepoContext,
 } from "./prompt";
+import {
+  loadPrReviewBoot,
+  loadPrRunContext,
+  pullRequestHeadRef,
+  pullRequestLocalBranch,
+} from "./pr-run";
+import {
+  executePrTool,
+  PR_TOOL_NAMES,
+  type PrToolContext,
+  type ReviewableFile,
+} from "./pr-tools";
 import { resolveAgentApiKey, getModelContextWindow, supportsImageInput } from "./model";
 import { forgeFor, isForgeApiError, type Forge } from "./forge";
 import { prStateFromRef, upsertPullRequest } from "./pull-requests";
@@ -343,6 +358,9 @@ interface ExecToolConfig {
   sandbox: Sandbox;
   /** null = pas de livraison (jeu d'un sous-agent : la PR appartient au parent). */
   createPr: CreatePrHandler | null;
+  /** Écritures sur la pull request RELUE (MIN-168). null hors session de
+   *  relecture : ces trois tools ne sont alors ni offerts ni exécutables. */
+  prCtx: PrToolContext | null;
   /** null = pas de tools ticket (idem : le ticket appartient au parent). */
   issueCtx: IssueToolContext | null;
   /** null = pas de tools carnet. */
@@ -379,6 +397,7 @@ function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
   const {
     sandbox,
     createPr,
+    prCtx,
     issueCtx,
     scratchpadCtx,
     webSearch,
@@ -473,6 +492,17 @@ function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         return subagentDenied(name, "the user's notebook belongs to the parent session");
       }
       return await executeScratchpadTool(scratchpadCtx, name, args);
+    }
+    if (PR_TOOL_NAMES.has(name)) {
+      if (!prCtx) {
+        return {
+          result: {
+            error: `${name} is only available in a pull request review session.`,
+          },
+          success: false,
+        };
+      }
+      return await executePrTool(prCtx, name, args);
     }
     if (SUBAGENT_CONTROL_TOOLS.has(name)) {
       if (!subagents) {
@@ -1110,9 +1140,24 @@ export async function executeAgentRun(
     if (!target) throw new Error("No repository linked to this project");
     const forge = forgeFor(target.provider);
 
-    // Ancrage du run : ticket minddy, ou CARNET (MIN-84, issue_id null) — la note
-    // du lanceur (run.prompt) est alors l'instruction, le projet le seul ancrage.
+    // Ancrage du run, à TROIS valeurs : ticket minddy, CARNET (MIN-84, la note du
+    // lanceur est l'instruction), ou PULL REQUEST (MIN-168 — une session de
+    // relecture, en lecture seule sur le dépôt).
     const issue = run.issue_id ? await loadIssueContext(run, run.issue_id) : null;
+    const prRun = run.pull_request_id ? await loadPrRunContext(run.pull_request_id) : null;
+    // Un run ancré à une PR dont la ligne a disparu ne doit PAS retomber en run
+    // carnet : il se croirait autorisé à créer une branche et à pousser dessus.
+    if (run.pull_request_id && !prRun) {
+      throw new Error("The pull request this review was anchored to no longer exists");
+    }
+    const anchor: AgentAnchor = issue ? "issue" : prRun ? "pr" : "notebook";
+    /**
+     * Le harnais écrit-il dans le DÉPÔT pour cette session ? Faux pour une
+     * relecture, et c'est la moitié harnais de la garantie « aucune écriture » —
+     * l'autre moitié étant le jeu de tools, qui n'a aucune édition. Une phrase de
+     * prompt ne tiendrait ni l'une ni l'autre.
+     */
+    const writesToRepo = anchor !== "pr";
     const project = issue
       ? { key: issue.projectKey, name: issue.projectName }
       : await loadProjectContext(run.project_id);
@@ -1121,12 +1166,16 @@ export async function executeAgentRun(
     // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner),
     // et statut d'atterrissage des tickets créés par l'agent = son réglage de compte.
     const { locale: commentLocale, numoDefaultStatus } = await resolveRunPrefs(run);
-    const baseBranch = run.base_branch ?? target.defaultBranch;
-    const workBranch =
-      run.branch_name ??
-      (issue
-        ? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`
-        : `minddy/agent/note-${run.id.slice(0, 8)}`);
+    // Session de relecture : les branches sont celles de la PR — sa base est le
+    // point de comparaison du diff, sa tête ce qu'on relit. Ailleurs, la base
+    // choisie au lancement et la branche de travail du run.
+    const baseBranch = (prRun?.baseBranch || run.base_branch) ?? target.defaultBranch;
+    const workBranch = prRun
+      ? pullRequestLocalBranch(prRun)
+      : run.branch_name ??
+        (issue
+          ? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`
+          : `minddy/agent/note-${run.id.slice(0, 8)}`);
 
     // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
     // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
@@ -1134,6 +1183,20 @@ export async function executeAgentRun(
     const { sandbox: sb } = await getOrCreateAgentSandbox({
       name: `agent-${run.id}`,
       onCreate: async (fresh) => {
+        if (prRun) {
+          // Par la REF SERVEUR de la PR, pas par le nom de branche : sur un fork,
+          // la branche de tête n'existe pas dans le dépôt de base (cf.
+          // `clonePullRequest`). Aucune identité de committer à résoudre — rien
+          // ne sera commité.
+          await clonePullRequest(fresh, {
+            authUrl: target.authUrl,
+            baseBranch,
+            headRef: pullRequestHeadRef(prRun.provider, prRun.number),
+            headBranch: prRun.headBranch,
+            localBranch: workBranch,
+          });
+          return;
+        }
         const committer = await resolveCommitterIdentity(target);
         await cloneRepo(fresh, { authUrl: target.authUrl, baseBranch, workBranch, committer });
       },
@@ -1158,7 +1221,9 @@ export async function executeAgentRun(
     // La branche est-elle DÉJÀ sur le remote ? Vrai quand la run hérite d'une
     // lignée (`launchAgentRun` ne transmet que des branches poussées) ou qu'un
     // chunk précédent a poussé. Sert à ne stamper qu'une fois.
-    let branchStamped = run.branch_name != null;
+    // `!writesToRepo` : une relecture ne poussera jamais, donc elle n'a aucune
+    // branche à enregistrer — la marquer déjà stampée est un garde-fou de plus.
+    let branchStamped = run.branch_name != null || !writesToRepo;
     /**
      * Enregistre la branche de travail au premier push qui a VRAIMENT eu lieu :
      * c'est ce push qui la crée sur le dépôt, donc c'est lui qui la fait exister
@@ -1259,6 +1324,8 @@ export async function executeAgentRun(
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
     // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
     let messages: AgentChatMessage[];
+    /** Contexte de PR chargé à l'amorce (null hors relecture, ou sur un chunk repris). */
+    let prBoot: Awaited<ReturnType<typeof loadPrReviewBoot>> | null = null;
     let usageSeqStart = run.checkpoint?.usageSeq ?? run.continuations * 1000;
     // Instructions repo déjà servies : reprises du checkpoint sur un tour éclaté en
     // plusieurs chunks, sinon vides — l'amorce les remplit juste en dessous (MIN-115).
@@ -1269,37 +1336,90 @@ export async function executeAgentRun(
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
     } else {
+      // Ce qu'une relecture ne peut PAS lire dans la sandbox : le ticket, la
+      // discussion déjà tenue sur la PR, la CI, le sommaire des fichiers. Chargé
+      // ICI seulement (amorce à froid) : un chunk repris a tout ça dans son
+      // checkpoint, et repayer six appels de forge pour le réécrire à l'identique
+      // serait du réseau pour rien.
+      prBoot = prRun
+        ? await loadPrReviewBoot({
+            forge,
+            call: {
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prRun.number,
+            },
+            pr: prRun,
+          })
+        : null;
+      // Le sha VRAIMENT relu, tel que la forge vient de le donner : celui posé au
+      // lancement vient de `pull_requests.head_sha`, qui date du dernier webhook
+      // et peut être en retard (ou absent). C'est ce sha-ci que « relancer
+      // aurait-il quelque chose de neuf à lire ? » doit comparer.
+      if (prBoot?.headSha && prBoot.headSha !== run.pr_head_sha) {
+        await stampRun(run.id, { pr_head_sha: prBoot.headSha });
+      }
       const system = buildAgentSystemPrompt({
         locale: commentLocale,
-        anchor: issue ? "issue" : "notebook",
+        anchor,
         webSearch: webSearchAllowed,
         applyPatch: usesApplyPatch(run.model),
         images: imageInput,
-        subagents: {
-          favorites: subagentFavorites,
-          models: subagentModels,
-          maxMultiplier: subagentScope.maxMultiplier,
-        },
+        // Une relecture ne délègue pas : le bloc ne doit pas exister, sans quoi
+        // le prompt décrirait des tools que le jeu de relecture n'a pas.
+        ...(writesToRepo
+          ? {
+              subagents: {
+                favorites: subagentFavorites,
+                models: subagentModels,
+                maxMultiplier: subagentScope.maxMultiplier,
+              },
+            }
+          : {}),
       });
-      const contextMsg = issue
-        ? buildAgentContextMessage({
-            issue: {
-              identifier: issue.identifier,
-              title: issue.title,
-              description: issue.description,
-              plan: issue.plan,
+      const contextMsg = prRun
+        ? buildPrReviewContextMessage({
+            repo: { fullName: target.repoFullName },
+            pr: {
+              number: prRun.number,
+              title: prRun.title,
+              body: prBoot?.body ?? null,
+              state: prRun.state,
+              headBranch: prRun.headBranch,
+              baseBranch,
+              term: prTerm(target.provider),
             },
-            repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
-            projectName: issue.projectName,
-            attachments: issue.attachments,
-            images: imageInput,
-            numoDefaultStatus,
+            issue: prBoot?.issue ?? null,
+            files: prBoot?.files ?? [],
+            filesTruncated: prBoot?.filesTruncated,
+            comments: prBoot?.comments,
+            reviews: prBoot?.reviews,
+            lineThreads: prBoot?.lineThreads,
+            checks: prBoot?.checks ?? null,
+            // Le prompt du lanceur EST la demande d'une session de relecture (la
+            // mention `@numo`, ou une consigne écrite au clic) : il se lit en tête
+            // du contexte, pas comme un message de plus à la fin.
+            question: run.prompt,
           })
-        : buildNotebookContextMessage({
-            repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
-            projectName: project.name,
-            numoDefaultStatus,
-          });
+        : issue
+          ? buildAgentContextMessage({
+              issue: {
+                identifier: issue.identifier,
+                title: issue.title,
+                description: issue.description,
+                plan: issue.plan,
+              },
+              repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+              projectName: issue.projectName,
+              attachments: issue.attachments,
+              images: imageInput,
+              numoDefaultStatus,
+            })
+          : buildNotebookContextMessage({
+              repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+              projectName: project.name,
+              numoDefaultStatus,
+            });
       messages = [
         { role: "system", content: system },
         { role: "user", content: contextMsg },
@@ -1307,13 +1427,16 @@ export async function executeAgentRun(
       // Session FROIDE héritant d'une PR (MIN-68) : elle n'a aucun checkpoint, mais
       // la branche porte déjà du travail. On lui donne sa seule mémoire de ce passé —
       // résumé de la session précédente, PR, fil de review — pour qu'elle itère au
-      // lieu de tout refaire.
-      const inheritedPr = await buildInheritedPrContext(run, {
-        forge,
-        token: target.token,
-        repoFullName: target.repoFullName,
-        repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
-      });
+      // lieu de tout refaire. Sans objet pour une relecture, qui n'a ni lignée ni
+      // travail antérieur : son contexte de PR est déjà celui du dessus.
+      const inheritedPr = writesToRepo
+        ? await buildInheritedPrContext(run, {
+            forge,
+            token: target.token,
+            repoFullName: target.repoFullName,
+            repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+          })
+        : null;
       if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
       // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après le contexte.
       // La racine est TOUJOURS marquée vue, trouvée ou non : ce qui suit ne recharge
@@ -1331,7 +1454,10 @@ export async function executeAgentRun(
       // le bloc MCP : ses tools natifs (read_scratchpad…) le remplacent. La bulle
       // de la conversation affiche `run.prompt` (la note brute) — le wrapper est
       // de la plomberie, pas du contenu utilisateur.
-      if (run.prompt?.trim()) {
+      // Une relecture n'a PAS de message final : sa demande est déjà en tête de
+      // son contexte (« What you were asked »), et la répéter ici la ferait lire
+      // deux fois.
+      if (run.prompt?.trim() && !prRun) {
         messages.push({
           role: "user",
           content: issue
@@ -1647,6 +1773,49 @@ export async function executeAgentRun(
     };
     const scratchpadToolCtx: ScratchpadToolContext = { userId: run.created_by };
 
+    /**
+     * Les trois écritures de PR (MIN-168), câblées comme `create_pr` : la forge du
+     * provider et le token de `resolveRepoCloneTarget` — Numo commente sous
+     * l'identité de minddy, jamais sous celle d'un humain (cf. la table
+     * d'identité de `forge.ts`).
+     *
+     * `files()` est PARESSEUX et mémoïsé : la validation d'ancre en a besoin, un
+     * tour qui ne commente aucune ligne n'a aucune raison de le payer, et un chunk
+     * repris n'a pas de `prBoot` à réutiliser. On re-résout un token frais à
+     * l'appel — un chunk peut durer plus longtemps que le token du claim.
+     */
+    let prFilesCache: Promise<ReviewableFile[]> | null = prBoot
+      ? Promise.resolve(prBoot.files)
+      : null;
+    const prToolCtx: PrToolContext | null = prRun
+      ? {
+          forge,
+          call: {
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prRun.number,
+          },
+          files: () => {
+            prFilesCache ??= (async () => {
+              const fresh =
+                (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+              const { files } = await forge.listPullRequestFiles({
+                token: fresh.token,
+                repoFullName: fresh.repoFullName,
+                number: prRun.number,
+              });
+              return files;
+            })();
+            return prFilesCache;
+          },
+          model: run.model,
+          locale: commentLocale,
+          // Compteur d'ancres du RUN, semé depuis le checkpoint : c'est ce qui rend
+          // le plafond de 5 insensible à la reprise et au tour suivant.
+          inline: { used: run.checkpoint?.prInlineComments ?? 0 },
+        }
+      : null;
+
     // Jobs de fond du chunk (MIN-114). Ils meurent AVANT chaque push (un watcher
     // qui écrit pendant le `git add -A` commiterait n'importe quoi) et de toute
     // façon en fin de chunk (`finally`) : un processus oublié mangerait la microVM
@@ -1787,6 +1956,9 @@ export async function executeAgentRun(
           execTool: makeExecTool({
             sandbox: sb,
             createPr: null,
+            // La pull request appartient au parent, comme le ticket et le carnet
+            // (et une fille n'a de toute façon aucun de ces tools dans son schéma).
+            prCtx: null,
             issueCtx: null,
             scratchpadCtx: null,
             webSearch,
@@ -1976,7 +2148,7 @@ export async function executeAgentRun(
     const result = await runAgentLoop({
       messages,
       tools: agentToolsFor({
-        anchor: issue ? "issue" : "notebook",
+        anchor,
         webSearch: webSearchAllowed,
         model: run.model,
         images: imageInput,
@@ -1997,7 +2169,10 @@ export async function executeAgentRun(
       contextWindow,
       execTool: makeExecTool({
         sandbox,
-        createPr,
+        // Une relecture n'ouvre pas de pull request : le tool n'est pas dans son
+        // jeu, et le handler ne lui est pas non plus câblé (deux verrous, pas un).
+        createPr: writesToRepo ? createPr : null,
+        prCtx: prToolCtx,
         issueCtx: issueToolCtx,
         scratchpadCtx: scratchpadToolCtx,
         webSearch,
@@ -2097,6 +2272,9 @@ export async function executeAgentRun(
       ...(result.status === "suspended" && subagents.suspendedCount() > 0
         ? { parkedForSubagents: true }
         : {}),
+      // Ancres déjà posées par la session de relecture : le plafond des 5 est par
+      // RUN, donc son compteur voyage avec le checkpoint (cf. `pr-tools.ts`).
+      ...(prToolCtx ? { prInlineComments: prToolCtx.inline.used } : {}),
     };
     const nowIso = new Date().toISOString();
 
@@ -2149,7 +2327,9 @@ export async function executeAgentRun(
     // ── Fin de tour NATURELLE : push du travail, PAS de PR automatique ────────
     if (result.status === "completed") {
       const reply = result.reply?.trim() ?? "";
-      const freshTarget = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+      const freshTarget = writesToRepo
+        ? await resolveRepoCloneTarget(run.project_id).catch(() => null)
+        : null;
       const authUrl = freshTarget?.authUrl ?? target.authUrl;
       const token = freshTarget?.token ?? target.token;
 
@@ -2161,17 +2341,24 @@ export async function executeAgentRun(
       // branche n'apparaît sur le dépôt qu'au premier vrai commit (MIN-123). Si la
       // session suit une PR, GitHub la met à jour tout seul — aucune création ici :
       // ouvrir une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
+      //
+      // Une session de RELECTURE ne passe pas par là du tout (`writesToRepo`) :
+      // pas de commit, pas de push, pas de branche enregistrée, pas de PR
+      // rouverte, pas d'événement `files_changed`. C'est la moitié harnais de
+      // « aucune écriture dans le dépôt » — l'autre est le jeu de tools.
       let pushError: string | null = null;
-      const pushed = await commitAndPush(sandbox, {
-        authUrl,
-        workBranch,
-        baseBranch,
-        message: commitMessageFromReply(reply, commitRef),
-      }).catch((err) => {
-        pushError = (err as Error).message;
-        console.error("[agent-execute] turn-end push failed:", pushError);
-        return null;
-      });
+      const pushed = writesToRepo
+        ? await commitAndPush(sandbox, {
+            authUrl,
+            workBranch,
+            baseBranch,
+            message: commitMessageFromReply(reply, commitRef),
+          }).catch((err) => {
+            pushError = (err as Error).message;
+            console.error("[agent-execute] turn-end push failed:", pushError);
+            return null;
+          })
+        : null;
       // Push raté → SIGNAL VISIBLE (event + error_message), le run reste au repos
       // reprennable. Un rejet non-fast-forward n'est PAS transitoire (quelqu'un a
       // poussé sur la branche de l'agent) : sans signal, chaque tour re-échouerait
@@ -2186,7 +2373,7 @@ export async function executeAgentRun(
       }
 
       await noteBranchPushed(pushed);
-      await reopenIfRejectedWorkPushed(pushed, token);
+      if (writesToRepo) await reopenIfRejectedWorkPushed(pushed, token);
       // APRÈS la réouverture éventuelle : elle recale `prState` sur la base, donc
       // un push qui ressuscite une PR refusée se raconte sur la bonne PR.
       await notePrCommits(pushed);
@@ -2235,20 +2422,24 @@ export async function executeAgentRun(
     }
 
     // ── interrupted / erreur / suspended : push WIP + persiste le checkpoint ──
-    // Même règle qu'en fin de tour : rien ne tourne pendant qu'on stage.
+    // Même règle qu'en fin de tour : rien ne tourne pendant qu'on stage. Et même
+    // exception : une session de relecture ne pousse pas plus à mi-tour qu'à la
+    // fin — son seul état durable est son checkpoint.
     await background.stopAll().catch(() => 0);
-    const wipPushed = await commitAndPush(sandbox, {
-      authUrl: target.authUrl,
-      workBranch,
-      baseBranch,
-      message: `wip(${commitRef}): chunk ${run.continuations + 1}`,
-    }).catch((err) => {
-      // Un push raté ne doit pas perdre le checkpoint (l'état repo se re-poussera au chunk suivant).
-      console.error("[agent-execute] WIP push failed:", (err as Error).message);
-      return null;
-    });
+    const wipPushed = writesToRepo
+      ? await commitAndPush(sandbox, {
+          authUrl: target.authUrl,
+          workBranch,
+          baseBranch,
+          message: `wip(${commitRef}): chunk ${run.continuations + 1}`,
+        }).catch((err) => {
+          // Un push raté ne doit pas perdre le checkpoint (l'état repo se re-poussera au chunk suivant).
+          console.error("[agent-execute] WIP push failed:", (err as Error).message);
+          return null;
+        })
+      : null;
     await noteBranchPushed(wipPushed);
-    await reopenIfRejectedWorkPushed(wipPushed, target.token);
+    if (writesToRepo) await reopenIfRejectedWorkPushed(wipPushed, target.token);
     await notePrCommits(wipPushed);
 
     // Budget d'usage épuisé → REPOS, avec la carte qui dit pourquoi et ce qu'on peut

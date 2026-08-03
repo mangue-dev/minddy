@@ -3,6 +3,9 @@ import "server-only";
 import { MAX_BACKGROUND_JOBS } from "./background";
 import { usesApplyPatch } from "./patch";
 import { SUBAGENT_TEMPLATE_IDS } from "./subagent-templates";
+// Type SEUL (donc effacé à la compilation) : l'ancrage est déclaré dans le module
+// des prompts, qui est celui qui le décline en texte.
+import type { AgentAnchor } from "./prompt";
 
 /**
  * Tools de l'agent de code (MIN-46), format function-calling OpenRouter (même
@@ -54,6 +57,14 @@ export type AgentToolDef = {
 
 /** Timeout dur (ms) d'un `run_command`, appliqué côté Sandbox. */
 export const RUN_COMMAND_TIMEOUT_MS = 180_000;
+
+/**
+ * Commentaires de ligne posables par session de relecture (MIN-141, MIN-168).
+ * Déclaré ICI plutôt que dans `pr-tools.ts` parce que la DESCRIPTION du tool doit
+ * l'annoncer au modèle, et que ce module ne dépend d'aucune plomberie de forge —
+ * `pr-tools.ts`, qui l'applique, le lit d'ici.
+ */
+export const AI_REVIEW_MAX_INLINE_COMMENTS = 5;
 
 /** Cœur commun aux deux ancrages : exploration, édition, vérification, checklist. */
 const CORE_TOOLS: AgentToolDef[] = [
@@ -861,6 +872,86 @@ const MINDDY_TOOLS: AgentToolDef[] = [
   },
 ];
 
+/**
+ * Les TROIS écritures d'une session de relecture (MIN-168) — tout ce qu'un run
+ * ancré à une pull request peut faire sortir de la sandbox. Exécutés par
+ * `lib/server/agent/pr-tools.ts`.
+ */
+const PR_TOOLS: AgentToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "comment_pr_line",
+      description:
+        `Post a review comment ANCHORED to one line of this pull request's diff — the way a reviewer points at the exact code they mean. Use it for a concrete problem you can point at; anything you cannot anchor goes in your summary instead.\n\nThe line must be a line the DIFF shows, not just any line of the file: 'line' is numbered in the NEW file for side 'RIGHT' (an added line, or an unchanged context line of the diff) and in the OLD file for side 'LEFT' (a removed line). If the anchor does not resolve, the call comes back with the commentable line ranges of that file — pick one of them, or fold the point into your summary. Nothing is posted on a failed anchor.\n\nAt most ${AI_REVIEW_MAX_INLINE_COMMENTS} line comments per review, hard: the result tells you how many you have left. Spend them on what matters most — fifteen anchored remarks is not a review, it is noise.`,
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description:
+              "Repo-relative path of the file, exactly as the diff names it (for a renamed file, either name works).",
+          },
+          line: {
+            type: "number",
+            description:
+              "The line to anchor to, numbered in the NEW file for side 'RIGHT' and in the OLD file for side 'LEFT'.",
+          },
+          side: {
+            type: "string",
+            enum: ["LEFT", "RIGHT"],
+            description:
+              "'RIGHT' for a line the pull request adds or leaves unchanged, 'LEFT' for a line it removes. Defaults to 'RIGHT'.",
+          },
+          body: {
+            type: "string",
+            description:
+              "One or two sentences in markdown: what is wrong and what to do instead. Address the code, not the author.",
+          },
+        },
+        required: ["path", "line", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "comment_pr",
+      description:
+        "Post a message in the pull request's conversation — this is where your review's summary goes, after you have placed your line comments. Say what the change does, what you think of it, and list the points you could not anchor to a line (with `path:line` in the text so they stay findable). State your verdict in the text; you have no way to approve or request changes on the forge, and that is deliberate — you give an opinion, a human holds the door. The signature naming you and your model is appended for you: do not write one.",
+      parameters: {
+        type: "object",
+        properties: {
+          body: {
+            type: "string",
+            description: "The message, in markdown.",
+          },
+        },
+        required: ["body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reply_pr_thread",
+      description:
+        "Reply inside an existing review thread — the one anchored to a line of the diff. Use it to answer a question someone asked you there, or to say that a point has been addressed. 'comment_id' is the numeric id of a review comment of that thread, as your context lists it. To open a NEW point, use comment_pr_line instead; to talk to the pull request as a whole, comment_pr.",
+      parameters: {
+        type: "object",
+        properties: {
+          comment_id: {
+            type: "number",
+            description: "Numeric id of a review comment of the thread you are replying to.",
+          },
+          body: { type: "string", description: "The reply, in markdown." },
+        },
+        required: ["comment_id", "body"],
+      },
+    },
+  },
+];
+
 /** `create_pr` — même tool, formulé selon l'ancrage (le carnet n'a pas de ticket). */
 const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
   type: "function",
@@ -899,6 +990,48 @@ export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
   CREATE_PR_TOOL("notebook"),
 ];
 
+/** Ce qu'une session de relecture garde du cœur : LIRE, chercher, exécuter. */
+const PR_REVIEW_CORE_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "read_file",
+  "list_dir",
+  "glob",
+  "grep",
+  "run_command",
+]);
+
+/** Les lecteurs minddy d'une relecture : le ticket que la PR met en œuvre. */
+const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "search_issues",
+  "read_issue",
+  "read_attachment",
+]);
+
+/**
+ * Jeu complet d'une session de RELECTURE (MIN-168). Ce qui n'y est pas dit ce
+ * qu'elle est :
+ *  - **aucune édition** (`edit_file`, `apply_edits`, `write_file`, `apply_patch`,
+ *    `move_file`, `delete_file`) ni `create_pr` : une review ne touche pas au
+ *    dépôt, et la lecture seule est une propriété du JEU DE TOOLS — pas une
+ *    phrase de prompt qu'un modèle peut ignorer (même doctrine que le sous-agent
+ *    `explore`). Le harnais ne commite ni ne pousse pour elle non plus
+ *    (`writesToRepo`, execute.ts) : les deux moitiés de la même garantie ;
+ *  - **aucune écriture minddy** (`update_issue`, `write_issue_plan`,
+ *    `create_issue`) ni carnet : relire une PR n'autorise pas à réécrire les
+ *    tickets de l'équipe ni les notes de quelqu'un ;
+ *  - **aucune délégation** ni `run_background` : une review tient dans une
+ *    session, et un serveur laissé vivant n'a rien à y faire ;
+ *  - **pas d'`update_plan`, pas d'`ask_user`, pas de `report_verdict`** : la
+ *    checklist n'a pas de lecteur ici, la question se pose dans le fil de la PR,
+ *    et le verdict s'écrit dans le corps de la synthèse (MIN-141).
+ * Restent les lecteurs, le shell (type-check, test ciblé), les lecteurs minddy et
+ * les trois écritures de PR.
+ */
+export const PR_REVIEW_TOOLS: AgentToolDef[] = [
+  ...CORE_TOOLS.filter((t) => PR_REVIEW_CORE_TOOL_NAMES.has(t.function.name)),
+  ...MINDDY_TOOLS.filter((t) => PR_REVIEW_MINDDY_TOOL_NAMES.has(t.function.name)),
+  ...PR_TOOLS,
+];
+
 /** Les deux interfaces d'édition, mutuellement EXCLUSIVES (MIN-115). */
 const STRING_EDIT_TOOLS = new Set(["edit_file", "apply_edits", "write_file"]);
 
@@ -909,12 +1042,18 @@ const TARGETABLE_ISSUE_TOOLS = new Set(["read_issue", "update_issue", "write_iss
  * Phrase de ciblage ajoutée à ces tools selon l'ancrage. Sans elle, un run de
  * carnet lirait « the ticket this session is anchored to » sur une session qui
  * n'en a pas, et un run de ticket croirait devoir passer `issue` à chaque appel.
+ *
+ * Une session de RELECTURE a un défaut, elle aussi : le ticket que la pull
+ * request met en œuvre, quand elle en porte un (MIN-143). Le dire évite un
+ * `search_issues` pour retrouver un ticket que le contexte nomme déjà.
  */
-const TARGET_SUFFIX: Record<"issue" | "notebook", string> = {
+const TARGET_SUFFIX: Record<AgentAnchor, string> = {
   issue:
     " `issue` is OPTIONAL: omit it to act on the ticket this session is anchored to, pass it to target ANOTHER ticket of the project.",
   notebook:
     " `issue` is REQUIRED: this session is not anchored to a ticket, so name the one you mean — resolve it with search_issues first.",
+  pr:
+    " `issue` is OPTIONAL: omit it to act on the ticket this pull request implements (when it has one), pass it to target ANOTHER ticket of the project.",
 };
 
 /**
@@ -935,7 +1074,7 @@ const TARGET_SUFFIX: Record<"issue" | "notebook", string> = {
  * entre deux façons de faire exactement la même chose.
  */
 export function agentToolsFor(opts: {
-  anchor: "issue" | "notebook";
+  anchor: AgentAnchor;
   webSearch: boolean;
   /** Modèle du run — décide de l'interface d'édition servie. */
   model?: string | null;
@@ -960,7 +1099,12 @@ export function agentToolsFor(opts: {
   chain?: boolean;
 }): AgentToolDef[] {
   const patch = usesApplyPatch(opts.model);
-  const tools = opts.anchor === "issue" ? AGENT_TOOLS : NOTEBOOK_AGENT_TOOLS;
+  const tools =
+    opts.anchor === "issue"
+      ? AGENT_TOOLS
+      : opts.anchor === "pr"
+        ? PR_REVIEW_TOOLS
+        : NOTEBOOK_AGENT_TOOLS;
   return tools
     .filter((t) => {
       const name = t.function.name;

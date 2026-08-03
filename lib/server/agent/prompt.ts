@@ -38,13 +38,16 @@ export interface AgentRepoContext {
   workBranch: string;
 }
 
-/** Ancrage d'une session : ticket minddy (historique) ou carnet de tâches (MIN-84). */
-export type AgentAnchor = "issue" | "notebook";
+/**
+ * Ancrage d'une session : ticket minddy (historique), carnet de tâches (MIN-84)
+ * ou PULL REQUEST (MIN-168 — une session de relecture).
+ */
+export type AgentAnchor = "issue" | "notebook" | "pr";
 
 /**
  * Prompt système stable. `locale` pilote seulement la langue des réponses ;
- * `anchor` choisit les fragments ticket vs carnet (préfixe identique d'un run à
- * l'autre POUR UN MÊME ancrage → le prompt caching reste effectif).
+ * `anchor` choisit les fragments ticket vs carnet vs relecture (préfixe identique
+ * d'un run à l'autre POUR UN MÊME ancrage → le prompt caching reste effectif).
  */
 export function buildAgentSystemPrompt(input: {
   locale?: string | null;
@@ -85,6 +88,13 @@ export function buildAgentSystemPrompt(input: {
   };
 }): string {
   const replyLanguage = input.locale === "fr" ? "French" : "English";
+  // La relecture n'est pas une variante du prompt d'écriture : elle n'a ni
+  // édition, ni git, ni pull request à ouvrir, ni carnet, ni sous-agents. Lui
+  // servir le prompt du dessous amputé lui ferait chercher des tools qu'elle n'a
+  // pas et promettre des gestes qu'elle ne peut pas faire.
+  if (input.anchor === "pr") {
+    return buildPrReviewSystemPrompt({ locale: input.locale, images: input.images });
+  }
   const notebook = input.anchor === "notebook";
   const patch = input.applyPatch === true;
   const images = input.images === true;
@@ -274,6 +284,79 @@ ${anchorSection}${delegationSection}
 - Do not fabricate APIs, files, or test results — everything you claim must be real and verified via tools.
 - Keep diffs as small as reasonably possible while fully solving the request.
 - Never print secrets or the git remote URL.`;
+}
+
+/**
+ * Prompt système d'une session de RELECTURE (MIN-168) — une persona à part
+ * entière, comme le sous-agent : ni ticket à implémenter, ni branche à pousser,
+ * ni pull request à ouvrir.
+ *
+ * Ce qu'il reprend de la passe d'avant (MIN-141) : ce qu'on cherche et dans quel
+ * ordre, le plan du ticket comme référence, l'écart argumenté qui n'est pas une
+ * faute, le point déjà soulevé qu'on ne redit pas, l'ancre obligatoire, et le
+ * droit de ne rien trouver.
+ *
+ * Ce qu'il ajoute, et qui est la raison d'être du ticket : **le diff n'est plus la
+ * limite du monde**. L'ancienne passe ne voyait que le patch, et son prompt lui
+ * demandait donc de traiter comme une question tout ce dont la définition était
+ * hors diff — c'est-à-dire d'abandonner précisément l'erreur qu'une relecture
+ * attrape le mieux, celle de JOINTURE. Ici l'agent a le dépôt : il ouvre les
+ * fichiers que le diff ne montre pas, suit les appelants, et vérifie.
+ */
+function buildPrReviewSystemPrompt(input: {
+  locale?: string | null;
+  images?: boolean;
+}): string {
+  const language = input.locale === "fr" ? "French" : "English";
+  const attachments = input.images === true
+    ? "an image comes back AS AN IMAGE you can look at — open a mockup the ticket carries when the change claims to implement it; other binaries"
+    : "binaries";
+
+  return `You are numo, minddy's coding agent, and this session has ONE job: **review a pull request**, the way a senior engineer of this team would. You work inside an isolated sandbox where the repository is already cloned and checked out ON THE PULL REQUEST'S HEAD — its dependencies are NOT installed: run the project's install yourself if you need something that depends on them (type-check, a test).
+
+This is a CONVERSATION, not a one-shot pass. You read, you comment on the pull request, and you reply. The user's messages drive each turn: they may ask you to look at something specific, to justify a point, or to check one more thing. A turn ends when you stop calling tools and write your reply. You keep the same sandbox and the full history across turns.
+
+**You cannot change the code, and that is structural.** You have no editing tool, no way to commit, push or open a pull request, and the harness never commits anything for this session. If what is asked is a modification, say what you would change and where, and say plainly that someone has to launch a run for it to happen.
+
+## Tools
+- \`list_dir\`, \`glob\` (find files by pattern), \`grep\` (search contents) — locate the code. \`grep\` reads its pattern as a POSIX extended regex, so a verbatim snippet of code — \`onUpdateIssue={\`, \`useState(\`, \`items[0]\` — is NOT a valid pattern: pass \`fixed_strings\` to search it literally.
+- \`read_file\` — returns content with line numbers.
+- \`run_command\` — read-only work in the repository: \`git diff\`, \`git log\`, the project's type-check, a targeted test. Long output is truncated in the MIDDLE (you always get the beginning and the end) and saved in full at the returned \`full_output_path\`, readable with \`grep\` and \`read_file\` — so never pipe to \`head\`/\`tail\`. Commands already run at the repository ROOT; pass \`workdir\` instead of \`cd <dir> && …\`.
+- \`comment_pr_line\` — post one remark ANCHORED to a line of the diff. \`comment_pr\` — post your summary in the pull request's conversation. \`reply_pr_thread\` — reply inside an existing review thread.
+- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_attachment\` — open an attachment (text inline; ${attachments} via a signed URL you can curl).
+
+## How to read the diff
+The repository is checked out on the pull request's head, and the base branch is at \`origin/<base>\`. So:
+1. **Start with \`git diff origin/<base>\`** — that is the change, in full, and you read it end to end. (The clone is shallow: this diff works, but three-dot diffs and deep \`git log\` have no common history to walk.)
+2. **Then OPEN the code the diff does not show.** This is the part the diff cannot give you: the definition of a function whose call changed, the other callers of a signature that moved, the counterpart of a contract (the message catalogue behind a key, the consumer of a payload field, the migration behind a column). \`grep\` for the symbols the diff touches and read what comes back.
+3. **Verify rather than assume.** When a claim would be a blocker if true, check it: read the file, run the type-check, run the one test that covers it. A finding you verified is worth ten you suspected.
+
+## What you are looking for, in this order
+- **Bugs.** A case that is not handled, an off-by-one, a null that gets through, a missing await, an error swallowed in silence.
+- **Joint errors.** Two files changed in the same move, each correct on its own, whose contract with the other is wrong: a value produced here and consumed there (i18n placeholders, props, payload fields, env vars, DB columns), a new case added on one side and ignored on the other, something changed halfway. **This is where reading beyond the diff pays** — the other half of the contract is usually not in it.
+- **Security and data.** A user-controlled value interpolated into a path, a URL or a query; a permission check that moved or vanished; a secret that ends up in a log.
+- **Leftovers.** Debug output, commented-out code, a scratch file, a change unrelated to what the pull request says it does.
+
+## What the ticket and the thread change
+- **The plan is what was decided before the code was written.** Check the change against it: a task marked \`[x]\` whose code is nowhere to be found, a decision reversed without a word, a step quietly dropped. Task states read \`[ ]\` not started, \`[~]\` in progress, \`[x]\` done, \`[-]\` dropped.
+- **Departing from the plan is not a defect in itself** — the plan is not sacred, and the code is sometimes the better answer. The comments on the ticket are where a departure gets argued: if it is explained there and it holds, say nothing. A departure nobody ever mentioned is worth a finding.
+- **Do not say again what has already been said.** A point already raised in the pull request thread, in a submitted review, or in a comment anchored to the diff belongs to whoever raised it. Come back to it only if the code still contradicts it — and then say that it was already raised. A RESOLVED thread has been dealt with: read it for the decision it records, do not reopen it.
+
+## What you do NOT do
+- Do not restate the diff, do not summarize each file one by one, do not congratulate.
+- Do not report a problem you cannot point at: every remark is anchored to one line, or it belongs in the summary.
+- Do not raise style preferences as if they were defects — the surrounding code is the convention, match it.
+- Do not pad. A clean change deserves a summary that says so and zero line comments; that is a good review.
+
+## How to post it
+1. **Line comments first**, most serious first — \`comment_pr_line\` anchors to a line the DIFF shows (side \`RIGHT\` for an added or unchanged line, numbered in the new file; \`LEFT\` for a removed one, numbered in the old). A refused anchor comes back with the commentable ranges: fix the line, or move the point to the summary. There is a hard cap per review, and the tool tells you what is left.
+2. **Then ONE summary**, with \`comment_pr\`, once: what the change does, what you think of it, your verdict in plain words, and every point you could not anchor (with \`path:line\` in the text). The signature naming you and your model is added for you. You have no way to approve or to request changes on the forge, and that is deliberate: you give an opinion, a human holds the door.
+3. **Then reply to the user** in ${language}, in a few lines: what you read, what you checked and how, what you posted. No raw file dumps, no repetition of the summary you just published.
+
+## Rules
+- Write the review and your replies in ${language}. Keep code, identifiers and paths as they are.
+- Everything you claim must be real and verified via tools: never invent an API, a file, a caller or a test result.
+- Stay within this repository, and never print secrets or the git remote URL.`;
 }
 
 /**
@@ -639,6 +722,247 @@ export function buildAgentContextMessage(input: {
 # Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${attachmentsBlock}
 
 This ticket is the session's anchor and context. Everything above is a snapshot taken at session start — \`read_issue\` gives you the live state (fields, plan, comments, attachments) whenever it matters. The user's messages drive the work; if none follows, the ticket itself is the request.${landingStatusLine(input.numoDefaultStatus)}`;
+}
+
+// ── Amorce d'une session de RELECTURE (MIN-168) ──────────────────────────────
+
+/** Le ticket que la PR met en œuvre, quand elle en porte un (MIN-143). */
+export interface PrReviewIssueContext {
+  identifier: string;
+  title: string;
+  description?: string | null;
+  /** Le plan d'implémentation : ce qui avait été décidé AVANT d'écrire le code. */
+  plan?: string | null;
+  /** Commentaires du ticket, du plus ancien au plus récent — l'endroit où
+   *  s'argumentent les écarts entre le plan et ce qui a fini par être écrit. */
+  comments?: Array<{ author: string; body: string }>;
+}
+
+/** Un message déjà écrit sur la PR : fil, ou corps d'une review soumise. */
+export interface PrReviewNote {
+  author: string;
+  /** Ce à quoi il se rattache (l'état d'une review soumise). Entre parenthèses. */
+  about?: string | null;
+  body: string;
+}
+
+/** Un fichier du diff, réduit à ce que l'amorce en dit (pas de patch : l'agent lit le dépôt). */
+export interface PrReviewFileStat {
+  filename: string;
+  status: string;
+  additions?: number;
+  deletions?: number;
+  previous_filename?: string;
+}
+
+/** Résultats de CI, tels que `ChecksSummary` les rend (décrit structurellement). */
+export interface PrReviewChecks {
+  state: "pending" | "success" | "failure" | "neutral" | null;
+  passing: number;
+  total: number;
+  checks: Array<{ name: string; state: string; description?: string | null }>;
+}
+
+/** Nombre de fichiers listés nommément dans l'amorce. */
+const PR_FILES_LISTED_MAX = 200;
+/** Checks détaillés : ceux qui demandent une action, pas les cent verts. */
+const PR_CHECKS_LISTED_MAX = 12;
+
+function renderPrNotes(notes: PrReviewNote[]): string {
+  return notes
+    .slice(-PR_COMMENTS_MAX)
+    .map((n) => {
+      const about = n.about?.trim() ? ` (${n.about.trim()})` : "";
+      return `- **${n.author.trim() || "someone"}**${about} — ${cap(n.body.trim(), PR_COMMENT_MAX_CHARS)
+        .split("\n")
+        .join("\n  ")}`;
+    })
+    .join("\n");
+}
+
+function renderPrFiles(files: PrReviewFileStat[], truncated: boolean): string {
+  const shown = files.slice(0, PR_FILES_LISTED_MAX);
+  const lines = shown.map((f) => {
+    const renamed = f.previous_filename ? ` (renamed from ${f.previous_filename})` : "";
+    const counts =
+      f.additions != null || f.deletions != null
+        ? ` · +${f.additions ?? 0} −${f.deletions ?? 0}`
+        : "";
+    return `- \`${f.filename}\`${renamed} — ${f.status}${counts}`;
+  });
+  const additions = files.reduce((n, f) => n + (f.additions ?? 0), 0);
+  const deletions = files.reduce((n, f) => n + (f.deletions ?? 0), 0);
+  const over = files.length - shown.length;
+  // Deux façons DIFFÉRENTES d'être incomplet, et les taire serait mentir par
+  // omission : la liste peut être coupée ICI (trop de fichiers pour l'amorce), et
+  // la pagination de la forge peut l'avoir coupée AVANT (`truncated`). Dans les
+  // deux cas l'agent doit le savoir — c'est `git diff` qui fait alors autorité,
+  // et il l'a sous la main.
+  const notes = [
+    over > 0 ? `- … and ${over} more files, not listed here.` : "",
+    truncated
+      ? `**The forge's own listing was cut off**, so even this count may be short. \`git diff origin/<base> --stat\` in the repository is the complete answer — use it.`
+      : "",
+  ].filter(Boolean);
+
+  return `## Files changed (${files.length}${truncated ? "+" : ""} files · +${additions} −${deletions})\n\n${lines.join("\n")}${
+    notes.length > 0 ? `\n${notes.join("\n")}` : ""
+  }`;
+}
+
+function renderPrChecks(checks: PrReviewChecks): string {
+  if (checks.total === 0) return "";
+  const notable = checks.checks
+    .filter((c) => c.state === "failure" || c.state === "pending")
+    .slice(0, PR_CHECKS_LISTED_MAX)
+    .map((c) => `- ${c.name} — ${c.state}${c.description?.trim() ? ` (${c.description.trim()})` : ""}`);
+  const head = `## CI\n\n${checks.passing}/${checks.total} checks passing${
+    checks.state === "failure"
+      ? " — **something is failing**. A failing check is a fact, not an opinion: read it before you judge the change."
+      : checks.state === "pending"
+        ? " — some are still running."
+        : "."
+  }`;
+  return notable.length > 0 ? `${head}\n\n${notable.join("\n")}` : head;
+}
+
+/**
+ * Message utilisateur de CONTEXTE d'une session de RELECTURE (MIN-168).
+ *
+ * **Le diff n'y est pas**, et c'est la décision qui distingue cette amorce de
+ * l'ancienne passe : celle-ci servait 60 000 caractères de patch DANS L'ORDRE DU
+ * DIFF, si bien qu'un lockfile mangeait son budget et poussait hors-champ les
+ * fichiers de logique qui venaient après. L'agent, lui, a le dépôt : il lit
+ * `git diff`, en entier, et ouvre ce que le diff ne montre pas. Ce qui reste ici
+ * est ce que le dépôt NE CONTIENT PAS — le ticket, la discussion, la CI — plus la
+ * liste des fichiers, qui sert de sommaire et dit si elle est complète.
+ */
+export function buildPrReviewContextMessage(input: {
+  repo: { fullName: string };
+  pr: {
+    number: number;
+    title: string | null;
+    body?: string | null;
+    state?: string | null;
+    headBranch: string | null;
+    baseBranch: string;
+    /** Vocabulaire de la forge : « pull request » ou « merge request ». */
+    term?: string;
+  };
+  issue?: PrReviewIssueContext | null;
+  files: PrReviewFileStat[];
+  /** La liste de fichiers de la forge a-t-elle été coupée par sa pagination ? */
+  filesTruncated?: boolean;
+  /** Fil de la PR, du plus ancien au plus récent. */
+  comments?: PrReviewNote[];
+  /** Reviews formelles déjà soumises, avec leur texte. */
+  reviews?: PrReviewNote[];
+  /** Fils ancrés au code, avec leur état de résolution. */
+  lineThreads?: InheritedPrLineThread[];
+  checks?: PrReviewChecks | null;
+  /**
+   * Ce qui a été DEMANDÉ à cette session, quand quelque chose l'a été : le
+   * commentaire qui a mentionné `@numo` (MIN-162), ou la consigne du lanceur.
+   * En TÊTE, et pas noyée au milieu du contexte : c'est la demande, le reste
+   * n'est que ce qu'il faut pour y répondre. L'appelant y met qui parle — la
+   * chaîne est reprise telle quelle.
+   */
+  question?: string | null;
+}): string {
+  const { pr, repo } = input;
+  const term = pr.term ?? "pull request";
+  const parts: string[] = [];
+
+  if (input.question?.trim()) {
+    const quoted = cap(input.question.trim(), PR_COMMENT_MAX_CHARS)
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    parts.push(
+      `# What you were asked\n\n${quoted}\n\n` +
+        `Answer it first, at the top of your summary. If it asks a question, answer the question; if it just says "review this", review it — that is the default. Either way you still do the review below.`,
+    );
+  }
+
+  const stateNote =
+    pr.state === "draft"
+      ? " It is still a DRAFT — nobody has proposed this work for review yet."
+      : pr.state === "closed"
+        ? " It is CLOSED."
+        : pr.state === "merged"
+          ? " It has already been MERGED — your remarks will land after the fact."
+          : "";
+
+  parts.push(
+    `# ${term === "merge request" ? "Merge" : "Pull"} request #${pr.number} — ${pr.title?.trim() || "(untitled)"}\n\n` +
+      `Repository **${repo.fullName}**, merging **${pr.headBranch ?? "(unknown head)"}** into **${pr.baseBranch}**.${stateNote}\n\n` +
+      `The repository in your sandbox is checked out on this ${term}'s head, and the base is at \`origin/${pr.baseBranch}\`. Start with \`git diff origin/${pr.baseBranch}\`, then open what the diff does not show.`,
+  );
+
+  const body = pr.body?.trim();
+  if (body) {
+    parts.push(`## What the ${term} says it does\n\n${cap(body, 4000)}`);
+  }
+
+  if (input.issue) {
+    const description = input.issue.description?.trim();
+    parts.push(
+      `## The ticket it implements — ${input.issue.identifier}: ${input.issue.title}` +
+        (description ? `\n\n${cap(description, 2000)}` : ""),
+    );
+    const plan = input.issue.plan?.trim();
+    if (plan) {
+      // Le plan est CLÔTURÉ dans un bloc : c'est un document markdown, et ses
+      // propres `##` sortiraient sinon de la section qui les contient.
+      parts.push(
+        `### Its implementation plan\n\n` +
+          "Written BEFORE the code. Task states: `[ ]` not started, `[~]` in progress, " +
+          "`[x]` done, `[-]` dropped.\n\n```markdown\n" +
+          cap(plan, 4000) +
+          "\n```",
+      );
+    }
+    const said = input.issue.comments ?? [];
+    if (said.length > 0) {
+      parts.push(
+        `### What was said on the ticket\n\n` +
+          `This is where a departure from the plan gets argued — an explained departure is not a defect.\n\n` +
+          renderPrNotes(said),
+      );
+    }
+  }
+
+  const reviews = input.reviews ?? [];
+  const comments = input.comments ?? [];
+  const threads = input.lineThreads ?? [];
+  if (reviews.length > 0 || comments.length > 0 || threads.length > 0) {
+    const blocks = [
+      reviews.length > 0
+        ? `### Reviews already submitted\n\n${renderPrNotes(reviews)}`
+        : "",
+      comments.length > 0 ? `### The ${term} thread\n\n${renderPrNotes(comments)}` : "",
+    ].filter(Boolean);
+    parts.push(
+      `## What has already been said on this ${term}\n\n` +
+        `These points are taken — do not raise them again as if they were yours.` +
+        (blocks.length > 0 ? `\n\n${blocks.join("\n\n")}` : ""),
+    );
+    const anchored = buildLineThreadsBlock(threads);
+    if (anchored) parts.push(anchored.trim());
+  }
+
+  if (input.checks) {
+    const checksBlock = renderPrChecks(input.checks);
+    if (checksBlock) parts.push(checksBlock);
+  }
+
+  parts.push(renderPrFiles(input.files, input.filesTruncated === true));
+
+  parts.push(
+    `Everything above is context, and a SNAPSHOT: the ${term} can move under you. The code itself is in the repository — read it there.`,
+  );
+
+  return parts.join("\n\n");
 }
 
 /**

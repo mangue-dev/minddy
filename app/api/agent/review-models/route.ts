@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getPrReviewModelCatalog } from "@/lib/server/agent/models-catalog";
-import { getInstancePrReviewModel } from "@/lib/server/agent/pr-review-runs";
+import { getInstancePrReviewModel } from "@/lib/server/agent/model";
 
 /**
  * Catalogue du picker « faire vérifier par Numo ».

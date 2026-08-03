@@ -900,7 +900,7 @@ export async function executeTool(
         if (!target) return toolError("This project has no linked repository.");
         const forge = forgeFor(target.provider);
 
-        const [pr, files, reviewComments, reviewThreads] = await Promise.all([
+        const [pr, diff, reviewComments, reviewThreads] = await Promise.all([
           forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
           forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
           forge
@@ -957,7 +957,7 @@ export async function executeTool(
                     .map((c) => ({ name: c.name, url: c.url })),
                 }
               : null,
-            files: files.map((f) => ({
+            files: diff.files.map((f) => ({
               filename: f.filename,
               status: f.status,
               additions: f.additions,
@@ -967,6 +967,9 @@ export async function executeTool(
                   ? f.patch.slice(0, PATCH_CAP) + "\n… (diff truncated)"
                   : f.patch ?? null,
             })),
+            // La pagination de la forge a coupé la liste : le dire plutôt que de
+            // laisser conclure sur ce qui a été vu.
+            files_truncated: diff.truncated,
             // Commentaires ancrés au code, regroupés en fils. `line: null` = le
             // code visé a changé depuis : l'ancre ne vaut plus, seul le hunk dit
             // de quoi on parlait.
