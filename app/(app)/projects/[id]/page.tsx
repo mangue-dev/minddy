@@ -39,6 +39,8 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveSidePanel } from "@/components/objective-side-panel";
 import { ProjectSeedDialog } from "@/components/project-seed/project-seed-dialog";
+import { ProjectImportDialog } from "@/components/project-seed/project-import-dialog";
+import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import { createIssueApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
@@ -148,6 +150,16 @@ function ProjectBoard() {
   // L'amorce par brief (MIN-172) : le wizard finit sur `?setup=brief`, et le
   // board vide la propose aussi — c'est le trou qu'elle comble.
   const [seedOpen, setSeedOpen] = useState(false);
+  // L'amorce par import (MIN-171) : `?setup=import` ouvre le panneau d'import
+  // avec le CSV déposé dans le wizard.
+  const [importOpen, setImportOpen] = useState(false);
+  // Ce que le wizard a récolté une étape plus tôt (brief collé, CSV déposé).
+  // Pris une fois : le rouvrir plus tard repart d'une surface vide.
+  const [handoff, setHandoff] = useState<ReturnType<typeof takeSeedHandoff>>(null);
+  // La remise se PREND, elle ne se relit pas : un effet rejoué (StrictMode en
+  // dev le fait systématiquement) la trouverait vide et effacerait celle qu'on
+  // vient d'obtenir.
+  const handoffTaken = useRef(false);
   // Views Numo is currently building from a description (their chip shows a
   // spinner). Maps view id → the view's updated_at when generation started;
   // cleared when the view's stored config changes (Numo applied filters) or
@@ -373,14 +385,20 @@ function ProjectBoard() {
     }
   }, [newParam, pathname, router]);
 
-  // Fin du wizard de création : /projects/[id]?setup=brief ouvre l'amorce.
-  // L'instruction est à usage unique, comme `?new=` — la refermer ne doit pas
-  // la rouvrir au rendu suivant.
+  // Fin du wizard de création : /projects/[id]?setup=brief|import ouvre
+  // l'amorce que l'utilisateur a choisie (MIN-171). L'URL ne porte que
+  // l'instruction — ce qui a été saisi voyage en mémoire (project-seed-handoff)
+  // parce qu'un `File` ne se sérialise pas. L'instruction est à usage unique,
+  // comme `?new=` : la refermer ne doit pas la rouvrir au rendu suivant.
   useEffect(() => {
-    if (setupParam === "brief") {
-      setSeedOpen(true);
-      router.replace(pathname);
+    if (setupParam !== "brief" && setupParam !== "import") return;
+    if (!handoffTaken.current) {
+      handoffTaken.current = true;
+      setHandoff(takeSeedHandoff());
     }
+    if (setupParam === "brief") setSeedOpen(true);
+    else setImportOpen(true);
+    router.replace(pathname);
   }, [setupParam, pathname, router]);
 
   // `C` (new issue) is an app-wide shortcut now (see CreateProvider). The column
@@ -598,6 +616,14 @@ function ProjectBoard() {
         open={seedOpen}
         onOpenChange={setSeedOpen}
         projectId={projectId}
+        initialBrief={handoff?.kind === "brief" ? handoff.text : null}
+      />
+
+      <ProjectImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        projectId={projectId}
+        initialFile={handoff?.kind === "import" ? handoff.file : null}
       />
 
       <ObjectiveSidePanel

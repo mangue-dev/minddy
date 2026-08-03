@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -39,11 +39,15 @@ export function ProjectSeedDialog({
   open,
   onOpenChange,
   projectId,
+  initialBrief,
   onSeeded,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  /** Le brief collé pendant le wizard (MIN-171), tendu par la remise en
+   *  mémoire. Il remplit le champ ; c'est l'utilisateur qui lance la passe. */
+  initialBrief?: string | null;
   onSeeded?: () => void;
 }) {
   const t = useTranslations("Seed");
@@ -62,6 +66,15 @@ export function ProjectSeedDialog({
     setPending(false);
     setCreating(false);
   };
+
+  // Le brief venu du wizard remplit le champ UNE fois, à l'identité de la
+  // valeur : sans la marque, chaque rendu réécrirait par-dessus les retouches.
+  const appliedBrief = useRef<string | null>(null);
+  useEffect(() => {
+    if (initialBrief == null || appliedBrief.current === initialBrief) return;
+    appliedBrief.current = initialBrief;
+    setBrief(initialBrief);
+  }, [initialBrief]);
 
   const runPass = async () => {
     if (pending) return;

@@ -30,12 +30,29 @@ export interface DraftRepo {
   fullName: string;
 }
 
+/** D'où on part (MIN-171) — la première question du wizard. */
+export type ProjectOrigin = "new" | "existing";
+
+/**
+ * L'amorce retenue, jouée APRÈS la création (le projet n'existe pas encore).
+ *
+ * `import` ne porte PAS le CSV : le fichier pèse jusqu'à `MAX_IMPORT_CSV_BYTES`
+ * (5 Mo) là où sessionStorage plafonne bien plus bas, et il ne survit donc pas
+ * au détour chez le provider git. Le retour le redemande, en le disant.
+ */
+export type DraftSeed =
+  | { kind: "brief"; text: string }
+  | { kind: "numo" }
+  | { kind: "import" };
+
 export interface ProjectDraft {
   /** Id du futur projet, tiré côté client : c'est la graine de l'orbe. */
   id: string;
   name: string;
   key: string;
   keyTouched: boolean;
+  origin: ProjectOrigin | null;
+  seed: DraftSeed | null;
   /**
    * L'icône choisie, à rejouer à la création. Un fichier y voyage en data URL
    * WebP déjà compressée par le serveur — quelques dizaines de Ko, largement
@@ -88,9 +105,15 @@ export function readProjectDraft(): ProjectDraft | null {
   ) {
     return null;
   }
-  // Un brouillon écrit par une version précédente n'a pas ce champ : le projet
-  // vaut mieux sans icône qu'un wizard qui plante en le relisant.
-  return { ...draft, icon: normalizeIconChoice(draft.icon) };
+  // Un brouillon écrit par une version précédente n'a pas ces champs : le
+  // projet vaut mieux sans icône ni amorce qu'un wizard qui plante en le
+  // relisant.
+  return {
+    ...draft,
+    icon: normalizeIconChoice(draft.icon),
+    origin: normalizeOrigin(draft.origin),
+    seed: normalizeSeed(draft.seed),
+  };
 }
 
 function normalizeIconChoice(value: unknown): ProjectIconChoice {
@@ -98,6 +121,18 @@ function normalizeIconChoice(value: unknown): ProjectIconChoice {
   if (choice?.kind === "site" && typeof choice.siteUrl === "string") return choice;
   if (choice?.kind === "file" && typeof choice.previewUrl === "string") return choice;
   return { kind: "none" };
+}
+
+function normalizeOrigin(value: unknown): ProjectOrigin | null {
+  return value === "new" || value === "existing" ? value : null;
+}
+
+function normalizeSeed(value: unknown): DraftSeed | null {
+  const seed = value as DraftSeed | undefined;
+  if (seed?.kind === "brief" && typeof seed.text === "string") return seed;
+  if (seed?.kind === "numo") return { kind: "numo" };
+  if (seed?.kind === "import") return { kind: "import" };
+  return null;
 }
 
 export function clearProjectDraft(): void {

@@ -75,6 +75,13 @@ export interface AnalyticsEventProps {
   project_wizard_opened: { source: "sidebar" | "home" | "palette" | "resume" };
   project_wizard_step_viewed: { step: string };
   project_wizard_abandoned: { last_step: string };
+  /** La première question du wizard (MIN-171) : d'où on part. C'est la mesure
+   *  de laquelle des deux entrées sert vraiment — un projet neuf à cadrer, ou
+   *  un backlog qui existe déjà ailleurs. */
+  project_wizard_origin_chosen: { origin: "new" | "existing" };
+  /** Ce que l'étape d'amorce a récolté, « rien » compris : l'écart entre
+   *  l'origine choisie et l'amorce retenue dit si l'étape tient sa promesse. */
+  project_wizard_seed_chosen: { seed: "brief" | "numo" | "import" | "none" };
   project_wizard_completed: {
     has_git_link: boolean;
     feedback_enabled: boolean;
@@ -420,6 +427,8 @@ const EVENT_NAMES = [
   "project_wizard_opened",
   "project_wizard_step_viewed",
   "project_wizard_abandoned",
+  "project_wizard_origin_chosen",
+  "project_wizard_seed_chosen",
   "project_wizard_completed",
   "project_created",
   "project_opened",

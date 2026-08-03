@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,12 +14,24 @@ import {
   Input,
   Spinner,
   Switch,
+  Textarea,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  cn,
   toast,
 } from "mangue-ui";
-import { ArrowLeft, ArrowRight, Github, Gitlab, Info, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  FileUp,
+  Github,
+  Gitlab,
+  Info,
+  ListTodo,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { isValidKey, normalizeKey, suggestKeyFromName } from "@/lib/project-key";
@@ -37,8 +49,13 @@ import {
   clearProjectDraft,
   saveProjectDraft,
   type DraftRepo,
+  type DraftSeed,
   type ProjectDraft,
+  type ProjectOrigin,
 } from "@/lib/project-draft";
+import { putSeedHandoff } from "@/lib/project-seed-handoff";
+import { MAX_IMPORT_CSV_BYTES } from "@/lib/import/types";
+import { MAX_BRIEF_CHARS } from "@/lib/seed/types";
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { SearchSelect } from "@/components/search-select";
@@ -53,8 +70,9 @@ import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
 
 /**
- * Wizard de création de projet (MIN-62) : Projet → Icône → Dépôt git →
- * Finitions. Le layout est celui du wizard AutoKap (project-wizard-dialog.tsx) :
+ * Wizard de création de projet (MIN-62, MIN-171) : D'où part-on ? → Projet →
+ * Icône → Dépôt git → Amorce → Finitions.
+ * Le layout est celui du wizard AutoKap (project-wizard-dialog.tsx) :
  * grande modale fixe (tokens --spacing-dialog-w/h), colonne centrée max-w-lg,
  * titre + sous-titre + stepper à pilules, corps d'étape animé, CTA pleine
  * largeur « Continuer » (« Terminer » en dernière étape) et retour en lien
@@ -75,10 +93,31 @@ import type { CandidateRepo } from "@/lib/types";
  * L'installation GitHub / l'OAuth GitLab quittent la page en plein écran : le
  * brouillon est sérialisé avant de partir (lib/project-draft.ts) et le callback
  * revient sur `/home?setup=git`, où `ProjectDraftResume` rouvre le wizard.
+ *
+ * L'amorce suit la même règle que le reste : l'étape COLLECTE (un brief collé,
+ * un CSV déposé), elle n'écrit rien. La passe qui en fait des tickets se joue
+ * après la création, sur le board du projet neuf, où `?setup=` la déclenche.
  */
 
-const STEPS = ["project", "icon", "git", "finish"] as const;
-type StepId = (typeof STEPS)[number];
+const ALL_STEPS = [
+  "origin",
+  "project",
+  "icon",
+  "git",
+  "seed",
+  "finish",
+] as const;
+type StepId = (typeof ALL_STEPS)[number];
+
+/**
+ * Les étapes du parcours. L'amorce dépend de l'origine — tant qu'elle n'est pas
+ * choisie, l'étape n'a pas de contenu et ne compte pas dans le stepper.
+ */
+function stepsFor(origin: ProjectOrigin | null): StepId[] {
+  return origin
+    ? ["origin", "project", "icon", "git", "seed", "finish"]
+    : ["origin", "project", "icon", "git", "finish"];
+}
 
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
@@ -115,6 +154,11 @@ export function CreateProjectWizard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Étape « D'où part-on ? » — la réponse décide de ce que l'étape d'amorce
+  // demande, et de rien d'autre : le projet se crée de la même façon des deux
+  // côtés.
+  const [origin, setOrigin] = useState<ProjectOrigin | null>(null);
+
   // Étape « Projet ». `draftId` est l'id du futur projet : la graine de l'orbe
   // doit être connue avant la création, sinon l'aperçu ment.
   const [draftId, setDraftId] = useState<string>(() => crypto.randomUUID());
@@ -136,20 +180,47 @@ export function CreateProjectWizard({
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [repo, setRepo] = useState<DraftRepo | null>(null);
 
+  // Étape « Amorce ». Elle collecte, elle n'écrit pas : le brief reste un
+  // texte, le CSV reste un `File` en mémoire — aucun appel réseau ici, le
+  // projet n'existe pas encore.
+  const [brief, setBrief] = useState("");
+  const [numo, setNumo] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  // Un CSV ne tient pas dans sessionStorage : le détour par le provider git
+  // l'oublie. On le redemande, et on le DIT — sinon la zone de dépôt vide
+  // passe pour un bug.
+  const [csvLost, setCsvLost] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
   // Étape « Finitions ». Smart Assign est proposé ACTIVÉ : c'est le réglage
   // qu'on veut par défaut sur un projet neuf, et le décocher reste à un clic.
   const [feedbackEnabled, setFeedbackEnabled] = useState(false);
   const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
-  const step: StepId = STEPS[Math.min(stepIndex, STEPS.length - 1)];
-  const isLast = stepIndex >= STEPS.length - 1;
+  const steps = useMemo(() => stepsFor(origin), [origin]);
+  const step: StepId = steps[Math.min(stepIndex, steps.length - 1)];
+  const isLast = stepIndex >= steps.length - 1;
+
+  /** L'amorce telle qu'elle est à cet instant — déduite, jamais stockée deux
+   *  fois : c'est ce que le brouillon porte et ce que `finish()` rejoue. */
+  const seed: DraftSeed | null = useMemo(() => {
+    if (origin === "existing") return csvFile ? { kind: "import" } : null;
+    if (numo) return { kind: "numo" };
+    return brief.trim() ? { kind: "brief", text: brief.trim() } : null;
+  }, [origin, csvFile, numo, brief]);
+
+  // Le plafond de la passe (lib/seed/types.ts) : le refuser ici évite de le
+  // découvrir après la création du projet, sur le board.
+  const briefTooLong = step === "seed" && brief.length > MAX_BRIEF_CHARS;
 
   const reset = useCallback(() => {
     setStepIndex(0);
     setSubmitting(false);
     setError(null);
     setDraftId(crypto.randomUUID());
+    setOrigin(null);
     setName("");
     setKey("");
     setKeyTouched(false);
@@ -158,6 +229,10 @@ export function CreateProjectWizard({
     setActiveConnectionId(null);
     setCandidates(null);
     setRepo(null);
+    setBrief("");
+    setNumo(false);
+    setCsvFile(null);
+    setCsvLost(false);
     setFeedbackEnabled(false);
     setSmartAssignEnabled(true);
     setAutoAssignEnabled(false);
@@ -169,15 +244,22 @@ export function CreateProjectWizard({
     if (!resume) return;
     const { draft } = resume;
     setDraftId(draft.id);
+    setOrigin(draft.origin);
     setName(draft.name);
     setKey(draft.key);
     setKeyTouched(draft.keyTouched);
     setIcon(draft.icon);
     setRepo(draft.repo);
+    setBrief(draft.seed?.kind === "brief" ? draft.seed.text : "");
+    setNumo(draft.seed?.kind === "numo");
+    // Le CSV n'a pas fait le voyage (voir `DraftSeed`) : la zone de dépôt
+    // repart vide, avec la note qui explique pourquoi.
+    setCsvFile(null);
+    setCsvLost(draft.seed?.kind === "import");
     setFeedbackEnabled(draft.feedbackEnabled);
     setSmartAssignEnabled(draft.smartAssignEnabled);
     setAutoAssignEnabled(draft.autoAssignEnabled);
-    setStepIndex(STEPS.indexOf("git"));
+    setStepIndex(stepsFor(draft.origin).indexOf("git"));
     setActiveConnectionId(resume.connectionId);
   }, [resume]);
 
@@ -210,6 +292,39 @@ export function CreateProjectWizard({
   const goToStep = (target: number) => {
     if (submitting) return;
     if (target >= 0 && target < stepIndex) setStepIndex(target);
+  };
+
+  // ── Étape « D'où part-on ? » ──────────────────────────────────────────────
+  // Un choix binaire qui demande deux gestes est un choix binaire mal posé : la
+  // carte cliquée pose la réponse ET avance.
+  const chooseOrigin = (next: ProjectOrigin) => {
+    setOrigin(next);
+    // Changer d'avis ne traîne pas l'amorce de l'autre branche derrière soi.
+    if (next !== origin) {
+      setBrief("");
+      setNumo(false);
+      setCsvFile(null);
+      setCsvLost(false);
+    }
+    track("project_wizard_origin_chosen", { origin: next });
+    setStepIndex((i) => i + 1);
+  };
+
+  // ── Étape « Amorce » ──────────────────────────────────────────────────────
+  const handleCsvFile = (file: File) => {
+    if (file.size > MAX_IMPORT_CSV_BYTES) {
+      toast.error(tSettings("importErrorTooLarge"));
+      return;
+    }
+    setCsvFile(file);
+    setCsvLost(false);
+  };
+
+  /** Quitter l'étape d'amorce, quel que soit le chemin (« Continuer »,
+   *  « Passer », le lien vers Numo) : le choix se compte une fois, là. */
+  const leaveSeedStep = (chosen: DraftSeed | null) => {
+    track("project_wizard_seed_chosen", { seed: chosen?.kind ?? "none" });
+    setStepIndex((i) => i + 1);
   };
 
   // ── Étape « Projet » ──────────────────────────────────────────────────────
@@ -270,10 +385,12 @@ export function CreateProjectWizard({
   /** L'état complet du wizard, tel qu'il doit survivre à un redirect provider. */
   const snapshot = () => ({
     id: draftId,
+    origin,
     name,
     key,
     keyTouched,
     icon,
+    seed,
     repo,
     feedbackEnabled,
     smartAssignEnabled,
@@ -410,28 +527,53 @@ export function CreateProjectWizard({
     toast.success(t("wizardDoneToast", { name: created.name }));
     setSubmitting(false);
     handleOpenChange(false);
-    router.push(`/projects/${created.id}`);
+
+    // L'amorce se joue sur le board du projet neuf : c'est le trou qu'on est en
+    // train de combler, et la passe est trop longue pour une étape de wizard
+    // (MIN-170). Ce qui a été saisi voyage en mémoire, l'URL ne porte que
+    // l'instruction. « J'en parle avec Numo » n'a pas encore sa surface
+    // (MIN-173) : le choix est compté, l'atterrissage reste le board.
+    if (seed?.kind === "brief") {
+      putSeedHandoff({ kind: "brief", text: seed.text });
+      router.push(`/projects/${created.id}?setup=brief`);
+    } else if (seed?.kind === "import" && csvFile) {
+      putSeedHandoff({ kind: "import", file: csvFile });
+      router.push(`/projects/${created.id}?setup=import`);
+    } else {
+      router.push(`/projects/${created.id}`);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (step === "project") submitProjectStep();
+    else if (step === "seed") leaveSeedStep(seed);
     else if (step === "finish") void finish();
     else setStepIndex((i) => i + 1);
   };
 
   const stepTitle: Record<StepId, string> = {
+    origin: t("wizardOriginTitle"),
     project: t("newProject"),
     icon: t("wizardIconTitle"),
     git: t("wizardGitTitle"),
+    seed:
+      origin === "existing" ? t("wizardSeedImportTitle") : t("wizardSeedBriefTitle"),
     finish: t("wizardFinishTitle"),
   };
   const stepSubtitle: Record<StepId, string> = {
+    origin: t("wizardOriginDesc"),
     project: t("dialogDescription", {
       entityPlural: tIssue("entityPlural").toLowerCase(),
     }),
     icon: t("wizardIconDesc"),
     git: t("wizardGitDesc"),
+    seed:
+      origin === "existing"
+        ? t("wizardSeedImportDesc")
+        : t("wizardSeedBriefDesc", {
+            entityPlural: tIssue("entityPlural").toLowerCase(),
+          }),
     finish: t("wizardFinishSubtitle"),
   };
 
@@ -475,9 +617,9 @@ export function CreateProjectWizard({
               </div>
               <WizardStepper
                 currentStep={stepIndex + 1}
-                totalSteps={STEPS.length}
+                totalSteps={steps.length}
                 onStepClick={(s) => goToStep(s - 1)}
-                getStepLabel={(s) => stepTitle[STEPS[s - 1]]}
+                getStepLabel={(s) => stepTitle[steps[s - 1]]}
               />
             </div>
 
@@ -491,6 +633,50 @@ export function CreateProjectWizard({
                   transition={MOTION}
                   className="w-full"
                 >
+                  {step === "origin" && (
+                    <div className="flex flex-col gap-3">
+                      {(
+                        [
+                          {
+                            id: "new",
+                            Icon: Sparkles,
+                            label: t("wizardOriginNewLabel"),
+                            desc: t("wizardOriginNewDesc"),
+                          },
+                          {
+                            id: "existing",
+                            Icon: ListTodo,
+                            label: t("wizardOriginExistingLabel"),
+                            desc: t("wizardOriginExistingDesc"),
+                          },
+                        ] as const
+                      ).map(({ id, Icon, label, desc }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => chooseOrigin(id)}
+                          aria-pressed={origin === id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors",
+                            origin === id
+                              ? "border-brand/50 bg-brand/5"
+                              : "border-border hover:border-ring/60 hover:bg-accent/40"
+                          )}
+                        >
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                            <Icon className="size-5" strokeWidth={1.5} />
+                          </span>
+                          <span className="flex min-w-0 flex-col gap-0.5">
+                            <span className="text-sm font-medium">{label}</span>
+                            <span className="text-xs leading-relaxed text-muted-foreground">
+                              {desc}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {step === "project" && (
                     <div className="flex items-end gap-3">
                       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -647,6 +833,147 @@ export function CreateProjectWizard({
                     </div>
                   )}
 
+                  {step === "seed" && origin === "new" && (
+                    <div className="flex flex-col gap-2">
+                      <Textarea
+                        autoFocus
+                        value={brief}
+                        onChange={(e) => {
+                          setBrief(e.target.value);
+                          // Écrire, c'est reprendre la main : le choix de
+                          // passer par Numo ne tient plus.
+                          if (numo) setNumo(false);
+                        }}
+                        placeholder={t("wizardSeedPlaceholder")}
+                        aria-label={t("wizardSeedBriefTitle")}
+                        rows={8}
+                        className="max-h-[40vh] min-h-40 overflow-y-auto"
+                      />
+                      <div className="flex items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNumo(true);
+                            setBrief("");
+                            leaveSeedStep({ kind: "numo" });
+                          }}
+                          className="text-left text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        >
+                          {t("wizardSeedNumoLink")}
+                        </button>
+                        {/* Le compteur n'apparaît qu'aux abords du plafond :
+                            avant, il n'apprend rien et met une limite sous les
+                            yeux de qui ne l'atteindra jamais. */}
+                        {brief.length > MAX_BRIEF_CHARS * 0.75 && (
+                          <span
+                            className={cn(
+                              "shrink-0 font-mono text-xs tabular-nums",
+                              brief.length > MAX_BRIEF_CHARS
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {t("wizardSeedCounter", {
+                              count: brief.length,
+                              max: MAX_BRIEF_CHARS,
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {step === "seed" && origin === "existing" && (
+                    <div className="flex flex-col gap-3">
+                      <input
+                        ref={csvInputRef}
+                        type="file"
+                        accept=".csv,text/csv"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleCsvFile(file);
+                        }}
+                      />
+                      {csvFile ? (
+                        <>
+                          <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                              <FileUp className="size-5" strokeWidth={1.5} />
+                            </span>
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="truncate text-sm font-medium">
+                                {csvFile.name}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {t("wizardSeedFileReady")}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                            onClick={() => {
+                              setCsvFile(null);
+                              if (csvInputRef.current) csvInputRef.current.value = "";
+                            }}
+                          >
+                            {tCommon("remove")}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => csvInputRef.current?.click()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                csvInputRef.current?.click();
+                              }
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              setDragOver(true);
+                            }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setDragOver(false);
+                              const file = e.dataTransfer.files?.[0];
+                              if (file) handleCsvFile(file);
+                            }}
+                            className={cn(
+                              "flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center outline-none transition-colors",
+                              dragOver
+                                ? "border-ring bg-accent/40"
+                                : "border-border hover:border-ring/60 focus-visible:border-ring"
+                            )}
+                          >
+                            <FileUp
+                              className="size-5 text-muted-foreground"
+                              aria-hidden
+                            />
+                            <p className="text-sm font-medium">
+                              {tSettings("importDropTitle")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {tSettings("importDropHint")}
+                            </p>
+                          </div>
+                          {csvLost && (
+                            <p className="text-center text-xs text-muted-foreground">
+                              {t("wizardSeedFileLost")}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {step === "finish" && (
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
@@ -704,18 +1031,31 @@ export function CreateProjectWizard({
               </AnimatePresence>
             </div>
 
-            {error && (
+            {(error || briefTooLong) && (
               <p className="text-center text-sm text-destructive" role="alert">
-                {error}
+                {error ?? t("wizardSeedTooLong", { max: MAX_BRIEF_CHARS })}
               </p>
             )}
 
             <div className="flex w-full flex-col items-center gap-3">
-              <Button type="submit" className="h-10 w-full" disabled={submitting}>
-                {submitting && <Spinner />}
-                {isLast ? t("wizardFinish") : tCommon("continue")}
-                {!submitting && !isLast && <ArrowRight className="ml-1 h-4 w-4" />}
-              </Button>
+              {/* L'étape d'origine n'a pas de CTA : la carte cliquée EST le
+                  geste. Un « Continuer » y demanderait un second clic pour
+                  confirmer ce qui vient d'être dit. */}
+              {step !== "origin" && (
+                <Button
+                  type="submit"
+                  className="h-10 w-full"
+                  disabled={submitting || briefTooLong}
+                >
+                  {submitting && <Spinner />}
+                  {isLast
+                    ? t("wizardFinish")
+                    : step === "seed" && !seed
+                      ? t("wizardSeedSkip")
+                      : tCommon("continue")}
+                  {!submitting && !isLast && <ArrowRight className="ml-1 h-4 w-4" />}
+                </Button>
+              )}
               {stepIndex > 0 && (
                 <Button
                   type="button"
