@@ -16,9 +16,9 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 
 /**
  * Réglages du compte → « Données personnelles » (MIN-119).
@@ -125,56 +125,67 @@ export function AccountDataSection() {
 
   return (
     <>
-      <SettingsSection title={t("exportTitle")} description={t("exportDesc")}>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" onClick={() => void handleExport()} disabled={exporting}>
-            {exporting ? <Spinner /> : <Download className="size-4" />}
-            {t("exportButton")}
-          </Button>
-          <p className="text-xs text-muted-foreground">{t("exportHint")}</p>
-        </div>
-      </SettingsSection>
+      <SettingsGroup icon={Download} title={t("exportTitle")} description={t("exportDesc")}>
+        <SettingsRow
+          label={t("exportButton")}
+          hint={t("exportHint")}
+          control={
+            <Button variant="outline" onClick={() => void handleExport()} disabled={exporting}>
+              {exporting ? <Spinner /> : <Download className="size-4" />}
+              {t("exportButton")}
+            </Button>
+          }
+        />
+      </SettingsGroup>
 
-      <SettingsSection destructive title={t("deleteTitle")} description={t("deleteDesc")}>
-        <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3.5">
-          <div className="space-y-1.5 text-sm">
-            <p className="font-medium">{t("deleteWhatTitle")}</p>
-            {preview ? (
-              <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                <li>{t("deleteWhatAccount")}</li>
-                {ownedCount > 0 && (
-                  <li>
-                    {t("deleteWhatProjects", {
-                      count: ownedCount,
-                      issues: preview.issueCount,
-                    })}
-                  </li>
-                )}
-                {preview.affectedMemberCount > 0 && (
-                  <li>{t("deleteWhatMembers", { count: preview.affectedMemberCount })}</li>
-                )}
-                {preview.commentCount > 0 && (
-                  <li>{t("deleteWhatComments", { count: preview.commentCount })}</li>
-                )}
-                {preview.hasActiveSubscription && <li>{t("deleteWhatSubscription")}</li>}
-              </ul>
-            ) : (
-              <p className="text-xs text-muted-foreground">{tc("loading")}</p>
-            )}
-          </div>
+      {/* La carte porte le ton : l'encart destructif qu'elle contenait dessinait
+          une seconde bordure rouge à l'intérieur de la première. */}
+      <SettingsGroup
+        icon={Trash2}
+        tone="destructive"
+        title={t("deleteTitle")}
+        description={t("deleteDesc")}
+      >
+        <SettingsRow
+          label={t("deleteWhatTitle")}
+          control={
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setConfirmEmail("");
+                setConfirmOpen(true);
+              }}
+            >
+              {t("deleteButton")}
+            </Button>
+          }
+        >
+          {preview ? (
+            <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+              <li>{t("deleteWhatAccount")}</li>
+              {ownedCount > 0 && (
+                <li>
+                  {t("deleteWhatProjects", {
+                    count: ownedCount,
+                    issues: preview.issueCount,
+                  })}
+                </li>
+              )}
+              {preview.affectedMemberCount > 0 && (
+                <li>{t("deleteWhatMembers", { count: preview.affectedMemberCount })}</li>
+              )}
+              {preview.commentCount > 0 && (
+                <li>{t("deleteWhatComments", { count: preview.commentCount })}</li>
+              )}
+              {preview.hasActiveSubscription && <li>{t("deleteWhatSubscription")}</li>}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">{tc("loading")}</p>
+          )}
           <p className="text-xs text-muted-foreground">{t("deleteExportFirst")}</p>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => {
-              setConfirmEmail("");
-              setConfirmOpen(true);
-            }}
-          >
-            {t("deleteButton")}
-          </Button>
-        </div>
-      </SettingsSection>
+        </SettingsRow>
+      </SettingsGroup>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

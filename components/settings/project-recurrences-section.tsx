@@ -16,6 +16,7 @@ import {
 } from "mangue-ui";
 import { CircleSlash, Repeat, User } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
@@ -39,9 +40,14 @@ import type { RecurringIssue } from "@/lib/types";
 export function ProjectRecurrencesSection({
   projectId,
   projectKey,
+  title,
+  description,
 }: {
   projectId: string;
   projectKey: string;
+  /** Titre et indice du groupe — la page les lit dans le namespace Recurrence. */
+  title: string;
+  description: string;
 }) {
   const t = useTranslations("Recurrence");
   const tField = useTranslations("Field");
@@ -93,113 +99,113 @@ export function ProjectRecurrencesSection({
     }
   };
 
-  if (rows === null) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-11 w-full" />
-        <Skeleton className="h-11 w-full" />
-      </div>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon={<Repeat className="size-6" />}
-        title={t("empty")}
-        description={t("emptyHint")}
-      />
-    );
-  }
-
   return (
-    <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
-      {rows.map((row) => {
-        const ref = issueIdentifier(projectKey, row.number);
-        const due = parseDueDate(row.due_date);
-        const assignee = members.find((m) => m.user_id === row.assignee_id);
-        return (
-          // Deux lignes, toujours : le ticket au-dessus, son horaire en
-          // dessous. Sur une seule, la cadence dite en toutes lettres (« tous
-          // les 3 du mois à 09:00 ») et le titre se disputaient la largeur —
-          // l'un rognait l'autre, et la fin de rangée passait à la ligne.
-          <div key={row.id} className="flex flex-col gap-2 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="shrink-0 font-mono">
-                {ref}
-              </Badge>
-              <Link
-                href={`/projects/${projectId}?issue=${row.id}`}
-                className="min-w-0 flex-1 truncate text-sm hover:underline"
-              >
-                {row.title}
-              </Link>
-              {/* Même affordance que les cartes du tableau : un rond pointillé
-                  pour « personne », jamais un avatar vide. */}
-              {assignee ? (
-                <UserAvatar
-                  seed={assignee.avatar_seed}
-                  title={displayName(assignee)}
-                  className="size-6"
-                />
-              ) : (
-                <span
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
-                  title={tField("unassigned")}
+    <SettingsGroup
+      icon={Repeat}
+      title={title}
+      description={description}
+      variant={rows !== null && rows.length === 0 ? "block" : "rows"}
+    >
+      {rows === null ? (
+        <div className="flex flex-col gap-2 py-3">
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+        </div>
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={<Repeat className="size-6" />}
+          title={t("empty")}
+          description={t("emptyHint")}
+        />
+      ) : (
+        rows.map((row) => {
+          const ref = issueIdentifier(projectKey, row.number);
+          const due = parseDueDate(row.due_date);
+          const assignee = members.find((m) => m.user_id === row.assignee_id);
+          return (
+            <SettingsListRow
+              key={row.id}
+              avatar={
+                <Badge variant="secondary" className="shrink-0 font-mono">
+                  {ref}
+                </Badge>
+              }
+              title={
+                <Link
+                  href={`/projects/${projectId}?issue=${row.id}`}
+                  className="hover:underline"
                 >
-                  <User className="size-3.5" />
-                </span>
-              )}
-              {/* En icône, comme les actions de la liste des catégories. */}
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                disabled={busyId === row.id}
-                title={t("stop")}
-                aria-label={t("stopAria", { ref })}
-                onClick={() => void stop(row)}
-              >
-                <CircleSlash />
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <Select
-                value={row.recurrence}
-                onValueChange={(v) => void setCadence(row, v as RecurrenceCadence)}
-                disabled={busyId === row.id}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-auto"
-                  aria-label={t("cadenceAria", { ref })}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RECURRENCE_CADENCES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {recurrenceLabel(c, due, t, format, locale)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* La prochaine échéance : c'est elle qui se décalera. Sans son
-                  heure — la cadence à côté la dit déjà. */}
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {due
+                  {row.title}
+                </Link>
+              }
+              /* La prochaine échéance : c'est elle qui se décalera. Sans son
+                 heure — la cadence à côté la dit déjà. */
+              subtitle={
+                due
                   ? `${t("nextOccurrence")} ${format.dateTime(due, {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
                     })}`
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+                  : "—"
+              }
+              action={
+                <>
+                  {/* Même affordance que les cartes du tableau : un rond
+                      pointillé pour « personne », jamais un avatar vide. */}
+                  {assignee ? (
+                    <UserAvatar
+                      seed={assignee.avatar_seed}
+                      title={displayName(assignee)}
+                      className="size-6"
+                    />
+                  ) : (
+                    <span
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
+                      title={tField("unassigned")}
+                    >
+                      <User className="size-3.5" />
+                    </span>
+                  )}
+
+                  <Select
+                    value={row.recurrence}
+                    onValueChange={(v) => void setCadence(row, v as RecurrenceCadence)}
+                    disabled={busyId === row.id}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="w-auto"
+                      aria-label={t("cadenceAria", { ref })}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECURRENCE_CADENCES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {recurrenceLabel(c, due, t, format, locale)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* En icône, comme les actions de la liste des catégories. */}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={busyId === row.id}
+                    title={t("stop")}
+                    aria-label={t("stopAria", { ref })}
+                    onClick={() => void stop(row)}
+                  >
+                    <CircleSlash />
+                  </Button>
+                </>
+              }
+            />
+          );
+        })
+      )}
+    </SettingsGroup>
   );
 }

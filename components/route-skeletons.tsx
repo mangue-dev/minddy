@@ -47,6 +47,33 @@ export function DocPageSkeleton({
 }
 
 /**
+ * Réglages (MIN-167) : titre, composeur, puis le rail d'onglets À GAUCHE et la
+ * colonne de cartes à droite. `DocPageSkeleton` dessinait quatre blocs pleine
+ * largeur sans rail — la bascule vers le vrai écran déplaçait tout.
+ * Reprend `mx-auto max-w-[1040px] p-4 md:p-8` et la grille du `SettingsShell`.
+ */
+export function SettingsPageSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="mx-auto w-full max-w-[1040px] space-y-8 p-4 md:p-8">
+      <Skeleton className="h-8 w-56" />
+      <Skeleton className="h-14 w-full rounded-xl" />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[220px_1fr] md:items-start md:gap-8">
+        <div className="flex flex-col gap-1.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
+          ))}
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          {Array.from({ length: rows }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Board kanban : barre d'outils puis colonnes. Reprend la structure pleine
  * hauteur de `app/(app)/projects/[id]/page.tsx` (`flex h-full flex-col`, puis
  * `min-h-0 flex-1 px-6 pt-4`) pour que la bascule vers le vrai board ne déplace

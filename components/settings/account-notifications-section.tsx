@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Switch, toast } from "mangue-ui";
+import { Inbox } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import {
   NOTIFICATION_CATEGORY_META_KEYS,
   resolveNotificationPrefs,
@@ -53,30 +54,25 @@ export function AccountNotificationsSection() {
   };
 
   return (
-    <SettingsSection title={t("title")} description={t("description")}>
-      <div className="flex flex-col gap-4">
-        {CATEGORIES.map((category) => (
-          <div key={category} className="flex items-start gap-3">
+    <SettingsGroup icon={Inbox} title={t("title")} description={t("description")}>
+      {/* L'interrupteur est À DROITE du libellé, comme partout ailleurs dans le
+          produit : c'était le seul endroit qui le mettait devant. */}
+      {CATEGORIES.map((category) => (
+        <SettingsRow
+          key={category}
+          htmlFor={`notif-${category}`}
+          label={t(`${category}Label`)}
+          hint={t(`${category}Desc`)}
+          control={
             <Switch
               id={`notif-${category}`}
               checked={prefs[category]}
               onCheckedChange={(v) => void save(category, v)}
               disabled={!user}
             />
-            <div className="flex min-w-0 flex-col">
-              <label
-                htmlFor={`notif-${category}`}
-                className="cursor-pointer text-sm text-foreground"
-              >
-                {t(`${category}Label`)}
-              </label>
-              <span className="text-xs text-muted-foreground">
-                {t(`${category}Desc`)}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </SettingsSection>
+          }
+        />
+      ))}
+    </SettingsGroup>
   );
 }

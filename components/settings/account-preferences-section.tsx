@@ -9,17 +9,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
+  SegmentedControl,
   Switch,
   useTheme,
-  cn,
   toast,
+  type SegmentedControlOption,
 } from "mangue-ui";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Palette, Ticket } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { locales, type Locale } from "@/i18n/config";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
   NUMO_DEFAULT_STATUS_OPTIONS,
@@ -40,10 +40,13 @@ const LANGUAGE_LABELS: Record<Locale, string> = {
   en: "English",
 };
 
-type ThemeValue = "light" | "dark" | "system";
+/** `""` = « on ne sait pas encore » : le thème n'existe que côté client, et
+    aucun segment ne doit s'allumer avant le montage (cf. `mounted`). */
+type ThemeValue = "light" | "dark" | "system" | "";
 
-/** Language + theme. Both persist to the account (locale to `user_metadata`,
-    theme to the local next-themes store). */
+/** Compte → Préférences : deux groupes, l'apparence et ce que font les tickets.
+    Les six sections empilées d'avant n'étaient pas six sujets, c'était six
+    réglages : chacun avait droit à son titre, aucun n'avait de voisin. */
 export function AccountPreferencesSection() {
   const ta = useTranslations("Account");
   const tLang = useTranslations("Language");
@@ -160,151 +163,129 @@ export function AccountPreferencesSection() {
     }
   };
 
-  const themeOptions: { value: ThemeValue; icon: typeof Sun; label: string }[] =
-    [
-      { value: "light", icon: Sun, label: tNav("themeLight") },
-      { value: "dark", icon: Moon, label: tNav("themeDark") },
-      { value: "system", icon: Monitor, label: tNav("themeSystem") },
-    ];
+  const themeOptions: SegmentedControlOption<ThemeValue>[] = [
+    { value: "light", label: tNav("themeLight") },
+    { value: "dark", label: tNav("themeDark") },
+    { value: "system", label: tNav("themeSystem") },
+  ];
 
   return (
     <>
-      <SettingsSection title={tLang("title")}>
-        <Select
-          value={currentLocale}
-          onValueChange={(value) => void switchLocale(value as Locale)}
-          disabled={switchingLocale}
-        >
-          <SelectTrigger id="account-language" className="max-w-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {locales.map((code) => (
-              <SelectItem key={code} value={code}>
-                {LANGUAGE_LABELS[code]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </SettingsSection>
-
-      <Separator />
-
-      <SettingsSection title={ta("themeTitle")}>
-        <div className="inline-flex rounded-lg border border-border p-0.5">
-          {themeOptions.map((o) => {
-            const active = mounted && theme === o.value;
-            const Icon = o.icon;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => setTheme(o.value)}
-                aria-pressed={active}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4" />
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-      </SettingsSection>
-
-      <Separator />
-
-      <SettingsSection title={ta("autoAssignTitle")}>
-        <div className="flex items-center gap-3">
-          <Switch
-            id="account-auto-assign"
-            checked={autoAssign}
-            onCheckedChange={(v) => void toggleAutoAssign(v)}
-            disabled={!user}
-          />
-          <label
-            htmlFor="account-auto-assign"
-            className="cursor-pointer text-sm text-foreground"
-          >
-            {ta("autoAssignLabel")}
-          </label>
-        </div>
-      </SettingsSection>
-
-      <Separator />
-
-      <SettingsSection
-        title={ta("autoAssignStartTitle")}
-        description={ta("autoAssignStartDesc")}
+      <SettingsGroup
+        icon={Palette}
+        title={tNav("appearance")}
+        description={ta("appearanceSectionDesc")}
       >
-        <div className="flex items-center gap-3">
-          <Switch
-            id="account-auto-assign-start"
-            checked={autoAssignStart}
-            onCheckedChange={(v) => void toggleAutoAssignStart(v)}
-            disabled={!user}
-          />
-          <label
-            htmlFor="account-auto-assign-start"
-            className="cursor-pointer text-sm text-foreground"
-          >
-            {ta("autoAssignStartLabel")}
-          </label>
-        </div>
-      </SettingsSection>
+        <SettingsRow
+          htmlFor="account-language"
+          label={tLang("title")}
+          control={
+            <Select
+              value={currentLocale}
+              onValueChange={(value) => void switchLocale(value as Locale)}
+              disabled={switchingLocale}
+            >
+              <SelectTrigger id="account-language" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {locales.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {LANGUAGE_LABELS[code]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
 
-      <Separator />
+        <SettingsRow
+          label={ta("themeTitle")}
+          control={
+            <SegmentedControl
+              options={themeOptions}
+              value={mounted ? ((theme ?? "") as ThemeValue) : ""}
+              onChange={(v) => v && setTheme(v)}
+              ariaLabel={ta("themeTitle")}
+              className="w-60"
+            />
+          }
+        />
+      </SettingsGroup>
 
-      <SettingsSection
-        title={ta("promptAutoStartTitle")}
-        description={ta("promptAutoStartDesc")}
+      <SettingsGroup
+        icon={Ticket}
+        title={tNav("tickets")}
+        description={ta("ticketsSectionDesc")}
       >
-        <div className="flex items-center gap-3">
-          <Switch
-            id="account-prompt-auto-start"
-            checked={promptAutoStart}
-            onCheckedChange={(v) => void togglePromptAutoStart(v)}
-            disabled={!user}
-          />
-          <label
-            htmlFor="account-prompt-auto-start"
-            className="cursor-pointer text-sm text-foreground"
-          >
-            {ta("promptAutoStartLabel")}
-          </label>
-        </div>
-      </SettingsSection>
+        <SettingsRow
+          htmlFor="account-auto-assign"
+          label={ta("autoAssignLabel")}
+          control={
+            <Switch
+              id="account-auto-assign"
+              checked={autoAssign}
+              onCheckedChange={(v) => void toggleAutoAssign(v)}
+              disabled={!user}
+            />
+          }
+        />
 
-      <Separator />
+        <SettingsRow
+          htmlFor="account-auto-assign-start"
+          label={ta("autoAssignStartLabel")}
+          hint={ta("autoAssignStartDesc")}
+          control={
+            <Switch
+              id="account-auto-assign-start"
+              checked={autoAssignStart}
+              onCheckedChange={(v) => void toggleAutoAssignStart(v)}
+              disabled={!user}
+            />
+          }
+        />
 
-      <SettingsSection
-        title={ta("numoStatusTitle")}
-        description={ta("numoStatusDesc")}
-      >
-        <Select
-          value={numoStatus}
-          onValueChange={(v) => void changeNumoStatus(v as NumoDefaultStatus)}
-          disabled={!user}
-        >
-          <SelectTrigger id="account-numo-status" className="max-w-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {NUMO_DEFAULT_STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>
-                <span className="flex items-center gap-2">
-                  <StatusIndicator status={s} className="size-4" />
-                  {tStatus(s)}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </SettingsSection>
+        <SettingsRow
+          htmlFor="account-prompt-auto-start"
+          label={ta("promptAutoStartLabel")}
+          hint={ta("promptAutoStartDesc")}
+          control={
+            <Switch
+              id="account-prompt-auto-start"
+              checked={promptAutoStart}
+              onCheckedChange={(v) => void togglePromptAutoStart(v)}
+              disabled={!user}
+            />
+          }
+        />
+
+        <SettingsRow
+          htmlFor="account-numo-status"
+          label={ta("numoStatusTitle")}
+          hint={ta("numoStatusDesc")}
+          control={
+            <Select
+              value={numoStatus}
+              onValueChange={(v) => void changeNumoStatus(v as NumoDefaultStatus)}
+              disabled={!user}
+            >
+              <SelectTrigger id="account-numo-status" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NUMO_DEFAULT_STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    <span className="flex items-center gap-2">
+                      <StatusIndicator status={s} className="size-4" />
+                      {tStatus(s)}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+      </SettingsGroup>
     </>
   );
 }

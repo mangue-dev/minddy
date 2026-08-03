@@ -9,12 +9,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
   Switch,
   toast,
 } from "mangue-ui";
+import { CalendarClock, IterationCw, ListPlus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import {
   CYCLES_ENABLED_META_KEY,
@@ -35,6 +35,10 @@ import {
  * pattern): optimistic local state, write through updateUser, revert + toast
  * on failure. Toggling any of them invalidates the board cache — the next
  * GET /api/me/board lazily reconciles the cycle timeline (create/fill).
+ *
+ * L'interrupteur maître vit dans l'EN-TÊTE de son groupe (MIN-167) : le reste
+ * des réglages n'existe que s'il est armé, et le lire au-dessus d'eux dit
+ * exactement ça.
  */
 export function AccountCyclesSection() {
   const t = useTranslations("Cycles");
@@ -79,8 +83,11 @@ export function AccountCyclesSection() {
 
   return (
     <>
-      <SettingsSection title={t("enableTitle")} description={t("enableDesc")}>
-        <div className="flex items-center gap-3">
+      <SettingsGroup
+        icon={IterationCw}
+        title={t("enableTitle")}
+        description={t("enableDesc")}
+        action={
           <Switch
             id="cycles-enabled"
             checked={prefs.enabled}
@@ -88,22 +95,20 @@ export function AccountCyclesSection() {
               void save(CYCLES_ENABLED_META_KEY, v, { enabled: v })
             }
             disabled={!user}
+            aria-label={t("enableTitle")}
           />
-          <label
-            htmlFor="cycles-enabled"
-            className="cursor-pointer text-sm text-foreground"
-          >
-            {t("enableLabel")}
-          </label>
-        </div>
-      </SettingsSection>
+        }
+      />
 
-      <Separator />
-
-      <SettingsSection title={t("cadenceTitle")} description={t("cadenceDesc")}>
-        <div className="flex max-w-sm flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-foreground">{t("durationLabel")}</span>
+      <SettingsGroup
+        icon={CalendarClock}
+        title={t("cadenceTitle")}
+        description={t("cadenceDesc")}
+      >
+        <SettingsRow
+          htmlFor="cycles-duration"
+          label={t("durationLabel")}
+          control={
             <Select
               value={String(prefs.durationWeeks)}
               onValueChange={(v) =>
@@ -121,10 +126,13 @@ export function AccountCyclesSection() {
                 <SelectItem value="2">{t("durationTwoWeeks")}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          }
+        />
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-foreground">{t("startDowLabel")}</span>
+        <SettingsRow
+          htmlFor="cycles-start-dow"
+          label={t("startDowLabel")}
+          control={
             <Select
               value={String(prefs.startDow)}
               onValueChange={(v) =>
@@ -145,10 +153,13 @@ export function AccountCyclesSection() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          }
+        />
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-foreground">{t("upcomingLabel")}</span>
+        <SettingsRow
+          htmlFor="cycles-upcoming"
+          label={t("upcomingLabel")}
+          control={
             <Select
               value={String(prefs.upcomingCount)}
               onValueChange={(v) =>
@@ -169,40 +180,47 @@ export function AccountCyclesSection() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
-      </SettingsSection>
-
-      <Separator />
-
-      <SettingsSection title={t("intensityTitle")} description={t("intensityDesc")}>
-        <Select
-          value={prefs.intensity}
-          onValueChange={(v) =>
-            void save(CYCLE_INTENSITY_META_KEY, v, {
-              intensity: v as CyclePrefs["intensity"],
-            })
           }
-          disabled={knobsDisabled}
-        >
-          <SelectTrigger id="cycles-intensity" className="max-w-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CYCLE_INTENSITIES.map((level) => (
-              <SelectItem key={level} value={level}>
-                {t(`intensity_${level}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </SettingsSection>
+        />
 
-      <Separator />
+        <SettingsRow
+          htmlFor="cycles-intensity"
+          label={t("intensityTitle")}
+          hint={t("intensityDesc")}
+          control={
+            <Select
+              value={prefs.intensity}
+              onValueChange={(v) =>
+                void save(CYCLE_INTENSITY_META_KEY, v, {
+                  intensity: v as CyclePrefs["intensity"],
+                })
+              }
+              disabled={knobsDisabled}
+            >
+              <SelectTrigger id="cycles-intensity" className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CYCLE_INTENSITIES.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {t(`intensity_${level}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+      </SettingsGroup>
 
-      <SettingsSection title={t("captureTitle")} description={t("captureDesc")}>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
+      <SettingsGroup
+        icon={ListPlus}
+        title={t("captureTitle")}
+        description={t("captureDesc")}
+      >
+        <SettingsRow
+          htmlFor="cycles-capture-started"
+          label={t("captureStartedLabel")}
+          control={
             <Switch
               id="cycles-capture-started"
               checked={prefs.autoCaptureStarted}
@@ -213,14 +231,13 @@ export function AccountCyclesSection() {
               }
               disabled={knobsDisabled}
             />
-            <label
-              htmlFor="cycles-capture-started"
-              className="cursor-pointer text-sm text-foreground"
-            >
-              {t("captureStartedLabel")}
-            </label>
-          </div>
-          <div className="flex items-center gap-3">
+          }
+        />
+
+        <SettingsRow
+          htmlFor="cycles-capture-completed"
+          label={t("captureCompletedLabel")}
+          control={
             <Switch
               id="cycles-capture-completed"
               checked={prefs.autoCaptureCompleted}
@@ -231,15 +248,9 @@ export function AccountCyclesSection() {
               }
               disabled={knobsDisabled}
             />
-            <label
-              htmlFor="cycles-capture-completed"
-              className="cursor-pointer text-sm text-foreground"
-            >
-              {t("captureCompletedLabel")}
-            </label>
-          </div>
-        </div>
-      </SettingsSection>
+          }
+        />
+      </SettingsGroup>
     </>
   );
 }

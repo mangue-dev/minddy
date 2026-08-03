@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, Spinner, Switch, toast } from "mangue-ui";
-import { Github, Gitlab, Link2Off } from "lucide-react";
+import { GitBranch, Github, Gitlab, Link2Off } from "lucide-react";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { GitBranchCleanup } from "@/components/settings/git-branch-cleanup";
 import { SearchSelect } from "@/components/search-select";
@@ -21,6 +21,12 @@ import {
   useProjectGitLinkQuery,
 } from "@/lib/use-project-git-link-query";
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
+import {
+  SettingsEmpty,
+  SettingsGroup,
+  SettingsListRow,
+  SettingsRow,
+} from "@/components/settings/settings-ui";
 import type { CandidateRepo } from "@/lib/types";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -175,8 +181,21 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     }
   };
 
+  /** Un seul cadre pour les six états : le groupe est toujours le même, seul
+      son corps change. Avant, chaque branche rendait sa propre mise en page. */
+  const group = (variant: "rows" | "block", children: ReactNode) => (
+    <SettingsGroup
+      icon={GitBranch}
+      title={t("gitTab")}
+      description={t("gitSectionDesc")}
+      variant={variant}
+    >
+      {children}
+    </SettingsGroup>
+  );
+
   if (loading) {
-    return <p className="py-2 text-sm text-muted-foreground">{t("gitLoading")}</p>;
+    return group("block", <SettingsEmpty className="py-0">{t("gitLoading")}</SettingsEmpty>);
   }
 
   // ── Sélecteur de dépôt (connexion active) ─────────────────────────────────
@@ -185,15 +204,16 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
       value: c.external_repo_id,
       label: c.full_name,
     }));
-    return (
+    return group(
+      "block",
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">{t("gitPickRepoDesc")}</p>
         {candidatesLoading ? (
-          <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner /> {t("gitLoadingRepos")}
           </div>
         ) : options.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">{t("gitNoRepos")}</p>
+          <p className="text-sm text-muted-foreground">{t("gitNoRepos")}</p>
         ) : (
           <SearchSelect
             value={null}
@@ -220,98 +240,97 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
             {t("gitCancel")}
           </Button>
         </div>
-      </div>
+      </div>,
     );
   }
 
   // ── Dépôt déjà lié ────────────────────────────────────────────────────────
   if (link) {
     const Icon = PROVIDER_ICON[link.provider];
+    const providerName = getRepoProvider(link.provider).displayName;
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-            <Icon className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {link.repo_full_name ?? link.external_repo_id}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {getRepoProvider(link.provider).displayName}
-              {link.account_login ? ` · ${link.account_login}` : ""}
-              {link.default_branch ? ` · ${link.default_branch}` : ""}
-            </p>
-          </div>
-          {isOwner && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmUnlink(true)}
-            >
-              <Link2Off className="size-4" />
-              {t("gitUnlink")}
-            </Button>
-          )}
-        </div>
-
-        {/* Sous quel compte Numo agit sur la forge (MIN-146). GitHub a une
-            identité de bot (le token d'installation de l'App) : rien à dire.
-            GitLab n'en a pas — l'agent part de la connexion OAuth du LIEN,
-            donc du compte de qui a lié le dépôt. Tant qu'une identité de
-            service n'existe pas, on le DIT plutôt que de le laisser
-            découvrir dans l'historique du dépôt. */}
-        {link.provider === "gitlab" && (
-          <p className="text-xs text-muted-foreground">
-            {link.account_login
-              ? t("gitAgentActsAs", { login: link.account_login })
-              : t("gitAgentActsAsUnknown")}
-          </p>
-        )}
-
-        {/* Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-3">
-            <Switch
-              id="git-issue-sync"
-              checked={issueSync}
-              onCheckedChange={(v) => void handleIssueSync(v)}
-              disabled={savingIssueSync || !isOwner}
+      <>
+        {group(
+          "rows",
+          <>
+            <SettingsListRow
+              avatar={
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                  <Icon className="size-4" />
+                </span>
+              }
+              title={link.repo_full_name ?? link.external_repo_id}
+              subtitle={
+                providerName +
+                (link.account_login ? ` · ${link.account_login}` : "") +
+                (link.default_branch ? ` · ${link.default_branch}` : "") +
+                // Sous quel compte Numo agit sur la forge (MIN-146). GitHub a une
+                // identité de bot (le token d'installation de l'App) : rien à dire.
+                // GitLab n'en a pas — l'agent part de la connexion OAuth du LIEN,
+                // donc du compte de qui a lié le dépôt. Tant qu'une identité de
+                // service n'existe pas, on le DIT plutôt que de le laisser
+                // découvrir dans l'historique du dépôt.
+                (link.provider === "gitlab"
+                  ? ` · ${
+                      link.account_login
+                        ? t("gitAgentActsAs", { login: link.account_login })
+                        : t("gitAgentActsAsUnknown")
+                    }`
+                  : "")
+              }
+              truncateSubtitle={false}
+              action={
+                isOwner && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmUnlink(true)}
+                  >
+                    <Link2Off className="size-4" />
+                    {t("gitUnlink")}
+                  </Button>
+                )
+              }
             />
-            <label
-              htmlFor="git-issue-sync"
-              className="cursor-pointer text-sm text-foreground"
-            >
-              {t("gitIssueSyncLabel", {
-                provider: getRepoProvider(link.provider).displayName,
-              })}
-            </label>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {isOwner ? t("gitIssueSyncHint") : t("gitIssueSyncOwnerOnlyHint")}
-          </p>
-          {issueSync && (
-            <p className="text-xs text-muted-foreground">
-              {t("gitIssueSyncOneWayHint")}
-            </p>
-          )}
-          {issueSync && link.issue_sync_backfilled_at && (
-            <p className="text-xs text-muted-foreground">
-              {t("gitIssueSyncBackfilled", {
-                date: format.dateTime(new Date(link.issue_sync_backfilled_at), {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }),
-              })}
-            </p>
-          )}
-        </div>
 
-        {/* Ménage des branches d'agent des PR fermées (MIN-102) — owner seul :
-            supprimer des branches distantes engage le dépôt, comme le déliement. */}
-        {isOwner && (
-          <GitBranchCleanup projectId={projectId} provider={link.provider} />
+            {/* Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */}
+            <SettingsRow
+              htmlFor="git-issue-sync"
+              label={t("gitIssueSyncLabel", { provider: providerName })}
+              hint={isOwner ? t("gitIssueSyncHint") : t("gitIssueSyncOwnerOnlyHint")}
+              control={
+                <Switch
+                  id="git-issue-sync"
+                  checked={issueSync}
+                  onCheckedChange={(v) => void handleIssueSync(v)}
+                  disabled={savingIssueSync || !isOwner}
+                />
+              }
+            >
+              {issueSync && (
+                <p className="text-xs text-muted-foreground">
+                  {t("gitIssueSyncOneWayHint")}
+                </p>
+              )}
+              {issueSync && link.issue_sync_backfilled_at && (
+                <p className="text-xs text-muted-foreground">
+                  {t("gitIssueSyncBackfilled", {
+                    date: format.dateTime(new Date(link.issue_sync_backfilled_at), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }),
+                  })}
+                </p>
+              )}
+            </SettingsRow>
+
+            {/* Ménage des branches d'agent des PR fermées (MIN-102) — owner seul :
+                supprimer des branches distantes engage le dépôt, comme le déliement. */}
+            {isOwner && (
+              <GitBranchCleanup projectId={projectId} provider={link.provider} />
+            )}
+          </>,
         )}
 
         <ConfirmDeleteDialog
@@ -323,14 +342,15 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
           cancelLabel={tc("cancel")}
           onConfirm={handleUnlink}
         />
-      </div>
+      </>
     );
   }
 
   // ── Aucun dépôt lié ───────────────────────────────────────────────────────
   if (!isOwner) {
-    return (
-      <p className="py-2 text-sm text-muted-foreground">{t("gitEmptyMember")}</p>
+    return group(
+      "block",
+      <SettingsEmpty className="py-0">{t("gitEmptyMember")}</SettingsEmpty>,
     );
   }
 
@@ -339,12 +359,14 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     .map((p) => p.id);
 
   if (configuredIds.length === 0) {
-    return (
-      <p className="py-2 text-sm text-muted-foreground">{t("gitNotConfigured")}</p>
+    return group(
+      "block",
+      <SettingsEmpty className="py-0">{t("gitNotConfigured")}</SettingsEmpty>,
     );
   }
 
-  return (
+  return group(
+    "block",
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{t("gitEmptyOwner")}</p>
       <ProviderConnectButtons
@@ -352,6 +374,6 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
         connecting={connecting}
         only={configuredIds}
       />
-    </div>
+    </div>,
   );
 }

@@ -29,10 +29,11 @@ export function SettingsAssistantPrompt({
     [openAssistant, projectId],
   );
 
-  // ChatInput insets its card by its own `px-3`; pull the section out by the
-  // same amount so the card aligns flush with the rest of the page content.
+  // Aucun décalage : les réglages sont désormais une colonne de CARTES, et le
+  // composeur doit s'aligner sur leur bord. L'ancien `-mx-3`, qui compensait
+  // l'inset de `ChatInput`, le faisait dépasser de la colonne (MIN-167).
   return (
-    <section className="-mx-3">
+    <section>
       <ChatInput onSend={handleSend} placeholder={placeholder} />
     </section>
   );

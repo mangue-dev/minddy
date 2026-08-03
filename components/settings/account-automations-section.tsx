@@ -16,10 +16,15 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
+import { FolderKanban, Workflow } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
-import { SettingsSection } from "@/components/settings-shell";
-import { HelpHint } from "@/components/settings/help-hint";
+import {
+  SettingsEmpty,
+  SettingsGroup,
+  SettingsListRow,
+  SettingsRow,
+} from "@/components/settings/settings-ui";
 import { AutomationPresetPicker } from "@/components/automations/automation-preset-picker";
 import { ProjectOrb } from "@/components/project-orb";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -218,20 +223,18 @@ export function AccountAutomationsSection() {
   });
 
   return (
-    <SettingsSection title={t("title")}>
-      <div className="flex flex-col gap-5">
+    <>
+      <SettingsGroup
+        icon={Workflow}
+        title={t("title")}
+        description={t("description")}
+        help={t("presetHint")}
+      >
         {/* 1. Quel préréglage ? Sa description est VISIBLE : c'est la seule
-            chose qu'on lit avant d'armer une boucle qui dépense. */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{t("presetTitle")}</span>
-            <HelpHint>
-              {t("description")}
-              <br />
-              <br />
-              {t("presetHint")}
-            </HelpHint>
-          </div>
+            chose qu'on lit avant d'armer une boucle qui dépense. Le sélecteur
+            est une grille de cartes, donc une rangée verticale — l'exception
+            assumée au clé/valeur. */}
+        <SettingsRow label={t("presetTitle")} orientation="vertical">
           <AutomationPresetPicker
             value={preset}
             onChange={(next) => void choosePreset(next)}
@@ -240,20 +243,22 @@ export function AccountAutomationsSection() {
           <p className="max-w-prose text-xs leading-relaxed text-muted-foreground">
             {preset ? t(PRESET_DESC_KEYS[preset]) : t("presetNoneSelected")}
           </p>
-        </div>
+        </SettingsRow>
 
         {/* 2. Combien ça coûte ? Cinq lignes courtes. */}
         {preset && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{t("costTitle")}</span>
-              <HelpHint>
+          <SettingsRow
+            label={t("costTitle")}
+            orientation="vertical"
+            help={
+              <>
                 {t("costDesc")}
                 <br />
                 <br />
                 {t("costFallback")}
-              </HelpHint>
-            </div>
+              </>
+            }
+          >
             <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground tabular-nums">
               {costRows.map((row) => (
                 <li key={row.effort}>
@@ -272,41 +277,42 @@ export function AccountAutomationsSection() {
                 </li>
               ))}
             </ul>
-          </div>
+          </SettingsRow>
         )}
 
         {/* 3. Le SURSIS. Juste après le coût, parce que c'est le garde-fou qui
             protège ce coût-là : le temps de se raviser avant que ça dépense. */}
         {preset && (
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{t("delayTitle")}</span>
-              <HelpHint>{t("delayHint")}</HelpHint>
-            </div>
-            <Select
-              value={String(delay)}
-              onValueChange={(v) => void setStartDelay(Number(v))}
-            >
-              <SelectTrigger id="automation-delay" className="w-full max-w-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AUTOMATION_START_DELAY_CHOICES.map((min) => (
-                  <SelectItem key={min} value={String(min)}>
-                    {min === 0 ? t("delayImmediate") : t("delayMinutes", { minutes: min })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <SettingsRow
+            htmlFor="automation-delay"
+            label={t("delayTitle")}
+            help={t("delayHint")}
+            control={
+              <Select
+                value={String(delay)}
+                onValueChange={(v) => void setStartDelay(Number(v))}
+              >
+                <SelectTrigger id="automation-delay" className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AUTOMATION_START_DELAY_CHOICES.map((min) => (
+                    <SelectItem key={min} value={String(min)}>
+                      {min === 0 ? t("delayImmediate") : t("delayMinutes", { minutes: min })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
         )}
 
         {/* 4. La personnalisation, PLIÉE. Le préréglage marche tel quel : ces
             deux réglages sont pour qui veut aller plus loin, et n'ont donc pas à
             occuper l'écran de qui vient juste d'en choisir un. */}
         {preset && (
-          <Accordion type="multiple" className="border-t border-border">
-            <AccordionItem value="efforts">
+          <Accordion type="multiple">
+            <AccordionItem value="efforts" className="border-b-0">
               <AccordionTrigger className="py-3 text-sm font-medium">
                 <span className="flex items-center gap-2">
                   {t("effortsTitle")}
@@ -318,112 +324,110 @@ export function AccountAutomationsSection() {
                 </span>
               </AccordionTrigger>
               <AccordionContent>
-                <p className="pb-2 text-xs leading-relaxed text-muted-foreground">
+                <p className="pb-1 text-xs leading-relaxed text-muted-foreground">
                   {t("effortsHint")}
                 </p>
-                <ul className="flex flex-col">
+                <div className="divide-y divide-border">
                   {EFFORTS.map((e) => (
-                    <li
+                    <SettingsRow
                       key={e.value}
-                      className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-b-0"
-                    >
-                      <span className="text-sm tabular-nums">{e.label}</span>
-                      <Switch
-                        checked={efforts[e.value]}
-                        onCheckedChange={(v) =>
-                          void setEffortEnabled(e.value, v)
-                        }
-                        aria-label={t("effortEnabled", { effort: e.label })}
-                      />
-                    </li>
+                      className="py-2.5"
+                      label={<span className="tabular-nums">{e.label}</span>}
+                      control={
+                        <Switch
+                          checked={efforts[e.value]}
+                          onCheckedChange={(v) =>
+                            void setEffortEnabled(e.value, v)
+                          }
+                          aria-label={t("effortEnabled", { effort: e.label })}
+                        />
+                      }
+                    />
                   ))}
-                </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="models">
+            <AccordionItem value="models" className="border-b-0">
               <AccordionTrigger className="py-3 text-sm font-medium">
                 {t("modelsTitle")}
               </AccordionTrigger>
               <AccordionContent>
-                <p className="pb-2 text-xs leading-relaxed text-muted-foreground">
+                <p className="pb-1 text-xs leading-relaxed text-muted-foreground">
                   {t("modelsHint")}
                 </p>
-                <ul className="flex flex-col">
+                <div className="divide-y divide-border">
                   {EFFORTS.map((e) => (
-                    <li
+                    <SettingsRow
                       key={e.value}
-                      className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-b-0"
-                    >
-                      <span className="text-sm tabular-nums">{e.label}</span>
-                      <ModelCombobox
-                        variant="compact"
-                        value={models[e.value] ?? ""}
-                        onChange={(v) => void setEffortModel(e.value, v)}
-                        defaultLabel={t("modelDefault")}
-                        placeholder={tAgent("modelSearchPlaceholder")}
-                        emptyLabel={tAgent("modelSearchEmpty")}
-                        loadingLabel={tAgent("modelSearchLoading")}
-                        freeTextLabel={(q) =>
-                          tAgent("modelUseCustom", { model: q })
-                        }
-                        // Une taille éteinte ne lance rien : lui choisir un modèle
-                        // n'aurait aucun effet, et l'offrir quand même laisserait
-                        // croire le contraire.
-                        disabled={!efforts[e.value]}
-                      />
-                    </li>
+                      className="py-2.5"
+                      label={<span className="tabular-nums">{e.label}</span>}
+                      control={
+                        <ModelCombobox
+                          variant="compact"
+                          value={models[e.value] ?? ""}
+                          onChange={(v) => void setEffortModel(e.value, v)}
+                          defaultLabel={t("modelDefault")}
+                          placeholder={tAgent("modelSearchPlaceholder")}
+                          emptyLabel={tAgent("modelSearchEmpty")}
+                          loadingLabel={tAgent("modelSearchLoading")}
+                          freeTextLabel={(q) =>
+                            tAgent("modelUseCustom", { model: q })
+                          }
+                          // Une taille éteinte ne lance rien : lui choisir un
+                          // modèle n'aurait aucun effet, et l'offrir quand même
+                          // laisserait croire le contraire.
+                          disabled={!efforts[e.value]}
+                        />
+                      }
+                    />
                   ))}
-                </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
         )}
+      </SettingsGroup>
 
-        {/* 5. Sur quels projets ? Un interrupteur par projet possédé — c'est ce
-            qui remplace l'ancien toggle général des réglages de projet. */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{t("projectsTitle")}</span>
-            <HelpHint>{t("projectsHint")}</HelpHint>
-          </div>
-          {owned.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("projectsEmpty")}
-            </p>
-          ) : (
-            <ul className="flex flex-col">
-              {owned.map((project) => (
-                <li
-                  key={project.id}
-                  className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-b-0"
-                >
-                  {/* L'icône avant le nom : c'est à elle qu'on reconnaît un
-                      projet partout ailleurs (barre latérale, fil d'Ariane,
-                      cartes) — une liste d'interrupteurs se lit plus vite quand
-                      elle parle le même langage. */}
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ProjectOrb
-                      seed={project.id}
-                      iconUrl={project.icon_url}
-                      className="size-5 shrink-0"
-                    />
-                    <span className="truncate text-sm">{project.name}</span>
-                  </span>
-                  <Switch
-                    checked={project.automations_enabled === true}
-                    onCheckedChange={(v) =>
-                      void toggleProject(project.id, v, project.name)
-                    }
-                    disabled={pending === project.id}
-                    aria-label={t("projectEnabled", { name: project.name })}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </SettingsSection>
+      {/* 5. Sur quels projets ? Un interrupteur par projet possédé — c'est ce
+          qui remplace l'ancien toggle général des réglages de projet. */}
+      <SettingsGroup
+        icon={FolderKanban}
+        title={t("projectsTitle")}
+        description={t("projectsHint")}
+      >
+        {owned.length === 0 ? (
+          <SettingsEmpty>{t("projectsEmpty")}</SettingsEmpty>
+        ) : (
+          owned.map((project) => (
+            /* L'icône avant le nom : c'est à elle qu'on reconnaît un projet
+               partout ailleurs (barre latérale, fil d'Ariane, cartes) — une
+               liste d'interrupteurs se lit plus vite quand elle parle le même
+               langage. */
+            <SettingsListRow
+              key={project.id}
+              avatar={
+                <ProjectOrb
+                  seed={project.id}
+                  iconUrl={project.icon_url}
+                  className="size-6 shrink-0"
+                />
+              }
+              title={project.name}
+              action={
+                <Switch
+                  checked={project.automations_enabled === true}
+                  onCheckedChange={(v) =>
+                    void toggleProject(project.id, v, project.name)
+                  }
+                  disabled={pending === project.id}
+                  aria-label={t("projectEnabled", { name: project.name })}
+                />
+              }
+            />
+          ))
+        )}
+      </SettingsGroup>
+    </>
   );
 }

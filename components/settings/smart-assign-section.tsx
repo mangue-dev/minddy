@@ -3,20 +3,27 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Spinner, Switch, toast } from "mangue-ui";
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert, WandSparkles } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { userIdsWithoutRule } from "@/lib/smart-assign-config";
-import { SettingsSection } from "@/components/settings-shell";
+import {
+  SettingsEmpty,
+  SettingsGroup,
+  SettingsRow,
+} from "@/components/settings/settings-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
 
 /** Project-level Smart Assign preferences (MIN-31): the opt-in switch and, on
     multi-member projects, one free-text assignment rule per member (owner
     included — the AI matches new issues against these rules). Owner-only;
-    members see a disabled, read-only state. */
+    members see a disabled, read-only state.
+
+    Les règles restent en rangées VERTICALES : un texte libre de 500 caractères
+    ne tient pas au bout d'une ligne. C'est l'exception assumée au clé/valeur. */
 export function SmartAssignSection({
   project,
   isOwner,
@@ -98,44 +105,43 @@ export function SmartAssignSection({
     }
   };
 
-  return (
-    <SettingsSection title={t("smartAssignTab")}>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-3">
-            <Switch
-              id="smart-assign-enabled"
-              checked={enabled}
-              onCheckedChange={(v) => void toggle(v)}
-              disabled={savingToggle || !isOwner}
-            />
-            <label
-              htmlFor="smart-assign-enabled"
-              className="cursor-pointer text-sm text-foreground"
-            >
-              {t("smartAssignToggleLabel")}
-            </label>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {isOwner ? t("smartAssignToggleHint") : t("smartAssignOwnerOnlyHint")}
-          </p>
-        </div>
+  const showRules = enabled && members.length > 1;
 
+  return (
+    <form onSubmit={saveRules}>
+      <SettingsGroup
+        icon={WandSparkles}
+        title={t("smartAssignTab")}
+        description={
+          isOwner ? t("smartAssignToggleHint") : t("smartAssignOwnerOnlyHint")
+        }
+        action={
+          <Switch
+            id="smart-assign-enabled"
+            checked={enabled}
+            onCheckedChange={(v) => void toggle(v)}
+            disabled={savingToggle || !isOwner}
+            aria-label={t("smartAssignToggleLabel")}
+          />
+        }
+        footer={
+          showRules && isOwner ? (
+            <Button type="submit" disabled={savingRules || !dirty}>
+              {savingRules && <Spinner />}
+              {tc("save")}
+            </Button>
+          ) : undefined
+        }
+      >
         {enabled && !loading && members.length <= 1 && (
-          <p className="text-sm text-muted-foreground">
-            {t("smartAssignSoloHint")}
-          </p>
+          <SettingsEmpty>{t("smartAssignSoloHint")}</SettingsEmpty>
         )}
 
-        {enabled && members.length > 1 && (
-          <form onSubmit={saveRules} className="flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-medium">{t("smartAssignRulesTitle")}</p>
-              <p className="text-xs text-muted-foreground">
-                {t("smartAssignRulesDesc")}
-              </p>
-            </div>
-
+        {showRules && (
+          <SettingsRow
+            label={t("smartAssignRulesTitle")}
+            hint={t("smartAssignRulesDesc")}
+          >
             {/* Ce qui manque, dit en clair : sans quoi un champ vide ressemble à
                 un champ facultatif, et Smart Assign a l'air de trier alors qu'il
                 renvoie tout au propriétaire. */}
@@ -148,55 +154,46 @@ export function SmartAssignSection({
                 })}
               </p>
             )}
-            <ul className="flex flex-col gap-3">
-              {members.map((m) => (
-                <li key={m.user_id} className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor={`smart-assign-rule-${m.user_id}`}
-                    className="flex items-center gap-2 text-sm font-medium"
-                  >
-                    <UserAvatar
-                      seed={m.avatar_seed}
-                      className="size-6"
-                    />
-                    <span className="truncate">{displayName(m)}</span>
-                    {m.is_owner && (
-                      <Badge variant="secondary">{tm("owner")}</Badge>
-                    )}
-                    {missingRuleIds.has(m.user_id) && (
-                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-500">
-                        <TriangleAlert className="size-3" aria-hidden />
-                        {t("smartAssignNoRule")}
-                      </span>
-                    )}
-                  </label>
-                  <AutoTextarea
-                    id={`smart-assign-rule-${m.user_id}`}
-                    value={rules[m.user_id] ?? ""}
-                    onChange={(e) =>
-                      setRules((r) => ({ ...r, [m.user_id]: e.target.value }))
-                    }
-                    placeholder={t("smartAssignRulePlaceholder", {
-                      name: displayName(m),
-                    })}
-                    maxLength={500}
-                    disabled={!isOwner}
-                    className="min-h-9 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring disabled:opacity-60"
-                  />
-                </li>
-              ))}
-            </ul>
-            {isOwner && (
-              <div>
-                <Button type="submit" disabled={savingRules || !dirty}>
-                  {savingRules && <Spinner />}
-                  {tc("save")}
-                </Button>
-              </div>
-            )}
-          </form>
+          </SettingsRow>
         )}
-      </div>
-    </SettingsSection>
+
+        {showRules &&
+          members.map((m) => (
+            <SettingsRow
+              key={m.user_id}
+              orientation="vertical"
+              htmlFor={`smart-assign-rule-${m.user_id}`}
+              label={
+                <>
+                  <UserAvatar seed={m.avatar_seed} className="size-6" />
+                  <span className="truncate">{displayName(m)}</span>
+                  {m.is_owner && <Badge variant="secondary">{tm("owner")}</Badge>}
+                  {missingRuleIds.has(m.user_id) && (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-500">
+                      <TriangleAlert className="size-3" aria-hidden />
+                      {t("smartAssignNoRule")}
+                    </span>
+                  )}
+                </>
+              }
+              control={
+                <AutoTextarea
+                  id={`smart-assign-rule-${m.user_id}`}
+                  value={rules[m.user_id] ?? ""}
+                  onChange={(e) =>
+                    setRules((r) => ({ ...r, [m.user_id]: e.target.value }))
+                  }
+                  placeholder={t("smartAssignRulePlaceholder", {
+                    name: displayName(m),
+                  })}
+                  maxLength={500}
+                  disabled={!isOwner}
+                  className="min-h-9 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring disabled:opacity-60"
+                />
+              }
+            />
+          ))}
+      </SettingsGroup>
+    </form>
   );
 }

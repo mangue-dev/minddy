@@ -11,7 +11,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
   Skeleton,
   Spinner,
   Switch,
@@ -19,7 +18,7 @@ import {
   toast,
 } from "mangue-ui";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { formatModelName } from "@/lib/model-display";
 import {
@@ -113,36 +112,34 @@ export function AdminModelsDashboard() {
           {t("loadError")}
         </div>
       ) : (
-        <div className="space-y-10">
-          {AI_MODEL_CONFIG_GROUPS.map((group, i) => (
-            <div key={group} className="space-y-10">
-              {i > 0 && <Separator />}
-              <SettingsSection
-                title={t(`groups.${group}.title`)}
-                // Description optionnelle : certains groupes s'expliquent par
-                // les descriptions de leurs champs.
-                description={
-                  // Cast : la clé n'existe que pour certains groupes (2 sur 4),
-                  // ce que le type ne sait pas dire — `t.has` est le garde-fou,
-                  // à l'exécution.
-                  t.has(`groups.${group}.desc` as AdminKey)
-                    ? t(`groups.${group}.desc` as AdminKey)
-                    : undefined
-                }
-              >
-                <div className="space-y-6">
-                  {fieldsByGroup[group].map((field) => (
-                    <ConfigRow
-                      key={field.key}
-                      field={field}
-                      value={values?.[field.key] ?? null}
-                      loading={values === null}
-                      onSaved={onSaved}
-                    />
-                  ))}
-                </div>
-              </SettingsSection>
-            </div>
+        /* C'est littéralement un écran de réglages : un groupe par famille, un
+           champ par rangée. Même grammaire que /settings (MIN-167). */
+        <div className="flex flex-col gap-4">
+          {AI_MODEL_CONFIG_GROUPS.map((group) => (
+            <SettingsGroup
+              key={group}
+              title={t(`groups.${group}.title`)}
+              // Description optionnelle : certains groupes s'expliquent par
+              // les descriptions de leurs champs.
+              description={
+                // Cast : la clé n'existe que pour certains groupes (2 sur 4),
+                // ce que le type ne sait pas dire — `t.has` est le garde-fou,
+                // à l'exécution.
+                t.has(`groups.${group}.desc` as AdminKey)
+                  ? t(`groups.${group}.desc` as AdminKey)
+                  : undefined
+              }
+            >
+              {fieldsByGroup[group].map((field) => (
+                <ConfigRow
+                  key={field.key}
+                  field={field}
+                  value={values?.[field.key] ?? null}
+                  loading={values === null}
+                  onSaved={onSaved}
+                />
+              ))}
+            </SettingsGroup>
           ))}
         </div>
       )}
@@ -171,7 +168,7 @@ function ConfigRow({
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2 py-3.5">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-9 w-full max-w-md" />
       </div>
@@ -241,25 +238,27 @@ function ModelRow({
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
-      <div className="mt-1 flex max-w-md items-center gap-2">
-        <ModelCombobox
-          scope="platform"
-          value={saved}
-          onChange={(next) => void select(next)}
-          disabled={busy}
-          defaultLabel={t("fieldDefault")}
-          defaultModelId={field.fallback}
-          placeholder={tAgent("modelSearchPlaceholder")}
-          emptyLabel={tAgent("modelSearchEmpty")}
-          loadingLabel={tAgent("modelSearchLoading")}
-          freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
-        />
-        {busy ? <Spinner className="shrink-0" /> : null}
-      </div>
-    </div>
+    <SettingsRow
+      label={label}
+      hint={desc ?? undefined}
+      control={
+        <>
+          <ModelCombobox
+            scope="platform"
+            value={saved}
+            onChange={(next) => void select(next)}
+            disabled={busy}
+            defaultLabel={t("fieldDefault")}
+            defaultModelId={field.fallback}
+            placeholder={tAgent("modelSearchPlaceholder")}
+            emptyLabel={tAgent("modelSearchEmpty")}
+            loadingLabel={tAgent("modelSearchLoading")}
+            freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
+          />
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </>
+      }
+    />
   );
 }
 
@@ -292,19 +291,18 @@ function FlagRow({
   };
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="space-y-1">
-        <label htmlFor={`cfg-${field.key}`} className="text-sm font-medium">
-          {label}
-        </label>
-        {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
-      </div>
-      <Switch
-        id={`cfg-${field.key}`}
-        checked={checked}
-        onCheckedChange={(v) => void toggle(v)}
-      />
-    </div>
+    <SettingsRow
+      htmlFor={`cfg-${field.key}`}
+      label={label}
+      hint={desc ?? undefined}
+      control={
+        <Switch
+          id={`cfg-${field.key}`}
+          checked={checked}
+          onCheckedChange={(v) => void toggle(v)}
+        />
+      }
+    />
   );
 }
 
@@ -352,28 +350,30 @@ function ModelIdRow({
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={`cfg-${field.key}`} className="text-sm font-medium">
-        {label}
-      </label>
-      {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
-      <div className="mt-1 flex max-w-md items-center gap-2">
-        <Input
-          id={`cfg-${field.key}`}
-          value={draft}
-          placeholder={field.fallback}
-          disabled={busy}
-          spellCheck={false}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => void commit()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-            if (e.key === "Escape") setDraft(saved);
-          }}
-        />
-        {busy ? <Spinner className="shrink-0" /> : null}
-      </div>
-    </div>
+    <SettingsRow
+      htmlFor={`cfg-${field.key}`}
+      label={label}
+      hint={desc ?? undefined}
+      control={
+        <>
+          <Input
+            id={`cfg-${field.key}`}
+            value={draft}
+            placeholder={field.fallback}
+            disabled={busy}
+            spellCheck={false}
+            className="w-64"
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => void commit()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") setDraft(saved);
+            }}
+          />
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </>
+      }
+    />
   );
 }
 
@@ -449,11 +449,10 @@ function FavoritesRow({
   const save = () => void write(list.length > 0 ? JSON.stringify(list) : "");
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      {desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
-
-      <div className="mt-2 space-y-3">
+    /* La seule rangée verticale du tableau de bord : une LISTE de favoris, avec
+       son propre texte long — elle ne tient pas au bout d'une ligne. */
+    <SettingsRow label={label} hint={desc ?? undefined} orientation="vertical">
+      <div className="space-y-3">
         {list.map((favorite, index) => (
           <div
             key={index}
@@ -567,6 +566,6 @@ function FavoritesRow({
           <p className="text-xs text-muted-foreground">{t("favorites.incomplete")}</p>
         ) : null}
       </div>
-    </div>
+    </SettingsRow>
   );
 }

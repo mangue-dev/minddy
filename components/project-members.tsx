@@ -20,6 +20,10 @@ import { UserPlus, Users, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { EmptyState } from "@/components/empty-state";
+import {
+  SettingsEmpty,
+  SettingsListRow,
+} from "@/components/settings/settings-ui";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
 import type { Member } from "@/lib/types";
@@ -128,65 +132,64 @@ export function ProjectMembers({
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">{t("membersLabel")}</p>
         {loading ? (
-          <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
         ) : (
-          <ul className="flex flex-col divide-y divide-border">
+          <div className="flex flex-col divide-y divide-border">
             {members.map((m) => (
-              <li key={m.user_id} className="flex items-center gap-3 py-2">
-                <UserAvatar
-                  seed={m.avatar_seed}
-                  className="size-8"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{displayName(m)}</p>
-                  {m.email && m.full_name && (
-                    <p className="truncate text-xs text-muted-foreground">{m.email}</p>
-                  )}
-                </div>
-                {m.is_owner ? (
-                  <Badge variant="secondary">{t("owner")}</Badge>
-                ) : (
-                  isOwner && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      disabled={busyId === m.user_id}
-                      onClick={() => setRemoveTarget(m)}
-                    >
-                      {t("remove")}
-                    </Button>
+              <SettingsListRow
+                key={m.user_id}
+                avatar={<UserAvatar seed={m.avatar_seed} className="size-8" />}
+                title={displayName(m)}
+                subtitle={m.email && m.full_name ? m.email : undefined}
+                action={
+                  m.is_owner ? (
+                    <Badge variant="secondary">{t("owner")}</Badge>
+                  ) : (
+                    isOwner && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={busyId === m.user_id}
+                        onClick={() => setRemoveTarget(m)}
+                      >
+                        {t("remove")}
+                      </Button>
+                    )
                   )
-                )}
-              </li>
+                }
+              />
             ))}
-          </ul>
+          </div>
         )}
       </div>
 
       {isOwner && invitations.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium">{t("pendingInvitations")}</p>
-          <ul className="flex flex-col divide-y divide-border">
+          <div className="flex flex-col divide-y divide-border">
             {invitations.map((inv) => (
-              <li key={inv.id} className="flex items-center gap-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{inv.invited_email}</p>
-                </div>
-                <Badge variant="outline">{t("pending")}</Badge>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("cancelInvitationAria")}
-                  disabled={busyId === inv.id}
-                  onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
-                >
-                  <X />
-                </Button>
-              </li>
+              <SettingsListRow
+                key={inv.id}
+                title={inv.invited_email}
+                action={
+                  <>
+                    <Badge variant="outline">{t("pending")}</Badge>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("cancelInvitationAria")}
+                      disabled={busyId === inv.id}
+                      onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
+                    >
+                      <X />
+                    </Button>
+                  </>
+                }
+              />
             ))}
-          </ul>
+          </div>
         </div>
       )}
 

@@ -6,6 +6,10 @@ import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-u
 import { Pencil, Plus, Trash2, Check, X } from "lucide-react";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
+  SettingsEmpty,
+  SettingsListRow,
+} from "@/components/settings/settings-ui";
+import {
   CATEGORY_COLORS,
   CATEGORY_COLOR_NAMES,
   DEFAULT_CATEGORY_COLOR,
@@ -97,25 +101,32 @@ function CategoryRow({
   }
 
   return (
-    <div className="flex items-center gap-2 py-1.5">
-      <span
-        className="size-3 rounded-full"
-        style={{ backgroundColor: category.color }}
-        aria-hidden
-      />
-      <span className="min-w-0 flex-1 truncate text-sm">{category.name}</span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={tc("edit")}
-        onClick={() => setEditing(true)}
-      >
-        <Pencil />
-      </Button>
-      <Button variant="ghost" size="icon-sm" aria-label={tc("delete")} onClick={onDelete}>
-        <Trash2 />
-      </Button>
-    </div>
+    <SettingsListRow
+      className="py-2"
+      avatar={
+        <span
+          className="size-3 shrink-0 rounded-full"
+          style={{ backgroundColor: category.color }}
+          aria-hidden
+        />
+      }
+      title={<span className="font-normal">{category.name}</span>}
+      action={
+        <>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={tc("edit")}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil />
+          </Button>
+          <Button variant="ghost" size="icon-sm" aria-label={tc("delete")} onClick={onDelete}>
+            <Trash2 />
+          </Button>
+        </>
+      }
+    />
   );
 }
 
@@ -172,9 +183,9 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
 
       <div className="flex flex-col divide-y divide-border">
         {categories.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">
+          <SettingsEmpty>
             {t("emptyState", { noCategories: tf("noCategories") })}
-          </p>
+          </SettingsEmpty>
         ) : (
           categories.map((c) => (
             <CategoryRow

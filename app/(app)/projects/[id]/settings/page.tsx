@@ -1,29 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  Badge,
-  Button,
-  ConfirmDeleteDialog,
-  Input,
-  Separator,
-  Skeleton,
-  Spinner,
-  toast,
-} from "mangue-ui";
+import { Button, ConfirmDeleteDialog, Skeleton, toast } from "mangue-ui";
 import {
   GitBranch,
   Import as ImportIcon,
-  LogOut,
   MessagesSquare,
   Plug,
   Repeat,
   Settings2,
   Tags,
-  Trash2,
   Users,
   WandSparkles,
 } from "lucide-react";
@@ -31,22 +20,21 @@ import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { userIdsWithoutRule } from "@/lib/smart-assign-config";
-import { removeMemberApi } from "@/lib/members-api";
-import { isValidKey, normalizeKey } from "@/lib/project-key";
-import { ProjectIconPicker } from "@/components/project-icon-picker";
 import { ProjectMembers } from "@/components/project-members";
 import { ProjectCategories } from "@/components/project-categories";
 import { ProjectIntegrations } from "@/components/project-integrations";
 import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
+import { ProjectGeneralSection } from "@/components/settings/project-general-section";
 import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
+import { SettingsGroup } from "@/components/settings/settings-ui";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   SettingsShell,
-  SettingsSection,
+  SETTINGS_MAX_WIDTH,
   type SettingsTab,
 } from "@/components/settings-shell";
 
@@ -57,13 +45,7 @@ export default function ProjectSettingsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const {
-    projects,
-    loading: projectsLoading,
-    updateProject,
-    deleteProject,
-    refetch,
-  } = useProjects();
+  const { projects, loading: projectsLoading, deleteProject } = useProjects();
   const project = projects.find((p) => p.id === id);
 
   // Même clé de cache que la section Smart Assign et l'onglet Membres : la
@@ -77,25 +59,11 @@ export default function ProjectSettingsPage() {
       project?.smart_assign_rules
     ).length > 0;
 
-  const [name, setName] = useState(project?.name ?? "");
-  const [key, setKey] = useState(project?.key ?? "");
-  const [saving, setSaving] = useState(false);
-  const [leaving, setLeaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // Sync the form once the project resolves (or changes via Realtime).
-  useEffect(() => {
-    if (project) {
-      setName(project.name);
-      setKey(project.key);
-      setError(null);
-    }
-  }, [project?.name, project?.key]);
 
   if (projectsLoading && !project) {
     return (
-      <div className="mx-auto w-full max-w-[1080px] p-4 md:p-8">
+      <div className={`mx-auto w-full ${SETTINGS_MAX_WIDTH} p-4 md:p-8`}>
         <Skeleton className="h-8 w-64" />
       </div>
     );
@@ -115,31 +83,6 @@ export default function ProjectSettingsPage() {
   }
 
   const isOwner = project.owner_id === user?.id;
-  const dirty = name.trim() !== project.name || normalizeKey(key) !== project.key;
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    const trimmedName = name.trim();
-    const finalKey = normalizeKey(key);
-    if (!trimmedName) {
-      setError(t("nameRequired"));
-      return;
-    }
-    if (!isValidKey(finalKey)) {
-      setError(t("keyInvalid"));
-      return;
-    }
-    setSaving(true);
-    try {
-      await updateProject(project.id, { name: trimmedName, key: finalKey });
-      toast.success(t("projectUpdated"));
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = async () => {
     await deleteProject(project.id);
@@ -147,158 +90,32 @@ export default function ProjectSettingsPage() {
     router.push("/home");
   };
 
-  const handleLeave = async () => {
-    if (!user) return;
-    setLeaving(true);
-    try {
-      await removeMemberApi(project.id, user.id);
-      toast.success(t("leftProject", { name: project.name }));
-      refetch();
-      router.push("/home");
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setLeaving(false);
-    }
-  };
-
-  const generalContent = isOwner ? (
-    <>
-      <SettingsSection
-        title={t("generalSectionTitle")}
-        description={t("generalSectionDesc")}
-      >
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="settings-name" className="text-sm font-medium">
-              {t("nameLabel")}
-            </label>
-            <Input
-              id="settings-name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="settings-key" className="text-sm font-medium">
-              {t("keyLabel")}
-            </label>
-            <Input
-              id="settings-key"
-              required
-              value={key}
-              onChange={(e) => setKey(normalizeKey(e.target.value))}
-              className="w-28 font-mono uppercase tracking-wide"
-              maxLength={5}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t("iconLabel")}</span>
-            {/* Le projet existe : chaque geste écrit tout de suite et le cache
-                `projects` rafraîchi rend la nouvelle icône — rien à retenir ici. */}
-            <ProjectIconPicker
-              projectId={project.id}
-              seed={project.id}
-              iconUrl={project.icon_url}
-              onChanged={() => {}}
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div>
-            <Button type="submit" disabled={saving || !dirty}>
-              {saving && <Spinner />}
-              {tc("save")}
-            </Button>
-          </div>
-        </form>
-      </SettingsSection>
-
-      <Separator />
-
-      <SettingsSection
-        title={t("dangerZoneTitle")}
-        description={t("dangerZoneDesc")}
-        destructive
-      >
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-          <div className="text-sm">
-            <p className="font-medium">{t("deleteProjectLabel")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("deleteProjectHint")}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            onClick={() => setConfirmDelete(true)}
-          >
-            <Trash2 />
-            {tc("moveToTrash")}
-          </Button>
-        </div>
-      </SettingsSection>
-    </>
-  ) : (
-    <>
-      <SettingsSection
-        title={t("generalSectionTitle")}
-        description={t("ownerOnlyHint")}
-      >
-        <div className="flex items-center gap-3">
-          <div>
-            <p className="text-sm font-medium">{project.name}</p>
-            <Badge variant="secondary" className="mt-1 font-mono">
-              {project.key}
-            </Badge>
-          </div>
-        </div>
-      </SettingsSection>
-
-      <Separator />
-
-      <SettingsSection title={t("leaveProjectLabel")}>
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-          <div className="text-sm">
-            <p className="font-medium">{t("leaveProjectLabel")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("leaveProjectHint")}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={leaving}
-            onClick={handleLeave}
-          >
-            {leaving ? <Spinner /> : <LogOut />}
-            {t("leave")}
-          </Button>
-        </div>
-      </SettingsSection>
-    </>
-  );
-
   const tabs: SettingsTab[] = [
     {
       value: "general",
       label: t("generalTab"),
       icon: Settings2,
-      content: generalContent,
+      content: (
+        <ProjectGeneralSection
+          project={project}
+          isOwner={isOwner}
+          onRequestDelete={() => setConfirmDelete(true)}
+        />
+      ),
     },
     {
       value: "categories",
       label: t("categoriesTab"),
       icon: Tags,
       content: (
-        <SettingsSection
+        <SettingsGroup
+          icon={Tags}
           title={t("categoriesTab")}
           description={t("categoriesSectionDesc")}
+          variant="block"
         >
           <ProjectCategories projectId={project.id} />
-        </SettingsSection>
+        </SettingsGroup>
       ),
     },
     {
@@ -306,12 +123,14 @@ export default function ProjectSettingsPage() {
       label: t("membersTab"),
       icon: Users,
       content: (
-        <SettingsSection
+        <SettingsGroup
+          icon={Users}
           title={t("membersTab")}
           description={t("membersSectionDesc")}
+          variant="block"
         >
           <ProjectMembers projectId={project.id} enabled />
-        </SettingsSection>
+        </SettingsGroup>
       ),
     },
     {
@@ -319,9 +138,12 @@ export default function ProjectSettingsPage() {
       label: t("recurrencesTab"),
       icon: Repeat,
       content: (
-        <SettingsSection title={tRecurrence("title")} description={tRecurrence("description")}>
-          <ProjectRecurrencesSection projectId={project.id} projectKey={project.key} />
-        </SettingsSection>
+        <ProjectRecurrencesSection
+          projectId={project.id}
+          projectKey={project.key}
+          title={tRecurrence("title")}
+          description={tRecurrence("description")}
+        />
       ),
     },
     {
@@ -337,27 +159,15 @@ export default function ProjectSettingsPage() {
       value: "feedback",
       label: t("feedbackTab"),
       icon: MessagesSquare,
-      content: (
-        <SettingsSection
-          title={t("feedbackSectionTitle")}
-          description={t("feedbackSectionDesc")}
-        >
-          <ProjectFeedbackSettings projectId={project.id} isOwner={isOwner} />
-        </SettingsSection>
-      ),
+      // Pas d'enveloppe : cet onglet rend DÉJÀ ses propres groupes (un par
+      // canal). L'envelopper dessinerait une carte dans une carte.
+      content: <ProjectFeedbackSettings projectId={project.id} isOwner={isOwner} />,
     },
     {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      content: (
-        <SettingsSection
-          title={t("gitTab")}
-          description={t("gitSectionDesc")}
-        >
-          <ProjectGitSection projectId={project.id} />
-        </SettingsSection>
-      ),
+      content: <ProjectGitSection projectId={project.id} />,
     },
     {
       value: "import",
@@ -372,12 +182,14 @@ export default function ProjectSettingsPage() {
       label: t("integrationsTab"),
       icon: Plug,
       content: (
-        <SettingsSection
+        <SettingsGroup
+          icon={Plug}
           title={t("integrationsTab")}
           description={t("integrationsSectionDesc")}
+          variant="block"
         >
           <ProjectIntegrations projectId={project.id} isOwner={isOwner} />
-        </SettingsSection>
+        </SettingsGroup>
       ),
     },
   ];

@@ -3,7 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
-import { SettingsSection } from "@/components/settings-shell";
+import { Bot, KeyRound } from "lucide-react";
+import {
+  SettingsEmpty,
+  SettingsGroup,
+  SettingsRow,
+} from "@/components/settings/settings-ui";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import { saveAgentPreferencesApi } from "@/lib/agent-keys-api";
@@ -57,43 +62,59 @@ export function AccountAiKeysSection() {
   return (
     <>
       {/* ── Provider (quota minddy ou BYOK), EN PREMIER ─────────────────────── */}
-      <SettingsSection title={t("aiProviderTitle")} description={t("aiProviderDesc")}>
+      {/* `ByokConnectPanel` est un assistant partagé avec l'onboarding : seul son
+          cadre change, jamais son contenu. */}
+      <SettingsGroup
+        icon={KeyRound}
+        title={t("aiProviderTitle")}
+        description={t("aiProviderDesc")}
+        variant="block"
+      >
         <ByokConnectPanel />
-      </SettingsSection>
+      </SettingsGroup>
 
-      {/* ── Modèle par défaut, ENSUITE ──────────────────────────────────────── */}
-      <SettingsSection title={t("agentModelTitle")} description={t("agentModelDesc")}>
+      {/* ── Les deux défauts de l'agent, réunis en un groupe ─────────────────
+          Modèle (MIN-46) puis niveau de raisonnement (MIN-122) : deux choix de
+          la même décision, qui n'avaient aucune raison d'être deux sections. */}
+      <SettingsGroup
+        icon={Bot}
+        title={t("agentTab")}
+        description={t("agentSectionDesc")}
+      >
         {prefLoading ? (
-          <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
         ) : (
-          <div className="max-w-md">
-            <ModelCombobox
-              value={defaultModel ?? ""}
-              onChange={(v) => void onModelChange(v)}
-              defaultLabel={t("agentModelRoot")}
-              defaultModelId={providerDefaultModel}
-              placeholder={tAgent("modelSearchPlaceholder")}
-              emptyLabel={tAgent("modelSearchEmpty")}
-              loadingLabel={tAgent("modelSearchLoading")}
-              freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+          <>
+            <SettingsRow
+              label={t("agentModelTitle")}
+              hint={t("agentModelDesc")}
+              control={
+                <ModelCombobox
+                  value={defaultModel ?? ""}
+                  onChange={(v) => void onModelChange(v)}
+                  defaultLabel={t("agentModelRoot")}
+                  defaultModelId={providerDefaultModel}
+                  placeholder={tAgent("modelSearchPlaceholder")}
+                  emptyLabel={tAgent("modelSearchEmpty")}
+                  loadingLabel={tAgent("modelSearchLoading")}
+                  freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+                />
+              }
             />
-          </div>
-        )}
-      </SettingsSection>
 
-      {/* ── Niveau de raisonnement par défaut (MIN-122) ─────────────────────── */}
-      <SettingsSection title={t("agentReasoningTitle")} description={t("agentReasoningDesc")}>
-        {prefLoading ? (
-          <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
-        ) : (
-          <div className="max-w-md">
-            <ReasoningCombobox
-              value={defaultReasoningLevel}
-              onChange={(v) => void onReasoningChange(v)}
+            <SettingsRow
+              label={t("agentReasoningTitle")}
+              hint={t("agentReasoningDesc")}
+              control={
+                <ReasoningCombobox
+                  value={defaultReasoningLevel}
+                  onChange={(v) => void onReasoningChange(v)}
+                />
+              }
             />
-          </div>
+          </>
         )}
-      </SettingsSection>
+      </SettingsGroup>
     </>
   );
 }

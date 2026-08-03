@@ -32,7 +32,6 @@ import {
   RefreshCw,
   Sparkles,
   TriangleAlert,
-  type LucideIcon,
 } from "lucide-react";
 import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
 import { useProjects } from "@/lib/projects-context";
@@ -42,7 +41,7 @@ import {
   fetchCustomDomainApi,
 } from "@/components/custom-domain-section";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
-import { HelpHint } from "@/components/settings/help-hint";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 
 /**
  * Onglet Feedback des settings (MIN-37). Deux canaux publics cumulables — le
@@ -50,6 +49,11 @@ import { HelpHint } from "@/components/settings/help-hint";
  * toujours active). Chaque réglage tient sur une rangée : libellé + contrôle,
  * et les explications longues (SSO, payload API) vivent derrière une icône ⓘ ou
  * un repli, pour que la config reste lisible d'un coup d'œil.
+ *
+ * C'est ici qu'a été inventé le patron carte + rangée que tous les écrans de
+ * réglages emploient depuis MIN-167. Ses `Channel` et `Row` locaux ont donc été
+ * SUPPRIMÉS au profit de `SettingsGroup` / `SettingsRow` : la source du patron
+ * doit en être un consommateur, sinon les deux redivergent au premier ajustement.
  */
 
 interface BoardSettings {
@@ -103,86 +107,6 @@ function StatusPill({ active, label }: { active: boolean; label: string }) {
       />
       {label}
     </span>
-  );
-}
-
-/** Carte d'un canal : chip d'icône, titre + aide + statut, contrôle, et corps
- *  (rangées de réglage) séparé par un liseré, uniquement s'il y a du contenu. */
-function Channel({
-  icon: Icon,
-  title,
-  hint,
-  help,
-  status,
-  control,
-  children,
-}: {
-  icon: LucideIcon;
-  title: string;
-  hint: string;
-  help?: ReactNode;
-  status?: ReactNode;
-  control?: ReactNode;
-  children?: ReactNode;
-}) {
-  return (
-    <section className="rounded-xl border border-border bg-card text-card-foreground">
-      <header className="flex items-start justify-between gap-4 p-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Icon className="size-4" />
-          </span>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <h3 className="text-sm font-medium">{title}</h3>
-              {help && <HelpHint>{help}</HelpHint>}
-            </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
-          </div>
-        </div>
-        {(status || control) && (
-          <div className="flex shrink-0 items-center gap-2.5">
-            {status}
-            {control}
-          </div>
-        )}
-      </header>
-      {children && <div className="border-t border-border px-4">{children}</div>}
-    </section>
-  );
-}
-
-/** Rangée de réglage : libellé (+ aide) & indice à gauche, contrôle à droite,
- *  contenu déroulant en dessous. */
-function Row({
-  label,
-  hint,
-  help,
-  control,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  help?: ReactNode;
-  control?: ReactNode;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-2.5 py-3.5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium">{label}</p>
-            {help && <HelpHint>{help}</HelpHint>}
-          </div>
-          {hint && (
-            <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
-          )}
-        </div>
-        {control && <div className="shrink-0">{control}</div>}
-      </div>
-      {children}
-    </div>
   );
 }
 
@@ -296,27 +220,28 @@ export function ProjectFeedbackSettings({
       {isOwner && <FeedbackIntegrationWizard projectId={projectId} />}
 
       {/* ── Canal 1 : board public ─────────────────────────────────────── */}
-      <Channel
+      <SettingsGroup
         icon={MessagesSquare}
         title={t("feedbackChannelBoardTitle")}
-        hint={t("feedbackChannelBoardDesc")}
+        description={t("feedbackChannelBoardDesc")}
         help={t("feedbackChannelBoardHelp")}
-        status={
-          <StatusPill
-            active={boardOn}
-            label={boardOn ? t("feedbackActive") : t("feedbackInactive")}
-          />
-        }
-        control={
-          <Switch
-            checked={boardOn}
-            disabled={!isOwner}
-            onCheckedChange={(v) => void patchBoard({ enabled: v })}
-          />
+        action={
+          <>
+            <StatusPill
+              active={boardOn}
+              label={boardOn ? t("feedbackActive") : t("feedbackInactive")}
+            />
+            <Switch
+              checked={boardOn}
+              disabled={!isOwner}
+              onCheckedChange={(v) => void patchBoard({ enabled: v })}
+              aria-label={t("feedbackChannelBoardTitle")}
+            />
+          </>
         }
       >
         {boardOn && (
-          <div className="divide-y divide-border">
+          <>
             {/* Lien public + domaine personnalisé (MIN-36) fusionnés : le lien
                 affiche déjà le domaine vérifié, donc `primaryUrlShown` évite de
                 le répéter. La section domaine se masque seule sans env VERCEL_*. */}
@@ -335,7 +260,7 @@ export function ProjectFeedbackSettings({
             </div>
 
             {/* Identité des visiteurs */}
-            <Row
+            <SettingsRow
               label={t("feedbackIdentityTitle")}
               help={t("feedbackIdentityHelp")}
               control={
@@ -360,11 +285,11 @@ export function ProjectFeedbackSettings({
                   origin={origin}
                 />
               )}
-            </Row>
+            </SettingsRow>
 
             {/* Onglets des vues partagées */}
             {board && (
-              <Row
+              <SettingsRow
                 label={t("feedbackShowViews")}
                 hint={t("feedbackShowViewsDesc")}
                 control={
@@ -372,6 +297,7 @@ export function ProjectFeedbackSettings({
                     checked={board.show_views}
                     disabled={!isOwner}
                     onCheckedChange={(v) => void patchBoard({ show_views: v })}
+                    aria-label={t("feedbackShowViews")}
                   />
                 }
               >
@@ -407,13 +333,13 @@ export function ProjectFeedbackSettings({
                       })}
                     </div>
                   ))}
-              </Row>
+              </SettingsRow>
             )}
 
             {/* Catégories des posts sur le board public (MIN-52) — off par
                 défaut : les catégories restent internes au dashboard équipe. */}
             {board && (
-              <Row
+              <SettingsRow
                 label={t("feedbackShowCategories")}
                 hint={t("feedbackShowCategoriesDesc")}
                 control={
@@ -421,6 +347,7 @@ export function ProjectFeedbackSettings({
                     checked={board.show_categories}
                     disabled={!isOwner}
                     onCheckedChange={(v) => void patchBoard({ show_categories: v })}
+                    aria-label={t("feedbackShowCategories")}
                   />
                 }
               />
@@ -436,17 +363,17 @@ export function ProjectFeedbackSettings({
                 onColorChange={patchBoardDebounced}
               />
             )}
-          </div>
+          </>
         )}
-      </Channel>
+      </SettingsGroup>
 
       {/* ── Canal 2 : API serveur-à-serveur ────────────────────────────── */}
-      <Channel
+      <SettingsGroup
         icon={Code2}
         title={t("feedbackChannelApiTitle")}
-        hint={t("feedbackChannelApiDesc")}
+        description={t("feedbackChannelApiDesc")}
         help={t("feedbackChannelApiHelp")}
-        status={
+        action={
           feedbackKeyCount > 0 ? (
             <StatusPill active label={t("feedbackActive")} />
           ) : undefined
@@ -476,7 +403,7 @@ export function ProjectFeedbackSettings({
             </CollapsibleContent>
           </Collapsible>
         </div>
-      </Channel>
+      </SettingsGroup>
 
       {/* ── Revue par Numo : s'applique aux trois canaux ────────────────── */}
       <NumoReviewSetting projectId={projectId} isOwner={isOwner} />
@@ -533,25 +460,26 @@ function NumoReviewSetting({
   };
 
   return (
-    <Channel
+    <SettingsGroup
       icon={Sparkles}
       title={t("feedbackReviewTitle")}
-      hint={t("feedbackReviewDesc")}
+      description={t("feedbackReviewDesc")}
       help={t("feedbackReviewHelp")}
-      status={
-        <StatusPill
-          active={reviewOn}
-          label={reviewOn ? t("feedbackActive") : t("feedbackInactive")}
-        />
-      }
-      control={
-        <Switch
-          checked={reviewOn}
-          disabled={!isOwner}
-          onCheckedChange={(v) =>
-            void patch("feedback_review_enabled", v, setReviewOn)
-          }
-        />
+      action={
+        <>
+          <StatusPill
+            active={reviewOn}
+            label={reviewOn ? t("feedbackActive") : t("feedbackInactive")}
+          />
+          <Switch
+            checked={reviewOn}
+            disabled={!isOwner}
+            onCheckedChange={(v) =>
+              void patch("feedback_review_enabled", v, setReviewOn)
+            }
+            aria-label={t("feedbackReviewTitle")}
+          />
+        </>
       }
     >
       {!reviewOn && (
@@ -563,7 +491,7 @@ function NumoReviewSetting({
         </div>
       )}
       {reviewOn && (
-        <Row
+        <SettingsRow
           label={t("feedbackReviewSkipLabel")}
           hint={t("feedbackReviewSkipDesc")}
           control={
@@ -573,11 +501,12 @@ function NumoReviewSetting({
               onCheckedChange={(v) =>
                 void patch("feedback_review_skip_over_budget", v, setSkipOn)
               }
+              aria-label={t("feedbackReviewSkipLabel")}
             />
           }
         />
       )}
-    </Channel>
+    </SettingsGroup>
   );
 }
 
@@ -599,13 +528,14 @@ function AccentColorSetting({
   const custom = board.accent_light !== null || board.accent_dark !== null;
 
   return (
-    <Row
+    <SettingsRow
       label={t("feedbackAccentTitle")}
       hint={t("feedbackAccentDesc")}
       control={
         <Switch
           checked={custom}
           disabled={!isOwner}
+          aria-label={t("feedbackAccentTitle")}
           onCheckedChange={(v) =>
             void onToggle(
               v
@@ -645,7 +575,7 @@ function AccentColorSetting({
           </div>
         </div>
       )}
-    </Row>
+    </SettingsRow>
   );
 }
 

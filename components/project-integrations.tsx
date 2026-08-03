@@ -37,6 +37,10 @@ import {
   integrationsQueryKey,
   useIntegrationsQuery,
 } from "@/lib/use-integrations-query";
+import {
+  SettingsEmpty,
+  SettingsListRow,
+} from "@/components/settings/settings-ui";
 import type {
   Integration,
   IntegrationKind,
@@ -451,24 +455,27 @@ export function ProjectIntegrations({
       )}
 
       {loading ? (
-        <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
+        <SettingsEmpty>{tc("loading")}</SettingsEmpty>
       ) : integrations.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">{t("integrationsEmpty")}</p>
+        <SettingsEmpty>{t("integrationsEmpty")}</SettingsEmpty>
       ) : (
-        <ul className="flex flex-col divide-y divide-border">
+        <div className="flex flex-col divide-y divide-border">
           {integrations.map((integration) => (
-            <li key={integration.id} className="flex items-center gap-3 py-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                {integration.kind === "feedback" ? (
-                  <MessagesSquare className="size-4" />
-                ) : (
-                  <Plug className="size-4" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium">{integration.name}</p>
-                  <code className="shrink-0 font-mono text-xs text-muted-foreground">
+            <SettingsListRow
+              key={integration.id}
+              avatar={
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                  {integration.kind === "feedback" ? (
+                    <MessagesSquare className="size-4" />
+                  ) : (
+                    <Plug className="size-4" />
+                  )}
+                </span>
+              }
+              title={
+                <span className="flex items-center gap-2">
+                  <span className="truncate">{integration.name}</span>
+                  <code className="shrink-0 font-mono text-xs font-normal text-muted-foreground">
                     {integration.key_prefix}…
                   </code>
                   <Badge variant="secondary">
@@ -477,43 +484,47 @@ export function ProjectIntegrations({
                   {integration.revoked_at && (
                     <Badge variant="secondary">{t("integrationRevokedBadge")}</Badge>
                   )}
-                </div>
-                <p className="truncate text-xs text-muted-foreground">
-                  {format.dateTime(new Date(integration.created_at), {
-                    dateStyle: "medium",
-                  })}
-                  {" · "}
-                  {lastUsed(integration)}
-                </p>
-              </div>
-              <WebhookStatusDot integration={integration} />
-              {isOwner && !integration.revoked_at && (
+                </span>
+              }
+              subtitle={
+                format.dateTime(new Date(integration.created_at), {
+                  dateStyle: "medium",
+                }) +
+                " · " +
+                lastUsed(integration)
+              }
+              action={
                 <>
-                  {/* Les webhooks suivent des événements d'issues : réservés aux clés issues. */}
-                  {integration.kind === "issues" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setWebhookFor(integration)}
-                    >
-                      <Webhook />
-                      {t("webhookButton")}
-                    </Button>
+                  <WebhookStatusDot integration={integration} />
+                  {isOwner && !integration.revoked_at && (
+                    <>
+                      {/* Les webhooks suivent des événements d'issues : réservés aux clés issues. */}
+                      {integration.kind === "issues" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWebhookFor(integration)}
+                        >
+                          <Webhook />
+                          {t("webhookButton")}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setToRevoke(integration)}
+                      >
+                        {t("integrationRevoke")}
+                      </Button>
+                    </>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setToRevoke(integration)}
-                  >
-                    {t("integrationRevoke")}
-                  </Button>
                 </>
-              )}
-            </li>
+              }
+            />
           ))}
-        </ul>
+        </div>
       )}
 
       <CreateIntegrationDialog

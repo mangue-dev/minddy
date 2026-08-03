@@ -134,7 +134,6 @@ export default function AccountSettingsPage() {
       title={t("title")}
       defaultTab="profile"
       tabs={tabs}
-      maxWidth={880}
       topSlot={
         <SettingsAssistantPrompt
           projectId={null}

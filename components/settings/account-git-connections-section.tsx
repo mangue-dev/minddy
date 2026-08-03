@@ -4,14 +4,18 @@ import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
-import { Github, Gitlab } from "lucide-react";
+import { GitBranch, Github, Gitlab } from "lucide-react";
 import { disconnectGitConnectionApi } from "@/lib/git-integration-api";
 import {
   gitConnectionsQueryKey,
   useGitConnectionsQuery,
 } from "@/lib/use-git-connections-query";
 import { getRepoProvider } from "@/lib/repo-providers";
-import { SettingsSection } from "@/components/settings-shell";
+import {
+  SettingsEmpty,
+  SettingsGroup,
+  SettingsListRow,
+} from "@/components/settings/settings-ui";
 import type { GitConnection } from "@/lib/types";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -43,52 +47,51 @@ export function AccountGitConnectionsSection() {
   };
 
   return (
-    <SettingsSection
-      title={t("gitConnectionsTitle")}
-      description={t("gitConnectionsDesc")}
-    >
-      {loading ? (
-        <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
-      ) : connections.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">
-          {t("gitConnectionsEmpty")}
-        </p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border">
-          {connections.map((c) => {
+    <>
+      <SettingsGroup
+        icon={GitBranch}
+        title={t("gitConnectionsTitle")}
+        description={t("gitConnectionsDesc")}
+      >
+        {loading ? (
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+        ) : connections.length === 0 ? (
+          <SettingsEmpty>{t("gitConnectionsEmpty")}</SettingsEmpty>
+        ) : (
+          connections.map((c) => {
             const Icon = PROVIDER_ICON[c.provider];
             return (
-              <li key={c.id} className="flex items-center gap-3 py-2">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                  <Icon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {getRepoProvider(c.provider).displayName}
-                    {c.account_login ? ` · ${c.account_login}` : ""}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {format.dateTime(new Date(c.created_at), {
-                      dateStyle: "medium",
-                    })}
-                    {c.projects.length > 0
-                      ? ` · ${t("gitConnectionUsedBy", { count: c.projects.length })}`
-                      : ""}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setToDisconnect(c)}
-                >
-                  {t("gitDisconnect")}
-                </Button>
-              </li>
+              <SettingsListRow
+                key={c.id}
+                avatar={
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <Icon className="size-4" />
+                  </span>
+                }
+                title={`${getRepoProvider(c.provider).displayName}${c.account_login ? ` · ${c.account_login}` : ""}`}
+                subtitle={
+                  format.dateTime(new Date(c.created_at), {
+                    dateStyle: "medium",
+                  }) +
+                  (c.projects.length > 0
+                    ? ` · ${t("gitConnectionUsedBy", { count: c.projects.length })}`
+                    : "")
+                }
+                action={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setToDisconnect(c)}
+                  >
+                    {t("gitDisconnect")}
+                  </Button>
+                }
+              />
             );
-          })}
-        </ul>
-      )}
+          })
+        )}
+      </SettingsGroup>
 
       <ConfirmDeleteDialog
         open={!!toDisconnect}
@@ -109,6 +112,6 @@ export function AccountGitConnectionsSection() {
         cancelLabel={tc("cancel")}
         onConfirm={handleDisconnect}
       />
-    </SettingsSection>
+    </>
   );
 }

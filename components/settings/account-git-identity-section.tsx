@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
-import { Github, Gitlab } from "lucide-react";
+import { Button, ConfirmDeleteDialog, cn, toast } from "mangue-ui";
+import { Github, Gitlab, UserRoundCheck } from "lucide-react";
 import {
   disconnectGitIdentityApi,
   startGitIdentityConnectApi,
@@ -15,7 +15,11 @@ import {
 } from "@/lib/use-git-identities-query";
 import { useGitConnectionsQuery } from "@/lib/use-git-connections-query";
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
-import { SettingsSection } from "@/components/settings-shell";
+import {
+  SettingsEmpty,
+  SettingsGroup,
+  SettingsListRow,
+} from "@/components/settings/settings-ui";
 import type { GitIdentity } from "@/lib/types";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -70,12 +74,16 @@ export function AccountGitIdentitySection() {
   };
 
   return (
-    <SettingsSection title={t("gitIdentityTitle")} description={t("gitIdentityDesc")}>
-      {loading ? (
-        <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border">
-          {providers.map((p) => {
+    <>
+      <SettingsGroup
+        icon={UserRoundCheck}
+        title={t("gitIdentityTitle")}
+        description={t("gitIdentityDesc")}
+      >
+        {loading ? (
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+        ) : (
+          providers.map((p) => {
             const Icon = PROVIDER_ICON[p.id];
             const name = getRepoProvider(p.id).displayName;
             const identity = identities.find((i) => i.provider === p.id);
@@ -100,56 +108,58 @@ export function AccountGitIdentitySection() {
                   : t("gitIdentityNotAuthorized");
 
             return (
-              <li key={p.id} className="flex items-center gap-3 py-2">
-                <span
-                  className={
-                    identity
-                      ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand"
-                      : "flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
-                  }
-                >
-                  <Icon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {name}
-                    {identity?.account_login ? ` · ${identity.account_login}` : ""}
-                  </p>
-                  {/* PAS de `truncate` ici : c'est cette ligne qui explique
-                      pourquoi le geste n'est pas offert. Coupée, elle laisse
-                      exactement le malentendu qu'elle est là pour lever. */}
-                  <p className="text-xs text-muted-foreground">{status}</p>
-                </div>
-                {identity ? (
-                  // Le compte GitLab EST la connexion OAuth : le révoquer ici
-                  // délierait les dépôts des projets. Ça se fait en dessous, où
-                  // l'avertissement est écrit.
-                  identity.source === "identity" ? (
+              <SettingsListRow
+                key={p.id}
+                avatar={
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full",
+                      identity
+                        ? "bg-brand/10 text-brand"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                }
+                title={`${name}${identity?.account_login ? ` · ${identity.account_login}` : ""}`}
+                subtitle={status}
+                // PAS de troncature ici : c'est cette ligne qui explique
+                // pourquoi le geste n'est pas offert. Coupée, elle laisse
+                // exactement le malentendu qu'elle est là pour lever.
+                truncateSubtitle={false}
+                action={
+                  identity ? (
+                    // Le compte GitLab EST la connexion OAuth : le révoquer ici
+                    // délierait les dépôts des projets. Ça se fait en dessous, où
+                    // l'avertissement est écrit.
+                    identity.source === "identity" ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setToDisconnect(identity)}
+                      >
+                        {t("gitIdentityRevoke")}
+                      </Button>
+                    ) : null
+                  ) : p.configured ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setToDisconnect(identity)}
+                      disabled={!!connecting}
+                      onClick={() => void authorize(p.id)}
                     >
-                      {t("gitIdentityRevoke")}
+                      {t("gitIdentityAuthorize")}
                     </Button>
                   ) : null
-                ) : p.configured ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!!connecting}
-                    onClick={() => void authorize(p.id)}
-                  >
-                    {t("gitIdentityAuthorize")}
-                  </Button>
-                ) : null}
-              </li>
+                }
+              />
             );
-          })}
-        </ul>
-      )}
+          })
+        )}
+      </SettingsGroup>
 
       <ConfirmDeleteDialog
         open={!!toDisconnect}
@@ -162,6 +172,6 @@ export function AccountGitIdentitySection() {
         cancelLabel={tc("cancel")}
         onConfirm={handleDisconnect}
       />
-    </SettingsSection>
+    </>
   );
 }

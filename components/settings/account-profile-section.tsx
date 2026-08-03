@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner, toast } from "mangue-ui";
-import { Shuffle } from "lucide-react";
+import { Shuffle, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { emailLocalPart } from "@/lib/display-name";
 import { useMyAvatarSeed, useRegenerateAvatar } from "@/lib/use-my-avatar";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { UserAvatar } from "@/components/user-avatar";
 
 /** Read a string key off the user's auth metadata. */
@@ -80,63 +80,63 @@ export function AccountProfileSection() {
   };
 
   return (
-    <SettingsSection
+    <SettingsGroup
+      icon={User}
       title={ta("profileSectionTitle")}
       description={ta("profileSectionDesc")}
+      footer={
+        <Button onClick={() => void save()} disabled={busy || !dirty}>
+          {busy && <Spinner />}
+          {tCommon("save")}
+        </Button>
+      }
     >
-      <div className="space-y-6">
-        {/* Avatar */}
-        <div className="flex items-center gap-4">
-          <UserAvatar seed={seed} className="size-16" />
+      {/* L'avatar ne se choisit pas : il se retire. Le portrait tient donc lieu
+          de valeur, et le bouton est le geste — comme partout ailleurs. */}
+      <SettingsRow
+        label={t("avatarLabel")}
+        hint={t("avatarHint")}
+        control={
+          <>
+            <UserAvatar seed={seed} className="size-9" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={reroll}
+              disabled={regenerate.isPending}
+            >
+              {regenerate.isPending ? <Spinner /> : <Shuffle />}
+              {t("newAvatar")}
+            </Button>
+          </>
+        }
+      />
 
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={reroll}
-                disabled={regenerate.isPending}
-              >
-                {regenerate.isPending ? <Spinner /> : <Shuffle />}
-                {t("newAvatar")}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("avatarHint")}</p>
-          </div>
-        </div>
-
-        {/* Name */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="account-name" className="text-sm font-medium">
-            {t("nameLabel")}
-          </label>
+      <SettingsRow
+        htmlFor="account-name"
+        label={t("nameLabel")}
+        control={
           <Input
             id="account-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("namePlaceholder")}
-            className="max-w-sm"
+            className="w-64"
           />
-        </div>
+        }
+      />
 
-        {/* Email (read-only) */}
-        {user?.email && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">{ta("emailLabel")}</label>
-            <div className="flex h-9 max-w-sm items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground">
-              {user.email}
-            </div>
-            <p className="text-xs text-muted-foreground">{ta("emailHint")}</p>
-          </div>
-        )}
-
-        <div>
-          <Button onClick={() => void save()} disabled={busy || !dirty}>
-            {busy && <Spinner />}
-            {tCommon("save")}
-          </Button>
-        </div>
-      </div>
-    </SettingsSection>
+      {/* L'e-mail ne se modifie pas : le montrer dans un champ grisé promettait
+          une saisie qui n'existe pas. C'est une valeur, elle se lit. */}
+      {user?.email && (
+        <SettingsRow
+          label={ta("emailLabel")}
+          hint={ta("emailHint")}
+          control={
+            <span className="text-sm text-muted-foreground">{user.email}</span>
+          }
+        />
+      )}
+    </SettingsGroup>
   );
 }

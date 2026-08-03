@@ -249,10 +249,17 @@ export function ModelCombobox({
           </Button>
         )}
       </PopoverTrigger>
+      {/* La liste se dimensionne sur SON contenu, pas sur le déclencheur : les
+          noms de modèles sont longs, et le picker vit désormais dans une rangée
+          de réglages où le bouton fait la largeur qu'il veut. `PopoverContent`
+          est déjà `w-max min-w-(--radix-popover-trigger-width)` — on ne lui
+          impose donc qu'un plafond, pour qu'un id à rallonge ne sorte pas de
+          l'écran. Épingler la largeur au déclencheur (ce que faisait
+          `w-[var(--radix-popover-trigger-width)]`) écrasait tout. */}
       <PopoverContent
         className={cn(
           "p-0",
-          variant === "compact" ? "w-80" : "w-[var(--radix-popover-trigger-width)]"
+          variant === "compact" ? "w-80" : "max-w-[min(30rem,calc(100vw-2rem))]"
         )}
         align="start"
       >

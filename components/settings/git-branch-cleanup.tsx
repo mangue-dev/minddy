@@ -21,6 +21,7 @@ import {
   deleteAgentBranchesApi,
   fetchAgentBranchesApi,
 } from "@/lib/git-integration-api";
+import { SettingsRow } from "@/components/settings/settings-ui";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentBranch, AgentBranchState } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -309,15 +310,16 @@ export function GitBranchCleanup({
 
   return (
     <>
-      <div className="flex flex-col gap-1.5">
-        <div>
+      <SettingsRow
+        label={t("gitCleanBranches")}
+        hint={t("gitCleanBranchesHint")}
+        control={
           <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
             <Brush className="size-4" />
             {t("gitCleanBranches")}
           </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">{t("gitCleanBranchesHint")}</p>
-      </div>
+        }
+      />
 
       <BranchCleanupDialog
         projectId={projectId}

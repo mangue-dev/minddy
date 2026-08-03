@@ -12,14 +12,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  Badge,
   Button,
   Checkbox,
   Spinner,
   toast,
 } from "mangue-ui";
-import { Check, Copy, Download } from "lucide-react";
+import { Check, Copy, Download, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { SettingsSection } from "@/components/settings-shell";
+import { SettingsGroup, SettingsEmpty } from "@/components/settings/settings-ui";
 import { mfaStatusQueryKey, useMfaStatusQuery } from "@/lib/use-mfa-status";
 import { mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
@@ -227,11 +228,20 @@ export function AccountSecuritySection() {
 
   return (
     <>
-      <SettingsSection title={t("title")} description={t("description")}>
+      {/* `variant="block"` : les trois états (recommandation, enrôlement, codes)
+          sont un ASSISTANT en pile, pas des rangées clé/valeur. Les encarts
+          bordés d'avant ont perdu leur cadre — ils sont DANS la carte, et la
+          double bordure faisait partie du bruit. */}
+      <SettingsGroup
+        icon={Lock}
+        title={t("title")}
+        description={t("description")}
+        variant="block"
+      >
         {status === null ? (
-          <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
+          <SettingsEmpty className="py-0">{tc("loading")}</SettingsEmpty>
         ) : stage === "codes" ? (
-          <div className="space-y-4 rounded-lg border border-border bg-card p-4">
+          <div className="space-y-4">
             <div className="space-y-1">
               <p className="text-sm font-medium">{t("codesTitle")}</p>
               <p className="text-xs leading-relaxed text-muted-foreground">
@@ -279,7 +289,7 @@ export function AccountSecuritySection() {
             </Button>
           </div>
         ) : stage === "enrolling" ? (
-          <div className="space-y-5 rounded-lg border border-border bg-card p-4">
+          <div className="space-y-5">
             <div className="space-y-2">
               <p className="text-sm font-medium">{t("enrollScanTitle")}</p>
               <p className="text-xs text-muted-foreground">{t("enrollScanHint")}</p>
@@ -332,9 +342,9 @@ export function AccountSecuritySection() {
             </div>
           </div>
         ) : status.enabled ? (
-          /* Activée : le même encart, mais qui se tait. Il constate l'état et
+          /* Activée : le même bloc, mais qui se tait. Il constate l'état et
              donne les deux gestes d'entretien — il ne félicite personne. */
-          <div className="space-y-3 rounded-lg border border-emerald-600/25 p-4">
+          <div className="space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-medium">{t("enabledCardTitle")}</p>
               <p className="text-xs text-muted-foreground">
@@ -364,15 +374,15 @@ export function AccountSecuritySection() {
             </div>
           </div>
         ) : (
-          /* Inactive : l'encart de recommandation. Le titre nomme ce qui est en
-             jeu — pas la fonctionnalité, qui est déjà écrite juste au-dessus. */
-          <div className="space-y-3 rounded-lg border border-brand/30 p-4">
+          /* Inactive : la recommandation. Le titre nomme ce qui est en jeu —
+             pas la fonctionnalité, qui est déjà écrite juste au-dessus. */
+          <div className="space-y-3">
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-medium">{t("recommendTitle")}</p>
-                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
+                <Badge variant="secondary" className="border-brand/30 text-brand">
                   {t("recommendedBadge")}
-                </span>
+                </Badge>
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {t("recommendBody")}
@@ -389,7 +399,7 @@ export function AccountSecuritySection() {
             </Button>
           </div>
         )}
-      </SettingsSection>
+      </SettingsGroup>
 
       <AlertDialog open={disableOpen} onOpenChange={setDisableOpen}>
         <AlertDialogContent>

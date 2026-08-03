@@ -13,7 +13,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ImageUp } from "lucide-react";
+import { ImageUp, Trash2 } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { DropOverlay, useFileDrop } from "@/components/attachments";
 import {
@@ -237,22 +237,26 @@ export function ProjectIconPicker({
     </Button>
   );
 
+  /** Retirer l'icône : un geste, pas un réglage — donc une icône, à côté de son
+   *  voisin « Importer », et seulement quand il y a quelque chose à retirer.
+   *  Le libellé passe en tooltip et en `aria-label`. */
   const removeButton = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className={cn(
-        "shrink-0 text-muted-foreground",
-        centered &&
-          "bg-transparent text-xs hover:bg-transparent hover:text-foreground"
-      )}
-      disabled={busy}
-      onClick={() => void handleRemove()}
-    >
-      {removing && <Spinner />}
-      {tCommon("remove")}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={tCommon("remove")}
+          className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={busy}
+          onClick={() => void handleRemove()}
+        >
+          {removing ? <Spinner /> : <Trash2 />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{tCommon("remove")}</TooltipContent>
+    </Tooltip>
   );
 
   // Fond quasi opaque : la zone de dépôt couvre l'aperçu, et sans lui le libellé
@@ -279,26 +283,21 @@ export function ProjectIconPicker({
         <div className="flex w-full items-center gap-2">
           {input}
           {importButton}
+          {iconUrl && removeButton}
         </div>
-        {iconUrl && removeButton}
         {dropOverlay}
       </div>
     );
   }
 
-  // Paramètres : rangée compacte avec aperçu inline et hint.
+  // Paramètres : une seule rangée — aperçu, champ, importer, retirer.
   return (
-    <div {...handlers} className="relative flex flex-col gap-2 rounded-xl">
+    <div {...handlers} className="relative flex items-center gap-2 rounded-xl">
       {fileInput}
-      <div className="flex items-center gap-3">
-        {preview}
-        {input}
-        {importButton}
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">{t("iconImportHint")}</p>
-        {iconUrl && removeButton}
-      </div>
+      {preview}
+      {input}
+      {importButton}
+      {iconUrl && removeButton}
       {dropOverlay}
     </div>
   );
