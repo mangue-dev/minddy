@@ -16,18 +16,23 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Kbd,
   Progress,
   Skeleton,
   toast,
 } from "mangue-ui";
-import { Plus, MoreHorizontal, Pencil, Trash2, Target } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Target, Trash2 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
-import { useAssistantContext } from "@/lib/assistant-panel-context";
+import {
+  useAssistantContext,
+  useAssistantPanel,
+} from "@/lib/assistant-panel-context";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
+import { NumoIcon } from "@/components/numo-icon";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
@@ -38,6 +43,7 @@ import type { Objective } from "@/lib/types";
 function ObjectivesInner() {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
+  const tSeed = useTranslations("Seed");
   const tIssue = useTranslations("Issue");
   const tStatus = useTranslations("ObjectiveStatus");
   const params = useParams<{ id: string }>();
@@ -55,6 +61,7 @@ function ObjectivesInner() {
     useObjectivesQuery(projectId);
   const { issues } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
+  const { open: openAssistant } = useAssistantPanel();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [openObjectiveId, setOpenObjectiveId] = useState<string | null>(null);
@@ -131,9 +138,6 @@ function ObjectivesInner() {
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-5xl">
-          <h1 className="mb-5 font-display text-xl font-semibold tracking-tight">
-            {t("title")}
-          </h1>
           {loading ? (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -141,18 +145,36 @@ function ObjectivesInner() {
               ))}
             </div>
           ) : objectives.length === 0 ? (
-            <EmptyState
-              icon={<Target className="size-6" />}
-              description={t("emptyState", {
-                issues: tIssue("entityPlural").toLowerCase(),
-              })}
-              action={
-                <Button onClick={openCreate}>
-                  <Plus />
-                  {t("newObjective")}
-                </Button>
-              }
-            />
+            /* Même forme que le board vide (MIN-173) : une scène, une phrase,
+               les gestes qui remplissent la page. La scène est l'icône de
+               l'onglet, posée au sol — la page se reconnaît à ce qui la nomme
+               dans la barre latérale. Pas d'import ici : un objectif ne
+               s'exporte d'aucun outil. */
+            <EmptyScene icon={Target} title={t("emptyTitle")}>
+              <Button onClick={openCreate}>
+                <Plus />
+                {t("newObjective")}
+                <Kbd
+                  size="sm"
+                  className="ml-1 border-transparent bg-primary-foreground/15 text-primary-foreground"
+                >
+                  O
+                </Kbd>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  openAssistant({
+                    projectId,
+                    prompt: t("emptyNumoPrompt", { name: project.name }),
+                  })
+                }
+              >
+                <NumoIcon state="idle" className="size-4" />
+                {tSeed("emptyBoardCta")}
+              </Button>
+            </EmptyScene>
           ) : (
             <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
               {objectives.map((obj) => {

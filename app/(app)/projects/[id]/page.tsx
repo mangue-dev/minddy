@@ -9,8 +9,15 @@ import {
   useSearchParams,
 } from "next/navigation";
 import Link from "next/link";
-import { Button, Skeleton, toast } from "mangue-ui";
-import { ListTodo } from "lucide-react";
+import {
+  Button,
+  DropdownMenuItem,
+  Kbd,
+  Skeleton,
+  SplitButton,
+  toast,
+} from "mangue-ui";
+import { FileUp, LayoutGrid, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -31,8 +38,8 @@ import {
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
-import { EmptyState } from "@/components/empty-state";
 import { NumoIcon } from "@/components/numo-icon";
+import { EmptyScene } from "@/components/empty-scene";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
@@ -92,6 +99,9 @@ function ProjectBoard() {
   const { integrations } = useIntegrationsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
+  // Import et amorce par Numo sont réservés au propriétaire (l'API les lui
+  // réserve) : le board vide ne montre que ce qui est réellement à portée.
+  const isOwner = !!project && project.owner_id === myUserId;
   const { open: openAssistant } = useAssistantPanel();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
@@ -462,24 +472,43 @@ function ProjectBoard() {
           </div>
         </div>
       ) : issues.length === 0 ? (
-        <div className="min-h-0 flex-1 px-6 pt-4">
-          <EmptyState
-            icon={<ListTodo className="size-6" />}
-            description={
-              <>
-                {t("noIssuesYet")}{" "}
-                <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  C
-                </kbd>
-                .
-              </>
-            }
-            // Amorcer un board vide, c'est le même geste que depuis le wizard
-            // (MIN-173) : on en PARLE à Numo, il demande ce qui manque et
-            // propose le lot à relire. Réservé au propriétaire, comme l'import :
-            // c'est un lot de tickets d'un coup, et c'est lui qui paye l'appel.
-            action={
-              project.owner_id === myUserId ? (
+        /* Board vide : les TROIS façons d'y mettre quelque chose, dans l'ordre
+           de ce qu'on fait le plus — un ticket à la main (le raccourci se
+           montre là où il sert), l'import d'un backlog existant, la
+           conversation avec Numo. Rien à lire pour comprendre : la scène dit
+           « rien ici, une première carte va s'y poser », les boutons disent le
+           reste. Import et amorce restent au propriétaire (l'API les lui
+           réserve, et c'est lui qui paye l'appel). */
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+          <div className="mx-auto max-w-5xl">
+            <EmptyScene icon={LayoutGrid} title={t("emptyTitle")}>
+              {isOwner ? (
+                <SplitButton
+                  onClick={() => openCreate()}
+                  menuLabel={t("emptyMoreWays")}
+                  menu={
+                    <DropdownMenuItem onSelect={() => setImportOpen(true)}>
+                      <FileUp />
+                      {t("emptyImport")}
+                    </DropdownMenuItem>
+                  }
+                >
+                  <Plus />
+                  {t("newIssue")}
+                  <Kbd
+                    size="sm"
+                    className="ml-1 border-transparent bg-primary-foreground/15 text-primary-foreground"
+                  >
+                    C
+                  </Kbd>
+                </SplitButton>
+              ) : (
+                <Button type="button" onClick={() => openCreate()}>
+                  <Plus />
+                  {t("newIssue")}
+                </Button>
+              )}
+              {isOwner && (
                 <Button
                   type="button"
                   variant="outline"
@@ -495,9 +524,9 @@ function ProjectBoard() {
                   <NumoIcon state="idle" className="size-4" />
                   {tSeed("emptyBoardCta")}
                 </Button>
-              ) : undefined
-            }
-          />
+              )}
+            </EmptyScene>
+          </div>
         </div>
       ) : (
         <>

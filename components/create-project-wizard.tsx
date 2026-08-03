@@ -28,7 +28,7 @@ import {
   Github,
   Gitlab,
   Info,
-  ListTodo,
+  Layers,
   Sparkles,
   X,
 } from "lucide-react";
@@ -67,6 +67,7 @@ import {
 import { WizardStepper } from "@/components/wizard-stepper";
 import { ImportGuideBlock } from "@/components/import/import-guide";
 import { NumoIcon } from "@/components/numo-icon";
+import { IsoIconScene } from "@/components/illustrations/iso-icon";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
@@ -216,6 +217,12 @@ export function CreateProjectWizard({
   // Le plafond de la passe (lib/seed/types.ts) : le refuser ici évite de le
   // découvrir après la création du projet, sur le board.
   const briefTooLong = step === "seed" && brief.length > MAX_BRIEF_CHARS;
+
+  /** L'étape en cours est FACULTATIVE et rien n'y a été posé : le bouton dit
+   *  « Passer », pas « Continuer ». Les deux avancent pareil — mais « Continuer »
+   *  sur une étape vide laisse croire qu'on emporte quelque chose. */
+  const skipping =
+    (step === "seed" && !seed) || (step === "git" && !repo);
 
   const reset = useCallback(() => {
     setStepIndex(0);
@@ -612,28 +619,43 @@ export function CreateProjectWizard({
           </Button>
         </div>
 
-        <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
+        {/* En-tête de la modale : où l'on est (le titre de l'étape, à gauche,
+            face au bouton de fermeture), et où l'on en est (la progression, au
+            centre). Trois colonnes plutôt qu'un centrage absolu : la colonne
+            vide de droite répond à celle du titre, donc la progression reste au
+            milieu quelle que soit la longueur du titre, sans jamais passer
+            dessous. Le contenu de l'étape, lui, garde le centre de l'écran. */}
+        <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-start gap-4 px-6 pt-5 pb-2">
+          <div className="min-w-0 space-y-1.5">
+            <h2 className="text-xl font-semibold tracking-tight">
+              {stepTitle[step]}
+            </h2>
+            <p className="max-w-md text-sm text-muted-foreground">
+              {stepSubtitle[step]}
+            </p>
+          </div>
+          {/* Aligné sur la ligne du titre, à la hauteur du bouton de fermeture. */}
+          <WizardStepper
+            className="pt-2.5"
+            currentStep={stepIndex + 1}
+            totalSteps={steps.length}
+            onStepClick={(s) => goToStep(s - 1)}
+            getStepLabel={(s) => stepTitle[steps[s - 1]]}
+          />
+          <div aria-hidden />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 pt-4 pb-12">
           <form
             onSubmit={handleSubmit}
-            className="flex w-full max-w-lg flex-col items-center gap-7"
+            className={cn(
+              "flex w-full flex-col items-center gap-7",
+              // Les deux portes du premier écran respirent plus large que les
+              // champs des étapes suivantes : c'est le seul écran où l'on
+              // regarde avant de lire.
+              step === "origin" ? "max-w-2xl" : "max-w-lg"
+            )}
           >
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="space-y-1.5">
-                <h2 className="text-xl font-semibold tracking-tight">
-                  {stepTitle[step]}
-                </h2>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  {stepSubtitle[step]}
-                </p>
-              </div>
-              <WizardStepper
-                currentStep={stepIndex + 1}
-                totalSteps={steps.length}
-                onStepClick={(s) => goToStep(s - 1)}
-                getStepLabel={(s) => stepTitle[steps[s - 1]]}
-              />
-            </div>
-
             <div className="w-full overflow-hidden p-1">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -645,48 +667,42 @@ export function CreateProjectWizard({
                   className="w-full"
                 >
                   {/* Le tout premier geste de minddy : deux portes côte à côte,
-                      de même poids, qui se lisent d'un coup d'œil. Les cartes
-                      reprennent la surface des cartes de projet
-                      (`components/project-card.tsx`) — même bordure, même ombre
-                      au survol : le wizard ouvre sur un objet déjà familier. */}
+                      de même poids, qui se lisent d'un coup d'œil. Chacune
+                      montre sa scène — un terrain nu où une carte se pose, une
+                      pile de cartes déjà là — et une ligne pour la nommer :
+                      c'est le dessin qui fait le choix, le libellé confirme. */}
                   {step === "origin" && (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       {(
                         [
-                          {
-                            id: "new",
-                            Icon: Sparkles,
-                            label: t("wizardOriginNewLabel"),
-                            desc: t("wizardOriginNewDesc"),
-                          },
-                          {
-                            id: "existing",
-                            Icon: ListTodo,
-                            label: t("wizardOriginExistingLabel"),
-                            desc: t("wizardOriginExistingDesc"),
-                          },
+                          { id: "new", label: t("wizardOriginNewLabel") },
+                          { id: "existing", label: t("wizardOriginExistingLabel") },
                         ] as const
-                      ).map(({ id, Icon, label, desc }) => (
+                      ).map(({ id, label }) => (
                         <button
                           key={id}
                           type="button"
                           onClick={() => chooseOrigin(id)}
                           aria-pressed={origin === id}
                           className={cn(
-                            "group flex min-h-[168px] cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border bg-card p-5 text-center outline-none transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50",
+                            "group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card text-center outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50",
                             origin === id
-                              ? "border-brand/50 bg-brand/5"
-                              : "border-border"
+                              ? "border-brand/50"
+                              : "border-border hover:border-brand/40"
                           )}
                         >
-                          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand transition-colors group-hover:bg-brand/15">
-                            <Icon className="size-6" strokeWidth={1.5} />
-                          </span>
-                          <span className="flex flex-col gap-1">
-                            <span className="text-sm font-medium">{label}</span>
-                            <span className="text-xs leading-relaxed text-balance text-muted-foreground">
-                              {desc}
-                            </span>
+                          {/* La scène est POSÉE sur la carte, pas encadrée :
+                              aucun fond, aucun filet — le fond de la carte
+                              court d'un bout à l'autre et le dessin flotte
+                              dedans. Une seule colonne, deux écarts explicites :
+                              autant d'air au-dessus du dessin qu'en dessous du
+                              titre, et un intervalle net entre les deux. */}
+                          <span className="flex flex-col items-center gap-4 px-5 py-6">
+                            <IsoIconScene
+                              icon={id === "new" ? Sparkles : Layers}
+                              className="w-full max-w-60 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                            />
+                            <span className="text-base font-medium">{label}</span>
                           </span>
                         </button>
                       ))}
@@ -1084,8 +1100,8 @@ export function CreateProjectWizard({
                   {submitting && <Spinner />}
                   {isLast
                     ? t("wizardFinish")
-                    : step === "seed" && !seed
-                      ? t("wizardSeedSkip")
+                    : skipping
+                      ? t("wizardSkip")
                       : tCommon("continue")}
                   {!submitting && !isLast && <ArrowRight className="ml-1 h-4 w-4" />}
                 </Button>

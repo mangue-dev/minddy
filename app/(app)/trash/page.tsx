@@ -29,7 +29,7 @@ import {
   TRASH_TYPE_ORDER,
 } from "@/lib/use-trash-query";
 import type { TrashItem, TrashType } from "@/lib/trash-api";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { StatsSectionHeader } from "@/components/stats/stats-chrome";
 import { UserAvatar } from "@/components/user-avatar";
 import { DocPageSkeleton } from "@/components/route-skeletons";
@@ -205,14 +205,15 @@ export default function TrashPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
-      {header}
+      {/* Corbeille vide : ni titre ni sous-titre au-dessus de la scène — il n'y
+          a rien à décrire, et le délai de conservation ne dit quelque chose que
+          quand il court sur quelque chose. */}
+      {grouped.length > 0 && header}
 
       {grouped.length === 0 ? (
-        <EmptyState
-          icon={<Trash2 className="size-6" />}
-          title={t("emptyTitle")}
-          description={t("empty", { days: retentionDays })}
-        />
+        /* Rien à faire ici non plus : la scène et une phrase, sans bouton,
+           comme le triage. */
+        <EmptyScene icon={Trash2} title={t("emptyTitle")} />
       ) : (
         grouped.map(({ type, items: rows }) => (
           <section key={type} className="mt-8 first:mt-0">

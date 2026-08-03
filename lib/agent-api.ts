@@ -774,6 +774,13 @@ export interface PullRequestListResponse {
   hasMore: boolean;
   /** La pagination d'une forge a été coupée : la liste n'est pas exhaustive. */
   truncated: boolean;
+  /** Dépôts liés visibles par ce compte, tous projets confondus. 0 = il n'y a
+   *  rien à afficher ici tant qu'un dépôt n'est pas lié quelque part. */
+  repoCount: number;
+  /** Existe-t-il UNE pull request, tous états confondus ? Une liste vide sur le
+   *  filtre « ouvertes » ne dit pas la même chose qu'un compte qui n'en a
+   *  jamais eu — seul le second mérite un écran d'accueil. */
+  anyPr: boolean;
 }
 
 /**

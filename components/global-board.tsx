@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Skeleton, toast } from "mangue-ui";
-import { ListTodo } from "lucide-react";
+import { Button, Kbd, Skeleton, toast } from "mangue-ui";
+import { FolderPlus, LayoutGrid, ListTodo, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { IssueSidePanel } from "@/components/issue-side-panel";
@@ -80,10 +81,11 @@ const NUMO_GENERATION_TIMEOUT_MS = 120_000;
 function GlobalBoardInner() {
   const t = useTranslations("GlobalBoard");
   const tBoard = useTranslations("Board");
+  const tProjects = useTranslations("Projects");
   const format = useFormatter();
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
-  const { projects } = useProjects();
+  const { projects, openCreateProject } = useProjects();
   const { openCreateIssue } = useCreate();
   const openAssistant = useAssistantPanel().open;
   const router = useRouter();
@@ -463,9 +465,19 @@ function GlobalBoardInner() {
     relations,
   };
 
+  /**
+   * Rien à montrer NULLE PART — pas « rien dans cette vue ». Aucun projet, ou
+   * aucun ticket dans aucun d'eux : la barre d'outils (vues, filtres, tri) n'a
+   * alors rien sur quoi mordre, et l'écran se réduit à ce qu'il y a à faire.
+   * Hors mode cycle, qui a déjà ses propres écrans d'attente.
+   */
+  const nothingAnywhere = !cycleMode && (projects.length === 0 || issues.length === 0);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
+        {/* Le titre de la page saute dans le seul cas où il n'y a rien du tout :
+            l'écran se réduit alors à ce qu'il y a à faire. */}
         {cycleMode && cycles?.enabled && selectedCycle ? (
           // Title line: date-selector left, Ask Numo right — the gauges live
           // on the pills row below.
@@ -477,54 +489,58 @@ function GlobalBoardInner() {
             />
             <CycleAskNumo onAskNumo={askNumoAboutCycle} />
           </div>
-        ) : (
+        ) : nothingAnywhere ? null : (
           <h1 className="font-display text-lg font-semibold tracking-tight">
             {cycleMode ? tBoard("cycleTab") : t("allTitle")}
           </h1>
         )}
-        <BoardToolbar
-          tabOrderScope="global"
-          views={views}
-          activeViewId={cycleMode ? null : activeViewId}
-          generatingViewIds={generatingViewIds}
-          onSelectView={(id) => {
-            if (cycleMode) switchCycleMode(false);
-            selectView(id);
-          }}
-          config={config}
-          onConfigChange={setConfig}
-          members={unionMembers}
-          categories={allCategories}
-          objectives={allObjectives}
-          integrations={allIntegrations}
-          projects={projects}
-          groupFacetsByName
-          dirty={cycleMode ? false : dirty}
-          onCreateView={handleCreateView}
-          onUpdateActiveView={saveActiveView}
-          onRenameView={renameView}
-          onDeleteView={deleteView}
-          withNumo
-          withShare={false}
-          onAskNumo={handleAskNumo}
-          cycleTab={{
-            active: cycleMode,
-            onSelect: () => switchCycleMode(true),
-          }}
-          rightControls={
-            cycleMode ? (
-              cyclesEnabled && selectedCycle ? (
-                <CycleControls
-                  cycle={selectedCycle}
-                  filledPoints={cycleFilledPoints(cycleIssues)}
-                  completionPercent={cycleCompletionPercent(cycleIssues)}
-                />
-              ) : (
-                <span aria-hidden />
-              )
-            ) : undefined
-          }
-        />
+        {/* Rien nulle part : pas de barre d'outils au-dessus d'un écran qui
+            n'a qu'une chose à proposer. */}
+        {!nothingAnywhere && (
+          <BoardToolbar
+            tabOrderScope="global"
+            views={views}
+            activeViewId={cycleMode ? null : activeViewId}
+            generatingViewIds={generatingViewIds}
+            onSelectView={(id) => {
+              if (cycleMode) switchCycleMode(false);
+              selectView(id);
+            }}
+            config={config}
+            onConfigChange={setConfig}
+            members={unionMembers}
+            categories={allCategories}
+            objectives={allObjectives}
+            integrations={allIntegrations}
+            projects={projects}
+            groupFacetsByName
+            dirty={cycleMode ? false : dirty}
+            onCreateView={handleCreateView}
+            onUpdateActiveView={saveActiveView}
+            onRenameView={renameView}
+            onDeleteView={deleteView}
+            withNumo
+            withShare={false}
+            onAskNumo={handleAskNumo}
+            cycleTab={{
+              active: cycleMode,
+              onSelect: () => switchCycleMode(true),
+            }}
+            rightControls={
+              cycleMode ? (
+                cyclesEnabled && selectedCycle ? (
+                  <CycleControls
+                    cycle={selectedCycle}
+                    filledPoints={cycleFilledPoints(cycleIssues)}
+                    completionPercent={cycleCompletionPercent(cycleIssues)}
+                  />
+                ) : (
+                  <span aria-hidden />
+                )
+              ) : undefined
+            }
+          />
+        )}
       </div>
 
       {cycleMode ? (
@@ -574,6 +590,37 @@ function GlobalBoardInner() {
             </div>
           </div>
         )
+      ) : nothingAnywhere ? (
+        /* Vide POUR DE BON, pas « vide dans cette vue » : soit il n'y a aucun
+           projet — et alors la seule chose à faire est d'en créer un —, soit il
+           y en a mais pas un seul ticket, et c'est le même écran que sur le
+           board d'un projet. Le ticket se crée depuis le dialog partagé, qui
+           demande dans QUEL projet : ici, aucun n'est sous les yeux. */
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+          <div className="mx-auto max-w-5xl">
+            {projects.length === 0 ? (
+              <EmptyScene icon={FolderPlus} title={t("emptyNoProject")}>
+                <Button onClick={openCreateProject}>
+                  <Plus />
+                  {tProjects("firstProject")}
+                </Button>
+              </EmptyScene>
+            ) : (
+              <EmptyScene icon={LayoutGrid} title={tBoard("emptyTitle")}>
+                <Button onClick={() => openCreateIssue()}>
+                  <Plus />
+                  {tBoard("newIssue")}
+                  <Kbd
+                    size="sm"
+                    className="ml-1 border-transparent bg-primary-foreground/15 text-primary-foreground"
+                  >
+                    C
+                  </Kbd>
+                </Button>
+              </EmptyScene>
+            )}
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="min-h-0 flex-1 px-6 pt-4">
           <EmptyState

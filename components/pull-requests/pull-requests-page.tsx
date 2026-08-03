@@ -13,8 +13,9 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { Check, ChevronDown, ChevronRight, GitPullRequest } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, GitPullRequest, Plus } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
@@ -24,6 +25,7 @@ import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -72,7 +74,9 @@ const FILTER_TRIGGER = "px-2 font-normal text-muted-foreground hover:text-foregr
 
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
+  const tProjects = useTranslations("Projects");
   const format = useFormatter();
+  const { projects, openCreateProject } = useProjects();
 
   // Deep-links : `?pr=<id>` (direct, MIN-143) et `?run=<id>` (historique — la
   // sidebar d'issue et tous les liens déjà en circulation parlent en run).
@@ -95,7 +99,7 @@ export function PullRequestsPage() {
   // même si elle tombe hors de la page (une PR d'il y a six mois). Sans ça, le
   // lien retomberait sur la première de la liste — la PR d'un autre ticket.
   const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
-  const { pullRequests, hasMore, truncated, loading, fetching, refetch } =
+  const { pullRequests, hasMore, truncated, repoCount, anyPr, loading, fetching, refetch } =
     useAllPullRequestsQuery(filter, limit, pin);
 
   // Suit les changements de param (navigation client vers une autre PR).
@@ -174,6 +178,36 @@ export function PullRequestsPage() {
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
+
+  /**
+   * Rien à lister NULLE PART — à distinguer d'un filtre sans résultat, qui garde
+   * sa petite boîte dans la colonne. Trois marches, dans l'ordre où on les
+   * franchit : un projet, un dépôt lié, puis des pull requests. `anyPr` compte
+   * tous les états, sinon « aucune ouverte » passerait pour « aucune jamais ».
+   */
+  if (!loading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+        <div className="mx-auto max-w-5xl">
+          {projects.length === 0 ? (
+            <EmptyScene icon={GitPullRequest} title={t("emptyNoProject")}>
+              <Button onClick={openCreateProject}>
+                <Plus />
+                {tProjects("firstProject")}
+              </Button>
+            </EmptyScene>
+          ) : (
+            /* Sans dépôt lié, il n'y a pas de bouton à offrir : le dépôt se lie
+               dans les réglages D'UN projet, et on ne sait pas lequel. */
+            <EmptyScene
+              icon={GitPullRequest}
+              title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0">

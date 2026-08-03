@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -310,6 +311,47 @@ export function FeedbackTeamPage() {
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
     void queryClient.invalidateQueries({ queryKey: ["feedback-count", projectId] });
   };
+
+  // Rien du tout (pas « rien dans ce filtre ») : les deux colonnes n'ont plus
+  // rien à montrer, et l'écran doit dire d'où viennent les retours plutôt que
+  // d'afficher une liste vide à côté d'un « sélectionnez un retour ». Les deux
+  // gestes restent à portée : en saisir un à la main, et aller ouvrir le board
+  // public — c'est lui qui remplit la page ensuite.
+  if (!isLoading && posts.length === 0) {
+    return (
+      <>
+        <div className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+            <div className="mx-auto max-w-5xl">
+              <EmptyScene icon={MessagesSquare} title={t("emptyTitle")}>
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus />
+                  {t("newFeedback")}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/projects/${projectId}/settings?tab=feedback`}>
+                    <Globe />
+                    {t("emptyConfigure")}
+                  </Link>
+                </Button>
+              </EmptyScene>
+            </div>
+          </div>
+        </div>
+
+        {/* Le dialog reste monté : c'est lui que « Nouveau retour » ouvre. */}
+        <InternalFeedbackDialog
+          projectId={projectId}
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(postId) => {
+            refresh();
+            setSelectedId(postId);
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0">

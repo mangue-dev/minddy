@@ -257,6 +257,8 @@ export function useAllPullRequestsQuery(
     pullRequests: data?.pullRequests ?? [],
     hasMore: data?.hasMore ?? false,
     truncated: data?.truncated ?? false,
+    repoCount: data?.repoCount ?? 0,
+    anyPr: data?.anyPr ?? false,
     loading: isLoading,
     fetching: isFetching,
     refetch,

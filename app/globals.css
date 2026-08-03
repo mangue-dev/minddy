@@ -30,6 +30,23 @@
 :root { --mention-chip: oklch(0.21 0.012 265 / 6%); }
 .dark { --mention-chip: oklch(0 0 0 / 25%); }
 
+/* ── Le pouce d'un interrupteur coché (mangue-ui Switch) ──────────────────────
+   Même cause que la pilule ci-dessus, et c'est le prix de notre --primary
+   d'encre. La piste cochée est en --primary ; mangue-ui peint le pouce en
+   --card en clair et en --foreground en SOMBRE, ce qui marche avec sa teinte de
+   marque mais pas ici : en sombre notre encre est presque blanche, donc pouce
+   blanc sur piste blanche — l'interrupteur coché n'était plus qu'une barre
+   pleine, sans rien qui bouge dedans.
+
+   Ce qui se pose SUR --primary a une couleur prévue pour ça : --primary-
+   foreground. Elle vaut dans les deux thèmes (blanc sur l'encre claire, encre
+   sur le blanc sombre), donc la règle n'est pas conditionnée au thème. Elle ne
+   touche que l'état coché : décoché, la piste est neutre et le pouce clair
+   d'origine est le bon. */
+[data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
+  background-color: var(--primary-foreground);
+}
+
 
 
 /* ── Vue diff des Pull Requests (MIN-66) ──────────────────────────────────────

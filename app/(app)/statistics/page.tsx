@@ -6,11 +6,12 @@ import { Button } from "mangue-ui";
 import { BarChart3, Plus } from "lucide-react";
 import { useStatsQuery } from "@/lib/use-stats-query";
 import { useCreate } from "@/lib/create-context";
+import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
 import { computeStreaks, dayInZone, fmtNum, heatmapTotals } from "@/lib/stats-derive";
 import { trackEvent } from "@/lib/analytics";
 import { useTrackView } from "@/lib/use-track-view";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { ActivityHeatmap } from "@/components/stats/activity-heatmap";
 import { EffortDurations } from "@/components/stats/effort-durations";
 import { NowBand } from "@/components/stats/now-band";
@@ -111,8 +112,10 @@ function RhythmSection({ cycles }: { cycles: StatsCycles }) {
 
 export default function StatisticsPage() {
   const t = useTranslations("Stats");
+  const tProjects = useTranslations("Projects");
   const { stats, loading } = useStatsQuery();
   const { openCreateIssue, canCreate } = useCreate();
+  const { openCreateProject } = useProjects();
   const { user } = useAuth();
   // Vue de la page stats — l'une des rares pages « consultées » plutôt
   // qu'« utilisées » : sans événement dédié, son usage réel est invisible.
@@ -159,21 +162,25 @@ export default function StatisticsPage() {
 
   if (isEmpty) {
     return (
+      /* Ni titre ni sous-titre ici : une page de mesures qui n'a rien mesuré n'a
+         pas à s'annoncer. Reste le geste qui lancera le compteur, et il dépend
+         d'où en est le compte — comme sur le board global : sans projet, il n'y
+         a pas de ticket à créer, il y a un projet à faire naître (`canCreate`
+         est exactement ce signal). */
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
-        {header}
-        <EmptyState
-          icon={<BarChart3 className="size-6" />}
-          title={t("emptyTitle")}
-          description={t("empty")}
-          action={
-            canCreate ? (
-              <Button onClick={() => openCreateIssue()}>
-                <Plus className="size-4" />
-                {t("emptyCta")}
-              </Button>
-            ) : undefined
-          }
-        />
+        <EmptyScene icon={BarChart3} title={t("emptyTitle")}>
+          {canCreate ? (
+            <Button onClick={() => openCreateIssue()}>
+              <Plus />
+              {t("emptyCta")}
+            </Button>
+          ) : (
+            <Button onClick={openCreateProject}>
+              <Plus />
+              {tProjects("firstProject")}
+            </Button>
+          )}
+        </EmptyScene>
       </div>
     );
   }

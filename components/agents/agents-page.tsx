@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Skeleton, cn } from "mangue-ui";
-import { GitPullRequest, NotebookPen } from "lucide-react";
+import { Button, Skeleton, cn } from "mangue-ui";
+import { Bot, GitPullRequest, NotebookPen, Plus } from "lucide-react";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { AgentStatusBadge } from "@/components/agents/agent-status-badge";
 import { LaunchAgentPicker } from "@/components/agents/launch-agent-picker";
 import { NoteCompose } from "@/components/agents/note-compose";
@@ -14,6 +14,7 @@ import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
 import { NumoIcon } from "@/components/numo-icon";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import { useProjects } from "@/lib/projects-context";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -104,8 +105,10 @@ function SessionAnchorBadge({ session }: { session: AgentSessionListItem }) {
  */
 export function AgentsPage() {
   const t = useTranslations("Agents");
+  const tProjects = useTranslations("Projects");
   const format = useFormatter();
   const router = useRouter();
+  const { projects, openCreateProject } = useProjects();
   const { sessions, loading } = useAgentSessionsQuery();
   const { reads, markRead } = useAgentReads();
   const isWide = useIsWideViewport();
@@ -297,6 +300,33 @@ export function AgentsPage() {
 
   const listCount = sessions.length + (showDraftEntry ? 1 : 0);
 
+  /* Aucune session, jamais : les deux colonnes n'ont rien à montrer, et le seul
+     geste possible devient l'écran. Sans projet, ce geste n'est pas « lancer
+     l'agent » — il n'y a aucun ticket à lui confier, et le sélecteur ouvrirait
+     sur du vide : c'est un projet qu'il faut d'abord. Des projets sans ticket,
+     en revanche, gardent le sélecteur : il dit lui-même qu'il n'a rien trouvé.
+     Le bouton est le MÊME que celui de la liste, pas un second chemin. */
+  if (!loading && sessions.length === 0 && !showDraftEntry) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+        <div className="mx-auto max-w-5xl">
+          {projects.length === 0 ? (
+            <EmptyScene icon={Bot} title={t("emptyNoProject")}>
+              <Button onClick={openCreateProject}>
+                <Plus />
+                {tProjects("firstProject")}
+              </Button>
+            </EmptyScene>
+          ) : (
+            <EmptyScene icon={Bot} title={t("emptyTitle")}>
+              <LaunchAgentPicker sessions={sessions} />
+            </EmptyScene>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0">
       {/* ── Gauche : liste des sessions ─────────────────────────────────── */}
@@ -319,13 +349,6 @@ export function AgentsPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
-          </div>
-        ) : sessions.length === 0 && !showDraftEntry ? (
-          <div className="p-4">
-            <EmptyState
-              icon={<NumoIcon className="size-6" animated={false} />}
-              description={t("emptyState")}
-            />
           </div>
         ) : (
           <div className="flex flex-col px-2 pb-4">

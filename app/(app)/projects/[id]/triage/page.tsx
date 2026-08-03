@@ -16,8 +16,8 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, Copy, Filter, X } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
+import { Check, ChevronLeft, CircleDotDashed, Copy, X } from "lucide-react";
+import { EmptyScene } from "@/components/empty-scene";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import {
@@ -245,16 +245,14 @@ export default function TriagePage() {
 
   if (!loading && triageIssues.length === 0) {
     return (
+      /* Triage vide : la même forme que le board et les objectifs — une scène,
+         une phrase, et ici rien à faire. Pas de bouton : le triage se remplit
+         tout seul, ce n'est pas un endroit où l'on crée. Le titre de la page
+         descend DANS le bloc, il n'a pas à être dit deux fois. */
       <div className="flex h-full flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
-            <h1 className="mb-5 font-display text-xl font-semibold tracking-tight">
-              {t("title")}
-            </h1>
-            <EmptyState
-              icon={<Filter className="size-6" />}
-              description={t("emptyState")}
-            />
+            <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
           </div>
         </div>
       </div>

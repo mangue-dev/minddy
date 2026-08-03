@@ -184,7 +184,13 @@ export async function GET(request: NextRequest) {
 
   const repos = await listVisibleRepos(auth.supabase);
   if (repos.length === 0) {
-    return NextResponse.json({ pullRequests: [], hasMore: false, truncated: false });
+    return NextResponse.json({
+      pullRequests: [],
+      hasMore: false,
+      truncated: false,
+      repoCount: 0,
+      anyPr: false,
+    });
   }
 
   // ── Rattrapage ────────────────────────────────────────────────────────────
@@ -290,5 +296,20 @@ export async function GET(request: NextRequest) {
   // et le taire, c'est mentir par omission — exactement ce que MIN-143 corrige.
   const truncated = sweptTruncated || [...seen].some((key) => syncs.get(key)?.truncated);
 
-  return NextResponse.json({ pullRequests, hasMore, truncated });
+  // Vide POUR CET ÉTAT ne veut pas dire vide tout court : une seule ligne, tous
+  // états confondus, suffit à trancher — et on ne la demande que dans ce cas.
+  const anyPr =
+    page.length > 0
+      ? true
+      : states
+        ? (await listPullRequestsForUser(auth.supabase, repos, { limit: 1 })).length > 0
+        : false;
+
+  return NextResponse.json({
+    pullRequests,
+    hasMore,
+    truncated,
+    repoCount: repos.length,
+    anyPr,
+  });
 }

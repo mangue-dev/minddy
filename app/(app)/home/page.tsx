@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Skeleton } from "mangue-ui";
-import { Plus } from "lucide-react";
+import { FolderPlus, LayoutGrid, Plus } from "lucide-react";
 import { useCreate } from "@/lib/create-context";
+import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
 import { useOnboarding } from "@/lib/use-onboarding";
+import { useHomeSummaryQuery } from "@/lib/use-home-summary-query";
 import { displayName } from "@/lib/display-name";
 import { pickGreeting } from "@/lib/home-greeting";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
@@ -18,6 +20,7 @@ import { HomeDueSoonSection } from "@/components/home/home-due-soon-section";
 import { HomeScratchpadSection } from "@/components/home/home-scratchpad-section";
 import { HomeTriageSection } from "@/components/home/home-triage-section";
 import { OnboardingCard } from "@/components/home/onboarding-card";
+import { EmptyScene } from "@/components/empty-scene";
 
 /** Display name from Supabase auth metadata (display_name → full_name → name),
     never the raw email — mirrors the sidebar account button. */
@@ -48,12 +51,19 @@ function useGreeting(name: string): string {
 
 export default function HomePage() {
   const t = useTranslations("Home");
+  const tBoard = useTranslations("Board");
+  const tProjects = useTranslations("Projects");
   const { openCreateIssue, canCreate } = useCreate();
+  const { projects, openCreateProject } = useProjects();
   const { user } = useAuth();
   // Onboarding (MIN-74) : tant qu'il n'est pas terminé ni passé, il prend la
   // place du corps de la home — pour un compte neuf, cycle, échéances, carnet et
   // file de triage n'ont rien à montrer.
   const onboarding = useOnboarding();
+  // Le compteur de tickets vient du MÊME appel que l'onboarding (/api/me/summary,
+  // dédoublonné par react-query) : rien de plus sur le réseau pour savoir si le
+  // compte a déjà écrit quelque chose.
+  const { counts } = useHomeSummaryQuery();
 
   const meta = user?.user_metadata as AuthMeta | undefined;
   // Repli vide : sans nom ni e-mail, on salue sans prénom plutôt que d'injecter
@@ -67,6 +77,16 @@ export default function HomePage() {
   );
 
   const greeting = useGreeting(name);
+  /**
+   * Deux vides, une fois l'onboarding terminé ou passé : pas de projet, ou des
+   * projets sans le moindre ticket. Dans les deux cas la page garde son salut et
+   * son composer, et le corps dit ce qui manque plutôt que d'aligner des cartes
+   * à zéro. Aucun ticket ⇒ rien en cycle, rien en attente : c'est le même vide,
+   * et il se lit sur un seul compteur.
+   */
+  const settled = !onboarding.loading && !onboarding.showCard;
+  const noProject = settled && projects.length === 0;
+  const noIssue = settled && projects.length > 0 && counts.total === 0;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -99,12 +119,20 @@ export default function HomePage() {
             </p>
           )}
         </div>
-        {!onboarding.showCard && (
-          <Button onClick={() => openCreateIssue()} disabled={!canCreate}>
-            <Plus className="size-4" />
-            {t("newTicket")}
-          </Button>
-        )}
+        {/* Sans projet, « Nouveau ticket » n'a nulle part où écrire : le bouton
+            dit alors le geste qui débloque tout le reste. */}
+        {!onboarding.showCard &&
+          (noProject ? (
+            <Button onClick={openCreateProject}>
+              <Plus className="size-4" />
+              {tProjects("firstProject")}
+            </Button>
+          ) : (
+            <Button onClick={() => openCreateIssue()} disabled={!canCreate}>
+              <Plus className="size-4" />
+              {t("newTicket")}
+            </Button>
+          ))}
       </div>
 
       {/* "Ask Numo" composer — hands off to the global assistant panel. */}
@@ -138,11 +166,25 @@ export default function HomePage() {
               décision de ma part. Stacked full-width until lg — two narrow
               columns cram the cycle card's rings on tablet/mobile. Explicit
               grid-cols give minmax(0,1fr) tracks so a card's content can't blow
-              the column past the viewport. */}
-          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <HomeCycleCard />
-            <HomeWaitingCard />
-          </div>
+              the column past the viewport.
+
+              Sans projet, ou sans le moindre ticket, les deux cartes n'ont rien
+              à mesurer : la scène prend leur place et dit lequel des deux vides
+              on regarde, comme sur le board global. Le geste, lui, est déjà en
+              haut de la page — on ne le répète pas. */}
+          {noProject || noIssue ? (
+            <div className="mt-6">
+              <EmptyScene
+                icon={noProject ? FolderPlus : LayoutGrid}
+                title={noProject ? t("noProject") : tBoard("emptyTitle")}
+              />
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <HomeCycleCard />
+              <HomeWaitingCard />
+            </div>
+          )}
 
           {/* Le carnet de tâches, en clair : personnel et cross-projet comme
               cette page. Carnet vide → rien du tout. */}
