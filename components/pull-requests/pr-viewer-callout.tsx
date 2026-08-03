@@ -49,20 +49,28 @@ export function PrViewerCallout({
     }
   };
 
-  // Quatre causes, jamais confondues. La plus traître est la dernière : quand
-  // l'instance n'a pas de quoi autoriser, ce n'est PAS « vous n'avez pas de
-  // compte » — le dire ainsi accuse l'utilisateur d'une configuration serveur
-  // absente, et le laisse chercher un bouton qui n'existe pas.
+  // Cinq causes, jamais confondues. Les deux traîtresses sont les dernières.
+  // Quand l'instance n'a pas de quoi autoriser, ce n'est PAS « vous n'avez pas
+  // de compte » — le dire ainsi accuse l'utilisateur d'une configuration serveur
+  // absente, et le laisse chercher un bouton qui n'existe pas. Et quand la forge
+  // refuse le token d'un compte pourtant connecté, ce n'est PAS un droit
+  // dégradé : le dire ainsi accuse ses droits sur le dépôt — jusqu'à annoncer au
+  // propriétaire du dépôt qu'il ne peut pas y fusionner.
   const { title, body } = !viewer.connected
-    ? viewer.configured
+    ? !viewer.configured
       ? {
-          title: t("viewerNoAccountTitle", { provider: providerName }),
-          body: t("viewerNoAccountBody", { provider: providerName }),
-        }
-      : {
           title: t("viewerProviderUnavailableTitle", { provider: providerName }),
           body: t("viewerProviderUnavailable", { provider: providerName }),
         }
+      : viewer.expired
+        ? {
+            title: t("viewerAccountExpiredTitle", { provider: providerName }),
+            body: t("viewerAccountExpiredBody", { provider: providerName }),
+          }
+        : {
+            title: t("viewerNoAccountTitle", { provider: providerName }),
+            body: t("viewerNoAccountBody", { provider: providerName }),
+          }
     : viewer.capability === "none"
       ? {
           title: t("viewerNoRepoAccessTitle", { provider: providerName }),
@@ -84,7 +92,9 @@ export function PrViewerCallout({
       {!viewer.connected && viewer.configured ? (
         <Button size="sm" variant="outline" onClick={() => void connect()} disabled={connecting}>
           {connecting ? <Spinner /> : null}
-          {t("viewerConnectAccount", { provider: providerName })}
+          {t(viewer.expired ? "viewerReauthorizeAccount" : "viewerConnectAccount", {
+            provider: providerName,
+          })}
         </Button>
       ) : null}
       {viewer.connected && viewer.capability === "none" && repoUrl ? (

@@ -165,6 +165,9 @@ const ACTOR_ERROR_KEYS = {
   noAccount: "gitAccountRequired",
   noRepoAccess: "gitRepoAccessRequired",
   noWriteAccess: "gitWriteAccessRequired",
+  // Sans cette entrée, un token refusé partait chez la forge et revenait en
+  // `Bad credentials` brut dans un toast — le message de GitHub, pas le nôtre.
+  expired: "gitAccountExpired",
 } as const;
 
 /**
@@ -290,6 +293,13 @@ export interface PrViewer {
   login: string | null;
   capability: "write" | "read" | "none";
   /**
+   * Un compte EST connecté, mais la forge refuse son token (401). Distinct de
+   * `!connected` : il ne manque pas une autorisation, il en manque une NEUVE —
+   * et distinct d'une capability dégradée, qui accuserait à tort les droits de
+   * la personne sur le dépôt.
+   */
+  expired: boolean;
+  /**
    * Le compte sous lequel NUMO écrit chez la forge (MIN-162) — `minddy-app[bot]`
    * côté GitHub. C'est ce qui permet à l'écran de reconnaître un message de Numo
    * dans le fil, et donc de proposer de lui RÉPONDRE plutôt que de mentionner un
@@ -328,6 +338,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
       provider,
       configured,
       connected: true,
+      expired: false,
       login: actor.login,
       capability: actor.capability,
       numoLogin,
@@ -337,8 +348,11 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
     provider,
     configured,
     // « Pas membre du dépôt » suppose un compte connecté — le distinguer de
-    // « aucun compte » est tout l'objet des deux états d'UI.
+    // « aucun compte » est tout l'objet des deux états d'UI. Un token périmé,
+    // lui, mène au MÊME bouton qu'« aucun compte » (réautoriser) : il se range
+    // donc du côté « non connecté », avec sa phrase à lui.
     connected: actor.reason === "noRepoAccess",
+    expired: actor.reason === "expired",
     login: actor.login ?? null,
     capability: "none",
     numoLogin,

@@ -512,6 +512,9 @@ export interface PrViewer {
   /** Le provider a-t-il de quoi autoriser un compte (self-host sans env) ? */
   configured: boolean;
   connected: boolean;
+  /** Un compte est connecté mais la forge REFUSE son token : à réautoriser.
+      Absent sur un onglet resté ouvert depuis une version d'avant ce champ. */
+  expired?: boolean;
   login: string | null;
   /** `write` = merger/résoudre, `read` = reviewer/commenter, `none` = rien. */
   capability: "write" | "read" | "none";

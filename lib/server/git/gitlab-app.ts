@@ -192,14 +192,41 @@ async function loadAccountTokenRow(
 }
 
 /**
+ * Une rotation à la fois par connexion, DANS ce process — même raison que le
+ * partage de promesse de `user-identities.ts` : le panneau d'une merge request
+ * tire plusieurs requêtes en parallèle, chacune mint ce token, et deux rotations
+ * concurrentes laissent en base un token que l'autre vient d'invalider.
+ */
+const inFlight = new Map<string, Promise<string>>();
+
+/**
  * Renvoie un access token GitLab valide pour une connexion (git_connections.id),
  * en rafraîchissant paresseusement quand on est dans la fenêtre d'expiry.
  *
  * Les refresh tokens GitLab sont SINGLE-USE rotatifs : deux appels concurrents
  * peuvent courir pour rafraîchir la même ligne. On récupère au lieu de verrouiller :
  * le perdant relit la ligne (le gagnant a stocké un token frais) et l'utilise.
+ *
+ * `force` saute le raccourci « pas encore expiré » : c'est ce que fait un
+ * appelant à qui GitLab vient de répondre 401 sur ce token-là.
  */
-export async function getGitlabAccessToken(connectionId: string): Promise<string> {
+export async function getGitlabAccessToken(
+  connectionId: string,
+  opts: { force?: boolean } = {},
+): Promise<string> {
+  const shared = opts.force ? null : inFlight.get(connectionId);
+  if (shared) return shared;
+  const task = mintGitlabAccessToken(connectionId, !!opts.force).finally(() => {
+    if (inFlight.get(connectionId) === task) inFlight.delete(connectionId);
+  });
+  inFlight.set(connectionId, task);
+  return task;
+}
+
+async function mintGitlabAccessToken(
+  connectionId: string,
+  force: boolean,
+): Promise<string> {
   const row = await loadAccountTokenRow(connectionId);
   if (!row || row.provider !== "gitlab") {
     throw new Error(
@@ -208,7 +235,7 @@ export async function getGitlabAccessToken(connectionId: string): Promise<string
   }
   const nowMs = Date.now();
   const expiresAtMs = row.token_expires_at ? Date.parse(row.token_expires_at) : 0;
-  if (expiresAtMs - nowMs > REFRESH_SKEW_MS) {
+  if (!force && expiresAtMs - nowMs > REFRESH_SKEW_MS) {
     const token = decryptForgeToken(row.access_token_encrypted);
     if (token) return token;
     // Déchiffrement échoué (secret tourné / corruption) → on tombe sur un refresh.
@@ -243,9 +270,12 @@ export async function getGitlabAccessToken(connectionId: string): Promise<string
     throw err;
   }
 
-  // Persiste avec un compare-and-set sur l'expiry qu'on a lu. Si on perd, le token
-  // du gagnant est aussi valide — on ne l'écrase pas. Notre access token frais est
-  // valide jusqu'à sa propre expiry de toute façon.
+  // Persiste avec un compare-and-set sur l'expiry qu'on a lu. Perdre ce CAS n'est
+  // PAS anodin : la ligne garde le token du gagnant, que notre propre rotation
+  // vient peut-être d'invalider chez GitLab. On le dit — c'est la seule trace qui
+  // nomme cette course, et le probe 401 de `forge-actor.ts` la rattrape.
+  // Sur une rotation FORCÉE, le CAS saute : elle part justement d'une expiry
+  // stockée que la forge a démentie, et c'est notre token qui fait foi.
   const supabase = getServiceClient();
   const persist = supabase
     .from("git_connections")
@@ -256,9 +286,17 @@ export async function getGitlabAccessToken(connectionId: string): Promise<string
       updated_at: new Date().toISOString(),
     })
     .eq("id", connectionId);
-  await (row.token_expires_at == null
-    ? persist.is("token_expires_at", null)
-    : persist.eq("token_expires_at", row.token_expires_at));
+  const guarded = force
+    ? persist
+    : row.token_expires_at == null
+      ? persist.is("token_expires_at", null)
+      : persist.eq("token_expires_at", row.token_expires_at);
+  const { data: written } = await guarded.select("id");
+  if (!force && !written?.length) {
+    console.warn(
+      "[gitlab-app] concurrent GitLab token rotation: our refresh was not persisted",
+    );
+  }
   return refreshed.accessToken;
 }
 
