@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { emailLocalPart } from "@/lib/display-name";
 import { useMyAvatarSeed, useRegenerateAvatar } from "@/lib/use-my-avatar";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
 
 /** Read a string key off the user's auth metadata. */
@@ -81,6 +82,7 @@ export function AccountProfileSection() {
 
   return (
     <SettingsGroup
+      anchor={SETTINGS_SECTIONS.accountProfile}
       icon={User}
       title={ta("profileSectionTitle")}
       description={ta("profileSectionDesc")}

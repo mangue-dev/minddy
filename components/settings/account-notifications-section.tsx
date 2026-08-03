@@ -6,6 +6,7 @@ import { Switch, toast } from "mangue-ui";
 import { Inbox } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import {
   NOTIFICATION_CATEGORY_META_KEYS,
   resolveNotificationPrefs,
@@ -54,7 +55,12 @@ export function AccountNotificationsSection() {
   };
 
   return (
-    <SettingsGroup icon={Inbox} title={t("title")} description={t("description")}>
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.accountNotifications}
+      icon={Inbox}
+      title={t("title")}
+      description={t("description")}
+    >
       {/* L'interrupteur est À DROITE du libellé, comme partout ailleurs dans le
           produit : c'était le seul endroit qui le mettait devant. */}
       {CATEGORIES.map((category) => (

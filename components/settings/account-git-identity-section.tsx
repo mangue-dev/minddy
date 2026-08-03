@@ -20,6 +20,7 @@ import {
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { GitIdentity } from "@/lib/types";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -76,6 +77,7 @@ export function AccountGitIdentitySection() {
   return (
     <>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountGitIdentity}
         icon={UserRoundCheck}
         title={t("gitIdentityTitle")}
         description={t("gitIdentityDesc")}

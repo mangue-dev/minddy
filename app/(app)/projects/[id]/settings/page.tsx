@@ -31,6 +31,10 @@ import { ProjectRecurrencesSection } from "@/components/settings/project-recurre
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import { SettingsGroup } from "@/components/settings/settings-ui";
+import {
+  PROJECT_SETTINGS_DEFAULT_TAB,
+  SETTINGS_SECTIONS,
+} from "@/lib/settings-sections";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   SettingsShell,
@@ -109,6 +113,7 @@ export default function ProjectSettingsPage() {
       icon: Tags,
       content: (
         <SettingsGroup
+          anchor={SETTINGS_SECTIONS.projectCategories}
           icon={Tags}
           title={t("categoriesTab")}
           description={t("categoriesSectionDesc")}
@@ -124,6 +129,7 @@ export default function ProjectSettingsPage() {
       icon: Users,
       content: (
         <SettingsGroup
+          anchor={SETTINGS_SECTIONS.projectMembers}
           icon={Users}
           title={t("membersTab")}
           description={t("membersSectionDesc")}
@@ -183,6 +189,7 @@ export default function ProjectSettingsPage() {
       icon: Plug,
       content: (
         <SettingsGroup
+          anchor={SETTINGS_SECTIONS.projectIntegrations}
           icon={Plug}
           title={t("integrationsTab")}
           description={t("integrationsSectionDesc")}
@@ -198,7 +205,7 @@ export default function ProjectSettingsPage() {
     <>
       <SettingsShell
         title={t("title")}
-        defaultTab="general"
+        defaultTab={PROJECT_SETTINGS_DEFAULT_TAB}
         tabs={tabs}
         topSlot={
           <SettingsAssistantPrompt

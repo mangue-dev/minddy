@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Import as ImportIcon } from "lucide-react";
 import { SettingsEmpty, SettingsGroup } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ImportPanel } from "@/components/settings/import-panel";
 
 /** Réglages du projet → Import (MIN-45). L'enveloppe seulement : le titre de
@@ -20,6 +21,7 @@ export function ProjectImportSection({
 
   return (
     <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectImport}
       icon={ImportIcon}
       title={t("importTab")}
       description={t("importSectionDesc")}

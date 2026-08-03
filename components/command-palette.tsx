@@ -102,6 +102,12 @@ const GROUP_BOOSTS: Record<string, number> = {
   goto: 250,
   projects: 200,
   pages: 150,
+  // Les réglages sont de la navigation, comme les pages, mais on les cherche
+  // moins souvent qu'un board : juste en dessous. Le projet passe devant le
+  // compte parce que ces lignes-là n'existent QUE quand on est dans un projet —
+  // les avoir demandées, c'est déjà avoir dit lesquelles.
+  "settings-project": 135,
+  "settings-account": 130,
   account: 100,
   issues: 80,
   objectives: 80,

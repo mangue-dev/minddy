@@ -779,6 +779,39 @@ nav[aria-label="Navigation"]
   display: none;
 }
 
+/* ─── Section de réglages ouverte depuis ⌘K ──────────────────────────────
+   La palette emmène sur la bonne page ET le bon onglet, mais un onglet de
+   réglages est une colonne de cartes qui se ressemblent : y arriver ne dit pas
+   encore LAQUELLE on venait chercher. L'anneau la nomme le temps d'un regard,
+   puis `components/settings-shell.tsx` retire l'attribut.
+
+   `box-shadow` plutôt qu'`outline` : il suit le rayon de la carte et s'estompe
+   en une seule propriété, et il ne pousse rien — la colonne ne bouge pas d'un
+   pixel pendant les deux secondes.
+
+   Pas de `fill-mode` : l'image d'arrivée est déjà transparente, et une ombre
+   figée resterait une couche composée pour rien. */
+@keyframes settings-section-focus {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--ring),
+      0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+  55% {
+    box-shadow:
+      0 0 0 2px var(--ring),
+      0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px transparent,
+      0 0 0 7px transparent;
+  }
+}
+[data-settings-focus] {
+  animation: settings-section-focus 2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* « Moins d'animation » : on ne raccourcit pas, on retire. Une durée quasi
    nulle laisserait quand même le remplissage `both` appliquer le flou pendant
    le délai de chaque mot — donc un titre flou tant qu'il n'a pas démarré. */
@@ -794,5 +827,13 @@ nav[aria-label="Navigation"]
     filter: none;
     transform: none;
     animation: none !important;
+  }
+  /* L'anneau, lui, RESTE : il ne décore pas, il désigne. On lui retire son
+     estompage — le shell l'efface au bout des deux mêmes secondes. */
+  [data-settings-focus] {
+    animation: none;
+    box-shadow:
+      0 0 0 2px var(--ring),
+      0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
   }
 }

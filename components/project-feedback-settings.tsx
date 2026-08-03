@@ -42,6 +42,7 @@ import {
 } from "@/components/custom-domain-section";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
 /**
  * Onglet Feedback des settings (MIN-37). Deux canaux publics cumulables — le
@@ -221,6 +222,7 @@ export function ProjectFeedbackSettings({
 
       {/* ── Canal 1 : board public ─────────────────────────────────────── */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.projectFeedbackBoard}
         icon={MessagesSquare}
         title={t("feedbackChannelBoardTitle")}
         description={t("feedbackChannelBoardDesc")}
@@ -369,6 +371,7 @@ export function ProjectFeedbackSettings({
 
       {/* ── Canal 2 : API serveur-à-serveur ────────────────────────────── */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.projectFeedbackApi}
         icon={Code2}
         title={t("feedbackChannelApiTitle")}
         description={t("feedbackChannelApiDesc")}
@@ -461,6 +464,7 @@ function NumoReviewSetting({
 
   return (
     <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectFeedbackReview}
       icon={Sparkles}
       title={t("feedbackReviewTitle")}
       description={t("feedbackReviewDesc")}

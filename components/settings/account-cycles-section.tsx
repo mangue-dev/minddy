@@ -15,6 +15,7 @@ import {
 import { CalendarClock, IterationCw, ListPlus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import {
   CYCLES_ENABLED_META_KEY,
@@ -84,6 +85,7 @@ export function AccountCyclesSection() {
   return (
     <>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountCyclesEnable}
         icon={IterationCw}
         title={t("enableTitle")}
         description={t("enableDesc")}
@@ -101,6 +103,7 @@ export function AccountCyclesSection() {
       />
 
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountCyclesCadence}
         icon={CalendarClock}
         title={t("cadenceTitle")}
         description={t("cadenceDesc")}
@@ -213,6 +216,7 @@ export function AccountCyclesSection() {
       </SettingsGroup>
 
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountCyclesCapture}
         icon={ListPlus}
         title={t("captureTitle")}
         description={t("captureDesc")}

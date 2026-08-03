@@ -19,6 +19,7 @@ import {
 import { Download, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
 /**
  * Réglages du compte → « Données personnelles » (MIN-119).
@@ -125,7 +126,12 @@ export function AccountDataSection() {
 
   return (
     <>
-      <SettingsGroup icon={Download} title={t("exportTitle")} description={t("exportDesc")}>
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountDataExport}
+        icon={Download}
+        title={t("exportTitle")}
+        description={t("exportDesc")}
+      >
         <SettingsRow
           label={t("exportButton")}
           hint={t("exportHint")}
@@ -141,6 +147,7 @@ export function AccountDataSection() {
       {/* La carte porte le ton : l'encart destructif qu'elle contenait dessinait
           une seconde bordure rouge à l'intérieur de la première. */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountDataDelete}
         icon={Trash2}
         tone="destructive"
         title={t("deleteTitle")}

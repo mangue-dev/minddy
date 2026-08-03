@@ -14,6 +14,7 @@ import {
   SettingsGroup,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { AutoTextarea } from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
 
@@ -110,6 +111,7 @@ export function SmartAssignSection({
   return (
     <form onSubmit={saveRules}>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.projectSmartAssign}
         icon={WandSparkles}
         title={t("smartAssignTab")}
         description={

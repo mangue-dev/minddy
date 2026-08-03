@@ -27,6 +27,7 @@ import {
   Focus,
   PanelsTopLeft,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
@@ -63,6 +64,11 @@ import {
   type AppNavItem,
   type AppNavSection,
 } from "@/components/app-sidebar";
+import {
+  settingsSectionHref,
+  useSettingsSections,
+  type SettingsSection,
+} from "@/lib/settings-sections";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { useZenMode } from "@/lib/zen-mode-context";
 import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
@@ -189,6 +195,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
   const { projects, openCreateProject } = useProjects();
   const { openCreateIssue, openCreateObjective } = useCreate();
   const { open: openScratchpad } = useScratchpad();
@@ -653,6 +660,68 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     return groups;
   }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, zen, toggleZen, t, ti, tk, tScratch, tSettings, setCheatsheetOpen]);
 
+  // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
+  // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone
+  // sensible » ou « Agir en votre nom » ne sont pas des onglets, et ce sont
+  // pourtant ces mots-là qu'on tape. Choisir une ligne ouvre donc la bonne page,
+  // y sélectionne le bon onglet, déroule jusqu'à la carte et la surligne
+  // (lib/settings-sections.ts → components/settings-shell.tsx).
+  //
+  // Le projet offert est CELUI DE LA PAGE, et lui seul : les mêmes treize
+  // sections répétées pour chaque projet noieraient la liste, alors que « les
+  // réglages de ce projet » est ce qu'on cherche depuis l'intérieur d'un projet.
+  // Pour en régler un autre, la ligne « Paramètres du projet » du groupe Pages
+  // (elle, offerte pour tous) y emmène d'abord.
+  const settingsSections = useSettingsSections();
+  const settingsGroups = useMemo<PaletteGroup[]>(() => {
+    const row = (s: SettingsSection, project: Project | null): PaletteItem => ({
+      key: `settings-${s.id}`,
+      label: s.title,
+      icon: s.icon,
+      keywords: [
+        ...s.keywords,
+        // L'onglet est un terme de recherche à part entière : « cycles » doit
+        // trouver « Cadence », qui ne porte le mot nulle part.
+        s.tabLabel,
+        ...(project ? [project.name, project.key] : []),
+      ],
+      meta: project ? projectChip(project) : undefined,
+      metaText: project ? project.name : s.tabLabel,
+      contextId: project?.id,
+      onSelect: () => router.push(settingsSectionHref(s, project?.id)),
+    });
+
+    const groups: PaletteGroup[] = [
+      {
+        key: "settings-account",
+        heading: t("accountSettings"),
+        items: settingsSections
+          .filter((s) => s.scope === "account")
+          .map((s) => row(s, null)),
+      },
+    ];
+
+    if (currentProject) {
+      // « Quitter le projet » et « Zone sensible » s'excluent l'une l'autre :
+      // proposer la seconde à qui n'est pas propriétaire l'emmènerait sur un
+      // onglet où elle n'existe pas.
+      const isOwner = currentProject.owner_id === user?.id;
+      groups.push({
+        key: "settings-project",
+        heading: t("projectSettings"),
+        items: settingsSections
+          .filter(
+            (s) =>
+              s.scope === "project" &&
+              (!s.audience || s.audience === (isOwner ? "owner" : "member")),
+          )
+          .map((s) => row(s, currentProject)),
+      });
+    }
+
+    return groups;
+  }, [settingsSections, currentProject, user, router, t]);
+
   // ── Data groups: tickets + objectifs, tous projets confondus (MIN-91) ────
   // Séparés des groupes de commandes ci-dessus parce qu'ils sont les seuls à
   // peser : quelques milliers de lignes, chacune avec ses éléments React
@@ -948,12 +1017,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // mobile menu sheet gains the account sections so it fully replaces the
   // sidebar, and takes the capped data groups.
   const paletteGroups = useMemo(
-    () => [...commandGroups, ...desktopDataGroups, accountCommandGroup],
-    [commandGroups, desktopDataGroups, accountCommandGroup]
+    () => [
+      ...commandGroups,
+      ...settingsGroups,
+      ...desktopDataGroups,
+      accountCommandGroup,
+    ],
+    [commandGroups, settingsGroups, desktopDataGroups, accountCommandGroup]
   );
   const mobilePaletteGroups = useMemo(
-    () => [...commandGroups, ...mobileDataGroups, accountCommandGroup],
-    [commandGroups, mobileDataGroups, accountCommandGroup]
+    () => [
+      ...commandGroups,
+      ...settingsGroups,
+      ...mobileDataGroups,
+      accountCommandGroup,
+    ],
+    [commandGroups, settingsGroups, mobileDataGroups, accountCommandGroup]
   );
 
   const mobileMenuSections = useMemo(

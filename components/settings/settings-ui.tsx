@@ -4,6 +4,10 @@ import { Children, type ReactNode } from "react";
 import { cn } from "mangue-ui";
 import type { LucideIcon } from "lucide-react";
 import {
+  settingsSectionAnchor,
+  type SettingsSectionId,
+} from "@/lib/settings-sections";
+import {
   Field,
   FieldContent,
   FieldDescription,
@@ -38,6 +42,7 @@ import { HelpHint } from "@/components/settings/help-hint";
 /** Carte de groupe : en-tête (icône, titre, indice, contrôle maître), corps, pied. */
 export function SettingsGroup({
   icon: Icon,
+  anchor,
   title,
   description,
   help,
@@ -49,6 +54,11 @@ export function SettingsGroup({
   children,
 }: {
   icon?: LucideIcon;
+  /** Entrée du catalogue des réglages ([lib/settings-sections.ts]) : la carte
+   *  devient joignable depuis ⌘K, qui l'ouvre puis la déroule et la surligne.
+   *  Le type interdit une ancre absente du catalogue — l'inverse (une entrée du
+   *  catalogue que personne ne rend) est tenu par settings-sections.test.ts. */
+  anchor?: SettingsSectionId;
   title: string;
   description?: string;
   /** Prose longue, sortie de la page derrière un ⓘ. */
@@ -70,8 +80,13 @@ export function SettingsGroup({
   const hasBody = Children.toArray(children).length > 0;
   return (
     <section
+      id={anchor ? settingsSectionAnchor(anchor) : undefined}
       className={cn(
         "rounded-xl border bg-card text-card-foreground",
+        /* `scroll-mt` : le shell déroule la carte en la CENTRANT, mais une carte
+           plus haute que la fenêtre est alignée en haut — sous le header collant
+           sans cette marge. */
+        anchor && "scroll-mt-20",
         destructive ? "border-destructive/30" : "border-border",
         className,
       )}

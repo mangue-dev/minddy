@@ -13,6 +13,7 @@ import {
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { BrandLogo } from "@/components/brand-logo";
 
 /** « Applications connectées » : les grants OAuth actifs (agents connectés
@@ -51,6 +52,7 @@ export function AccountConnectedAppsSection() {
   return (
     <>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountConnectedApps}
         icon={AppWindow}
         title={t("connectedAppsTitle")}
         description={t("connectedAppsDesc")}

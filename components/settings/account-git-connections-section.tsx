@@ -16,6 +16,7 @@ import {
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { GitConnection } from "@/lib/types";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -49,6 +50,7 @@ export function AccountGitConnectionsSection() {
   return (
     <>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountGitConnections}
         icon={GitBranch}
         title={t("gitConnectionsTitle")}
         description={t("gitConnectionsDesc")}

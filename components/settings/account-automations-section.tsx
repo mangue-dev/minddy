@@ -25,6 +25,7 @@ import {
   SettingsListRow,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { AutomationPresetPicker } from "@/components/automations/automation-preset-picker";
 import { ProjectOrb } from "@/components/project-orb";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -225,6 +226,7 @@ export function AccountAutomationsSection() {
   return (
     <>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountAutomations}
         icon={Workflow}
         title={t("title")}
         description={t("description")}
@@ -392,6 +394,7 @@ export function AccountAutomationsSection() {
       {/* 5. Sur quels projets ? Un interrupteur par projet possédé — c'est ce
           qui remplace l'ancien toggle général des réglages de projet. */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountAutomationsProjects}
         icon={FolderKanban}
         title={t("projectsTitle")}
         description={t("projectsHint")}

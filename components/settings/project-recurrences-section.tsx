@@ -17,6 +17,7 @@ import {
 import { CircleSlash, Repeat, User } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
@@ -101,6 +102,7 @@ export function ProjectRecurrencesSection({
 
   return (
     <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectRecurrences}
       icon={Repeat}
       title={title}
       description={description}

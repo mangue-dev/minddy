@@ -32,6 +32,7 @@ import { AccountGitIdentitySection } from "@/components/settings/account-git-ide
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
 import { AccountDataSection } from "@/components/settings/account-data-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
+import { ACCOUNT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
 
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
@@ -132,7 +133,7 @@ export default function AccountSettingsPage() {
   return (
     <SettingsShell
       title={t("title")}
-      defaultTab="profile"
+      defaultTab={ACCOUNT_SETTINGS_DEFAULT_TAB}
       tabs={tabs}
       topSlot={
         <SettingsAssistantPrompt

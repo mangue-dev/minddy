@@ -1,11 +1,25 @@
 "use client";
 
-import { Suspense, useCallback, useId, useMemo, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger, cn } from "mangue-ui";
 import type { LucideIcon } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import {
+  SETTINGS_SECTION_PARAM,
+  settingsSectionAnchor,
+  type SettingsSectionId,
+} from "@/lib/settings-sections";
 
 export type SettingsTab = {
   value: string;
@@ -33,6 +47,61 @@ type SettingsShellProps = {
     shell et n'ont pas la même largeur, c'est déjà « chaque onglet a un look
     différent ». */
 export const SETTINGS_MAX_WIDTH = "max-w-[1040px]";
+
+/** Le temps que dure l'anneau : celui de poser l'œil, pas plus. */
+const FOCUS_HIGHLIGHT_MS = 2000;
+/** Au-delà, la section demandée n'arrivera pas (onglet sans elle, droits qui ne
+ *  la rendent pas, requête en échec) : on cesse de la guetter. */
+const FOCUS_WAIT_MS = 5000;
+
+/**
+ * Déroule jusqu'à la carte demandée et la surligne (MIN — recherche des
+ * réglages dans ⌘K).
+ *
+ * Elle n'existe presque jamais à la frame où l'URL arrive : l'onglet vient de
+ * changer, et la plupart des sections attendent une requête (membres, dépôt
+ * lié, réglages du board). D'où la guette plutôt qu'un seul essai — sans elle,
+ * une section sur deux ne recevait rien et l'utilisateur atterrissait en haut
+ * de l'onglet, à chercher des yeux ce qu'il venait de nommer.
+ */
+function useSectionFocus(
+  target: { id: SettingsSectionId; nonce: number } | null,
+  reduceMotion: boolean,
+) {
+  useEffect(() => {
+    if (!target) return;
+    const domId = settingsSectionAnchor(target.id);
+    const deadline = Date.now() + FOCUS_WAIT_MS;
+    let frame = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let marked: HTMLElement | null = null;
+
+    const look = () => {
+      const el = document.getElementById(domId);
+      if (!el) {
+        if (Date.now() < deadline) frame = requestAnimationFrame(look);
+        return;
+      }
+      el.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        block: "center",
+      });
+      el.setAttribute("data-settings-focus", "");
+      marked = el;
+      timer = setTimeout(
+        () => el.removeAttribute("data-settings-focus"),
+        FOCUS_HIGHLIGHT_MS,
+      );
+    };
+    frame = requestAnimationFrame(look);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      if (timer) clearTimeout(timer);
+      marked?.removeAttribute("data-settings-focus");
+    };
+  }, [target, reduceMotion]);
+}
 
 /**
  * The settings layout shared by the account and project settings pages: a
@@ -118,6 +187,39 @@ function SettingsTabs({
     },
     [fallback, pathname, router, searchParams],
   );
+
+  // `?section=` : la palette ne se contente pas d'ouvrir le bon onglet, elle
+  // nomme la carte. Le paramètre est CONSOMMÉ dès sa lecture — recopié en état
+  // local puis retiré de l'URL. Sans ce retrait, changer d'onglet le trimballe
+  // (setActiveTab recopie la query) et un rechargement rejouerait le surlignage
+  // d'une section qu'on ne cherche plus.
+  const sectionParam = searchParams.get(SETTINGS_SECTION_PARAM);
+  const [focus, setFocus] = useState<{
+    id: SettingsSectionId;
+    nonce: number;
+  } | null>(null);
+  const consumed = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!sectionParam) {
+      consumed.current = null;
+      return;
+    }
+    if (consumed.current === sectionParam) return;
+    consumed.current = sectionParam;
+    // Le compteur, et pas l'id seul : redemander DEUX FOIS la même section doit
+    // la re-dérouler, or son id n'a pas changé.
+    setFocus((prev) => ({
+      id: sectionParam as SettingsSectionId,
+      nonce: (prev?.nonce ?? 0) + 1,
+    }));
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(SETTINGS_SECTION_PARAM);
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [sectionParam, searchParams, pathname, router]);
+
+  useSectionFocus(focus, !!reduceMotion);
 
   return (
     <Tabs

@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { locales, type Locale } from "@/i18n/config";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
   NUMO_DEFAULT_STATUS_OPTIONS,
@@ -172,6 +173,7 @@ export function AccountPreferencesSection() {
   return (
     <>
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountAppearance}
         icon={Palette}
         title={tNav("appearance")}
         description={ta("appearanceSectionDesc")}
@@ -214,6 +216,7 @@ export function AccountPreferencesSection() {
       </SettingsGroup>
 
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountIssues}
         icon={Ticket}
         title={tNav("tickets")}
         description={ta("ticketsSectionDesc")}

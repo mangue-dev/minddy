@@ -21,6 +21,7 @@ import {
 import { Check, Copy, Download, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsGroup, SettingsEmpty } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { mfaStatusQueryKey, useMfaStatusQuery } from "@/lib/use-mfa-status";
 import { mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
@@ -233,6 +234,7 @@ export function AccountSecuritySection() {
           bordés d'avant ont perdu leur cadre — ils sont DANS la carte, et la
           double bordure faisait partie du bruit. */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountSecurity}
         icon={Lock}
         title={t("title")}
         description={t("description")}

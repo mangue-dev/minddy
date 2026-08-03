@@ -11,6 +11,7 @@ import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { ProjectIconPicker } from "@/components/project-icon-picker";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { Project } from "@/lib/types";
 
 /**
@@ -93,6 +94,7 @@ export function ProjectGeneralSection({
     return (
       <>
         <SettingsGroup
+          anchor={SETTINGS_SECTIONS.projectGeneral}
           icon={Settings2}
           title={t("generalSectionTitle")}
           description={t("ownerOnlyHint")}
@@ -114,6 +116,7 @@ export function ProjectGeneralSection({
         {/* Le geste vit dans l'en-tête : le groupe n'a qu'une action, et une
             rangée qui répétait mot pour mot le titre au-dessus d'elle. */}
         <SettingsGroup
+          anchor={SETTINGS_SECTIONS.projectLeave}
           icon={LogOut}
           title={t("leaveProjectLabel")}
           description={t("leaveProjectHint")}
@@ -140,6 +143,7 @@ export function ProjectGeneralSection({
           comme avant — le bouton d'envoi vit dans le pied du groupe. */}
       <form onSubmit={handleSave}>
         <SettingsGroup
+          anchor={SETTINGS_SECTIONS.projectGeneral}
           icon={Settings2}
           title={t("generalSectionTitle")}
           description={t("generalSectionDesc")}
@@ -199,6 +203,7 @@ export function ProjectGeneralSection({
       </form>
 
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.projectDanger}
         icon={TriangleAlert}
         tone="destructive"
         title={t("dangerZoneTitle")}

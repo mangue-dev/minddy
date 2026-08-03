@@ -27,6 +27,7 @@ import {
   SettingsListRow,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { CandidateRepo } from "@/lib/types";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -185,6 +186,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
       son corps change. Avant, chaque branche rendait sa propre mise en page. */
   const group = (variant: "rows" | "block", children: ReactNode) => (
     <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectGit}
       icon={GitBranch}
       title={t("gitTab")}
       description={t("gitSectionDesc")}

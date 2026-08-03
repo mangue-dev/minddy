@@ -9,6 +9,7 @@ import {
   SettingsGroup,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import { saveAgentPreferencesApi } from "@/lib/agent-keys-api";
@@ -65,6 +66,7 @@ export function AccountAiKeysSection() {
       {/* `ByokConnectPanel` est un assistant partagé avec l'onboarding : seul son
           cadre change, jamais son contenu. */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountAiProvider}
         icon={KeyRound}
         title={t("aiProviderTitle")}
         description={t("aiProviderDesc")}
@@ -77,6 +79,7 @@ export function AccountAiKeysSection() {
           Modèle (MIN-46) puis niveau de raisonnement (MIN-122) : deux choix de
           la même décision, qui n'avaient aucune raison d'être deux sections. */}
       <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountAgent}
         icon={Bot}
         title={t("agentTab")}
         description={t("agentSectionDesc")}
