@@ -1184,6 +1184,7 @@ export function IssueCard({
   };
 
   const agentActions = useAgentMenuActions({
+    issueId: issue.id,
     agentsEnabled,
     hasSession: agentHasSession,
     hasPlan: issueHasPlan,

@@ -20,11 +20,20 @@ import type { AgentRunVerdict } from "@/lib/server/agent/runs";
  */
 
 export type AgentChainStatus =
+  /** EN SURSIS : ouverte, mais elle ne démarre qu'à `not_before` — et seulement
+   *  si la condition qui l'a ouverte tient encore (cf. la migration). */
+  | "pending"
   | "running"
   | "awaiting_human"
   | "stopped"
   | "completed"
   | "failed";
+
+/** L'événement mis de côté par une chaîne en sursis, rejoué à son réveil. */
+export interface PendingChainEvent {
+  to: string;
+  source: string;
+}
 
 export interface AgentChain {
   id: string;
@@ -42,12 +51,24 @@ export interface AgentChain {
    *  La colonne reste pour ne pas migrer une table pour un champ mort. */
   budget_usd: number | null;
   stop_reason: string | null;
+  /** Heure d'amorçage d'une chaîne en sursis. Null = elle a déjà démarré. */
+  not_before: string | null;
+  /** L'événement qui l'a ouverte, à rejouer au réveil (chaîne en sursis). */
+  pending_event: PendingChainEvent | null;
   created_at: string;
   updated_at: string;
 }
 
-/** Statuts d'une chaîne VIVANTE — ceux que couvre l'index unique par ticket. */
-export const LIVE_CHAIN_STATUSES: AgentChainStatus[] = ["running", "awaiting_human"];
+/**
+ * Statuts d'une chaîne VIVANTE — ceux que couvre l'index unique par ticket.
+ * `pending` en fait partie : un ticket en sursis est OCCUPÉ, sans quoi une
+ * deuxième chaîne s'ouvrirait dessus et les deux démarreraient.
+ */
+export const LIVE_CHAIN_STATUSES: AgentChainStatus[] = [
+  "pending",
+  "running",
+  "awaiting_human",
+];
 
 /** Code Postgres d'une violation de contrainte d'unicité. */
 const PG_UNIQUE_VIOLATION = "23505";
@@ -75,6 +96,10 @@ export async function openChain(input: {
   issueId: string;
   ownerId: string;
   preset: string | null;
+  /** Sursis : l'heure avant laquelle elle ne démarre pas. Absent = tout de suite. */
+  notBefore?: string | null;
+  /** L'événement à rejouer au réveil. Obligatoire avec `notBefore`. */
+  pendingEvent?: PendingChainEvent | null;
 }): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data, error } = await service
@@ -84,6 +109,13 @@ export async function openChain(input: {
       issue_id: input.issueId,
       owner_id: input.ownerId,
       preset: input.preset,
+      ...(input.notBefore
+        ? {
+            status: "pending",
+            not_before: input.notBefore,
+            pending_event: input.pendingEvent ?? null,
+          }
+        : {}),
     })
     .select("*")
     .single();
@@ -151,7 +183,11 @@ export async function advanceChain(
     })
     .eq("id", chain.id)
     .eq("step", chain.step)
-    .in("status", LIVE_CHAIN_STATUSES)
+    // PAS `LIVE_CHAIN_STATUSES` : une chaîne en SURSIS n'avance pas, elle se
+    // réveille d'abord (`startPendingChain`), et ce réveil re-vérifie que la
+    // condition qui l'a ouverte tient toujours. Avancer directement ferait sauter
+    // ce contrôle — et l'update ci-dessus la passerait en `running` au passage.
+    .in("status", ["running", "awaiting_human"])
     .select("*")
     .maybeSingle();
   return data ? toChain(data) : null;
@@ -173,6 +209,59 @@ export async function addChainSpend(chainId: string, usd: number): Promise<numbe
   const next = Number(((current?.spent_usd ?? 0) + usd).toFixed(6));
   await service.from("agent_chains").update({ spent_usd: next }).eq("id", chainId);
   return next;
+}
+
+/**
+ * Réveille une chaîne EN SURSIS. Compare-and-set sur `pending` : le balayeur et
+ * un « Lancer maintenant » simultanés ne peuvent pas la démarrer deux fois.
+ */
+export async function startPendingChain(chainId: string): Promise<AgentChain | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_chains")
+    .update({ status: "running", not_before: null })
+    .eq("id", chainId)
+    .eq("status", "pending")
+    .select("*")
+    .maybeSingle();
+  return data ? toChain(data) : null;
+}
+
+/**
+ * Annule une chaîne en sursis. SILENCIEUX à dessein — ni commentaire, ni
+ * notification : elle n'a rien joué, rien dépensé, et rien produit qui mérite
+ * un rapport. Annoncer « la chaîne s'est arrêtée » pour un travail qui n'a
+ * jamais commencé serait du bruit sur le ticket.
+ */
+export async function cancelPendingChain(
+  chainId: string,
+  reason: string,
+): Promise<AgentChain | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_chains")
+    .update({ status: "stopped", stop_reason: reason, not_before: null })
+    .eq("id", chainId)
+    .eq("status", "pending")
+    .select("*")
+    .maybeSingle();
+  return data ? toChain(data) : null;
+}
+
+/**
+ * Les chaînes en sursis DUES. Lues par le balayeur (cron) : c'est lui qui les
+ * réveille, la fenêtre d'un `after()` ne survivant pas à cinq minutes d'attente.
+ */
+export async function duePendingChains(limit = 50): Promise<AgentChain[]> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_chains")
+    .select("*")
+    .eq("status", "pending")
+    .lte("not_before", new Date().toISOString())
+    .order("not_before", { ascending: true })
+    .limit(limit);
+  return ((data ?? []) as unknown[]).map(toChain);
 }
 
 /** Gare la chaîne : elle attend un feu vert humain explicite. */

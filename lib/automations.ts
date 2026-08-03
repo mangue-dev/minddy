@@ -59,16 +59,104 @@ export const MAX_VERIFICATION_RETRIES = 1;
 
 // ── Déclencheurs ─────────────────────────────────────────────────────────────
 
+/**
+ * QUI a changé le statut. Même vocabulaire que `resolveIssueSource`
+ * ([lib/server/create-issue.ts](lib/server/create-issue.ts)) — une deuxième
+ * taxonomie pour dire la même chose serait une divergence programmée —, plus
+ * `automation` pour l'empreinte de la boucle elle-même.
+ *
+ * C'est le levier qui empêche l'automatisation d'entrer en conflit avec le
+ * travail manuel : « à faire » ne veut pas dire la même chose selon qui l'a
+ * posé. Un humain qui déplace une carte demande que quelque chose démarre ; un
+ * agent MCP qui range son ticket décrit ce qu'IL est en train de faire — lui
+ * lancer Numo dessus, c'est mettre deux ouvriers sur le même établi.
+ */
+export const AUTOMATION_SOURCES = [
+  /** Un geste humain dans minddy (app web, palette, glisser-déposer). */
+  "web",
+  /**
+   * Un geste humain passé par l'ASSISTANT Numo (« passe MIN-42 en à faire »).
+   * C'est une demande, au même titre qu'un glisser-déposer — seul le clavier
+   * change. À ne surtout pas confondre avec `agent` ci-dessous.
+   */
+  "numo",
+  /** Un agent branché sur le serveur MCP (Claude Code, Cursor…). */
+  "mcp",
+  /**
+   * L'AGENT DE CODE de minddy alignant le statut sur son propre cycle de vie
+   * (`issue-status-sync`) : démarrage → `in_progress`, PR ouverte → `in_review`,
+   * PR fusionnée → `done`, PR REFUSÉE → `todo`. Personne n'a demandé ces
+   * écritures-là, elles décrivent l'état d'un run. Les compter comme une demande
+   * faisait redémarrer la boucle entière au moindre refus de PR.
+   */
+  "agent",
+  /** La boucle elle-même (action `set_status`, remise en triage). */
+  "automation",
+  /** La synchro du dépôt lié ou un webhook de la forge. */
+  "forge",
+  /** Une intégration projet (API de feedback…). */
+  "integration",
+  /** Aucun acteur — récurrences, crons. */
+  "system",
+] as const;
+export type AutomationSource = (typeof AUTOMATION_SOURCES)[number];
+
+/**
+ * L'origine d'une écriture, dans le vocabulaire des règles. `raw` vient de
+ * `resolveIssueSource` — on ne le réimplémente pas ici, on le NARROWE (ce module
+ * est pur, il ne peut pas importer un module `server-only`), et un code inconnu
+ * retombe sur `system` plutôt que d'élargir le type en silence.
+ *
+ * Deux drapeaux que `resolveIssueSource` ne connaît pas, et qui priment dans cet
+ * ordre :
+ *   • `viaAutomation` — la boucle elle-même. Elle ne doit jamais réagir à sa
+ *     propre empreinte ;
+ *   • `viaAgentRun` — le CYCLE DE VIE d'un run d'agent. `resolveIssueSource` le
+ *     rend `numo`, comme l'assistant : or l'assistant relaie une DEMANDE humaine
+ *     (« passe ce ticket en à faire ») quand la synchro de statut ne fait que
+ *     décrire l'état d'un run. Les confondre obligeait à écarter les deux, et
+ *     donc à refuser d'amorcer la boucle sur une demande légitime.
+ */
+export function automationSourceOf(params: {
+  raw: string;
+  viaAutomation?: boolean;
+  viaAgentRun?: boolean;
+}): AutomationSource {
+  if (params.viaAutomation) return "automation";
+  if (params.viaAgentRun) return "agent";
+  return (AUTOMATION_SOURCES as readonly string[]).includes(params.raw)
+    ? (params.raw as AutomationSource)
+    : "system";
+}
+
 /** Les deux seuls événements dont la boucle a besoin. */
 export type AutomationTrigger =
-  | { type: "status_changed"; to: IssueStatus[] }
+  | {
+      type: "status_changed";
+      to: IssueStatus[];
+      /**
+       * Origines acceptées. ABSENT = toutes — c'est le sens le plus faible,
+       * donc le bon défaut pour une règle écrite à la main qui ne s'en soucie
+       * pas (et pour toutes celles déjà en base). Les préréglages, eux, le
+       * posent : cf. `HUMAN_SOURCES` / `WORKER_SOURCES`.
+       */
+      source?: AutomationSource[];
+    }
   | { type: "run_finished"; intent: AgentLaunchIntent[]; outcome?: "ok" | "failed" };
 
 export type AutomationTriggerType = AutomationTrigger["type"];
 
 /** L'événement RÉEL, tel que les crochets le rapportent au moteur. */
 export type AutomationEvent =
-  | { type: "status_changed"; from: IssueStatus | null; to: IssueStatus }
+  | {
+      type: "status_changed";
+      from: IssueStatus | null;
+      to: IssueStatus;
+      /** Absent = origine inconnue : c'est le cas des événements SIMULÉS
+       *  (`simulateChain`), qui ne doivent jamais être filtrés là-dessus — une
+       *  estimation décrit le parcours nominal, pas un audit d'acteur. */
+      source?: AutomationSource;
+    }
   | { type: "run_finished"; intent: AgentLaunchIntent; outcome: "ok" | "failed" };
 
 // ── Conditions ───────────────────────────────────────────────────────────────
@@ -208,7 +296,14 @@ export interface AutomationMatchContext {
 function triggerMatches(trigger: AutomationTrigger, event: AutomationEvent): boolean {
   if (trigger.type !== event.type) return false;
   if (trigger.type === "status_changed" && event.type === "status_changed") {
-    return trigger.to.includes(event.to);
+    if (!trigger.to.includes(event.to)) return false;
+    // Origine : on ne filtre que si la règle le demande ET que l'événement la
+    // porte. Un événement sans origine est un événement SIMULÉ — le filtrer
+    // ferait mentir l'estimation de coût, qui doit chiffrer le parcours nominal.
+    if (trigger.source && event.source && !trigger.source.includes(event.source)) {
+      return false;
+    }
+    return true;
   }
   if (trigger.type === "run_finished" && event.type === "run_finished") {
     if (!trigger.intent.includes(event.intent)) return false;
@@ -460,7 +555,9 @@ function parseTrigger(raw: unknown): AutomationTrigger | null {
   if (!obj) return null;
   if (obj.type === "status_changed") {
     const to = pickAll(obj.to, STATUSES);
-    return to ? { type: "status_changed", to } : null;
+    if (!to) return null;
+    const source = pickAll(obj.source, AUTOMATION_SOURCES);
+    return { type: "status_changed", to, ...(source ? { source } : {}) };
   }
   if (obj.type === "run_finished") {
     const intent = pickAll(obj.intent, INTENTS);
@@ -589,6 +686,30 @@ const MEDIUM_EFFORTS: (IssueEffort | "none")[] = ["m", "none"];
 const BIG_EFFORTS: (IssueEffort | "none")[] = ["l", "xl"];
 const SMALL_EFFORTS: (IssueEffort | "none")[] = ["xs", "s"];
 
+/**
+ * ÉCRIRE DU CODE ne part que d'une DEMANDE humaine.
+ *
+ * « À faire » ne veut pas dire la même chose selon qui l'a posé. Toi qui
+ * déplaces une carte — ou qui dis à Numo de la déplacer, c'est le même geste et
+ * la même intention —, tu demandes que ça démarre. Un agent MCP qui range son
+ * ticket décrit ce qu'IL fait ; l'agent de code qui aligne un statut décrit où
+ * en est SON run ; la forge rapporte l'état d'une PR. Aucune de ces trois-là
+ * n'est une demande, et y répondre met deux ouvriers sur la même branche.
+ */
+const HUMAN_SOURCES: AutomationSource[] = ["web", "numo"];
+
+/**
+ * VÉRIFIER, au contraire, accepte tout ce qui TRAVAILLE. « Un agent a fini,
+ * minddy relit » est le meilleur usage de la boucle — et l'interdire au MCP la
+ * priverait de son scénario le plus fort : Claude Code termine, passe le ticket
+ * en revue, et la vérification part toute seule. Relire n'écrase le travail de
+ * personne, contrairement à coder.
+ *
+ * Seules exclues : `automation` (l'empreinte de la boucle elle-même, sans quoi
+ * une chaîne réagirait à son propre `set_status`), `integration` et `system`.
+ */
+const WORKER_SOURCES: AutomationSource[] = ["web", "numo", "mcp", "agent", "forge"];
+
 // `model` reste ABSENT des préréglages : un identifiant OpenRouter épinglé ici
 // vieillirait sans que personne ne le voie, et absent veut déjà dire « le défaut
 // du lanceur ». Le levier de coût des préréglages, c'est le raisonnement.
@@ -620,7 +741,7 @@ function loopByEffortRules(): AutomationRule[] {
       id: `${p}:small-implement`,
       name: "XS/S — implémentation directe",
       enabled: true,
-      when: { type: "status_changed", to: ["todo"] },
+      when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: { effort: SMALL_EFFORTS },
       then: [run("implement", "low")],
     },
@@ -628,7 +749,7 @@ function loopByEffortRules(): AutomationRule[] {
       id: `${p}:medium-plan`,
       name: "M — écrire le plan",
       enabled: true,
-      when: { type: "status_changed", to: ["todo"] },
+      when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: { effort: MEDIUM_EFFORTS },
       then: [run("plan", "medium")],
     },
@@ -652,7 +773,7 @@ function loopByEffortRules(): AutomationRule[] {
       id: `${p}:big-plan`,
       name: "L/XL — écrire le plan",
       enabled: true,
-      when: { type: "status_changed", to: ["todo"] },
+      when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: { effort: BIG_EFFORTS },
       then: [run("plan", "high")],
     },
@@ -704,7 +825,7 @@ function planAndVerifyRules(): AutomationRule[] {
       id: `${p}:write`,
       name: "Écrire le plan à l'entrée en « à faire »",
       enabled: true,
-      when: { type: "status_changed", to: ["todo"] },
+      when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: {},
       then: [run("plan", "medium")],
     },
@@ -712,7 +833,7 @@ function planAndVerifyRules(): AutomationRule[] {
       id: `${p}:verify`,
       name: "Vérifier l'implémentation à l'entrée en revue",
       enabled: true,
-      when: { type: "status_changed", to: ["in_review"] },
+      when: { type: "status_changed", to: ["in_review"], source: WORKER_SOURCES },
       if: {},
       then: [run("verify", "low")],
     },
@@ -725,7 +846,7 @@ function planOnlyRules(): AutomationRule[] {
       id: "plan-only:write",
       name: "Écrire le plan à l'entrée en « à faire »",
       enabled: true,
-      when: { type: "status_changed", to: ["todo"] },
+      when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: {},
       then: [run("plan", "medium")],
     },
@@ -743,7 +864,7 @@ function implementOnlyRules(): AutomationRule[] {
       id: "implement-only:implement",
       name: "Implémenter à l'entrée en « à faire »",
       enabled: true,
-      when: { type: "status_changed", to: ["todo"] },
+      when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: {},
       then: [run("implement", "medium")],
     },
@@ -756,7 +877,7 @@ function verifyOnlyRules(): AutomationRule[] {
       id: "verify-only:verify",
       name: "Vérifier l'implémentation à l'entrée en revue",
       enabled: true,
-      when: { type: "status_changed", to: ["in_review"] },
+      when: { type: "status_changed", to: ["in_review"], source: WORKER_SOURCES },
       if: {},
       then: [run("verify", "low")],
     },
@@ -815,6 +936,41 @@ export function presetOfRules(rules: readonly AutomationRule[]): AutomationPrese
  * même décision que sur un bac à sable.
  */
 export const AUTOMATION_PRESET_META_KEY = "automation_preset";
+
+/**
+ * SURSIS avant l'amorçage d'une chaîne, en minutes (Compte → Automatisations).
+ *
+ * Faire glisser une carte vers « à faire » est un geste FAIBLE — on le fait en
+ * triant, parfois par erreur, et on change d'avis dans la minute. Cliquer
+ * « lancer Numo » est un geste FORT. Sans sursis, l'automatisation transforme le
+ * geste faible en dépense immédiate ; c'est cette disproportion qu'on corrige.
+ *
+ * Sémantique du `for:` des alertes Prometheus : la condition doit tenir EN
+ * CONTINU. Au réveil, le ticket doit toujours être dans le statut qui a ouvert
+ * la chaîne — ce qui couvre, sans rien tracker de plus, « j'ai copié le prompt
+ * pour le faire moi-même » (la copie déplace le ticket en `in_progress`), « je
+ * l'ai remis en backlog », « je l'ai classé ».
+ *
+ * `0` = amorçage immédiat, comme avant. Ne vaut QUE pour l'amorçage : une chaîne
+ * partie enchaîne ses étapes sans attendre.
+ */
+export const AUTOMATION_START_DELAY_META_KEY = "automation_start_delay_min";
+
+/** Assez pour se raviser, assez court pour que ça reste automatique. */
+export const DEFAULT_AUTOMATION_START_DELAY_MIN = 5;
+/** Les valeurs offertes à l'écran — au-delà, ce n'est plus un sursis. */
+export const AUTOMATION_START_DELAY_CHOICES = [0, 2, 5, 10, 30] as const;
+const MAX_AUTOMATION_START_DELAY_MIN = 120;
+
+export function resolveAutomationStartDelayMinutes(
+  meta: Record<string, unknown> | null | undefined,
+): number {
+  const raw = meta?.[AUTOMATION_START_DELAY_META_KEY];
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return DEFAULT_AUTOMATION_START_DELAY_MIN;
+  }
+  return Math.min(MAX_AUTOMATION_START_DELAY_MIN, Math.max(0, Math.round(raw)));
+}
 
 /** Le préréglage du compte, ou `null` — aucun, donc rien ne se déclenche. */
 export function resolveAutomationPreset(

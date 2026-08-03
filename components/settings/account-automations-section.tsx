@@ -8,6 +8,11 @@ import {
   AccordionItem,
   AccordionTrigger,
   Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Switch,
   toast,
 } from "mangue-ui";
@@ -20,12 +25,15 @@ import { ProjectOrb } from "@/components/project-orb";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   AUTOMATION_EFFORTS_META_KEY,
+  AUTOMATION_START_DELAY_CHOICES,
+  AUTOMATION_START_DELAY_META_KEY,
   AUTOMATION_MODELS_META_KEY,
   AUTOMATION_PRESET_META_KEY,
   presetRules,
   resolveAutomationEfforts,
   resolveAutomationModels,
   resolveAutomationPreset,
+  resolveAutomationStartDelayMinutes,
   stepCostUsd,
   simulateIssueLifetime,
   simulatedRunModes,
@@ -106,6 +114,24 @@ export function AccountAutomationsSection() {
     setEfforts(resolveAutomationEfforts(user?.user_metadata));
     setModels(resolveAutomationModels(user?.user_metadata));
   }, [user]);
+
+  const [delay, setDelay] = useState(() =>
+    resolveAutomationStartDelayMinutes(user?.user_metadata),
+  );
+  useEffect(() => {
+    setDelay(resolveAutomationStartDelayMinutes(user?.user_metadata));
+  }, [user]);
+
+  const setStartDelay = async (minutes: number) => {
+    const prev = delay;
+    setDelay(minutes); // optimiste — annulé en cas d'échec
+    try {
+      await updateUserMetadata({ [AUTOMATION_START_DELAY_META_KEY]: minutes });
+    } catch (e) {
+      setDelay(prev);
+      toast.error((e as Error).message);
+    }
+  };
 
   // Un projet en cours d'écriture : son interrupteur seul se fige, pas la liste.
   const [pending, setPending] = useState<string | null>(null);
@@ -249,7 +275,33 @@ export function AccountAutomationsSection() {
           </div>
         )}
 
-        {/* 3. La personnalisation, PLIÉE. Le préréglage marche tel quel : ces
+        {/* 3. Le SURSIS. Juste après le coût, parce que c'est le garde-fou qui
+            protège ce coût-là : le temps de se raviser avant que ça dépense. */}
+        {preset && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{t("delayTitle")}</span>
+              <HelpHint>{t("delayHint")}</HelpHint>
+            </div>
+            <Select
+              value={String(delay)}
+              onValueChange={(v) => void setStartDelay(Number(v))}
+            >
+              <SelectTrigger id="automation-delay" className="w-full max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AUTOMATION_START_DELAY_CHOICES.map((min) => (
+                  <SelectItem key={min} value={String(min)}>
+                    {min === 0 ? t("delayImmediate") : t("delayMinutes", { minutes: min })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* 4. La personnalisation, PLIÉE. Le préréglage marche tel quel : ces
             deux réglages sont pour qui veut aller plus loin, et n'ont donc pas à
             occuper l'écran de qui vient juste d'en choisir un. */}
         {preset && (
@@ -328,7 +380,7 @@ export function AccountAutomationsSection() {
           </Accordion>
         )}
 
-        {/* 4. Sur quels projets ? Un interrupteur par projet possédé — c'est ce
+        {/* 5. Sur quels projets ? Un interrupteur par projet possédé — c'est ce
             qui remplace l'ancien toggle général des réglages de projet. */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">

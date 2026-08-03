@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { activeRunForIssue, requestInterrupt } from "@/lib/server/agent/runs";
 import {
+  cancelPendingChain,
   latestChainForIssue,
   lastRunOfChain,
   resumeChain,
@@ -18,6 +19,7 @@ import {
   rulesForProject,
   simulateChain,
   simulatedRunModes,
+  type AutomationSource,
 } from "@/lib/automations";
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 
@@ -63,6 +65,8 @@ function publicChain(chain: AgentChain) {
     step: chain.step,
     retries: chain.retries,
     stopReason: chain.stop_reason,
+    /** Chaîne en sursis : l'heure d'amorçage, pour le compte à rebours. */
+    notBefore: chain.not_before,
     createdAt: chain.created_at,
     updatedAt: chain.updated_at,
   };
@@ -161,14 +165,43 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const action = (body as { action?: unknown } | null)?.action;
-  if (action !== "resume" && action !== "stop") {
-    return NextResponse.json({ error: "action must be 'resume' or 'stop'" }, { status: 400 });
+  if (
+    action !== "resume" &&
+    action !== "stop" &&
+    action !== "start" &&
+    action !== "handoff"
+  ) {
+    return NextResponse.json(
+      { error: "action must be 'resume', 'start', 'stop' or 'handoff'" },
+      { status: 400 },
+    );
   }
 
   const chain = await latestChainForIssue(id);
+
+  // « Je prends la main » — envoyé par les gestes manuels qui ne déplacent PAS
+  // le ticket (copier le prompt de plan, de vérification, une consigne libre).
+  // NO-OP silencieux quand il n'y a rien à annuler : l'appelant tire ce signal à
+  // chaque copie, sans savoir s'il existe une chaîne, et un 404 le ferait
+  // journaliser une erreur pour un cas parfaitement normal.
+  if (action === "handoff") {
+    if (chain?.status === "pending") await cancelPendingChain(chain.id, "taken_over");
+    return NextResponse.json({ ok: true });
+  }
+
   if (!chain) return NextResponse.json({ error: "No chain on this issue" }, { status: 404 });
 
   if (action === "stop") {
+    // Une chaîne EN SURSIS s'annule en silence : elle n'a rien joué, rien
+    // dépensé, et un rapport « la chaîne s'est arrêtée » pour un travail jamais
+    // commencé ne ferait qu'encombrer le ticket.
+    if (chain.status === "pending") {
+      const cancelled = await cancelPendingChain(chain.id, "canceled");
+      return NextResponse.json({
+        ok: true,
+        chain: cancelled ? publicChain(cancelled) : null,
+      });
+    }
     // Le run en cours part avec elle : le drapeau d'interruption le ramène au
     // repos proprement, sans rien perdre du travail déjà poussé.
     const active = await activeRunForIssue(id);
@@ -176,6 +209,28 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     await haltChain(chain, "interrupted");
     const after = await latestChainForIssue(id);
     return NextResponse.json({ ok: true, chain: after ? publicChain(after) : null });
+  }
+
+  if (action === "start") {
+    // « Lancer maintenant » : on court-circuite le sursis. Le moteur re-vérifie
+    // quand même que le ticket est resté où il était — c'est un raccourci, pas
+    // un passe-droit.
+    if (chain.status !== "pending" || !chain.pending_event?.to) {
+      return NextResponse.json({ error: "Chain is not waiting to start" }, { status: 409 });
+    }
+    scheduleAutomations({
+      issueId: id,
+      projectId: issue.project_id as string,
+      chainId: chain.id,
+      startPending: true,
+      event: {
+        type: "status_changed",
+        from: null,
+        to: chain.pending_event.to as IssueStatus,
+        source: chain.pending_event.source as AutomationSource,
+      },
+    });
+    return NextResponse.json({ ok: true, chain: publicChain(chain) });
   }
 
   // resume — feu vert humain, uniquement depuis `awaiting_human`.

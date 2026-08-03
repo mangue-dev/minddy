@@ -1,6 +1,6 @@
 import "server-only";
 
-import { after } from "next/server";
+import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
@@ -69,7 +69,7 @@ export interface SmartAssignParams {
 /** Fire-and-forget entry point for the two server cores (create/update issue).
     Cheap: the real work happens after the response, in runSmartAssign. */
 export function scheduleSmartAssign(params: SmartAssignParams): void {
-  after(() =>
+  afterOrNow(() =>
     runSmartAssign(params).catch((e) =>
       console.error("[smart-assign] run failed:", (e as Error).message)
     )
@@ -367,7 +367,7 @@ ${memberLines}`;
     // le membre qui dépose un ticket lui ferait payer un réglage qui n'est pas
     // le sien, et découplerait le payeur de la porte qui laisse passer l'appel.
     const u = parseOpenRouterUsage(data.usage);
-    after(() =>
+    afterOrNow(() =>
       recordAiUsage({
         runId: newRunId(),
         feature: "smart_assign",

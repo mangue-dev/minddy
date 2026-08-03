@@ -166,11 +166,13 @@ export async function fetchIssueAgentRunsApi(
     la dépense, seul le quota du compte borne (cf. lib/automations). */
 export interface IssueChainState {
   id: string;
-  status: "running" | "awaiting_human" | "stopped" | "completed" | "failed";
+  status: "pending" | "running" | "awaiting_human" | "stopped" | "completed" | "failed";
   preset: string | null;
   step: number;
   retries: number;
   stopReason: string | null;
+  /** Chaîne EN SURSIS : l'heure d'amorçage, pour le compte à rebours. */
+  notBefore: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -189,9 +191,28 @@ export async function fetchIssueAutomationApi(
   return parseJson(await fetch(`/api/issues/${issueId}/automation`));
 }
 
+/**
+ * « Je prends ce ticket en main » — annule la chaîne qui l'attendait EN SURSIS.
+ *
+ * À tirer sur les gestes manuels qui ne déplacent PAS le ticket : copier le
+ * prompt de plan, de vérification ou une consigne libre. Le prompt
+ * d'IMPLÉMENTATION, lui, avance déjà le ticket en « en cours » et annule le
+ * sursis par ce seul fait ; les LANCEMENTS, eux, sont couverts côté serveur.
+ *
+ * Silencieux de bout en bout : aucune attente, aucune erreur remontée. Copier un
+ * prompt doit rester instantané, et l'échec de ce signal ne vaut pas un toast.
+ */
+export function handOffIssueApi(issueId: string): void {
+  void fetch(`/api/issues/${issueId}/automation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "handoff" }),
+  }).catch(() => {});
+}
+
 export async function postIssueAutomationApi(
   issueId: string,
-  action: "resume" | "stop",
+  action: "resume" | "start" | "stop",
 ): Promise<{ ok: true; chain: IssueChainState | null }> {
   return parseJson(
     await fetch(`/api/issues/${issueId}/automation`, {

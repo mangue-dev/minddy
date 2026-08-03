@@ -1,6 +1,6 @@
 import "server-only";
 
-import { after } from "next/server";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { getServiceClient } from "@/lib/supabase-service";
 import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
@@ -30,7 +30,7 @@ export function scheduleFeedbackStatusSync(
   const mapped =
     typeof issueStatus === "string" ? ISSUE_TO_FEEDBACK_STATUS[issueStatus] : undefined;
   if (!mapped) return;
-  after(() =>
+  afterOrNow(() =>
     syncFeedbackStatusForIssue(issueId, mapped, actorId).catch((e) =>
       console.error("[feedback-status-sync] failed:", (e as Error).message)
     )

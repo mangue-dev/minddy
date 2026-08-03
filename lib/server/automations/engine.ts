@@ -17,6 +17,7 @@ import {
   presetOfRules,
   rulesForIssue,
   rulesForProject,
+  resolveAutomationStartDelayMinutes,
   rulesToReplayOnRetry,
   simulateChain,
   type AutomationEvent,
@@ -26,11 +27,13 @@ import {
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import {
   advanceChain,
+  cancelPendingChain,
   chainForIssue,
   getChain,
   lastVerdictOfChain,
   openChain,
   retryChain,
+  startPendingChain,
   type AgentChain,
 } from "./chain";
 import { runAction } from "./actions";
@@ -59,6 +62,12 @@ export interface AutomationRunParams {
    * reprise humaine). Absent → celle du ticket, s'il en a une vivante.
    */
   chainId?: string | null;
+  /**
+   * L'appel vient du BALAYEUR (cron) ou d'un « Lancer maintenant » : il réveille
+   * une chaîne en sursis. C'est le seul chemin qui a le droit de la démarrer, et
+   * il re-vérifie d'abord que la condition qui l'a ouverte tient toujours.
+   */
+  startPending?: boolean;
 }
 
 /**
@@ -211,6 +220,20 @@ async function handleFailedVerification(params: {
   return true;
 }
 
+/**
+ * Éteint une chaîne, quelle que soit sa forme. Une chaîne EN SURSIS s'annule en
+ * silence : elle n'a rien joué, rien dépensé, et un rapport « la chaîne s'est
+ * arrêtée » pour un travail jamais commencé serait du bruit sur le ticket. Une
+ * chaîne qui TOURNE, elle, s'arrête en le disant.
+ *
+ * Sans ce point de passage, un projet désarmé pendant un sursis laissait la
+ * chaîne `pending` pour toujours — et l'index unique par ticket avec elle.
+ */
+async function shutDownChain(chain: AgentChain, reason: string): Promise<void> {
+  if (chain.status === "pending") await cancelPendingChain(chain.id, reason);
+  else if (chain.status === "running") await haltChain(chain, reason);
+}
+
 function factsOf(issue: IssueRow, categoryIds: string[]): AutomationIssueFacts {
   return {
     status: issue.status,
@@ -241,11 +264,11 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   if (!project.automations_enabled) {
     // L'interrupteur a été coupé pendant qu'une chaîne tournait : on ne la laisse
     // pas en suspens, on l'arrête en le disant.
-    if (existing && existing.status === "running") await haltChain(existing, "disabled");
+    if (existing) await shutDownChain(existing, "disabled");
     return;
   }
   if (!(await canUseAutomations(project.owner_id as string))) {
-    if (existing && existing.status === "running") await haltChain(existing, "entitlement");
+    if (existing) await shutDownChain(existing, "entitlement");
     return;
   }
 
@@ -274,33 +297,85 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   // finir plutôt que de l'abandonner à mi-parcours.
   if (!existing && !isAutomationEffortEnabled(ownerMeta, issue.effort)) return;
   if (rules.length === 0) {
-    if (existing && existing.status === "running") await haltChain(existing, "disabled");
+    if (existing) await shutDownChain(existing, "disabled");
     return;
+  }
+
+  // Un run TRAVAILLE déjà sur le ticket : rien ne doit être décidé maintenant.
+  // Ce garde-fou est ICI, AVANT le réveil d'un sursis et avant les règles.
+  //
+  // Avant le sursis, parce que réveiller d'abord et abandonner ensuite laissait
+  // une chaîne `running` à l'étape 0, sans run à elle : plus jamais balayée (elle
+  // n'est plus `pending`), plus jamais avancée (aucun run de chaîne ne finira), et
+  // occupant l'index unique du ticket pour toujours. Laissée `pending`, elle est
+  // simplement reproposée au balayage suivant.
+  //
+  // Avant les règles, parce qu'un changement de statut manuel pendant qu'un run
+  // tourne ne matche aucune règle : sans ce retour, la chaîne serait déclarée
+  // TERMINÉE alors que son étape court encore. (Sur le chemin normal, `stampRun`
+  // a déjà rendu le run terminal quand le crochet appelle : rien n'est actif et
+  // ce test laisse passer.)
+  if (await activeRunForIssue(issue.id)) return;
+
+  // ── La chaîne EN SURSIS ───────────────────────────────────────────────────
+  // Sémantique du `for:` des alertes : la condition doit tenir EN CONTINU. Au
+  // réveil, le ticket doit toujours être dans le statut qui a ouvert la chaîne.
+  // C'est ce test qui couvre « j'ai copié le prompt d'implémentation » (la copie
+  // déplace le ticket en `in_progress`), « je l'ai remis en backlog », « je l'ai
+  // classé ». Les gestes manuels qui NE déplacent PAS le ticket — copier le
+  // prompt de plan, lancer un plan ou une vérification à la main — n'y sont pas
+  // visibles : ceux-là annulent la chaîne à la source (cf. `handOffToHuman`).
+  let live = existing;
+  let startedFromPending = false;
+  if (live && live.status === "pending") {
+    if (params.startPending) {
+      if (live.pending_event && live.pending_event.to !== issue.status) {
+        await cancelPendingChain(live.id, "superseded");
+        return;
+      }
+      const started = await startPendingChain(live.id);
+      if (!started) return; // un autre l'a réveillée, ou annulée
+      live = started;
+      startedFromPending = true;
+    } else if (
+      params.event.type === "status_changed" &&
+      live.pending_event &&
+      params.event.to !== live.pending_event.to
+    ) {
+      // Le ticket est parti ailleurs pendant le sursis : la chaîne en attente
+      // n'a plus lieu d'être. On l'annule EN SILENCE (elle n'a rien joué, rien
+      // dépensé) et on laisse le nouveau statut être évalué pour lui-même.
+      await cancelPendingChain(live.id, "superseded");
+      live = null;
+    } else {
+      return;
+    }
   }
 
   // Une chaîne garée attend un HUMAIN : rien d'automatique ne la fait repartir.
   // La route de reprise la remet en `running` AVANT de rappeler le moteur.
-  if (existing && existing.status !== "running") return;
-
-  // Un run TRAVAILLE déjà sur le ticket : la chaîne est au milieu d'une étape,
-  // et rien ne doit être décidé maintenant. Ce garde-fou est ICI, avant même de
-  // regarder les règles, et pas juste avant de lancer : un changement de statut
-  // manuel pendant qu'un run tourne ne matche aucune règle, et sans ce retour
-  // la chaîne serait déclarée TERMINÉE alors que son étape court encore. (Sur le
-  // chemin normal, `stampRun` a déjà rendu le run terminal quand le crochet
-  // appelle : il n'y a donc rien d'actif et ce test laisse passer.)
-  if (await activeRunForIssue(issue.id)) return;
+  if (live && live.status !== "running") return;
 
   const categoryIds = await categoryIdsOf(issue.id);
   const facts = factsOf(issue, categoryIds);
   const projectKey = (project.key as string) ?? "";
 
+  // Analytique d'ouverture d'une chaîne qui sortait de SURSIS : elle part au
+  // vrai démarrage, pas à la mise en attente — une chaîne annulée pendant son
+  // sursis n'a jamais commencé, et ne doit donc rien compter.
+  if (startedFromPending && live) {
+    captureChainStarted(live, {
+      effort: issue.effort,
+      plannedSteps: simulateChain(rules, facts, { throughHumanStop: true }).length,
+    });
+  }
+
   // ── Le verdict d'une vérification prime sur les règles ────────────────────
-  if (existing && params.event.type === "run_finished" && params.event.intent === "verify") {
-    const verdict = await lastVerdictOfChain(existing.id);
+  if (live && params.event.type === "run_finished" && params.event.intent === "verify") {
+    const verdict = await lastVerdictOfChain(live.id);
     if (verdict && !verdict.ok) {
       await handleFailedVerification({
-        chain: existing,
+        chain: live,
         rules,
         verdict,
         issue,
@@ -315,7 +390,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   const rule = nextRule(rules, {
     event: params.event,
     issue: facts,
-    playedRuleIds: existing?.played_rule_ids ?? [],
+    playedRuleIds: live?.played_rule_ids ?? [],
   });
   if (!rule) {
     // Plus rien à jouer — mais deux fins très différentes, qu'il faut distinguer
@@ -328,33 +403,53 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     // `requeueStuckRuns` vers `stampRun` promettait : un run abandonné par le
     // balayeur ARRÊTE sa chaîne. (Sans chaîne, c'est simplement un événement
     // qui n'intéresse aucune règle.)
-    if (existing) {
+    if (live) {
       if (params.event.type === "run_finished" && params.event.outcome === "failed") {
-        await haltChain(existing, "run_failed");
+        await haltChain(live, "run_failed");
       } else {
-        await finishChain(existing);
+        await finishChain(live);
       }
     }
     return;
   }
 
   // ── La chaîne ─────────────────────────────────────────────────────────────
-  let chain = existing;
+  let chain = live;
   if (!chain) {
     const ownerId = await resolveChainOwner(
       project.id as string,
       project.owner_id as string,
       issue.assignee_id,
     );
+    // ── Le SURSIS ───────────────────────────────────────────────────────────
+    // Un changement de statut ouvre la chaîne EN ATTENTE : elle ne démarrera
+    // qu'au bout du délai, et seulement si le ticket y est encore. Le sursis ne
+    // vaut que pour l'AMORÇAGE — la fin d'un run enchaîne l'étape suivante tout
+    // de suite, puisqu'on est déjà engagé (et qu'on a déjà payé).
+    const delayMin = resolveAutomationStartDelayMinutes(ownerMeta);
+    const deferred =
+      delayMin > 0 && params.event.type === "status_changed"
+        ? {
+            notBefore: new Date(Date.now() + delayMin * 60_000).toISOString(),
+            pendingEvent: {
+              to: params.event.to,
+              source: params.event.source ?? "web",
+            },
+          }
+        : null;
     chain = await openChain({
       projectId: project.id as string,
       issueId: issue.id,
       ownerId,
       preset: presetOfRules(rules),
+      ...(deferred ?? {}),
     });
     // Null = une autre chaîne est née entre-temps (index unique). On rend la
     // main : c'est elle qui pilote maintenant.
     if (!chain) return;
+    // En sursis : rien de plus ici. C'est le balayeur qui la rappellera, et
+    // l'analytique d'ouverture part au VRAI démarrage, pas à la mise en attente.
+    if (deferred) return;
     captureChainStarted(chain, {
       effort: issue.effort,
       plannedSteps: simulateChain(rules, facts, { throughHumanStop: true }).length,

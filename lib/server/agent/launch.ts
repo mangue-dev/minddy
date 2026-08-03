@@ -24,6 +24,7 @@ import {
 import { drainAgentRuns } from "./drain";
 import { chainAgentDrain } from "./drain-chain";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
+import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
 
 /**
@@ -314,6 +315,15 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     ) {
       await syncIssueStatusOnAgentStart({ issueId, actorId: input.userId });
     }
+
+    // Un lancement MANUEL, quel que soit son mode, dit que quelqu'un prend le
+    // ticket en main : la chaîne qui l'attendait en sursis s'annule (MIN-147).
+    // Sans ça, seule l'implémentation était couverte — elle seule déplace le
+    // ticket —, et lancer un plan ou une vérification à la main laissait le
+    // sursis courir jusqu'au bout, pour repartir sur le travail qu'on venait de
+    // prendre. Une chaîne qui TOURNE n'est pas concernée : là, c'est ce
+    // lancement-ci qui est refusé (`alreadyRunning`, plus haut).
+    if (input.triggeredBy !== "automation") handOffToHuman(issueId);
   }
 
   kickAgentDrain(service);

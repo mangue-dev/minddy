@@ -51,6 +51,10 @@ async function applyIssueStatus(
       // Une PR humaine ne passe pas par Numo : le crédit va à la forge, pas à lui.
       viaAssistant: !forgeSync,
       forgeSync,
+      // CE point de passage est le cycle de vie d'un run, jamais une demande
+      // (MIN-147). Sans ce drapeau, il se lit comme l'assistant Numo relayant une
+      // instruction — et « PR refusée → à faire » redémarrait la boucle entière.
+      viaAgentRun: true,
     });
     if (!result.ok) {
       console.error(

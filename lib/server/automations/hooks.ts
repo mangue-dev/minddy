@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { AgentRun } from "@/lib/server/agent/runs";
-import type { AutomationEvent } from "@/lib/automations";
+import type { AutomationEvent, AutomationSource } from "@/lib/automations";
 import type { IssueStatus } from "@/lib/issue-constants";
 
 /**
@@ -46,12 +46,56 @@ export function scheduleStatusAutomations(params: {
   projectId: string;
   from: IssueStatus | null;
   to: IssueStatus;
+  /**
+   * QUI a fait l'écriture. Sans elle, une règle ne peut pas distinguer « je
+   * déplace une carte » de « mon agent MCP range son ticket » — et les
+   * préréglages qui écrivent du code ne partent que du premier.
+   */
+  source: AutomationSource;
 }): void {
   void schedule({
     issueId: params.issueId,
     projectId: params.projectId,
-    event: { type: "status_changed", from: params.from, to: params.to },
+    event: {
+      type: "status_changed",
+      from: params.from,
+      to: params.to,
+      source: params.source,
+    },
   }).catch((e) => console.error("[automations] status hook failed:", (e as Error).message));
+}
+
+/**
+ * QUELQU'UN A PRIS LA MAIN sur le ticket — annule sa chaîne EN SURSIS.
+ *
+ * Le sursis se juge d'habitude au statut : si le ticket a bougé, la chaîne
+ * n'a plus lieu d'être. Mais la moitié des gestes manuels ne déplacent RIEN :
+ *
+ *   • lancer « générer un plan », « vérifier le plan », « vérifier
+ *     l'implémentation » ou une consigne libre — seul `implement` démarre le
+ *     ticket (`intentStartsWork`), les trois autres le laissent où il est ;
+ *   • copier le prompt de plan, de vérification ou une consigne libre — seul
+ *     le prompt d'implémentation avance le ticket (`shouldAutoStartOnPromptCopy`),
+ *     « planifier n'est pas commencer le travail ».
+ *
+ * Dans tous ces cas, le ticket reste en « à faire » et le sursis courait
+ * jusqu'au bout : Numo repartait sur un travail qu'on venait de prendre en
+ * charge. Ce point d'appel-ci le dit explicitement, pour les cinq façons de
+ * lancer comme pour les quatre façons de copier.
+ *
+ * ANNULATION SILENCIEUSE : la chaîne n'a rien joué, rien dépensé. Best-effort,
+ * et strictement limité au sursis — une chaîne qui TOURNE n'est pas concernée,
+ * c'est le refus `alreadyRunning` qui arbitre ce cas-là.
+ */
+export function handOffToHuman(issueId: string): void {
+  const go = async () => {
+    const { chainForIssue, cancelPendingChain } = await import("./chain");
+    const chain = await chainForIssue(issueId);
+    if (chain?.status === "pending") await cancelPendingChain(chain.id, "taken_over");
+  };
+  void go().catch((e) =>
+    console.error("[automations] hand-off hook failed:", (e as Error).message),
+  );
 }
 
 /** Statuts de run que la chaîne lit comme un succès. */

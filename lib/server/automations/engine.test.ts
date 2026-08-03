@@ -82,7 +82,25 @@ vi.mock("./chain", () => ({
     step: chain.step + 1,
     played_rule_ids: [...chain.played_rule_ids, ruleId],
   })),
-  openChain: vi.fn(async () => h.chain),
+  // Pas de chaîne existante → on en ouvre une neuve, à l'étape 0.
+  openChain: vi.fn(async () => ({
+    id: "chain-new",
+    project_id: "p1",
+    issue_id: "i1",
+    owner_id: "owner",
+    preset: "loop-by-effort",
+    status: "running",
+    step: 0,
+    played_rule_ids: [] as string[],
+    retries: 0,
+    spent_usd: 0,
+    budget_usd: null,
+    stop_reason: null,
+    not_before: null,
+    pending_event: null,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  })),
   retryChain: vi.fn(
     async (chain: { retries: number; played_rule_ids: string[] }, replay: string[]) => ({
       ...chain,
@@ -91,6 +109,8 @@ vi.mock("./chain", () => ({
     }),
   ),
   lastVerdictOfChain: vi.fn(async () => h.verdict),
+  startPendingChain: vi.fn(async () => ({ ...h.chain, status: "running", not_before: null })),
+  cancelPendingChain: vi.fn(async () => null),
 }));
 
 vi.mock("./actions", () => ({ runAction: vi.fn(async () => ({ kind: "launched" })) }));
@@ -105,6 +125,7 @@ const { runAutomations } = await import("./engine");
 const report = await import("./report");
 const actions = await import("./actions");
 const updateIssue = await import("@/lib/server/update-issue");
+const chainMod = await import("./chain");
 
 /** Une chaîne vivante qui a déjà joué son unique étape d'implémentation. */
 function livingChain() {
@@ -121,6 +142,8 @@ function livingChain() {
     spent_usd: 0,
     budget_usd: null,
     stop_reason: null,
+    not_before: null,
+    pending_event: null,
     created_at: "2026-08-01T00:00:00Z",
     updated_at: "2026-08-01T00:00:00Z",
   };
@@ -270,6 +293,158 @@ describe("runAutomations — conclure une chaîne", () => {
         viaAutomation: true,
       }),
     );
+  });
+
+  it("l'ORIGINE du changement de statut arrive jusqu'aux règles", async () => {
+    // Le câblage complet : `updateIssueFields` → `scheduleStatusAutomations` →
+    // l'événement → `nextRule`. Sans lui, la condition d'origine serait écrite
+    // dans les préréglages mais jamais évaluée.
+    h.chain = null;
+    // Sursis à zéro : ce test-ci porte sur l'ORIGINE, pas sur le délai.
+    h.ownerMeta = { automation_preset: "loop-by-effort", automation_start_delay_min: 0 };
+    const enterTodo = (source: "web" | "mcp") =>
+      runAutomations({
+        issueId: "i1",
+        projectId: "p1",
+        event: { type: "status_changed", from: "backlog", to: "todo", source },
+      });
+
+    // Mon agent MCP range son ticket : il décrit son propre travail, il ne
+    // demande pas qu'on en lance un deuxième dessus.
+    await enterTodo("mcp");
+    expect(actions.runAction).not.toHaveBeenCalled();
+
+    // Moi qui déplace la carte : là, oui.
+    await enterTodo("web");
+    expect(actions.runAction).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(actions.runAction).mock.calls[0][0].action).toMatchObject({
+      type: "run_numo",
+      mode: "plan",
+    });
+  });
+
+  it("le SURSIS ouvre la chaîne en attente, sans rien lancer", async () => {
+    h.chain = null;
+    h.ownerMeta = { automation_preset: "loop-by-effort" }; // 5 min par défaut
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      event: { type: "status_changed", from: "backlog", to: "todo", source: "web" },
+    });
+
+    // Rien n'est lancé, rien n'est dépensé : la chaîne attend.
+    expect(actions.runAction).not.toHaveBeenCalled();
+    const opened = vi.mocked(chainMod.openChain).mock.calls[0][0];
+    expect(opened.notBefore).toBeTruthy();
+    expect(Date.parse(opened.notBefore as string)).toBeGreaterThan(Date.now());
+    // L'événement est mis de côté : c'est lui qu'on rejouera, et son `to` sert
+    // de condition de survie.
+    expect(opened.pendingEvent).toEqual({ to: "todo", source: "web" });
+    // L'analytique d'ouverture n'est PAS émise : rien n'a commencé.
+    expect(report.captureChainStarted).not.toHaveBeenCalled();
+  });
+
+  it("la fin d'un run n'attend JAMAIS — on est déjà engagé", async () => {
+    // Le sursis protège l'AMORÇAGE. Une fois la chaîne partie, faire patienter
+    // l'étape suivante ne protégerait plus rien : la dépense est déjà faite.
+    h.ownerMeta = { automation_preset: "implement-only" }; // 5 min par défaut
+    h.chain = { ...livingChain(), played_rule_ids: [] };
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      chainId: "chain-1",
+      event: { type: "run_finished", intent: "plan", outcome: "ok" },
+    });
+    // `implement-only` ne réagit pas à `run_finished` → rien à jouer, mais le
+    // point est ailleurs : aucune chaîne n'a été mise en sursis.
+    expect(vi.mocked(chainMod.openChain)).not.toHaveBeenCalled();
+  });
+
+  it("le ticket parti ailleurs pendant le sursis annule la chaîne EN SILENCE", async () => {
+    // Le cas « j'ai copié le prompt pour le faire moi-même » : la copie déplace
+    // le ticket en `in_progress`, donc il n'est plus dans le statut qui avait
+    // ouvert la chaîne. Aucun commentaire, aucune notification : rien n'a tourné.
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.chain = {
+      ...livingChain(),
+      status: "pending",
+      step: 0,
+      played_rule_ids: [],
+      pending_event: { to: "todo", source: "web" },
+    };
+    h.single.issues = {
+      ...(h.single.issues as Record<string, unknown>),
+      status: "in_progress",
+    };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      chainId: "chain-1",
+      startPending: true,
+      event: { type: "status_changed", from: null, to: "todo", source: "web" },
+    });
+
+    expect(chainMod.cancelPendingChain).toHaveBeenCalledWith("chain-1", "superseded");
+    expect(chainMod.startPendingChain).not.toHaveBeenCalled();
+    expect(actions.runAction).not.toHaveBeenCalled();
+    expect(report.haltChain).not.toHaveBeenCalled(); // silencieux
+  });
+
+  it("le ticket TOUJOURS là au réveil : la chaîne démarre pour de bon", async () => {
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.chain = {
+      ...livingChain(),
+      status: "pending",
+      step: 0,
+      played_rule_ids: [],
+      pending_event: { to: "todo", source: "web" },
+    };
+    h.single.issues = { ...(h.single.issues as Record<string, unknown>), status: "todo" };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      chainId: "chain-1",
+      startPending: true,
+      event: { type: "status_changed", from: null, to: "todo", source: "web" },
+    });
+
+    expect(chainMod.startPendingChain).toHaveBeenCalledWith("chain-1");
+    expect(chainMod.cancelPendingChain).not.toHaveBeenCalled();
+    expect(actions.runAction).toHaveBeenCalledTimes(1);
+    // L'analytique d'ouverture part ICI, au vrai démarrage.
+    expect(report.captureChainStarted).toHaveBeenCalled();
+  });
+
+  it("un run ACTIF ne réveille pas le sursis — sinon la chaîne devient zombie", async () => {
+    // Réveiller d'abord et abandonner ensuite laissait une chaîne `running` à
+    // l'étape 0, sans run à elle : plus jamais balayée (elle n'est plus
+    // `pending`), plus jamais avancée (aucun run de chaîne ne finira), et
+    // occupant l'index unique du ticket pour toujours.
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.activeRun = { id: "run-manuel" };
+    h.chain = {
+      ...livingChain(),
+      status: "pending",
+      step: 0,
+      played_rule_ids: [],
+      pending_event: { to: "todo", source: "web" },
+    };
+    h.single.issues = { ...(h.single.issues as Record<string, unknown>), status: "todo" };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      chainId: "chain-1",
+      startPending: true,
+      event: { type: "status_changed", from: null, to: "todo", source: "web" },
+    });
+
+    // Elle reste EN SURSIS : le balayage suivant la reproposera.
+    expect(chainMod.startPendingChain).not.toHaveBeenCalled();
+    expect(chainMod.cancelPendingChain).not.toHaveBeenCalled();
+    expect(actions.runAction).not.toHaveBeenCalled();
   });
 
   it("un événement sans chaîne ne conclut rien du tout", async () => {

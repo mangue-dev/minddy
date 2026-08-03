@@ -61,6 +61,7 @@ import {
   mergeServerIssue,
 } from "@/lib/optimistic/issue-writes";
 import { patchSearchIndexIssue } from "@/lib/use-search-index";
+import { handOffIssueApi } from "@/lib/agent-api";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -594,6 +595,11 @@ export function CommandPalette({
               attachmentCount: full.attachment_count,
             });
             await navigator.clipboard.writeText(prompt);
+            // Copier un prompt, c'est prendre le ticket en main : la chaîne qui
+            // l'attendait en sursis s'annule (MIN-147). Ici comme dans le menu
+            // du board — et même quand l'auto-start est éteint, auquel cas le
+            // ticket ne bouge pas et rien d'autre ne le signalerait.
+            handOffIssueApi(full.id);
             if (autoStart) {
               const handle = issueWrites.begin({
                 kind: "patch",

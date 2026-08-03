@@ -9,6 +9,10 @@
       "schedule": "*/2 * * * *"
     },
     {
+      "path": "/api/cron/automations",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/billing-sync",
       "schedule": "15 * * * *"
     },

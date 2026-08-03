@@ -33,7 +33,7 @@ import { statusAllowsCycle } from "@/lib/cycle";
 import type { IssueStatus } from "@/lib/issue-constants";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { scheduleStatusAutomations } from "@/lib/server/automations/hooks";
-import { parseAutomationOverride } from "@/lib/automations";
+import { automationSourceOf, parseAutomationOverride } from "@/lib/automations";
 import { captureServerEvent } from "./posthog";
 import { resolveIssueSource } from "./create-issue";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -84,6 +84,7 @@ export async function updateIssueFields({
   input,
   viaAssistant = false,
   viaAutomation = false,
+  viaAgentRun = false,
   mcpKeyId = null,
   forgeSync = null,
 }: {
@@ -97,6 +98,12 @@ export async function updateIssueFields({
       l'écriture (l'assigné du ticket, ou le propriétaire du projet). Se cumule
       avec `viaAssistant` — c'est bien Numo qui agit, mais personne n'a cliqué. */
   viaAutomation?: boolean;
+  /** L'écriture est une conséquence MÉCANIQUE du cycle de vie d'un run d'agent
+      (`issue-status-sync` : démarrage, PR ouverte/fusionnée/refusée), et non une
+      demande. Elle porte `viaAssistant` comme l'assistant — d'où ce drapeau,
+      qui sépare « Numo relaie ma demande » de « Numo décrit où en est son run ».
+      Ne change que l'ORIGINE vue par les automatisations (MIN-147). */
+  viaAgentRun?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
   /** Attribue les événements à la forge ('github' | 'gitlab') quand l'écriture
@@ -537,6 +544,15 @@ export async function updateIssueFields({
       projectId: before.project_id as string,
       from: (before.status as IssueStatus | null) ?? null,
       to: updates.status as IssueStatus,
+      // L'ORIGINE décide si une règle a le droit de réagir : les préréglages qui
+      // écrivent du code n'acceptent qu'un geste humain, ceux qui vérifient
+      // acceptent aussi un agent. Même résolveur que la source analytique — une
+      // deuxième taxonomie divergerait le jour où l'une des deux bouge.
+      source: automationSourceOf({
+        raw: resolveIssueSource({ viaAssistant, mcpKeyId, forge: forgeSync, actorId }),
+        viaAutomation,
+        viaAgentRun,
+      }),
     });
   }
 

@@ -12,10 +12,16 @@ import type { AgentRun } from "@/lib/server/agent/runs";
  * lue. La dépense se cumule quand même : elle a bien eu lieu.
  */
 
-vi.mock("./chain", () => ({ addChainSpend: vi.fn(async () => 0) }));
+const C = vi.hoisted(() => ({ chain: null as Record<string, unknown> | null }));
+
+vi.mock("./chain", () => ({
+  addChainSpend: vi.fn(async () => 0),
+  chainForIssue: vi.fn(async () => C.chain),
+  cancelPendingChain: vi.fn(async () => null),
+}));
 vi.mock("./engine", () => ({ scheduleAutomations: vi.fn() }));
 
-const { notifyChainOfRunEnd } = await import("./hooks");
+const { notifyChainOfRunEnd, handOffToHuman } = await import("./hooks");
 const chain = await import("./chain");
 const engine = await import("./engine");
 
@@ -71,6 +77,27 @@ describe("notifyChainOfRunEnd", () => {
         event: { type: "run_finished", intent: "plan", outcome: "failed" },
       }),
     );
+  });
+
+  it("prendre la main annule le SURSIS, jamais une chaîne qui tourne", async () => {
+    // Les gestes manuels qui ne déplacent PAS le ticket — lancer un plan, une
+    // vérification, une consigne libre, copier l'un de ces prompts — ne se
+    // voient nulle part ailleurs : sans ce signal, le sursis courait jusqu'au
+    // bout et Numo repartait sur un travail déjà pris en charge.
+    C.chain = { id: "chain-1", status: "pending" };
+    handOffToHuman("i1");
+    await vi.waitFor(() => expect(chain.cancelPendingChain).toHaveBeenCalled());
+    expect(chain.cancelPendingChain).toHaveBeenCalledWith("chain-1", "taken_over");
+  });
+
+  it("une chaîne qui TOURNE n'est pas touchée par une prise en main", async () => {
+    // Ce cas-là est déjà arbitré à la source : le lancement manuel est refusé
+    // (`alreadyRunning`). Annuler ici couperait une chaîne en plein travail.
+    C.chain = { id: "chain-1", status: "running" };
+    handOffToHuman("i1");
+    await vi.waitFor(() => expect(chain.chainForIssue).toHaveBeenCalled());
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    expect(chain.cancelPendingChain).not.toHaveBeenCalled();
   });
 
   it("un run sans chaîne ne réveille rien", async () => {

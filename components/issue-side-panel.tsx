@@ -524,6 +524,7 @@ export function IssueSidePanel({
   // avec la feuille « plan » (générer ou vérifier, selon le ticket) et
   // « Implémenter le ticket » (hook partagé avec les cartes du board).
   const agentActions = useAgentMenuActions({
+    issueId: issue?.id ?? null,
     agentsEnabled,
     hasSession: hasAgentSession,
     hasPlan: issueHasPlan,

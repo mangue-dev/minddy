@@ -3593,6 +3593,14 @@
     "stopped": "Automation stopped.",
     "overrideTitle": "Automate",
     "overrideFollowProject": "Follow the project's rules",
-    "overrideDisabled": "Never on this issue"
+    "overrideDisabled": "Never on this issue",
+    "chainPending": "Starting in {minutes} min",
+    "startNow": "Start now",
+    "started": "Off it goes.",
+    "cancel": "Cancel",
+    "delayTitle": "Delay before starting",
+    "delayHint": "Room to change your mind. During the delay the loop waits — and it cancels itself if you move the issue elsewhere, for instance by copying its prompt to do the work yourself. Once started, it runs its steps back to back.",
+    "delayImmediate": "Right away",
+    "delayMinutes": "{minutes} minutes"
   }
 }

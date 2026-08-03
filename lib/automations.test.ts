@@ -4,8 +4,10 @@ import {
   AUTOMATION_MODELS_META_KEY,
   AUTOMATION_PRESET_IDS,
   AUTOMATION_PRESET_META_KEY,
+  AUTOMATION_SOURCES,
   automationEffortKey,
   automationModelFor,
+  automationSourceOf,
   isAutomationEffortEnabled,
   DEFAULT_STEP_COST_USD,
   effortCostFactor,
@@ -26,6 +28,7 @@ import {
   type AutomationEvent,
   type AutomationIssueFacts,
   type AutomationRule,
+  type AutomationSource,
 } from "@/lib/automations";
 import type { IssueEffort } from "@/lib/issue-constants";
 import { EFFORT_POINTS, effortToPoints } from "@/lib/cycle";
@@ -261,6 +264,123 @@ describe("préréglage plan-and-verify — encadrer le travail humain", () => {
     for (const effort of ["xs", "s", "m", "l", "xl", null] as const) {
       expect(walk(rules, facts(effort))).toEqual(["plan"]);
     }
+  });
+});
+
+describe("origine du changement de statut — ne pas marcher sur le travail manuel", () => {
+  const entering = (to: "todo" | "in_review", source: AutomationSource): AutomationEvent => ({
+    type: "status_changed",
+    from: "backlog",
+    to,
+    source,
+  });
+  const at = (status: "todo" | "in_review") => ({ ...facts("m"), status });
+
+  const fires = (rules: AutomationRule[], event: AutomationEvent, status: "todo" | "in_review") =>
+    nextRule(rules, { event, issue: at(status), playedRuleIds: [] }) !== null;
+
+  it("ÉCRIRE du code ne part que d'une DEMANDE humaine", () => {
+    // Le cas signalé : mon agent MCP range son ticket en « à faire » pour dire
+    // ce qu'IL fait — lui envoyer Numo par-dessus met deux ouvriers sur la même
+    // branche. Idem pour la forge et pour le cycle de vie d'un run.
+    for (const preset of ["loop-by-effort", "plan-only", "implement-only"] as const) {
+      const rules = presetRules(preset);
+      for (const source of ["web", "numo"] as const) {
+        expect(fires(rules, entering("todo", source), "todo")).toBe(true);
+      }
+      for (const source of ["mcp", "agent", "forge", "automation", "system"] as const) {
+        expect(fires(rules, entering("todo", source), "todo")).toBe(false);
+      }
+    }
+  });
+
+  it("demander à Numo de déplacer le ticket AMORCE la boucle — c'est mon geste", () => {
+    // `numo` = l'ASSISTANT relayant une instruction. Seul le clavier change par
+    // rapport à un glisser-déposer : l'intention est la même, donc l'effet aussi.
+    const rules = presetRules("loop-by-effort");
+    expect(fires(rules, entering("todo", "numo"), "todo")).toBe(true);
+    expect(fires(rules, entering("todo", "agent"), "todo")).toBe(false);
+  });
+
+  it("VÉRIFIER accepte tout ce qui travaille — c'est le meilleur usage de la boucle", () => {
+    // « Claude Code a fini et passe le ticket en revue → minddy relit » : le
+    // scénario le plus fort de la feature. Relire n'écrase le travail de
+    // personne, contrairement à coder.
+    const rules = presetRules("verify-only");
+    for (const source of ["web", "mcp", "numo", "forge"] as const) {
+      expect(fires(rules, entering("in_review", source), "in_review")).toBe(true);
+    }
+    // …sauf la boucle elle-même : une chaîne ne réagit pas à sa propre empreinte.
+    expect(fires(rules, entering("in_review", "automation"), "in_review")).toBe(false);
+  });
+
+  it("plan-and-verify applique les deux règles à ses deux bouts", () => {
+    const rules = presetRules("plan-and-verify");
+    expect(fires(rules, entering("todo", "mcp"), "todo")).toBe(false);
+    expect(fires(rules, entering("in_review", "mcp"), "in_review")).toBe(true);
+  });
+
+  it("REFUSER une PR ne relance pas la boucle depuis le début", () => {
+    // `issueStatusForPrState("closed")` renvoie le ticket en « à faire », écrit
+    // par Numo (fermeture in-app) ou par la forge (webhook). C'est une ENTRÉE en
+    // `todo` comme une autre : sans filtre d'origine, refuser la PR rouvrait une
+    // chaîne NEUVE — la précédente étant `completed`, ni `played_rule_ids` ni
+    // `MAX_CHAIN_STEPS` ne protégeaient. Rejeter le travail le faisait donc
+    // recommencer, indéfiniment.
+    //
+    // `agent` = fermeture in-app (le cycle de vie du run) ; `forge` = webhook.
+    const rules = presetRules("loop-by-effort");
+    for (const source of ["agent", "forge"] as const) {
+      expect(fires(rules, entering("todo", source), "todo")).toBe(false);
+    }
+  });
+
+  it("une règle SANS origine n'est pas filtrée — les règles déjà en base marchent", () => {
+    const [written] = parseAutomations([
+      {
+        id: "libre",
+        when: { type: "status_changed", to: ["todo"] },
+        then: [{ type: "run_numo", mode: "implement" }],
+      },
+    ]);
+    expect(written.when).toEqual({ type: "status_changed", to: ["todo"] });
+    for (const source of AUTOMATION_SOURCES) {
+      expect(fires([written], entering("todo", source), "todo")).toBe(true);
+    }
+  });
+
+  it("un événement SIMULÉ n'est jamais filtré — l'estimation chiffre le nominal", () => {
+    // `simulateChain` synthétise des événements sans origine : les filtrer
+    // afficherait « 0 étape » sur l'écran dont toute la raison d'être est de
+    // dire ce que ça coûte.
+    for (const id of AUTOMATION_PRESET_IDS) {
+      const steps = simulateIssueLifetime(presetRules(id), facts("m"));
+      expect(steps.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("parseAutomations relit l'origine et jette les codes inconnus", () => {
+    const [rule] = parseAutomations([
+      {
+        id: "r",
+        when: { type: "status_changed", to: ["todo"], source: ["web", "pigeon", "mcp"] },
+        then: [{ type: "stop" }],
+      },
+    ]);
+    expect(rule.when).toEqual({ type: "status_changed", to: ["todo"], source: ["web", "mcp"] });
+  });
+
+  it("automationSourceOf : la boucle prime, puis le run, l'inconnu tombe en system", () => {
+    expect(automationSourceOf({ raw: "web" })).toBe("web");
+    expect(automationSourceOf({ raw: "mcp" })).toBe("mcp");
+    // Une écriture de la boucle est `via_assistant` ET `via_automation` : c'est
+    // la seconde qui doit gagner, sinon la chaîne se relance elle-même.
+    expect(automationSourceOf({ raw: "numo", viaAutomation: true })).toBe("automation");
+    // Le nœud du problème : l'ASSISTANT et le CYCLE DE VIE d'un run arrivent ici
+    // tous deux en `numo`. Seul le second est écarté.
+    expect(automationSourceOf({ raw: "numo" })).toBe("numo");
+    expect(automationSourceOf({ raw: "numo", viaAgentRun: true })).toBe("agent");
+    expect(automationSourceOf({ raw: "martien" })).toBe("system");
   });
 });
 

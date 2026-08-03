@@ -1,6 +1,6 @@
 import "server-only";
 
-import { after } from "next/server";
+import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents, type EventRow } from "@/lib/server/issue-events";
@@ -576,7 +576,7 @@ export interface CycleCaptureParams {
  * everything at execution time, so a stale schedule is a silent no-op.
  */
 export function scheduleCycleCapture(params: CycleCaptureParams): void {
-  after(() =>
+  afterOrNow(() =>
     runCycleCapture(params).catch((e) =>
       console.error("[cycles] capture failed:", (e as Error).message)
     )
@@ -663,7 +663,7 @@ export interface CycleBlockerPullParams {
  * leave a cycle on rebalancing. Re-checks everything at execution time.
  */
 export function scheduleCycleBlockerPull(params: CycleBlockerPullParams): void {
-  after(() =>
+  afterOrNow(() =>
     runCycleBlockerPull(params).catch((e) =>
       console.error("[cycles] blocker pull failed:", (e as Error).message)
     )

@@ -3593,6 +3593,14 @@
     "stopped": "Automatisation arrêtée.",
     "overrideTitle": "Automatiser",
     "overrideFollowProject": "Suivre les règles du projet",
-    "overrideDisabled": "Jamais sur ce ticket"
+    "overrideDisabled": "Jamais sur ce ticket",
+    "chainPending": "Démarre dans {minutes} min",
+    "startNow": "Lancer maintenant",
+    "started": "C'est parti.",
+    "cancel": "Annuler",
+    "delayTitle": "Délai avant démarrage",
+    "delayHint": "Le temps de changer d'avis. Pendant ce délai, la boucle attend — et elle s'annule d'elle-même si tu déplaces le ticket ailleurs, par exemple en copiant son prompt pour le faire toi-même. Une fois partie, elle enchaîne ses étapes sans attendre.",
+    "delayImmediate": "Tout de suite",
+    "delayMinutes": "{minutes} minutes"
   }
 }
