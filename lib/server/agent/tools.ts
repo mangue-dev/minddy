@@ -1043,9 +1043,12 @@ const TARGETABLE_ISSUE_TOOLS = new Set(["read_issue", "update_issue", "write_iss
  * carnet lirait « the ticket this session is anchored to » sur une session qui
  * n'en a pas, et un run de ticket croirait devoir passer `issue` à chaque appel.
  *
- * Une session de RELECTURE a un défaut, elle aussi : le ticket que la pull
- * request met en œuvre, quand elle en porte un (MIN-143). Le dire évite un
- * `search_issues` pour retrouver un ticket que le contexte nomme déjà.
+ * Une session de RELECTURE a un défaut CONDITIONNEL : le ticket que la pull
+ * request met en œuvre — quand elle en porte un. **Beaucoup n'en portent pas**
+ * (une PR humaine, une PR rattachée à rien : c'est l'état normal depuis MIN-143),
+ * et la phrase doit donc décrire les deux cas plutôt que d'en promettre un. Elle
+ * reste CONSTANTE pour l'ancrage, sans quoi le préfixe système cesserait d'être
+ * partagé par le prompt caching.
  */
 const TARGET_SUFFIX: Record<AgentAnchor, string> = {
   issue:
@@ -1053,7 +1056,7 @@ const TARGET_SUFFIX: Record<AgentAnchor, string> = {
   notebook:
     " `issue` is REQUIRED: this session is not anchored to a ticket, so name the one you mean — resolve it with search_issues first.",
   pr:
-    " `issue` is OPTIONAL: omit it to act on the ticket this pull request implements (when it has one), pass it to target ANOTHER ticket of the project.",
+    " `issue` defaults to the ticket this pull request implements, when it has one — your context says so at the top. MANY PULL REQUESTS HAVE NO TICKET: there, omitting `issue` is refused, and you must name the ticket you mean (find it with search_issues) or do without one — reviewing a pull request never requires a ticket.",
 };
 
 /**

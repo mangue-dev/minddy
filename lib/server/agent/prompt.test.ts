@@ -1137,6 +1137,22 @@ describe("buildPrReviewContextMessage", () => {
     expect(msg).toMatch(/Answer it first/);
   });
 
+  it("DIT qu'il n'y a pas de ticket, plutôt que de le taire", () => {
+    // Une PR sans ticket est l'état NORMAL d'une PR humaine (MIN-143). Le prompt
+    // système fait du plan une référence de lecture : sans cette section, l'agent
+    // partirait chercher un ticket qui n'existe pas.
+    const msg = buildPrReviewContextMessage(base);
+    expect(msg).toContain("## No ticket");
+    expect(msg).toMatch(/Do not go looking for one/);
+    expect(msg).toMatch(/no default target/);
+    // Et l'inverse : avec un ticket, la section n'existe pas.
+    const withIssue = buildPrReviewContextMessage({
+      ...base,
+      issue: { identifier: "MIN-42", title: "Search" },
+    });
+    expect(withIssue).not.toContain("## No ticket");
+  });
+
   it("parle le vocabulaire de la forge", () => {
     const msg = buildPrReviewContextMessage({
       ...base,

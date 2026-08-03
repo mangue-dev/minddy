@@ -18,11 +18,19 @@ import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
  *
  *  1. **Qui paye.** Un tour de modèle se compte sur un compte minddy
  *     (`ai_usage.user_id`), et l'auteur du commentaire n'en a pas forcément un.
- *     C'est donc le OWNER du projet du ticket lié qui porte la dépense — la même
- *     règle que partout ailleurs pour un travail de fond, et le seul compte dont
- *     l'existence est garantie. Sans ticket lié, il n'y a pas de projet, donc
- *     personne à qui imputer : on ne fait rien. C'est aussi lui qui sert à
- *     résoudre le token de forge, comme pour n'importe quelle lecture.
+ *     C'est donc le OWNER d'un projet qui porte la dépense — la même règle que
+ *     partout ailleurs pour un travail de fond, et le seul compte dont
+ *     l'existence est garantie. C'est aussi lui qui sert à résoudre le token de
+ *     forge, comme pour n'importe quelle lecture.
+ *
+ *     Ce projet se trouvait par le TICKET lié, et une PR sans ticket voyait donc
+ *     sa mention ignorée. C'était un raccourci, corrigé par MIN-168 : une pull
+ *     request n'appartient pas à un ticket, elle appartient à un DÉPÔT, que des
+ *     projets lient (`project_git_links`) — exactement la résolution qui sert au
+ *     bouton « faire vérifier par Numo ». Le ticket reste le meilleur chemin
+ *     quand il existe (c'est SON projet qui est concerné) ; sans lui, on prend un
+ *     projet qui lie le dépôt. Sans aucun des deux, il n'y a vraiment personne :
+ *     on ne fait rien.
  *
  *  2. **Si ce message vient de nous.** Un commentaire posté depuis minddy revient
  *     par webhook quelques secondes plus tard : sans garde, la passe partirait
@@ -35,17 +43,41 @@ import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
  * relecture, jamais un run de code — cf. `startNumoPrReview`.
  */
 
-/** Le compte minddy qui portera la passe : le owner du projet du ticket lié. */
-async function projectOwnerForPr(pr: PullRequestRow): Promise<string | null> {
-  if (!pr.issue_id) return null;
+/**
+ * Le compte minddy qui portera la relecture. Deux chemins, dans cet ordre :
+ * le owner du projet du TICKET lié quand il y en a un (c'est son projet qui est
+ * concerné), sinon le owner d'un projet qui LIE LE DÉPÔT. Null seulement quand
+ * plus personne ne connaît ce dépôt.
+ */
+async function payerForPr(pr: PullRequestRow): Promise<string | null> {
   const service = getServiceClient();
+
+  if (pr.issue_id) {
+    const { data } = await service
+      .from("issues")
+      .select("projects(owner_id)")
+      .eq("id", pr.issue_id)
+      .maybeSingle();
+    const owner = (data as { projects?: { owner_id?: string } | null } | null)?.projects
+      ?.owner_id;
+    if (owner) return owner;
+  }
+
+  // PR sans ticket : le dépôt reste rattaché à des projets, et l'un d'eux a un
+  // owner. Ordonné par date de liaison pour que le choix soit STABLE d'une
+  // mention à l'autre — deux projets qui lient le même dépôt ne doivent pas se
+  // renvoyer la facture au hasard.
   const { data } = await service
-    .from("issues")
-    .select("projects(owner_id)")
-    .eq("id", pr.issue_id)
-    .maybeSingle();
-  const project = (data as { projects?: { owner_id?: string } | null } | null)?.projects;
-  return project?.owner_id ?? null;
+    .from("project_git_links")
+    .select("created_at, projects(owner_id)")
+    .eq("provider", pr.provider)
+    .eq("repo_full_name", pr.repo_full_name)
+    .order("created_at", { ascending: true });
+  for (const row of (data ?? []) as Array<{ projects?: { owner_id?: string } | null }>) {
+    const owner = row.projects?.owner_id;
+    if (owner) return owner;
+  }
+  return null;
 }
 
 /**
@@ -71,12 +103,13 @@ export async function handleForgeNumoMention(opts: {
     });
     if (!pr) return;
 
-    const userId = await projectOwnerForPr(pr);
+    const userId = await payerForPr(pr);
     if (!userId) {
-      // PR non rattachée à un ticket : personne à qui imputer la dépense, et
-      // aucun projet dont lire les droits. On le dit, plutôt que de deviner.
+      // Plus AUCUN projet ne lie ce dépôt (liaison retirée depuis) : personne à
+      // qui imputer la dépense, et aucun droit à lire. On le dit, plutôt que de
+      // deviner un compte.
       console.warn(
-        `[pr-mention] @numo ignoré sur ${opts.repoFullName}#${opts.prNumber} : PR sans ticket`,
+        `[pr-mention] @numo ignoré sur ${opts.repoFullName}#${opts.prNumber} : aucun projet ne lie ce dépôt`,
       );
       return;
     }

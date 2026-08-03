@@ -1757,10 +1757,19 @@ export async function executeAgentRun(
 
     // Contextes des tools métier, construits côte à côte : les deux jeux sont
     // servis quel que soit l'ancrage (MIN-125). Ce que l'ancrage décide encore,
-    // c'est `anchorIssueId` — la cible par défaut des tools ticket, null sur un
-    // run de carnet (`issue` devient alors obligatoire).
+    // c'est `anchorIssueId` — la cible par défaut des tools ticket.
+    //
+    // Sur une RELECTURE, ce défaut est le ticket que la PULL REQUEST met en
+    // œuvre : `run.issue_id` est toujours nul (une session de review n'occupe
+    // pas un ticket), mais la PR, elle, en porte souvent un — et c'est ce
+    // ticket-là que l'agent veut lire quand il compare le code au plan. Sans
+    // cette ligne, le tool annoncerait un défaut qui n'existe pas et le premier
+    // `read_issue` sans argument brûlerait un round.
+    //
+    // Une PR sans ticket (le cas normal d'une PR humaine, MIN-143) laisse le
+    // défaut nul : `issue` redevient obligatoire, ce que le tool dit aussi.
     const issueToolCtx: IssueToolContext = {
-      anchorIssueId: run.issue_id ?? null,
+      anchorIssueId: run.issue_id ?? prRun?.issueId ?? null,
       projectId: run.project_id,
       projectKey: issue?.projectKey ?? project.key,
       actorId: run.created_by,

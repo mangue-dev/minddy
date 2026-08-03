@@ -327,11 +327,16 @@ describe("agentToolsFor — ancrage pull request", () => {
     expect(new Set(served).size).toBe(served.length);
   });
 
-  it("cible par défaut le ticket de la PR pour `read_issue`", () => {
+  it("dit les DEUX cas de ciblage : PR avec ticket, et PR sans", () => {
     const readIssue = agentToolsFor({ anchor: "pr", webSearch: false }).find(
       (t) => t.function.name === "read_issue",
     );
-    expect(readIssue?.function.description).toContain("this pull request implements");
+    const d = readIssue?.function.description ?? "";
+    expect(d).toContain("this pull request implements");
+    // Beaucoup de PR n'ont pas de ticket (MIN-143) : promettre un défaut qui
+    // n'existe pas ferait brûler un round au premier `read_issue` sans argument.
+    expect(d).toContain("MANY PULL REQUESTS HAVE NO TICKET");
+    expect(d).toMatch(/never requires a ticket/);
   });
 
   it("`report_verdict` reste absent même dans une chaîne", () => {

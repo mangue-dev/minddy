@@ -930,6 +930,15 @@ export function buildPrReviewContextMessage(input: {
           renderPrNotes(said),
       );
     }
+  } else {
+    // DIT, plutôt que tu par omission. Le prompt système fait du plan du ticket
+    // une référence de lecture ; sans cette ligne, l'agent partirait chercher un
+    // ticket qui n'existe pas — `search_issues`, `read_issue`, des rounds brûlés —
+    // avant de conclure tout seul. Une pull request sans ticket est l'état
+    // NORMAL d'une PR humaine (MIN-143), pas un contexte incomplet.
+    parts.push(
+      `## No ticket\n\nThis ${term} implements no minddy ticket: there is no plan to check the change against, and no ticket discussion to read. Do not go looking for one — judge the change on the code, on what the ${term} says it does, and on what has already been said here. \`read_issue\` has no default target in this session; only pass it a ticket if the ${term} itself names one.`,
+    );
   }
 
   const reviews = input.reviews ?? [];
