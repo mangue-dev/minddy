@@ -10,7 +10,7 @@ import {
 } from "next/navigation";
 import Link from "next/link";
 import { Button, Skeleton, toast } from "mangue-ui";
-import { ListTodo } from "lucide-react";
+import { ListTodo, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -38,6 +38,7 @@ import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveSidePanel } from "@/components/objective-side-panel";
+import { ProjectSeedDialog } from "@/components/project-seed/project-seed-dialog";
 import { createIssueApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
@@ -56,6 +57,7 @@ import type {
 
 function ProjectBoard() {
   const t = useTranslations("Board");
+  const tSeed = useTranslations("Seed");
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const router = useRouter();
@@ -65,6 +67,7 @@ function ProjectBoard() {
   const issueParam = searchParams.get("issue");
   const newParam = searchParams.get("new");
   const viewParam = searchParams.get("view");
+  const setupParam = searchParams.get("setup");
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -142,6 +145,9 @@ function ProjectBoard() {
     "description"
   );
   const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
+  // L'amorce par brief (MIN-172) : le wizard finit sur `?setup=brief`, et le
+  // board vide la propose aussi — c'est le trou qu'elle comble.
+  const [seedOpen, setSeedOpen] = useState(false);
   // Views Numo is currently building from a description (their chip shows a
   // spinner). Maps view id → the view's updated_at when generation started;
   // cleared when the view's stored config changes (Numo applied filters) or
@@ -367,6 +373,16 @@ function ProjectBoard() {
     }
   }, [newParam, pathname, router]);
 
+  // Fin du wizard de création : /projects/[id]?setup=brief ouvre l'amorce.
+  // L'instruction est à usage unique, comme `?new=` — la refermer ne doit pas
+  // la rouvrir au rendu suivant.
+  useEffect(() => {
+    if (setupParam === "brief") {
+      setSeedOpen(true);
+      router.replace(pathname);
+    }
+  }, [setupParam, pathname, router]);
+
   // `C` (new issue) is an app-wide shortcut now (see CreateProvider). The column
   // "+" still opens this local dialog with its status/objective/assignee presets.
 
@@ -413,6 +429,17 @@ function ProjectBoard() {
                 </kbd>
                 .
               </>
+            }
+            // L'amorce par brief (MIN-172) est réservée au propriétaire, comme
+            // l'import : elle crée un lot de tickets d'un coup, et c'est lui
+            // qui paye l'appel.
+            action={
+              project.owner_id === myUserId ? (
+                <Button type="button" variant="outline" onClick={() => setSeedOpen(true)}>
+                  <Sparkles />
+                  {tSeed("emptyBoardCta")}
+                </Button>
+              ) : undefined
             }
           />
         </div>
@@ -565,6 +592,12 @@ function ProjectBoard() {
         onAddRelation={handleAddRelation}
         onRemoveRelation={handleRemoveRelation}
         initialTab={openIssueTab}
+      />
+
+      <ProjectSeedDialog
+        open={seedOpen}
+        onOpenChange={setSeedOpen}
+        projectId={projectId}
       />
 
       <ObjectiveSidePanel

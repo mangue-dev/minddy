@@ -54,6 +54,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // d'alias, comme avant).
   { key: "import_map_enabled", kind: "flag", fallback: "true", group: "assistant" },
   { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Découpe d'un brief en objectifs + tickets (lib/server/brief-to-issues.ts,
+  // MIN-172) : UN appel par brief collé, jamais par ticket — le modèle rend le
+  // lot entier d'un coup, ce que vingt `create_issue` en file ne feraient ni au
+  // même prix ni à la même latence. Le drapeau la coupe partout d'un coup :
+  // l'amorce d'un projet neuf retombe alors sur l'import et la saisie à la main.
+  { key: "brief_enabled", kind: "flag", fallback: "true", group: "assistant" },
+  { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
   // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },

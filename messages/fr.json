@@ -130,7 +130,8 @@
     "feedbackMerged": "a fusionné « {title} » dans ce feedback",
     "feedbackMergeUndone": "a annulé la fusion de « {title} »",
     "feedbackUpdated": "a mis à jour ce feedback",
-    "imported": "a importé le ticket depuis {source}"
+    "imported": "a importé le ticket depuis {source}",
+    "importedFromBrief": "a créé le ticket depuis un brief"
   },
   "ApiErrors": {
     "invalidJson": "Requête invalide.",
@@ -223,6 +224,8 @@
     "importTooLarge": "Le CSV dépasse 5 Mo.",
     "importTooManyIssues": "L'import est limité à 1 000 tickets à la fois.",
     "importOwnerOnly": "Seul le propriétaire du projet peut importer des tickets.",
+    "briefTooShort": "Écrivez-en un peu plus, qu'il y ait quelque chose à découper.",
+    "briefTooLong": "Le brief dépasse 20 000 caractères.",
     "aiKeySaveFailed": "Impossible d'enregistrer la clé.",
     "conversationCreateFailed": "Impossible de créer la conversation.",
     "conversationLoadFailed": "Impossible de charger la conversation.",
@@ -1996,6 +1999,28 @@
     "importValueDropLabel": "Non repris",
     "importWarn_unknownAssignee": "« {value} » ne correspond à aucun membre → non assigné, gardé en description ({count})"
   },
+  "Seed": {
+    "emptyBoardCta": "Partir d'un brief",
+    "dialogTitle": "Partir d'un brief",
+    "dialogDesc": "Collez ce que vous avez déjà établi — avec un assistant IA, ou dans vos notes. minddy le découpe en objectifs et en tickets.",
+    "briefLabel": "Brief du projet",
+    "briefPlaceholder": "Collez votre brief ici…",
+    "briefHint": "Un résumé suffit — quelques paragraphes.",
+    "briefTooLong": "{max, number} caractères maximum.",
+    "passButton": "Découper",
+    "passPending": "Découpage…",
+    "passPendingHint": "Comptez jusqu'à une ou deux minutes.",
+    "passFailed": "Rien d'exploitable n'est revenu. Réessayez.",
+    "previewDesc": "Rien n'existe encore. Décochez ce dont vous ne voulez pas, corrigez ce qui se lit mal, puis créez.",
+    "countIssues": "{count, plural, one {# ticket} other {# tickets}}",
+    "countObjectives": "{count, plural, one {# objectif} other {# objectifs}}",
+    "noObjective": "Sans objectif",
+    "titleLabel": "Titre du ticket",
+    "createButton": "{count, plural, one {Créer # ticket} other {Créer # tickets}}",
+    "createHint": "Ils arrivent dans le backlog.",
+    "createdToast": "{count, plural, one {# ticket créé} other {# tickets créés}}",
+    "backToBrief": "Revenir au brief"
+  },
   "Sort": {
     "manual": "Manuel",
     "priority": "Priorité",
@@ -2645,6 +2670,14 @@
       "import_map_model": {
         "label": "Modèle de correspondance des imports",
         "desc": "Lit les en-têtes, leurs valeurs distinctes et quelques exemples, et propose où va chaque colonne. L'utilisateur voit la proposition et peut la corriger avant d'importer."
+      },
+      "brief_enabled": {
+        "label": "Découpe d'un brief",
+        "desc": "Permet à un texte collé de devenir une proposition d'objectifs et de tickets à l'amorce d'un projet. Un appel par brief, jamais par ticket. Coupée, un projet neuf démarre par un import ou par des tickets saisis à la main."
+      },
+      "brief_model": {
+        "label": "Modèle de découpe d'un brief",
+        "desc": "Lit le brief et rend le lot entier d'un coup : 3 à 6 objectifs, 10 à 40 tickets avec leur priorité et leur effort. L'utilisateur relit la proposition à l'écran avant que rien ne soit écrit."
       }
     },
     "finance": {
@@ -2719,6 +2752,7 @@
         "web_search": "Recherche web",
         "pr_review": "Review d'une PR par Numo",
         "import_map": "Correspondance d'un import",
+        "brief_split": "Découpe d'un brief",
         "landing_demo": "Démo publique de la dictée"
       }
     },

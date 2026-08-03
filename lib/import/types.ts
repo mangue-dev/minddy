@@ -8,9 +8,11 @@ import type {
   IssueStatusValue,
 } from "@/lib/issue-validation";
 
-/** D'où vient le lot importé : un CSV téléversé, ou le backfill d'un dépôt lié
- *  à l'activation de la synchro d'issues (MIN-97). */
-export type ImportSource = "linear" | "jira" | "csv" | "github" | "gitlab";
+/** D'où vient le lot importé : un CSV téléversé, le backfill d'un dépôt lié à
+ *  l'activation de la synchro d'issues (MIN-97), ou la découpe d'un brief à
+ *  l'amorce d'un projet (MIN-172) — cette valeur est celle que porte
+ *  l'événement `imported` de la timeline. */
+export type ImportSource = "linear" | "jira" | "csv" | "github" | "gitlab" | "brief";
 
 /**
  * Plafond par import — garde-fou contre un export raté qui inonderait un
@@ -45,6 +47,15 @@ export interface ImportedIssue {
   externalKeys: string[];
   /** Parent reference (matched against other rows' externalKeys, 1 level max). */
   parentExternalKey: string | null;
+  /**
+   * Objectif d'arrivée — un id RÉEL, résolu par l'appelant avant l'écriture
+   * (l'amorce par brief crée ses objectifs d'abord, MIN-172). Il voyage avec la
+   * ligne plutôt qu'en seconde passe : `importIssuesIntoProject` tire les
+   * identifiants lui-même et n'en rend aucun, donc rattacher après coup
+   * demanderait de retrouver les tickets qu'on vient d'insérer. Absent d'un
+   * import CSV, qui n'a pas d'objectif à donner.
+   */
+  objectiveId?: string | null;
   /** Identité de l'issue distante que ce ticket reflète (backfill d'un dépôt
    *  lié, MIN-97). Absent pour un import CSV. */
   remote?: {

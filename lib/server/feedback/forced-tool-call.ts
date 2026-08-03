@@ -46,6 +46,14 @@ export async function forcedToolCall(
      *  les sorties qui grandissent avec l'entrée (un plan de correspondance
      *  porte une ligne par colonne du fichier). */
     maxTokens?: number;
+    /**
+     * Défaut : 45 s — la mesure d'un verdict ou d'un plan de correspondance.
+     * Va AVEC `maxTokens` : une sortie qu'on autorise à faire des milliers de
+     * tokens met des dizaines de secondes à s'écrire, et la couper à 45 s
+     * jette l'appel entier après l'avoir payé. Relever les deux ensemble, et
+     * tenir le `maxDuration` de la route au-dessus.
+     */
+    timeoutMs?: number;
   }
 ): Promise<Record<string, unknown> | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -82,7 +90,7 @@ export async function forcedToolCall(
         usage: { include: true },
         max_tokens: options?.maxTokens ?? 1024,
       }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 45_000),
     });
     if (!response.ok) {
       const errorText = await response.text();

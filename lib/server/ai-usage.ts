@@ -31,6 +31,12 @@ export type AiFeature =
   | "pr_review"
   | "import_map"
   /**
+   * Découpe d'un brief en objectifs + tickets (MIN-172) : un appel par brief
+   * collé. Sa propre feature, comme `import_map` : c'est le coût de l'amorce
+   * d'un projet, et on veut pouvoir le lire seul.
+   */
+  | "brief_split"
+  /**
    * Démo de dictée de la landing (MIN-150) : ses DEUX appels (transcription
    * puis rangement) s'écrivent sous cette seule feature, sous un run_id
    * commun. Une ligne = une démo jouée, son coût moyen par run = le prix d'un

@@ -164,6 +164,9 @@ export async function importIssuesIntoProject({
       // (`sanitizeMapping`) : la colonne porte une FK vers auth.users.
       assignee_id: issue.assigneeId,
       due_date: issue.dueDate,
+      // L'objectif est un id réel, créé et validé par l'appelant (amorce par
+      // brief, MIN-172) : rien à résoudre ici.
+      objective_id: issue.objectiveId ?? null,
       parent_id: parentId && parentId !== ids[i] ? parentId : null,
       created_by: actorId,
       position: positionBase + i,

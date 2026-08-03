@@ -130,7 +130,8 @@
     "feedbackMerged": "merged “{title}” into this feedback",
     "feedbackMergeUndone": "reverted the merge of “{title}”",
     "feedbackUpdated": "updated this feedback",
-    "imported": "imported the issue from {source}"
+    "imported": "imported the issue from {source}",
+    "importedFromBrief": "created the issue from a brief"
   },
   "ApiErrors": {
     "invalidJson": "Invalid request.",
@@ -223,6 +224,8 @@
     "importTooLarge": "The CSV exceeds 5 MB.",
     "importTooManyIssues": "Imports are limited to 1,000 issues at a time.",
     "importOwnerOnly": "Only the project owner can import issues.",
+    "briefTooShort": "Write a bit more so there is something to break down.",
+    "briefTooLong": "The brief exceeds 20,000 characters.",
     "aiKeySaveFailed": "Couldn't save the key.",
     "conversationCreateFailed": "Couldn't create the conversation.",
     "conversationLoadFailed": "Couldn't load the conversation.",
@@ -1996,6 +1999,28 @@
     "importValueDropLabel": "Not imported",
     "importWarn_unknownAssignee": "“{value}” matches no member → unassigned, kept in the description ({count})"
   },
+  "Seed": {
+    "emptyBoardCta": "Start from a brief",
+    "dialogTitle": "Start from a brief",
+    "dialogDesc": "Paste what you already worked out — with an AI assistant, or in your own notes. minddy cuts it into objectives and issues.",
+    "briefLabel": "Project brief",
+    "briefPlaceholder": "Paste your brief here…",
+    "briefHint": "A summary is enough — a few paragraphs.",
+    "briefTooLong": "{max, number} characters max.",
+    "passButton": "Break it down",
+    "passPending": "Breaking it down…",
+    "passPendingHint": "This takes up to a couple of minutes.",
+    "passFailed": "Nothing usable came back. Try again.",
+    "previewDesc": "Nothing exists yet. Uncheck what you don't want, fix what reads wrong, then create.",
+    "countIssues": "{count, plural, one {# issue} other {# issues}}",
+    "countObjectives": "{count, plural, one {# objective} other {# objectives}}",
+    "noObjective": "No objective",
+    "titleLabel": "Issue title",
+    "createButton": "{count, plural, one {Create # issue} other {Create # issues}}",
+    "createHint": "They land in the backlog.",
+    "createdToast": "{count, plural, one {# issue created} other {# issues created}}",
+    "backToBrief": "Back to the brief"
+  },
   "Sort": {
     "manual": "Manual",
     "priority": "Priority",
@@ -2645,6 +2670,14 @@
       "import_map_model": {
         "label": "CSV import mapping model",
         "desc": "Reads the column headers, their distinct values and a few samples, and proposes where each column goes. The user sees the proposal and can correct it before importing."
+      },
+      "brief_enabled": {
+        "label": "Brief breakdown",
+        "desc": "Lets a pasted brief become a proposal of objectives and issues when a project starts. One call per brief, never per issue. Off, a new project starts from an import or from issues typed by hand."
+      },
+      "brief_model": {
+        "label": "Brief breakdown model",
+        "desc": "Reads the brief and returns the whole batch at once: 3 to 6 objectives, 10 to 40 issues with their priority and effort. The user reviews the proposal on screen before anything is written."
       }
     },
     "finance": {
@@ -2719,6 +2752,7 @@
         "web_search": "Web search",
         "pr_review": "Numo's PR review",
         "import_map": "Import column matching",
+        "brief_split": "Brief breakdown",
         "landing_demo": "Public dictation demo"
       }
     },

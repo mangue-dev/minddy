@@ -102,10 +102,15 @@ export function describeEvent(
   const { t, tStatus, tPriority, tRecurrence, formatDue } = tr;
   if (e.type === "created") return t("created");
   // CSV importers (MIN-45): to_value carries the source.
+  // L'amorce par brief (MIN-172) emprunte le même chemin d'écriture, mais elle
+  // n'importe rien d'un outil : c'est un texte qui s'est découpé. Le nom d'un
+  // produit ne rend pas ça, donc elle a sa phrase à elle.
   if (e.type === "imported")
-    return t("imported", {
-      source: IMPORT_SOURCE_LABELS[e.to_value ?? ""] ?? "CSV",
-    });
+    return e.to_value === "brief"
+      ? t("importedFromBrief")
+      : t("imported", {
+          source: IMPORT_SOURCE_LABELS[e.to_value ?? ""] ?? "CSV",
+        });
   if (e.type === "category_added")
     return t("categoryAdded", { name: categoryName(ctx, tr, e.to_value) });
   if (e.type === "category_removed")
