@@ -50,6 +50,60 @@ export function innermostHovered<T>(
   return innermost ? registry.get(innermost) : undefined;
 }
 
+/**
+ * Le pointeur est-il PÉRIMÉ, c'est-à-dire posé là sans qu'on l'y ait mis pour
+ * cette frappe ? Sur une surface éditable — le carnet — cette question tranche
+ * seule entre « raccourci » et « lettre ».
+ *
+ * Ailleurs, il suffit de regarder la cible de l'événement : on ne prend pas la
+ * touche quand elle part dans un champ (cf. `isTypingTarget`). Le carnet, lui,
+ * EST un champ de bout en bout, et il prend le focus à l'ouverture : la même
+ * règle y éteindrait ⇧A/⇧P pour toujours. Ce qui distingue les deux gestes
+ * n'est donc pas le focus, c'est le pointeur — visé à l'instant, ou laissé là
+ * pendant qu'on écrit ailleurs.
+ *
+ * D'où le drapeau : écrire périme le pointeur, le bouger le rafraîchit. Une
+ * tâche survolée depuis dix minutes pendant qu'on rédige la ligne d'au-dessus
+ * ne reçoit plus rien ; la viser à nouveau, même d'un frémissement, la remet en
+ * jeu. C'est un booléen et pas deux horodatages : seul l'ordre des deux gestes
+ * compte, jamais le délai entre eux.
+ */
+let pointerStale = false;
+let pointerTrackers = 0;
+const freshenPointer = () => {
+  pointerStale = false;
+};
+
+/** À appeler à chaque frappe reçue par la surface éditable. */
+export function noteTyping(): void {
+  pointerStale = true;
+}
+
+/** Vrai tant qu'on a écrit sans redéplacer le pointeur depuis. */
+export function pointerIsStale(): boolean {
+  return pointerStale;
+}
+
+/**
+ * Suit les déplacements du pointeur tant que la surface éditable est montée.
+ * Rend son désabonnement. Un seul écouteur, passif, qui n'écrit qu'un booléen.
+ */
+export function trackPointerFreshness(): () => void {
+  pointerStale = false;
+  if (pointerTrackers++ === 0)
+    window.addEventListener("pointermove", freshenPointer, {
+      capture: true,
+      passive: true,
+    });
+  let stopped = false;
+  return () => {
+    if (stopped) return;
+    stopped = true;
+    if (--pointerTrackers === 0)
+      window.removeEventListener("pointermove", freshenPointer, true);
+  };
+}
+
 type HoverKeyHandler = (e: KeyboardEvent) => void;
 
 const handlers = new Map<Element, HoverKeyHandler>();

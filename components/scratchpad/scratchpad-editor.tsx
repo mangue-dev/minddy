@@ -33,6 +33,7 @@ import {
 import { useDictation } from "@/components/scratchpad/use-dictation";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { noteTyping, trackPointerFreshness } from "@/lib/keyboard/hover-keys";
 
 /** mm:ss for the dictation timer. */
 function formatTime(ms: number): string {
@@ -411,6 +412,17 @@ export function ScratchpadEditor({
       // (the trailing space below is the wrapper's pb-[40vh]).
       scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
       scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
+      // Écrire périme le pointeur : tant qu'on n'a pas redéplacé la souris, la
+      // tâche qu'elle survole ne prend plus ⇧A/⇧P (cf. hover-keys.ts). Le
+      // signal est la FRAPPE, pas le changement de document : les flèches et
+      // les retours arrière sont de l'écriture eux aussi, et une insertion
+      // programmée (dictée, « tout démarrer ») n'en est pas. ProseMirror ne
+      // voit ici que les frappes tombées jusqu'à lui — un raccourci de survol
+      // qui a fait son office les arrête avant.
+      handleKeyDown: () => {
+        noteTyping();
+        return false;
+      },
     },
     onCreate: ({ editor }) => {
       editorRef.current = editor;
@@ -445,6 +457,11 @@ export function ScratchpadEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
+
+  // L'autre moitié de la règle ci-dessus : bouger le pointeur le rafraîchit,
+  // et le carnet est le seul endroit qui s'en sert — l'écouteur vit donc le
+  // temps qu'il est ouvert.
+  useEffect(() => trackPointerFreshness(), []);
 
   // ⌘S / Ctrl+S saves now (autosave already runs; this is the explicit gesture
   // that drives the visible "saved" indicator) instead of the browser dialog.

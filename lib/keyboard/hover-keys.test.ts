@@ -4,7 +4,13 @@
 // chaque frappe, et le plus intérieur des survolés gagne.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { innermostHovered, registerHoverKeys } from "@/lib/keyboard/hover-keys";
+import {
+  innermostHovered,
+  noteTyping,
+  pointerIsStale,
+  registerHoverKeys,
+  trackPointerFreshness,
+} from "@/lib/keyboard/hover-keys";
 
 interface FakeElement extends Element {
   hovered: boolean;
@@ -75,6 +81,73 @@ describe("innermostHovered", () => {
     registry.delete(child);
 
     expect(innermostHovered(registry)).toBe("parent");
+  });
+});
+
+// Sur le carnet, tout est éditable et l'éditeur prend le focus à l'ouverture :
+// « suis-je en train d'écrire ? » ne se lit donc pas sur le focus, mais sur
+// l'ordre des deux derniers gestes — écrire périme le pointeur, le bouger le
+// rafraîchit.
+describe("fraîcheur du pointeur", () => {
+  /** Fenêtre factice ; rend de quoi déclencher un `pointermove`. */
+  function stubWindow() {
+    const moves = new Set<() => void>();
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn((type: string, fn: () => void) => {
+        if (type === "pointermove") moves.add(fn);
+      }),
+      removeEventListener: vi.fn((type: string, fn: () => void) => {
+        if (type === "pointermove") moves.delete(fn);
+      }),
+    });
+    return { moves, move: () => moves.forEach((fn) => fn()) };
+  }
+
+  it("périme le pointeur dès qu'on écrit, jusqu'au prochain mouvement", () => {
+    const dom = stubWindow();
+    const stop = trackPointerFreshness();
+
+    // Carnet ouvert, rien d'écrit : la tâche survolée prend bien ⇧A/⇧P.
+    expect(pointerIsStale()).toBe(false);
+
+    // On écrit sur une autre ligne, la souris restée sur celle-ci.
+    noteTyping();
+    expect(pointerIsStale()).toBe(true);
+    // Et toujours après la frappe suivante : seul l'ordre des gestes compte,
+    // jamais le temps écoulé — une pause au milieu d'une phrase n'ouvre pas de
+    // fenêtre où la lettre partirait en raccourci.
+    noteTyping();
+    expect(pointerIsStale()).toBe(true);
+
+    // Viser à nouveau une tâche, même d'un frémissement, la remet en jeu.
+    dom.move();
+    expect(pointerIsStale()).toBe(false);
+
+    stop();
+  });
+
+  it("ne garde l'écouteur qu'entre le premier et le dernier suivi", () => {
+    const dom = stubWindow();
+    const stopA = trackPointerFreshness();
+    const stopB = trackPointerFreshness();
+    expect(dom.moves.size).toBe(1);
+
+    stopA();
+    expect(dom.moves.size).toBe(1);
+    stopB();
+    expect(dom.moves.size).toBe(0);
+    // Arrêter deux fois ne doit ni jeter ni fausser le compte — sinon le suivi
+    // suivant n'ouvrirait plus d'écouteur, et le pointeur ne se rafraîchirait
+    // plus jamais.
+    stopB();
+    expect(dom.moves.size).toBe(0);
+
+    // Un carnet fermé sur une frappe ne rouvre pas avec un pointeur périmé.
+    noteTyping();
+    const stop = trackPointerFreshness();
+    expect(pointerIsStale()).toBe(false);
+    expect(dom.moves.size).toBe(1);
+    stop();
   });
 });
 

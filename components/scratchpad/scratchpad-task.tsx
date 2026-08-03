@@ -48,7 +48,8 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 import { eventKey } from "@/lib/keyboard/event-key";
-import { useHoverKeys } from "@/lib/keyboard/hover-keys";
+import { pointerIsStale, useHoverKeys } from "@/lib/keyboard/hover-keys";
+import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 
 /**
  * Les lignes de titre markdown (niveaux compris) des sections qui CONTIENNENT le
@@ -238,9 +239,11 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   // d'en-tête, et aucun des deux n'a de raccourci.
   //
   // Le carnet est une surface éditable, où ⇧A c'est aussi « écrire un A ». La
-  // règle : la frappe l'emporte tant qu'on édite LA tâche survolée (caret
-  // dedans, éditeur au focus) — écrire « Ajouter » sur sa propre ligne ne lance
-  // donc jamais rien.
+  // règle : **la frappe l'emporte tant qu'on écrit**, où que soit le pointeur.
+  // Écrire « Ajouter » sur sa propre ligne ne lance donc rien — et écrire sur
+  // une AUTRE ligne non plus, alors même que la souris est restée sur celle-ci
+  // (`pointerIsStale`, cf. hover-keys.ts). Le raccourci ne repart qu'une fois
+  // la tâche visée à nouveau, d'un mouvement du pointeur.
   // Tout ce qui bouge d'un rendu à l'autre (les actions relisent le contenu du
   // nœud, `getPos` sa position) passe par une ref : le listener reste alors
   // abonné d'un bout à l'autre du survol au lieu de se réabonner à chaque frappe.
@@ -258,6 +261,13 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
     if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
     const key = eventKey(e);
     if (key !== "a" && key !== "p") return;
+    // On tape dans un champ hors du carnet (la recherche du ⋯, un dialog par
+    // dessus) : la touche est à lui, la tâche survolée n'a rien à y voir.
+    const target = e.target as HTMLElement | null;
+    if (isTypingTarget(target) && !editor.view.dom.contains(target)) return;
+    // On écrit DANS le carnet, ailleurs que sur la tâche visée : le pointeur
+    // n'est plus qu'un vestige du dernier déplacement, la lettre l'emporte.
+    if (pointerIsStale()) return;
     // On écrit DANS cette tâche-là : la lettre l'emporte sur le raccourci.
     const pos = liveRef.current.getPos();
     if (pos != null && editor.isFocused) {
