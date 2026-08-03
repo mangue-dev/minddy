@@ -12,30 +12,13 @@ export interface SeedCommitResponse {
 }
 
 /**
- * Demande la découpe d'un brief (MIN-172). Rien ne s'écrit : la réponse est une
- * PROPOSITION, que l'aperçu affiche et laisse corriger.
- *
- * Lève avec le message du serveur — contrairement à la proposition de
- * correspondance d'un import, cette passe EST la fonctionnalité : un échec
- * silencieux laisserait l'utilisateur devant un écran qui ne dit rien.
+ * La DEMANDE de découpe n'est plus une route du navigateur (MIN-173) : un brief
+ * n'est plus un formulaire qu'une passe traite dans son coin, c'est le premier
+ * message d'une conversation, et c'est Numo qui appelle la fabrique
+ * (`propose_backlog`, `lib/server/assistant/execute-tool.ts`). Il ne reste ici
+ * que l'ÉCRITURE de ce que l'aperçu a fait valider — la même, quel que soit
+ * l'écran qui l'a montré.
  */
-export async function proposeBriefApi(
-  projectId: string,
-  brief: string
-): Promise<SeedProposal | null> {
-  trackEvent("brief_split_requested", { brief_length: brief.length });
-  const proposal = await postJson<{ proposal: SeedProposal | null }>(
-    `/api/projects/${projectId}/brief`,
-    { brief }
-  );
-  if (proposal.proposal) {
-    trackEvent("brief_split_proposed", {
-      issue_count: proposal.proposal.issues.length,
-      objective_count: proposal.proposal.objectives.length,
-    });
-  }
-  return proposal.proposal;
-}
 
 /** POST la proposition TELLE QUE L'APERÇU LA MONTRE — décochages et titres
  *  réécrits compris. Le serveur la revalide en entier avant d'écrire. */

@@ -173,6 +173,20 @@ describe("buildAssistantBlocks", () => {
     expect(turn.summary?.id).toBe("a2");
   });
 
+  it("traite une proposition d'amorce comme la fin du tour", () => {
+    // MIN-173 : la carte à cocher vit sur ce message. Repliée dans le déroulé,
+    // elle serait cachée derrière un accordéon fermé — or c'est elle qu'on
+    // attend, et rien n'existe tant qu'elle n'a pas été validée.
+    const blocks = buildAssistantBlocks([
+      msg("u1", "user", "aide-moi à démarrer ce projet"),
+      msg("a1", "assistant", null, { tool_calls: [call("list_issues")] }),
+      msg("a2", "assistant", null, { tool_calls: [call("propose_backlog")] }),
+    ]);
+    const [turn] = turns(blocks);
+    expect(turn.work.map((m) => m.id)).toEqual(["a1"]);
+    expect(turn.summary?.id).toBe("a2");
+  });
+
   it("affiche tel quel un tour interrompu avant sa réponse", () => {
     // Envoi annulé pendant un outil : il n'y a pas de réponse à mettre en avant,
     // on ne cache pas le peu de travail produit derrière un accordéon fermé.

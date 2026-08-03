@@ -129,6 +129,7 @@ export const AssistantShell = forwardRef<
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
   const tToolCall = useTranslations("ToolCall");
+  const tSeed = useTranslations("Seed");
 
   // La conversation vit AU-DESSUS du panneau (AssistantChatProvider) : elle
   // survit à la fermeture du Sheet, qui démonte cette coquille. Ici, on ne fait
@@ -377,6 +378,33 @@ export const AssistantShell = forwardRef<
     handleSend(tToolCall("skippedQuestions"));
   }, [handleSend, tToolCall]);
 
+  // Proposition d'amorce ACTIVE (MIN-173) : même règle que la question ouverte —
+  // le dernier message visible porte le `propose_backlog` et Numo est au repos
+  // (l'outil lui a fait rendre la main). La carte s'y affiche, à cocher et à
+  // créer ; dès qu'un message la suit, la proposition appartient au passé.
+  const activeSeedMessageId = useMemo((): string | null => {
+    if (isBusy) return null;
+    for (let i = state.messages.length - 1; i >= 0; i--) {
+      const m = state.messages[i];
+      if (m.role === "tool" || m.role === "system") continue;
+      if (m.role !== "assistant" || !m.tool_calls?.length) return null;
+      return m.tool_calls.some((c) => c.function.name === "propose_backlog")
+        ? m.id
+        : null;
+    }
+    return null;
+  }, [state.messages, isBusy]);
+
+  // Les tickets viennent d'être écrits : Numo l'apprend par un message de
+  // l'utilisateur — c'est SON geste — et la conversation reprend là-dessus.
+  // C'est aussi ce qui éteint la carte, y compris au rechargement.
+  const handleSeedCreated = useCallback(
+    (created: number) => {
+      handleSend(tSeed("createdReply", { count: created }));
+    },
+    [handleSend, tSeed]
+  );
+
   // Réponses aux questions ask_user : la bulle user qui suit un message porteur
   // d'un ask_user est sa réponse — elle ne s'affiche PAS comme bulle (le flow de
   // lecture reste propre) mais dans les détails de la ligne ask_user du fil.
@@ -462,6 +490,8 @@ export const AssistantShell = forwardRef<
         toolCallResults={state.toolCallResults}
         askUserHidden={msg.id === activeAskUser?.messageId}
         askUserAnswer={askUserReplies.byMessageId.get(msg.id)}
+        seedLive={msg.id === activeSeedMessageId}
+        onSeedCreated={handleSeedCreated}
         showCopyButton={copyButtonIds.has(msg.id)}
       />
     );

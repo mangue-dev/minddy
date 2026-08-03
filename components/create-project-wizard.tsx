@@ -65,6 +65,8 @@ import {
   type ProjectIconChoice,
 } from "@/components/project-icon-picker";
 import { WizardStepper } from "@/components/wizard-stepper";
+import { ImportGuideBlock } from "@/components/import/import-guide";
+import { NumoIcon } from "@/components/numo-icon";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
@@ -529,13 +531,22 @@ export function CreateProjectWizard({
     handleOpenChange(false);
 
     // L'amorce se joue sur le board du projet neuf : c'est le trou qu'on est en
-    // train de combler, et la passe est trop longue pour une étape de wizard
+    // train de combler, et rien de tout ça ne tiendrait dans une étape de wizard
     // (MIN-170). Ce qui a été saisi voyage en mémoire, l'URL ne porte que
-    // l'instruction. « J'en parle avec Numo » n'a pas encore sa surface
-    // (MIN-173) : le choix est compté, l'atterrissage reste le board.
-    if (seed?.kind === "brief") {
-      putSeedHandoff({ kind: "brief", text: seed.text });
-      router.push(`/projects/${created.id}?setup=brief`);
+    // l'instruction, et c'est le board qui ouvre la surface — le wizard vit
+    // AU-DESSUS du panneau de Numo (`ProjectsProvider` le monte avant
+    // `AssistantPanelProvider`), il n'a donc pas la main dessus.
+    //
+    // Un brief collé et « j'en parle » mènent au MÊME endroit : une
+    // conversation. Le brief n'est pas un formulaire qu'une passe traite dans
+    // son coin, c'est le premier message — Numo peut demander ce qui manque
+    // avant de proposer quoi que ce soit.
+    if (seed?.kind === "brief" || seed?.kind === "numo") {
+      putSeedHandoff({
+        kind: "numo",
+        brief: seed.kind === "brief" ? seed.text : null,
+      });
+      router.push(`/projects/${created.id}?setup=numo`);
     } else if (seed?.kind === "import" && csvFile) {
       putSeedHandoff({ kind: "import", file: csvFile });
       router.push(`/projects/${created.id}?setup=import`);
@@ -633,8 +644,13 @@ export function CreateProjectWizard({
                   transition={MOTION}
                   className="w-full"
                 >
+                  {/* Le tout premier geste de minddy : deux portes côte à côte,
+                      de même poids, qui se lisent d'un coup d'œil. Les cartes
+                      reprennent la surface des cartes de projet
+                      (`components/project-card.tsx`) — même bordure, même ombre
+                      au survol : le wizard ouvre sur un objet déjà familier. */}
                   {step === "origin" && (
-                    <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {(
                         [
                           {
@@ -657,18 +673,18 @@ export function CreateProjectWizard({
                           onClick={() => chooseOrigin(id)}
                           aria-pressed={origin === id}
                           className={cn(
-                            "flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors",
+                            "group flex min-h-[168px] cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border bg-card p-5 text-center outline-none transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50",
                             origin === id
                               ? "border-brand/50 bg-brand/5"
-                              : "border-border hover:border-ring/60 hover:bg-accent/40"
+                              : "border-border"
                           )}
                         >
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                            <Icon className="size-5" strokeWidth={1.5} />
+                          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand transition-colors group-hover:bg-brand/15">
+                            <Icon className="size-6" strokeWidth={1.5} />
                           </span>
-                          <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="flex flex-col gap-1">
                             <span className="text-sm font-medium">{label}</span>
-                            <span className="text-xs leading-relaxed text-muted-foreground">
+                            <span className="text-xs leading-relaxed text-balance text-muted-foreground">
                               {desc}
                             </span>
                           </span>
@@ -849,42 +865,60 @@ export function CreateProjectWizard({
                         rows={8}
                         className="max-h-[40vh] min-h-40 overflow-y-auto"
                       />
-                      <div className="flex items-start justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNumo(true);
-                            setBrief("");
-                            leaveSeedStep({ kind: "numo" });
-                          }}
-                          className="text-left text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                      {/* Le compteur n'apparaît qu'aux abords du plafond :
+                          avant, il n'apprend rien et met une limite sous les
+                          yeux de qui ne l'atteindra jamais. */}
+                      {brief.length > MAX_BRIEF_CHARS * 0.75 && (
+                        <span
+                          className={cn(
+                            "self-end font-mono text-xs tabular-nums",
+                            brief.length > MAX_BRIEF_CHARS
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          )}
                         >
-                          {t("wizardSeedNumoLink")}
-                        </button>
-                        {/* Le compteur n'apparaît qu'aux abords du plafond :
-                            avant, il n'apprend rien et met une limite sous les
-                            yeux de qui ne l'atteindra jamais. */}
-                        {brief.length > MAX_BRIEF_CHARS * 0.75 && (
-                          <span
-                            className={cn(
-                              "shrink-0 font-mono text-xs tabular-nums",
-                              brief.length > MAX_BRIEF_CHARS
-                                ? "text-destructive"
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            {t("wizardSeedCounter", {
-                              count: brief.length,
-                              max: MAX_BRIEF_CHARS,
-                            })}
-                          </span>
-                        )}
+                          {t("wizardSeedCounter", {
+                            count: brief.length,
+                            max: MAX_BRIEF_CHARS,
+                          })}
+                        </span>
+                      )}
+
+                      {/* L'autre entrée du mode « nouveau projet » (MIN-173) :
+                          en parler plutôt que coller. C'est une porte, pas une
+                          note de bas de page — elle se voit et se clique comme
+                          le bouton d'à côté. */}
+                      <div className="mt-1 flex items-center gap-3">
+                        <span className="h-px flex-1 bg-border" aria-hidden />
+                        <span className="text-xs text-muted-foreground">
+                          {tCommon("or")}
+                        </span>
+                        <span className="h-px flex-1 bg-border" aria-hidden />
                       </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-center gap-2"
+                        onClick={() => {
+                          setNumo(true);
+                          setBrief("");
+                          leaveSeedStep({ kind: "numo" });
+                        }}
+                      >
+                        <NumoIcon state="idle" className="size-4" />
+                        {t("wizardSeedNumoLink")}
+                      </Button>
                     </div>
                   )}
 
                   {step === "seed" && origin === "existing" && (
                     <div className="flex flex-col gap-3">
+                      {/* Où trouver le CSV, outil par outil — la même marche à
+                          suivre que les réglages et l'onboarding. Demander un
+                          export sans dire où il se prend, c'est renvoyer
+                          chercher dans la doc de l'outil qu'on quitte. Le
+                          fichier déposé, elle a fini son travail. */}
+                      {!csvFile && <ImportGuideBlock />}
                       <input
                         ref={csvInputRef}
                         type="file"

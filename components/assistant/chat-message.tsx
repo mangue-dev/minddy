@@ -37,6 +37,13 @@ interface ChatMessageProps {
    * qui suivait, masquée du fil) — affichée dans les détails de la ligne.
    */
   askUserAnswer?: string | null;
+  /**
+   * Ce message porte-t-il la proposition d'amorce (MIN-173) qui attend encore
+   * l'utilisateur ? Elle s'affiche alors en carte à cocher et à créer.
+   */
+  seedLive?: boolean;
+  /** Les tickets de cette proposition viennent d'être écrits (leur nombre). */
+  onSeedCreated?: (created: number) => void;
   /** Whether this assistant message renders a Copy button under its text.
    *  Only a turn's final answer should — everything folded into the work
    *  accordion is intermediate narration, not an answer to take away. The host
@@ -184,6 +191,8 @@ export function ChatMessage({
   toolCallResults,
   askUserHidden = false,
   askUserAnswer,
+  seedLive = false,
+  onSeedCreated,
   showCopyButton = true,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
@@ -255,6 +264,8 @@ export function ChatMessage({
                 })}
                 askUserHidden={askUserHidden}
                 askUserAnswer={askUserAnswer}
+                seedLive={seedLive}
+                onSeedCreated={onSeedCreated}
               />
             )}
           </div>

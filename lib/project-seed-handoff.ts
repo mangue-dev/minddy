@@ -4,21 +4,24 @@
  * Ce que le wizard de création tend au board qu'il vient d'ouvrir (MIN-171).
  *
  * L'amorce se joue APRÈS la création : le wizard finit sur
- * `/projects/{id}?setup=brief|import`, et la surface qui s'y ouvre a besoin de
+ * `/projects/{id}?setup=numo|import`, et la surface qui s'y ouvre a besoin de
  * ce qui a été saisi une étape plus tôt — le brief collé, le CSV déposé.
  *
  * En mémoire, pas en sessionStorage : un `File` ne se sérialise pas, et la
  * navigation est un `router.push` côté client, donc le même contexte JS. Une
  * relance complète (rechargement, lien rouvert plus tard) perd la remise et la
- * modale s'ouvre vide — ce qui est exactement ce qu'elle doit faire quand elle
- * n'a rien reçu.
+ * surface s'ouvre vide — ce qui est exactement ce qu'elle doit faire quand elle
+ * n'a rien reçu (Numo ouvre alors sur ses questions, l'import sur sa zone de
+ * dépôt).
  *
  * La remise est à USAGE UNIQUE : le board la prend, elle disparaît. Sinon le
  * même brief se re-proposerait au prochain passage sur ce board.
  */
 
 export type SeedHandoff =
-  | { kind: "brief"; text: string }
+  /** Le brief devient le PREMIER MESSAGE d'une conversation avec Numo
+   *  (MIN-173) ; `null` quand l'utilisateur a préféré partir de ses questions. */
+  | { kind: "numo"; brief: string | null }
   | { kind: "import"; file: File };
 
 let pending: SeedHandoff | null = null;

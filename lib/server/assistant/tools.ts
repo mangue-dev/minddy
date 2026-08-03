@@ -287,6 +287,25 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "propose_backlog",
+      description:
+        "Turn a project you have framed WITH the user into the backlog that starts it, in ONE pass: you hand over a brief, minddy cuts it into 3–6 objectives and 10–40 issues, and the PROPOSAL is displayed to the user, who unchecks what they don't want, fixes the titles and creates it themselves. This call WRITES NOTHING. Use it when the user wants to start a project from your conversation ('aide-moi à démarrer ce projet', a brand-new project with an empty board, a discussion that has converged on what to build), and NEVER as a way to create a few issues someone already listed — that's create_issue. Two conditions before calling it: (1) the project is actually framed — the goal, what it must do, the perimeter, the constraints, the choices already made; ask what you're missing first (see ask_user), a proposal built on two vague sentences wastes the user's review; (2) it replaces the batch — never chain create_issue calls to build a backlog, twenty calls cost twenty round-trips and all land in triage. The pass takes up to a minute or two. Your turn ENDS on this call — say in ONE short sentence what you are about to propose BEFORE calling it, because you get no word after: the user then reviews the proposal on screen and tells you what they created, so create, edit or comment on nothing in the meantime.",
+      parameters: {
+        type: "object",
+        properties: {
+          brief: {
+            type: "string",
+            description:
+              "The brief: EVERYTHING the conversation established about the project, rewritten as a self-contained summary — the goal, what it must do, the perimeter, the technical choices and constraints, what is explicitly out of scope. A few structured paragraphs, in the user's language. The pass sees NOTHING but this text: what you leave out is missing from the backlog, and what you invent here becomes issues nobody asked for.",
+          },
+        },
+        required: ["brief"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "update_issues",
       description:
         "Update one or several issues (1–50) with the same field changes. Use for single edits too. Only pass the fields to change. Setting status to 'duplicate' requires fields.duplicate_of_id.",

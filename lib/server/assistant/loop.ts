@@ -339,6 +339,9 @@ export async function processChat(
       const hasAskUser = [...toolCallAccumulators.values()].some(
         (acc) => acc.name === "ask_user"
       );
+      // Un outil peut lui aussi rendre la main (propose_backlog, MIN-173) : ce
+      // qu'il met sous les yeux de l'utilisateur attend son geste.
+      let pausedByTool = false;
 
       // Execute each tool and save results to DB
       for (const [, acc] of toolCallAccumulators) {
@@ -386,43 +389,48 @@ export async function processChat(
           // Invalid JSON from LLM
         }
 
-        const { result, success }: ToolExecution = await executeTool(
-          acc.name,
-          args,
-          context
-        );
+        const { result, success, modelResult, pause }: ToolExecution =
+          await executeTool(acc.name, args, context);
         emitter.emit("tool_result", {
           id: acc.id,
           name: acc.name,
           result,
           success,
         });
+        if (pause) pausedByTool = true;
 
-        // Save tool result message to DB
+        // Ce que le MODÈLE relit n'est pas toujours ce que l'écran montre : une
+        // proposition d'amorce (MIN-173) fait quarante titres qu'il vient
+        // d'écrire, et que l'historique lui re-servirait à chaque tour. Le
+        // résultat complet part alors sur la métadonnée, d'où le fil le relit
+        // (`buildToolCallResultsFromMessages`), et `content` ne porte que ce que
+        // le modèle a besoin de savoir.
+        const forModel = modelResult ?? result;
         await context.service.from("assistant_messages").insert({
           conversation_id: context.conversationId,
           role: "tool",
-          content: JSON.stringify(result),
+          content: JSON.stringify(forModel),
           tool_call_id: acc.id,
           tool_name: acc.name,
-          metadata: { success },
+          metadata:
+            modelResult === undefined ? { success } : { success, result },
         });
 
         messages.push({
           role: "tool",
           tool_call_id: acc.id,
           content: serializeToolResult(
-            result,
+            forModel,
             getToolResultCharLimit(acc.name)
           ),
         });
       }
 
       // Continue rules:
-      // - ask_user: stop and wait for user
+      // - ask_user, or a tool that hands the turn back: stop and wait for user
       // - other tools: continue normally with tools enabled (round cap only —
       //   minddy tools chain legitimately: create issue → set categories → comment)
-      if (!hasAskUser && roundCount < MAX_TOOL_ROUNDS) {
+      if (!hasAskUser && !pausedByTool && roundCount < MAX_TOOL_ROUNDS) {
         continueLoop = true;
       }
       fullContent = "";

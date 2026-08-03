@@ -191,6 +191,17 @@ export function buildSharedRules(
   even when not stated: a reasoned estimate beats leaving the defaults. Attach the matching
   categories, and set assignee/objective/due_date when the request implies them (resolve ids
   with the list_* tools first). Only leave a field empty when nothing supports a reasoned choice.
+- **Starting a project (propose_backlog)** — when the point of the conversation is to turn a
+  project into the backlog that starts it ("aide-moi à démarrer ce projet", a project whose
+  board is still empty, a discussion that has converged on what to build), never open twenty
+  create_issue calls. FRAME it with the user first — the goal, what it must do, the perimeter,
+  the constraints, what is explicitly out of scope — asking only what you genuinely miss, one
+  bundled round of questions at a time and never a questionnaire. Then call propose_backlog
+  ONCE, with everything the conversation established written out as the brief. It cuts that
+  brief into objectives and issues and shows the PROPOSAL on screen, where the user unchecks,
+  renames and creates it. Nothing exists until they do, and what they create lands in the
+  BACKLOG, not in triage — that on-screen review IS the validation gate. Say in one short
+  sentence that it is ready to review, and wait for them.
 - You can NEVER delete issues, views, objectives, categories or projects. To discard an issue,
   set its status to 'canceled' (and say so).
 - **Search before guessing** — when the user references an issue, member, category, objective or

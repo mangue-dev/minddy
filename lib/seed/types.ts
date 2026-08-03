@@ -67,8 +67,15 @@ export const MAX_SEED_DISTINCT_LABELS = 6;
  * Longueur du texte collé. Un brief est le RÉSUMÉ d'une réflexion menée
  * ailleurs, pas la conversation entière : quelques milliers de mots suffisent,
  * et c'est aussi ce qui garde l'appel à un prix d'amorce.
+ *
+ * Le plafond tient SOUS celui d'un message de chat (12 000 caractères,
+ * `sanitizeAssistantMessageContent`), phrase d'encadrement comprise : depuis
+ * MIN-173 le brief collé dans le wizard voyage comme premier message d'une
+ * conversation avec Numo. Au-dessus, il serait tronqué en silence à l'entrée de
+ * l'API — et c'est la fin du brief, celle qui dit le hors-périmètre, qui
+ * disparaîtrait.
  */
-export const MAX_BRIEF_CHARS = 20_000;
+export const MAX_BRIEF_CHARS = 10_000;
 /** En dessous, il n'y a rien à découper — le bouton reste éteint. */
 export const MIN_BRIEF_CHARS = 40;
 

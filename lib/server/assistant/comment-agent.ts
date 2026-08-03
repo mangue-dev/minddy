@@ -118,9 +118,11 @@ export async function replyTargetsNumoFeedback(
   return !!last?.via_assistant && last.assistant_status !== "working";
 }
 
-// Fire-and-forget: no ask_user — the loop can never pause for the user.
+// Fire-and-forget: no ask_user — the loop can never pause for the user. Same
+// for propose_backlog (MIN-173) : sa proposition s'ouvre dans le panneau de
+// Numo, qu'un commentaire de ticket n'a pas sous la main.
 const COMMENT_TOOLS = ASSISTANT_TOOLS.filter(
-  (t) => t.function.name !== "ask_user"
+  (t) => !["ask_user", "propose_backlog"].includes(t.function.name)
 );
 
 // Stored comment content is written once in the requester's locale (unlike UI

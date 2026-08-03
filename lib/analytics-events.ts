@@ -313,13 +313,10 @@ export interface AnalyticsEventProps {
   import_started: { source: string };
   import_completed: { source: string; issue_count: number };
   import_failed: { source: string; reason: string };
-  /** Amorce d'un projet par un brief collé (MIN-172). Les trois marches sont
-   *  distinctes parce que c'est entre elles que ça se perd : demander la passe,
-   *  obtenir une proposition lisible, la garder. `issue_count` à l'écriture est
-   *  ce qui RESTE après les décochages — l'écart avec la proposition dit si
-   *  l'aperçu sert à corriger ou à jeter. */
-  brief_split_requested: { brief_length: number };
-  brief_split_proposed: { issue_count: number; objective_count: number };
+  /** Amorce d'un projet par un brief (MIN-172, MIN-173). Seule l'ÉCRITURE se
+   *  compte encore côté navigateur : la demande et la proposition sont passées
+   *  dans la conversation avec Numo, où elles sont un appel d'outil comme un
+   *  autre. `issue_count` est ce qui RESTE après les décochages. */
   brief_split_applied: { issue_count: number; objective_count: number };
 
   // ── Billing (MIN-72) ──
@@ -606,8 +603,6 @@ const EVENT_NAMES = [
   "import_started",
   "import_completed",
   "import_failed",
-  "brief_split_requested",
-  "brief_split_proposed",
   "brief_split_applied",
   // Billing
   "pricing_viewed",

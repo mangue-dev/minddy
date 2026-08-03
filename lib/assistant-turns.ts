@@ -42,13 +42,18 @@ function isHidden(m: AssistantMessage): boolean {
 }
 
 /**
- * Message qui clôt un tour : du texte (la réponse), ou une question posée à
- * l'utilisateur — un `ask_user` termine le tour, la boucle attend la réponse.
+ * Message qui clôt un tour : du texte (la réponse), ou quelque chose qui rend
+ * la main à l'utilisateur — un `ask_user` termine le tour, la boucle attend la
+ * réponse, et une proposition d'amorce (`propose_backlog`, MIN-173) attend de
+ * même le geste qui crée les tickets. Ce qui se répond ne se replie pas dans le
+ * déroulé : ça reste à l'écran, sous l'accordéon.
  */
+const HANDS_BACK = new Set(["ask_user", "propose_backlog"]);
+
 function closesTurn(m: AssistantMessage): boolean {
   if (m.role !== "assistant") return false;
   if (m.content?.trim()) return true;
-  return (m.tool_calls ?? []).some((tc) => tc.function.name === "ask_user");
+  return (m.tool_calls ?? []).some((tc) => HANDS_BACK.has(tc.function.name));
 }
 
 /**

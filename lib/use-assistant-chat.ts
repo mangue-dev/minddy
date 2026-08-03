@@ -53,6 +53,11 @@ function buildToolCallResultsFromMessages(messages: AssistantMessage[]): Map<str
         result = message.content;
       }
     }
+    // Un résultat trop gros pour le modèle voyage sur la métadonnée : `content`
+    // ne porte alors que le résumé qu'il relit, et l'écran a besoin du tout (la
+    // proposition d'amorce et ses quarante titres, MIN-173).
+    const stored = (message.metadata as { result?: unknown } | null)?.result;
+    if (stored !== undefined) result = stored;
 
     toolCallResults.set(message.tool_call_id, {
       status: "complete",

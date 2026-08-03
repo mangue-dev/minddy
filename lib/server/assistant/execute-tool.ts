@@ -103,6 +103,8 @@ import {
   MAX_WEB_SEARCHES_PER_TURN,
   WEB_SEARCH_SEQ_BASE,
 } from "@/lib/server/web-search";
+import { proposeBacklogFromBrief } from "@/lib/server/brief-to-issues";
+import { MIN_BRIEF_CHARS } from "@/lib/seed/types";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -147,6 +149,20 @@ export interface WebSearchTurn {
 export interface ToolExecution {
   result: unknown;
   success: boolean;
+  /**
+   * Ce que le MODÈLE relit, quand ce n'est pas ce que l'écran montre. Une
+   * proposition d'amorce (MIN-173) fait quarante titres avec leurs
+   * descriptions : le fil doit les afficher, le modèle vient de les écrire et
+   * n'a plus rien à en faire. `result` part alors au navigateur et sur la
+   * métadonnée du message, `modelResult` dans l'historique de la conversation.
+   */
+  modelResult?: unknown;
+  /**
+   * Le tour s'arrête ici : la main passe à l'utilisateur, comme sur `ask_user`.
+   * Ce que la boucle enchaînerait ne servirait à rien tant qu'il n'a pas
+   * répondu à ce que ce résultat lui met sous les yeux.
+   */
+  pause?: boolean;
 }
 
 function toolError(message: string): ToolExecution {
@@ -669,6 +685,54 @@ export async function executeTool(
             },
           },
           success: true,
+        };
+      }
+
+      // L'amorce d'un projet, par la conversation (MIN-173). Aucune fabrique de
+      // plus : c'est la passe du brief collé (MIN-172), appelée avec ce que
+      // Numo a établi avec l'utilisateur au lieu d'un texte collé. Elle N'ÉCRIT
+      // RIEN — ce qui s'écrit est ce que l'aperçu du fil aura fait valider, par
+      // `/api/projects/[id]/brief/apply`, exactement comme depuis le board.
+      case "propose_backlog": {
+        // Réservée au propriétaire, comme la modale : c'est lui qui paye
+        // l'appel, et c'est un lot de tickets d'un coup dans SON projet.
+        if (!access.isOwner) {
+          return toolError(
+            "Only the project owner can seed the backlog of this project."
+          );
+        }
+        const brief = typeof args.brief === "string" ? args.brief.trim() : "";
+        if (brief.length < MIN_BRIEF_CHARS) {
+          return toolError(
+            "The brief is too short to cut up. Frame the project with the user first, then send back everything the conversation established."
+          );
+        }
+        const proposal = await proposeBacklogFromBrief({
+          brief,
+          projectName: access.project.name,
+          userId: ctx.userId,
+          projectId,
+        });
+        if (!proposal) {
+          return toolError(
+            "The pass returned nothing usable. Tell the user, and offer to try again."
+          );
+        }
+        const counts = {
+          objectives: proposal.objectives.length,
+          issues: proposal.issues.length,
+        };
+        return {
+          // `proposal` ne sert qu'à l'écran : c'est lui que la carte du fil
+          // affiche, décoche et envoie à l'écriture.
+          result: { status: "awaiting_user_review", project_id: projectId, ...counts, proposal },
+          modelResult: {
+            status: "awaiting_user_review",
+            ...counts,
+            note: "The proposal is now on the user's screen, where they uncheck, rename and create the issues themselves — your turn ended on this call. NOTHING exists yet: do not create, edit or comment on any of these issues, and do not list them back. Wait for the user to tell you what they created. What they create lands in the BACKLOG (not in triage): the whole point of the on-screen review is that it replaces the triage gate.",
+          },
+          success: true,
+          pause: true,
         };
       }
 

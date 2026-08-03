@@ -10,7 +10,7 @@ import {
 } from "next/navigation";
 import Link from "next/link";
 import { Button, Skeleton, toast } from "mangue-ui";
-import { ListTodo, Sparkles } from "lucide-react";
+import { ListTodo } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -32,13 +32,13 @@ import {
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { EmptyState } from "@/components/empty-state";
+import { NumoIcon } from "@/components/numo-icon";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
 import { ObjectiveSidePanel } from "@/components/objective-side-panel";
-import { ProjectSeedDialog } from "@/components/project-seed/project-seed-dialog";
 import { ProjectImportDialog } from "@/components/project-seed/project-import-dialog";
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import { createIssueApi } from "@/lib/issues-api";
@@ -60,6 +60,7 @@ import type {
 function ProjectBoard() {
   const t = useTranslations("Board");
   const tSeed = useTranslations("Seed");
+  const tProjects = useTranslations("Projects");
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const router = useRouter();
@@ -147,9 +148,6 @@ function ProjectBoard() {
     "description"
   );
   const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
-  // L'amorce par brief (MIN-172) : le wizard finit sur `?setup=brief`, et le
-  // board vide la propose aussi — c'est le trou qu'elle comble.
-  const [seedOpen, setSeedOpen] = useState(false);
   // L'amorce par import (MIN-171) : `?setup=import` ouvre le panneau d'import
   // avec le CSV déposé dans le wizard.
   const [importOpen, setImportOpen] = useState(false);
@@ -158,8 +156,10 @@ function ProjectBoard() {
   const [handoff, setHandoff] = useState<ReturnType<typeof takeSeedHandoff>>(null);
   // La remise se PREND, elle ne se relit pas : un effet rejoué (StrictMode en
   // dev le fait systématiquement) la trouverait vide et effacerait celle qu'on
-  // vient d'obtenir.
+  // vient d'obtenir. Le ref en garde donc une copie, que les rejeux relisent
+  // au lieu d'une remise déjà consommée.
   const handoffTaken = useRef(false);
+  const takenHandoff = useRef<ReturnType<typeof takeSeedHandoff>>(null);
   // Views Numo is currently building from a description (their chip shows a
   // spinner). Maps view id → the view's updated_at when generation started;
   // cleared when the view's stored config changes (Numo applied filters) or
@@ -385,21 +385,47 @@ function ProjectBoard() {
     }
   }, [newParam, pathname, router]);
 
-  // Fin du wizard de création : /projects/[id]?setup=brief|import ouvre
-  // l'amorce que l'utilisateur a choisie (MIN-171). L'URL ne porte que
-  // l'instruction — ce qui a été saisi voyage en mémoire (project-seed-handoff)
-  // parce qu'un `File` ne se sérialise pas. L'instruction est à usage unique,
-  // comme `?new=` : la refermer ne doit pas la rouvrir au rendu suivant.
+  // Fin du wizard de création : /projects/[id]?setup=numo|import ouvre l'amorce
+  // que l'utilisateur a choisie (MIN-171). L'URL ne porte que l'instruction —
+  // ce qui a été saisi voyage en mémoire (project-seed-handoff) parce qu'un
+  // `File` ne se sérialise pas. L'instruction est à usage unique, comme `?new=`
+  // : la refermer ne doit pas la rouvrir au rendu suivant.
   useEffect(() => {
-    if (setupParam !== "brief" && setupParam !== "import") return;
+    if (setupParam !== "import" && setupParam !== "numo") return;
+    // Le premier message NOMME le projet : on attend donc de le connaître.
+    if (setupParam === "numo" && !project) return;
     if (!handoffTaken.current) {
       handoffTaken.current = true;
-      setHandoff(takeSeedHandoff());
+      takenHandoff.current = takeSeedHandoff();
+      setHandoff(takenHandoff.current);
     }
-    if (setupParam === "brief") setSeedOpen(true);
-    else setImportOpen(true);
+    if (setupParam === "numo") {
+      // Le brief collé (MIN-173) n'ouvre pas une passe en coulisses : il OUVRE
+      // LA CONVERSATION. C'est le même écran que « j'en parle avec Numo », au
+      // premier message près — celui qui n'a rien collé part des questions de
+      // Numo, celui qui a collé part de son texte, et les deux peuvent se
+      // répondre avant qu'un seul ticket existe.
+      const taken = takenHandoff.current;
+      const brief = taken?.kind === "numo" ? taken.brief?.trim() : null;
+      openAssistant({
+        projectId,
+        prompt: brief
+          ? tProjects("wizardSeedBriefPrompt", { name: project!.name, brief })
+          : tProjects("wizardSeedNumoPrompt", { name: project!.name }),
+      });
+    } else {
+      setImportOpen(true);
+    }
     router.replace(pathname);
-  }, [setupParam, pathname, router]);
+  }, [
+    setupParam,
+    pathname,
+    router,
+    project,
+    projectId,
+    openAssistant,
+    tProjects,
+  ]);
 
   // `C` (new issue) is an app-wide shortcut now (see CreateProvider). The column
   // "+" still opens this local dialog with its status/objective/assignee presets.
@@ -448,13 +474,25 @@ function ProjectBoard() {
                 .
               </>
             }
-            // L'amorce par brief (MIN-172) est réservée au propriétaire, comme
-            // l'import : elle crée un lot de tickets d'un coup, et c'est lui
-            // qui paye l'appel.
+            // Amorcer un board vide, c'est le même geste que depuis le wizard
+            // (MIN-173) : on en PARLE à Numo, il demande ce qui manque et
+            // propose le lot à relire. Réservé au propriétaire, comme l'import :
+            // c'est un lot de tickets d'un coup, et c'est lui qui paye l'appel.
             action={
               project.owner_id === myUserId ? (
-                <Button type="button" variant="outline" onClick={() => setSeedOpen(true)}>
-                  <Sparkles />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    openAssistant({
+                      projectId,
+                      prompt: tProjects("wizardSeedNumoPrompt", {
+                        name: project.name,
+                      }),
+                    })
+                  }
+                >
+                  <NumoIcon state="idle" className="size-4" />
                   {tSeed("emptyBoardCta")}
                 </Button>
               ) : undefined
@@ -610,13 +648,6 @@ function ProjectBoard() {
         onAddRelation={handleAddRelation}
         onRemoveRelation={handleRemoveRelation}
         initialTab={openIssueTab}
-      />
-
-      <ProjectSeedDialog
-        open={seedOpen}
-        onOpenChange={setSeedOpen}
-        projectId={projectId}
-        initialBrief={handoff?.kind === "brief" ? handoff.text : null}
       />
 
       <ProjectImportDialog

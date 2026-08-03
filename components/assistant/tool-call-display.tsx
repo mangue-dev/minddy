@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
+import { SeedProposalCard } from "./seed-proposal-card";
+import type { SeedProposal } from "@/lib/seed/types";
 import {
   Activity,
   Bot,
@@ -30,6 +32,7 @@ import {
   Search,
   Settings2,
   SlidersHorizontal,
+  Sparkles,
   Tag,
   Tags,
   Target,
@@ -64,6 +67,29 @@ interface ToolCallListProps {
    * user qui suit, masqué du fil) — affichée dans les détails de la ligne.
    */
   askUserAnswer?: string | null;
+  /**
+   * Ce message porte-t-il la proposition d'amorce (MIN-173) qui ATTEND encore
+   * l'utilisateur ? Elle s'affiche alors en carte, à cocher et à créer ; les
+   * propositions des tours passés restent des lignes.
+   */
+  seedLive?: boolean;
+  /** Les tickets de la proposition viennent d'être écrits (leur nombre). */
+  onSeedCreated?: (created: number) => void;
+}
+
+/** La proposition portée par un résultat de `propose_backlog`, si elle a
+ *  survécu au voyage (résultat d'un ancien format, message tronqué…). */
+function seedProposalOf(
+  result: unknown
+): { projectId: string; proposal: SeedProposal } | null {
+  const r = result as
+    | { project_id?: unknown; proposal?: { issues?: unknown } }
+    | undefined;
+  if (typeof r?.project_id !== "string") return null;
+  if (!Array.isArray(r.proposal?.issues) || r.proposal.issues.length === 0) {
+    return null;
+  }
+  return { projectId: r.project_id, proposal: r.proposal as SeedProposal };
 }
 
 /** Le translator du namespace `ToolCall`, tel que le rendent `useTranslations`
@@ -211,6 +237,18 @@ const TOOL_META: Record<string, ToolMeta> = {
       return identifier
         ? t("issueCreatedWithId", { identifier })
         : t("issueCreated");
+    },
+  },
+  // L'amorce d'un projet par la conversation (MIN-173). La proposition VIVANTE
+  // s'affiche en carte (voir plus bas) ; cette ligne est ce qu'il en reste une
+  // fois la conversation repartie.
+  propose_backlog: {
+    icon: Sparkles,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("proposingBacklog");
+      if (!success) return t("proposeBacklogFailed");
+      const count = typeof result?.issues === "number" ? result.issues : 0;
+      return t("backlogProposed", { count });
     },
   },
   update_issues: {
@@ -767,6 +805,8 @@ export function ToolCallList({
   items,
   askUserHidden = false,
   askUserAnswer,
+  seedLive = false,
+  onSeedCreated,
 }: ToolCallListProps) {
   const t = useTranslations("ToolCall");
   const [expanded, setExpanded] = useState(false);
@@ -777,7 +817,21 @@ export function ToolCallList({
   const askUserCallouts = items.filter(
     (i) => i.name === "ask_user" && i.status === "complete"
   );
-  const calloutIds = new Set(askUserCallouts.map((i) => i.id));
+  // La proposition d'amorce en attente prend la place de sa ligne : c'est un
+  // aperçu à relire, pas une action passée.
+  const seedCallouts =
+    seedLive && onSeedCreated
+      ? items.filter(
+          (i) =>
+            i.name === "propose_backlog" &&
+            i.status === "complete" &&
+            i.success !== false &&
+            seedProposalOf(i.result)
+        )
+      : [];
+  const calloutIds = new Set(
+    [...askUserCallouts, ...seedCallouts].map((i) => i.id)
+  );
   const rowItems = items.filter((i) => !calloutIds.has(i.id));
 
   const renderRows = () => {
@@ -855,6 +909,17 @@ export function ToolCallList({
             t={t}
           />
         ))}
+      {seedCallouts.map((item) => {
+        const seed = seedProposalOf(item.result)!;
+        return (
+          <SeedProposalCard
+            key={item.id}
+            projectId={seed.projectId}
+            proposal={seed.proposal}
+            onCreated={onSeedCreated!}
+          />
+        );
+      })}
     </div>
   );
 }
