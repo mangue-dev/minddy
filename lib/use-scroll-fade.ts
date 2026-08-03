@@ -92,5 +92,8 @@ export function useScrollFade<T extends HTMLElement>(
       : undefined,
   };
 
-  return { ref, scrollProps };
+  // `edges` sort avec le reste : « il reste du contenu de ce côté » sert au-delà du
+  // fondu — c'est aussi la condition d'un bouton de retour en bas (le fil de l'agent).
+  // Le mesurer deux fois sur le même nœud n'apprendrait rien de plus.
+  return { ref, scrollProps, edges };
 }

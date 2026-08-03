@@ -8,9 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
 import {
   AlertTriangle,
+  ArrowDown,
   Brain,
   CheckCircle2,
   Circle,
@@ -830,6 +831,7 @@ export function AgentEventFeed({
   pendingUserMessages?: string[];
 }) {
   const t = useTranslations("Agent");
+  const tc = useTranslations("Common");
   // On ne poll les events (et n'affiche l'indicateur « travaille ») que tant que
   // l'agent TRAVAILLE ; au repos le fil est figé jusqu'au prochain message.
   const active = isAgentRunWorking(status);
@@ -840,7 +842,9 @@ export function AgentEventFeed({
   const feedRef = useRef<HTMLDivElement>(null);
   // Fade doux en haut/bas du fil (même pattern que les colonnes Kanban) → on voit
   // qu'il reste du contenu au-dessus / en dessous. On fusionne son ref avec le nôtre.
-  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
+  // `edges.end` (« il reste du contenu en dessous ») commande aussi le bouton de
+  // retour en bas : même mesure, donc jamais de désaccord entre le fondu et lui.
+  const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>();
   const setScrollNode = useCallback(
     (node: HTMLDivElement | null) => {
       feedRef.current = node;
@@ -848,6 +852,10 @@ export function AgentEventFeed({
     },
     [fadeRef],
   );
+  const scrollToEnd = useCallback(() => {
+    const node = feedRef.current;
+    if (node) node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+  }, []);
 
   const { items, results, userTexts } = useMemo(
     () => buildFeed(events, prompt),
@@ -1038,6 +1046,28 @@ export function AgentEventFeed({
           </div>
         ) : null}
       </div>
+      {/* Retour en bas, à parité avec le fil de Numo : le fil ne suit plus l'agent,
+          ce bouton est donc le raccourci pour rattraper la fin. `sticky` sur une
+          boîte de hauteur NULLE → il flotte au-dessus du bas du cadre sans réserver
+          de place, donc son apparition ne pousse rien (`min-h-0` avec `h-0` : sans
+          lui, la taille minimale automatique d'un item flex en colonne rendrait au
+          bloc la hauteur de son bouton). Et il se tient au-dessus des 2 rem du fondu
+          de bas de fil, qui le délaverait s'il descendait dedans. */}
+      {edges.end ? (
+        <div className="sticky bottom-10 z-10 flex h-0 min-h-0 items-end justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={tc("scrollToBottom")}
+            title={tc("scrollToBottom")}
+            onClick={scrollToEnd}
+            className="rounded-full bg-background shadow-sm dark:bg-background dark:hover:bg-muted"
+          >
+            <ArrowDown className="size-4" />
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

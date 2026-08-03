@@ -550,15 +550,6 @@ export function IssueSidePanel({
     onVerifyWithAgent: verifyWithAgent,
     onCustomWithAgent: () => setCustomTarget("launch"),
     onOpenSession: () => setChatOpen(true),
-    // « Automatiser » (MIN-147) : le forçage vit sur le ticket, donc il s'écrit
-    // par le même chemin que ses autres champs.
-    automationOverride: issue?.automation_override ?? null,
-    onSetAutomationOverride: issue
-      ? (next) =>
-          void onUpdate(issue.id, { automation_override: next }).catch((err) =>
-            toast.error((err as Error).message),
-          )
-      : undefined,
   });
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel

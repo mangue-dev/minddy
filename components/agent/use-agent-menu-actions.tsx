@@ -3,32 +3,15 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Check,
   ClipboardCopy,
   Code2,
   ListChecks,
   PenLine,
   Plus,
   SearchCheck,
-  Workflow,
 } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-import {
-  AUTOMATION_PRESET_IDS,
-  type AutomationOverride,
-  type AutomationPresetId,
-} from "@/lib/automations";
-import type { MessageKey } from "@/lib/i18n-keys";
-
-/** Libellés des préréglages — les mêmes que l'écran de réglages du projet. */
-const PRESET_LABEL_KEYS: Record<AutomationPresetId, MessageKey<"Automations">> = {
-  "loop-by-effort": "presetLoopByEffort",
-  "plan-and-verify": "presetPlanAndVerify",
-  "plan-only": "presetPlanOnly",
-  "implement-only": "presetImplementOnly",
-  "verify-only": "presetVerifyOnly",
-};
 
 /**
  * Les deux entrées « agent » du menu ⋯ / clic droit d'un ticket — copier le
@@ -67,8 +50,6 @@ export function useAgentMenuActions({
   onVerifyWithAgent,
   onCustomWithAgent,
   onOpenSession,
-  automationOverride,
-  onSetAutomationOverride,
 }: {
   /** Agents disponibles (plan payant + dépôt lié) — sinon, pas d'entrée agent. */
   agentsEnabled: boolean;
@@ -90,17 +71,9 @@ export function useAgentMenuActions({
   onCustomWithAgent: () => void;
   /** Rouvre la conversation existante (modal côté panneau, page côté carte). */
   onOpenSession: () => void;
-  /**
-   * Forçage des automatisations SUR CE TICKET (MIN-147) : `null` = il suit les
-   * règles du projet. Absent (avec son callback) → l'entrée n'apparaît pas : les
-   * appelants qui n'écrivent pas le ticket n'ont pas à l'offrir.
-   */
-  automationOverride?: AutomationOverride | null;
-  onSetAutomationOverride?: (next: AutomationOverride | null) => void;
 }): ContextMenuAction[] {
   const t = useTranslations("IssueUI");
   const tAgent = useTranslations("Agent");
-  const tAuto = useTranslations("Automations");
 
   return useMemo(() => {
 
@@ -211,56 +184,6 @@ export function useAgentMenuActions({
       customAction("agent-custom", onCustomWithAgent),
     ];
 
-    // « Automatiser » (MIN-147) : forcer un préréglage sur CE ticket, ou l'en
-    // retirer. À côté des quatre façons de lancer Numo parce que c'est la même
-    // question posée à l'avance — « qu'est-ce que Numo fait de ce ticket ? » —,
-    // sauf qu'on y répond une fois pour toutes.
-    const current = automationOverride ?? null;
-    const automate: ContextMenuAction | null = onSetAutomationOverride
-      ? {
-          id: "automate-issue",
-          label: tAuto("overrideTitle"),
-          keywords: [
-            "automation",
-            "automatisation",
-            "automatiser",
-            "automate",
-            "boucle",
-            "loop",
-            "chain",
-            "chaîne",
-          ],
-          icon: <Workflow className="size-4" />,
-          // Le choix courant porte une coche : `ContextMenuAction` n'a pas d'état
-          // sélectionné, et sans marque le sous-menu ne dirait pas ce qui est
-          // déjà en place — c'est pourtant la première chose qu'on vient y lire.
-          children: [
-            {
-              id: "automate-follow",
-              label: tAuto("overrideFollowProject"),
-              ...(current === null ? { icon: <Check className="size-4" /> } : {}),
-              onSelect: () => onSetAutomationOverride(null),
-            },
-            ...AUTOMATION_PRESET_IDS.map((id) => ({
-              id: `automate-${id}`,
-              label: tAuto(PRESET_LABEL_KEYS[id]),
-              ...(current && "preset" in current && current.preset === id
-                ? { icon: <Check className="size-4" /> }
-                : {}),
-              onSelect: () => onSetAutomationOverride({ preset: id }),
-            })),
-            {
-              id: "automate-off",
-              label: tAuto("overrideDisabled"),
-              ...(current && "disabled" in current
-                ? { icon: <Check className="size-4" /> }
-                : {}),
-              onSelect: () => onSetAutomationOverride({ disabled: true }),
-            },
-          ],
-        }
-      : null;
-
     return hasSession
       ? [
           copyPrompt,
@@ -279,7 +202,6 @@ export function useAgentMenuActions({
             icon: <Plus className="size-4" />,
             children: launchChildren,
           },
-          ...(automate ? [automate] : []),
         ]
       : [
           copyPrompt,
@@ -290,14 +212,11 @@ export function useAgentMenuActions({
             icon: <NumoIcon className="size-4" />,
             children: launchChildren,
           },
-          ...(automate ? [automate] : []),
         ];
   }, [
     agentsEnabled,
     hasSession,
     hasPlan,
-    automationOverride,
-    onSetAutomationOverride,
     onCopyPrompt,
     onCopyPlanPrompt,
     onCopyVerifyPrompt,
@@ -309,6 +228,5 @@ export function useAgentMenuActions({
     onOpenSession,
     t,
     tAgent,
-    tAuto,
   ]);
 }

@@ -2,6 +2,7 @@
 
 import { Button, cn } from "mangue-ui";
 import { ArrowDownIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   createContext,
   useCallback,
@@ -151,11 +152,14 @@ export const ConversationScrollButton = ({
   className,
   ...props
 }: ConversationScrollButtonProps) => {
+  const tc = useTranslations("Common");
   const { isAtBottom, scrollToBottom } = useConversationContext();
 
   return (
     !isAtBottom && (
       <Button
+        aria-label={tc("scrollToBottom")}
+        title={tc("scrollToBottom")}
         className={cn(
           "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted",
           className
