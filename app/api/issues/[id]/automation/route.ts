@@ -202,10 +202,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         chain: cancelled ? publicChain(cancelled) : null,
       });
     }
-    // Le run en cours part avec elle : le drapeau d'interruption le ramène au
-    // repos proprement, sans rien perdre du travail déjà poussé.
+    // Le run en cours part avec elle — mais SEULEMENT s'il est à elle. Sans ce
+    // test, arrêter une chaîne garée interrompait la session que l'utilisateur
+    // avait lancée à la main pour faire le travail lui-même : le geste « je me
+    // débarrasse de l'automatisation » tuait son propre agent.
     const active = await activeRunForIssue(id);
-    if (active) await requestInterrupt(active.id);
+    if (active?.chain_id === chain.id) await requestInterrupt(active.id);
     await haltChain(chain, "interrupted");
     const after = await latestChainForIssue(id);
     return NextResponse.json({ ok: true, chain: after ? publicChain(after) : null });

@@ -4,7 +4,11 @@ import { after } from "next/server";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { canUseAutomations } from "@/lib/server/entitlements";
-import { activeRunForIssue, type AgentRunVerdict } from "@/lib/server/agent/runs";
+import {
+  activeRunForIssue,
+  requestInterrupt,
+  type AgentRunVerdict,
+} from "@/lib/server/agent/runs";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import {
   automationModelFor,
@@ -23,6 +27,7 @@ import {
   type AutomationEvent,
   type AutomationIssueFacts,
   type AutomationRule,
+  type AutomationSource,
 } from "@/lib/automations";
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import {
@@ -87,6 +92,22 @@ export function scheduleAutomations(params: AutomationRunParams): void {
     void go();
   }
 }
+
+/**
+ * Les statuts qui disent « ce ticket n'est plus en travail » : rangé, abandonné,
+ * ou fait à la main. `todo`, `in_progress` et `in_review` en sont absents — ce
+ * sont ceux que la chaîne traverse elle-même.
+ */
+const CHAIN_STAND_DOWN_STATUSES: IssueStatus[] = [
+  "backlog",
+  "triage",
+  "canceled",
+  "duplicate",
+  "done",
+];
+
+/** Origines qui valent « quelqu'un a repris la main » — cf. `AUTOMATION_SOURCES`. */
+const HUMAN_STAND_DOWN_SOURCES: AutomationSource[] = ["web", "numo"];
 
 interface IssueRow {
   id: string;
@@ -230,8 +251,13 @@ async function handleFailedVerification(params: {
  * chaîne `pending` pour toujours — et l'index unique par ticket avec elle.
  */
 async function shutDownChain(chain: AgentChain, reason: string): Promise<void> {
+  // Les TROIS statuts vivants, pas deux : `awaiting_human` était oublié, alors
+  // que `stopChain` l'accepte parfaitement. Désarmer le projet, perdre le
+  // budget, retirer le préréglage ou poser « ne pas automatiser » sur le ticket
+  // pendant qu'une chaîne était garée la laissait garée POUR TOUJOURS — et avec
+  // elle l'index unique du ticket, donc plus aucune automatisation possible.
   if (chain.status === "pending") await cancelPendingChain(chain.id, reason);
-  else if (chain.status === "running") await haltChain(chain, reason);
+  else await haltChain(chain, reason);
 }
 
 function factsOf(issue: IssueRow, categoryIds: string[]): AutomationIssueFacts {
@@ -255,11 +281,19 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     .eq("id", params.projectId)
     .is("deleted_at", null)
     .maybeSingle();
-  if (!project) return;
 
   const existing = params.chainId
     ? await getChain(params.chainId)
     : await chainForIssue(params.issueId);
+
+  // Projet à la corbeille : la chaîne n'a plus d'objet. L'abandonner telle
+  // quelle la laissait vivante à jamais — et, pire, en tête de la file du
+  // balayeur (triée par ancienneté), où une poignée de chaînes mortes suffisait
+  // à affamer TOUTES les automatisations de la plateforme.
+  if (!project) {
+    if (existing) await shutDownChain(existing, "gone");
+    return;
+  }
 
   if (!project.automations_enabled) {
     // L'interrupteur a été coupé pendant qu'une chaîne tournait : on ne la laisse
@@ -280,7 +314,13 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     .eq("id", params.issueId)
     .is("deleted_at", null)
     .maybeSingle();
-  if (!issueRow) return;
+  // Ticket à la corbeille : même raison, même remède. Et sans ça, une
+  // restauration avant la purge réveillait une chaîne vieille de plusieurs
+  // jours, qui lançait un run que plus personne n'attendait.
+  if (!issueRow) {
+    if (existing) await shutDownChain(existing, "gone");
+    return;
+  }
   const issue = issueRow as IssueRow;
 
   const override = parseAutomationOverride(issue.automation_override);
@@ -298,6 +338,36 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   if (!existing && !isAutomationEffortEnabled(ownerMeta, issue.effort)) return;
   if (rules.length === 0) {
     if (existing) await shutDownChain(existing, "disabled");
+    return;
+  }
+
+  // ── L'HUMAIN A REPRIS LE TICKET ───────────────────────────────────────────
+  // La garde la plus importante du système, et celle qui manquait.
+  //
+  // Le sursis ne protège que l'AMORÇAGE : à partir de l'étape 2, la chaîne
+  // décide sur des déclencheurs `run_finished`, dont les conditions ne portent
+  // que sur le ticket (effort, priorité, plan…) et JAMAIS sur son statut. Une
+  // chaîne engagée ne regardait donc plus jamais où en était son ticket — et le
+  // crochet de statut ne rattrapait rien, puisqu'il sort tôt quand un run
+  // travaille. Conséquence mesurée : on annule un ticket à la main, l'étape en
+  // cours finit, la suivante part quand même, et `syncIssueStatusOnAgentStart`
+  // ÉCRASE l'annulation en le repassant « en cours ».
+  //
+  // La règle : un geste HUMAIN qui sort le ticket du travail en cours retire la
+  // chaîne. Restreint aux origines humaines à dessein — le cycle de vie d'un run
+  // écrit lui aussi des statuts (`done` à la fusion d'une PR), et la boucle ne
+  // doit pas s'arrêter sur sa propre réussite.
+  if (
+    existing &&
+    params.event.type === "status_changed" &&
+    HUMAN_STAND_DOWN_SOURCES.includes(params.event.source ?? "web") &&
+    CHAIN_STAND_DOWN_STATUSES.includes(params.event.to)
+  ) {
+    // Le run en cours part avec elle : le laisser finir, c'est continuer à
+    // dépenser sur un ticket que son propriétaire vient de ranger.
+    const working = await activeRunForIssue(issue.id);
+    if (working?.chain_id === existing.id) await requestInterrupt(working.id);
+    await shutDownChain(existing, "taken_over");
     return;
   }
 

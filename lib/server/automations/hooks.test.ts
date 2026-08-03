@@ -15,7 +15,7 @@ import type { AgentRun } from "@/lib/server/agent/runs";
 const C = vi.hoisted(() => ({ chain: null as Record<string, unknown> | null }));
 
 vi.mock("./chain", () => ({
-  addChainSpend: vi.fn(async () => 0),
+  recomputeChainSpend: vi.fn(async () => 0),
   chainForIssue: vi.fn(async () => C.chain),
   cancelPendingChain: vi.fn(async () => null),
 }));
@@ -41,7 +41,7 @@ function run(extra: Partial<AgentRun>): AgentRun {
 
 /** Le crochet est fire-and-forget : on laisse la chaîne de promesses se vider. */
 async function settle() {
-  await vi.waitFor(() => expect(chain.addChainSpend).toHaveBeenCalled());
+  await vi.waitFor(() => expect(chain.recomputeChainSpend).toHaveBeenCalled());
   for (let i = 0; i < 5; i++) await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -53,7 +53,7 @@ describe("notifyChainOfRunEnd", () => {
     notifyChainOfRunEnd(run({ awaiting_input: true }));
     await settle();
     // La dépense, oui — elle a eu lieu. L'étape suivante, non.
-    expect(chain.addChainSpend).toHaveBeenCalledWith("chain-1", 0.25);
+    expect(chain.recomputeChainSpend).toHaveBeenCalledWith("chain-1");
     expect(engine.scheduleAutomations).not.toHaveBeenCalled();
   });
 
@@ -103,7 +103,7 @@ describe("notifyChainOfRunEnd", () => {
   it("un run sans chaîne ne réveille rien", async () => {
     notifyChainOfRunEnd(run({ chain_id: null }));
     for (let i = 0; i < 5; i++) await Promise.resolve();
-    expect(chain.addChainSpend).not.toHaveBeenCalled();
+    expect(chain.recomputeChainSpend).not.toHaveBeenCalled();
     expect(engine.scheduleAutomations).not.toHaveBeenCalled();
   });
 });

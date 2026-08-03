@@ -54,7 +54,7 @@ import {
 } from "@/components/issue-context-menu";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
-import { isAgentRunWorking } from "@/lib/agent-api";
+import { handOffIssueApi, isAgentRunWorking } from "@/lib/agent-api";
 import {
   setAgentComposeDraft,
   type AgentComposeIntent,
@@ -415,6 +415,12 @@ export function IssueSidePanel({
 
   const copyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
+    // Copier un prompt, c'est confier le travail à quelqu'un d'autre — un agent
+    // externe, soi-même. La chaîne qui attendait ce ticket en sursis s'annule
+    // donc (MIN-147). ICI et pas dans le menu : les boutons de l'onglet Plan et
+    // le raccourci ⇧P appellent ce callback DIRECTEMENT, et sautaient donc
+    // l'enveloppe qui n'existait qu'au niveau du menu ⋯.
+    handOffIssueApi(issue.id);
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
     // désactivable dans Compte → Préférences). On n'avance que les statuts
     // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
@@ -453,6 +459,8 @@ export function IssueSidePanel({
   // automatique ici : planifier n'est pas commencer le travail.
   const copyPlanPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
+    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
         issue,
@@ -474,6 +482,8 @@ export function IssueSidePanel({
   // travail déjà fait, on ne le commence pas.
   const copyVerifyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
+    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
         issue,
@@ -494,6 +504,10 @@ export function IssueSidePanel({
   const runCustomPrompt = useCallback(
     async (instructions: string, target: CustomPromptTarget) => {
       if (!issue || !promptContext) return;
+      // Prise en main, que la consigne libre soit copiée OU lancée (MIN-147).
+      // Le lancement est de toute façon couvert côté serveur ; le signal est
+      // idempotent, et ce point-ci couvre la copie.
+      handOffIssueApi(issue.id);
       if (target === "launch") {
         const identifier = issueIdentifier(projectKey, issue.number);
         composeAgentSession(
@@ -524,7 +538,6 @@ export function IssueSidePanel({
   // avec la feuille « plan » (générer ou vérifier, selon le ticket) et
   // « Implémenter le ticket » (hook partagé avec les cartes du board).
   const agentActions = useAgentMenuActions({
-    issueId: issue?.id ?? null,
     agentsEnabled,
     hasSession: hasAgentSession,
     hasPlan: issueHasPlan,

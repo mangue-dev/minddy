@@ -61,7 +61,7 @@ import {
   useAgentHasSession,
   useIssuePr,
 } from "@/components/agent/agent-activity-context";
-import { isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
+import { handOffIssueApi, isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
 import {
   setAgentComposeDraft,
   type AgentComposeIntent,
@@ -1091,6 +1091,10 @@ export function IssueCard({
   };
 
   const copyPrompt = async () => {
+    // Copier un prompt, c'est confier le travail à quelqu'un d'autre : la chaîne
+    // qui attendait ce ticket en sursis s'annule (MIN-147). Dans le callback et
+    // pas dans le menu — ⇧P l'appelle directement.
+    handOffIssueApi(issue.id);
     // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
     // désactivable dans Compte → Préférences). On n'avance que les statuts
     // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
@@ -1123,6 +1127,8 @@ export function IssueCard({
   // relecture quand le plan existe. Pas de démarrage automatique : planifier
   // n'est pas commencer.
   const copyPlanPrompt = async () => {
+    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
         issue,
@@ -1141,6 +1147,8 @@ export function IssueCard({
   // automatique : on relit du travail déjà fait, on ne le commence pas — et un
   // ticket resté en amont ne doit pas avancer parce qu'on demande un contrôle.
   const copyVerifyPrompt = async () => {
+    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
         issue,
@@ -1184,7 +1192,6 @@ export function IssueCard({
   };
 
   const agentActions = useAgentMenuActions({
-    issueId: issue.id,
     agentsEnabled,
     hasSession: agentHasSession,
     hasPlan: issueHasPlan,

@@ -29,7 +29,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   // On n'interrompt qu'un run qui TRAVAILLE ; au repos il n'y a rien à interrompre.
-  if (WORKING.includes(run.status)) {
+  const working = WORKING.includes(run.status);
+  if (working) {
     await requestInterrupt(runId);
   }
 
@@ -37,7 +38,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // c'est le geste de quelqu'un qui veut que ça cesse, pas une fin d'étape. Il
   // faut le dire ICI — le crochet de fin de run ne peut pas le déduire,
   // `clearInterrupt` ayant déjà effacé le drapeau quand `stampRun` s'exécute.
-  if (run.chain_id) stopChainOnInterrupt(run.chain_id);
+  //
+  // Seulement si CE run travaillait : ouvrir un ANCIEN run de la chaîne et y
+  // cliquer « stop » arrêtait la chaîne alors que son run courant continuait de
+  // tourner et de pousser du code — la barre disait « arrêtée », l'agent codait.
+  if (run.chain_id && working) stopChainOnInterrupt(run.chain_id);
 
   return NextResponse.json({ ok: true, status: run.status });
 }

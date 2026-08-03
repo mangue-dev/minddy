@@ -3,6 +3,7 @@ import "server-only";
 import type { AgentRun } from "@/lib/server/agent/runs";
 import type { AutomationEvent, AutomationSource } from "@/lib/automations";
 import type { IssueStatus } from "@/lib/issue-constants";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Les CROCHETS des automatisations (MIN-147) — les deux seuls endroits d'où la
@@ -30,6 +31,23 @@ interface ScheduleParams {
 async function schedule(params: ScheduleParams): Promise<void> {
   const { scheduleAutomations } = await import("./engine");
   scheduleAutomations(params);
+}
+
+/**
+ * Retient l'invocation AVANT le premier `await`.
+ *
+ * C'était le défaut commun des trois crochets : ils faisaient `void go()`, et
+ * `go` n'entrait dans `after()` qu'après deux aller-retours de base. Entre les
+ * deux, rien ne retenait la fonction — une promesse flottante n'est pas
+ * `waitUntil`-ée, et le contrat de la plateforme ne la garantit pas. Ce qui se
+ * perdait là n'était pas cosmétique : l'avancement d'une chaîne, ou son arrêt
+ * demandé par un humain. Et comme rien ne rattrape une chaîne `running`, chaque
+ * perte coûtait un ticket verrouillé, pas un raté rejouable.
+ */
+function inBackground(work: () => Promise<void>, label: string): void {
+  afterOrNow(() =>
+    work().catch((e) => console.error(`[automations] ${label} failed:`, (e as Error).message)),
+  );
 }
 
 /**
@@ -88,14 +106,11 @@ export function scheduleStatusAutomations(params: {
  * c'est le refus `alreadyRunning` qui arbitre ce cas-là.
  */
 export function handOffToHuman(issueId: string): void {
-  const go = async () => {
+  inBackground(async () => {
     const { chainForIssue, cancelPendingChain } = await import("./chain");
     const chain = await chainForIssue(issueId);
     if (chain?.status === "pending") await cancelPendingChain(chain.id, "taken_over");
-  };
-  void go().catch((e) =>
-    console.error("[automations] hand-off hook failed:", (e as Error).message),
-  );
+  }, "hand-off hook");
 }
 
 /** Statuts de run que la chaîne lit comme un succès. */
@@ -114,9 +129,11 @@ const OK_STATUSES = new Set(["completed"]);
  */
 export function notifyChainOfRunEnd(run: AgentRun): void {
   if (!run.chain_id || !run.issue_id) return;
-  const go = async () => {
-    const { addChainSpend } = await import("./chain");
-    await addChainSpend(run.chain_id as string, Number(run.cost_usd ?? 0));
+  inBackground(async () => {
+    const { recomputeChainSpend } = await import("./chain");
+    // Recalcul, pas cumul : un run traverse plusieurs repos et `cost_usd` est
+    // cumulatif — additionner le total à chaque passage le comptait plusieurs fois.
+    await recomputeChainSpend(run.chain_id as string);
     // L'agent a posé une QUESTION (`ask_user`) et attend la réponse. Son TOUR
     // s'est bien terminé — d'où le statut `completed` qui nous amène ici — mais
     // son TRAVAIL, non. Enchaîner maintenant lancerait l'étape suivante par
@@ -135,10 +152,7 @@ export function notifyChainOfRunEnd(run: AgentRun): void {
         outcome: OK_STATUSES.has(run.status) ? "ok" : "failed",
       },
     });
-  };
-  void go().catch((e) =>
-    console.error("[automations] run-end hook failed:", (e as Error).message),
-  );
+  }, "run-end hook");
 }
 
 /**
@@ -149,13 +163,10 @@ export function notifyChainOfRunEnd(run: AgentRun): void {
  * quand `stampRun` s'exécute.
  */
 export function stopChainOnInterrupt(chainId: string): void {
-  const go = async () => {
+  inBackground(async () => {
     const { getChain } = await import("./chain");
     const { haltChain } = await import("./report");
     const chain = await getChain(chainId);
     if (chain) await haltChain(chain, "interrupted");
-  };
-  void go().catch((e) =>
-    console.error("[automations] interrupt hook failed:", (e as Error).message),
-  );
+  }, "interrupt hook");
 }

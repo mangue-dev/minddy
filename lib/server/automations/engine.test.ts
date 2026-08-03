@@ -68,6 +68,7 @@ vi.mock("@/lib/server/entitlements", () => ({
 
 vi.mock("@/lib/server/agent/runs", () => ({
   activeRunForIssue: vi.fn(async () => h.activeRun),
+  requestInterrupt: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/server/update-issue", () => ({
@@ -126,6 +127,7 @@ const report = await import("./report");
 const actions = await import("./actions");
 const updateIssue = await import("@/lib/server/update-issue");
 const chainMod = await import("./chain");
+const runsMod = await import("@/lib/server/agent/runs");
 
 /** Une chaîne vivante qui a déjà joué son unique étape d'implémentation. */
 function livingChain() {
@@ -445,6 +447,101 @@ describe("runAutomations — conclure une chaîne", () => {
     expect(chainMod.startPendingChain).not.toHaveBeenCalled();
     expect(chainMod.cancelPendingChain).not.toHaveBeenCalled();
     expect(actions.runAction).not.toHaveBeenCalled();
+  });
+
+  it("un humain qui RANGE le ticket retire la chaîne, même en plein run", async () => {
+    // La garde centrale. Une chaîne engagée ne regardait plus jamais son ticket :
+    // ses déclencheurs `run_finished` n'ont aucune condition de statut, et le
+    // crochet de statut sortait tôt dès qu'un run travaillait. On annulait un
+    // ticket, l'étape suivante partait quand même, et le lancement ÉCRASAIT
+    // l'annulation en repassant le ticket « en cours ».
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.chain = { ...livingChain(), preset: "loop-by-effort" };
+    h.activeRun = { id: "run-chaine", chain_id: "chain-1" };
+
+    for (const to of ["canceled", "backlog", "done", "duplicate", "triage"] as const) {
+      vi.clearAllMocks();
+      await runAutomations({
+        issueId: "i1",
+        projectId: "p1",
+        event: { type: "status_changed", from: "in_progress", to, source: "web" },
+      });
+      expect(report.haltChain).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "chain-1" }),
+        "taken_over",
+      );
+      // Le run de la chaîne part avec elle : le laisser finir, c'est dépenser
+      // sur un ticket que son propriétaire vient de ranger.
+      expect(runsMod.requestInterrupt).toHaveBeenCalledWith("run-chaine");
+      expect(actions.runAction).not.toHaveBeenCalled();
+    }
+  });
+
+  it("…mais PAS sur les statuts que la chaîne traverse elle-même", async () => {
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.chain = { ...livingChain(), preset: "loop-by-effort" };
+    h.activeRun = { id: "run-chaine", chain_id: "chain-1" };
+
+    for (const to of ["todo", "in_progress", "in_review"] as const) {
+      vi.clearAllMocks();
+      await runAutomations({
+        issueId: "i1",
+        projectId: "p1",
+        event: { type: "status_changed", from: "todo", to, source: "web" },
+      });
+      expect(report.haltChain).not.toHaveBeenCalled();
+      expect(runsMod.requestInterrupt).not.toHaveBeenCalled();
+    }
+  });
+
+  it("…ni quand c'est le CYCLE DE VIE d'un run qui écrit le statut", async () => {
+    // Une PR fusionnée passe le ticket en `done` avec l'origine `agent` : c'est
+    // la réussite de la chaîne, pas quelqu'un qui la lui retire.
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.chain = { ...livingChain(), preset: "loop-by-effort" };
+    h.activeRun = { id: "run-chaine", chain_id: "chain-1" };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      event: { type: "status_changed", from: "in_review", to: "done", source: "agent" },
+    });
+    expect(report.haltChain).not.toHaveBeenCalled();
+  });
+
+  it("le ticket ou le projet supprimé ÉTEINT la chaîne au lieu de l'abandonner", async () => {
+    // Abandonnée, elle restait vivante à jamais — et en tête de la file du
+    // balayeur, où une poignée suffisait à affamer toute la plateforme.
+    h.chain = livingChain();
+    h.single.issues = null;
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      event: { type: "run_finished", intent: "implement", outcome: "ok" },
+    });
+    expect(report.haltChain).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "chain-1" }),
+      "gone",
+    );
+  });
+
+  it("désarmer le projet éteint aussi une chaîne GARÉE", async () => {
+    // `shutDownChain` ne couvrait que `pending` et `running` : une chaîne au
+    // point d'arrêt humain restait garée pour toujours, index unique compris.
+    h.chain = { ...livingChain(), status: "awaiting_human" };
+    h.single.projects = {
+      ...(h.single.projects as Record<string, unknown>),
+      automations_enabled: false,
+    };
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      event: { type: "run_finished", intent: "plan", outcome: "ok" },
+    });
+    expect(report.haltChain).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "awaiting_human" }),
+      "disabled",
+    );
   });
 
   it("un événement sans chaîne ne conclut rien du tout", async () => {

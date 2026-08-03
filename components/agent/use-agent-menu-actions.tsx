@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-import { handOffIssueApi } from "@/lib/agent-api";
 import {
   AUTOMATION_PRESET_IDS,
   type AutomationOverride,
@@ -56,7 +55,6 @@ const PRESET_LABEL_KEYS: Record<AutomationPresetId, MessageKey<"Automations">> =
  * sous-menu.
  */
 export function useAgentMenuActions({
-  issueId,
   agentsEnabled,
   hasSession,
   hasPlan,
@@ -72,8 +70,6 @@ export function useAgentMenuActions({
   automationOverride,
   onSetAutomationOverride,
 }: {
-  /** Ticket concerné — sert à annoncer la prise en main (MIN-147). */
-  issueId: string | null;
   /** Agents disponibles (plan payant + dépôt lié) — sinon, pas d'entrée agent. */
   agentsEnabled: boolean;
   /** Le ticket a déjà une conversation d'agent. */
@@ -107,21 +103,6 @@ export function useAgentMenuActions({
   const tAuto = useTranslations("Automations");
 
   return useMemo(() => {
-    /**
-     * COPIER un prompt, c'est passer le travail à quelqu'un d'autre — un agent
-     * externe, soi-même. La chaîne qui attendait ce ticket en sursis s'annule
-     * donc (MIN-147).
-     *
-     * Les quatre copies, pas seulement celle d'implémentation : elle seule
-     * déplace le ticket en « en cours » (et encore, sous une préférence qu'on
-     * peut éteindre) ; copier le prompt de plan ou de vérification ne laissait
-     * aucune trace, et le sursis courait jusqu'au bout. Le signal est idempotent
-     * et sans effet quand aucune chaîne n'attend.
-     */
-    const handingOff = (copy: () => void) => () => {
-      if (issueId) handOffIssueApi(issueId);
-      copy();
-    };
 
     // Les deux libellés restent cherchables ensemble : quel que soit l'état du
     // ticket, taper « plan » ou « vérifier » trouve l'entrée.
@@ -190,7 +171,7 @@ export function useAgentMenuActions({
           label: planLabel,
           keywords: planKeywords,
           icon: <ListChecks className="size-4" />,
-          onSelect: handingOff(onCopyPlanPrompt),
+          onSelect: onCopyPlanPrompt,
         },
         {
           id: "copy-prompt-implement",
@@ -198,10 +179,10 @@ export function useAgentMenuActions({
           keywords: implementKeywords,
           icon: <Code2 className="size-4" />,
           shortcut: "⇧P",
-          onSelect: handingOff(onCopyPrompt),
+          onSelect: onCopyPrompt,
         },
-        verifyAction("copy-prompt-verify", handingOff(onCopyVerifyPrompt)),
-        customAction("copy-prompt-custom", handingOff(onCopyCustomPrompt)),
+        verifyAction("copy-prompt-verify", onCopyVerifyPrompt),
+        customAction("copy-prompt-custom", onCopyCustomPrompt),
       ],
     };
 
@@ -312,7 +293,6 @@ export function useAgentMenuActions({
           ...(automate ? [automate] : []),
         ];
   }, [
-    issueId,
     agentsEnabled,
     hasSession,
     hasPlan,

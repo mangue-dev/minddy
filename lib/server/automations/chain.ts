@@ -187,26 +187,44 @@ export async function advanceChain(
     // réveille d'abord (`startPendingChain`), et ce réveil re-vérifie que la
     // condition qui l'a ouverte tient toujours. Avancer directement ferait sauter
     // ce contrôle — et l'update ci-dessus la passerait en `running` au passage.
-    .in("status", ["running", "awaiting_human"])
+    // NI `awaiting_human` : c'est le statut qui matérialise « la boucle attend
+    // un humain », et le seul chemin légitime pour en sortir est `resumeChain`
+    // (feu vert explicite). L'accepter ici ouvrait une seconde porte : un moteur
+    // concurrent qui trouvait la chaîne entre `advanceChain` et `parkChain`
+    // pouvait sauter le point d'arrêt EN SILENCE, après que le commentaire
+    // « la suite attend ton feu vert » a été posté. Le moteur garantit de toute
+    // façon `status === "running"` avant tout appel : ne rien perdre ici.
+    .eq("status", "running")
     .select("*")
     .maybeSingle();
   return data ? toChain(data) : null;
 }
 
 /**
- * Cumule la dépense d'un run sur la chaîne. Lecture puis écriture, sans CAS :
- * l'appelant unique est le crochet de fin de run, appelé depuis `stampRun`, dont
- * la garde de transition assure déjà EXACTEMENT-UNE-FOIS par run. Deux runs
- * d'une même chaîne ne finissent jamais en même temps — la chaîne n'en lance
- * qu'un à la fois.
+ * RECALCULE la dépense de la chaîne depuis ses runs. Idempotent par
+ * construction — et c'est tout l'intérêt.
+ *
+ * L'ancienne version cumulait un delta (`spent += run.cost_usd`) en pariant sur
+ * « exactement une fois par run ». Or `stampRun` garantit exactement une fois
+ * par TRANSITION TERMINALE, et un run en traverse plusieurs par conception :
+ * l'agent pose une question (repos), on lui répond (`/steer` le re-queue), il
+ * repart, il se repose encore. Comme `agent_runs.cost_usd` est CUMULATIF, chaque
+ * repos rajoutait le total du run depuis le début : un run à cinq tours de 0,10
+ * affichait 1,50 pour 0,50 réellement dépensés.
+ *
+ * Une somme relue ne peut pas dériver, quel que soit le nombre d'appels.
  */
-export async function addChainSpend(chainId: string, usd: number): Promise<number> {
-  if (!Number.isFinite(usd) || usd <= 0) {
-    return (await getChain(chainId))?.spent_usd ?? 0;
-  }
+export async function recomputeChainSpend(chainId: string): Promise<number> {
   const service = getServiceClient();
-  const current = await getChain(chainId);
-  const next = Number(((current?.spent_usd ?? 0) + usd).toFixed(6));
+  const { data } = await service
+    .from("agent_runs")
+    .select("cost_usd")
+    .eq("chain_id", chainId);
+  const total = ((data ?? []) as Array<{ cost_usd: number | string | null }>).reduce(
+    (sum, row) => sum + (Number(row.cost_usd) || 0),
+    0,
+  );
+  const next = Number(total.toFixed(6));
   await service.from("agent_chains").update({ spent_usd: next }).eq("id", chainId);
   return next;
 }
@@ -260,6 +278,36 @@ export async function duePendingChains(limit = 50): Promise<AgentChain[]> {
     .eq("status", "pending")
     .lte("not_before", new Date().toISOString())
     .order("not_before", { ascending: true })
+    .limit(limit);
+  return ((data ?? []) as unknown[]).map(toChain);
+}
+
+/**
+ * Chaînes `running` ABANDONNÉES : plus rien ne les porte.
+ *
+ * Le système n'avait aucun filet pour `running`. Une chaîne n'en sort que par le
+ * crochet de fin de run — or ce crochet est une promesse en vol, qu'une fonction
+ * qui gèle emporte ; et si un run manuel démarre dans l'intervalle, le moteur
+ * rend la main et le run manuel, lui, ne porte pas de `chain_id` : plus aucun
+ * événement ne viendra jamais. Comme `running` fait partie de l'index unique par
+ * ticket, ce ticket n'acceptait alors PLUS JAMAIS d'automatisation.
+ *
+ * Le seuil est large à dessein (bien au-delà de la latence d'un crochet) : ce
+ * balayage ne rattrape que ce qui est manifestement mort. Et le rattrapage est
+ * sans risque — c'est le compare-and-set d'`advanceChain` qui décide au bout,
+ * donc un événement simplement lent ne peut pas produire un double lancement.
+ */
+export async function staleRunningChains(
+  staleBefore: string,
+  limit = 25,
+): Promise<AgentChain[]> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_chains")
+    .select("*")
+    .eq("status", "running")
+    .lt("updated_at", staleBefore)
+    .order("updated_at", { ascending: true })
     .limit(limit);
   return ((data ?? []) as unknown[]).map(toChain);
 }

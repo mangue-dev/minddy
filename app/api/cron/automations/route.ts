@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyCronSecret } from "@/lib/server/cron-auth";
-import { duePendingChains } from "@/lib/server/automations/chain";
+import {
+  cancelPendingChain,
+  duePendingChains,
+  lastRunOfChain,
+  staleRunningChains,
+} from "@/lib/server/automations/chain";
+import { activeRunForIssue } from "@/lib/server/agent/runs";
+import { haltChain } from "@/lib/server/automations/report";
 import { runAutomations } from "@/lib/server/automations/engine";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
@@ -33,6 +40,30 @@ export const maxDuration = 300;
 /** Assez pour absorber une rafale, assez peu pour tenir dans la fenêtre. */
 const SWEEP_LIMIT = 50;
 
+/**
+ * Passé ce retard, une chaîne en sursis n'a plus de sens : le monde a changé
+ * depuis le geste qui l'a ouverte. Sans cette péremption, une chaîne que le
+ * moteur refuse de démarrer (run manuel qui n'en finit pas, projet corbeillé)
+ * restait `pending` POUR TOUJOURS — et, la file étant triée par ancienneté, une
+ * cinquantaine d'entre elles suffisait à occuper 100 % de chaque balayage et à
+ * affamer toutes les automatisations de la plateforme.
+ */
+const PENDING_MAX_LATENESS_MS = 60 * 60_000;
+
+/**
+ * Passé ce silence, une chaîne `running` est ABANDONNÉE : son crochet de fin de
+ * run s'est perdu (fonction gelée, run manuel intercalé qui ne porte pas de
+ * `chain_id`, exception après l'avancement). Rien d'autre ne la réveillait, et
+ * comme `running` fait partie de l'index unique, son ticket n'acceptait plus
+ * jamais d'automatisation.
+ *
+ * Très au-delà de la latence d'un crochet : on ne rattrape que ce qui est
+ * manifestement mort. Le rattrapage est sans risque — c'est le compare-and-set
+ * d'`advanceChain` qui tranche au bout, donc un événement simplement lent ne
+ * peut pas produire un double lancement.
+ */
+const RUNNING_STALE_MS = 15 * 60_000;
+
 async function handle(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -40,17 +71,24 @@ async function handle(request: NextRequest) {
 
   const startedAt = Date.now();
   const due = await duePendingChains(SWEEP_LIMIT);
+  let expired = 0;
+  let revived = 0;
 
   // En SÉRIE : deux chaînes dues appartiennent presque toujours au même projet,
   // et chacune lance un run. Les paralléliser ne ferait que bousculer le quota
   // et la file du drain pour gagner quelques centaines de millisecondes.
   let started = 0;
   for (const chain of due) {
-    // Sans événement mis de côté, on ne sait pas POURQUOI elle a été ouverte :
-    // impossible de la rejouer honnêtement. On la laisse au balayeur suivant
-    // plutôt que d'inventer un déclencheur (le cas n'existe que si la ligne a
-    // été écrite à la main).
-    if (!chain.pending_event?.to) continue;
+    // Trop en retard, ou sans événement mis de côté (ligne écrite à la main) :
+    // dans les deux cas elle ne démarrera jamais — on ne sait pas POURQUOI elle
+    // a été ouverte, ou le monde a trop changé depuis. On la retire de la file
+    // plutôt que de la relire indéfiniment.
+    const lateness = Date.now() - Date.parse(chain.not_before ?? chain.created_at);
+    if (!chain.pending_event?.to || lateness > PENDING_MAX_LATENESS_MS) {
+      await cancelPendingChain(chain.id, "expired").catch(() => null);
+      expired++;
+      continue;
+    }
     try {
       await runAutomations({
         issueId: chain.issue_id,
@@ -71,6 +109,37 @@ async function handle(request: NextRequest) {
     }
   }
 
+  // ── Le filet des chaînes ABANDONNÉES ──────────────────────────────────────
+  // Une chaîne `running` que plus aucun run ne porte : on rejoue la fin de son
+  // dernier run, exactement ce que fait le bouton « Continuer ».
+  for (const chain of await staleRunningChains(
+    new Date(Date.now() - RUNNING_STALE_MS).toISOString(),
+  )) {
+    try {
+      if (await activeRunForIssue(chain.issue_id)) continue; // elle travaille
+      const last = await lastRunOfChain(chain.id);
+      if (!last) {
+        // Avancée puis jamais lancée (exception entre les deux) : rien à rejouer.
+        await haltChain(chain, "stalled");
+        revived++;
+        continue;
+      }
+      await runAutomations({
+        issueId: chain.issue_id,
+        projectId: chain.project_id,
+        chainId: chain.id,
+        event: {
+          type: "run_finished",
+          intent: last.intent ?? "implement",
+          outcome: last.status === "completed" ? "ok" : "failed",
+        },
+      });
+      revived++;
+    } catch (err) {
+      console.error("[automations-cron] revive failed:", chain.id, (err as Error).message);
+    }
+  }
+
   captureServerEvent({
     distinctId: "cron",
     event: "cron_executed",
@@ -78,11 +147,13 @@ async function handle(request: NextRequest) {
       job: "automations",
       due: due.length,
       started,
+      expired,
+      revived,
       duration_bucket: durationBucket(Date.now() - startedAt),
     },
   });
 
-  return NextResponse.json({ ok: true, due: due.length, started });
+  return NextResponse.json({ ok: true, due: due.length, started, expired, revived });
 }
 
 export const GET = handle;

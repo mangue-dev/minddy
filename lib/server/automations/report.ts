@@ -33,7 +33,7 @@ export type ChainReportKind = "awaiting_human" | "completed" | "stopped";
 const STOP_REASONS: Record<Locale, Record<string, string>> = {
   fr: {
     quota: "le budget d'usage IA du compte est épuisé",
-    verification_failed: "la vérification de l'implémentation a échoué deux fois",
+    verification_failed: "la vérification de l'implémentation a échoué",
     interrupted: "quelqu'un a interrompu le run en cours",
     run_failed: "un run s'est terminé en échec",
     max_steps: "la chaîne a atteint son nombre maximum d'étapes",
@@ -46,10 +46,14 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     promptRequired: "l'étape n'avait pas de consigne à envoyer",
     issueNotFound: "le ticket n'existe plus",
     entitlement: "les automatisations ne sont pas incluses dans le plan du projet",
+    taken_over: "quelqu'un a repris le ticket en main",
+    gone: "le ticket ou le projet a été supprimé",
+    expired: "elle a trop attendu pour démarrer",
+    stalled: "elle s'est interrompue sans rien laisser à reprendre",
   },
   en: {
     quota: "the account's AI usage budget is spent",
-    verification_failed: "the implementation failed its own check twice",
+    verification_failed: "the implementation failed its own check",
     interrupted: "someone interrupted the running session",
     run_failed: "a session ended in failure",
     max_steps: "the chain reached its maximum number of steps",
@@ -62,6 +66,10 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     promptRequired: "the step had no instruction to send",
     issueNotFound: "the issue no longer exists",
     entitlement: "automations are not included in the project's plan",
+    taken_over: "someone took the issue over",
+    gone: "the issue or project was deleted",
+    expired: "it waited too long to start",
+    stalled: "it stopped with nothing left to resume",
   },
 };
 
