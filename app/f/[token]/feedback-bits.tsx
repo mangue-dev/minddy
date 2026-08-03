@@ -6,7 +6,11 @@ import { cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type { FeedbackPostStatus, PublicCategory } from "@/lib/feedback/types";
+import type {
+  FeedbackPostStatus,
+  PublicCategory,
+  PublicIdentity,
+} from "@/lib/feedback/types";
 
 /** Petites briques partagées du board public : badge de statut (mêmes icônes
     que les statuts d'issue), vote en pill horizontal (style UserJot) et
@@ -105,15 +109,21 @@ export function VoteButton({
   );
 }
 
-/** Avatar déterministe d'un pseudonyme : la même marque abstraite que dans
-    l'app, semée sur le pseudonyme plutôt que sur un identifiant de compte —
-    les votants du board public sont anonymes. */
-export function PseudonymAvatar({
-  name,
+/** Avatar du visiteur, la même marque abstraite que dans l'app : semée sur la
+    graine de son compte minddy quand le SSO l'a identifié — le visage qu'il y
+    connaît — et sinon sur son pseudonyme, les votants du board public étant
+    anonymes. C'est le seul avatar du board, et seul son propriétaire le voit. */
+export function IdentityAvatar({
+  identity,
   className,
 }: {
-  name: string;
+  identity: PublicIdentity;
   className?: string;
 }) {
-  return <UserAvatar seed={name} className={cn("size-5", className)} />;
+  return (
+    <UserAvatar
+      seed={identity.avatarSeed ?? identity.pseudonym}
+      className={cn("size-5", className)}
+    />
+  );
 }

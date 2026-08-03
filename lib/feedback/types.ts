@@ -142,4 +142,11 @@ export interface SimilarPost {
 export interface PublicIdentity {
   pseudonym: string;
   email: string | null;
+  /**
+   * La graine d'avatar du compte minddy derrière ce visiteur, quand le SSO du
+   * board l'a identifié — son visage de l'app, à l'identique. Null sinon
+   * (OTP, SSO d'un autre produit) : l'avatar retombe alors sur le pseudonyme.
+   * Ne sert QUE dans le header, que son propriétaire est seul à voir.
+   */
+  avatarSeed: string | null;
 }

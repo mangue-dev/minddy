@@ -17,6 +17,7 @@ import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
   getFeedbackSession,
+  toPublicIdentity,
 } from "@/lib/server/feedback/identity";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import {
@@ -91,19 +92,19 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
       domainTarget,
     }),
   ]);
-  const detail = await getPublicPostDetail({
-    projectId: ctx.project.id,
-    postId,
-    viewerId: session?.user.id ?? null,
-    includeCategories: ctx.board.show_categories,
-  });
+  const [detail, identity] = await Promise.all([
+    getPublicPostDetail({
+      projectId: ctx.project.id,
+      postId,
+      viewerId: session?.user.id ?? null,
+      includeCategories: ctx.board.show_categories,
+    }),
+    toPublicIdentity(session),
+  ]);
   if (!detail) notFound();
   if (detail.mergedIntoId) {
     permanentRedirect(`${base}/p/${detail.mergedIntoId}`);
   }
-  const identity = session
-    ? { pseudonym: session.user.pseudonym, email: session.user.email }
-    : null;
 
   return (
     <PublicPageShell

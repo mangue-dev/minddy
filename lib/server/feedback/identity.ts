@@ -2,8 +2,10 @@ import "server-only";
 
 import { randomBytes, randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
+import { findAvatarSeed } from "@/lib/server/avatar-seeds";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
 import { generatePseudonym } from "@/lib/feedback/pseudonym";
+import type { PublicIdentity } from "@/lib/feedback/types";
 
 /**
  * Identités et sessions des utilisateurs finaux du board (MIN-37). Jamais
@@ -230,6 +232,32 @@ export async function revokeFeedbackSession(token: string | undefined | null): P
   if (!token || !token.startsWith(SESSION_PREFIX)) return;
   const service = getServiceClient();
   await service.from("feedback_sessions").delete().eq("token_hash", sha256Hex(token));
+}
+
+/**
+ * L'identité telle que le visiteur se voit lui-même, en haut du board.
+ *
+ * Le pseudonyme reste la façade publique — mais l'avatar du header n'est vu que
+ * par son propriétaire (aucun post n'affiche celui de son auteur), et quelqu'un
+ * arrivé par SSO depuis minddy s'attend à y retrouver SON visage, pas un second
+ * tiré au sort. Le SSO a justement posé l'`auth.users.id` dans `external_id`
+ * (app/feedback/route.ts) : une ligne `user_avatars` à ce nom prouve le compte
+ * et donne sa graine, et la résoudre à chaque rendu suit un nouveau tirage
+ * d'avatar sans rien avoir à propager.
+ *
+ * Rien à trouver — vérification par OTP, ou board d'un autre produit dont les
+ * `external_id` ne sont pas des comptes minddy — et l'avatar retombe sur le
+ * pseudonyme, anonyme comme avant.
+ */
+export async function toPublicIdentity(
+  session: FeedbackSessionContext | null
+): Promise<PublicIdentity | null> {
+  if (!session) return null;
+  return {
+    pseudonym: session.user.pseudonym,
+    email: session.user.email,
+    avatarSeed: await findAvatarSeed(getServiceClient(), session.user.external_id),
+  };
 }
 
 /** Options du cookie de session, path-scopé au board (une seule et même

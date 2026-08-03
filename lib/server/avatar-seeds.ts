@@ -66,6 +66,34 @@ export async function fetchAvatarSeeds(
   return seeds;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Le seed d'un compte s'il en a un — sans jamais en créer.
+ *
+ * Le pendant en lecture seule de `fetchAvatarSeed`, pour l'appelant qui ne sait
+ * PAS encore si l'identifiant qu'il tient désigne un compte minddy : l'
+ * `external_id` d'un visiteur du board public, par exemple. `user_avatars`
+ * référence `auth.users`, donc une ligne trouvée PROUVE le compte. C'est tout
+ * l'intérêt de ne pas créer ici : la création paresseuse inventerait une marque
+ * pour un identifiant étranger, et brouillerait la preuve.
+ *
+ * Un identifiant qui n'est pas un UUID n'atteint pas la base : Postgres
+ * refuserait la comparaison (22P02) et l'erreur passerait inaperçue.
+ */
+export async function findAvatarSeed(
+  service: SupabaseClient,
+  userId: string | null | undefined
+): Promise<string | null> {
+  if (!userId || !UUID_RE.test(userId)) return null;
+  const { data } = await service
+    .from("user_avatars")
+    .select("seed")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data?.seed as string | undefined) ?? null;
+}
+
 /** Le seed d'un seul compte (même garanties que `fetchAvatarSeeds`). */
 export async function fetchAvatarSeed(
   service: SupabaseClient,

@@ -17,6 +17,7 @@ import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
   getFeedbackSession,
+  toPublicIdentity,
 } from "@/lib/server/feedback/identity";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import { listMyFeedback } from "@/lib/server/feedback/queries";
@@ -75,12 +76,12 @@ export default async function MyFeedbackPage({ params }: PageProps) {
       domainTarget,
     }),
   ]);
-  const entries: MyFeedbackItem[] = session
-    ? await listMyFeedback({ projectId: ctx.project.id, viewerId: session.user.id })
-    : [];
-  const identity = session
-    ? { pseudonym: session.user.pseudonym, email: session.user.email }
-    : null;
+  const [entries, identity] = await Promise.all([
+    session
+      ? listMyFeedback({ projectId: ctx.project.id, viewerId: session.user.id })
+      : Promise.resolve<MyFeedbackItem[]>([]),
+    toPublicIdentity(session),
+  ]);
 
   return (
     <PublicPageShell

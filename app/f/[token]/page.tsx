@@ -16,6 +16,7 @@ import { getBoardContext } from "@/lib/server/feedback/board-context";
 import {
   FEEDBACK_SESSION_COOKIE,
   getFeedbackSession,
+  toPublicIdentity,
 } from "@/lib/server/feedback/identity";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import {
@@ -109,7 +110,7 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
   const showCategories = ctx.board.show_categories;
   const activeCategory =
     showCategories && typeof search.category === "string" ? search.category : null;
-  const [posts, categories] = await Promise.all([
+  const [posts, categories, identity] = await Promise.all([
     listPublicPosts({
       projectId: ctx.project.id,
       viewerId: session?.user.id ?? null,
@@ -121,10 +122,8 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     showCategories
       ? listPublicCategories(ctx.project.id)
       : Promise.resolve<PublicCategory[]>([]),
+    toPublicIdentity(session),
   ]);
-  const identity = session
-    ? { pseudonym: session.user.pseudonym, email: session.user.email }
-    : null;
 
   return (
     <PublicPageShell

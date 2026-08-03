@@ -14,7 +14,7 @@ import { LogOut, MessagesSquare } from "lucide-react";
 import type { PublicIdentity } from "@/lib/feedback/types";
 import { logoutAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
-import { PseudonymAvatar } from "./feedback-bits";
+import { IdentityAvatar } from "./feedback-bits";
 
 /** Identité du visiteur dans le header du site public : « S'authentifier »
     (porte OTP) ou l'avatar seul — les actions (Mes feedbacks, déconnexion)
@@ -53,7 +53,7 @@ export function HeaderIdentity({
           aria-label={identity.pseudonym}
           className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <PseudonymAvatar name={identity.pseudonym} className="size-7 text-xs" />
+          <IdentityAvatar identity={identity} className="size-7 text-xs" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
