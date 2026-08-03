@@ -319,9 +319,16 @@ function buildFeed(
         // NARRATION (du texte, rendue en bulle). Sans le marqueur, le comportement
         // d'avant MIN-122 est inchangé.
         if (p.kind === "reasoning") {
-          // `current` n'est PAS touché : `openMessage` sert à rattacher les
-          // tool_call suivants, et une ligne de réflexion ne doit pas devenir
-          // leur bulle d'accueil.
+          // La réflexion FERME la bulle en cours sans en ouvrir une (une ligne de
+          // réflexion n'accueille pas de tool-call) : les actions du round qui suit
+          // s'attachent donc à une bulle NEUVE, rendue SOUS cette ligne.
+          //
+          // Sans ça, tous les tool-calls d'un tour s'empilaient dans le groupe
+          // d'actions du premier round — celui ouvert avant la première réflexion —
+          // pendant que les lignes de réflexion se rangeaient à la queue. Le fil
+          // racontait alors un agent qui agit d'un trait puis réfléchit trois fois,
+          // soit l'inverse de ce qui s'est passé : il réfléchit ENTRE ses actions.
+          current = null;
           items.push({
             kind: "reasoning",
             id: e.id,
@@ -929,16 +936,37 @@ export function AgentEventFeed({
     return ids;
   }, [items, active]);
 
-  // Cale le flux en bas dès l'ouverture (même run terminé) puis à chaque nouvel
-  // event tant qu'il est actif — et à chaque poussée du texte en direct, sinon la
-  // réponse s'écrirait sous la ligne de flottaison. useLayoutEffect → pas de flash
-  // « scroll depuis le haut » avant peinture.
-  // Le chrono de réflexion COMPTE dans le déclencheur : pendant une phase de pure
-  // pensée, le texte ne bouge pas — sans lui, le fil cesserait de suivre.
-  const liveLength = (live?.text.length ?? 0) + (live?.reasoningMs ?? 0);
+  // Le fil se cale en bas à l'OUVERTURE de la session (et à chaque changement de
+  // session) : on arrive là où le travail se passe. useLayoutEffect → pas de flash
+  // « scroll depuis le haut » avant peinture. On attend que les events de la session
+  // soient LÀ : le prompt de lancement, lui, s'affiche dès le changement de session
+  // (il vient de la prop) — ancrer sur cette seule bulle laisserait le fil en haut
+  // du déroulé une seconde plus tard.
+  //
+  // Ensuite, plus rien ne bouge tout seul. Le fil suivait auparavant chaque event et
+  // chaque poussée du texte en direct : impossible de relire un pas de travail, le
+  // suivant arrachait la vue vers le bas. Pendant que l'agent travaille, la vue reste
+  // donc où l'utilisateur l'a laissée, et le contenu grandit dessous.
+  const anchoredRunRef = useRef<string | null | undefined>(undefined);
   useLayoutEffect(() => {
-    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
-  }, [items.length, liveLength]);
+    const node = feedRef.current;
+    if (!node || loading || items.length === 0) return;
+    if (anchoredRunRef.current === runId) return;
+    node.scrollTop = node.scrollHeight;
+    anchoredRunRef.current = runId;
+  }, [runId, loading, items.length]);
+
+  // Un message de l'utilisateur, LUI, se suit : c'est son geste, et sa bulle doit
+  // être sous ses yeux. Le compte des messages en vol ne monte qu'à l'envoi.
+  const pendingCount = pendingUserMessages.length;
+  const lastPendingCountRef = useRef(pendingCount);
+  useLayoutEffect(() => {
+    const node = feedRef.current;
+    if (node && pendingCount > lastPendingCountRef.current) {
+      node.scrollTop = node.scrollHeight;
+    }
+    lastPendingCountRef.current = pendingCount;
+  }, [pendingCount]);
 
   if (items.length === 0 && stillPending.length === 0 && liveItems.length === 0) {
     return (

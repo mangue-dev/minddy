@@ -1842,6 +1842,28 @@ export async function executeAgentRun(
     // qui casse un type doit le faire dire avant que le parent ne réponde.
     const editedPaths = new Set<string>();
 
+    // Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
+    // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
+    // round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
+    const quotaNow = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+    // Deux plafonds, le plus serré gagne : le QUOTA du compte, et celui que
+    // l'appelant a éventuellement posé sur CE run. Une chaîne d'automatisation
+    // n'en ajoute PAS un troisième (MIN-147) : la couper au milieu laisserait un
+    // ticket à moitié fait sans explication lisible — c'est le quota, global et
+    // visible, qui borne la dépense.
+    //
+    // Calculé AVANT `subagentRunner`, et pas juste avant la boucle : la closure du
+    // runner le LIT, et `resumeSuspended()` l'appelle SYNCHRONEMENT — une fille
+    // reprise n'a aucun `await` avant l'objet passé à `runAgentLoop`. Déclaré plus
+    // bas, `budgetUsd` était alors dans sa zone morte temporelle, et la reprise
+    // mourait sur un `ReferenceError` (MIN-169). L'invariant — rien de ce que la
+    // closure capture ne se déclare après elle — est tenu par
+    // `subagent-runner-init.test.ts`.
+    const budgetUsd = minDefined(
+      quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
+      run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd)),
+    );
+
     // ── Sous-agents (MIN-112) ──────────────────────────────────────────────────
     /** Chrono de la boucle : le budget restant du chunk borne chaque sous-agent. */
     let loopStartedAt = Date.now();
@@ -2135,20 +2157,6 @@ export async function executeAgentRun(
       if (editedPaths.size > 0) repoTouched = true;
       return (await typeCheckBlock(budgetMs)) ?? (await selfReviewBlock(budgetMs));
     };
-
-    // Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
-    // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
-    // round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
-    const quotaNow = await checkAgentQuota(run.created_by ?? "").catch(() => null);
-    // Deux plafonds, le plus serré gagne : le QUOTA du compte, et celui que
-    // l'appelant a éventuellement posé sur CE run. Une chaîne d'automatisation
-    // n'en ajoute PAS un troisième (MIN-147) : la couper au milieu laisserait un
-    // ticket à moitié fait sans explication lisible — c'est le quota, global et
-    // visible, qui borne la dépense.
-    const budgetUsd = minDefined(
-      quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
-      run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd)),
-    );
 
     // Chrono de la boucle : c'est depuis ici que se mesure le budget restant d'un
     // sous-agent (`chunkRemainingMs`).

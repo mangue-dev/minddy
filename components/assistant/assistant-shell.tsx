@@ -420,6 +420,16 @@ export const AssistantShell = forwardRef<
     ]
   );
 
+  // Le fil ne se recale en bas que sur un GESTE de l'utilisateur : ouvrir une
+  // conversation, ou envoyer un message. Pendant que Numo écrit, il ne bouge plus —
+  // c'est tout ce que `<Conversation>` sait faire, et son bouton de retour en bas
+  // reste là pour rattraper la fin quand on la veut.
+  const userMessageCount = useMemo(
+    () => state.messages.filter((m) => m.role === "user").length,
+    [state.messages],
+  );
+  const scrollAnchor = `${state.conversationId ?? "new"}:${userMessageCount}`;
+
   // Bouton « Copier » : uniquement sur la RÉPONSE du tour — celle qui reste
   // seule sous l'accordéon replié en « A travaillé pendant X ». Ce qui est plié
   // dedans est du travail intermédiaire, pas une réponse à emporter.
@@ -647,7 +657,7 @@ export const AssistantShell = forwardRef<
              FocusScope du Sheet le poserait sur la coquille (halo de focus). */
           <>
             {hasMessages ? (
-              <Conversation className="min-h-0 flex-1" initial="instant">
+              <Conversation className="min-h-0 flex-1" anchor={scrollAnchor}>
                 <ConversationContent
                   className={
                     compact
