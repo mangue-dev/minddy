@@ -20,6 +20,7 @@ import {
   type StripeEvent,
   type StripeSubscription,
 } from "@/lib/server/stripe";
+import { isGiftExpired } from "@/lib/billing-gift";
 
 /**
  * Comptes billing (MIN-72) — une ligne `billing_accounts` par user, écrite
@@ -33,6 +34,8 @@ export interface BillingAccount {
   email: string | null;
   admin_override_plan_id: string | null;
   admin_override_note: string | null;
+  /** Fin du plan offert par un admin — null = sans limite (lib/billing-gift.ts). */
+  admin_override_expires_at: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   stripe_price_id: string | null;
@@ -65,11 +68,31 @@ export function shouldUseStripePlan(status: string | null | undefined): boolean 
   return !!status && STRIPE_ACTIVE_STATUSES.has(status);
 }
 
-export function resolvePlanFromBillingAccount(account: BillingAccount | null): {
+/**
+ * L'override admin encore VALIDE de ce compte, `null` dès l'échéance passée.
+ *
+ * C'est ici que le cadeau à durée s'arrête tout seul : rien n'a besoin de
+ * passer réécrire la ligne pour que le droit tombe — la lecture suffit. Le
+ * balayage (`expireAdminOverrides`) nettoie ensuite, sans rien changer au
+ * résultat.
+ */
+export function activeAdminOverride(
+  account: BillingAccount | null,
+  now: number = Date.now()
+): BillingPlanId | null {
+  const planId = coerceBillingPlanId(account?.admin_override_plan_id);
+  if (!planId) return null;
+  return isGiftExpired(account?.admin_override_expires_at, now) ? null : planId;
+}
+
+export function resolvePlanFromBillingAccount(
+  account: BillingAccount | null,
+  now: number = Date.now()
+): {
   planId: BillingPlanId;
   source: BillingPlanSource;
 } {
-  const adminPlanId = coerceBillingPlanId(account?.admin_override_plan_id);
+  const adminPlanId = activeAdminOverride(account, now);
   if (adminPlanId) return { planId: adminPlanId, source: "admin_override" };
 
   const stripePlanId = coerceBillingPlanId(account?.stripe_plan_id);
@@ -259,6 +282,39 @@ export async function getResolvedBilling(userId: string): Promise<ResolvedBillin
     account,
     stripeConfigured: isStripeConfigured(),
   };
+}
+
+// ── Fin des plans offerts ────────────────────────────────────────────────────
+
+/**
+ * Efface les overrides admin dont l'échéance est passée.
+ *
+ * Ne coupe RIEN : `activeAdminOverride` les ignore déjà depuis la seconde où
+ * ils expirent, quota compris. Ce balayage sert à ce que la ligne arrête de
+ * décrire un cadeau qui n'existe plus — et, accessoirement, l'écriture pousse
+ * le changement de plan aux onglets ouverts (le direct écoute
+ * `billing_accounts`), qui garderaient sinon l'ancien badge jusqu'au prochain
+ * chargement.
+ *
+ * La note part avec le plan : elle disait POURQUOI on offrait, elle n'a plus
+ * d'objet une fois le cadeau fini.
+ */
+export async function expireAdminOverrides(): Promise<{ expired: number }> {
+  const service = getServiceClient();
+  const nowIso = new Date().toISOString();
+  const { data, error } = await service
+    .from("billing_accounts")
+    .update({
+      admin_override_plan_id: null,
+      admin_override_note: null,
+      admin_override_expires_at: null,
+      updated_at: nowIso,
+    })
+    .not("admin_override_expires_at", "is", null)
+    .lte("admin_override_expires_at", nowIso)
+    .select("user_id");
+  if (error) throw new Error(error.message);
+  return { expired: (data ?? []).length };
 }
 
 // ── Reconciliation périodique ────────────────────────────────────────────────

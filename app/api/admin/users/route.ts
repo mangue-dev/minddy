@@ -13,11 +13,8 @@ import {
 } from "@/lib/server/admin-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { getServiceClient } from "@/lib/supabase-service";
-import {
-  DEFAULT_BILLING_PLAN_ID,
-  coerceBillingPlanId,
-  getBillingPlan,
-} from "@/lib/billing-plans";
+import { DEFAULT_BILLING_PLAN_ID, getBillingPlan } from "@/lib/billing-plans";
+import { activeAdminOverride } from "@/lib/server/billing-accounts";
 import type { AdminUserRow, AdminUsersResponse } from "@/lib/types";
 
 /**
@@ -52,12 +49,18 @@ async function usageOf(row: AdminUserRpcRow) {
     const usage = await getUserUsage(row.user_id);
     const account = usage.billing.account;
     const budgetUsd = usage.billing.plan.includedUsageUsd;
+    // Un plan offert dont l'échéance est passée ne compte plus nulle part :
+    // ni dans le plan effectif (la résolution l'ignore), ni ici.
+    const override = activeAdminOverride(account);
     return {
       billing: {
         planId: usage.billing.planId,
         source: usage.billing.source,
-        override: coerceBillingPlanId(account?.admin_override_plan_id),
-        overrideNote: account?.admin_override_note ?? null,
+        override,
+        overrideNote: override ? (account?.admin_override_note ?? null) : null,
+        overrideExpiresAt: override
+          ? (account?.admin_override_expires_at ?? null)
+          : null,
         stripePlanId: account?.stripe_plan_id ?? null,
         stripeStatus: account?.stripe_subscription_status ?? null,
       },
@@ -73,6 +76,7 @@ async function usageOf(row: AdminUserRpcRow) {
         source: "default" as const,
         override: null,
         overrideNote: null,
+        overrideExpiresAt: null,
         stripePlanId: null,
         stripeStatus: null,
       },

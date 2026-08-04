@@ -25,9 +25,15 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { EyeOff, RotateCcw, Search, Undo2, X } from "lucide-react";
+import { CalendarClock, EyeOff, RotateCcw, Search, Undo2, X } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { BILLING_PLANS, type BillingPlanId } from "@/lib/billing-plans";
+import {
+  DEFAULT_GIFT_DURATION,
+  GIFT_DURATIONS,
+  giftExpiresAt,
+  type GiftDuration,
+} from "@/lib/billing-gift";
 import type { AdminUserRow, AdminUsersResponse } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 
@@ -54,6 +60,10 @@ import type { MessageKey } from "@/lib/i18n-keys";
 
 const PAGE_SIZE = 25;
 const NO_OVERRIDE = "none";
+/** Valeur du sélecteur de durée qui n'envoie AUCUNE durée : l'échéance en place
+ *  ne bouge pas. Proposée seulement quand un cadeau est déjà en cours — sinon
+ *  « ne pas changer » ne changerait rien de rien. */
+const KEEP_DURATION = "keep";
 
 function fmtCost(n: number): string {
   if (n === 0) return "$0";
@@ -109,7 +119,9 @@ function Cell({ value, label }: { value: number; label: string }) {
 
 function PlanBadge({ user }: { user: AdminUserRow }) {
   const t = useTranslations("Admin");
+  const format = useFormatter();
   const overridden = user.billing.source === "admin_override";
+  const until = user.billing.overrideExpiresAt;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -124,7 +136,20 @@ function PlanBadge({ user }: { user: AdminUserRow }) {
           ) : null}
         </Badge>
       </TooltipTrigger>
-      <TooltipContent>{t(`billing.source_${user.billing.source}`)}</TooltipContent>
+      <TooltipContent>
+        <span>{t(`billing.source_${user.billing.source}`)}</span>
+        {until ? (
+          <span className="block text-background/70">
+            {t("billing.giftUntil", {
+              at: format.dateTime(new Date(until), {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }),
+            })}
+          </span>
+        ) : null}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -158,6 +183,7 @@ function UserSheet({
   const t = useTranslations("Admin");
   const format = useFormatter();
   const [override, setOverride] = useState<string>(NO_OVERRIDE);
+  const [duration, setDuration] = useState<string>(DEFAULT_GIFT_DURATION);
   const [note, setNote] = useState("");
   const [savingPlan, setSavingPlan] = useState(false);
   const [busyQuota, setBusyQuota] = useState(false);
@@ -167,6 +193,9 @@ function UserSheet({
   useEffect(() => {
     setOverride(user?.billing.override ?? NO_OVERRIDE);
     setNote(user?.billing.overrideNote ?? "");
+    // Cadeau déjà en cours → on ne touche pas à son échéance par défaut ;
+    // sinon la durée courante, « 1 mois ».
+    setDuration(user?.billing.override ? KEEP_DURATION : DEFAULT_GIFT_DURATION);
   }, [user?.userId, user?.billing.override, user?.billing.overrideNote]);
 
   if (!user) return null;
@@ -193,6 +222,9 @@ function UserSheet({
           userId: user.userId,
           planId: override === NO_OVERRIDE ? null : override,
           note: note.trim() || null,
+          // Durée omise = l'échéance en place ne bouge pas (le serveur ne
+          // relance pas le compte à rebours sur une simple correction de note).
+          duration: duration === KEEP_DURATION ? null : duration,
         }),
       });
       const data = (await response.json()) as {
@@ -200,6 +232,7 @@ function UserSheet({
         source?: AdminUserRow["billing"]["source"];
         override?: BillingPlanId | null;
         note?: string | null;
+        expiresAt?: string | null;
         error?: string;
       };
       if (!response.ok) throw new Error(data.error);
@@ -211,6 +244,7 @@ function UserSheet({
           source: data.source ?? user.billing.source,
           override: data.override ?? null,
           overrideNote: data.note ?? null,
+          overrideExpiresAt: data.expiresAt ?? null,
         },
       });
       toast.success(t("billing.saved"));
@@ -459,7 +493,7 @@ function UserSheet({
             )}
           </section>
 
-          {/* ── Plan + override admin ──────────────────────────────────── */}
+          {/* ── Plan : offrir, pour un temps ou sans limite ────────────── */}
           <section className="space-y-3">
             <div>
               <h3 className="text-sm font-semibold">{t("billing.title")}</h3>
@@ -475,6 +509,16 @@ function UserSheet({
               <Badge variant="outline">
                 {t(`billing.source_${user.billing.source}`)}
               </Badge>
+              {user.billing.override ? (
+                <Badge variant="outline" className="gap-1">
+                  <CalendarClock className="size-3" />
+                  {user.billing.overrideExpiresAt
+                    ? t("billing.giftUntil", {
+                        at: dt(user.billing.overrideExpiresAt),
+                      })
+                    : t("billing.giftNoEnd")}
+                </Badge>
+              ) : null}
               {user.billing.stripePlanId && user.billing.source !== "stripe" ? (
                 <span className="text-xs text-muted-foreground">
                   {t("billing.stripeUnderneath", { plan: user.billing.stripePlanId })}
@@ -483,26 +527,76 @@ function UserSheet({
             </div>
 
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t("billing.overrideLabel")}
-                </label>
-                <Select value={override} onValueChange={setOverride}>
-                  <SelectTrigger size="sm" className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_OVERRIDE}>
-                      {t("billing.overrideNone")}
-                    </SelectItem>
-                    {BILLING_PLANS.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id}>
-                        {plan.id}
+              <div className="flex flex-wrap gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {t("billing.overrideLabel")}
+                  </label>
+                  <Select value={override} onValueChange={setOverride}>
+                    <SelectTrigger size="sm" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_OVERRIDE}>
+                        {t("billing.overrideNone")}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {BILLING_PLANS.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {t("billing.durationLabel")}
+                  </label>
+                  <Select
+                    value={duration}
+                    onValueChange={setDuration}
+                    disabled={override === NO_OVERRIDE}
+                  >
+                    <SelectTrigger size="sm" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* « Ne pas changer » n'a de sens que sur un cadeau déjà
+                          en cours — et c'est alors le choix par défaut. */}
+                      {user.billing.override ? (
+                        <SelectItem value={KEEP_DURATION}>
+                          {t("billing.durationKeep")}
+                        </SelectItem>
+                      ) : null}
+                      {GIFT_DURATIONS.map((id) => (
+                        <SelectItem key={id} value={id}>
+                          {/* Clé assemblée à l'exécution depuis la liste des durées. */}
+                          {t(`billing.duration_${id}` as MessageKey<"Admin">)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              {/* Ce que le bouton va poser, en toutes lettres : une durée
+                  choisie ne dit pas d'elle-même à quelle date elle tombe. */}
+              {override !== NO_OVERRIDE ? (
+                <p className="text-xs text-muted-foreground">
+                  {duration === KEEP_DURATION
+                    ? user.billing.overrideExpiresAt
+                      ? t("billing.previewKeep", {
+                          at: dt(user.billing.overrideExpiresAt),
+                        })
+                      : t("billing.previewNoEnd")
+                    : duration === "unlimited"
+                      ? t("billing.previewNoEnd")
+                      : t("billing.previewUntil", {
+                          at: dt(
+                            giftExpiresAt(duration as GiftDuration) as string,
+                          ),
+                        })}
+                </p>
+              ) : null}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   {t("billing.noteLabel")}
@@ -516,7 +610,9 @@ function UserSheet({
               </div>
               <Button size="sm" onClick={() => void savePlan()} disabled={savingPlan}>
                 {savingPlan ? <Spinner /> : null}
-                {t("billing.save")}
+                {override === NO_OVERRIDE
+                  ? t("billing.stopGift")
+                  : t("billing.gift")}
               </Button>
             </div>
           </section>

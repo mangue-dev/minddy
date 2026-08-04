@@ -1067,6 +1067,8 @@ export interface AdminUserRow {
     source: "admin_override" | "stripe" | "default";
     override: BillingPlanId | null;
     overrideNote: string | null;
+    /** Fin du plan offert (ISO) — null = sans limite, ou pas d'override. */
+    overrideExpiresAt: string | null;
     stripePlanId: string | null;
     stripeStatus: string | null;
   };
