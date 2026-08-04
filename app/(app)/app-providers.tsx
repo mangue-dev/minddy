@@ -11,6 +11,7 @@ import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { AssistantChatProvider } from "@/lib/assistant-chat-context";
 import { ScratchpadProvider } from "@/lib/scratchpad-context";
 import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
+import { SecondarySidebarProvider } from "@/lib/secondary-sidebar-context";
 import { ZenModeProvider } from "@/lib/zen-mode-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
@@ -56,21 +57,26 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                   {/* Le mode zen (MIN-134) enveloppe le shell ET le FAB : c'est
                       le chrome des deux qu'il masque, et ils sont frères. */}
                   <ZenModeProvider>
-                    <KeyboardProvider>
-                      <UndoProvider>
-                        <CreateProvider>
-                          <BulkActionsProvider>
-                            <AppShellChrome>{children}</AppShellChrome>
-                          </BulkActionsProvider>
-                        </CreateProvider>
-                        <AssistantPanel />
-                        <AssistantFab />
-                        <ScratchpadModal />
-                        <KeyboardCheatsheet />
-                        <AnalyticsProjectGroup />
-                        <NewVersionBanner />
-                      </UndoProvider>
-                    </KeyboardProvider>
+                    {/* Au-dessus du clavier : ⌘B lit ce contexte pour savoir
+                        qu'une page porte une sidebar secondaire — la primaire y
+                        est en rail, il n'y a plus rien à replier. */}
+                    <SecondarySidebarProvider>
+                      <KeyboardProvider>
+                        <UndoProvider>
+                          <CreateProvider>
+                            <BulkActionsProvider>
+                              <AppShellChrome>{children}</AppShellChrome>
+                            </BulkActionsProvider>
+                          </CreateProvider>
+                          <AssistantPanel />
+                          <AssistantFab />
+                          <ScratchpadModal />
+                          <KeyboardCheatsheet />
+                          <AnalyticsProjectGroup />
+                          <NewVersionBanner />
+                        </UndoProvider>
+                      </KeyboardProvider>
+                    </SecondarySidebarProvider>
                   </ZenModeProvider>
                 </ScratchpadProvider>
               </AssistantChatProvider>

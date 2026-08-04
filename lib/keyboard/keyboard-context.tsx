@@ -18,7 +18,8 @@
 //
 // It also owns two singleton shortcuts, co-located here like AutoKap's keyboard
 // store: ⌘/Ctrl+B toggles the app sidebar (whose collapse state is lifted here
-// so a keystroke can flip it).
+// so a keystroke can flip it) — sauf sur une page à sidebar secondaire, où la
+// primaire est en rail et n'a plus de repli à basculer.
 
 import {
   createContext,
@@ -37,6 +38,7 @@ import { toast, Kbd } from "mangue-ui";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
+import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { trackEvent } from "@/lib/analytics";
 
@@ -106,6 +108,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { toggle: toggleAssistant } = useAssistantPanel();
   const { open: openScratchpad } = useScratchpad();
+  const { present: secondaryPresent } = useSecondarySidebar();
   const tk = useTranslations("Keyboard");
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -135,6 +138,8 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   openScratchpadRef.current = openScratchpad;
   const thenRef = useRef(tk("then"));
   thenRef.current = tk("then");
+  const secondaryPresentRef = useRef(secondaryPresent);
+  secondaryPresentRef.current = secondaryPresent;
   // Mirrors chordPrefix synchronously for the listener (state is async).
   const armedRef = useRef(false);
 
@@ -225,6 +230,11 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         if (isTypingTarget(e.target) || isDialogOpen()) return;
         e.preventDefault();
         e.stopImmediatePropagation();
+        // Sur une page à sidebar secondaire, la primaire est en rail et se
+        // déplie au survol, par-dessus, sans rien décaler : il n'y a plus de
+        // repli à basculer. On consomme quand même la frappe — la laisser
+        // passer rendrait le gras de l'éditeur à un endroit inattendu.
+        if (secondaryPresentRef.current) return;
         setSidebarCollapsed((c) => !c);
         return;
       }

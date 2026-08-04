@@ -12,6 +12,7 @@ import { LaunchAgentPicker } from "@/components/agents/launch-agent-picker";
 import { NoteCompose } from "@/components/agents/note-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { NumoIcon } from "@/components/numo-icon";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
@@ -330,20 +331,12 @@ export function AgentsPage() {
   return (
     <div className="flex h-full min-h-0">
       {/* ── Gauche : liste des sessions ─────────────────────────────────── */}
-      <div
-        className={cn(
-          "min-h-0 w-full shrink-0 flex-col overflow-y-auto border-border md:flex md:w-80 md:border-r",
-          mobileDetail ? "hidden" : "flex",
-        )}
+      <SecondarySidebar
+        title={t("title")}
+        count={listCount}
+        hiddenOnMobile={mobileDetail}
+        actions={<LaunchAgentPicker sessions={sessions} />}
       >
-        <div className="flex items-center gap-2 px-4 pt-5 pb-2">
-          <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
-          <span className="text-sm tabular-nums text-muted-foreground">{listCount}</span>
-          <div className="ml-auto">
-            <LaunchAgentPicker sessions={sessions} />
-          </div>
-        </div>
-
         {loading && !showDraftEntry ? (
           <div className="flex flex-col gap-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -351,7 +344,7 @@ export function AgentsPage() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col px-2 pb-4">
+          <div className="flex flex-col px-2 pt-2 pb-4">
             {/* Entrée synthétique du brouillon — un anneau discret la distingue des
                 vraies sessions ; elle disparaît si le 1er message n'est pas envoyé. */}
             {showDraftEntry && draft ? (
@@ -451,7 +444,7 @@ export function AgentsPage() {
             })}
           </div>
         )}
-      </div>
+      </SecondarySidebar>
 
       {/* ── Droite : conversation de la session (ou brouillon en compose) ─── */}
       <div

@@ -42,17 +42,3 @@ export const ENV_LOGO_TINT: Record<AppEnv, string> = {
   preview: "text-blue-600 dark:text-blue-400",
   development: "text-pink-600 dark:text-pink-400",
 };
-
-/**
- * Le mot posé à côté du brandmark dans la barre latérale, qui se lit comme la
- * suite du logo. `null` en production : la marque y est seule, sans mention.
- *
- * Volontairement hors des catalogues i18n — ce sont les noms d'environnement de
- * Vercel, des identifiants techniques identiques en français et en anglais, au
- * même titre qu'un numéro de version. Ils ne sortent jamais en production.
- */
-export const ENV_LABEL: Record<AppEnv, string | null> = {
-  production: null,
-  preview: "preview",
-  development: "dev",
-};

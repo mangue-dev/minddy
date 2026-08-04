@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
@@ -64,6 +64,11 @@ import {
   type AppNavItem,
   type AppNavSection,
 } from "@/components/app-sidebar";
+import { SecondarySidebarSlot } from "@/components/secondary-sidebar";
+import {
+  routeHasSecondaryNav,
+  useSecondarySidebar,
+} from "@/lib/secondary-sidebar-context";
 import {
   settingsSectionHref,
   useSettingsSections,
@@ -212,6 +217,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Command palette open state — shared by the header search pill and the
   // global shortcuts (⌘K / ⌘P / F, handled inside <CommandPalette>).
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // La page porte-t-elle une sidebar secondaire ? Le montage de la barre est la
+  // réponse exacte ; la route donne la même avant l'hydratation, où rien n'est
+  // encore monté (cf. routeHasSecondaryNav). Sans elle, le HTML du serveur
+  // partirait sidebar primaire dépliée et contenu pleine largeur, pour tout
+  // réorganiser d'un coup à l'hydratation.
+  const { present: secondaryPresent } = useSecondarySidebar();
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  const secondaryNav =
+    secondaryPresent || (!hydrated && routeHasSecondaryNav(pathname));
 
   const currentProjectId = projectIdFromPath(pathname);
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
@@ -1054,10 +1070,27 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      // Mode zen (MIN-134) : on ne CACHE pas la sidebar et le header, on ne les
-      // donne pas. AppShell ne rend alors aucune de leurs boîtes, et le contenu
-      // occupe toute la fenêtre — pas de gouttière vide là où était la sidebar.
-      sidebar={zen ? undefined : <AppSidebar sections={sections} modeKey={modeKey} />}
+      // Le bloc de navigation : la sidebar primaire, puis le point d'accueil de
+      // la sidebar SECONDAIRE que la page y téléporte. Les deux vivent dans la
+      // même boîte, à gauche du header — c'est ce qui décale le fil d'Ariane et
+      // le contenu, au lieu de les laisser passer au-dessus d'une colonne.
+      //
+      // Mode zen (MIN-134) : on ne CACHE pas la sidebar primaire et le header,
+      // on ne les donne pas — pas de gouttière vide là où était la barre. La
+      // secondaire, elle, RESTE : sur /pull-requests elle est le seul moyen de
+      // passer d'une PR à l'autre, et le zen n'est pas censé enfermer.
+      sidebar={
+        <div className="relative flex h-full">
+          {zen ? null : (
+            <AppSidebar
+              sections={sections}
+              modeKey={modeKey}
+              overlay={secondaryNav}
+            />
+          )}
+          <SecondarySidebarSlot reserve={secondaryNav} />
+        </div>
+      }
       header={
         zen ? undefined : (
           <Header

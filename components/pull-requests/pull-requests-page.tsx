@@ -22,6 +22,7 @@ import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { ProjectOrb } from "@/components/project-orb";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -212,20 +213,16 @@ export function PullRequestsPage() {
   return (
     <div className="flex h-full min-h-0">
       {/* ── Gauche : liste des PR ───────────────────────────────────────── */}
-      <div
-        className={cn(
-          "min-h-0 w-full shrink-0 flex-col overflow-y-auto border-border md:flex md:w-80 md:border-r",
-          mobileDetail ? "hidden" : "flex",
-        )}
-      >
-        <div className="flex items-center gap-2 px-4 pt-5 pb-3">
-          <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
-          <span className="text-sm tabular-nums text-muted-foreground">{filtered.length}</span>
-          {/* `-mr-2` compense le padding du bouton : son libellé s'aligne alors
-              sur le bord droit de la liste, pas 8 px en-deçà. */}
+      <SecondarySidebar
+        title={t("title")}
+        count={filtered.length}
+        hiddenOnMobile={mobileDetail}
+        actions={
+          /* `-mr-2` compense le padding du bouton : son libellé s'aligne alors
+             sur le bord droit de la liste, pas 8 px en-deçà. */
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-mr-2 ml-auto")}>
+              <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-mr-2")}>
                 {t(STATE_FILTERS.find((s) => s.value === filter)?.label ?? "filterOpen")}
                 <ChevronDown aria-hidden />
               </Button>
@@ -245,13 +242,13 @@ export function PullRequestsPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-
+        }
+      >
         {/* Filtre d'auteur — la seconde question qu'on se pose devant une liste
             où Numo et les humains cohabitent. Masqué tant qu'il n'y a qu'un seul
             auteur : il n'aurait rien à trancher. */}
         {authors.length > 1 ? (
-          <div className="flex px-4 pb-3">
+          <div className="flex px-4 pt-3 pb-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-ml-2 max-w-full")}>
@@ -301,7 +298,7 @@ export function PullRequestsPage() {
             />
           </div>
         ) : (
-          <div className="flex flex-col px-2 pb-4">
+          <div className="flex flex-col px-2 pt-2 pb-4">
             {filtered.map((pr) => {
               // L'identifiant de la PR d'abord — c'est CETTE ligne qu'on regarde ;
               // le ticket lié se lit à droite, derrière un chevron qui dit la
@@ -406,7 +403,7 @@ export function PullRequestsPage() {
             ) : null}
           </div>
         )}
-      </div>
+      </SecondarySidebar>
 
       {/* ── Droite : détail de la PR ────────────────────────────────────── */}
       <div

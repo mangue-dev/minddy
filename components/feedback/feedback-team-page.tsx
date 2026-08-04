@@ -56,6 +56,7 @@ import {
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -356,35 +357,27 @@ export function FeedbackTeamPage() {
   return (
     <div className="flex h-full min-h-0">
       {/* ── Liste ────────────────────────────────────────────────────────── */}
-      <div
-        className={cn(
-          "flex w-full flex-col border-r md:w-80 md:shrink-0",
-          mobileDetail && "hidden md:flex"
-        )}
-      >
-        {/* Header façon triage : gros titre + compteur discret. */}
-        <div className="flex items-center gap-2 px-4 pt-5 pb-2">
-          <h1 className="font-display text-lg font-semibold tracking-tight">{t("title")}</h1>
-          {visiblePosts.length > 0 && (
-            <span className="text-sm tabular-nums text-muted-foreground">
-              {visiblePosts.length}
-            </span>
-          )}
+      <SecondarySidebar
+        title={t("title")}
+        count={visiblePosts.length > 0 ? visiblePosts.length : undefined}
+        hiddenOnMobile={mobileDetail}
+        actions={
           <Button
             variant="ghost"
             size="sm"
-            className="ml-auto"
+            className="-mr-2"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
             {t("newFeedback")}
           </Button>
-        </div>
+        }
+      >
         {toReviewCount > 0 && (
           <Tabs
             value={onlyToReview ? "review" : "all"}
             onValueChange={(v) => setOnlyToReview(v === "review")}
-            className="px-4 pb-1"
+            className="shrink-0 px-4 pt-2 pb-1"
           >
             <TabsList variant="line" className="w-full justify-start p-0">
               <TabsTrigger value="all">{t("filterAll")}</TabsTrigger>
@@ -397,7 +390,7 @@ export function FeedbackTeamPage() {
             </TabsList>
           </Tabs>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1">
           {isLoading ? (
             <div className="flex flex-col gap-2 p-4">
               <Skeleton className="h-14 w-full" />
@@ -468,7 +461,7 @@ export function FeedbackTeamPage() {
             </ul>
           )}
         </div>
-      </div>
+      </SecondarySidebar>
 
       {/* ── Détail ──────────────────────────────────────────────────────── */}
       <div className={cn("min-w-0 flex-1", !mobileDetail && "hidden md:block")}>

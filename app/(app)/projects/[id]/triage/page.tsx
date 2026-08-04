@@ -18,6 +18,7 @@ import {
 } from "mangue-ui";
 import { Check, ChevronLeft, CircleDotDashed, Copy, X } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import {
@@ -262,20 +263,11 @@ export default function TriagePage() {
   return (
     <div className="flex h-full min-h-0">
       {/* ── Left: pending list ─────────────────────────────────────────── */}
-      <div
-        className={cn(
-          "min-h-0 w-full shrink-0 flex-col overflow-y-auto border-border md:flex md:w-80 md:border-r",
-          mobileDetail ? "hidden" : "flex"
-        )}
+      <SecondarySidebar
+        title={t("title")}
+        count={triageIssues.length}
+        hiddenOnMobile={mobileDetail}
       >
-        <div className="flex items-center gap-2 px-4 pt-5 pb-2">
-          <h1 className="font-display text-lg font-semibold tracking-tight">
-            {t("title")}
-          </h1>
-          <span className="text-sm tabular-nums text-muted-foreground">
-            {triageIssues.length}
-          </span>
-        </div>
         {loading ? (
           <div className="flex flex-col gap-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -283,7 +275,7 @@ export default function TriagePage() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col px-2 pb-4">
+          <div className="flex flex-col px-2 pt-2 pb-4">
             {triageIssues.map((issue) => (
               <button
                 key={issue.id}
@@ -320,7 +312,7 @@ export default function TriagePage() {
             ))}
           </div>
         )}
-      </div>
+      </SecondarySidebar>
 
       {/* ── Right: full issue view ─────────────────────────────────────── */}
       <div
