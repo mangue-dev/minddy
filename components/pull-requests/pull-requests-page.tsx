@@ -62,10 +62,18 @@ const AUTHOR_NUMO = "__numo__";
 const STATE_FILTERS: ReadonlyArray<{
   value: PullRequestStateFilter;
   label: MessageKey<"PullRequests">;
+  /**
+   * Titre de la colonne vide quand c'est CET état, et lui seul, qui la vide —
+   * « aucune pull request fusionnée » dit ce qu'on cherchait, là où « aucune
+   * dans ces filtres » renvoie l'utilisateur ouvrir le menu pour se rappeler
+   * lesquels. « Toutes » n'en a pas : un état qui n'exclut rien n'a rien à
+   * nommer, et cette surface-là est déjà traitée avant le rendu de la colonne.
+   */
+  empty?: MessageKey<"PullRequests">;
 }> = [
-  { value: "open", label: "filterOpen" },
-  { value: "merged", label: "filterMerged" },
-  { value: "closed", label: "filterClosed" },
+  { value: "open", label: "filterOpen", empty: "emptyOpen" },
+  { value: "merged", label: "filterMerged", empty: "emptyMerged" },
+  { value: "closed", label: "filterClosed", empty: "emptyClosed" },
   { value: "all", label: "filterAll" },
 ];
 
@@ -399,11 +407,23 @@ export function PullRequestsPage() {
              « Rien ne correspond » et « aucune PR dans cet état » ne sont pas la
              même nouvelle : la première se répare en effaçant trois lettres, la
              seconde demande de rouvrir le filtre — d'où le bouton, qui n'a rien
-             à offrir tant que c'est la saisie qui restreint. */
+             à offrir tant que c'est la saisie qui restreint.
+
+             Et quand l'état est la SEULE restriction, la scène le nomme. Dès
+             qu'un auteur s'y ajoute, elle repasse au libellé générique : « aucune
+             pull request ouverte » serait faux s'il en existe, mais d'un autre. */
           <EmptyScene
             size="compact"
             icon={GitPullRequest}
-            title={query.trim() ? tCommon("noFilterMatch") : t("emptyState")}
+            title={
+              query.trim()
+                ? tCommon("noFilterMatch")
+                : t(
+                    (author === AUTHOR_ALL
+                      ? STATE_FILTERS.find((s) => s.value === filter)?.empty
+                      : undefined) ?? "emptyState",
+                  )
+            }
             className="py-10"
           >
             {query.trim() ? null : (

@@ -2378,6 +2378,9 @@
   "PullRequests": {
     "title": "Pull requests",
     "emptyState": "No pull request matches these filters",
+    "emptyOpen": "No open pull request",
+    "emptyMerged": "No merged pull request",
+    "emptyClosed": "No closed pull request",
     "emptyShowAll": "Show all pull requests",
     "emptyNoProject": "No project, so no repository to watch",
     "emptyNoRepo": "Link a GitHub or GitLab repository to a project to see its pull requests here",
