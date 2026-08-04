@@ -1282,6 +1282,37 @@ function sanitizeKeyPart(name: string): string {
 }
 
 /**
+ * Les types servis TELS QUELS depuis le bucket public. Tout le reste est stocké
+ * en `application/octet-stream`.
+ *
+ * Le type déclaré vient du client, et l'URL rendue ici est PUBLIQUE, stable et
+ * portée par le domaine de notre projet Supabase. Un `text/html` s'y ouvrirait
+ * comme une page (et un `image/svg+xml` atteint EN DIRECT exécute son script) :
+ * n'importe quel compte ayant accès à une PR y hébergerait une page de
+ * hameçonnage à notre nom. La garde d'accès à la PR décide QUI peut écrire ;
+ * elle ne dit rien de CE QUI est servi.
+ *
+ * Ce qui reste inline est ce que le composer affiche vraiment — les images
+ * bitmap — plus les deux formats qu'on ouvre sans y penser. Le reste se
+ * télécharge, ce qu'un lien de pièce jointe fait déjà.
+ */
+const INLINE_SAFE_ATTACHMENT_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "application/pdf",
+  "text/plain",
+]);
+
+/** Le type sous lequel le fichier sera SERVI (cf. la liste ci-dessus). */
+function servedAttachmentType(declared: string): string {
+  const type = declared.split(";")[0].trim().toLowerCase();
+  return INLINE_SAFE_ATTACHMENT_TYPES.has(type) ? type : "application/octet-stream";
+}
+
+/**
  * Héberge un fichier destiné à un commentaire de pull request (MIN-162) et rend
  * son URL PUBLIQUE — celle que le corps du commentaire portera.
  *
@@ -1310,13 +1341,12 @@ export async function prAttachmentResponse(
   }
 
   const name = (file.name || "fichier").slice(-200);
+  const contentType = servedAttachmentType(file.type || "");
   const path = `${scope.pr.id}/${crypto.randomUUID()}/${sanitizeKeyPart(name)}`;
   const service = getServiceClient();
   const { error } = await service.storage
     .from(FORGE_ATTACHMENTS_BUCKET)
-    .upload(path, await file.arrayBuffer(), {
-      contentType: file.type || "application/octet-stream",
-    });
+    .upload(path, await file.arrayBuffer(), { contentType });
   if (error) {
     console.error("[pr-actions] forge attachment upload failed:", error.message);
     return NextResponse.json({ error: "Upload failed" }, { status: 502 });
@@ -1327,8 +1357,10 @@ export async function prAttachmentResponse(
     url: data.publicUrl,
     name,
     // Le composer en déduit la forme markdown : `![](…)` pour une image, un lien
-    // nommé pour le reste. C'est le serveur qui sait ce qu'il a reçu.
-    isImage: (file.type || "").startsWith("image/"),
+    // nommé pour le reste. C'est le type SERVI qui tranche, pas celui qui a été
+    // annoncé — sans quoi un fichier reversé en octet-stream partirait quand
+    // même en `![](…)`, et le commentaire porterait une image morte.
+    isImage: contentType.startsWith("image/"),
   });
 }
 

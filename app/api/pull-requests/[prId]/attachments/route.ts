@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizePrRequest, prAttachmentResponse } from "@/lib/server/agent/pr-actions";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
  * POST /api/pull-requests/[prId]/attachments — héberge un fichier destiné à un
@@ -34,5 +35,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
+  // Même garde que les pièces jointes de ticket : la destination est un bucket
+  // PUBLIC de 20 Mo par fichier, et rien d'autre ne borne la boucle qui en
+  // téléverse un millier.
+  const rl = checkSessionRateLimit(auth.userId, "pr-attachment-create");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
   return prAttachmentResponse(auth.scope, file);
 }
