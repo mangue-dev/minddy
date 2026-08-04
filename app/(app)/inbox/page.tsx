@@ -18,7 +18,7 @@ import {
   Settings,
   Trash2,
 } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import {
   AutomationAvatar,
   McpAvatar,
@@ -216,6 +216,14 @@ export default function InboxPage() {
   const showInvitations = filter !== "mentions" && invitations.length > 0;
   const pendingCount = unreadCount + invitations.length;
 
+  /**
+   * Rien du tout : aucune notification, aucune invitation en attente. Ni les
+   * filtres ni les actions de tête n'ont alors de prise — l'écran se réduit à la
+   * scène, et au raccourci vers ce qui décide de ce qui atterrit ici. À
+   * distinguer d'un FILTRE vide, qui garde la page et sa ligne « Rien ici ».
+   */
+  const trulyEmpty = !loading && notifications.length === 0 && invitations.length === 0;
+
   // Toute mutation est optimiste dans le hook — ici on ne gère que l'échec.
   const act = (p: Promise<void>) =>
     void p.catch((e) => toast.error((e as Error).message));
@@ -263,6 +271,21 @@ export default function InboxPage() {
     });
     return n.comment_excerpt ? `${sentence} : ${n.comment_excerpt}` : sentence;
   };
+
+  if (trulyEmpty) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-6 py-10">
+        <EmptyScene icon={Inbox} title={t("emptyTitle")}>
+          <Button variant="outline" asChild>
+            <Link href="/settings?tab=inbox">
+              <Settings className="size-4" />
+              {t("settings")}
+            </Link>
+          </Button>
+        </EmptyScene>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -379,14 +402,9 @@ export default function InboxPage() {
         </div>
       ) : notifications.length === 0 ? (
         // Une invitation seule tient lieu de contenu : le « vous êtes à jour »
-        // mentirait juste en dessous d'une chose qui attend une réponse.
-        showInvitations ? null : (
-          <EmptyState
-            className="mt-6"
-            icon={<Inbox className="size-6" />}
-            description={t("emptyMessage")}
-          />
-        )
+        // mentirait juste en dessous d'une chose qui attend une réponse. Sans
+        // invitation, la page entière est déjà partie sur sa scène, plus haut.
+        null
       ) : visible.length === 0 ? (
         showInvitations ? null : (
           <p className="py-16 text-center text-sm text-muted-foreground">

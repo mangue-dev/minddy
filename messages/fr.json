@@ -908,7 +908,7 @@
     "settings": "Paramètres de l'inbox",
     "markAllRead": "Tout marquer comme lu",
     "clearRead": "Supprimer les lues",
-    "emptyMessage": "Vous êtes à jour.",
+    "emptyTitle": "Vous êtes à jour",
     "emptyFiltered": "Rien ici.",
     "filterAll": "Toutes",
     "filterUnread": "Non lues",

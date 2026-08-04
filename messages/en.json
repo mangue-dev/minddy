@@ -908,7 +908,7 @@
     "settings": "Inbox settings",
     "markAllRead": "Mark all as read",
     "clearRead": "Delete read",
-    "emptyMessage": "You're all caught up.",
+    "emptyTitle": "You're all caught up",
     "emptyFiltered": "Nothing here.",
     "filterAll": "All",
     "filterUnread": "Unread",
