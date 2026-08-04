@@ -1327,10 +1327,11 @@
     "recent": "Brouillons récents",
     "untitled": "Sans titre",
     "delete": "Supprimer le brouillon",
-    "closeTitle": "Fermer ce brouillon ?",
+    "closeTitle": "Enregistrer ce brouillon ?",
     "closeDescription": "Vous le retrouverez dans vos brouillons récents.",
-    "closeConfirm": "Fermer le brouillon",
-    "keepEditing": "Continuer la rédaction"
+    "closeConfirm": "Enregistrer",
+    "closeDiscard": "Abandonner",
+    "keepEditing": "Revenir"
   },
   "Picker": {
     "createNamed": "Créer « {name} »",
@@ -1775,10 +1776,10 @@
     "draftResume": "Reprendre le brouillon « {name} »",
     "draftDelete": "Supprimer le brouillon",
     "draftCloseTitle": "Enregistrer ce brouillon ?",
-    "draftCloseDescription": "Vous le retrouverez dans la barre latérale, sous vos projets, et reprendrez à cette étape.",
-    "draftCloseCancel": "Continuer la configuration",
+    "draftCloseDescription": "Vous le retrouverez dans la barre latérale, et reprendrez à cette étape.",
+    "draftCloseCancel": "Revenir",
     "draftCloseDiscard": "Abandonner",
-    "draftCloseConfirm": "Enregistrer le brouillon"
+    "draftCloseConfirm": "Enregistrer"
   },
   "Settings": {
     "title": "Paramètres du projet",

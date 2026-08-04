@@ -284,9 +284,18 @@ export function CreateIssueDialog({
     });
   };
 
-  // Stash the draft and close (the confirmation's "Close draft" action).
+  // Stash the draft and close (the confirmation's "Save" action).
   const saveDraftAndClose = () => {
     saveDraft();
+    closeAndReset();
+  };
+
+  // « Abandonner » : on ferme SANS garder, et le brouillon d'origine s'en va
+  // avec — sinon on retrouverait dans la rangée de reprise celui qu'on croyait
+  // avoir abandonné. Même geste que la création réussie, qui consomme aussi le
+  // brouillon dont elle vient.
+  const discardDraftAndClose = () => {
+    if (activeDraftId) drafts.remove(activeDraftId);
     closeAndReset();
   };
 
@@ -701,6 +710,7 @@ export function CreateIssueDialog({
         open={confirmClose}
         onOpenChange={handleConfirmOpenChange}
         onConfirm={saveDraftAndClose}
+        onDiscard={discardDraftAndClose}
       />
     </>
   );

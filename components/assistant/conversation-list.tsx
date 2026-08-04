@@ -224,10 +224,11 @@ export function ConversationList({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("deleteConfirm.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            {/* `variant`, et non un `className` de couleur : AlertDialogAction
+                pose les classes du bouton sur un Slot parent, donc la couleur
+                écrite ici ne passe pas par tailwind-merge et perdait contre
+                celle du variant — la suppression s'affichait en bouton bleu. */}
+            <AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
               {t("deleteConfirm.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>

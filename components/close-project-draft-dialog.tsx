@@ -21,9 +21,12 @@ import {
  * aller le supprimer dans la barre latérale — la sortie la plus simple serait la
  * plus longue.
  *
- * Le cousin `CloseDraftDialog` (dialogues de création de ticket, MIN-41) n'en a
- * que deux : là-bas le brouillon est local et gratuit, ici il prend une ligne
- * dans la barre latérale jusqu'à ce qu'on s'en occupe.
+ * Le cousin `CloseDraftDialog` (dialogues de création de ticket et d'objectif,
+ * MIN-41) pose exactement la même question, avec les mêmes mots : seul ce qu'il
+ * dit du rangement change — la rangée de reprise du dialogue là-bas, la barre
+ * latérale ici. Deux composants et non un seul parce que les deux brouillons ne
+ * vivent pas au même endroit (localStorage contre table), pas parce que le
+ * dessin diffère : le faire diverger serait la faute à éviter.
  */
 export function CloseProjectDraftDialog({
   open,
@@ -46,11 +49,23 @@ export function CloseProjectDraftDialog({
             {t("draftCloseDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        {/* Trois boutons dans une modale calibrée pour deux (`max-w-sm`) : ils
+            tiennent parce que les libellés sont courts, et `flex-wrap` est la
+            ceinture — une traduction qui s'allonge passe à la ligne DANS la
+            boîte au lieu d'en déborder.
+            L'ordre du DOM est celui de la pile mobile lue de bas en haut
+            (`flex-col-reverse`) ; en ligne, « Abandonner » repart à gauche pour
+            laisser à droite la paire qu'on choisit vraiment. */}
+        <AlertDialogFooter className="sm:flex-wrap">
           <AlertDialogCancel>{t("draftCloseCancel")}</AlertDialogCancel>
+          {/* `variant`, et non un `className` de couleur : `AlertDialogAction`
+              pose les classes du bouton sur un Slot parent, donc une couleur
+              écrite ici ne passe pas par tailwind-merge et perd contre celle du
+              variant — le bouton restait bleu. */}
           <AlertDialogAction
+            variant="destructive"
             onClick={onDiscard}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="sm:order-first sm:mr-auto"
           >
             {t("draftCloseDiscard")}
           </AlertDialogAction>

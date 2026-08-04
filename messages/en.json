@@ -1327,10 +1327,11 @@
     "recent": "Recent drafts",
     "untitled": "Untitled",
     "delete": "Delete draft",
-    "closeTitle": "Close this draft?",
+    "closeTitle": "Save this draft?",
     "closeDescription": "You'll find it in your recent drafts.",
-    "closeConfirm": "Close draft",
-    "keepEditing": "Keep editing"
+    "closeConfirm": "Save",
+    "closeDiscard": "Discard",
+    "keepEditing": "Back"
   },
   "Picker": {
     "createNamed": "Create “{name}”",
@@ -1775,10 +1776,10 @@
     "draftResume": "Resume the “{name}” draft",
     "draftDelete": "Delete draft",
     "draftCloseTitle": "Save this draft?",
-    "draftCloseDescription": "You'll find it in the sidebar, under your projects, and pick up at this step.",
-    "draftCloseCancel": "Keep setting up",
+    "draftCloseDescription": "You'll find it in the sidebar, and pick up at this step.",
+    "draftCloseCancel": "Back",
     "draftCloseDiscard": "Discard",
-    "draftCloseConfirm": "Save draft"
+    "draftCloseConfirm": "Save"
   },
   "Settings": {
     "title": "Project settings",
