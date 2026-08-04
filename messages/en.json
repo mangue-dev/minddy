@@ -245,7 +245,8 @@
     "issueAlreadyLinked": "This issue is already linked to an open pull request.",
     "issueOutsideRepo": "This issue belongs to a project that doesn't link this repository.",
     "prReviewPrNotFound": "This pull request is no longer reachable from a project you can access.",
-    "prReviewPrIncomplete": "This pull request hasn't been fully synced yet: its base branch is unknown, so there is nothing to review against. Refresh the pull request and try again."
+    "prReviewPrIncomplete": "This pull request hasn't been fully synced yet: its base branch is unknown, so there is nothing to review against. Refresh the pull request and try again.",
+    "draftTooLarge": "This draft is too large to save."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -1769,7 +1770,15 @@
     "wizardSeedImportTitle": "Bring your issues over",
     "wizardSeedImportDesc": "Drop a CSV export. You will check the column matching once the project exists — nothing is imported yet.",
     "wizardSeedFileReady": "Imported once the project is created.",
-    "wizardSeedFileLost": "The file did not survive the trip to your git provider — drop it again."
+    "wizardSeedFileLost": "A file can't be kept in a draft — drop it again.",
+    "draftBadge": "Draft",
+    "draftResume": "Resume the “{name}” draft",
+    "draftDelete": "Delete draft",
+    "draftCloseTitle": "Save this draft?",
+    "draftCloseDescription": "You'll find it in the sidebar, under your projects, and pick up at this step.",
+    "draftCloseCancel": "Keep setting up",
+    "draftCloseDiscard": "Discard",
+    "draftCloseConfirm": "Save draft"
   },
   "Settings": {
     "title": "Project settings",

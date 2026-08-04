@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { AppShell, Header, MobileNav, Spinner, cn } from "mangue-ui";
+import { AppShell, Header, MobileNav, Spinner, cn, toast } from "mangue-ui";
 import {
   Home,
   ChevronLeft,
@@ -27,6 +27,8 @@ import {
   Focus,
   PanelsTopLeft,
   Download,
+  FileClock,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -86,6 +88,7 @@ import type {
   SearchIndexObjective,
 } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { draftIconUrl } from "@/lib/project-draft";
 
 /**
  * How many rows from OTHER projects the mobile surfaces get, per data group.
@@ -189,6 +192,15 @@ function countBadge(count: number, label?: string) {
   );
 }
 
+/**
+ * La marque d'un brouillon de projet, à la place exacte du compteur « à trier »
+ * d'un projet créé : c'est le seul point où la ligne diffère, et le vide y
+ * laisserait croire à un projet sans rien à trier.
+ */
+function draftBadge(label: string) {
+  return <FileClock className="size-3.5 text-muted-foreground" aria-label={label} />;
+}
+
 /** Muted monospace identifier badge, e.g. "MIND-42". */
 function identifierBadge(id: string) {
   return (
@@ -206,11 +218,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tSettings = useTranslations("Settings");
   const tExport = useTranslations("Export");
   const tBilling = useTranslations("Billing");
+  const tProjects = useTranslations("Projects");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
-  const { projects, openCreateProject } = useProjects();
+  const {
+    projects,
+    openCreateProject,
+    projectDrafts,
+    openProjectDraft,
+    deleteProjectDraft,
+  } = useProjects();
   const { openCreateIssue, openCreateObjective } = useCreate();
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
@@ -486,6 +505,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         onSelect: openCreateProject,
       });
     }
+    // Les brouillons vivent DANS le groupe « Créer », sous « Nouveau projet » :
+    // un brouillon est une création en cours, et les deux lignes mènent au même
+    // endroit — le wizard, neuf ou repris. Les mettre dans « Aller à » aurait
+    // rangé une modale parmi des destinations.
+    //
+    // Pas de verrou de plan ici, contrairement à « Nouveau projet » : reprendre
+    // un brouillon n'est pas créer, et le plafond se dit à la création.
+    for (const d of projectDrafts) {
+      createItems.push({
+        key: `resume-project-draft-${d.id}`,
+        label: tProjects("draftResume", { name: d.name }),
+        icon: FileClock,
+        keywords: [...createKw, d.name, "brouillon", "draft", "reprendre", "resume"],
+        onSelect: () => openProjectDraft(d),
+      });
+    }
     groups.push({ key: "create", heading: t("create"), items: createItems });
 
     // ── Go to (global) ────────────────────────────────────────────────
@@ -717,7 +752,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tScratch, tSettings, tExport, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
   // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone
@@ -1047,6 +1082,36 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                   : undefined,
             };
           }),
+          // Les brouillons, à la suite des projets et dans la même liste : c'est
+          // la même chose à un état près, et les reléguer ailleurs demanderait
+          // d'aller les chercher. La ligne est celle d'un projet — orbe, nom —
+          // sauf sa marque, et cliquer rouvre le wizard là où on l'a laissé.
+          ...projectDrafts.map(
+            (d): AppNavItem => ({
+              key: `project-draft-${d.id}`,
+              label: d.name,
+              icon: projectOrbIcon(d.id, draftIconUrl(d)),
+              onClick: () => openProjectDraft(d),
+              badge: draftBadge(tProjects("draftBadge")),
+              // Au rail, la ligne se réduit à son orbe : sans la pastille de
+              // coin, un brouillon y serait indiscernable d'un projet.
+              showBadgeCollapsed: true,
+              tooltip: tProjects("draftResume", { name: d.name }),
+              contextActions: [
+                {
+                  id: "delete-project-draft",
+                  label: tProjects("draftDelete"),
+                  icon: <Trash2 className="size-4" />,
+                  variant: "destructive",
+                  onSelect: () => {
+                    void deleteProjectDraft(d.id).catch((err: Error) =>
+                      toast.error(err.message),
+                    );
+                  },
+                },
+              ],
+            }),
+          ),
           {
             key: "new-project",
             label: t("newProject"),
@@ -1061,7 +1126,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t]);
+  }, [currentProject, pathname, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";

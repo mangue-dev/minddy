@@ -72,9 +72,21 @@ export interface AnalyticsEventProps {
   onboarding_completed: { steps_acknowledged: number };
 
   // ── Projets ──
-  project_wizard_opened: { source: "sidebar" | "home" | "palette" | "resume" };
+  /** `draft` = un brouillon repris depuis la barre latérale ; `resume` = le
+   *  retour d'un aller-retour chez le provider git, qui n'est pas une reprise
+   *  volontaire mais le milieu d'un geste. */
+  project_wizard_opened: {
+    source: "sidebar" | "home" | "palette" | "resume" | "draft";
+  };
   project_wizard_step_viewed: { step: string };
+  /** Fermé SANS garder la saisie. Depuis les brouillons de projet, l'abandon
+   *  est un choix explicite (« Abandonner ») et non plus le sort par défaut de
+   *  toute fermeture : c'est `project_wizard_draft_saved` qu'il faut lui
+   *  comparer pour lire l'étape qui fait décrocher. */
   project_wizard_abandoned: { last_step: string };
+  /** Fermé EN GARDANT la saisie — le brouillon prend sa ligne dans la barre
+   *  latérale. L'étape dit où l'on s'arrête quand on ne renonce pas. */
+  project_wizard_draft_saved: { step: string };
   /** La première question du wizard (MIN-171) : d'où on part. C'est la mesure
    *  de laquelle des deux entrées sert vraiment — un projet neuf à cadrer, ou
    *  un backlog qui existe déjà ailleurs. */
@@ -434,6 +446,7 @@ const EVENT_NAMES = [
   "project_wizard_opened",
   "project_wizard_step_viewed",
   "project_wizard_abandoned",
+  "project_wizard_draft_saved",
   "project_wizard_origin_chosen",
   "project_wizard_seed_chosen",
   "project_wizard_completed",

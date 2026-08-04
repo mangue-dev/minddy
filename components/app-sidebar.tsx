@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import packageJson from "@/package.json";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +30,10 @@ import {
   type NavSection,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
+import {
+  IssueContextMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
 import {
   Sun,
   Moon,
@@ -112,6 +122,12 @@ export type AppNavItem = NavItem & {
    * triangle Smart Assign et un compteur ; repliée, seul le triangle passe.
    */
   badgeCollapsed?: ReactNode;
+  /**
+   * Actions au clic droit sur la ligne. Réservé aux entrées qui portent un
+   * OBJET dont on peut faire quelque chose — un brouillon de projet, qu'on jette
+   * de là plutôt qu'en le rouvrant. Une entrée de navigation n'en a pas.
+   */
+  contextActions?: ContextMenuAction[];
 };
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
@@ -214,6 +230,19 @@ function SidebarRow({
       }
     : undefined;
 
+  // Clic droit : le même menu ancré au pointeur que les cartes du board, sur les
+  // seules lignes qui portent des actions (aujourd'hui les brouillons de projet).
+  const [menuPosition, setMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const openContextMenu = item.contextActions?.length
+    ? (e: MouseEvent) => {
+        e.preventDefault();
+        setMenuPosition({ x: e.clientX, y: e.clientY });
+      }
+    : undefined;
+
   let row: ReactNode;
   if (item.href) {
     row = (
@@ -223,6 +252,7 @@ function SidebarRow({
         aria-current={active ? "page" : undefined}
         onMouseEnter={warm}
         onFocus={warm}
+        onContextMenu={openContextMenu}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}
       >
@@ -235,6 +265,7 @@ function SidebarRow({
         type="button"
         onClick={item.onClick}
         disabled={item.disabled}
+        onContextMenu={openContextMenu}
         className={cn(rowClass, "text-left", !collapsed && "w-full")}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}
@@ -245,7 +276,7 @@ function SidebarRow({
   }
 
   if (collapsed || item.shortcut) {
-    return (
+    row = (
       <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
         <TooltipTrigger asChild>{row}</TooltipTrigger>
         <TooltipContent
@@ -264,7 +295,20 @@ function SidebarRow({
       </Tooltip>
     );
   }
-  return row;
+
+  if (!item.contextActions?.length) return row;
+  return (
+    <>
+      {row}
+      {/* Menu court : pas de champ de recherche, il ne ferait que du bruit. */}
+      <IssueContextMenu
+        position={menuPosition}
+        onClose={() => setMenuPosition(null)}
+        actions={item.contextActions}
+        searchable={false}
+      />
+    </>
+  );
 }
 
 function SidebarNav({

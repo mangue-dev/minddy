@@ -44,12 +44,16 @@ import {
   uploadProjectIconDataUrlApi,
 } from "@/lib/projects-api";
 import {
-  clearProjectDraft,
-  saveProjectDraft,
+  clearPendingDraftId,
+  setPendingDraftId,
+  stepIndexOf,
+  stepsFor,
   type DraftRepo,
   type DraftSeed,
   type ProjectDraft,
+  type ProjectDraftInput,
   type ProjectOrigin,
+  type ProjectWizardStep,
 } from "@/lib/project-draft";
 import { putSeedHandoff } from "@/lib/project-seed-handoff";
 import { MAX_IMPORT_CSV_BYTES } from "@/lib/import/types";
@@ -69,6 +73,7 @@ import {
 import { ImportGuideBlock } from "@/components/import/import-guide";
 import { NumoIcon } from "@/components/numo-icon";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
+import { CloseProjectDraftDialog } from "@/components/close-project-draft-dialog";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
@@ -81,10 +86,10 @@ import type { CandidateRepo } from "@/lib/types";
  * Ce fichier ne décrit que ses étapes et ce qu'elles déclenchent.
  *
  * Le projet n'est créé qu'à la DERNIÈRE étape : tout ce qui précède est un
- * brouillon en mémoire (nom, clé, favicon résolu mais pas stocké, dépôt choisi
- * mais pas lié). Fermer le wizard en route ne laisse donc rien derrière — pas
- * de projet vide à moitié configuré. En contrepartie, chaque étape doit savoir
- * travailler sans projet :
+ * BROUILLON (nom, clé, favicon résolu mais pas stocké, dépôt choisi mais pas
+ * lié). Fermer le wizard en route ne laisse donc pas de projet vide à moitié
+ * configuré derrière soi. En contrepartie, chaque étape doit savoir travailler
+ * sans projet :
  *  - l'icône ne fait que résoudre le favicon (`/api/account/project-icon`),
  *    l'import réel suit la création ;
  *  - le dépôt se choisit au niveau COMPTE (`/api/account/git-connections`), la
@@ -92,40 +97,32 @@ import type { CandidateRepo } from "@/lib/types";
  *  - l'id du projet est tiré ici, pour que l'orbe montrée dans le wizard soit
  *    bien celle du projet créé.
  *
+ * Ce brouillon n'est plus perdu à la fermeture : dès qu'il porte un nom, il
+ * s'enregistre côté serveur (lib/project-draft.ts, table `project_drafts`) et
+ * prend une ligne dans la barre latérale, à la place du projet qu'il deviendra.
+ * On y revient à l'étape où l'on s'était arrêté, d'une session à l'autre.
+ *
  * L'installation GitHub / l'OAuth GitLab quittent la page en plein écran : le
- * brouillon est sérialisé avant de partir (lib/project-draft.ts) et le callback
- * revient sur `/home?setup=git`, où `ProjectDraftResume` rouvre le wizard.
+ * brouillon est enregistré avant de partir, `sessionStorage` n'en garde que
+ * l'id, et le callback revient sur `/home?setup=git` où `ProjectDraftResume`
+ * rouvre le wizard à l'étape « Dépôt ».
  *
  * L'amorce suit la même règle que le reste : l'étape COLLECTE (un brief collé,
  * un CSV déposé), elle n'écrit rien. La passe qui en fait des tickets se joue
  * après la création, sur le board du projet neuf, où `?setup=` la déclenche.
  */
 
-const ALL_STEPS = [
-  "origin",
-  "project",
-  "icon",
-  "git",
-  "seed",
-  "finish",
-] as const;
-type StepId = (typeof ALL_STEPS)[number];
-
-/**
- * Les étapes du parcours. L'amorce dépend de l'origine — tant qu'elle n'est pas
- * choisie, l'étape n'a pas de contenu et ne compte pas dans le stepper.
- */
-function stepsFor(origin: ProjectOrigin | null): StepId[] {
-  return origin
-    ? ["origin", "project", "icon", "git", "seed", "finish"]
-    : ["origin", "project", "icon", "git", "finish"];
-}
-
-/** Reprise du wizard après le redirect d'un provider git. */
+/** Reprise du wizard sur un brouillon — repris à la main, ou après un redirect. */
 export interface ProjectSetupResumeState {
   draft: ProjectDraft;
   /** Connexion fraîchement créée par le callback — ouvre le sélecteur de dépôt. */
   connectionId: string | null;
+  /**
+   * Retour d'un aller-retour chez le provider git : on rouvre à l'étape
+   * « Dépôt », d'où l'on était parti, et non à l'étape enregistrée — la sortie
+   * de l'app n'était pas un abandon, c'était le milieu d'un geste.
+   */
+  fromGit?: boolean;
 }
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
@@ -147,12 +144,24 @@ export function CreateProjectWizard({
   const tIssue = useTranslations("Issue");
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { projects, createProject, updateProject } = useProjects();
+  const {
+    projects,
+    createProject,
+    updateProject,
+    saveProjectDraft,
+    deleteProjectDraft,
+  } = useProjects();
   const { track } = useAnalytics();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Le brouillon a-t-il déjà une ligne en base ? Ce qui décide, à la sortie, s'il
+  // y a quelque chose à supprimer — et non s'il y a quelque chose à enregistrer,
+  // qui ne dépend que du nom.
+  const [draftExists, setDraftExists] = useState(false);
+  const [closePromptOpen, setClosePromptOpen] = useState(false);
 
   // Étape « D'où part-on ? » — la réponse décide de ce que l'étape d'amorce
   // demande, et de rien d'autre : le projet se crée de la même façon des deux
@@ -206,8 +215,7 @@ export function CreateProjectWizard({
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
   const steps = useMemo(() => stepsFor(origin), [origin]);
-  const step: StepId = steps[Math.min(stepIndex, steps.length - 1)];
-  const isLast = stepIndex >= steps.length - 1;
+  const step: ProjectWizardStep = steps[Math.min(stepIndex, steps.length - 1)];
 
   /** L'amorce telle qu'elle est à cet instant — déduite, jamais stockée deux
    *  fois : c'est ce que le brouillon porte et ce que `finish()` rejoue. */
@@ -231,6 +239,8 @@ export function CreateProjectWizard({
     setStepIndex(0);
     setSubmitting(false);
     setError(null);
+    setDraftExists(false);
+    setClosePromptOpen(false);
     setDraftId(crypto.randomUUID());
     setOrigin(null);
     setName("");
@@ -251,8 +261,10 @@ export function CreateProjectWizard({
     setAutoAssignEnabled(false);
   }, []);
 
-  // Reprise après le redirect provider : le brouillon reprend sa place, on
-  // repart à l'étape git, sélecteur de dépôt ouvert si la connexion a été créée.
+  // Reprise d'un brouillon : il reprend toute sa place, et on rouvre là où on
+  // l'avait laissé — à l'étape enregistrée, ou à l'étape git si l'on revient
+  // d'un aller-retour chez le provider (sélecteur de dépôt ouvert si la
+  // connexion a été créée).
   useEffect(() => {
     if (!resume) return;
     const { draft } = resume;
@@ -272,7 +284,12 @@ export function CreateProjectWizard({
     setFeedbackEnabled(draft.feedbackEnabled);
     setSmartAssignEnabled(draft.smartAssignEnabled);
     setAutoAssignEnabled(draft.autoAssignEnabled);
-    setStepIndex(stepsFor(draft.origin).indexOf("git"));
+    setDraftExists(true);
+    setStepIndex(
+      resume.fromGit
+        ? stepsFor(draft.origin).indexOf("git")
+        : stepIndexOf(draft),
+    );
     setActiveConnectionId(resume.connectionId);
   }, [resume]);
 
@@ -280,25 +297,77 @@ export function CreateProjectWizard({
   // « abandonné », on ne verrait que les projets créés — jamais l'étape qui
   // fait décrocher (la leçon AutoKap : c'était l'étape GitHub obligatoire).
   useTrackView(open, "opened", () =>
-    track("project_wizard_opened", { source: resume ? "resume" : "sidebar" }),
+    track("project_wizard_opened", {
+      source: resume?.fromGit ? "resume" : resume ? "draft" : "sidebar",
+    }),
   );
   // Clé = l'étape : chaque étape atteinte est comptée une fois, revenir en
   // arrière ne la recompte pas (« combien de gens ont atteint l'étape N »).
   useTrackView(open, step, () => track("project_wizard_step_viewed", { step }));
 
+  /** L'état complet du wizard, tel qu'il s'enregistre. */
+  const snapshot = (): ProjectDraftInput => ({
+    id: draftId,
+    name: name.trim(),
+    key,
+    keyTouched,
+    step,
+    origin,
+    seed,
+    icon,
+    repo,
+    feedbackEnabled,
+    smartAssignEnabled,
+    autoAssignEnabled,
+  });
+
+  /** Ferme pour de bon : plus rien en attente, tout remis à zéro. */
+  const closeWizard = useCallback(() => {
+    clearPendingDraftId();
+    setClosePromptOpen(false);
+    reset();
+    onOpenChange(false);
+  }, [onOpenChange, reset]);
+
+  /** Sortie « je reprendrai » : le brouillon part en base, la modale se ferme. */
+  const saveAndClose = async () => {
+    try {
+      await saveProjectDraft(snapshot());
+    } catch (err) {
+      // Rien n'est enregistré et la modale reste ouverte : la saisie est encore
+      // là, et fermer maintenant la perdrait pour de bon.
+      setClosePromptOpen(false);
+      toast.error((err as Error).message);
+      return;
+    }
+    track("project_wizard_draft_saved", { step });
+    closeWizard();
+  };
+
+  /** Sortie « j'y renonce » : le brouillon déjà enregistré s'en va avec. */
+  const discardAndClose = () => {
+    track("project_wizard_abandoned", { last_step: step });
+    if (draftExists) {
+      void deleteProjectDraft(draftId).catch((err: Error) => {
+        console.error("[create-project-wizard] draft delete failed:", err);
+      });
+    }
+    closeWizard();
+  };
+
   const handleOpenChange = (next: boolean) => {
-    // Fermeture avant la dernière étape = abandon. `finish()` ferme via ce même
-    // chemin, mais seulement depuis l'étape finale, qui est exclue ici.
-    if (!next && step !== "finish") {
-      track("project_wizard_abandoned", { last_step: step });
+    if (next) {
+      onOpenChange(true);
+      return;
     }
-    if (!next) {
-      // Un brouillon abandonné ne doit pas ressurgir à la prochaine ouverture :
-      // il n'existe que pour survivre à l'aller-retour chez le provider.
-      clearProjectDraft();
-      reset();
+    // Dès qu'il y a un nom, il y a un brouillon à proposer : on ne referme pas
+    // sur la saisie sans demander. Sans nom, il n'y a rien à montrer dans la
+    // barre latérale — et rien à garder.
+    if (name.trim()) {
+      setClosePromptOpen(true);
+      return;
     }
-    onOpenChange(next);
+    discardAndClose();
   };
 
   /** Retour aux étapes déjà validées uniquement (stepper + lien retour). */
@@ -422,21 +491,6 @@ export function CreateProjectWizard({
     };
   }, [activeConnectionId]);
 
-  /** L'état complet du wizard, tel qu'il doit survivre à un redirect provider. */
-  const snapshot = () => ({
-    id: draftId,
-    origin,
-    name,
-    key,
-    keyTouched,
-    icon,
-    seed,
-    repo,
-    feedbackEnabled,
-    smartAssignEnabled,
-    autoAssignEnabled,
-  });
-
   const handleConnect = async (provider: RepoProviderId) => {
     setConnecting(provider);
     track("git_connection_started", { provider });
@@ -445,9 +499,12 @@ export function CreateProjectWizard({
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
       } else {
-        // On quitte l'app : le brouillon part en session, le callback revient
-        // sur /home?setup=git et ProjectDraftResume rouvre le wizard ici.
-        saveProjectDraft(snapshot());
+        // On quitte l'app : le brouillon part en base AVANT le redirect, et
+        // sessionStorage n'en garde que l'id. Le callback revient sur
+        // /home?setup=git, où ProjectDraftResume rouvre le wizard ici même.
+        await saveProjectDraft(snapshot());
+        setDraftExists(true);
+        setPendingDraftId(draftId);
         window.location.href = res.url;
       }
     } catch (err) {
@@ -491,7 +548,16 @@ export function CreateProjectWizard({
       return;
     }
 
-    clearProjectDraft();
+    // Le brouillon a fait son travail : le projet existe, il n'a plus lieu
+    // d'être. Son échec de suppression ne remet rien en cause — au pire une
+    // ligne de brouillon reste dans la barre latérale, et se jette d'un clic
+    // droit.
+    clearPendingDraftId();
+    if (draftExists) {
+      void deleteProjectDraft(draftId).catch((err: Error) => {
+        console.error("[create-project-wizard] draft delete failed:", err);
+      });
+    }
     track("project_created", {
       has_icon: icon.kind !== "none",
       has_git_link: !!repo,
@@ -568,7 +634,9 @@ export function CreateProjectWizard({
     });
     toast.success(t("wizardDoneToast", { name: created.name }));
     setSubmitting(false);
-    handleOpenChange(false);
+    // `closeWizard` et non `handleOpenChange` : le projet est créé, il n'y a
+    // plus de brouillon à proposer de garder.
+    closeWizard();
 
     // L'amorce se joue sur le board du projet neuf : c'est le trou qu'on est en
     // train de combler, et rien de tout ça ne tiendrait dans une étape de wizard
@@ -604,7 +672,10 @@ export function CreateProjectWizard({
    * Les étapes, décrites. Le parcours retenu est `steps` (l'amorce dépend de
    * l'origine) : ce qui n'y figure pas n'est ni rendu, ni compté.
    */
-  const stepDefs: Record<StepId, WizardStep<StepId>> = {
+  const stepDefs: Record<
+    ProjectWizardStep,
+    WizardStep<ProjectWizardStep>
+  > = {
     // Le tout premier geste de minddy : deux portes côte à côte, de même poids,
     // qui se lisent d'un coup d'œil. Chacune montre sa scène — un terrain nu où
     // une carte se pose, une pile de cartes déjà là — et une ligne pour la
@@ -1099,24 +1170,38 @@ export function CreateProjectWizard({
   };
 
   return (
-    <WizardDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      label={t("newProject")}
-      steps={steps.map((id) => stepDefs[id])}
-      stepIndex={stepIndex}
-      onStepIndexChange={goToStep}
-      submitting={submitting}
-      error={
-        error ??
-        (briefTooLong ? t("wizardSeedTooLong", { max: MAX_BRIEF_CHARS }) : null)
-      }
-      onSubmit={(id) => {
-        if (id === "project") submitProjectStep();
-        else if (id === "seed") leaveSeedStep(seed);
-        else if (id === "finish") void finish();
-        else setStepIndex((i) => i + 1);
-      }}
-    />
+    <>
+      <WizardDialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        label={t("newProject")}
+        steps={steps.map((id) => stepDefs[id])}
+        stepIndex={stepIndex}
+        onStepIndexChange={goToStep}
+        submitting={submitting}
+        error={
+          error ??
+          (briefTooLong
+            ? t("wizardSeedTooLong", { max: MAX_BRIEF_CHARS })
+            : null)
+        }
+        onSubmit={(id) => {
+          if (id === "project") submitProjectStep();
+          else if (id === "seed") leaveSeedStep(seed);
+          else if (id === "finish") void finish();
+          else setStepIndex((i) => i + 1);
+        }}
+      />
+      {/* Ce qu'on demande à la fermeture : garder, renoncer, ou revenir. Monté
+          en frère du wizard (et non dedans) — le wizard reste ouvert dessous
+          tant qu'on n'a pas tranché, et « Continuer la configuration » le rend
+          tel qu'on l'a laissé. */}
+      <CloseProjectDraftDialog
+        open={closePromptOpen}
+        onOpenChange={setClosePromptOpen}
+        onSave={() => void saveAndClose()}
+        onDiscard={discardAndClose}
+      />
+    </>
   );
 }

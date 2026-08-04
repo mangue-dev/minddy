@@ -245,7 +245,8 @@
     "issueAlreadyLinked": "Ce ticket est déjà lié à une pull request en cours.",
     "issueOutsideRepo": "Ce ticket appartient à un projet qui ne lie pas ce dépôt.",
     "prReviewPrNotFound": "Cette pull request n'est plus accessible depuis un projet auquel vous avez accès.",
-    "prReviewPrIncomplete": "Cette pull request n'est pas encore entièrement synchronisée : sa branche de base est inconnue, il n'y a donc rien contre quoi la relire. Rafraîchissez la pull request et réessayez."
+    "prReviewPrIncomplete": "Cette pull request n'est pas encore entièrement synchronisée : sa branche de base est inconnue, il n'y a donc rien contre quoi la relire. Rafraîchissez la pull request et réessayez.",
+    "draftTooLarge": "Ce brouillon est trop lourd pour être enregistré."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -1769,7 +1770,15 @@
     "wizardSeedImportTitle": "Récupérez vos tickets",
     "wizardSeedImportDesc": "Déposez un export CSV. Vous vérifierez la correspondance des colonnes une fois le projet créé — rien n'est encore importé.",
     "wizardSeedFileReady": "Importé une fois le projet créé.",
-    "wizardSeedFileLost": "Le fichier n'a pas survécu au détour par votre hébergeur git — redéposez-le."
+    "wizardSeedFileLost": "Un fichier ne se garde pas dans un brouillon — redéposez-le.",
+    "draftBadge": "Brouillon",
+    "draftResume": "Reprendre le brouillon « {name} »",
+    "draftDelete": "Supprimer le brouillon",
+    "draftCloseTitle": "Enregistrer ce brouillon ?",
+    "draftCloseDescription": "Vous le retrouverez dans la barre latérale, sous vos projets, et reprendrez à cette étape.",
+    "draftCloseCancel": "Continuer la configuration",
+    "draftCloseDiscard": "Abandonner",
+    "draftCloseConfirm": "Enregistrer le brouillon"
   },
   "Settings": {
     "title": "Paramètres du projet",
