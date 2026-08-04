@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
@@ -18,11 +19,11 @@ import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
  * consultables les runs passées via son sélecteur de sessions. `working` signale
  * qu'un run de l'issue TRAVAILLE (queued/running) — pilote le spinner de la liste.
  *
- * Les runs CARNET (MIN-84, issue_id null) sont chacun leur PROPRE session — pas de
- * dédoublonnage (aucune lignée) ; leur « titre » est l'excerpt de la note
- * (`prompt`).
+ * Les runs SANS TICKET (MIN-84, issue_id null) sont chacun leur PROPRE session —
+ * pas de dédoublonnage (aucune lignée) ; leur « titre » est l'excerpt de leur
+ * instruction (`prompt`).
  *
- * POST = lancement d'un run CARNET : { projectId, prompt, model?, baseBranch? }.
+ * POST = lancement d'un run sans ticket : { projectId, prompt, model?, baseBranch? }.
  */
 
 export const runtime = "nodejs";
@@ -229,15 +230,22 @@ function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
 }
 
 /**
- * Lance un run CARNET (MIN-84) : sans ticket, ancré à un projet (le dépôt à
- * cloner) + la note comme instruction. Membre du projet requis — le run est
- * ensuite personnel (RLS : créateur seul).
+ * Lance un run SANS TICKET (MIN-84, dit « carnet » — le carnet en fut le
+ * premier point d'entrée) : ancré à un projet (le dépôt à cloner) + un texte
+ * libre comme instruction, quel qu'en soit le sujet. Membre du projet requis —
+ * le run est ensuite personnel (RLS : créateur seul).
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  let body: { projectId?: string; prompt?: string; model?: string; baseBranch?: string };
+  let body: {
+    projectId?: string;
+    prompt?: string;
+    model?: string;
+    reasoningLevel?: string;
+    baseBranch?: string;
+  };
   try {
     const parsed: unknown = await request.json();
     // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
@@ -274,6 +282,12 @@ export async function POST(request: NextRequest) {
     typeof body.baseBranch === "string" && body.baseBranch.trim()
       ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
+  // Niveau de raisonnement du composer (MIN-122). Une valeur inconnue est
+  // IGNORÉE plutôt que refusée : le lancement retombe alors sur le défaut perso,
+  // comme la route d'un ticket.
+  const reasoningLevel = isReasoningLevel(body.reasoningLevel)
+    ? body.reasoningLevel
+    : undefined;
 
   const result = await launchAgentRun({
     projectId,
@@ -282,6 +296,7 @@ export async function POST(request: NextRequest) {
     prompt,
     model,
     forced: !!model,
+    reasoningLevel,
     baseBranch,
   });
   if (!result.ok) return launchErrorResponse(result);

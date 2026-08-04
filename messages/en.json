@@ -1692,14 +1692,15 @@
     "errorNoModelForProvider": "Pick a model for this provider.",
     "errorSupersededRun": "A newer session has taken over this issue. Launch a new agent to carry on.",
     "errorPrMerged": "This session's pull request is merged. Launch a new agent: it will start from a fresh branch.",
-    "noteComposeIntro": "Your note becomes the agent's instruction. Pick the project whose repository it will clone.",
-    "noteComposePlaceholder": "Your note — the agent's instruction…",
-    "noteProjectPlaceholder": "Project",
-    "noteProjectSearchPlaceholder": "Search projects…",
-    "noteProjectSearchEmpty": "No projects found.",
-    "noteProjectRequired": "Pick a project first. The agent clones its repository.",
-    "errorPromptRequired": "The note is empty. Write the agent's instruction.",
-    "noteProjectTooltip": "Pick a project before launching"
+    "composeGreeting": "Hello, {name}.",
+    "composeWorkingIn": "We're working in <project></project>",
+    "composePlaceholderFree": "What should Numo work on?",
+    "errorPromptRequired": "The instruction is empty. Write what the agent should do.",
+    "composeProjectPlaceholder": "Project",
+    "composeProjectSearchPlaceholder": "Search projects…",
+    "composeProjectSearchEmpty": "No projects found.",
+    "composeProjectRequired": "Pick a project first. The agent clones its repository.",
+    "composeProjectTooltip": "Pick a project before launching"
   },
   "Projects": {
     "newProject": "New project",
@@ -2349,7 +2350,7 @@
     "title": "Numo agent",
     "filterPlaceholder": "Filter {count, plural, =0 {conversations} one {# conversation} other {# conversations}}…",
     "emptyTitle": "No session yet",
-    "emptyNoProject": "No project, so no issue to hand to the agent",
+    "emptyNoProject": "No project, so no repository to launch the agent in",
     "noSelection": "Select a session.",
     "draftBadge": "Draft",
     "unread": "The agent finished — unread",
@@ -2358,6 +2359,8 @@
     "newSearchPlaceholder": "Search issues…",
     "newEmpty": "No issues found.",
     "newLoading": "Loading issues…",
+    "newFreeOption": "Free topic",
+    "newSessionTitle": "New conversation",
     "backToList": "Back to list",
     "openPullRequest": "View pull request",
     "prAvailable": "PR available",
@@ -2368,9 +2371,9 @@
     "statusWaiting": "Idle",
     "statusFailed": "Failed",
     "statusCanceled": "Canceled",
-    "noteBadge": "Notebook",
     "prBadge": "PR analysis",
-    "noteSessionTitle": "Notebook note"
+    "freeBadge": "Free topic",
+    "freeSessionTitle": "Untitled conversation"
   },
   "PullRequests": {
     "title": "Pull requests",

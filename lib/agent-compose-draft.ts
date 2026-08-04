@@ -4,15 +4,15 @@ import { useSyncExternalStore } from "react";
 
 /**
  * Brouillon « optimiste » de lancement d'agent, posé par un bouton « Lancer un
- * agent » (panneau d'issue, carte, picker de la page Agents — ou le CARNET,
- * MIN-84) puis lu par la page Agents. Il porte juste de quoi dessiner une ENTRÉE
- * synthétique dans la liste et amorcer la conversation en compose. Purement UI :
- * si l'utilisateur n'envoie jamais le 1er message, l'entrée est effacée sans
- * qu'aucune run n'ait existé.
+ * agent » (panneau d'issue, carte — ou le CARNET, MIN-84, ou le bouton
+ * « Nouveau » de la page Agents) puis lu par la page Agents. Il porte juste de
+ * quoi dessiner une ENTRÉE synthétique dans la liste et amorcer la conversation
+ * en compose. Purement UI : si l'utilisateur n'envoie jamais le 1er message,
+ * l'entrée est effacée sans qu'aucune run n'ait existé.
  *
- * Deux formes : `issue` (l'historique — ancré à un ticket, `?compose=<issueId>`)
- * et `note` (run carnet — la note est le prompt, le projet se choisit dans le
- * composer ou arrive pré-choisi, `?compose=note`).
+ * Deux formes : `issue` (ancré à un ticket, `?compose=<issueId>`) et `free`
+ * (conversation SANS ticket — le projet se choisit dans le composer ou arrive
+ * pré-choisi, `?compose=new`).
  *
  * Store module-level (pas de contexte) : il n'a qu'un producteur à la fois et
  * un seul consommateur (la page), et doit survivre à la navigation `router.push`
@@ -51,23 +51,29 @@ export interface AgentIssueComposeDraft {
   intent?: AgentComposeIntent;
 }
 
-export interface AgentNoteComposeDraft {
-  kind: "note";
-  /** La note (markdown brut du carnet) — l'instruction du run, éditable avant envoi. */
+export interface AgentFreeComposeDraft {
+  kind: "free";
+  /**
+   * Texte PRÉ-ÉCRIT du composer, éditable avant envoi : une note du carnet
+   * (MIN-84), un prompt d'intégration — ou la chaîne VIDE quand la conversation
+   * part de zéro (bouton « Nouveau » de la page Agents), où c'est l'utilisateur
+   * qui dit sur quoi lancer l'agent.
+   */
   prompt: string;
   /**
    * Projet PRÉ-CHOISI dans le composer, quand le producteur du brouillon sait
    * déjà quel dépôt est visé — le prompt d'intégration feedback part des
-   * réglages d'UN projet. Absent (carnet) : le composer laisse choisir.
-   * Reste librement modifiable : c'est un pré-remplissage, pas un verrou.
+   * réglages d'UN projet. Absent (carnet, bouton « Nouveau ») : le composer
+   * laisse choisir. Reste librement modifiable : c'est un pré-remplissage, pas
+   * un verrou.
    */
   projectId?: string;
 }
 
-export type AgentComposeDraft = AgentIssueComposeDraft | AgentNoteComposeDraft;
+export type AgentComposeDraft = AgentIssueComposeDraft | AgentFreeComposeDraft;
 
-/** Valeur du paramètre `?compose=` qui désigne un brouillon CARNET. */
-export const NOTE_COMPOSE_PARAM = "note";
+/** Valeur du paramètre `?compose=` qui désigne un brouillon SANS ticket. */
+export const FREE_COMPOSE_PARAM = "new";
 
 let current: AgentComposeDraft | null = null;
 const listeners = new Set<() => void>();

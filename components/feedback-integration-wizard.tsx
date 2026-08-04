@@ -16,7 +16,7 @@ import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import { integrationsQueryKey } from "@/lib/use-integrations-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import {
-  NOTE_COMPOSE_PARAM,
+  FREE_COMPOSE_PARAM,
   setAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
@@ -35,8 +35,8 @@ import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
  * modes :
  *  • le presse-papier, pour l'agent de code de l'utilisateur (Claude Code,
  *    Cursor…) ;
- *  • NUMO, en un clic : le prompt part comme note de run carnet sur le projet,
- *    et l'agent de minddy ouvre la pull request lui-même.
+ *  • NUMO, en un clic : le prompt amorce une conversation d'agent sur le
+ *    projet, et l'agent de minddy ouvre la pull request lui-même.
  *
  * Ce qui rend la seconde possible, c'est que plus aucun prompt ne porte de
  * credential : le secret SSO comme la clé d'API vivent dans une variable
@@ -178,16 +178,17 @@ export function FeedbackIntegrationWizard({
 
   /**
    * Confier le prompt à Numo : même chemin que « lancer un agent » depuis le
-   * carnet (brouillon de run carnet + composer de la page Agents), avec le
-   * projet déjà choisi. On passe par le composer plutôt que de lancer d'ici :
-   * l'utilisateur relit la consigne, choisit son modèle et sa branche de base
-   * — un run d'agent sur son dépôt ne part pas d'un clic sans revue.
+   * carnet (brouillon de conversation sans ticket + composer de la page
+   * Agents), avec le projet déjà choisi. On passe par le composer plutôt que de
+   * lancer d'ici : l'utilisateur relit la consigne, choisit son modèle et sa
+   * branche de base — un run d'agent sur son dépôt ne part pas d'un clic sans
+   * revue.
    */
   const handOffToNumo = () => {
     if (!prompt) return;
-    setAgentComposeDraft({ kind: "note", prompt, projectId });
+    setAgentComposeDraft({ kind: "free", prompt, projectId });
     handleOpenChange(false);
-    router.push(`/agents?compose=${NOTE_COMPOSE_PARAM}`);
+    router.push(`/agents?compose=${FREE_COMPOSE_PARAM}`);
   };
 
   const stepDefs: Record<StepId, WizardStep<StepId>> = {

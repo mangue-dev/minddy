@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,11 +17,11 @@ import {
   toast,
 } from "mangue-ui";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { ModelCombobox } from "@/components/agent/model-combobox";
+import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
@@ -29,12 +29,20 @@ import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useProjects } from "@/lib/projects-context";
+import { useAuth } from "@/lib/auth-context";
+import {
+  defaultAgentProjectId,
+  lastAgentProjectId,
+  rememberAgentProject,
+} from "@/lib/last-agent-project";
+import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Project } from "@/lib/types";
 
 const MAX_RESULTS = 50;
 
 /**
- * Picker du PROJET d'un run carnet — le pendant du BranchCombobox, même chip
+ * Picker du PROJET de la conversation — le pendant du BranchCombobox, même chip
  * compact du composer. Obligatoire : sans ticket, seul le projet dit quel dépôt
  * cloner. Pas de filtre « a un dépôt lié » côté client : le serveur refuse
  * proprement (`noRepo`) et le toast l'explique.
@@ -136,38 +144,76 @@ function ProjectCombobox({
 }
 
 /**
- * Composer de lancement d'un run CARNET (MIN-84) — le pendant de la phase compose
- * d'AgentConversation, avant toute run : la note (pré-remplie, éditable) part
- * comme instruction, avec un projet OBLIGATOIRE (le dépôt à cloner), un modèle et
- * une branche de base optionnels. Envoyer POSTe /api/agent-runs ; la run rendue
- * est remontée à la page (`onLaunched`), qui bascule sur sa session réelle.
+ * Composer de LANCEMENT d'une conversation d'agent — la phase d'avant toute
+ * run, pendant de celle d'AgentConversation pour un ticket.
+ *
+ * Le sujet est LIBRE : ce qu'on écrit ici part comme instruction, et la seule
+ * chose obligatoire est le PROJET, dont l'agent clone le dépôt. Le texte peut
+ * arriver pré-écrit (une note du carnet — MIN-84 —, un prompt d'intégration)
+ * ou vide (entrée « Sujet libre » du bouton « Nouveau »), et reste éditable
+ * dans les deux cas. Modèle, niveau de raisonnement et branche de base sont
+ * facultatifs — ils partent sur les défauts perso, comme depuis un ticket.
+ *
+ * Une conversation ANCRÉE à un ticket ne passe pas par ici : elle se choisit
+ * dans le menu du bouton « Nouveau » (ou depuis le ticket lui-même) et ouvre le
+ * composer d'AgentConversation, qui sait ce qu'un ticket demande de plus —
+ * branche héritée, statut à faire avancer.
+ *
+ * Envoyer POSTe /api/agent-runs ; la run rendue est remontée à la page
+ * (`onLaunched`), qui bascule sur sa session réelle.
  */
-export function NoteCompose({
+export function SessionCompose({
   initialText,
   initialProjectId,
   onLaunched,
 }: {
-  /** La note du carnet, pré-écrite dans le composer (librement éditable). */
-  initialText: string;
+  /** Texte pré-écrit dans le composer (librement éditable), vide par défaut. */
+  initialText?: string;
   /**
    * Projet pré-choisi quand le brouillon en désigne un (prompt d'intégration
    * feedback, lancé depuis les réglages d'un projet) — le picker reste ouvert.
    */
   initialProjectId?: string;
-  /** Une run carnet vient d'être lancée — la page bascule sur sa session. */
+  /** Une run vient d'être lancée — la page bascule sur sa session. */
   onLaunched: (run: AgentRunSummary) => void;
 }) {
   const t = useTranslations("Agent");
+  const tNav = useTranslations("Nav");
   const agentErrorMessage = useAgentErrorMessage();
   const queryClient = useQueryClient();
   const { projects } = useProjects();
-
-  const [projectId, setProjectId] = useState(
-    initialProjectId ?? (projects.length === 1 ? projects[0].id : ""),
+  // Le compte est nommé ici comme partout ailleurs (barre latérale, menu
+  // mobile) : son nom d'affichage entier, jamais l'e-mail brut.
+  const { user } = useAuth();
+  const name = authDisplayName(
+    user?.user_metadata as AuthNameMeta | undefined,
+    user?.email ?? null,
+    tNav("accountFallback"),
   );
+
+  // Le projet part PRÉ-CHOISI : celui que le brouillon désigne, sinon le dernier
+  // où un agent a été lancé (à défaut, le projet touché le plus récemment). Il
+  // reste librement modifiable — c'est un défaut, pas un verrou.
+  const [projectId, setProjectId] = useState(initialProjectId ?? "");
+  // Résolu dans un effet, pas à l'initialisation : la liste des projets arrive
+  // par react-query et peut être encore vide au montage (le composer resterait
+  // alors sans projet pour toujours), et lire localStorage pendant le rendu
+  // ferait diverger une hydratation. Ne s'applique qu'à un composer SANS projet :
+  // il ne repasse jamais sur un choix, ni celui du brouillon ni celui de
+  // l'utilisateur.
+  useEffect(() => {
+    if (projectId || projects.length === 0) return;
+    const fallback = defaultAgentProjectId(projects, lastAgentProjectId());
+    if (fallback) setProjectId(fallback);
+  }, [projects, projectId]);
   const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
-  const { defaultModel } = useAgentPreferencesQuery();
+  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
+  // Niveau de raisonnement du lancement (MIN-122), figé sur la run côté serveur :
+  // tant qu'on n'y touche pas, c'est le défaut perso qui part — comme dans le
+  // composer d'un ticket.
+  const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
+  const reasoningLevel = reasoningOverride ?? defaultReasoningLevel;
   const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
   // Bulle optimiste du 1er message pendant le POST (mêmes raisons que le launch
@@ -180,7 +226,7 @@ export function NoteCompose({
     const prompt = message.trim();
     if (!prompt) return;
     if (!projectId) {
-      toast.error(t("noteProjectRequired"));
+      toast.error(t("composeProjectRequired"));
       return;
     }
     if (modelRequired) {
@@ -194,9 +240,12 @@ export function NoteCompose({
         projectId,
         prompt,
         model: model || undefined,
+        reasoningLevel,
         baseBranch: baseBranch || undefined,
       });
       onLaunched(run);
+      // Ce projet devient le défaut du prochain composer (mémoire d'appareil).
+      rememberAgentProject(projectId);
       // La liste des sessions ne poll pas au repos : sans invalidation, la page
       // ne rattraperait la session neuve qu'au prochain rechargement.
       await queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
@@ -221,11 +270,33 @@ export function NoteCompose({
             className="h-full py-4"
           />
         ) : (
+          /* La conversation n'a pas encore de fil : sa place accueille le seul
+             choix qui manque avant de lancer — le PROJET, dont l'agent clonera
+             le dépôt. Il est dit dans une phrase plutôt que posé en chip dans
+             le composer : c'est la question de l'écran, pas un réglage de
+             l'envoi (le modèle, le raisonnement et la branche, eux, le sont). */
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card">
-              <NumoIcon className="size-6 text-muted-foreground" />
+            <p className="text-lg font-medium">{t("composeGreeting", { name })}</p>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
+              {t.rich("composeWorkingIn", {
+                project: () => (
+                  <ProjectCombobox
+                    projects={projects}
+                    value={projectId}
+                    onChange={(id) => {
+                      setProjectId(id);
+                      // La branche appartient au dépôt du projet : changer de
+                      // projet invalide le choix précédent.
+                      setBaseBranch("");
+                    }}
+                    placeholder={t("composeProjectPlaceholder")}
+                    searchPlaceholder={t("composeProjectSearchPlaceholder")}
+                    emptyLabel={t("composeProjectSearchEmpty")}
+                    disabled={launching}
+                  />
+                ),
+              })}
             </div>
-            <p className="max-w-sm text-sm text-muted-foreground">{t("noteComposeIntro")}</p>
           </div>
         )}
       </div>
@@ -233,32 +304,19 @@ export function NoteCompose({
       <div className="shrink-0">
         <div className="mx-auto w-full max-w-[800px]">
           <ChatInput
-            key="note-compose"
+            key="session-compose"
             onSend={(message) => void launch(message)}
             disabled={launching}
-            // Sans projet, rien à cloner : l'envoi est bloqué (note librement
-            // éditable) et le tooltip du bouton explique quoi choisir d'abord.
+            // Sans projet, rien à cloner : l'envoi est bloqué (le texte reste
+            // librement éditable) et le tooltip du bouton explique quoi choisir
+            // d'abord.
             sendDisabled={!projectId}
-            sendDisabledTooltip={t("noteProjectTooltip")}
+            sendDisabledTooltip={t("composeProjectTooltip")}
             hideAttach
             initialValue={initialText}
-            placeholder={t("noteComposePlaceholder")}
+            placeholder={t("composePlaceholderFree")}
             leadingControls={
               <>
-                <ProjectCombobox
-                  projects={projects}
-                  value={projectId}
-                  onChange={(id) => {
-                    setProjectId(id);
-                    // La branche appartient au dépôt du projet : changer de
-                    // projet invalide le choix précédent.
-                    setBaseBranch("");
-                  }}
-                  placeholder={t("noteProjectPlaceholder")}
-                  searchPlaceholder={t("noteProjectSearchPlaceholder")}
-                  emptyLabel={t("noteProjectSearchEmpty")}
-                  disabled={launching}
-                />
                 <ModelCombobox
                   variant="compact"
                   value={model}
@@ -269,6 +327,11 @@ export function NoteCompose({
                   emptyLabel={t("modelSearchEmpty")}
                   loadingLabel={t("modelSearchLoading")}
                   freeTextLabel={(q) => t("modelUseCustom", { model: q })}
+                  disabled={launching}
+                />
+                <ReasoningCombobox
+                  value={reasoningLevel}
+                  onChange={setReasoningOverride}
                   disabled={launching}
                 />
                 {projectId ? (

@@ -1692,14 +1692,15 @@
     "errorNoModelForProvider": "Choisissez un modèle pour ce provider.",
     "errorSupersededRun": "Une session plus récente a repris ce ticket. Lancez un nouvel agent pour continuer.",
     "errorPrMerged": "La pull request de cette session est fusionnée. Lancez un nouvel agent : il repartira d'une branche neuve.",
-    "noteComposeIntro": "Votre note devient l'instruction de l'agent. Choisissez le projet dont il clonera le dépôt.",
-    "noteComposePlaceholder": "Votre note — l'instruction de l'agent…",
-    "noteProjectPlaceholder": "Projet",
-    "noteProjectSearchPlaceholder": "Rechercher un projet…",
-    "noteProjectSearchEmpty": "Aucun projet trouvé.",
-    "noteProjectRequired": "Choisissez d'abord un projet : l'agent clone son dépôt.",
-    "errorPromptRequired": "La note est vide. Écrivez l'instruction de l'agent.",
-    "noteProjectTooltip": "Choisissez un projet avant de lancer"
+    "composeGreeting": "Bonjour, {name}.",
+    "composeWorkingIn": "Nous travaillons dans <project></project>",
+    "composePlaceholderFree": "Sur quoi Numo doit-il travailler ?",
+    "errorPromptRequired": "L'instruction est vide. Écrivez ce que l'agent doit faire.",
+    "composeProjectPlaceholder": "Projet",
+    "composeProjectSearchPlaceholder": "Rechercher un projet…",
+    "composeProjectSearchEmpty": "Aucun projet trouvé.",
+    "composeProjectRequired": "Choisissez d'abord un projet : l'agent clone son dépôt.",
+    "composeProjectTooltip": "Choisissez un projet avant de lancer"
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -2349,7 +2350,7 @@
     "title": "Agent Numo",
     "filterPlaceholder": "Filtrer {count, plural, =0 {les conversations} one {la conversation} other {les # conversations}}…",
     "emptyTitle": "Aucune session pour l'instant",
-    "emptyNoProject": "Aucun projet, donc aucun ticket à confier à l'agent",
+    "emptyNoProject": "Aucun projet, donc aucun dépôt où lancer l'agent",
     "noSelection": "Sélectionnez une session.",
     "draftBadge": "Brouillon",
     "unread": "L'agent a terminé — non lu",
@@ -2358,6 +2359,8 @@
     "newSearchPlaceholder": "Rechercher un ticket…",
     "newEmpty": "Aucun ticket trouvé.",
     "newLoading": "Chargement des tickets…",
+    "newFreeOption": "Sujet libre",
+    "newSessionTitle": "Nouvelle conversation",
     "backToList": "Retour à la liste",
     "openPullRequest": "Voir la pull request",
     "prAvailable": "PR disponible",
@@ -2368,9 +2371,9 @@
     "statusWaiting": "Au repos",
     "statusFailed": "Échoué",
     "statusCanceled": "Annulé",
-    "noteBadge": "Carnet",
     "prBadge": "Analyse de PR",
-    "noteSessionTitle": "Note du carnet"
+    "freeBadge": "Sujet libre",
+    "freeSessionTitle": "Conversation sans titre"
   },
   "PullRequests": {
     "title": "Pull requests",

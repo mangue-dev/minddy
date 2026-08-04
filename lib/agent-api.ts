@@ -269,20 +269,28 @@ export async function fetchIssueRepoBranchesApi(
   return parseJson(await fetch(`/api/issues/${issueId}/agent/branches`));
 }
 
-// ── Runs CARNET (MIN-84) : lancement sans ticket ─────────────────────────────
+// ── Runs SANS TICKET (MIN-84) : sujet libre, ancré à un projet ───────────────
 
 /**
- * Lance un run CARNET : sans ticket, ancré à un projet (le dépôt à cloner) +
- * la note comme instruction. Chaque lancement est une conversation autonome.
+ * Lance un run SANS TICKET : ancré à un projet (le dépôt à cloner) + un texte
+ * libre comme instruction. Chaque lancement est une conversation autonome.
+ *
+ * Dit « carnet » (notebook) partout côté serveur : le carnet en fut le premier
+ * point d'entrée (MIN-84). Ils viennent aujourd'hui d'un peu partout — le
+ * bouton « Nouveau » de la page Agents, les wizards d'intégration — et le sujet
+ * est libre : seul le projet est obligatoire.
  */
 export async function launchNotebookAgentApi(body: {
   projectId: string;
   prompt: string;
   model?: string;
+  /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
+  reasoningLevel?: ReasoningLevel;
   baseBranch?: string;
 }): Promise<{ run: AgentRunSummary }> {
   trackEvent("agent_launched", {
     model: body.model ?? "default",
+    reasoning_level: body.reasoningLevel ?? "default",
     has_branch: !!body.baseBranch,
     provider: "unknown",
     scope: "notebook",

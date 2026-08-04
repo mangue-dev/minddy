@@ -5,21 +5,37 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { Plus } from "lucide-react";
+import { MessageSquare, Plus } from "lucide-react";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { useProjects } from "@/lib/projects-context";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
-import { setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import { FREE_COMPOSE_PARAM, setAgentComposeDraft } from "@/lib/agent-compose-draft";
 import { agentLaunchPromptVariant } from "@/lib/agent-launch-prompt";
 import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
 import type { AgentSessionListItem } from "@/lib/agent-api";
 import type { GlobalBoardResponse, Issue } from "@/lib/types";
 
 /**
- * Bouton « New » de la page Agents : choisir un ticket (recherche cross-projet) et
- * lancer un agent dessus. Trois cas, alignés sur l'issue-card :
+ * Valeur de la ligne « Sujet libre », en tête du menu. Une LIGNE comme les
+ * autres, pas le `noneOption` du SearchSelect : celui-ci se coche dès que le
+ * picker vaut `null` — ce qui est son cas ici, où l'on ne sélectionne rien, on
+ * lance. Une coche permanente sur la première ligne mentirait.
+ */
+const FREE_TOPIC_VALUE = "__free__";
+
+/**
+ * Bouton « Nouveau » de la page Agents : choisir SUR QUOI lancer l'agent.
+ *
+ * En tête du menu, avant les tickets : SUJET LIBRE — une conversation qui ne
+ * parle d'aucun ticket, dont le sujet s'écrit dans le composer. L'agent sait
+ * travailler sur n'importe quoi dans un dépôt, et le menu n'a donc pas à
+ * n'offrir que des tickets ; seul le PROJET y sera obligatoire (le dépôt à
+ * cloner), et il se choisit dans le composer.
+ *
+ * Vient ensuite le ticket (recherche cross-projet), qui garde ses trois cas,
+ * alignés sur l'issue-card :
  *   • un agent TRAVAILLE déjà sur le ticket → on ouvre sa conversation vivante (un
  *     seul run à la fois : un compose échouerait) ;
  *   • une session existe (au repos) → NOUVELLE session, composer VIERGE ;
@@ -68,7 +84,7 @@ export function LaunchAgentPicker({
   const options = useMemo<PickerOption[]>(() => {
     // Ouvertes d'abord (les closes restent choisissables — une session « terminée »
     // peut vouloir une nouvelle session), sinon ordre du board.
-    return [...issues]
+    const issueOptions = [...issues]
       .sort((a, b) => (isClosedStatus(a.status) ? 1 : 0) - (isClosedStatus(b.status) ? 1 : 0))
       .map((i) => {
         const project = projectById.get(i.project_id);
@@ -80,10 +96,27 @@ export function LaunchAgentPicker({
           icon: <StatusIndicator status={i.status} className="size-4" />,
         };
       });
-  }, [issues, projectById]);
+    // Le sujet libre EN TÊTE, avant tout ticket : c'est le cas général (l'agent
+    // travaille sur ce qu'on lui dit), le ticket en est la forme ancrée.
+    return [
+      {
+        value: FREE_TOPIC_VALUE,
+        label: t("newFreeOption"),
+        icon: <MessageSquare className="size-4 text-muted-foreground" />,
+      },
+      ...issueOptions,
+    ];
+  }, [issues, projectById, t]);
 
   const launch = (issueId: string | null) => {
     if (!issueId) return;
+    // Sujet libre : brouillon sans ticket, le composer prend la suite (projet,
+    // modèle, raisonnement, branche).
+    if (issueId === FREE_TOPIC_VALUE) {
+      setAgentComposeDraft({ kind: "free", prompt: "" });
+      router.push(`/agents?compose=${FREE_COMPOSE_PARAM}`);
+      return;
+    }
     const issue = issueById.get(issueId) as Issue | undefined;
     if (!issue) return;
     const session = sessions.find((s) => s.issue?.id === issueId) ?? null;

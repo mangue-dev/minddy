@@ -89,9 +89,9 @@ export function AgentConversation({
   /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
   issueIdentifier?: string;
   /**
-   * Session CARNET (MIN-84) : le run EST la session — conversation d'UN run,
-   * sans historique d'issue ni phase compose (le run existe déjà ; le compose
-   * carnet vit dans NoteCompose, avant toute run).
+   * Session SANS TICKET (MIN-84) : le run EST la session — conversation d'UN
+   * run, sans historique d'issue ni phase compose (le run existe déjà ; le
+   * compose de ces sessions vit dans SessionCompose, avant toute run).
    */
   noteRunId?: string | null;
   /**
@@ -359,8 +359,9 @@ export function AgentConversation({
   const modelRequired = provider === "generic" && !defaultModel && !model;
 
   const launch = async (message: string) => {
-    // La phase compose n'existe que pour un ancrage ISSUE (le compose carnet vit
-    // dans NoteCompose, avant toute run) : sans issue, rien à lancer ici.
+    // La phase compose n'existe que pour un ancrage ISSUE (celui des sessions
+    // sans ticket vit dans SessionCompose, avant toute run) : sans issue, rien
+    // à lancer ici.
     if (launching || !issueId) return;
     if (modelRequired) {
       toast.error(t("modelRequired"));

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { ChevronLeft, GitPullRequest, NotebookPen } from "lucide-react";
+import { ChevronLeft, GitPullRequest, MessageSquare } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { PR_STATE_STYLES } from "@/components/pull-requests/pr-state-badge";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -19,8 +19,9 @@ import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
  * Cliquer un ticket ouvre sa session la plus ACTIVE (résolution par défaut de la
  * conversation), et donne accès à ses runs précédentes (MIN-68).
  *
- * Session CARNET (MIN-84, `issue` null) : le run EST la session — l'en-tête montre
- * l'excerpt de la note (non cliquable), la conversation s'ancre sur `noteRunId`.
+ * Session SANS TICKET (MIN-84, `issue` null) : le run EST la session — l'en-tête
+ * montre le sujet de la conversation (non cliquable, résumé de son premier
+ * message), et la conversation s'ancre sur `noteRunId`.
  */
 export function AgentSessionDetail({
   item,
@@ -152,7 +153,7 @@ export function AgentSessionDetail({
     );
   }
 
-  // ── Session CARNET : conversation d'UN run, en-tête = excerpt de la note ────
+  // ── Session SANS TICKET : conversation d'UN run, en-tête = son sujet ───────
   if (!issue) {
     return (
       <div className="flex h-full min-h-0 flex-col">
@@ -164,9 +165,9 @@ export function AgentSessionDetail({
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {backButton}
-              <NotebookPen className="size-4 shrink-0 text-muted-foreground" />
+              <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate text-sm font-medium">
-                {item.noteTitle || t("noteSessionTitle")}
+                {item.noteTitle || t("freeSessionTitle")}
               </span>
             </div>
           }

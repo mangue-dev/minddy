@@ -34,7 +34,7 @@ import {
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import {
-  NOTE_COMPOSE_PARAM,
+  FREE_COMPOSE_PARAM,
   setAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
 import type { IntegrationKind } from "@/lib/types";
@@ -139,16 +139,16 @@ export function CreateIntegrationWizard({
 
   /**
    * Confier le prompt à Numo : même chemin que « lancer un agent » depuis le
-   * carnet (brouillon de run + composer de la page Agents), projet déjà choisi.
-   * On passe par le composer plutôt que de lancer d'ici : l'utilisateur relit
-   * la consigne et choisit sa branche de base — un run sur son dépôt ne part
-   * pas d'un clic sans revue.
+   * carnet (brouillon de conversation sans ticket + composer de la page
+   * Agents), projet déjà choisi. On passe par le composer plutôt que de lancer
+   * d'ici : l'utilisateur relit la consigne et choisit sa branche de base — un
+   * run sur son dépôt ne part pas d'un clic sans revue.
    */
   const handOffToNumo = () => {
     if (!prompt) return;
-    setAgentComposeDraft({ kind: "note", prompt, projectId });
+    setAgentComposeDraft({ kind: "free", prompt, projectId });
     handleOpenChange(false);
-    router.push(`/agents?compose=${NOTE_COMPOSE_PARAM}`);
+    router.push(`/agents?compose=${FREE_COMPOSE_PARAM}`);
   };
 
   /** Dernière étape de configuration : on crée, on branche, on rédige. */

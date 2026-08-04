@@ -158,7 +158,8 @@ interface ChatInputProps {
   /**
    * Bloque UNIQUEMENT l'envoi (saisie libre, Entrée inerte) : le bouton devient
    * un chip inactif porteur de `sendDisabledTooltip`, qui explique quoi faire
-   * d'abord. Le composer carnet s'en sert tant qu'aucun projet n'est choisi.
+   * d'abord. Le composer de lancement s'en sert tant qu'aucun projet n'est
+   * choisi.
    */
   sendDisabled?: boolean;
   sendDisabledTooltip?: string;

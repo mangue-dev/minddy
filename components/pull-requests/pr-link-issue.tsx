@@ -33,7 +33,7 @@ import type { GlobalBoardResponse } from "@/lib/types";
  * rattrapage, et il prend la place exacte du « aucun ticket » qu'il remplace.
  *
  * Le geste est en DEUX temps, parce qu'il est définitif : on choisit dans le
- * même picker que le bouton « Nouveau » de /agents (board global chargé
+ * même picker de tickets que le composer de /agents (board global chargé
  * paresseusement, à l'ouverture), puis on confirme dans un dialog qui nomme le
  * ticket ET annonce le statut qu'il va prendre — la conséquence se dit avant le
  * geste, pas après.
