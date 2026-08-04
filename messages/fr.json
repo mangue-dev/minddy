@@ -2684,15 +2684,14 @@
     },
     "billing": {
       "title": "Offrir un plan",
-      "subtitle": "Forcez un plan sur un compte, pour une durée ou sans limite. Il prend le pas sur Stripe et s'arrête tout seul à l'échéance.",
-      "searchPlaceholder": "utilisateur@email.com",
-      "search": "Rechercher",
-      "notFound": "Aucun compte avec cet email.",
+      "subtitle": "Prioritaire sur Stripe, et s'arrête tout seul à l'échéance.",
+      "help": "Le plan offert prend le pas sur l'abonnement Stripe du compte sans y toucher : à la fin du cadeau, la personne retrouve son vrai plan. Un cadeau ne rapporte rien et ne compte donc jamais dans le revenu.",
       "effectivePlan": "Plan : {plan}",
       "source_admin_override": "Override admin",
       "source_stripe": "Abonnement Stripe",
       "source_default": "Plan par défaut",
       "stripeUnderneath": "Plan Stripe sous-jacent : {plan}",
+      "planLabel": "Plan effectif",
       "overrideLabel": "Override",
       "overrideNone": "Aucun (plan réel)",
       "noteLabel": "Note",
@@ -2712,7 +2711,6 @@
       "previewNoEnd": "Le plan restera offert jusqu'à ce qu'un admin le reprenne.",
       "gift": "Offrir",
       "stopGift": "Reprendre le plan réel",
-      "save": "Enregistrer",
       "saved": "Plan mis à jour."
     },
     "title": "Modèles IA",
@@ -2789,6 +2787,10 @@
       "transcription_model": {
         "label": "Transcription vocale",
         "desc": "Convertit l'audio de la dictée en texte."
+      },
+      "demo_dictation_enabled": {
+        "label": "Démo vocale de la landing",
+        "desc": "Laisse un visiteur sans compte essayer la dictée sur la page d'accueil, sur un ticket fictif. Le seul appel IA que minddy offre : environ 0,0003 $ le passage, borné à dix par IP et par heure et à 500 par jour. Coupée, la démo se dit indisponible."
       },
       "feedback_classify_enabled": {
         "label": "Classification automatique",
@@ -2903,15 +2905,17 @@
       "usersTitle": "Usage IA par utilisateur",
       "usersDescription": "Chaque utilisateur est limité par le budget mensuel de son plan, toutes fonctionnalités IA confondues. La remise à zéro fait repartir le décompte à partir de maintenant ; aucune dépense n'est effacée.",
       "empty": "Aucun usage IA ce mois-ci.",
-      "counted": "compté sur le budget",
-      "realSpend": "dépense du mois",
+      "counted": "Compté sur le budget",
+      "realSpend": "Dépense du mois",
       "blocked": "Bloqué",
-      "resetOn": "Remis à zéro le {at}",
-      "lastUsed": "Dernier usage {at}",
       "calls": "{count, plural, one {# appel} other {# appels}}",
       "reset": "Remettre à zéro",
+      "resetsTitle": "Remises à zéro de la période",
+      "resetsHint": "Seule la plus récente compte ; la retirer rend la main à la précédente.",
+      "resetsCount": "{count, plural, one {# remise à zéro} other {# remises à zéro}}",
+      "resetActive": "en cours",
+      "undoOne": "Annuler cette remise à zéro",
       "resetToast": "Quota de {name} remis à zéro.",
-      "undo": "Annuler",
       "undoToast": "Remise à zéro annulée pour {name}."
     },
     "users": {
@@ -2946,6 +2950,10 @@
       "step_mcp": "Connecter un agent",
       "step_key": "Votre clé d'API",
       "step_cycles": "Cycles",
+      "accountTitle": "Compte",
+      "accountSubtitle": "Inscription, activité, onboarding.",
+      "internalHint": "Retiré de toutes les statistiques.",
+      "usageDescription": "La fenêtre en cours, et la dépense réelle du mois.",
       "usageTitle": "Budget d'usage IA",
       "usageSubtitle": "La remise à zéro fait repartir le décompte à partir de maintenant ; aucune dépense n'est effacée.",
       "internalTitle": "Compte interne",

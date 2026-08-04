@@ -1081,7 +1081,9 @@ export interface AdminUserRow {
     spentMonthUsd: number;
     calls: number;
     blocked: boolean;
-    /** Filigrane de remise à zéro admin, s'il y en a un. */
+    /** La DERNIÈRE remise à zéro admin, s'il y en a une : c'est elle qui fixe le
+     *  début de la fenêtre comptée. Le registre complet de la période se lit sur
+     *  `GET /api/admin/agent-quota?userId=`. */
     resetAt: string | null;
   };
 }
@@ -1090,6 +1092,27 @@ export interface AdminUsersResponse {
   users: AdminUserRow[];
   /** Nombre de comptes correspondant à la recherche, avant pagination. */
   total: number;
+}
+
+/** Une remise à zéro du budget d'usage, telle que l'admin la voit. */
+export interface AdminQuotaReset {
+  id: string;
+  at: string;
+}
+
+/**
+ * `GET|POST|DELETE /api/admin/agent-quota` — le registre des remises à zéro de
+ * la période de facturation en cours, et ce que le budget compte APRÈS le geste
+ * (retirer une remise à zéro rouvre la fenêtre : le montant remonte).
+ */
+export interface AdminQuotaResetsResponse {
+  periodStart: string;
+  /** De la plus récente à la plus ancienne ; la première fait foi. */
+  resets: AdminQuotaReset[];
+  usage: {
+    spentUsd: number;
+    blocked: boolean;
+  };
 }
 
 /** Un jour de la série d'activité de la vue d'ensemble. */

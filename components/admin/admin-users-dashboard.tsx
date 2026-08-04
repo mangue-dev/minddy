@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Badge,
@@ -25,8 +32,17 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { CalendarClock, EyeOff, RotateCcw, Search, Undo2, X } from "lucide-react";
+import {
+  EyeOff,
+  Gauge,
+  Gift,
+  RotateCcw,
+  Search,
+  UserRound,
+  X,
+} from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { BILLING_PLANS, type BillingPlanId } from "@/lib/billing-plans";
 import {
   DEFAULT_GIFT_DURATION,
@@ -34,7 +50,12 @@ import {
   giftExpiresAt,
   type GiftDuration,
 } from "@/lib/billing-gift";
-import type { AdminUserRow, AdminUsersResponse } from "@/lib/types";
+import type {
+  AdminQuotaReset,
+  AdminQuotaResetsResponse,
+  AdminUserRow,
+  AdminUsersResponse,
+} from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -52,6 +73,24 @@ import type { MessageKey } from "@/lib/i18n-keys";
  * La remise à zéro conserve sa nuance d'origine, essentielle : elle ne supprime
  * AUCUN coût. Le panneau montre donc les deux montants — ce que le budget compte
  * (fenêtre réelle + filigrane) et la dépense réelle du mois, intacte.
+ *
+ * Elle s'EMPILE désormais (20261105) : plusieurs par période de facturation, et
+ * le panneau en tient le registre. C'est la plus récente qui fixe le début de la
+ * fenêtre comptée — les précédentes sont derrière elle et ne libèrent plus rien ;
+ * elles disent seulement combien on a déjà offert à ce compte sur la période,
+ * qui est exactement ce qu'on veut savoir avant d'en offrir une de plus.
+ *
+ * Le panneau suit la GRAMMAIRE DES RÉGLAGES (`components/settings/settings-ui`,
+ * MIN-167), comme l'onglet « Modèles ». Il ne l'a pas toujours fait, et ça se
+ * voyait : six sections toutes en `text-sm font-semibold`, certaines bordées et
+ * d'autres nues, chacune suivie de son paragraphe d'explication — rien ne disait
+ * ce qui était un titre, un fait ou un geste. La même information tient
+ * maintenant en trois cartes de rangées « libellé à gauche · valeur à droite »,
+ * et la prose (ce qu'un compte interne cesse d'alimenter, ce qu'une remise à
+ * zéro n'efface pas) est passée derrière les ⓘ, où on la lit quand on la
+ * cherche. En haut, ce qui identifie le compte : l'avatar, le nom, l'email, puis
+ * ses pastilles d'état sur leur propre ligne — accrochées au titre, elles le
+ * tronquaient dès qu'un nom était long.
  *
  * Seul écran de l'app où l'email brut s'affiche : c'est l'identifiant avec
  * lequel un admin travaille, et l'accès est verrouillé côté serveur
@@ -188,6 +227,8 @@ function UserSheet({
   const [savingPlan, setSavingPlan] = useState(false);
   const [busyQuota, setBusyQuota] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
+  /** Le registre des remises à zéro de la période — `null` tant qu'il charge. */
+  const [resets, setResets] = useState<AdminQuotaReset[] | null>(null);
 
   // Le panneau se remplit à chaque ouverture (et à chaque compte suivant).
   useEffect(() => {
@@ -198,8 +239,33 @@ function UserSheet({
     setDuration(user?.billing.override ? KEEP_DURATION : DEFAULT_GIFT_DURATION);
   }, [user?.userId, user?.billing.override, user?.billing.overrideNote]);
 
+  // Le registre ne voyage pas avec la liste des comptes : il coûterait une
+  // requête de plus par ligne pour une information qu'on ne lit qu'ici.
+  const userId = user?.userId;
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    setResets(null);
+    void (async () => {
+      try {
+        const response = await fetch(`/api/admin/agent-quota?userId=${userId}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = (await response.json()) as AdminQuotaResetsResponse;
+        if (alive) setResets(data.resets);
+      } catch {
+        // Le registre manquant ne doit pas condamner le reste du panneau : on
+        // le montre vide, le geste « Remettre à zéro » reste offert.
+        if (alive) setResets([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
   if (!user) return null;
 
+  /** Un instant : la date ET l'heure — « dernière connexion » se lit à l'heure. */
   const dt = (iso: string | null) =>
     iso
       ? format.dateTime(new Date(iso), {
@@ -210,6 +276,15 @@ function UserSheet({
           minute: "2-digit",
         })
       : "—";
+
+  /** Une échéance : la date seule. L'heure d'un cadeau qui finit dans trois mois
+   *  n'apprend rien et allonge la ligne d'un tiers. */
+  const day = (iso: string) =>
+    format.dateTime(new Date(iso), {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
 
   const savePlan = async () => {
     if (savingPlan) return;
@@ -279,36 +354,41 @@ function UserSheet({
     }
   };
 
-  const setQuotaReset = async (reset: boolean) => {
+  /**
+   * Pose une remise à zéro de plus (`undoId` absent), ou en retire une.
+   *
+   * Le serveur renvoie l'état recalculé dans les deux cas : retirer une remise
+   * à zéro ROUVRE la fenêtre sur des dépenses qui n'étaient plus comptées, et le
+   * nouveau montant ne se devine pas d'ici. La dépense RÉELLE du mois, elle, ne
+   * bouge jamais — c'est tout l'intérêt du filigrane.
+   */
+  const setQuotaReset = async (undoId?: string) => {
     if (busyQuota) return;
     setBusyQuota(true);
     try {
-      const response = reset
-        ? await fetch("/api/admin/agent-quota", {
+      const response = undoId
+        ? await fetch(`/api/admin/agent-quota?id=${undoId}`, { method: "DELETE" })
+        : await fetch("/api/admin/agent-quota", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: user.userId }),
-          })
-        : await fetch(`/api/admin/agent-quota?userId=${user.userId}`, {
-            method: "DELETE",
           });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = (await response.json()) as { resetAt?: string };
+      const data = (await response.json()) as AdminQuotaResetsResponse;
+      setResets(data.resets);
       onChanged({
         userId: user.userId,
         usage: {
           ...user.usage,
-          resetAt: reset ? (data.resetAt ?? new Date().toISOString()) : null,
-          // La remise à zéro libère le budget compté ; la dépense réelle du
-          // mois, elle, ne bouge pas — c'est tout l'intérêt du filigrane.
-          spentUsd: reset ? 0 : user.usage.spentUsd,
-          blocked: reset ? false : user.usage.blocked,
+          resetAt: data.resets[0]?.at ?? null,
+          spentUsd: data.usage.spentUsd,
+          blocked: data.usage.blocked,
         },
       });
       toast.success(
-        reset
-          ? t("quotas.resetToast", { name: user.name })
-          : t("quotas.undoToast", { name: user.name }),
+        undoId
+          ? t("quotas.undoToast", { name: user.name })
+          : t("quotas.resetToast", { name: user.name }),
       );
     } catch (err) {
       toast.error((err as Error).message);
@@ -322,130 +402,199 @@ function UserSheet({
       ? Math.min(user.usage.spentUsd / user.usage.budgetUsd, 1)
       : 0;
 
+  // L'onboarding tient en UNE ligne : où il en est, et l'étape en cours quand
+  // elle veut dire quelque chose (un compte à qui l'onboarding n'a jamais été
+  // montré n'a franchi aucune étape et n'en franchira pas).
+  const onboarding = user.onboarding.dismissed
+    ? t("users.onboardingDismissed", {
+        done: user.onboarding.completed,
+        total: user.onboarding.total,
+      })
+    : user.onboarding.started
+      ? t("users.onboardingProgress", {
+          done: user.onboarding.completed,
+          total: user.onboarding.total,
+        })
+      : t("users.onboardingNeverSeen");
+  const currentStep =
+    user.onboarding.started && user.onboarding.currentStep
+      ? t("users.onboardingCurrent", {
+          // L'étape vient de la base : clé assemblée à l'exécution.
+          step: t(
+            `users.step_${user.onboarding.currentStep}` as MessageKey<"Admin">,
+          ),
+        })
+      : null;
+
+  /** Ce que le bouton « Offrir » va poser : une durée ne dit pas d'elle-même à
+   *  quelle date elle tombe. */
+  const preview =
+    duration === KEEP_DURATION
+      ? user.billing.overrideExpiresAt
+        ? t("billing.previewKeep", { at: day(user.billing.overrideExpiresAt) })
+        : t("billing.previewNoEnd")
+      : duration === "unlimited"
+        ? t("billing.previewNoEnd")
+        : t("billing.previewUntil", {
+            at: day(giftExpiresAt(duration as GiftDuration) as string),
+          });
+
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="flex !w-full flex-col gap-0 sm:!w-[92%] sm:!max-w-[520px]"
+        className="flex !w-full flex-col gap-0 sm:!w-[92%] sm:!max-w-[540px]"
       >
-        <SheetHeader className="shrink-0 border-b border-border pr-12">
-          <SheetTitle className="flex items-center gap-2.5">
-            <UserAvatar
-              seed={user.avatarSeed}
-              className="size-7"
-            />
-            <span className="truncate">{user.name}</span>
+        {/* ── Qui c'est ─────────────────────────────────────────────────── */}
+        {/* En-tête sur la surface de carte du panneau ; le corps, lui, passe en
+            `bg-background` — la convention du shell (fond gris, cartes
+            blanches), sans quoi des cartes `bg-card` sur un panneau `bg-card`
+            ne se détacheraient de rien. */}
+        <SheetHeader className="shrink-0 gap-3 border-b border-border pr-12">
+          <div className="flex min-w-0 items-center gap-3">
+            <UserAvatar seed={user.avatarSeed} className="size-9 shrink-0" />
+            <div className="flex min-w-0 flex-col">
+              <SheetTitle className="truncate">{user.name}</SheetTitle>
+              <SheetDescription className="truncate text-xs">
+                {user.email ?? "—"}
+              </SheetDescription>
+            </div>
+          </div>
+          {/* L'état du compte, en pastilles : le plan, ce qui le met à part, ce
+              qui le bloque. Sous l'identité, jamais dans son titre — un badge
+              collé au nom est ce qui le tronquait. */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <PlanBadge user={user} />
             {user.internal ? <InternalBadge /> : null}
-          </SheetTitle>
-          <SheetDescription className="truncate">
-            {user.email ?? "—"}
-          </SheetDescription>
+            {user.usage.blocked ? (
+              <Badge variant="destructive" className="h-5 shrink-0 text-[10px]">
+                {t("quotas.blocked")}
+              </Badge>
+            ) : null}
+          </div>
         </SheetHeader>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-background p-4">
           {/* ── Le compte en chiffres ─────────────────────────────────── */}
-          <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {/* Filets à 1 px par `gap-px` sur fond de bordure : les tuiles ne
+              peuvent pas se toucher, et la valeur reste alignée d'une colonne à
+              l'autre même quand un libellé passe à la ligne. */}
+          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
             {[
               { label: t("users.projects"), value: user.projects },
               { label: t("users.projectsOwned"), value: user.projectsOwned },
               { label: t("users.issues"), value: user.issues },
               { label: t("users.issuesCreated"), value: user.issuesCreated },
             ].map((item) => (
-              <div key={item.label} className="flex flex-col gap-0.5">
-                <span className="text-xl font-semibold tabular-nums tracking-tight">
+              <div
+                key={item.label}
+                className="flex flex-col gap-1 bg-card px-3 py-2.5"
+              >
+                <span className="text-lg leading-none font-semibold tabular-nums">
                   {item.value}
                 </span>
-                <span className="text-xs text-muted-foreground">{item.label}</span>
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {item.label}
+                </span>
               </div>
             ))}
           </section>
 
-          <section className="space-y-2 rounded-xl border border-border p-3">
-            <Row label={t("users.signedUp")} value={dt(user.createdAt)} />
-            <Row label={t("users.lastSignIn")} value={dt(user.lastSignInAt)} />
-            <Row label={t("users.lastActivity")} value={dt(user.lastActivityAt)} />
-            <Row
+          {/* ── Le compte ─────────────────────────────────────────────── */}
+          <SettingsGroup
+            icon={UserRound}
+            title={t("users.accountTitle")}
+            description={t("users.accountSubtitle")}
+          >
+            <SettingsRow
+              label={t("users.signedUp")}
+              control={<Value>{dt(user.createdAt)}</Value>}
+            />
+            <SettingsRow
+              label={t("users.lastSignIn")}
+              control={<Value>{dt(user.lastSignInAt)}</Value>}
+            />
+            <SettingsRow
+              label={t("users.lastActivity")}
+              control={<Value>{dt(user.lastActivityAt)}</Value>}
+            />
+            <SettingsRow
               label={t("users.emailStatus")}
-              value={
-                user.emailConfirmed ? t("users.confirmed") : t("users.unconfirmed")
+              control={
+                <Badge variant={user.emailConfirmed ? "secondary" : "outline"}>
+                  {user.emailConfirmed
+                    ? t("users.confirmed")
+                    : t("users.unconfirmed")}
+                </Badge>
               }
             />
-          </section>
+            <SettingsRow
+              label={t("users.onboardingTitle")}
+              hint={currentStep ? `${onboarding} ${currentStep}` : onboarding}
+              control={<OnboardingPips user={user} />}
+            />
+            <SettingsRow
+              htmlFor="admin-user-internal"
+              label={t("users.internalTitle")}
+              hint={t("users.internalHint")}
+              // La liste exhaustive de ce qui cesse de compter est vraie et
+              // utile — mais c'est de la prose : elle vit derrière le ⓘ.
+              help={t("users.internalSubtitle")}
+              control={
+                <>
+                  {/* L'interrupteur reste en place pendant l'écriture : le
+                      remplacer par le spinner ferait pointer le libellé sur un
+                      `id` disparu, et sauter la ligne. */}
+                  {savingInternal ? <Spinner /> : null}
+                  <Switch
+                    id="admin-user-internal"
+                    checked={user.internal}
+                    disabled={savingInternal}
+                    onCheckedChange={(next) => void toggleInternal(next)}
+                  />
+                </>
+              }
+            />
+          </SettingsGroup>
 
-          {/* ── Compte interne ─────────────────────────────────────────── */}
-          <section className="flex items-start justify-between gap-4 rounded-xl border border-border p-3">
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold">{t("users.internalTitle")}</h3>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {t("users.internalSubtitle")}
-              </p>
-            </div>
-            {savingInternal ? (
-              <Spinner className="mt-1 shrink-0" />
-            ) : (
-              <Switch
-                checked={user.internal}
-                onCheckedChange={(next) => void toggleInternal(next)}
-                aria-label={t("users.internalTitle")}
-                className="mt-1 shrink-0"
-              />
-            )}
-          </section>
-
-          {/* ── Onboarding ─────────────────────────────────────────────── */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t("users.onboardingTitle")}</h3>
-            <p className="text-sm text-muted-foreground">
-              {user.onboarding.dismissed
-                ? t("users.onboardingDismissed", {
-                    done: user.onboarding.completed,
-                    total: user.onboarding.total,
-                  })
-                : user.onboarding.started
-                  ? t("users.onboardingProgress", {
-                      done: user.onboarding.completed,
-                      total: user.onboarding.total,
-                    })
-                  : t("users.onboardingNeverSeen")}
-            </p>
-            {/* L'étape en cours ne veut rien dire pour un compte à qui
-                l'onboarding n'a jamais été montré — il n'en a franchi aucune
-                et n'en franchira pas : ne pas lui inventer une progression. */}
-            {user.onboarding.started && user.onboarding.currentStep ? (
-              <p className="text-xs text-muted-foreground">
-                {t("users.onboardingCurrent", {
-                  // L'étape vient de la base : clé assemblée à l'exécution.
-                  step: t(
-                    `users.step_${user.onboarding.currentStep}` as MessageKey<"Admin">,
-                  ),
-                })}
-              </p>
-            ) : null}
-          </section>
-
-          {/* ── Budget d'usage + remise à zéro ─────────────────────────── */}
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">{t("users.usageTitle")}</h3>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {t("users.usageSubtitle")}
-              </p>
-            </div>
-
-            <div className="space-y-2 rounded-xl border border-border p-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <span
-                  className={cn(
-                    "text-sm font-medium tabular-nums",
-                    user.usage.blocked && "text-destructive",
-                  )}
+          {/* ── Budget d'usage ────────────────────────────────────────── */}
+          <SettingsGroup
+            icon={Gauge}
+            title={t("users.usageTitle")}
+            description={t("users.usageDescription")}
+            help={t("users.usageSubtitle")}
+            // Combien on en a déjà offert sur cette période : c'est la question
+            // qu'on se pose avant d'en offrir une de plus, donc elle est à
+            // gauche du bouton qui le fait.
+            footer={
+              <>
+                {resets && resets.length > 0 ? (
+                  <span className="mr-auto text-xs text-muted-foreground">
+                    {t("quotas.resetsCount", { count: resets.length })}
+                  </span>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void setQuotaReset()}
+                  disabled={busyQuota}
+                >
+                  {busyQuota ? <Spinner /> : <RotateCcw className="size-3.5" />}
+                  {t("quotas.reset")}
+                </Button>
+              </>
+            }
+          >
+            <SettingsRow
+              label={t("quotas.counted")}
+              control={
+                <Value
+                  className={cn(user.usage.blocked && "text-destructive")}
                 >
                   {fmtCost(user.usage.spentUsd)} / ${user.usage.budgetUsd}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {t("quotas.counted")}
-                </span>
-              </div>
+                </Value>
+              }
+            >
               <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
@@ -455,182 +604,187 @@ function UserSheet({
                   style={{ width: `${Math.round(ratio * 100)}%` }}
                 />
               </div>
-              <div className="flex items-baseline justify-between gap-3 pt-1">
-                <span className="text-sm tabular-nums text-muted-foreground">
-                  {fmtCost(user.usage.spentMonthUsd)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {t("quotas.realSpend")} · {t("quotas.calls", { count: user.usage.calls })}
-                </span>
-              </div>
-            </div>
-
-            {user.usage.resetAt ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="h-5 text-[10px]">
-                  {t("quotas.resetOn", { at: dt(user.usage.resetAt) })}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void setQuotaReset(false)}
-                  disabled={busyQuota}
-                >
-                  {busyQuota ? <Spinner /> : <Undo2 className="size-3.5" />}
-                  {t("quotas.undo")}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void setQuotaReset(true)}
-                disabled={busyQuota}
+            </SettingsRow>
+            {/* La dépense réelle du mois ne bouge JAMAIS d'une remise à zéro :
+                c'est tout l'intérêt de la montrer à côté du compté. */}
+            <SettingsRow
+              label={t("quotas.realSpend")}
+              hint={t("quotas.calls", { count: user.usage.calls })}
+              control={<Value>{fmtCost(user.usage.spentMonthUsd)}</Value>}
+            />
+            {/* Le registre de la période. Rien à montrer tant qu'aucune remise à
+                zéro n'a été posée : une rangée vide ferait du bruit pour dire
+                qu'il ne s'est rien passé. */}
+            {resets && resets.length > 0 ? (
+              <SettingsRow
+                label={t("quotas.resetsTitle")}
+                hint={t("quotas.resetsHint")}
+                orientation="vertical"
               >
-                {busyQuota ? <Spinner /> : <RotateCcw className="size-3.5" />}
-                {t("quotas.reset")}
-              </Button>
-            )}
-          </section>
-
-          {/* ── Plan : offrir, pour un temps ou sans limite ────────────── */}
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">{t("billing.title")}</h3>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {t("billing.subtitle")}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">
-                {t("billing.effectivePlan", { plan: user.billing.planId })}
-              </Badge>
-              <Badge variant="outline">
-                {t(`billing.source_${user.billing.source}`)}
-              </Badge>
-              {user.billing.override ? (
-                <Badge variant="outline" className="gap-1">
-                  <CalendarClock className="size-3" />
-                  {user.billing.overrideExpiresAt
-                    ? t("billing.giftUntil", {
-                        at: dt(user.billing.overrideExpiresAt),
-                      })
-                    : t("billing.giftNoEnd")}
-                </Badge>
-              ) : null}
-              {user.billing.stripePlanId && user.billing.source !== "stripe" ? (
-                <span className="text-xs text-muted-foreground">
-                  {t("billing.stripeUnderneath", { plan: user.billing.stripePlanId })}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {t("billing.overrideLabel")}
-                  </label>
-                  <Select value={override} onValueChange={setOverride}>
-                    <SelectTrigger size="sm" className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_OVERRIDE}>
-                        {t("billing.overrideNone")}
-                      </SelectItem>
-                      {BILLING_PLANS.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {t("billing.durationLabel")}
-                  </label>
-                  <Select
-                    value={duration}
-                    onValueChange={setDuration}
-                    disabled={override === NO_OVERRIDE}
-                  >
-                    <SelectTrigger size="sm" className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* « Ne pas changer » n'a de sens que sur un cadeau déjà
-                          en cours — et c'est alors le choix par défaut. */}
-                      {user.billing.override ? (
-                        <SelectItem value={KEEP_DURATION}>
-                          {t("billing.durationKeep")}
-                        </SelectItem>
+                <ul className="flex flex-col gap-1.5">
+                  {resets.map((entry, index) => (
+                    <li
+                      key={entry.id}
+                      className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5"
+                    >
+                      <RotateCcw className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate text-xs tabular-nums">
+                        {dt(entry.at)}
+                      </span>
+                      {/* La plus récente est la SEULE qui compte encore : les
+                          autres sont derrière elle, elles ne libèrent plus
+                          rien. Le dire évite de lire la pile comme un cumul. */}
+                      {index === 0 ? (
+                        <Badge variant="secondary" className="h-5 shrink-0 text-[10px]">
+                          {t("quotas.resetActive")}
+                        </Badge>
                       ) : null}
-                      {GIFT_DURATIONS.map((id) => (
-                        <SelectItem key={id} value={id}>
-                          {/* Clé assemblée à l'exécution depuis la liste des durées. */}
-                          {t(`billing.duration_${id}` as MessageKey<"Admin">)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {/* Ce que le bouton va poser, en toutes lettres : une durée
-                  choisie ne dit pas d'elle-même à quelle date elle tombe. */}
-              {override !== NO_OVERRIDE ? (
-                <p className="text-xs text-muted-foreground">
-                  {duration === KEEP_DURATION
-                    ? user.billing.overrideExpiresAt
-                      ? t("billing.previewKeep", {
-                          at: dt(user.billing.overrideExpiresAt),
-                        })
-                      : t("billing.previewNoEnd")
-                    : duration === "unlimited"
-                      ? t("billing.previewNoEnd")
-                      : t("billing.previewUntil", {
-                          at: dt(
-                            giftExpiresAt(duration as GiftDuration) as string,
-                          ),
-                        })}
-                </p>
-              ) : null}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t("billing.noteLabel")}
-                </label>
-                <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t("billing.notePlaceholder")}
-                  disabled={override === NO_OVERRIDE}
-                />
-              </div>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        className="shrink-0"
+                        aria-label={t("quotas.undoOne")}
+                        onClick={() => void setQuotaReset(entry.id)}
+                        disabled={busyQuota}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </SettingsRow>
+            ) : null}
+          </SettingsGroup>
+
+          {/* ── Plan : offrir, pour un temps ou sans limite ───────────── */}
+          <SettingsGroup
+            icon={Gift}
+            title={t("billing.title")}
+            description={t("billing.subtitle")}
+            help={t("billing.help")}
+            footer={
               <Button size="sm" onClick={() => void savePlan()} disabled={savingPlan}>
                 {savingPlan ? <Spinner /> : null}
                 {override === NO_OVERRIDE
                   ? t("billing.stopGift")
                   : t("billing.gift")}
               </Button>
-            </div>
-          </section>
+            }
+          >
+            <SettingsRow
+              label={t("billing.planLabel")}
+              hint={
+                user.billing.override
+                  ? user.billing.overrideExpiresAt
+                    ? t("billing.giftUntil", {
+                        at: day(user.billing.overrideExpiresAt),
+                      })
+                    : t("billing.giftNoEnd")
+                  : user.billing.stripePlanId && user.billing.source !== "stripe"
+                    ? t("billing.stripeUnderneath", {
+                        plan: user.billing.stripePlanId,
+                      })
+                    : undefined
+              }
+              control={
+                <>
+                  <Badge variant="secondary">{user.billing.planId}</Badge>
+                  <Badge variant="outline">
+                    {t(`billing.source_${user.billing.source}`)}
+                  </Badge>
+                </>
+              }
+            />
+            <SettingsRow
+              htmlFor="admin-gift-plan"
+              label={t("billing.overrideLabel")}
+              control={
+                <Select value={override} onValueChange={setOverride}>
+                  <SelectTrigger id="admin-gift-plan" size="sm" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_OVERRIDE}>
+                      {t("billing.overrideNone")}
+                    </SelectItem>
+                    {BILLING_PLANS.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            />
+            <SettingsRow
+              htmlFor="admin-gift-duration"
+              label={t("billing.durationLabel")}
+              hint={override === NO_OVERRIDE ? undefined : preview}
+              control={
+                <Select
+                  value={duration}
+                  onValueChange={setDuration}
+                  disabled={override === NO_OVERRIDE}
+                >
+                  <SelectTrigger
+                    id="admin-gift-duration"
+                    size="sm"
+                    className="w-40"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* « Ne pas changer » n'a de sens que sur un cadeau déjà en
+                        cours — et c'est alors le choix par défaut. */}
+                    {user.billing.override ? (
+                      <SelectItem value={KEEP_DURATION}>
+                        {t("billing.durationKeep")}
+                      </SelectItem>
+                    ) : null}
+                    {GIFT_DURATIONS.map((id) => (
+                      <SelectItem key={id} value={id}>
+                        {/* Clé assemblée depuis la liste des durées. */}
+                        {t(`billing.duration_${id}` as MessageKey<"Admin">)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            />
+            <SettingsRow
+              htmlFor="admin-gift-note"
+              label={t("billing.noteLabel")}
+              orientation="vertical"
+              control={
+                <Input
+                  id="admin-gift-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t("billing.notePlaceholder")}
+                  disabled={override === NO_OVERRIDE}
+                />
+              }
+            />
+          </SettingsGroup>
         </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-/** Une ligne libellé / valeur du panneau. */
-function Row({ label, value }: { label: string; value: string }) {
+/** La valeur d'une rangée : un fait, aligné à droite, jamais tronqué au milieu. */
+function Value({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="truncate text-sm tabular-nums">{value}</span>
-    </div>
+    <span className={cn("text-sm tabular-nums", className)}>{children}</span>
   );
 }
+
 
 export function AdminUsersDashboard() {
   const t = useTranslations("Admin");

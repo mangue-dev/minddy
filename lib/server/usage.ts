@@ -23,7 +23,9 @@ import { recordAiUsage, type AiUsageBillTo } from "@/lib/server/ai-usage";
  * Fenêtre : le cycle de facturation Stripe pour les abonnés (annuel → sous-cycle
  * MENSUEL, l'usage se réinitialise chaque mois même en paiement annuel), sinon
  * le mois calendaire UTC ; bornée par le filigrane `agent_quota_resets` (remise
- * à zéro admin — s'applique au budget entier, plus seulement aux agents).
+ * à zéro admin — s'applique au budget entier, plus seulement aux agents). Ce
+ * filigrane est un REGISTRE : plusieurs remises à zéro peuvent coexister sur une
+ * même période, et c'est la PLUS RÉCENTE qui borne la fenêtre.
  *
  * Enforcement : `ensureUsageBudget` en PRÉ-VOL avant chaque action coûtante ;
  * l'enregistrement reste post-hoc best-effort (`recordAiUsage` ne throw
@@ -50,18 +52,19 @@ function monthWindow(now = new Date()): UsagePeriod {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-/** La fenêtre comptée par le budget de ce user. */
-export async function getUsagePeriod(
-  userId: string,
-  billing: ResolvedBilling
-): Promise<UsagePeriod> {
-  let { start, end } = monthWindow();
-
-  // Fenêtre = cycle de facturation Stripe dès qu'un abonnement ACTIF porte ses
-  // dates, indépendamment de la source du plan effectif : un override admin peut
-  // coexister avec un vrai abonnement, et c'est alors le cycle (pas le mois
-  // calendaire) qui borne l'usage. Annuel → sous-cycle MENSUEL : l'usage se
-  // réinitialise chaque mois même quand le paiement est annuel.
+/**
+ * La PÉRIODE DE FACTURATION de ce user, avant tout filigrane — c'est elle qui
+ * borne le registre des remises à zéro (« combien en a-t-on déjà offert sur
+ * cette période ? »), là où `getUsagePeriod` répond à « depuis quand compte-t-on
+ * vraiment ? ».
+ *
+ * Cycle Stripe dès qu'un abonnement ACTIF porte ses dates, indépendamment de la
+ * source du plan effectif : un override admin peut coexister avec un vrai
+ * abonnement, et c'est alors le cycle (pas le mois calendaire) qui borne
+ * l'usage. Annuel → sous-cycle MENSUEL : l'usage se réinitialise chaque mois
+ * même quand le paiement est annuel.
+ */
+export function getBillingWindow(billing: ResolvedBilling): UsagePeriod {
   const account = billing.account;
   if (
     account?.stripe_current_period_start &&
@@ -72,22 +75,39 @@ export async function getUsagePeriod(
       periodStart: account.stripe_current_period_start,
       periodEnd: account.stripe_current_period_end,
     });
-    if (window) {
-      start = window.start;
-      end = window.end;
-    }
+    if (window) return window;
   }
+  return monthWindow();
+}
 
+/**
+ * Le dernier filigrane posé sur ce compte.
+ *
+ * `agent_quota_resets` est un REGISTRE : un admin peut en poser plusieurs sur
+ * une même période, et c'est la remise à zéro la PLUS RÉCENTE qui fixe le début
+ * de la fenêtre comptée — les précédentes sont déjà derrière elle, elles ne
+ * peuvent plus rien libérer.
+ */
+export async function latestQuotaResetAt(userId: string): Promise<string | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_quota_resets")
     .select("reset_at")
     .eq("user_id", userId)
+    .order("reset_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
-  const resetAt = (data as { reset_at?: string } | null)?.reset_at;
-  if (resetAt && resetAt > start) start = resetAt;
+  return (data as { reset_at?: string } | null)?.reset_at ?? null;
+}
 
-  return { start, end };
+/** La fenêtre comptée par le budget de ce user. */
+export async function getUsagePeriod(
+  userId: string,
+  billing: ResolvedBilling
+): Promise<UsagePeriod> {
+  const { start, end } = getBillingWindow(billing);
+  const resetAt = await latestQuotaResetAt(userId);
+  return { start: resetAt && resetAt > start ? resetAt : start, end };
 }
 
 interface UsageRpcRow {

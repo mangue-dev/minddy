@@ -2684,15 +2684,14 @@
     },
     "billing": {
       "title": "Gift a plan",
-      "subtitle": "Force a plan on an account, for a set time or with no end date. It takes precedence over Stripe and ends on its own.",
-      "searchPlaceholder": "user@email.com",
-      "search": "Search",
-      "notFound": "No account with this email.",
+      "subtitle": "Takes precedence over Stripe, and ends on its own.",
+      "help": "A gifted plan overrides the account's Stripe subscription without touching it: when the gift ends, the person gets their real plan back. A gift earns nothing, so it never counts toward revenue.",
       "effectivePlan": "Plan: {plan}",
       "source_admin_override": "Admin override",
       "source_stripe": "Stripe subscription",
       "source_default": "Default plan",
       "stripeUnderneath": "Stripe plan underneath: {plan}",
+      "planLabel": "Effective plan",
       "overrideLabel": "Override",
       "overrideNone": "None (real plan)",
       "noteLabel": "Note",
@@ -2712,7 +2711,6 @@
       "previewNoEnd": "The plan stays gifted until an admin takes it back.",
       "gift": "Gift",
       "stopGift": "Restore real plan",
-      "save": "Save",
       "saved": "Plan updated."
     },
     "title": "AI models",
@@ -2789,6 +2787,10 @@
       "transcription_model": {
         "label": "Speech-to-text",
         "desc": "Converts dictation audio into text."
+      },
+      "demo_dictation_enabled": {
+        "label": "Landing page voice demo",
+        "desc": "Lets a visitor with no account try dictation on the home page, on a fictional issue. The only AI call minddy gives away: about $0.0003 a go, capped at ten per IP per hour and 500 a day. Off, the demo says it is unavailable."
       },
       "feedback_classify_enabled": {
         "label": "Automatic classification",
@@ -2903,15 +2905,17 @@
       "usersTitle": "AI usage by user",
       "usersDescription": "Each user is capped by their plan's monthly budget, across all AI features. A reset restarts the count from now; no spend is erased.",
       "empty": "No AI usage this month.",
-      "counted": "counted toward budget",
-      "realSpend": "spend this month",
+      "counted": "Counted toward budget",
+      "realSpend": "Spend this month",
       "blocked": "Blocked",
-      "resetOn": "Reset on {at}",
-      "lastUsed": "Last used {at}",
       "calls": "{count, plural, one {# call} other {# calls}}",
       "reset": "Reset",
+      "resetsTitle": "Resets this period",
+      "resetsHint": "Only the most recent one counts; removing it hands back to the previous one.",
+      "resetsCount": "{count, plural, one {# reset} other {# resets}}",
+      "resetActive": "current",
+      "undoOne": "Undo this reset",
       "resetToast": "{name}'s quota reset.",
-      "undo": "Undo",
       "undoToast": "Reset undone for {name}."
     },
     "users": {
@@ -2946,6 +2950,10 @@
       "step_mcp": "Connect an agent",
       "step_key": "Your API key",
       "step_cycles": "Cycles",
+      "accountTitle": "Account",
+      "accountSubtitle": "Sign-up, activity, onboarding.",
+      "internalHint": "Left out of every statistic.",
+      "usageDescription": "The current window, and the real spend this month.",
       "usageTitle": "AI usage budget",
       "usageSubtitle": "A reset restarts the count from now; no spend is erased.",
       "internalTitle": "Internal account",
