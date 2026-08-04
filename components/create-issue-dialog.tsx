@@ -488,9 +488,16 @@ export function CreateIssueDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
+        {/* Trois largeurs, trois marges. Au large, le modal garde ses 32 px.
+          Sous `sm`, il ne fait plus que la fenêtre moins 32 px : 20 px suffisent
+          à le faire respirer sans manger la ligne. Sous 480 px, mangue-ui le
+          bascule en bottom sheet (vaul) et pose DÉJÀ ses propres 16 px sur le
+          contenu — les nôtres s'y ajouteraient, soit près d'un tiers de la
+          largeur d'un téléphone perdu en marges, d'où le `p-0` de ce cas-là
+          (l'attribut de vaul, seul repère fiable du basculement). */}
         <DialogContent
           ref={contentRef}
-          className="p-8 sm:max-w-2xl"
+          className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
           showCloseButton={false}
           onInteractOutside={keepOverlayOpenForPopper}
         >
@@ -541,7 +548,7 @@ export function CreateIssueDialog({
                 void submit(e.shiftKey || createMore);
               }}
               placeholder={t("titlePlaceholder")}
-              className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+              className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
             />
             <MarkdownEditor
               mentions={mentions}
@@ -619,8 +626,11 @@ export function CreateIssueDialog({
               />
             </div>
 
-            {/* Bottom bar — voice dictation at left, create controls at right */}
-            <div className="mt-8 flex items-center gap-3">
+            {/* Bottom bar — voice dictation at left, create controls at right.
+              Elle passe à la ligne sous `sm` : micro, trombone et « créer
+              plus » tiennent sur la première, le bouton — qui porte le nom du
+              projet — prend la seconde, pleine largeur. */}
+            <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {numoBusy ? (
                 <span
                   className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
@@ -661,11 +671,16 @@ export function CreateIssueDialog({
                   checked={createMore}
                   onCheckedChange={setCreateMore}
                 />
+              </div>
+              {/* Le bouton dans son propre bloc : c'est lui qui bascule sur une
+                ligne à lui, pleine largeur, quand la barre passe à la ligne. */}
+              <div className="flex items-center justify-end max-sm:w-full sm:ml-1">
                 {otherProjects.length > 0 && currentProject ? (
                   <SplitButton
                     type="submit"
                     disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                    actionClassName="rounded-l-full pl-4"
+                    className="max-sm:w-full"
+                    actionClassName="rounded-l-full pl-4 max-sm:flex-1"
                     triggerClassName="rounded-r-full"
                     menuLabel={t("createInOtherProject")}
                     menu={otherProjects.map((p) => (
@@ -686,7 +701,7 @@ export function CreateIssueDialog({
                 ) : (
                   <Button
                     type="submit"
-                    className="rounded-full px-4"
+                    className="rounded-full px-4 max-sm:w-full"
                     disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                   >
                     {submitting && <Spinner />}

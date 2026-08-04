@@ -37,10 +37,12 @@ import { UserAvatar } from "@/components/user-avatar";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { Category, Member, Objective } from "@/lib/types";
 
+// Au doigt, la rangée d'options est faite de cibles de 30 px, sous le seuil du
+// confortable : sous `sm` chaque déclencheur gagne quelques pixels de garde.
 const BARE =
-  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
 const PILL =
-  "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring";
+  "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring max-sm:h-9";
 
 // Lets the create-issue dialog drive each picker's open state from a keyboard
 // shortcut and surface the key in the trigger's tooltip. All optional — the
@@ -310,7 +312,7 @@ export function DueDateCompact({
       onRecurrenceChange={onRecurrenceChange}
       placeholder={tField("dueDate")}
       ariaLabel={t("changeDueDateAria")}
-      className="h-8 rounded-full"
+      className="h-8 rounded-full max-sm:h-9"
       open={open}
       onOpenChange={onOpenChange}
       tooltip={shortcutHint ? tField("dueDate") : undefined}

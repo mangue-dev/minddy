@@ -59,7 +59,7 @@ import type {
 // Bare (borderless) compact-field trigger — matches issue-compact-fields.tsx so
 // the objective dialog's options row reads like the create-issue dialog's.
 const BARE =
-  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
 
 /** Icon + label status picker for the compact options row. */
 function ObjectiveStatusCompact({
@@ -448,8 +448,12 @@ export function ObjectiveDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
+        {/* Mêmes trois marges que le dialog de création de ticket : 32 px au
+          large, 20 px sous `sm` (le modal ne fait plus que la fenêtre moins
+          32 px), et rien sous 480 px — mangue-ui bascule alors en bottom sheet
+          (vaul) qui pose déjà ses propres 16 px sur le contenu. */}
         <DialogContent
-          className="p-8 sm:max-w-2xl"
+          className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* Titre lecteur d'écran : à l'édition, le nom de l'objectif dit
@@ -504,7 +508,7 @@ export function ObjectiveDialog({
                 void submit();
               }}
               placeholder={t("namePlaceholder")}
-              className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+              className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
             />
             <MarkdownEditor
               key={editorKey}
@@ -537,7 +541,7 @@ export function ObjectiveDialog({
                 placeholder={t("targetDatePlaceholder")}
                 ariaLabel={t("targetDatePlaceholder")}
                 tooltip={t("targetDatePlaceholder")}
-                className="h-8 rounded-full"
+                className="h-8 rounded-full max-sm:h-9"
               />
               <ColorCompact
                 value={form.color}
@@ -546,8 +550,9 @@ export function ObjectiveDialog({
             </div>
 
             {/* Bottom bar — voice dictation at left, create controls at right,
-              like the create-issue dialog */}
-            <div className="mt-8 flex items-center gap-3">
+              like the create-issue dialog : elle passe à la ligne sous `sm`,
+              où le bouton prend une ligne à lui, pleine largeur. */}
+            <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {composerEnabled &&
                 (numoBusy ? (
                   <>
@@ -581,7 +586,7 @@ export function ObjectiveDialog({
               {composerEnabled && (
                 <AttachButton onFiles={uploads.addFiles} disabled={submitting} />
               )}
-              <div className="ml-auto flex items-center gap-4">
+              <div className="ml-auto flex items-center justify-end max-sm:w-full">
                 {showSplit ? (
                   <SplitButton
                     type="submit"
@@ -591,7 +596,8 @@ export function ObjectiveDialog({
                       !form.name.trim() ||
                       uploads.uploading
                     }
-                    actionClassName="rounded-l-full pl-4"
+                    className="max-sm:w-full"
+                    actionClassName="rounded-l-full pl-4 max-sm:flex-1"
                     triggerClassName="rounded-r-full"
                     menuLabel={t("createInOtherProject")}
                     menu={otherProjects.map((p) => (
@@ -609,7 +615,7 @@ export function ObjectiveDialog({
                 ) : (
                   <Button
                     type="submit"
-                    className="rounded-full px-4"
+                    className="rounded-full px-4 max-sm:w-full"
                     disabled={
                       submitting ||
                       numoBusy ||
