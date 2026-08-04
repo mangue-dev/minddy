@@ -5,6 +5,7 @@ import { cn } from "mangue-ui";
 import {
   IsoIconScene,
   type SceneIcon,
+  type SceneTone,
 } from "@/components/illustrations/iso-icon";
 
 /**
@@ -27,6 +28,7 @@ export function EmptyScene({
   icon,
   title,
   size = "page",
+  tone,
   children,
   className,
 }: {
@@ -34,6 +36,8 @@ export function EmptyScene({
   icon: SceneIcon;
   title: string;
   size?: "page" | "compact";
+  /** Teinte du dessin — `destructive` pour ce qui supprime (la corbeille). */
+  tone?: SceneTone;
   /** Les actions, côte à côte. Aucune sur une surface qui se remplit seule. */
   children?: ReactNode;
   className?: string;
@@ -47,7 +51,11 @@ export function EmptyScene({
         className
       )}
     >
-      <IsoIconScene icon={icon} className={compact ? "w-40" : "w-72"} />
+      <IsoIconScene
+        icon={icon}
+        tone={tone}
+        className={compact ? "w-40" : "w-72"}
+      />
       <p className={cn("font-medium", compact ? "text-sm" : "text-base")}>
         {title}
       </p>

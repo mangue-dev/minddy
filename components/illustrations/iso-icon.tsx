@@ -59,16 +59,31 @@ export type SceneIcon = ComponentType<{
  *  maximum vient coller aux arêtes du losange et la scène étouffe. */
 const ICON_INSET = 15;
 
+/**
+ * La teinte du dessin. La marque par défaut ; le rouge pour ce qui SUPPRIME —
+ * la corbeille se reconnaît à sa couleur avant de se lire, et la peindre en
+ * bleu comme le reste en ferait une section de plus.
+ */
+const TONE = {
+  brand: { face: "text-brand", back: "text-brand/25" },
+  destructive: { face: "text-destructive", back: "text-destructive/25" },
+} as const;
+
+export type SceneTone = keyof typeof TONE;
+
 export function IsoIcon({
   icon: Icon,
   size,
   depth = 1,
   lying = true,
   spin = -45,
+  tone = "brand",
   className,
   style,
 }: {
   icon: SceneIcon;
+  /** Teinte du dessin — `destructive` pour ce qui supprime. */
+  tone?: SceneTone;
   /** Côté de l'icône. Absent = celui que l'appelant impose par `style`. */
   size?: number;
   /** Copies d'épaisseur (1 = une icône plate, sans relief). */
@@ -141,7 +156,7 @@ export function IsoIcon({
             strokeWidth={1.5}
             className={cn(
               "absolute inset-0 size-full",
-              top ? "text-brand" : "text-brand/25"
+              top ? TONE[tone].face : TONE[tone].back
             )}
             style={{
               transform: `translateY(${-back * 1.6}px) ${flatten}${fitted}`,
@@ -211,6 +226,7 @@ export function IsoIconScene({
   depth?: number;
   lying?: boolean;
   spin?: number;
+  tone?: SceneTone;
   className?: string;
 }) {
   return (

@@ -213,7 +213,7 @@ export default function TrashPage() {
       {grouped.length === 0 ? (
         /* Rien à faire ici non plus : la scène et une phrase, sans bouton,
            comme le triage. */
-        <EmptyScene icon={Trash2} title={t("emptyTitle")} />
+        <EmptyScene icon={Trash2} tone="destructive" title={t("emptyTitle")} />
       ) : (
         grouped.map(({ type, items: rows }) => (
           <section key={type} className="mt-8 first:mt-0">
