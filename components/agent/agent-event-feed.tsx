@@ -213,10 +213,21 @@ function str(v: unknown): string {
 function buildFeed(
   events: AgentRunEvent[],
   initialPrompt?: string | null,
-): { items: FeedItem[]; results: Map<string, ToolResult>; userTexts: string[] } {
+): {
+  items: FeedItem[];
+  results: Map<string, ToolResult>;
+  userTexts: string[];
+  sandboxReady: boolean;
+} {
   const ordered = [...events].sort((a, b) => a.seq - b.seq);
   const items: FeedItem[] = [];
   const results = new Map<string, ToolResult>();
+  // Où en est la MACHINE du chunk en cours ? Chaque chunk ouvre par un
+  // `status: running` puis, une fois la microVM réveillée et le dépôt là, un
+  // `phase: sandbox_ready`. Le second après le premier ⇒ la sandbox est ouverte.
+  // (Comparés par `seq` : un run enchaîne les chunks, seul le dernier compte.)
+  let runningSeq = -1;
+  let sandboxSeq = -1;
   // TOUS les textes user reçus (bulles ET réponses absorbées par une question) —
   // sert au dédoublonnage des bulles optimistes, qui ne peut plus se lire depuis
   // les items seuls.
@@ -483,6 +494,10 @@ function buildFeed(
         break;
       }
       case "status": {
+        // Marqueurs de la MACHINE — rien à rendre, ils disent seulement où en est
+        // le chunk (cf. `sandboxReady`).
+        if (p.phase === "sandbox_ready") sandboxSeq = e.seq;
+        else if (p.status === "running") runningSeq = e.seq;
         // Le seul `status` rendu : le provider a REFUSÉ le niveau de raisonnement
         // demandé (MIN-122). Sans cette ligne, le niveau choisi resterait affiché
         // dans le composer alors qu'il n'a plus aucun effet — silencieusement.
@@ -509,7 +524,7 @@ function buildFeed(
     }
   }
 
-  return { items, results, userTexts };
+  return { items, results, userTexts, sandboxReady: sandboxSeq > runningSeq };
 }
 
 /**
@@ -857,7 +872,7 @@ export function AgentEventFeed({
     if (node) node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
   }, []);
 
-  const { items, results, userTexts } = useMemo(
+  const { items, results, userTexts, sandboxReady } = useMemo(
     () => buildFeed(events, prompt),
     [events, prompt],
   );
@@ -976,21 +991,6 @@ export function AgentEventFeed({
     lastPendingCountRef.current = pendingCount;
   }, [pendingCount]);
 
-  if (items.length === 0 && stillPending.length === 0 && liveItems.length === 0) {
-    return (
-      <div className={cn("flex items-center justify-center px-3 text-center", className)}>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {active ? (
-            <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
-          ) : null}
-          <span className={cn(active && "text-shimmer")}>
-            {loading || active ? t("working") : t("noActivity")}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   const ctx: RenderContext = {
     results,
     copyableIds,
@@ -998,9 +998,24 @@ export function AgentEventFeed({
     hiddenQuestionEventId,
   };
   // Le tour actif (accordéon ouvert « Travaille depuis X ») porte déjà le signal
-  // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore
-  // (ex. juste après le lancement : prompt affiché, aucun pas produit).
+  // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore.
   const hasActiveTurn = blocks.some((b) => b.type === "turn" && b.active);
+  /**
+   * L'agent est parti mais rien n'est encore visible de lui. Deux moments très
+   * différents sous cette même apparence, et c'est l'event `sandbox_ready` qui les
+   * sépare :
+   *  • AVANT — la microVM se réveille et le dépôt se restaure : personne ne
+   *    travaille encore, on ouvre la sandbox (plusieurs secondes) ;
+   *  • APRÈS — la machine est là et l'agent réfléchit ; son premier pas n'est
+   *    simplement pas encore posé (un tour peut ne rien émettre jusqu'à sa
+   *    réponse finale). Là, « travaille » est la vérité.
+   * Dès qu'un pas paraît, le tour actif prend le relais et porte le chrono.
+   */
+  const startingSandbox = active && !hasActiveTurn && !sandboxReady;
+  const workingSilently = active && !hasActiveTurn && sandboxReady;
+  // Rien du tout, et personne au travail : la session n'a rien à raconter.
+  const emptyAtRest =
+    !active && blocks.length === 0 && displayPending.length === 0 && !loading;
 
   return (
     <div
@@ -1008,11 +1023,15 @@ export function AgentEventFeed({
       {...scrollProps}
       className={cn("flex flex-col overflow-y-auto overscroll-contain", className)}
     >
-      {/* `mt-auto` colle le contenu en BAS (proche de l'input) tant qu'il est court,
-          puis remonte et défile normalement quand il déborde. Largeur bornée +
-          centrée, avec le MÊME retrait horizontal (px-3) que le composer `ChatInput`
-          → messages et input strictement à la même largeur. */}
-      <div className="mx-auto mt-auto flex w-full max-w-[800px] flex-col gap-3 px-3">
+      {/* Le fil part du HAUT, sous l'en-tête de la conversation, et descend vers
+          l'input — comme une page qui se remplit.
+          Il était collé en BAS (`mt-auto`) tant qu'il était court : chaque bloc qui
+          arrivait poussait alors tout le fil vers le haut, et le lancement d'une
+          session — où la sandbox, le premier pas et la première réponse tombent en
+          quelques secondes — se voyait comme une suite de sauts.
+          Largeur bornée + centrée, avec le MÊME retrait horizontal (px-3) que le
+          composer `ChatInput` → messages et input strictement à la même largeur. */}
+      <div className="mx-auto flex w-full max-w-[800px] flex-col gap-3 px-3">
         {blocks.map((block) =>
           block.type === "turn" ? (
             <TurnGroup
@@ -1039,11 +1058,19 @@ export function AgentEventFeed({
             toolCallResults={results}
           />
         ))}
-        {active && !hasActiveTurn ? (
+        {/* Ces deux lignes tiennent la place du premier bloc à venir : elles sont
+            DANS le fil, à sa largeur et à son ancrage. L'ouverture de la sandbox
+            s'affiche donc exactement là où le travail s'écrira, et la relève ne
+            déplace rien. */}
+        {startingSandbox || workingSilently ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
-            <span className="text-shimmer">{t("working")}</span>
+            <span className="text-shimmer">
+              {startingSandbox ? t("openingSandbox") : t("working")}
+            </span>
           </div>
+        ) : emptyAtRest ? (
+          <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
         ) : null}
       </div>
       {/* Retour en bas, à parité avec le fil de Numo : le fil ne suit plus l'agent,

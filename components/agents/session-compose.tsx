@@ -12,7 +12,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronLeft, ChevronsUpDown, MessageSquare } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
@@ -20,7 +20,7 @@ import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
-import { allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
+import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
@@ -212,6 +212,17 @@ export function SessionCompose({
         reasoningLevel,
         baseBranch: baseBranch || undefined,
       });
+      /**
+       * Amorce le cache de la session AVANT de rendre la main.
+       *
+       * Le volet de conversation qui prend le relais dans une seconde interroge
+       * cette clé-là (`useAgentRunQuery`). Sans données, il se rend en phase
+       * « chargement » : un spinner À LA PLACE du message et du composer, le temps
+       * d'un aller-retour, en plein milieu du lancement. Or la session est ICI,
+       * telle que le serveur vient de la rendre — il n'y a rien à aller chercher.
+       * La conversation s'ouvre donc directement sur son fil.
+       */
+      queryClient.setQueryData(agentRunQueryKey(run.id), { run });
       onLaunched(run);
       // Ce projet devient le défaut du prochain composer (mémoire d'appareil).
       rememberAgentProject(projectId);
@@ -230,20 +241,31 @@ export function SessionCompose({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Sous `md` seulement : la colonne des conversations est cachée derrière
-          ce volet, il faut un chemin de retour. Au-dessus, les deux cohabitent. */}
-      {onBack ? (
-        <div className="flex shrink-0 items-center px-2 pt-2 md:hidden">
+      {/* En-tête, à la MÊME géométrie que celle d'une conversation ouverte
+          (`AgentConversation` : `px-4 pt-4 pb-2.5`, retour mobile · icône · titre).
+          Ce n'est pas de la décoration : quand la session réelle prend le relais —
+          quelques secondes après l'envoi —, la page échange ce volet contre celui
+          de la conversation. Sans en-tête ici, le fil démarrait 50 px plus haut et
+          le message déjà écrit sautait vers le bas au moment de la relève.
+          Le titre suit le même sort : « Nouvelle conversation » cède la place au
+          titre que l'agent lui donne, sans que rien ne bouge. */}
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+        {/* Sous `md` seulement : la colonne des conversations est cachée derrière
+            ce volet, il faut un chemin de retour. Au-dessus, les deux cohabitent. */}
+        {onBack ? (
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label={tAgents("backToList")}
+            className="md:hidden"
             onClick={onBack}
           >
             <ChevronLeft />
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+        <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate text-sm font-medium">{tAgents("newButton")}</span>
+      </div>
       <div className="min-h-0 flex-1">
         {launchText ? (
           <AgentEventFeed

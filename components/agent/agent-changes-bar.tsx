@@ -52,11 +52,15 @@ export function AgentChangesBar({
     if (liveFiles.length === 0) return null;
     return (
       <div className="px-3 pb-2">
+        {/* REPLIÉ pendant le travail, et c'est le point : ce bloc est le seul
+            élément qui pousse le composer, et déplié il grandissait d'une ligne à
+            chaque fichier touché — l'input redescendait sous les doigts pendant
+            qu'on écrivait. Son libellé porte déjà le décompte, qui monte sans rien
+            déplacer ; le déroulé est à un clic pour qui veut le suivre. */}
         <ChangedFilesBlock
           files={liveFiles}
           label={t("filesChangedTurn", { count: liveFiles.length })}
           live
-          defaultOpen
           onOpenFile={onOpenFile}
         />
       </div>

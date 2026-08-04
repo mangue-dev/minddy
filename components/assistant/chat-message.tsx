@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 import { IconButton, toast } from "mangue-ui";
@@ -186,7 +186,21 @@ function AssistantText({ content }: { content: string }) {
 
 // ── Message components ────────────────────────────────────────────────
 
-export function ChatMessage({
+/**
+ * MÉMOÏSÉ, et c'est structurel : un message déjà écrit ne change plus jamais.
+ *
+ * Le fil de l'agent se re-rend ~4 fois par seconde pendant que le modèle écrit
+ * (le direct pousse son texte à cette cadence). Sans ce garde, chacune de ces
+ * images re-rendait TOUS les messages du fil — donc reparsait tout leur markdown
+ * et remuait tout leur DOM — pour n'en changer qu'un seul, le dernier. Sur une
+ * session un peu longue, c'est ce qui saturait le fil principal.
+ *
+ * Le contrat qui le rend efficace : les props doivent garder leur identité entre
+ * deux rendus. `message` et `toolCallResults` viennent d'un `useMemo` sur les
+ * events (stables tant qu'aucun event n'arrive) et `onSeedCreated` /
+ * `onOpenFile` doivent être des callbacks stables côté appelant.
+ */
+export const ChatMessage = memo(function ChatMessage({
   message,
   toolCallResults,
   askUserHidden = false,
@@ -273,7 +287,7 @@ export function ChatMessage({
       </div>
     </Message>
   );
-}
+});
 
 // Streaming message (not yet persisted)
 export function StreamingMessage({

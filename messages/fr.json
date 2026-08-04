@@ -1616,6 +1616,7 @@
     "branchSessionLocked": "Cette session travaille sur {branch}, copiée de {origin}.",
     "prMerged": "PR fusionnée",
     "working": "L'agent Numo travaille…",
+    "openingSandbox": "Ouverture de la sandbox…",
     "commitLabel": "Commit",
     "viewPullRequest": "Voir la pull request",
     "noActivity": "Aucune activité pour l'instant.",

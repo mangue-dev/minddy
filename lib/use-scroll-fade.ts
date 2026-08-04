@@ -49,8 +49,9 @@ export function useScrollFade<T extends HTMLElement>(
   // ref, il tournait une fois dans le vide et plus rien ne mesurait jamais.
   const [node, setNode] = useState<T | null>(null);
   const [edges, setEdges] = useState({ start: false, end: false });
+  const frameRef = useRef<number | null>(null);
 
-  const update = useCallback(() => {
+  const measure = useCallback(() => {
     const el = elRef.current;
     if (!el) return;
     const offset = axis === "y" ? el.scrollTop : el.scrollLeft;
@@ -62,6 +63,28 @@ export function useScrollFade<T extends HTMLElement>(
       prev.start === start && prev.end === end ? prev : { start, end }
     );
   }, [axis]);
+
+  /**
+   * Mesure AU PLUS UNE FOIS PAR IMAGE.
+   *
+   * Ces trois lectures (`scrollTop`, `clientHeight`, `scrollHeight`) forcent le
+   * navigateur à recalculer la mise en page, et ce qui les déclenche n'est pas
+   * un geste de l'utilisateur : c'est un `MutationObserver` en `subtree`, donc
+   * TOUT changement du contenu. Un fil d'agent qui streame réécrit son markdown
+   * plusieurs fois par seconde, chaque réécriture remue des centaines de nœuds —
+   * on mesurait donc à cette cadence-là, en bloquant le fil principal à chaque
+   * fois. C'est ce qui faisait « sauter » toute l'interface, barre latérale
+   * comprise, au moment précis où l'agent commence à écrire.
+   *
+   * Une image suffit : personne ne peut voir un fondu apparaître plus tôt.
+   */
+  const update = useCallback(() => {
+    if (frameRef.current != null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      measure();
+    });
+  }, [measure]);
 
   const ref = useCallback<RefCallback<T>>((el) => {
     elRef.current = el;
@@ -81,6 +104,8 @@ export function useScrollFade<T extends HTMLElement>(
     return () => {
       ro.disconnect();
       mo.disconnect();
+      if (frameRef.current != null) cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
     };
   }, [node, update]);
 

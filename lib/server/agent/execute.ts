@@ -1218,6 +1218,14 @@ export async function executeAgentRun(
       base_branch: baseBranch,
     });
 
+    // La machine est là. C'est la seule chose que le fil ne pouvait pas deviner :
+    // entre le `status: running` du haut de ce chunk et le premier pas de l'agent,
+    // il se passe plusieurs secondes de réveil de microVM et de clone — le fil
+    // affichait « travaille » alors que personne ne travaillait encore. Cet event
+    // ferme cette fenêtre : avant lui « ouverture de la sandbox », après lui le
+    // travail (cf. `sandboxReady` dans components/agent/agent-event-feed.tsx).
+    await emit("status", { phase: "sandbox_ready" });
+
     // La branche est-elle DÉJÀ sur le remote ? Vrai quand la run hérite d'une
     // lignée (`launchAgentRun` ne transmet que des branches poussées) ou qu'un
     // chunk précédent a poussé. Sert à ne stamper qu'une fois.

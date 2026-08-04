@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn, Spinner, toast } from "mangue-ui";
@@ -298,7 +305,12 @@ export function AgentConversation({
   // Les fichiers des blocs « fichiers changés » ouvrent la vue diff de la session
   // DANS la conversation (note scratchpad : voir le diff pendant que l'agent
   // modifie, sans attendre la PR) — le Sheet montre le travail poussé, PR ou pas.
-  const openDiff = liveRun ? () => setDiffOpen(true) : undefined;
+  //
+  // STABLE (useCallback) : ce callback descend jusqu'aux blocs du fil, qui sont
+  // mémoïsés. Recréé à chaque rendu, il les réveillerait tous à chaque poussée du
+  // direct — soit quatre fois par seconde pendant que l'agent écrit.
+  const openDiffSheet = useCallback(() => setDiffOpen(true), []);
+  const openDiff = liveRun ? openDiffSheet : undefined;
 
   // Changer de run vide les bulles optimistes : elles appartiennent à la
   // conversation qu'on quitte, pas à celle qu'on ouvre. `launchText` part avec :
