@@ -10,7 +10,6 @@ import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { enUS, fr } from "react-day-picker/locale";
 import {
-  Kbd,
   Popover,
   PopoverAnchor,
   PopoverContent,
@@ -27,6 +26,7 @@ import {
   TooltipTrigger,
   cn,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { CalendarDays, Repeat } from "lucide-react";
 import { Calendar } from "@/components/calendar";
 import { dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";

@@ -26,8 +26,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-  Kbd,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 
 export interface ContextMenuAction {

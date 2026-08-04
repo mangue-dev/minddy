@@ -4,7 +4,6 @@ import { Mic, Square } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  KbdSequence,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -16,6 +15,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { KbdSequence } from "@/components/ui/kbd";
 
 import { DictateWaveform } from "./dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";

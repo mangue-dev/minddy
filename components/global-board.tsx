@@ -3,7 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Button, Kbd, Skeleton, toast } from "mangue-ui";
+import { Button, Skeleton, toast } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { FolderPlus, LayoutGrid, ListTodo, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";

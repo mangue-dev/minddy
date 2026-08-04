@@ -10,9 +10,8 @@ import {
   cn,
   transitions,
   buttonTap,
-  Kbd,
-  KbdSequence,
 } from "mangue-ui";
+import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";

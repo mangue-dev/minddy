@@ -12,11 +12,11 @@ import Link from "next/link";
 import {
   Button,
   DropdownMenuItem,
-  Kbd,
   Skeleton,
   SplitButton,
   toast,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { FileUp, LayoutGrid, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";

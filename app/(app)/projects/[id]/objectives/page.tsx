@@ -16,11 +16,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Kbd,
   Progress,
   Skeleton,
   toast,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { Plus, MoreHorizontal, Pencil, Target, Trash2 } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import {

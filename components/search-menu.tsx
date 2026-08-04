@@ -17,7 +17,6 @@ import {
   CommandEmpty,
   CommandList,
   CommandSeparator,
-  Kbd,
   Popover,
   PopoverAnchor,
   PopoverContent,
@@ -27,6 +26,7 @@ import {
   TooltipTrigger,
   cn,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 
 /** Shared styling for the search input inside any dropdown (cmdk or Radix). */
 export const searchInputClass =

@@ -7,8 +7,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  Kbd,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import {
   ChevronDown,
   ListTodo,

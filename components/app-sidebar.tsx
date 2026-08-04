@@ -20,10 +20,10 @@ import {
   TooltipContent,
   useTheme,
   cn,
-  Kbd,
   type NavItem,
   type NavSection,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Sun,
   Moon,

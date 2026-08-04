@@ -33,7 +33,8 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { toast, Kbd } from "mangue-ui";
+import { toast } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";

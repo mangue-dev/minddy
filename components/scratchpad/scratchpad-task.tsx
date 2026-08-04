@@ -16,10 +16,10 @@ import {
   CommandItem,
   CommandSeparator,
   CommandShortcut,
-  Kbd,
   cn,
   toast,
 } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Bot,
   Check,

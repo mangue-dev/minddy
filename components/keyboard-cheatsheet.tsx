@@ -10,8 +10,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  KbdSequence,
 } from "mangue-ui";
+import { KbdSequence } from "@/components/ui/kbd";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { CHEATSHEET, resolveKeyToken } from "@/lib/keyboard/shortcuts";
 

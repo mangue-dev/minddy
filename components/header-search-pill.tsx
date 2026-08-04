@@ -2,8 +2,9 @@
 
 import { type ComponentType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Kbd } from "mangue-ui";
+import { Kbd } from "@/components/ui/kbd";
 import { Search } from "lucide-react";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 
 /**
  * A single command-palette row. Superset of mangue-ui's `CommandMenuItem`: adds
@@ -49,6 +50,11 @@ export interface PaletteGroup {
  */
 export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations("Nav");
+  // La pill ANNONCE le raccourci : elle doit donc dire celui qu'on a sous les
+  // doigts. Le cheat sheet et le pied de la palette résolvent déjà « mod » à la
+  // plateforme ; celle-ci était la dernière à afficher ⌘ en dur, y compris à qui
+  // n'a pas de touche ⌘.
+  const mod = useModKey();
   return (
     <button
       type="button"
@@ -60,7 +66,12 @@ export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
       <span className="hidden text-left sm:inline-block">
         {t("searchPlaceholder")}
       </span>
-      <Kbd className="ml-1 hidden opacity-60 sm:inline-flex">⌘K</Kbd>
+      {/* Deux touches, deux `Kbd` — comme le cheat sheet, et comme le clavier :
+          « ⌘K » dans une seule pastille se lisait comme une touche unique. */}
+      <span className="ml-1 hidden items-center gap-0.5 opacity-60 sm:inline-flex">
+        <Kbd>{mod}</Kbd>
+        <Kbd>K</Kbd>
+      </span>
     </button>
   );
 }
