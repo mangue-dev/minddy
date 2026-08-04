@@ -1,5 +1,6 @@
 import { mcpToolCatalog } from "@/lib/server/mcp/catalog";
 import { MCP_SERVER_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
+import { integrationWebhookDoc } from "@/lib/feedback/integration-contract";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
@@ -31,6 +32,8 @@ ${MCP_SERVER_INSTRUCTIONS}
 ## Tools (${tools.length})
 
 ${tools.map(renderTool).join("\n\n")}
+
+${renderWebhook()}
 `;
 
   return new Response(body, {
@@ -39,6 +42,36 @@ ${tools.map(renderTool).join("\n\n")}
       "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
     },
   });
+}
+
+/**
+ * Le webhook sortant — la seule partie de l'API qui ne se lit pas dans un
+ * schéma d'outil : c'est une route que l'agent doit ÉCRIRE, pas appeler. Elle
+ * vient donc en entier, depuis le même contrat que celui rendu par
+ * `minddy_create_integration` et `minddy_configure_webhook`.
+ */
+function renderWebhook(): string {
+  const w = integrationWebhookDoc();
+  // Les blocs se séparent d'une ligne vide, les puces d'un simple retour : une
+  // liste aérée est une liste « loose » en markdown, et se rend en paragraphes.
+  const list = (items: string[]) => items.join("\n");
+  return [
+    "## Webhooks (minddy → your app)",
+    w.purpose,
+    w.configure,
+    "### Events",
+    list(w.events.map((e) => `- \`${e.name}\`: ${e.when}`)),
+    "### Scope",
+    list(w.scopes.map((s) => `- \`${s.value}\`: ${s.meaning}`)),
+    "### Request headers",
+    list(Object.entries(w.headers).map(([name, value]) => `- \`${name}\`: ${value}`)),
+    "### Verifying the signature",
+    w.signature,
+    "### Body",
+    list(Object.entries(w.payload).map(([field, value]) => `- \`${field}\`: ${value}`)),
+    "### Delivery",
+    list(w.delivery.map((rule) => `- ${rule}`)),
+  ].join("\n\n");
 }
 
 function renderTool(tool: ReturnType<typeof mcpToolCatalog>[number]): string {

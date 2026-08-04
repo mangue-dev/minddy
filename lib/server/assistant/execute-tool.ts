@@ -29,6 +29,7 @@ import {
 } from "@/lib/server/integrations";
 import {
   integrationUsage,
+  integrationWebhookDoc,
   isIntegrationKind,
 } from "@/lib/feedback/integration-contract";
 import { SITE_URL } from "@/lib/site";
@@ -255,6 +256,8 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
     "Smart Assign is not included in the owner's plan, so it cannot be turned on. Relay that as-is.",
   automationsNotAllowed:
     "Automations are not included in the owner's plan, so the loop cannot be armed on this project. Relay that as-is.",
+  webhookIssuesOnly:
+    "That is a 'feedback' key: it creates no issue, so it has no webhook. Only an 'issues' key can have one.",
   databaseError: "A database error occurred.",
 };
 
@@ -680,11 +683,36 @@ export async function executeTool(
       case "list_integrations": {
         const { data, error } = await ctx.supabase
           .from("integrations")
-          .select("id, name, kind, revoked_at")
+          // Une seule chaîne littérale : `select` type ses colonnes en LISANT
+          // ce texte, et une concaténation lui rend le résultat opaque.
+          .select(
+            "id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at"
+          )
           .eq("project_id", projectId)
           .order("name", { ascending: true });
         if (error) return toolError(error.message);
-        return { result: { integrations: data ?? [] }, success: true };
+        return {
+          result: {
+            integrations: (data ?? []).map((row) => ({
+              id: row.id,
+              name: row.name,
+              kind: row.kind,
+              revoked_at: row.revoked_at,
+              // Sans URL il n'y a pas de webhook : `null` plutôt qu'un objet à
+              // moitié rempli, qui ferait croire à un webhook éteint mais réglé.
+              webhook: row.webhook_url
+                ? {
+                    url: row.webhook_url,
+                    events: row.webhook_events,
+                    scope: row.webhook_scope,
+                    last_status: row.webhook_last_status,
+                    last_at: row.webhook_last_at,
+                  }
+                : null,
+            })),
+          },
+          success: true,
+        };
       }
 
       // ── Write tools ───────────────────────────────────────────────────
@@ -1652,6 +1680,12 @@ export async function executeTool(
               webhook_events: result.integration.webhook_events,
               webhook_scope: result.integration.webhook_scope,
             },
+            // Le récepteur reste à écrire, et rien de son contrat ne se devine
+            // (la clé du HMAC n'est pas la clé d'API). Éteindre le webhook, en
+            // revanche, ne demande plus rien : pas de contrat à relayer.
+            ...(result.integration.webhook_url
+              ? { contract: integrationWebhookDoc() }
+              : {}),
           },
           success: true,
         };

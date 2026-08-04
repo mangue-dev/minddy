@@ -150,10 +150,15 @@ export function dispatchWebhooksForEvents(
       const issueById = new Map(issues.map((i) => [i.id as string, i]));
 
       const projectIds = [...new Set(issues.map((i) => i.project_id as string))];
+      // `kind = issues` : un webhook ne livre que des événements d'issue, et une
+      // clé feedback n'en crée aucune. La règle est refusée à l'écriture
+      // (lib/server/integrations.ts) ; on la tient aussi ici, pour qu'une
+      // configuration antérieure à la règle cesse de partir.
       const { data: hooks } = await service
         .from("integrations")
         .select("id, project_id, name, key_hash, webhook_url, webhook_events, webhook_scope")
         .in("project_id", projectIds)
+        .eq("kind", "issues")
         .not("webhook_url", "is", null)
         .is("revoked_at", null);
       if (!hooks?.length) return;

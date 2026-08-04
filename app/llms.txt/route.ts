@@ -1,4 +1,8 @@
 import { firstSentence, mcpToolCatalog } from "@/lib/server/mcp/catalog";
+import {
+  WEBHOOK_SIGNATURE_HEADER,
+  integrationWebhookDoc,
+} from "@/lib/feedback/integration-contract";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
@@ -25,6 +29,7 @@ import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
  */
 export function GET(): Response {
   const tools = mcpToolCatalog();
+  const webhook = integrationWebhookDoc();
 
   const body = `# minddy
 
@@ -63,6 +68,20 @@ ${MCP_SERVER_MODEL}
 ## Tools
 
 ${tools.map((tool) => `- \`${tool.name}\`${tool.readOnly ? " (read-only)" : ""}: ${firstSentence(tool.description)}`).join("\n")}
+
+## Webhooks
+
+minddy also calls YOU. An integration key created with
+\`minddy_create_integration\` can carry an outgoing webhook — set it with
+\`minddy_configure_webhook\` — and minddy then POSTs signed JSON to your endpoint
+when issues move. It is how an app learns that a human triaged what it pushed:
+do not poll for that.
+
+- Events: ${webhook.events.map((e) => `\`${e.name}\``).join(", ")}
+- Scope: ${webhook.scopes.map((s) => `\`${s.value}\``).join(" or ")} — ${webhook.scopes[0].value} means only the issues that key created
+- Signature: \`${WEBHOOK_SIGNATURE_HEADER}: sha256=<hex>\`. ${webhook.signature}
+
+Full payload, headers and delivery guarantees: ${SITE_URL}/llms-full.txt
 
 ## More
 

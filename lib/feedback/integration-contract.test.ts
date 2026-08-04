@@ -3,7 +3,13 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { integrationUsage, type IntegrationKind } from "./integration-contract";
+import {
+  WEBHOOK_SIGNATURE_HEADER,
+  integrationUsage,
+  integrationWebhookDoc,
+  type IntegrationKind,
+} from "./integration-contract";
+import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 
 /**
  * Le contrat entre CE QU'ON RACONTE AUX AGENTS et CE QUE LES ROUTES FONT.
@@ -86,6 +92,62 @@ describe.each(["feedback", "issues"] as IntegrationKind[])(
     });
   }
 );
+
+/**
+ * Le webhook a la même exigence que les endpoints, dans l'autre sens : ce
+ * qu'on annonce doit être ce que `lib/server/webhooks.ts` envoie VRAIMENT. Un
+ * agent écrit sa route de réception contre cette description et ne la testera
+ * qu'en production, sur un événement qu'il ne provoque pas lui-même.
+ */
+describe("integrationWebhookDoc", () => {
+  const doc = integrationWebhookDoc();
+  const DISPATCHER = readFileSync(
+    join(ROOT, "lib", "server", "webhooks.ts"),
+    "utf8"
+  );
+
+  it("lists exactly the events the dispatcher can send", () => {
+    expect(doc.events.map((e) => e.name).sort()).toEqual([...WEBHOOK_EVENTS].sort());
+  });
+
+  it("lists exactly the scopes the dispatcher understands", () => {
+    expect(doc.scopes.map((s) => s.value).sort()).toEqual([...WEBHOOK_SCOPES].sort());
+  });
+
+  it("only announces headers the dispatcher actually sets", () => {
+    for (const header of Object.keys(doc.headers)) {
+      expect(DISPATCHER, `header "${header}" is never sent`).toContain(`"${header}"`);
+    }
+    expect(Object.keys(doc.headers)).toContain(WEBHOOK_SIGNATURE_HEADER);
+  });
+
+  it("only announces body fields the dispatcher actually builds", () => {
+    for (const field of Object.keys(doc.payload)) {
+      expect(DISPATCHER, `body field "${field}" is never sent`).toMatch(
+        new RegExp(`\\b${field}\\b`)
+      );
+    }
+  });
+
+  it("describes the signature the dispatcher computes: HMAC-SHA256 keyed by the key hash", () => {
+    expect(DISPATCHER).toContain('createHmac("sha256", integration.key_hash)');
+    expect(doc.signature).toContain("SHA-256 hex digest");
+    // Le récepteur signe le corps BRUT : re-sérialiser le JSON change les
+    // octets, et c'est l'erreur qu'on paie en production.
+    expect(doc.signature).toMatch(/raw/i);
+  });
+
+  // Le webhook ne livre que des événements d'issue : l'annoncer sur une clé
+  // feedback ferait écrire une route de réception qui n'est jamais appelée.
+  it("n'est porté que par la clé issues", () => {
+    expect(integrationUsage("issues", ORIGIN).webhook?.events).toEqual(doc.events);
+    expect(integrationUsage("feedback", ORIGIN).webhook).toBeUndefined();
+  });
+
+  it("dit lui-même qu'il est réservé aux clés issues", () => {
+    expect(doc.configure).toContain("'issues' key only");
+  });
+});
 
 describe("integrationUsage", () => {
   it("normalises a trailing slash on the origin", () => {

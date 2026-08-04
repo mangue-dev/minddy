@@ -77,6 +77,15 @@ export const MCP_SERVER_INSTRUCTIONS =
       "and returns, ONCE, the plaintext key plus a `usage` object with the exact " +
       "endpoints, payloads and error codes: write the key into the project's " +
       "server-side environment (never client-side, never committed) and implement " +
-      "against that `usage`, not from memory. minddy_list_integrations shows what " +
-      "already exists (never a key), minddy_revoke_integration kills one for good. " +
+      "against that `usage`, not from memory. An 'issues' integration also runs " +
+      "the OTHER WAY: minddy_configure_webhook points it at an endpoint of their " +
+      "app, and " +
+      "minddy POSTs signed JSON there when issues are created, change status or " +
+      "change fields — that is how the app learns a human triaged what it pushed, " +
+      "so never write a polling loop. The `usage.webhook` of the created key, and " +
+      "the result of minddy_configure_webhook, carry the receiver contract: " +
+      "headers, HMAC verification, payload, delivery guarantees. " +
+      "minddy_list_integrations shows what already exists (never a key, but the " +
+      "webhook setup and its last delivery status), minddy_revoke_integration " +
+      "kills one for good. " +
       "Start with minddy_list_projects to discover project ids.";

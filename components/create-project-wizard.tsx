@@ -4,13 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
   Input,
   Spinner,
   Switch,
@@ -21,20 +16,14 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ArrowLeft,
-  ArrowRight,
-  FileUp,
-  Github,
-  Gitlab,
-  Info,
-  Layers,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { FileUp, Github, Gitlab, Info, Layers, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
-import { isValidKey, normalizeKey, suggestKeyFromName } from "@/lib/project-key";
+import {
+  isValidKey,
+  normalizeKey,
+  suggestKeyFromName,
+} from "@/lib/project-key";
 import {
   bindGitRepoApi,
   fetchAccountGitCandidatesApi,
@@ -64,10 +53,13 @@ import {
   ProjectIconPicker,
   type ProjectIconChoice,
 } from "@/components/project-icon-picker";
-import { WizardStepper } from "@/components/wizard-stepper";
+import {
+  WizardDialog,
+  type WizardStep,
+} from "@/components/wizard/wizard-dialog";
 import { ImportGuideBlock } from "@/components/import/import-guide";
 import { NumoIcon } from "@/components/numo-icon";
-import { IsoIconScene } from "@/components/illustrations/iso-icon";
+import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
@@ -75,11 +67,9 @@ import type { CandidateRepo } from "@/lib/types";
 /**
  * Wizard de création de projet (MIN-62, MIN-171) : D'où part-on ? → Projet →
  * Icône → Dépôt git → Amorce → Finitions.
- * Le layout est celui du wizard AutoKap (project-wizard-dialog.tsx) :
- * grande modale fixe (tokens --spacing-dialog-w/h), colonne centrée max-w-lg,
- * titre + sous-titre + stepper à pilules, corps d'étape animé, CTA pleine
- * largeur « Continuer » (« Terminer » en dernière étape) et retour en lien
- * discret.
+ * La forme est celle de tous les wizards de minddy — modale, progression,
+ * animation, boutons : `WizardDialog` (components/wizard/wizard-dialog.tsx).
+ * Ce fichier ne décrit que ses étapes et ce qu'elles déclenchent.
  *
  * Le projet n'est créé qu'à la DERNIÈRE étape : tout ce qui précède est un
  * brouillon en mémoire (nom, clé, favicon résolu mais pas stocké, dépôt choisi
@@ -121,8 +111,6 @@ function stepsFor(origin: ProjectOrigin | null): StepId[] {
     ? ["origin", "project", "icon", "git", "seed", "finish"]
     : ["origin", "project", "icon", "git", "finish"];
 }
-
-const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
 /** Reprise du wizard après le redirect d'un provider git. */
 export interface ProjectSetupResumeState {
@@ -178,7 +166,9 @@ export function CreateProjectWizard({
   // Étape « Dépôt git » — tout au niveau compte, aucun projet en jeu.
   const { connections, providers } = useGitConnectionsQuery(open);
   const [connecting, setConnecting] = useState<RepoProviderId | null>(null);
-  const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
+  const [activeConnectionId, setActiveConnectionId] = useState<string | null>(
+    null,
+  );
   const [candidates, setCandidates] = useState<CandidateRepo[] | null>(null);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [repo, setRepo] = useState<DraftRepo | null>(null);
@@ -218,11 +208,11 @@ export function CreateProjectWizard({
   // découvrir après la création du projet, sur le board.
   const briefTooLong = step === "seed" && brief.length > MAX_BRIEF_CHARS;
 
-  /** L'étape en cours est FACULTATIVE et rien n'y a été posé : le bouton dit
-   *  « Passer », pas « Continuer ». Les deux avancent pareil — mais « Continuer »
-   *  sur une étape vide laisse croire qu'on emporte quelque chose. */
-  const skipping =
-    (step === "seed" && !seed) || (step === "git" && !repo);
+  /** Une étape FACULTATIVE où rien n'a été posé dit « Passer », pas
+   *  « Continuer ». Les deux avancent pareil — mais « Continuer » sur une étape
+   *  vide laisse croire qu'on emporte quelque chose. */
+  const skipLabel = (empty: boolean) =>
+    empty ? tCommon("skip") : undefined;
 
   const reset = useCallback(() => {
     setStepIndex(0);
@@ -276,7 +266,7 @@ export function CreateProjectWizard({
   // « abandonné », on ne verrait que les projets créés — jamais l'étape qui
   // fait décrocher (la leçon AutoKap : c'était l'étape GitHub obligatoire).
   useTrackView(open, "opened", () =>
-    track("project_wizard_opened", { source: resume ? "resume" : "sidebar" })
+    track("project_wizard_opened", { source: resume ? "resume" : "sidebar" }),
   );
   // Clé = l'étape : chaque étape atteinte est comptée une fois, revenir en
   // arrière ne la recompte pas (« combien de gens ont atteint l'étape N »).
@@ -428,7 +418,7 @@ export function CreateProjectWizard({
 
   const handlePickRepo = (externalRepoId: string) => {
     const candidate = (candidates ?? []).find(
-      (c) => c.external_repo_id === externalRepoId
+      (c) => c.external_repo_id === externalRepoId,
     );
     const connection = connections.find((c) => c.id === activeConnectionId);
     if (!candidate || !connection) return;
@@ -480,17 +470,19 @@ export function CreateProjectWizard({
     };
 
     if (icon.kind === "site") {
-      await enrich("icon", () => importProjectIconApi(created.id, icon.siteUrl));
+      await enrich("icon", () =>
+        importProjectIconApi(created.id, icon.siteUrl),
+      );
     } else if (icon.kind === "file") {
       // L'aperçu est l'image compressée elle-même : la poser sur le projet ne
       // demande rien de plus que de la renvoyer telle quelle.
       await enrich("icon", () =>
-        uploadProjectIconDataUrlApi(created.id, icon.previewUrl)
+        uploadProjectIconDataUrlApi(created.id, icon.previewUrl),
       );
     }
     if (repo) {
       const linked = await enrich("git bind", () =>
-        bindGitRepoApi(created.id, repo.connectionId, repo.externalRepoId)
+        bindGitRepoApi(created.id, repo.connectionId, repo.externalRepoId),
       );
       if (linked) track("project_git_linked", { provider: repo.provider });
     }
@@ -499,7 +491,7 @@ export function CreateProjectWizard({
         updateProject(created.id, {
           smart_assign_enabled: smartAssignEnabled,
           auto_assign_enabled: autoAssignEnabled,
-        })
+        }),
       );
     }
     if (feedbackEnabled) {
@@ -510,7 +502,7 @@ export function CreateProjectWizard({
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ enabled: true }),
-          }
+          },
         );
         if (!response.ok) {
           const data = (await response.json().catch(() => null)) as {
@@ -562,567 +554,487 @@ export function CreateProjectWizard({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (step === "project") submitProjectStep();
-    else if (step === "seed") leaveSeedStep(seed);
-    else if (step === "finish") void finish();
-    else setStepIndex((i) => i + 1);
-  };
-
-  const stepTitle: Record<StepId, string> = {
-    origin: t("wizardOriginTitle"),
-    project: t("newProject"),
-    icon: t("wizardIconTitle"),
-    git: t("wizardGitTitle"),
-    seed:
-      origin === "existing" ? t("wizardSeedImportTitle") : t("wizardSeedBriefTitle"),
-    finish: t("wizardFinishTitle"),
-  };
-  const stepSubtitle: Record<StepId, string> = {
-    origin: t("wizardOriginDesc"),
-    project: t("dialogDescription", {
-      entityPlural: tIssue("entityPlural").toLowerCase(),
-    }),
-    icon: t("wizardIconDesc"),
-    git: t("wizardGitDesc"),
-    seed:
-      origin === "existing"
-        ? t("wizardSeedImportDesc")
-        : t("wizardSeedBriefDesc", {
-            entityPlural: tIssue("entityPlural").toLowerCase(),
-          }),
-    finish: t("wizardFinishSubtitle"),
-  };
-
-  const configuredProviderIds = providers.filter((p) => p.configured).map((p) => p.id);
+  const configuredProviderIds = providers
+    .filter((p) => p.configured)
+    .map((p) => p.id);
   const RepoIcon = repo ? PROVIDER_ICON[repo.provider] : null;
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
-      >
-        <DialogTitle className="sr-only">{t("newProject")}</DialogTitle>
-        <DialogDescription className="sr-only">{stepSubtitle[step]}</DialogDescription>
-
-        <div className="absolute top-4 right-4 z-30">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => handleOpenChange(false)}
-            aria-label={tCommon("close")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+  /**
+   * Les étapes, décrites. Le parcours retenu est `steps` (l'amorce dépend de
+   * l'origine) : ce qui n'y figure pas n'est ni rendu, ni compté.
+   */
+  const stepDefs: Record<StepId, WizardStep<StepId>> = {
+    // Le tout premier geste de minddy : deux portes côte à côte, de même poids,
+    // qui se lisent d'un coup d'œil. Chacune montre sa scène — un terrain nu où
+    // une carte se pose, une pile de cartes déjà là — et une ligne pour la
+    // nommer : c'est le dessin qui fait le choix, le libellé confirme.
+    origin: {
+      id: "origin",
+      title: t("wizardOriginTitle"),
+      subtitle: t("wizardOriginDesc"),
+      // Les deux portes respirent plus large que les champs des étapes
+      // suivantes : c'est le seul écran où l'on regarde avant de lire.
+      wide: true,
+      // Un choix binaire qui demande deux gestes est un choix binaire mal posé :
+      // la carte cliquée pose la réponse ET avance, un CTA ne ferait que
+      // redemander confirmation de ce qui vient d'être dit.
+      hideSubmit: true,
+      content: (
+        <div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+          role="radiogroup"
+          aria-label={t("wizardOriginTitle")}
+        >
+          {(
+            [
+              { id: "new", icon: Sparkles, label: t("wizardOriginNewLabel") },
+              {
+                id: "existing",
+                icon: Layers,
+                label: t("wizardOriginExistingLabel"),
+              },
+            ] as const
+          ).map(({ id, icon, label }) => (
+            <WizardChoiceCard
+              key={id}
+              icon={icon}
+              label={label}
+              selected={origin === id}
+              onSelect={() => chooseOrigin(id)}
+            />
+          ))}
         </div>
+      ),
+    },
 
-        {/* En-tête de la modale : où l'on est (le titre de l'étape, à gauche,
-            face au bouton de fermeture), et où l'on en est (la progression, au
-            centre). Trois colonnes plutôt qu'un centrage absolu : la colonne
-            vide de droite répond à celle du titre, donc la progression reste au
-            milieu quelle que soit la longueur du titre, sans jamais passer
-            dessous. Le contenu de l'étape, lui, garde le centre de l'écran. */}
-        <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-start gap-4 px-6 pt-5 pb-2">
-          <div className="min-w-0 space-y-1.5">
-            <h2 className="text-xl font-semibold tracking-tight">
-              {stepTitle[step]}
-            </h2>
-            <p className="max-w-md text-sm text-muted-foreground">
-              {stepSubtitle[step]}
-            </p>
+    project: {
+      id: "project",
+      title: t("newProject"),
+      subtitle: t("dialogDescription", {
+        entityPlural: tIssue("entityPlural").toLowerCase(),
+      }),
+      content: (
+        <div className="flex items-end gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <label htmlFor="project-name" className="text-sm font-medium">
+              {t("nameLabel")}
+            </label>
+            <Input
+              id="project-name"
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder={t("namePlaceholder")}
+            />
           </div>
-          {/* Aligné sur la ligne du titre, à la hauteur du bouton de fermeture. */}
-          <WizardStepper
-            className="pt-2.5"
-            currentStep={stepIndex + 1}
-            totalSteps={steps.length}
-            onStepClick={(s) => goToStep(s - 1)}
-            getStepLabel={(s) => stepTitle[steps[s - 1]]}
-          />
-          <div aria-hidden />
-        </div>
-
-        <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 pt-4 pb-12">
-          <form
-            onSubmit={handleSubmit}
-            className={cn(
-              "flex w-full flex-col items-center gap-7",
-              // Les deux portes du premier écran respirent plus large que les
-              // champs des étapes suivantes : c'est le seul écran où l'on
-              // regarde avant de lire.
-              step === "origin" ? "max-w-2xl" : "max-w-lg"
-            )}
-          >
-            <div className="w-full overflow-hidden p-1">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={step}
-                  initial={{ opacity: 0, x: 18 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -18 }}
-                  transition={MOTION}
-                  className="w-full"
-                >
-                  {/* Le tout premier geste de minddy : deux portes côte à côte,
-                      de même poids, qui se lisent d'un coup d'œil. Chacune
-                      montre sa scène — un terrain nu où une carte se pose, une
-                      pile de cartes déjà là — et une ligne pour la nommer :
-                      c'est le dessin qui fait le choix, le libellé confirme. */}
-                  {step === "origin" && (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      {(
-                        [
-                          { id: "new", label: t("wizardOriginNewLabel") },
-                          { id: "existing", label: t("wizardOriginExistingLabel") },
-                        ] as const
-                      ).map(({ id, label }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => chooseOrigin(id)}
-                          aria-pressed={origin === id}
-                          className={cn(
-                            "group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card text-center outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50",
-                            origin === id
-                              ? "border-brand/50"
-                              : "border-border hover:border-brand/40"
-                          )}
-                        >
-                          {/* La scène est POSÉE sur la carte, pas encadrée :
-                              aucun fond, aucun filet — le fond de la carte
-                              court d'un bout à l'autre et le dessin flotte
-                              dedans. Une seule colonne, deux écarts explicites :
-                              autant d'air au-dessus du dessin qu'en dessous du
-                              titre, et un intervalle net entre les deux. */}
-                          <span className="flex flex-col items-center gap-4 px-5 py-6">
-                            <IsoIconScene
-                              icon={id === "new" ? Sparkles : Layers}
-                              className="w-full max-w-60 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-                            />
-                            <span className="text-base font-medium">{label}</span>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {step === "project" && (
-                    <div className="flex items-end gap-3">
-                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <label
-                          htmlFor="project-name"
-                          className="text-sm font-medium"
-                        >
-                          {t("nameLabel")}
-                        </label>
-                        <Input
-                          id="project-name"
-                          autoFocus
-                          required
-                          value={name}
-                          onChange={(e) => handleNameChange(e.target.value)}
-                          placeholder={t("namePlaceholder")}
-                        />
-                      </div>
-                      <div className="flex w-28 shrink-0 flex-col gap-1.5">
-                        {/* La clé demande une explication, pas un hint permanent
-                            sous le champ : elle tient dans un tooltip au survol
-                            du « i », et le sous-titre de l'étape parle du
-                            projet. */}
-                        <div className="flex items-center gap-1">
-                          <label
-                            htmlFor="project-key"
-                            className="text-sm font-medium"
-                          >
-                            {t("keyLabel")}
-                          </label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={t("keyTooltipLabel")}
-                                className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
-                              >
-                                <Info className="size-3.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs text-left">
-                              {t("keyTooltip", {
-                                entityPlural: tIssue("entityPlural").toLowerCase(),
-                                key: key || "MIND",
-                              })}
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <Input
-                          id="project-key"
-                          required
-                          value={key}
-                          onChange={(e) => {
-                            setKeyTouched(true);
-                            setKey(normalizeKey(e.target.value));
-                          }}
-                          placeholder="MIND"
-                          className="font-mono uppercase tracking-wide"
-                          maxLength={5}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {step === "icon" && (
-                    <ProjectIconPicker
-                      centered
-                      projectId={null}
-                      seed={draftId}
-                      iconUrl={iconPreviewUrl}
-                      onChanged={setIcon}
-                    />
-                  )}
-
-                  {step === "git" && (
-                    <div className="flex flex-col gap-3">
-                      {repo && RepoIcon ? (
-                        <>
-                          <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
-                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                              <RepoIcon className="size-5" strokeWidth={1.5} />
-                            </span>
-                            <div className="min-w-0 flex-1 text-left">
-                              <p className="truncate text-sm font-medium">
-                                {repo.fullName}
-                              </p>
-                              <p className="truncate text-xs text-muted-foreground">
-                                {getRepoProvider(repo.provider).displayName}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                            onClick={() => setRepo(null)}
-                          >
-                            {tCommon("remove")}
-                          </Button>
-                        </>
-                      ) : activeConnectionId ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <p className="text-sm text-muted-foreground">
-                            {tSettings("gitPickRepoDesc")}
-                          </p>
-                          {candidatesLoading ? (
-                            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                              <Spinner /> {tSettings("gitLoadingRepos")}
-                            </div>
-                          ) : (candidates ?? []).length === 0 ? (
-                            <p className="py-2 text-sm text-muted-foreground">
-                              {tSettings("gitNoRepos")}
-                            </p>
-                          ) : (
-                            <SearchSelect
-                              value={null}
-                              onChange={(v) => v && handlePickRepo(v)}
-                              options={(candidates ?? []).map((c) => ({
-                                value: c.external_repo_id,
-                                label: c.full_name,
-                              }))}
-                              searchPlaceholder={tSettings("gitSearchRepo")}
-                              emptyText={tSettings("gitNoRepos")}
-                              align="center"
-                              trigger={
-                                <Button variant="outline" className="justify-center">
-                                  {tSettings("gitChooseRepo")}
-                                </Button>
-                              }
-                            />
-                          )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                            onClick={() => setActiveConnectionId(null)}
-                          >
-                            {tCommon("back")}
-                          </Button>
-                        </div>
-                      ) : configuredProviderIds.length === 0 ? (
-                        <p className="py-2 text-center text-sm text-muted-foreground">
-                          {tSettings("gitNotConfigured")}
-                        </p>
-                      ) : (
-                        <ProviderConnectButtons
-                          onConnect={(provider) => void handleConnect(provider)}
-                          connecting={connecting}
-                          only={configuredProviderIds}
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {step === "seed" && origin === "new" && (
-                    <div className="flex flex-col gap-2">
-                      <Textarea
-                        autoFocus
-                        value={brief}
-                        onChange={(e) => {
-                          setBrief(e.target.value);
-                          // Écrire, c'est reprendre la main : le choix de
-                          // passer par Numo ne tient plus.
-                          if (numo) setNumo(false);
-                        }}
-                        placeholder={t("wizardSeedPlaceholder")}
-                        aria-label={t("wizardSeedBriefTitle")}
-                        rows={8}
-                        className="max-h-[40vh] min-h-40 overflow-y-auto"
-                      />
-                      {/* Le compteur n'apparaît qu'aux abords du plafond :
-                          avant, il n'apprend rien et met une limite sous les
-                          yeux de qui ne l'atteindra jamais. */}
-                      {brief.length > MAX_BRIEF_CHARS * 0.75 && (
-                        <span
-                          className={cn(
-                            "self-end font-mono text-xs tabular-nums",
-                            brief.length > MAX_BRIEF_CHARS
-                              ? "text-destructive"
-                              : "text-muted-foreground"
-                          )}
-                        >
-                          {t("wizardSeedCounter", {
-                            count: brief.length,
-                            max: MAX_BRIEF_CHARS,
-                          })}
-                        </span>
-                      )}
-
-                      {/* L'autre entrée du mode « nouveau projet » (MIN-173) :
-                          en parler plutôt que coller. C'est une porte, pas une
-                          note de bas de page — elle se voit et se clique comme
-                          le bouton d'à côté. */}
-                      <div className="mt-1 flex items-center gap-3">
-                        <span className="h-px flex-1 bg-border" aria-hidden />
-                        <span className="text-xs text-muted-foreground">
-                          {tCommon("or")}
-                        </span>
-                        <span className="h-px flex-1 bg-border" aria-hidden />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full justify-center gap-2"
-                        onClick={() => {
-                          setNumo(true);
-                          setBrief("");
-                          leaveSeedStep({ kind: "numo" });
-                        }}
-                      >
-                        <NumoIcon state="idle" className="size-4" />
-                        {t("wizardSeedNumoLink")}
-                      </Button>
-                    </div>
-                  )}
-
-                  {step === "seed" && origin === "existing" && (
-                    <div className="flex flex-col gap-3">
-                      {/* Où trouver le CSV, outil par outil — la même marche à
-                          suivre que les réglages et l'onboarding. Demander un
-                          export sans dire où il se prend, c'est renvoyer
-                          chercher dans la doc de l'outil qu'on quitte. Le
-                          fichier déposé, elle a fini son travail. */}
-                      {!csvFile && <ImportGuideBlock />}
-                      <input
-                        ref={csvInputRef}
-                        type="file"
-                        accept=".csv,text/csv"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleCsvFile(file);
-                        }}
-                      />
-                      {csvFile ? (
-                        <>
-                          <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
-                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                              <FileUp className="size-5" strokeWidth={1.5} />
-                            </span>
-                            <div className="min-w-0 flex-1 text-left">
-                              <p className="truncate text-sm font-medium">
-                                {csvFile.name}
-                              </p>
-                              <p className="truncate text-xs text-muted-foreground">
-                                {t("wizardSeedFileReady")}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                            onClick={() => {
-                              setCsvFile(null);
-                              if (csvInputRef.current) csvInputRef.current.value = "";
-                            }}
-                          >
-                            {tCommon("remove")}
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => csvInputRef.current?.click()}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                csvInputRef.current?.click();
-                              }
-                            }}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              setDragOver(true);
-                            }}
-                            onDragLeave={() => setDragOver(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setDragOver(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) handleCsvFile(file);
-                            }}
-                            className={cn(
-                              "flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center outline-none transition-colors",
-                              dragOver
-                                ? "border-ring bg-accent/40"
-                                : "border-border hover:border-ring/60 focus-visible:border-ring"
-                            )}
-                          >
-                            <FileUp
-                              className="size-5 text-muted-foreground"
-                              aria-hidden
-                            />
-                            <p className="text-sm font-medium">
-                              {tSettings("importDropTitle")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {tSettings("importDropHint")}
-                            </p>
-                          </div>
-                          {csvLost && (
-                            <p className="text-center text-xs text-muted-foreground">
-                              {t("wizardSeedFileLost")}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {step === "finish" && (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
-                        {/* Carré arrondi au ratio des cartes projet (≈ 0,28 —
-                            11px @ 40px), bordé pour rester lisible quand le
-                            favicon importé est rond ou transparent. */}
-                        <ProjectOrb
-                          seed={draftId}
-                          iconUrl={iconPreviewUrl}
-                          className="size-10 rounded-[11px] border border-border"
-                        />
-                        <div className="min-w-0 flex-1 text-left">
-                          <p className="truncate text-sm font-medium">{name}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            <span className="font-mono">{key}</span>
-                            {repo ? ` · ${repo.fullName}` : ` · ${t("wizardNoRepo")}`}
-                          </p>
-                        </div>
-                      </div>
-                      <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
-                        <span className="flex min-w-0 flex-col gap-0.5 text-left">
-                          <span className="text-sm font-medium">{t("wizardSmartAssignLabel")}</span>
-                          <span className="text-xs leading-relaxed text-muted-foreground">
-                            {t("wizardSmartAssignDesc")}
-                          </span>
-                        </span>
-                        <Switch checked={smartAssignEnabled} onCheckedChange={setSmartAssignEnabled} />
-                      </label>
-                      <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
-                        <span className="flex min-w-0 flex-col gap-0.5 text-left">
-                          <span className="text-sm font-medium">{t("wizardAutoAssignLabel")}</span>
-                          <span className="text-xs leading-relaxed text-muted-foreground">
-                            {t("wizardAutoAssignDesc")}
-                          </span>
-                        </span>
-                        <Switch checked={autoAssignEnabled} onCheckedChange={setAutoAssignEnabled} />
-                      </label>
-                      <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
-                        <span className="flex min-w-0 flex-col gap-0.5 text-left">
-                          <span className="text-sm font-medium">
-                            {t("wizardFeedbackLabel")}
-                          </span>
-                          <span className="text-xs leading-relaxed text-muted-foreground">
-                            {t("wizardFeedbackDesc")}
-                          </span>
-                        </span>
-                        <Switch
-                          checked={feedbackEnabled}
-                          onCheckedChange={setFeedbackEnabled}
-                        />
-                      </label>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+          <div className="flex w-28 shrink-0 flex-col gap-1.5">
+            {/* La clé demande une explication, pas un hint permanent sous le
+                champ : elle tient dans un tooltip au survol du « i », et le
+                sous-titre de l'étape parle du projet. */}
+            <div className="flex items-center gap-1">
+              <label htmlFor="project-key" className="text-sm font-medium">
+                {t("keyLabel")}
+              </label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t("keyTooltipLabel")}
+                    className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-left">
+                  {t("keyTooltip", {
+                    entityPlural: tIssue("entityPlural").toLowerCase(),
+                    key: key || "MIND",
+                  })}
+                </TooltipContent>
+              </Tooltip>
             </div>
+            <Input
+              id="project-key"
+              required
+              value={key}
+              onChange={(e) => {
+                setKeyTouched(true);
+                setKey(normalizeKey(e.target.value));
+              }}
+              placeholder="MIND"
+              className="font-mono uppercase tracking-wide"
+              maxLength={5}
+            />
+          </div>
+        </div>
+      ),
+    },
 
-            {(error || briefTooLong) && (
-              <p className="text-center text-sm text-destructive" role="alert">
-                {error ?? t("wizardSeedTooLong", { max: MAX_BRIEF_CHARS })}
+    icon: {
+      id: "icon",
+      title: t("wizardIconTitle"),
+      subtitle: t("wizardIconDesc"),
+      content: (
+        <ProjectIconPicker
+          centered
+          projectId={null}
+          seed={draftId}
+          iconUrl={iconPreviewUrl}
+          onChanged={setIcon}
+        />
+      ),
+    },
+
+    git: {
+      id: "git",
+      title: t("wizardGitTitle"),
+      subtitle: t("wizardGitDesc"),
+      submitLabel: skipLabel(!repo),
+      content: (
+        <div className="flex flex-col gap-3">
+          {repo && RepoIcon ? (
+            <>
+              <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                  <RepoIcon className="size-5" strokeWidth={1.5} />
+                </span>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-medium">
+                    {repo.fullName}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {getRepoProvider(repo.provider).displayName}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                onClick={() => setRepo(null)}
+              >
+                {tCommon("remove")}
+              </Button>
+            </>
+          ) : activeConnectionId ? (
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                {tSettings("gitPickRepoDesc")}
               </p>
-            )}
-
-            <div className="flex w-full flex-col items-center gap-3">
-              {/* L'étape d'origine n'a pas de CTA : la carte cliquée EST le
-                  geste. Un « Continuer » y demanderait un second clic pour
-                  confirmer ce qui vient d'être dit. */}
-              {step !== "origin" && (
-                <Button
-                  type="submit"
-                  className="h-10 w-full"
-                  disabled={submitting || briefTooLong}
-                >
-                  {submitting && <Spinner />}
-                  {isLast
-                    ? t("wizardFinish")
-                    : skipping
-                      ? t("wizardSkip")
-                      : tCommon("continue")}
-                  {!submitting && !isLast && <ArrowRight className="ml-1 h-4 w-4" />}
-                </Button>
+              {candidatesLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Spinner /> {tSettings("gitLoadingRepos")}
+                </div>
+              ) : (candidates ?? []).length === 0 ? (
+                <p className="py-2 text-sm text-muted-foreground">
+                  {tSettings("gitNoRepos")}
+                </p>
+              ) : (
+                <SearchSelect
+                  value={null}
+                  onChange={(v) => v && handlePickRepo(v)}
+                  options={(candidates ?? []).map((c) => ({
+                    value: c.external_repo_id,
+                    label: c.full_name,
+                  }))}
+                  searchPlaceholder={tSettings("gitSearchRepo")}
+                  emptyText={tSettings("gitNoRepos")}
+                  align="center"
+                  trigger={
+                    <Button variant="outline" className="justify-center">
+                      {tSettings("gitChooseRepo")}
+                    </Button>
+                  }
+                />
               )}
-              {stepIndex > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                onClick={() => setActiveConnectionId(null)}
+              >
+                {tCommon("back")}
+              </Button>
+            </div>
+          ) : configuredProviderIds.length === 0 ? (
+            <p className="py-2 text-center text-sm text-muted-foreground">
+              {tSettings("gitNotConfigured")}
+            </p>
+          ) : (
+            <ProviderConnectButtons
+              onConnect={(provider) => void handleConnect(provider)}
+              connecting={connecting}
+              only={configuredProviderIds}
+            />
+          )}
+        </div>
+      ),
+    },
+
+    seed: {
+      id: "seed",
+      title:
+        origin === "existing"
+          ? t("wizardSeedImportTitle")
+          : t("wizardSeedBriefTitle"),
+      subtitle:
+        origin === "existing"
+          ? t("wizardSeedImportDesc")
+          : t("wizardSeedBriefDesc", {
+              entityPlural: tIssue("entityPlural").toLowerCase(),
+            }),
+      submitLabel: skipLabel(!seed),
+      submitDisabled: briefTooLong,
+      content:
+        origin === "existing" ? (
+          <div className="flex flex-col gap-3">
+            {/* Où trouver le CSV, outil par outil — la même marche à suivre que
+                les réglages et l'onboarding. Demander un export sans dire où il
+                se prend, c'est renvoyer chercher dans la doc de l'outil qu'on
+                quitte. Le fichier déposé, elle a fini son travail. */}
+            {!csvFile && <ImportGuideBlock />}
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleCsvFile(file);
+              }}
+            />
+            {csvFile ? (
+              <>
+                <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                    <FileUp className="size-5" strokeWidth={1.5} />
+                  </span>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-sm font-medium">
+                      {csvFile.name}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {t("wizardSeedFileReady")}
+                    </p>
+                  </div>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground disabled:opacity-50"
-                  onClick={() => goToStep(stepIndex - 1)}
-                  disabled={submitting}
+                  className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                  onClick={() => {
+                    setCsvFile(null);
+                    if (csvInputRef.current) csvInputRef.current.value = "";
+                  }}
                 >
-                  <ArrowLeft className="size-3.5" />
-                  {tCommon("back")}
+                  {tCommon("remove")}
                 </Button>
-              )}
+              </>
+            ) : (
+              <>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => csvInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      csvInputRef.current?.click();
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleCsvFile(file);
+                  }}
+                  className={cn(
+                    "flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center outline-none transition-colors",
+                    dragOver
+                      ? "border-ring bg-accent/40"
+                      : "border-border hover:border-ring/60 focus-visible:border-ring",
+                  )}
+                >
+                  <FileUp
+                    className="size-5 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <p className="text-sm font-medium">
+                    {tSettings("importDropTitle")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tSettings("importDropHint")}
+                  </p>
+                </div>
+                {csvLost && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t("wizardSeedFileLost")}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Textarea
+              autoFocus
+              value={brief}
+              onChange={(e) => {
+                setBrief(e.target.value);
+                // Écrire, c'est reprendre la main : le choix de passer par Numo
+                // ne tient plus.
+                if (numo) setNumo(false);
+              }}
+              placeholder={t("wizardSeedPlaceholder")}
+              aria-label={t("wizardSeedBriefTitle")}
+              rows={8}
+              className="max-h-[40vh] min-h-40 overflow-y-auto"
+            />
+            {/* Le compteur n'apparaît qu'aux abords du plafond : avant, il
+                n'apprend rien et met une limite sous les yeux de qui ne
+                l'atteindra jamais. */}
+            {brief.length > MAX_BRIEF_CHARS * 0.75 && (
+              <span
+                className={cn(
+                  "self-end font-mono text-xs tabular-nums",
+                  brief.length > MAX_BRIEF_CHARS
+                    ? "text-destructive"
+                    : "text-muted-foreground",
+                )}
+              >
+                {t("wizardSeedCounter", {
+                  count: brief.length,
+                  max: MAX_BRIEF_CHARS,
+                })}
+              </span>
+            )}
+
+            {/* L'autre entrée du mode « nouveau projet » (MIN-173) : en parler
+                plutôt que coller. C'est une porte, pas une note de bas de page —
+                elle se voit et se clique comme le bouton d'à côté. */}
+            <div className="mt-1 flex items-center gap-3">
+              <span className="h-px flex-1 bg-border" aria-hidden />
+              <span className="text-xs text-muted-foreground">
+                {tCommon("or")}
+              </span>
+              <span className="h-px flex-1 bg-border" aria-hidden />
             </div>
-          </form>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-center gap-2"
+              onClick={() => {
+                setNumo(true);
+                setBrief("");
+                leaveSeedStep({ kind: "numo" });
+              }}
+            >
+              <NumoIcon state="idle" className="size-4" />
+              {t("wizardSeedNumoLink")}
+            </Button>
+          </div>
+        ),
+    },
+
+    finish: {
+      id: "finish",
+      title: t("wizardFinishTitle"),
+      subtitle: t("wizardFinishSubtitle"),
+      submitLabel: t("wizardFinish"),
+      content: (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
+            {/* Carré arrondi au ratio des cartes projet (≈ 0,28 — 11px @ 40px),
+                bordé pour rester lisible quand le favicon importé est rond ou
+                transparent. */}
+            <ProjectOrb
+              seed={draftId}
+              iconUrl={iconPreviewUrl}
+              className="size-10 rounded-[11px] border border-border"
+            />
+            <div className="min-w-0 flex-1 text-left">
+              <p className="truncate text-sm font-medium">{name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                <span className="font-mono">{key}</span>
+                {repo ? ` · ${repo.fullName}` : ` · ${t("wizardNoRepo")}`}
+              </p>
+            </div>
+          </div>
+          <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
+            <span className="flex min-w-0 flex-col gap-0.5 text-left">
+              <span className="text-sm font-medium">
+                {t("wizardSmartAssignLabel")}
+              </span>
+              <span className="text-xs leading-relaxed text-muted-foreground">
+                {t("wizardSmartAssignDesc")}
+              </span>
+            </span>
+            <Switch
+              checked={smartAssignEnabled}
+              onCheckedChange={setSmartAssignEnabled}
+            />
+          </label>
+          <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
+            <span className="flex min-w-0 flex-col gap-0.5 text-left">
+              <span className="text-sm font-medium">
+                {t("wizardAutoAssignLabel")}
+              </span>
+              <span className="text-xs leading-relaxed text-muted-foreground">
+                {t("wizardAutoAssignDesc")}
+              </span>
+            </span>
+            <Switch
+              checked={autoAssignEnabled}
+              onCheckedChange={setAutoAssignEnabled}
+            />
+          </label>
+          <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
+            <span className="flex min-w-0 flex-col gap-0.5 text-left">
+              <span className="text-sm font-medium">
+                {t("wizardFeedbackLabel")}
+              </span>
+              <span className="text-xs leading-relaxed text-muted-foreground">
+                {t("wizardFeedbackDesc")}
+              </span>
+            </span>
+            <Switch
+              checked={feedbackEnabled}
+              onCheckedChange={setFeedbackEnabled}
+            />
+          </label>
         </div>
-      </DialogContent>
-    </Dialog>
+      ),
+    },
+  };
+
+  return (
+    <WizardDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      label={t("newProject")}
+      steps={steps.map((id) => stepDefs[id])}
+      stepIndex={stepIndex}
+      onStepIndexChange={goToStep}
+      submitting={submitting}
+      error={
+        error ??
+        (briefTooLong ? t("wizardSeedTooLong", { max: MAX_BRIEF_CHARS }) : null)
+      }
+      onSubmit={(id) => {
+        if (id === "project") submitProjectStep();
+        else if (id === "seed") leaveSeedStep(seed);
+        else if (id === "finish") void finish();
+        else setStepIndex((i) => i + 1);
+      }}
+    />
   );
 }

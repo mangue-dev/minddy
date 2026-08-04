@@ -48,7 +48,7 @@ const MAX_NAME_LENGTH = 60;
 const MAX_WEBHOOK_URL_LENGTH = 2048;
 
 export async function listIntegrations(
-  projectId: string
+  projectId: string,
 ): Promise<IntegrationSummary[] | null> {
   const service = getServiceClient();
   const { data, error } = await service
@@ -75,7 +75,11 @@ export async function createIntegration({
   kind: unknown;
 }): Promise<
   | { ok: true; integration: IntegrationSummary; key: string }
-  | { ok: false; status: number; errorKey: "integrationNameRequired" | "databaseError" }
+  | {
+      ok: false;
+      status: number;
+      errorKey: "integrationNameRequired" | "databaseError";
+    }
 > {
   const trimmed = typeof name === "string" ? name.trim() : "";
   if (!trimmed || trimmed.length > MAX_NAME_LENGTH) {
@@ -117,7 +121,12 @@ export async function updateIntegrationWebhook({
   | {
       ok: false;
       status: number;
-      errorKey: "webhookInvalidUrl" | "webhookInvalidConfig" | "integrationNotFound" | "databaseError";
+      errorKey:
+        | "webhookInvalidUrl"
+        | "webhookInvalidConfig"
+        | "webhookIssuesOnly"
+        | "integrationNotFound"
+        | "databaseError";
     }
 > {
   // webhook_url null = webhook désactivé (la config events/scope est conservée).
@@ -132,7 +141,8 @@ export async function updateIntegrationWebhook({
     }
     try {
       const parsed = new URL(url);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:")
+        throw new Error();
     } catch {
       return { ok: false, status: 400, errorKey: "webhookInvalidUrl" };
     }
@@ -151,6 +161,33 @@ export async function updateIntegrationWebhook({
   }
 
   const service = getServiceClient();
+
+  // Un webhook ne porte que des événements d'ISSUE : sur une clé feedback, il
+  // n'aurait rien à livrer. On refuse de l'allumer plutôt que de ranger une
+  // configuration qui ne partira jamais — l'éteindre, en revanche, reste
+  // toujours possible (une clé feedback réglée avant cette règle doit pouvoir
+  // se nettoyer).
+  if (url) {
+    const { data: existing, error: readError } = await service
+      .from("integrations")
+      .select("kind")
+      .eq("id", integrationId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+    if (readError) {
+      console.error(
+        "[integrations] webhook kind read failed:",
+        readError.message,
+      );
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    if (!existing)
+      return { ok: false, status: 404, errorKey: "integrationNotFound" };
+    if (existing.kind !== "issues") {
+      return { ok: false, status: 400, errorKey: "webhookIssuesOnly" };
+    }
+  }
+
   const { data, error } = await service
     .from("integrations")
     .update({
@@ -180,7 +217,11 @@ export async function revokeIntegration({
   integrationId: string;
 }): Promise<
   | { ok: true }
-  | { ok: false; status: number; errorKey: "integrationNotFound" | "databaseError" }
+  | {
+      ok: false;
+      status: number;
+      errorKey: "integrationNotFound" | "databaseError";
+    }
 > {
   const service = getServiceClient();
   const { data, error } = await service

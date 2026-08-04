@@ -43,12 +43,21 @@ import {
   unlinkFeedbackIssue,
 } from "@/lib/server/feedback/promote";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
-import { integrationUsage } from "@/lib/feedback/integration-contract";
+import {
+  integrationUsage,
+  integrationWebhookDoc,
+} from "@/lib/feedback/integration-contract";
 import {
   configureFeedbackBoard,
   getFeedbackBoardConfig,
 } from "@/lib/server/feedback/board-config";
-import { createIntegration, listIntegrations, revokeIntegration } from "@/lib/server/integrations";
+import {
+  createIntegration,
+  listIntegrations,
+  revokeIntegration,
+  updateIntegrationWebhook,
+} from "@/lib/server/integrations";
+import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { SITE_URL } from "@/lib/site";
 import {
   downloadAttachment,
@@ -2653,10 +2662,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "List the project's integrations — the API keys an external app uses to " +
         "push into this project server-to-server: id, name, kind ('issues' or " +
-        "'feedback'), key_prefix, when it was created, when it was last used, and " +
-        "whether it is revoked. Call it before creating one, to reuse the setup " +
-        "already in place instead of piling up keys. Plaintext keys are NEVER " +
-        "listed — a key exists in clear only in the minddy_create_integration result.",
+        "'feedback'), key_prefix, when it was created, when it was last used, " +
+        "whether it is revoked, and its outgoing `webhook` (null when off, else " +
+        "url, events, scope and the status of the last delivery). Call it before " +
+        "creating one, to reuse the setup already in place instead of piling up " +
+        "keys. Plaintext keys are NEVER listed — a key exists in clear only in the " +
+        "minddy_create_integration result.",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
     },
@@ -2674,6 +2685,18 @@ export function registerMinddyTools(rawServer: McpServer): void {
           created_at: row.created_at,
           last_used_at: row.last_used_at,
           revoked: row.revoked_at !== null,
+          // Une intégration sans URL n'a pas de webhook : dire `null` plutôt
+          // qu'un objet à moitié rempli évite de faire croire à un webhook
+          // éteint mais configuré.
+          webhook: row.webhook_url
+            ? {
+                url: row.webhook_url,
+                events: row.webhook_events,
+                scope: row.webhook_scope,
+                last_status: row.webhook_last_status,
+                last_at: row.webhook_last_at,
+              }
+            : null,
         })),
       });
     }
@@ -2693,7 +2716,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "never readable again, so write it to the project's server-side environment " +
         "(never client-side, never committed) before doing anything else — and a " +
         "`usage` object with the exact endpoints, payloads and error codes for that " +
-        "kind: implement against THAT, not from memory.",
+        "kind: implement against THAT, not from memory. On an 'issues' key, " +
+        "`usage.webhook` describes the OTHER direction — minddy calling the app " +
+        "back when issues move; turn it on with minddy_configure_webhook rather " +
+        "than polling. A 'feedback' key has none: what it submits lives on the " +
+        "board, and it creates no issue.",
       inputSchema: {
         project_id: PROJECT_ID,
         name: z
@@ -2735,6 +2762,101 @@ export function registerMinddyTools(rawServer: McpServer): void {
         },
         key: created.key,
         usage: integrationUsage(args.kind, SITE_URL),
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_configure_webhook",
+    {
+      title: "Configure integration webhook",
+      description:
+        "Point an integration's outgoing webhook at an endpoint of the user's app: " +
+        "minddy then POSTs signed JSON there whenever a followed issue event " +
+        "happens, which is how the app learns that a human triaged what it pushed. " +
+        "OWNER ONLY, and 'issues' keys ONLY — a 'feedback' key creates no issue, so " +
+        "it has no webhook and this is refused on one. This is the answer to 'how " +
+        "do I know when the status changes' — never write a polling loop. The " +
+        "result carries the full receiver contract (headers, signature, payload, " +
+        "delivery guarantees): implement the route against THAT. Pass url: null to " +
+        "turn the webhook off; the events and scope are kept. Read the current " +
+        "setup with minddy_list_integrations.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        integration_id: z.string().uuid().describe("From minddy_list_integrations."),
+        url: z
+          .string()
+          .nullable()
+          .describe(
+            "HTTPS endpoint that receives the deliveries, or null to turn the " +
+              "webhook off. Must be reachable from the internet — a localhost URL " +
+              "is accepted and will simply never be delivered."
+          ),
+        events: z
+          .array(z.enum(WEBHOOK_EVENTS))
+          .min(1)
+          .describe(
+            "Which events to deliver: 'issue.created', 'issue.status_changed', " +
+              "'issue.updated'. Ask for what the app actually reacts to — every " +
+              "unused delivery is a request your endpoint has to answer anyway."
+          ),
+        scope: z
+          .enum(WEBHOOK_SCOPES)
+          .describe(
+            "'integration' = only the issues this key created (the usual choice " +
+              "for an app that pushes its own reports); 'all' = every issue of the " +
+              "project. A 'feedback' key creates no issue, so it needs 'all'."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      if (!scope.access.isOwner) {
+        return fail("forbidden", "Only the project owner can configure a webhook.");
+      }
+      const result = await updateIntegrationWebhook({
+        projectId: scope.access.project.id,
+        integrationId: args.integration_id,
+        input: {
+          webhook_url: args.url,
+          webhook_events: args.events,
+          webhook_scope: args.scope,
+        },
+      });
+      if (!result.ok) {
+        switch (result.errorKey) {
+          case "webhookInvalidUrl":
+            return fail("invalid_params", "url must be an http(s) URL, or null.");
+          case "webhookInvalidConfig":
+            return fail("invalid_params", "Unknown event or scope.");
+          case "webhookIssuesOnly":
+            return fail(
+              "invalid_params",
+              "That is a 'feedback' key: it creates no issue, so it has no " +
+                "webhook. Only an 'issues' key can have one."
+            );
+          case "integrationNotFound":
+            return fail(
+              "not_found",
+              "No active integration with that id in this project."
+            );
+          default:
+            return fail("database_error", "Could not configure the webhook.");
+        }
+      }
+      return ok({
+        webhook: {
+          url: result.integration.webhook_url,
+          events: result.integration.webhook_events,
+          scope: result.integration.webhook_scope,
+          // Éteindre le webhook, c'est ne plus rien avoir à implémenter : le
+          // contrat du récepteur ne suit que quand il y a une URL.
+          ...(result.integration.webhook_url
+            ? { contract: integrationWebhookDoc() }
+            : {}),
+        },
       });
     }
   );

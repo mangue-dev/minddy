@@ -3,7 +3,7 @@
  *
  * Une clé d'intégration ne sert à rien sans le format qui va avec. Jusqu'ici ce
  * format n'existait qu'en prose, dans le prompt d'intégration copié depuis
- * l'interface (`lib/server/feedback/integration-prompt.ts`) : très bien pour un
+ * l'interface (`lib/server/integration-prompt.ts`) : très bien pour un
  * humain qui colle un prompt, inexploitable pour un agent qui vient d'appeler un
  * outil et doit écrire l'appel HTTP dans la foulée.
  *
@@ -66,8 +66,135 @@ export interface IntegrationUsage {
     note: string;
   };
   endpoints: IntegrationEndpointDoc[];
+  /**
+   * Le sens INVERSE : minddy qui rappelle l'application. Réservé aux clés
+   * 'issues' — un webhook ne porte que des événements d'issue, et une clé
+   * 'feedback' n'en crée aucune. Absent, donc, du contrat d'une clé feedback.
+   */
+  webhook?: IntegrationWebhookDoc;
   errors: Array<{ status: number; code: string; meaning: string }>;
   rules: string[];
+}
+
+/**
+ * Le webhook sortant, décrit du point de vue de qui le REÇOIT.
+ *
+ * Une clé 'issues' a deux sens de circulation, et le second se documentait
+ * nulle part : l'application pousse dans minddy par `/api/v1/issues`, et minddy
+ * la rappelle quand les tickets bougent. Un agent qui ne connaît que le premier
+ * écrit une boucle de polling — alors que le récepteur tient en une route.
+ *
+ * Une clé 'feedback', elle, n'a pas de webhook : elle ne crée pas d'issue, donc
+ * il n'y aurait rien à livrer. Ce qu'elle dépose vit sur le board.
+ *
+ * Ce que le récepteur ne peut PAS deviner et qui est ici : la clé du HMAC n'est
+ * pas la clé d'API mais son empreinte, la livraison est best-effort (donc son
+ * handler doit être idempotent), et un enregistrement qui touche plusieurs
+ * champs ne produit qu'une seule livraison.
+ */
+export interface IntegrationWebhookDoc {
+  purpose: string;
+  /** Où on l'allume — l'agent ne devine pas qu'il existe un réglage. */
+  configure: string;
+  events: Array<{ name: string; when: string }>;
+  scopes: Array<{ value: string; meaning: string }>;
+  /** En-têtes de la requête sortante, valeur telle qu'elle arrive. */
+  headers: Record<string, string>;
+  /** Comment vérifier `X-Minddy-Signature`. */
+  signature: string;
+  /** Champ → contenu du corps JSON. */
+  payload: Record<string, string>;
+  /** Ce que le récepteur doit tenir pour vrai des livraisons. */
+  delivery: string[];
+}
+
+/** Le nom de l'en-tête de signature — lu par le récepteur, écrit par
+ *  `lib/server/webhooks.ts`. */
+export const WEBHOOK_SIGNATURE_HEADER = "X-Minddy-Signature";
+
+export function integrationWebhookDoc(): IntegrationWebhookDoc {
+  return {
+    purpose:
+      "The other direction: minddy POSTs signed JSON to an endpoint of YOUR app " +
+      "when issues move, so you react to triage decisions instead of polling.",
+    configure:
+      "On an 'issues' key only — a 'feedback' key creates no issue, so it has no " +
+      "webhook. Per integration, and off by default: set it in the project's " +
+      "settings (Integrations → Webhook) or over MCP with " +
+      "minddy_configure_webhook. An empty url turns it off and keeps the events " +
+      "and scope for later.",
+    events: [
+      { name: "issue.created", when: "An issue was created in the project." },
+      {
+        name: "issue.status_changed",
+        when:
+          "An issue's status changed. The body carries `change`: " +
+          "{ field: 'status', from, to }.",
+      },
+      {
+        name: "issue.updated",
+        when:
+          "Any other field changed — title, priority, effort, assignee, due date, " +
+          "categories, sub-issues, description, plan. The body carries `changes`, " +
+          "an array of { field, from, to }; description and plan record the field " +
+          "name only, never their values.",
+      },
+    ],
+    scopes: [
+      {
+        value: "integration",
+        meaning:
+          "Only the issues this key itself created — `issue.created_via_integration` " +
+          "is then always true. The usual choice for an app that only cares about " +
+          "what it reported.",
+      },
+      {
+        value: "all",
+        meaning:
+          "Every issue of the project, whoever created it — a person in the app, " +
+          "another integration, or minddy's own agent.",
+      },
+    ],
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "minddy-webhooks",
+      "X-Minddy-Event": "The event name, same as `event` in the body.",
+      "X-Minddy-Delivery":
+        "A UUID unique to this delivery, same as `delivery_id` in the body.",
+      [WEBHOOK_SIGNATURE_HEADER]:
+        "`sha256=` followed by the HMAC of the raw body, in lowercase hex.",
+    },
+    signature:
+      "The HMAC key is NOT the API key: it is the SHA-256 hex digest of that key, " +
+      "lowercase — the only form minddy keeps, the plaintext is never stored. " +
+      "Verify with hmac_sha256(RAW request body, sha256_hex(<your API key>)) and " +
+      "compare it to the hex after 'sha256=', in constant time. Hash the bytes as " +
+      "received: parsing the JSON and re-serialising it changes them.",
+    payload: {
+      event: "The event name — one of the events above.",
+      delivery_id: "UUID, the same as the X-Minddy-Delivery header.",
+      timestamp: "ISO 8601, when the batch was dispatched.",
+      project: "{ id, name, key } — key is the identifier prefix, e.g. 'MIND'.",
+      integration: "{ id, name } — the integration this webhook belongs to.",
+      issue:
+        "{ id, number, identifier ('MIND-42'), title, status, priority, effort, " +
+        "created_via_integration }.",
+      change: "issue.status_changed only: { field: 'status', from, to }.",
+      changes: "issue.updated only: an array of { field, from, to }.",
+    },
+    delivery: [
+      "Best effort, no queue: 5 second timeout, ONE immediate retry on a network " +
+        "error or a 5xx, then the delivery is dropped for good.",
+      "Answer 2xx as soon as you hold the payload and do the work afterwards — a " +
+        "slow endpoint loses deliveries.",
+      "A delivery can arrive twice (a timeout that did land, a 5xx after the fact) " +
+        "and deliveries are not ordered: key your handler on delivery_id.",
+      "One save that changes several fields is ONE issue.updated delivery carrying " +
+        "every change, not one per field.",
+      "The status of the last attempt is shown on the integration, in the project's " +
+        "settings.",
+    ],
+  };
 }
 
 /** Erreurs communes aux deux kinds — l'authentification et le débit. */
@@ -148,6 +275,7 @@ function feedbackUsage(base: string): IntegrationUsage {
         response: "200 { ok: true }",
       },
     ],
+    // Pas de `webhook` ici : il ne livre que des événements d'issue.
     errors: [
       ...sharedErrors("feedback"),
       { status: 422, code: "title_required", meaning: "title is empty." },
@@ -221,6 +349,7 @@ function issuesUsage(base: string): IntegrationUsage {
         response: "200 { project, categories, priorities, efforts }",
       },
     ],
+    webhook: integrationWebhookDoc(),
     errors: [
       ...sharedErrors("issues"),
       { status: 422, code: "title_required", meaning: "title is empty." },
@@ -242,6 +371,7 @@ function issuesUsage(base: string): IntegrationUsage {
     rules: [
       "Status, assignee and parent are not settable from outside: every issue created this way lands in 'triage'.",
       "Use this kind for reporting into the backlog (crash reports, support escalations). For end-user requests that deserve votes and a public status, create a 'feedback' key instead.",
+      "What you push comes back: point this integration's webhook at your app and you are told when a human triages one of your issues — see `webhook`. Never poll the API for that.",
     ],
   };
 }

@@ -10,7 +10,7 @@ import { createIntegration } from "@/lib/server/integrations";
 import {
   buildIntegrationPrompt,
   type IntegrationPromptMode,
-} from "@/lib/server/feedback/integration-prompt";
+} from "@/lib/server/integration-prompt";
 
 type RouteContext = { params: Promise<{ id: string }> };
 

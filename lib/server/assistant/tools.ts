@@ -258,7 +258,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_integrations",
       description:
-        "List the project's integrations (API keys external apps push through): id, name, kind ('issues' or 'feedback'), revoked_at. Issues created by one carry its integration_id; the view filter filters.integration takes these ids. Plaintext keys are never listed — they exist only in the create_integration result.",
+        "List the project's integrations (API keys external apps push through): id, name, kind ('issues' or 'feedback'), revoked_at, and `webhook` — null when none, else the url, events, scope and the status of the last delivery. Issues created by one carry its integration_id; the view filter filters.integration takes these ids. Plaintext keys are never listed — they exist only in the create_integration result.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -924,7 +924,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_integration",
       description:
-        "Create a named integration — an API key the user's own app uses to push into this project server-to-server. OWNER ONLY. Pick the kind from what they want to collect: 'feedback' for end-user requests (they land on the feedback board with votes and a public status), 'issues' to create issues directly in triage. The result carries a `usage` object with the exact endpoint, payload and error codes for that kind: relay it rather than describing the API from memory. The plaintext API key is returned ONCE — surface it immediately, tell them to store it server-side in an env var, and that it won't be shown again.",
+        "Create a named integration — an API key the user's own app uses to push into this project server-to-server. OWNER ONLY. Pick the kind from what they want to collect: 'feedback' for end-user requests (they land on the feedback board with votes and a public status), 'issues' to create issues directly in triage. The result carries a `usage` object with the exact endpoint, payload and error codes for that kind: relay it rather than describing the API from memory. On an 'issues' key, `usage.webhook` is the other direction — minddy calling their app back when issues move — which update_integration_webhook turns on; a 'feedback' key has none, since it creates no issue. The plaintext API key is returned ONCE — surface it immediately, tell them to store it server-side in an env var, and that it won't be shown again.",
       parameters: {
         type: "object",
         properties: {
@@ -948,7 +948,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_integration_webhook",
       description:
-        "Configure an integration's outgoing webhook: the URL minddy POSTs issue events to, which events to follow, and the scope. OWNER ONLY. Get the id via list_integrations. Pass webhook_url null to disable the webhook (keeping its event/scope config).",
+        "Point an integration's outgoing webhook at an endpoint of the user's app: minddy then POSTs signed JSON there whenever a followed issue event happens, which is how their app learns a human triaged what it pushed. OWNER ONLY, and 'issues' keys ONLY — a 'feedback' key creates no issue, so it has no webhook and this is refused on one. This is the answer to 'how do I know when the status changes' — never suggest polling. Users often create the integration before they have an endpoint, so this is the natural follow-up: ask for the URL when they have it. The result carries the full receiver contract (headers, HMAC verification, payload, delivery guarantees) — relay it, none of it is guessable, starting with the HMAC key, which is not the API key. Get the id via list_integrations. Pass webhook_url null to disable the webhook (keeping its event/scope config).",
       parameters: {
         type: "object",
         properties: {
