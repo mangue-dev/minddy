@@ -13,7 +13,6 @@ import {
   cn,
 } from "mangue-ui";
 import { ChevronRight, GitPullRequest, ListFilter, Plus } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
@@ -393,15 +392,34 @@ export function PullRequestsPage() {
             ))}
           </div>
         ) : visible.length === 0 ? (
-          <div className="p-4">
-            <EmptyState
-              icon={<GitPullRequest className="size-6" />}
-              /* « Rien ne correspond » et « aucune PR dans cet état » ne sont pas
-                 la même nouvelle : la première se répare en effaçant trois
-                 lettres, la seconde non. */
-              description={query.trim() ? tCommon("noFilterMatch") : t("emptyState")}
-            />
-          </div>
+          /* Des PR existent forcément ici — la surface entièrement vide est
+             traitée plus haut, avant le rendu de la colonne. La liste ne peut
+             donc être vide que parce qu'un filtre l'a vidée, et la même scène
+             que les autres états vides le dit, à la taille de la colonne.
+             « Rien ne correspond » et « aucune PR dans cet état » ne sont pas la
+             même nouvelle : la première se répare en effaçant trois lettres, la
+             seconde demande de rouvrir le filtre — d'où le bouton, qui n'a rien
+             à offrir tant que c'est la saisie qui restreint. */
+          <EmptyScene
+            size="compact"
+            icon={GitPullRequest}
+            title={query.trim() ? tCommon("noFilterMatch") : t("emptyState")}
+            className="py-10"
+          >
+            {query.trim() ? null : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFilter("all");
+                  setAuthor(AUTHOR_ALL);
+                  setLimit(PULL_REQUESTS_PAGE);
+                }}
+              >
+                {t("emptyShowAll")}
+              </Button>
+            )}
+          </EmptyScene>
         ) : (
           <div className="flex flex-col px-2 pt-2 pb-4">
             {visible.map((pr) => {

@@ -2374,7 +2374,8 @@
   },
   "PullRequests": {
     "title": "Pull requests",
-    "emptyState": "Aucune pull request sur les dépôts liés pour l'instant.",
+    "emptyState": "Aucune pull request dans ces filtres",
+    "emptyShowAll": "Voir toutes les pull requests",
     "emptyNoProject": "Aucun projet, donc aucun dépôt à surveiller",
     "emptyNoRepo": "Liez un dépôt GitHub ou GitLab à un projet pour voir ses pull requests ici",
     "emptyNone": "Aucune pull request pour l'instant",
