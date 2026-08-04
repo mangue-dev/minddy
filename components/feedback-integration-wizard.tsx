@@ -22,7 +22,8 @@ import { NumoIcon } from "@/components/numo-icon";
 import { integrationsQueryKey } from "@/lib/use-integrations-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import { NOTE_COMPOSE_PARAM, setAgentComposeDraft } from "@/lib/agent-compose-draft";
-import { ssoEnvLine } from "@/lib/feedback/sso-env";
+import { ssoEnvLine } from "@/lib/feedback/env-lines";
+import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 
 /**
  * « Intégrer dans mon app » (MIN-37) : wizard 2-3 étapes qui génère un prompt
@@ -30,16 +31,18 @@ import { ssoEnvLine } from "@/lib/feedback/sso-env";
  * → SSO (board uniquement, fortement recommandé) → instruction libre de
  * placement.
  *
- * Le prompt fini a DEUX destinations, et c'est le mode qui décide laquelle est
- * ouverte :
+ * Le prompt fini a DEUX destinations, ouvertes toutes les deux dans les DEUX
+ * modes :
  *  • le presse-papier, pour l'agent de code de l'utilisateur (Claude Code,
- *    Cursor…) — toujours, les deux modes ;
- *  • NUMO, en un clic (MIN-37) : le prompt part comme note de run carnet sur le
- *    projet, et l'agent de minddy ouvre la pull request lui-même. Réservé au
- *    mode BOARD : ce prompt-là ne porte plus aucun credential (le secret SSO
- *    vit désormais dans une variable d'environnement que l'utilisateur
- *    renseigne). Le mode API, lui, embarque une clé en clair — on ne l'envoie
- *    pas dans une conversation d'agent, il reste copie-manuelle.
+ *    Cursor…) ;
+ *  • NUMO, en un clic : le prompt part comme note de run carnet sur le projet,
+ *    et l'agent de minddy ouvre la pull request lui-même.
+ *
+ * Ce qui rend la seconde possible, c'est que plus aucun prompt ne porte de
+ * credential : le secret SSO comme la clé d'API vivent dans une variable
+ * d'environnement, et le wizard montre à part la LIGNE à coller dans le `.env`.
+ * Remettre un secret dans un de ces textes, c'est le mettre dans une
+ * conversation d'agent — donc l'un ne va pas sans l'autre.
  */
 
 type Mode = "board" | "api";
@@ -106,7 +109,8 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
   const [generating, setGenerating] = useState(false);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [keyCreated, setKeyCreated] = useState(false);
-  const [ssoSecret, setSsoSecret] = useState<string | null>(null);
+  /** La ligne de `.env` que ce prompt-ci attend (secret SSO ou clé), s'il en attend une. */
+  const [env, setEnv] = useState<{ line: string; description: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [envCopied, setEnvCopied] = useState(false);
 
@@ -125,7 +129,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
     setStepIndex(0);
     setPrompt(null);
     setKeyCreated(false);
-    setSsoSecret(null);
+    setEnv(null);
     setCopied(false);
     setEnvCopied(false);
   };
@@ -165,6 +169,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
         prompt?: string;
         key_created?: boolean;
         sso_secret?: string | null;
+        api_key?: string | null;
         error?: string;
       } | null;
       if (!response.ok || !data?.prompt) {
@@ -172,7 +177,22 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
       }
       setPrompt(data.prompt);
       setKeyCreated(data.key_created === true);
-      setSsoSecret(data.sso_secret ?? null);
+      // Le credential que le prompt ATTEND sans le porter. La clé d'API est en
+      // plus jetable-à-l'affichage (aucune relecture possible) : sa phrase le
+      // dit, là où le secret SSO reste consultable dans les réglages.
+      setEnv(
+        data.api_key
+          ? {
+              line: integrationKeyEnvLine("feedback", data.api_key),
+              description: t("feedbackWizardEnvDescKey"),
+            }
+          : data.sso_secret
+            ? {
+                line: ssoEnvLine(data.sso_secret),
+                description: t("feedbackWizardEnvDescSso"),
+              }
+            : null,
+      );
       // Le board/la clé ont pu être provisionnés : rafraîchir les vues settings.
       void queryClient.invalidateQueries({ queryKey: ["feedback-settings", projectId] });
       void queryClient.invalidateQueries({ queryKey: integrationsQueryKey(projectId) });
@@ -198,8 +218,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
     router.push(`/agents?compose=${NOTE_COMPOSE_PARAM}`);
   };
 
-  const envLine = ssoSecret ? ssoEnvLine(ssoSecret) : null;
-  const canHandOffToNumo = mode === "board" && !!link;
+  const canHandOffToNumo = !!link;
 
   return (
     <>
@@ -236,26 +255,26 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
                 className="h-40 w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs outline-none"
               />
 
-              {/* Le prompt de board ne porte plus de secret : le voici, à part,
-                  sous la seule forme qui serve — la ligne du fichier .env. */}
-              {envLine && (
+              {/* Le prompt ne porte plus de credential : le voici, à part, sous
+                  la seule forme qui serve — la ligne du fichier .env. */}
+              {env && (
                 <div className="flex flex-col gap-2 rounded-lg border border-brand/25 bg-brand/5 p-3">
                   <div className="flex flex-col gap-0.5">
                     <p className="text-sm font-medium">{t("feedbackWizardEnvTitle")}</p>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      {t("feedbackWizardEnvDesc")}
+                      {env.description}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs whitespace-nowrap">
-                      {envLine}
+                      {env.line}
                     </code>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       aria-label={t("feedbackWizardEnvCopy")}
                       onClick={() => {
-                        void navigator.clipboard.writeText(envLine);
+                        void navigator.clipboard.writeText(env.line);
                         setEnvCopied(true);
                         setTimeout(() => setEnvCopied(false), 2000);
                       }}
@@ -271,7 +290,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
               )}
 
               {/* L'autre destination du prompt : l'agent de minddy, sur le dépôt
-                  déjà lié au projet. Board seulement (cf. en-tête du fichier). */}
+                  déjà lié au projet. */}
               {canHandOffToNumo && (
                 <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
                   <div className="flex min-w-0 flex-col gap-0.5">
@@ -292,10 +311,9 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
                 </div>
               )}
 
-              {(mode === "api" || keyCreated) && (
+              {keyCreated && (
                 <p className="text-xs text-muted-foreground">
-                  {t("feedbackWizardSecretsWarning")}
-                  {keyCreated && <> {t("feedbackWizardDoneKeyNote")}</>}
+                  {t("feedbackWizardDoneKeyNote")}
                 </p>
               )}
               <DialogFooter>

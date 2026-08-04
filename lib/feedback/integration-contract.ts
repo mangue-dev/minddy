@@ -19,12 +19,31 @@
  */
 
 import { FEEDBACK_BODY_MAX, FEEDBACK_TITLE_MAX } from "@/lib/feedback/types";
+import { envLine } from "@/lib/feedback/env-lines";
 
 /** Usage dédié d'une clé : créer des issues directement, ou déposer du feedback. */
 export type IntegrationKind = "issues" | "feedback";
 
 export function isIntegrationKind(value: unknown): value is IntegrationKind {
   return value === "issues" || value === "feedback";
+}
+
+/**
+ * La variable d'environnement où la clé de chaque kind est attendue. Un nom, pas
+ * une suggestion : c'est celui que le prompt d'intégration cite (il ne porte plus
+ * la clé), celui que l'interface propose à la copie, et celui que le contrat
+ * ci-dessous annonce aux agents. Les trois doivent lire la même constante, sans
+ * quoi le code écrit par l'agent cherchera une variable que l'utilisateur n'a
+ * pas remplie.
+ */
+export const INTEGRATION_ENV_VAR: Record<IntegrationKind, string> = {
+  feedback: "MINDDY_FEEDBACK_KEY",
+  issues: "MINDDY_API_KEY",
+};
+
+/** La ligne de `.env` d'une clé fraîchement créée — affichée telle qu'on la colle. */
+export function integrationKeyEnvLine(kind: IntegrationKind, key: string): string {
+  return envLine(INTEGRATION_ENV_VAR[kind], key);
 }
 
 export interface IntegrationEndpointDoc {
@@ -99,7 +118,7 @@ function feedbackUsage(base: string): IntegrationUsage {
     kind: "feedback",
     auth: {
       header: "Authorization: Bearer <key>",
-      env_var: "MINDDY_FEEDBACK_KEY",
+      env_var: INTEGRATION_ENV_VAR.feedback,
       note: "Server-side only. Never ship the key to a browser, never commit it.",
     },
     endpoints: [
@@ -177,7 +196,7 @@ function issuesUsage(base: string): IntegrationUsage {
     kind: "issues",
     auth: {
       header: "Authorization: Bearer <key>",
-      env_var: "MINDDY_API_KEY",
+      env_var: INTEGRATION_ENV_VAR.issues,
       note: "Server-side only. Never ship the key to a browser, never commit it.",
     },
     endpoints: [

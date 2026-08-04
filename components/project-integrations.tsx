@@ -43,6 +43,7 @@ import {
   SettingsListRow,
 } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 import { EmptyScene } from "@/components/empty-scene";
 import type {
   Integration,
@@ -129,7 +130,13 @@ function KindPicker({
 }
 
 /** Create dialog: kind + name form that, once submitted, swaps to the one-time
-    key panel — the only moment the plaintext key is ever visible. */
+    key panel — the only moment the plaintext key is ever visible.
+
+    La clé s'y montre et s'y copie comme LIGNE D'ENVIRONNEMENT, avec le nom de
+    variable qu'attend son kind : c'est sa destination unique, et c'est le nom
+    que le prompt d'intégration cite désormais au lieu de porter la clé. Copier
+    la valeur nue obligerait à retrouver le bon nom de variable — et il diffère
+    entre une clé « tickets » et une clé « feedback ». */
 function CreateIntegrationDialog({
   projectId,
   open,
@@ -176,9 +183,13 @@ function CreateIntegrationDialog({
     }
   };
 
+  // La clé n'existe en clair qu'ici : `kind` est celui du formulaire qui vient
+  // de la créer, donc le nom de variable affiché est toujours le sien.
+  const createdEnvLine = createdKey ? integrationKeyEnvLine(kind, createdKey) : null;
+
   const handleCopy = async () => {
-    if (!createdKey) return;
-    await navigator.clipboard.writeText(createdKey);
+    if (!createdEnvLine) return;
+    await navigator.clipboard.writeText(createdEnvLine);
     setCopied(true);
     toast.success(t("keyCopied"));
   };
@@ -193,8 +204,8 @@ function CreateIntegrationDialog({
               <DialogDescription>{t("integrationKeyNotice")}</DialogDescription>
             </DialogHeader>
             <div className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-muted px-3 py-2 font-mono text-sm">
-                {createdKey}
+              <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-sm whitespace-nowrap">
+                {createdEnvLine}
               </code>
               <Button type="button" variant="outline" size="icon" onClick={handleCopy}>
                 {copied ? <Check /> : <Copy />}

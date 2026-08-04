@@ -34,7 +34,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
-import { ssoEnvLine } from "@/lib/feedback/sso-env";
+import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useProjects } from "@/lib/projects-context";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {

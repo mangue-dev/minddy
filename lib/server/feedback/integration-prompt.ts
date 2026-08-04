@@ -1,6 +1,7 @@
 import "server-only";
 
-import { SSO_ENV_VAR } from "@/lib/feedback/sso-env";
+import { SSO_ENV_VAR } from "@/lib/feedback/env-lines";
+import { INTEGRATION_ENV_VAR } from "@/lib/feedback/integration-contract";
 
 /**
  * Prompt d'intégration tout-en-un (MIN-37) : un texte prêt à coller dans un
@@ -9,13 +10,15 @@ import { SSO_ENV_VAR } from "@/lib/feedback/sso-env";
  * COMMENT. Deux modes : lien vers le board public (± pré-auth SSO) ou
  * intégration API serveur-à-serveur.
  *
- * Le secret SSO n'y figure PAS : le prompt nomme la variable d'environnement
- * (`MINDDY_SSO_SECRET`) et l'utilisateur la renseigne lui-même, de sorte qu'un
- * prompt destiné au board public soit un texte sans credential — c'est ce qui
- * permet de le confier à un agent sans le manipuler comme un secret. Le mode
- * API, lui, porte encore la clé en clair (elle n'est relisible nulle part
- * ailleurs) : il reste owner-only et jamais stocké.
+ * AUCUN credential n'y figure, dans aucun des deux modes : le prompt nomme la
+ * variable d'environnement (`MINDDY_SSO_SECRET`, `MINDDY_FEEDBACK_KEY`) et
+ * l'utilisateur la renseigne lui-même, à partir de la ligne que l'interface lui
+ * montre. C'est ce qui fait de ces textes des consignes ordinaires — qu'on colle
+ * où l'on veut, qu'on confie à Numo — et non des secrets à manipuler avec
+ * précaution. Le module ne reçoit donc ni secret ni clé : rien à laisser fuir.
  */
+
+const FEEDBACK_KEY_ENV_VAR = INTEGRATION_ENV_VAR.feedback;
 
 export type IntegrationPromptMode = "board" | "api";
 
@@ -30,8 +33,6 @@ export interface IntegrationPromptInput {
   boardUrl?: string;
   /** Pré-identification SSO demandée — le SECRET, lui, n'entre pas ici. */
   sso?: boolean;
-  /** Mode api. */
-  apiKey?: string;
 }
 
 export function buildIntegrationPrompt(input: IntegrationPromptInput): string {
@@ -155,7 +156,7 @@ ${placement || "À l'endroit le plus naturel (bouton « Feedback » + petite mod
 2. Côté serveur UNIQUEMENT, envoie le retour à minddy :
    \`\`\`
    POST ${input.origin}/api/v1/feedback
-   Authorization: Bearer $MINDDY_FEEDBACK_KEY
+   Authorization: Bearer $${FEEDBACK_KEY_ENV_VAR}
    Content-Type: application/json
 
    {
@@ -173,10 +174,7 @@ ${placement || "À l'endroit le plus naturel (bouton « Feedback » + petite mod
    - Erreurs : 401 \`invalid_api_key\`, 422 \`title_required\` / \`user_identity_required\`, 429 \`rate_limited\` (header \`Retry-After\`).
 3. (Optionnel) Voter au nom d'un utilisateur sur un post existant :
    \`POST ${input.origin}/api/v1/feedback/<post_id>/vote\` avec le même objet \`user\`.
-4. Stocke la clé dans une variable d'environnement \`MINDDY_FEEDBACK_KEY\` — jamais côté client, jamais commitée :
-   \`\`\`
-   ${input.apiKey}
-   \`\`\`
+4. La clé n'est PAS dans ce prompt : elle vit dans la variable d'environnement \`${FEEDBACK_KEY_ENV_VAR}\`, que je renseigne moi-même. Lis-la côté serveur (\`process.env.${FEEDBACK_KEY_ENV_VAR}\` ou l'équivalent du langage), ne l'écris jamais en dur, ne l'expose jamais au client, et si elle est absente, échoue clairement au démarrage plutôt que d'appeler l'API sans authentification.
 
 ## Vérification
 
@@ -199,7 +197,7 @@ ${placement || "Wherever it fits best (a “Feedback” button + small title/des
 2. Server-side ONLY, submit the feedback to minddy:
    \`\`\`
    POST ${input.origin}/api/v1/feedback
-   Authorization: Bearer $MINDDY_FEEDBACK_KEY
+   Authorization: Bearer $${FEEDBACK_KEY_ENV_VAR}
    Content-Type: application/json
 
    {
@@ -217,10 +215,7 @@ ${placement || "Wherever it fits best (a “Feedback” button + small title/des
    - Errors: 401 \`invalid_api_key\`, 422 \`title_required\` / \`user_identity_required\`, 429 \`rate_limited\` (\`Retry-After\` header).
 3. (Optional) Vote on an existing post on a user's behalf:
    \`POST ${input.origin}/api/v1/feedback/<post_id>/vote\` with the same \`user\` object.
-4. Store the key in a \`MINDDY_FEEDBACK_KEY\` environment variable — never client-side, never committed:
-   \`\`\`
-   ${input.apiKey}
-   \`\`\`
+4. The key is NOT in this prompt: it lives in the \`${FEEDBACK_KEY_ENV_VAR}\` environment variable, which I set myself. Read it server-side (\`process.env.${FEEDBACK_KEY_ENV_VAR}\` or your language's equivalent), never hardcode it, never expose it to the client, and if it is missing, fail loudly at startup rather than calling the API unauthenticated.
 
 ## Verification
 

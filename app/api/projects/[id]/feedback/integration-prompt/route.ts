@@ -24,10 +24,11 @@ const PLACEMENT_MAX = 500;
  * d'intégration feedback neuve (mode api — la seule façon d'avoir la clé en
  * clair).
  *
- * Le secret SSO revient À PART du prompt (`sso_secret`), parce qu'il n'y est
- * plus : le prompt nomme la variable d'environnement, l'interface montre la
- * ligne à coller dans le `.env`. Un prompt de board public est ainsi un texte
- * sans credential — celui qu'on peut confier à Numo d'un clic.
+ * Les credentials reviennent À PART du prompt (`sso_secret`, `api_key`), parce
+ * qu'ils n'y sont plus : le prompt nomme la variable d'environnement,
+ * l'interface montre la ligne à coller dans le `.env`. Les deux prompts sont
+ * ainsi des textes sans secret — c'est ce qui permet de les confier à Numo d'un
+ * clic, dans un mode comme dans l'autre.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -103,7 +104,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     projectName,
     placement,
     origin,
-    apiKey: created.key,
   });
-  return NextResponse.json({ prompt, key_created: true });
+  return NextResponse.json({ prompt, key_created: true, api_key: created.key });
 }
