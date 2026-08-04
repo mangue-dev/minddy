@@ -39,8 +39,10 @@ import {
 } from "@/lib/use-integrations-query";
 import {
   SettingsEmpty,
+  SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { EmptyScene } from "@/components/empty-scene";
 import type {
   Integration,
@@ -48,6 +50,28 @@ import type {
   IntegrationWebhookEvent,
   IntegrationWebhookScope,
 } from "@/lib/types";
+
+/**
+ * Le TYPE d'une clé décide de ce qu'elle a le droit d'écrire — des tickets dans
+ * le triage, ou des retours sur le board. C'est l'information la plus lourde de
+ * la rangée, et elle se lisait en gris, dans le même badge que « Révoquée ».
+ * Une teinte par type, pour qu'elle se prenne d'un coup d'œil.
+ *
+ * La forme est celle des badges de minddy (teinte à 10 %, bord à 20-30 %, jamais
+ * un aplat), comme `PR_STATE_STYLES` — l'icône de la pastille porte déjà la même
+ * distinction sans la couleur, donc rien ne repose sur elle seule.
+ */
+const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> = {
+  issues: {
+    badge: "border-brand/30 bg-brand/10 text-brand",
+    avatar: "bg-brand/10 text-brand",
+  },
+  feedback: {
+    badge:
+      "border-amber-600/25 bg-amber-600/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-400",
+    avatar: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  },
+};
 
 /** Choix du type de clé à la création : deux cartes exclusives. */
 function KindPicker({
@@ -441,28 +465,35 @@ export function ProjectIntegrations({
       : t("integrationNeverUsed");
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Le bouton vit au-dessus de la LISTE ; quand il n'y a rien à lister, il
-          descend dans la scène et n'est pas montré deux fois. */}
-      {isOwner && integrations.length > 0 ? (
-        <div>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectIntegrations}
+      icon={Plug}
+      title={t("integrationsTab")}
+      description={t("integrationsSectionDesc")}
+      variant="block"
+      /* Le geste vit en bout de titre ; quand il n'y a rien à lister, il descend
+         dans la scène et n'est pas montré deux fois. */
+      action={
+        isOwner && integrations.length > 0 ? (
+          <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
             <Plus />
             {t("newIntegration")}
           </Button>
-        </div>
-      ) : !isOwner ? (
-        <p className="text-xs text-muted-foreground">
+        ) : undefined
+      }
+    >
+      {!isOwner && (
+        <p className="mb-4 text-xs text-muted-foreground">
           {t("integrationsOwnerOnlyHint")}
         </p>
-      ) : null}
+      )}
 
       {loading ? (
         <SettingsEmpty>{tc("loading")}</SettingsEmpty>
       ) : integrations.length === 0 ? (
         <EmptyScene size="compact" icon={Plug} title={t("integrationsEmpty")}>
           {isOwner && (
-            <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
               <Plus />
               {t("newIntegration")}
             </Button>
@@ -474,7 +505,12 @@ export function ProjectIntegrations({
             <SettingsListRow
               key={integration.id}
               avatar={
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-full",
+                    KIND_STYLES[integration.kind].avatar
+                  )}
+                >
                   {integration.kind === "feedback" ? (
                     <MessagesSquare className="size-4" />
                   ) : (
@@ -488,12 +524,6 @@ export function ProjectIntegrations({
                   <code className="shrink-0 font-mono text-xs font-normal text-muted-foreground">
                     {integration.key_prefix}…
                   </code>
-                  <Badge variant="secondary">
-                    {t(`integrationKind_${integration.kind}`)}
-                  </Badge>
-                  {integration.revoked_at && (
-                    <Badge variant="secondary">{t("integrationRevokedBadge")}</Badge>
-                  )}
                 </span>
               }
               subtitle={
@@ -505,6 +535,19 @@ export function ProjectIntegrations({
               }
               action={
                 <>
+                  {/* Les deux états de la clé — ce qu'elle fait, et si elle vit
+                      encore — tenus à l'opposé de son nom. */}
+                  <Badge
+                    variant="secondary"
+                    className={cn("h-6", KIND_STYLES[integration.kind].badge)}
+                  >
+                    {t(`integrationKind_${integration.kind}`)}
+                  </Badge>
+                  {integration.revoked_at && (
+                    <Badge variant="destructive" className="h-6">
+                      {t("integrationRevokedBadge")}
+                    </Badge>
+                  )}
                   <WebhookStatusDot integration={integration} />
                   {isOwner && !integration.revoked_at && (
                     <>
@@ -560,6 +603,6 @@ export function ProjectIntegrations({
         cancelLabel={tc("cancel")}
         onConfirm={handleRevoke}
       />
-    </div>
+    </SettingsGroup>
   );
 }

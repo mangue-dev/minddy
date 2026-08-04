@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Spinner, Switch, toast } from "mangue-ui";
-import { TriangleAlert, WandSparkles } from "lucide-react";
+import { TriangleAlert, UserRound, WandSparkles } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { userIdsWithoutRule } from "@/lib/smart-assign-config";
+import { EmptyScene } from "@/components/empty-scene";
 import {
-  SettingsEmpty,
   SettingsGroup,
   SettingsRow,
 } from "@/components/settings/settings-ui";
@@ -135,8 +136,23 @@ export function SmartAssignSection({
           ) : undefined
         }
       >
+        {/* Seul dans le projet : Smart Assign est armé mais n'a personne entre
+            qui trancher. La scène le dit, et offre le geste qui la remplit —
+            inviter quelqu'un, ce que seul le propriétaire peut faire. */}
         {enabled && !loading && members.length <= 1 && (
-          <SettingsEmpty>{t("smartAssignSoloHint")}</SettingsEmpty>
+          <EmptyScene
+            size="compact"
+            icon={UserRound}
+            title={t("smartAssignSoloHint")}
+          >
+            {isOwner && (
+              <Button asChild size="sm">
+                <Link href={`/projects/${project.id}/settings?tab=members`}>
+                  {tm("inviteByEmail")}
+                </Link>
+              </Button>
+            )}
+          </EmptyScene>
         )}
 
         {showRules && (

@@ -41,6 +41,7 @@ import {
   fetchCustomDomainApi,
 } from "@/components/custom-domain-section";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
+import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
@@ -369,48 +370,57 @@ export function ProjectFeedbackSettings({
         )}
       </SettingsGroup>
 
-      {/* ── Canal 2 : API serveur-à-serveur ────────────────────────────── */}
+      {/* ── Canal 2 : les clés que porte votre backend ──────────────────── */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectFeedbackApi}
         icon={Code2}
         title={t("feedbackChannelApiTitle")}
         description={t("feedbackChannelApiDesc")}
         help={t("feedbackChannelApiHelp")}
+        /* Le geste vit en bout de titre ; sans clé active il descend dans la
+           scène et n'est pas montré deux fois — comme l'onglet Intégrations. */
         action={
           feedbackKeyCount > 0 ? (
-            <StatusPill active label={t("feedbackActive")} />
+            <>
+              <StatusPill active label={t("feedbackActive")} />
+              <ManageKeysButton projectId={projectId} />
+            </>
           ) : undefined
         }
       >
-        <div className="flex flex-col gap-3 py-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">
-              {t("feedbackApiKeysCount", { count: feedbackKeyCount })}
-            </p>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/projects/${projectId}/settings?tab=integrations`}>
-                {t("feedbackApiManageKeys")}
-              </Link>
-            </Button>
-          </div>
-          <Collapsible>
-            <CollapsibleTrigger className="group flex items-center gap-1 text-xs text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-              <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
-              {t("feedbackApiEndpoint")}
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <code className="mt-2 block overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs">
-                POST /api/v1/feedback ·{" "}
-                {"{ title, body?, user: { external_id?, email?, name? } }"}
-              </code>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+        {feedbackKeyCount === 0 ? (
+          // Le libellé « aucune » du pluriel EST la phrase de la scène : la
+          // dire deux fois, c'est la voir diverger.
+          <EmptyScene
+            size="compact"
+            icon={Code2}
+            title={t("feedbackApiKeysCount", { count: 0 })}
+          >
+            <ManageKeysButton projectId={projectId} />
+          </EmptyScene>
+        ) : (
+          <p className="py-3.5 text-xs text-muted-foreground">
+            {t("feedbackApiKeysCount", { count: feedbackKeyCount })}
+          </p>
+        )}
       </SettingsGroup>
 
       {/* ── Revue par Numo : s'applique aux trois canaux ────────────────── */}
       <NumoReviewSetting projectId={projectId} isOwner={isOwner} />
     </div>
+  );
+}
+
+/** Le renvoi vers l'onglet Intégrations, où les clés se créent et se révoquent —
+ *  en-tête de carte quand il y en a, dans la scène vide quand il n'y en a pas. */
+function ManageKeysButton({ projectId }: { projectId: string }) {
+  const t = useTranslations("Settings");
+  return (
+    <Button variant="outline" size="sm" asChild>
+      <Link href={`/projects/${projectId}/settings?tab=integrations`}>
+        {t("feedbackApiManageKeys")}
+      </Link>
+    </Button>
   );
 }
 

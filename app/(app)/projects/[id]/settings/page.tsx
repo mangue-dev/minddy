@@ -182,17 +182,10 @@ export default function ProjectSettingsPage() {
       value: "integrations",
       label: t("integrationsTab"),
       icon: Plug,
-      content: (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectIntegrations}
-          icon={Plug}
-          title={t("integrationsTab")}
-          description={t("integrationsSectionDesc")}
-          variant="block"
-        >
-          <ProjectIntegrations projectId={project.id} isOwner={isOwner} />
-        </SettingsGroup>
-      ),
+      // Pas d'enveloppe : la section rend sa PROPRE carte, parce que « Nouvelle
+      // intégration » vit dans l'en-tête du groupe et que l'état du bouton
+      // dépend de la liste, que seule la section connaît.
+      content: <ProjectIntegrations projectId={project.id} isOwner={isOwner} />,
     },
   ];
 
