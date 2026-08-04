@@ -87,9 +87,11 @@ export function HomeScratchpadSection() {
   }
 
   return (
-    <section className="flex flex-col gap-2">
+    // Même entête que les listes de la page (components/home/home-list.tsx) : le
+    // corps, lui, n'est pas une liste de lignes mais l'aperçu d'une note.
+    <section className="flex flex-col gap-2.5">
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">{t("title")}</h2>
+        <h2 className="shrink-0 text-sm font-semibold tracking-tight">{t("title")}</h2>
         <span className="text-sm text-muted-foreground">
           {t("tasksLeft", { count: left })}
         </span>

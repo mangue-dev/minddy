@@ -109,8 +109,11 @@ export function CycleTitleSelector({
 }
 
 /** SVG ring, filled clockwise from 12 o'clock — the Pie of issue-indicators,
-    as a stroke so it reads as a gauge, not a status. */
-function ProgressRing({
+    as a stroke so it reads as a gauge, not a status. Exported for the home's
+    cycle section, which keeps the gauge vocabulary of the cycle board but only
+    shows completion — capacity is a planning number, and planning happens on
+    /all, not on the dashboard. */
+export function ProgressRing({
   percent,
   colorClass,
   className,

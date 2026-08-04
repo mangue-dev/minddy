@@ -54,8 +54,6 @@ export function useHomeSummaryQuery() {
     triageTotal: data?.triageTotal ?? 0,
     newFeedback: data?.newFeedback ?? [],
     newFeedbackTotal: data?.newFeedbackTotal ?? 0,
-    inReview: data?.inReview ?? [],
-    inReviewTotal: data?.inReviewTotal ?? 0,
     relations: data?.relations ?? [],
     blockerStatuses: data?.blockerStatuses ?? {},
     loading: isLoading,

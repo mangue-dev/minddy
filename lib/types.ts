@@ -508,16 +508,6 @@ export interface HomeSummaryResponse {
    */
   newFeedback: HomeSummaryFeedback[];
   newFeedbackTotal: number;
-  /**
-   * Tickets en relecture, le plus anciennement bougé d'abord — la part
-   * « tickets » de la carte « En attente de moi ». Un ticket en `in_review` ne
-   * bouge plus tant qu'un humain ne l'a pas relu : c'est exactement ce que la
-   * carte réunit, avec les PR ouvertes et les sessions d'agent non lues (celles-là
-   * lues côté client, elles ne passent pas par cette route). Tronquée —
-   * `inReviewTotal` donne le compte réel.
-   */
-  inReview: HomeSummaryIssue[];
-  inReviewTotal: number;
   /** Relations touchant un ticket du cycle — l'ordre reco tient compte des blocages. */
   relations: IssueRelation[];
   /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */

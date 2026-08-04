@@ -18,10 +18,22 @@ import type { IssueStatus } from "@/lib/issue-constants";
 /** Combien de cycles clos le sélecteur de dates liste (aligné sur /api/me/board). */
 const PAST_CYCLES_SHOWN = 8;
 
-/** Colonnes d'un ticket du tableau de bord : ce que les cartes affichent ou
-    ordonnent, rien de plus. */
+/**
+ * Colonnes d'un ticket du tableau de bord : ce que les sections affichent ou
+ * ordonnent, rien de plus.
+ *
+ * `projects!inner(deleted_at)` n'est pas une colonne affichée, c'est le FILTRE
+ * de la corbeille : mettre un projet à la corbeille ne touche pas ses tickets
+ * (DELETE /api/projects/[id] : « ses tickets, objectifs et feedbacks ne bougent
+ * pas »), et `can_access_project` ne regarde pas `deleted_at` — les tickets d'un
+ * projet jeté continuent donc de passer RLS. Le board global s'en protège côté
+ * client (`scopedIssues`, components/global-board.tsx) ; ici il faut le faire en
+ * SQL, sinon les « +N autres » — qui viennent de `count: "exact"` — compteraient
+ * ce que la liste, elle, aurait écarté. Même jointure que la réconciliation des
+ * cycles (lib/server/cycles.ts).
+ */
 const SUMMARY_ISSUE_COLUMNS =
-  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, created_at, updated_at, issue_categories(category_id)";
+  "id, project_id, number, title, status, priority, effort, due_date, cycle_id, created_at, updated_at, issue_categories(category_id), projects!inner(deleted_at)";
 
 /**
  * Combien d'échéances proches remontent au plus. La section n'en affiche qu'une
@@ -42,23 +54,22 @@ const DUE_SOON_LIMIT = 50;
 const TRIAGE_LIMIT = 30;
 const NEW_FEEDBACK_LIMIT = 30;
 
-/**
- * Plafond de la relecture en attente : la carte « En attente de moi » en montre
- * une poignée à côté des PR et des sessions d'agent. Le `+N autres` reste exact
- * (`count: "exact"` compte tout l'ensemble filtré, `limit` ne borne que les
- * lignes rapatriées).
- */
-const IN_REVIEW_LIMIT = 20;
-
 /** Colonnes d'un retour de la file « À trier » — cf. HomeSummaryFeedback. */
 const SUMMARY_FEEDBACK_COLUMNS = "id, project_id, title, vote_count, created_at";
 
 type SummaryRow = Omit<HomeSummaryIssue, "category_ids"> & {
   issue_categories?: { category_id: string }[] | null;
+  /** Jointure de filtrage seulement — cf. SUMMARY_ISSUE_COLUMNS. */
+  projects?: unknown;
 };
 
-/** La jointure des catégories arrive en lignes ; la home veut des ids. */
-function toSummaryIssue({ issue_categories, ...rest }: SummaryRow): HomeSummaryIssue {
+/** La jointure des catégories arrive en lignes ; la home veut des ids. Celle du
+    projet ne sert qu'à filtrer la corbeille et ne descend pas au client. */
+function toSummaryIssue({
+  issue_categories,
+  projects: _projects,
+  ...rest
+}: SummaryRow): HomeSummaryIssue {
   return { ...rest, category_ids: (issue_categories ?? []).map((c) => c.category_id) };
 }
 
@@ -151,24 +162,20 @@ export async function GET(request: NextRequest) {
   // avoir téléchargé chaque ticket. Il n'en reste qu'un : la carte qui alignait
   // « ouverts / en cours / à moi » a cédé la place à « En attente de moi », qui
   // montre des lignes sur lesquelles agir plutôt que des nombres.
-  const [
-    totalRes,
-    cycleIssuesRes,
-    dueSoonRes,
-    triageRes,
-    inReviewRes,
-    myProjectsRes,
-  ] = await Promise.all([
+  const [totalRes, cycleIssuesRes, dueSoonRes, triageRes, myProjectsRes] =
+    await Promise.all([
       // Tous statuts confondus : l'onboarding demande « as-tu déjà créé un
       // ticket ? », auquel un ticket terminé répond oui (lib/use-onboarding.ts).
       auth.supabase
         .from("issues")
-        .select("id", { count: "exact", head: true })
+        .select("id, projects!inner(deleted_at)", { count: "exact", head: true })
+        .is("projects.deleted_at", null)
         .is("deleted_at", null),
       currentCycleId
         ? auth.supabase
             .from("issues")
             .select(SUMMARY_ISSUE_COLUMNS)
+            .is("projects.deleted_at", null)
             .is("deleted_at", null)
             .eq("cycle_id", currentCycleId)
         : Promise.resolve({ data: [], error: null }),
@@ -179,6 +186,7 @@ export async function GET(request: NextRequest) {
       auth.supabase
         .from("issues")
         .select(SUMMARY_ISSUE_COLUMNS)
+        .is("projects.deleted_at", null)
         .is("deleted_at", null)
         .not("due_date", "is", null)
         .not("status", "in", `(${CLOSED_STATUSES.join(",")})`)
@@ -191,21 +199,11 @@ export async function GET(request: NextRequest) {
       auth.supabase
         .from("issues")
         .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
+        .is("projects.deleted_at", null)
         .is("deleted_at", null)
         .eq("status", "triage")
         .order("created_at", { ascending: true })
         .limit(TRIAGE_LIMIT),
-      // Relecture en attente, part « tickets » de la carte « En attente de moi ».
-      // Trié sur `updated_at` et non `created_at` : ce qui compte n'est pas l'âge
-      // du ticket mais depuis quand il ne bouge plus, et c'est le passage en
-      // relecture qui a posé cette date.
-      auth.supabase
-        .from("issues")
-        .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
-        .is("deleted_at", null)
-        .eq("status", "in_review")
-        .order("updated_at", { ascending: true })
-        .limit(IN_REVIEW_LIMIT),
       // Mes projets, à seule fin de borner la lecture service-role du feedback
       // (loadNewFeedback) : RLS `projects_select` = owner ∪ membre.
       auth.supabase.from("projects").select("id").is("deleted_at", null),
@@ -216,7 +214,6 @@ export async function GET(request: NextRequest) {
     cycleIssuesRes.error ||
     dueSoonRes.error ||
     triageRes.error ||
-    inReviewRes.error ||
     myProjectsRes.error;
   if (firstError) {
     console.error("[api/me/summary] load failed:", firstError.message);
@@ -237,11 +234,6 @@ export async function GET(request: NextRequest) {
     toSummaryIssue
   );
   const triageTotal = triageRes.count ?? triage.length;
-
-  const inReview: HomeSummaryIssue[] = ((inReviewRes.data ?? []) as SummaryRow[]).map(
-    toSummaryIssue
-  );
-  const inReviewTotal = inReviewRes.count ?? inReview.length;
 
   const dueSoon: HomeSummaryIssue[] = ((dueSoonRes.data ?? []) as SummaryRow[])
     .map(toSummaryIssue)
@@ -272,9 +264,13 @@ export async function GET(request: NextRequest) {
       ),
     ];
     if (counterpartIds.length > 0) {
+      // Même filtre corbeille : un bloqueur dans un projet jeté ne bloque plus
+      // rien — sans quoi il maintiendrait indéfiniment son ticket en bas de
+      // l'ordre reco, pour une raison devenue invisible.
       const { data: statusRows } = await auth.supabase
         .from("issues")
-        .select("id, status")
+        .select("id, status, projects!inner(deleted_at)")
+        .is("projects.deleted_at", null)
         .is("deleted_at", null)
         .in("id", counterpartIds);
       for (const row of (statusRows ?? []) as { id: string; status: IssueStatus }[]) {
@@ -294,8 +290,6 @@ export async function GET(request: NextRequest) {
     triageTotal,
     newFeedback: newFeedback.posts,
     newFeedbackTotal: newFeedback.total,
-    inReview,
-    inReviewTotal,
     relations,
     blockerStatuses,
   };

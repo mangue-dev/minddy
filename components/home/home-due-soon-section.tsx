@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "mangue-ui/lib/utils";
 import { useHomeSummaryQuery } from "@/lib/use-home-summary-query";
@@ -9,7 +8,13 @@ import { useProjects } from "@/lib/projects-context";
 import { EffortIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isDueDateOverdue, parseDueDate, relativeDue } from "@/lib/due-date";
-import type { HomeSummaryIssue } from "@/lib/types";
+import {
+  HomeLead,
+  HomeMore,
+  HomeRow,
+  HomeSection,
+} from "@/components/home/home-list";
+import type { HomeSummaryIssue, Project } from "@/lib/types";
 
 /** Combien de lignes la section montre. Au-delà, un compte — l'accueil est un
     tableau de bord, pas une liste de tickets (celle-là vit sur /all). */
@@ -65,46 +70,46 @@ function RelativeDueLabel({ due }: { due: Date }) {
 
 function DueSoonRow({
   issue,
-  projectKey,
+  project,
 }: {
   issue: HomeSummaryIssue;
-  projectKey: string;
+  project: Project | undefined;
 }) {
   const t = useTranslations("Home");
+  const tIssue = useTranslations("Issue");
   const due = parseDueDate(issue.due_date);
   const overdue = due !== null && isDueDateOverdue(due);
 
   return (
-    // Même destination que l'aperçu du cycle : le board cross-projet ouvre le
-    // panneau du ticket (components/global-board.tsx consomme ?issue=).
-    <Link
+    <HomeRow
+      // Même destination que les autres aperçus de l'accueil : le board
+      // cross-projet ouvre le panneau du ticket (components/global-board.tsx
+      // consomme ?issue=).
       href={`/all?issue=${issue.id}`}
-      className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40"
-    >
-      <StatusIndicator status={issue.status} className="size-4" />
-      {projectKey ? (
-        <span className="shrink-0 font-mono text-xs text-muted-foreground">
-          {issueIdentifier(projectKey, issue.number)}
-        </span>
-      ) : null}
-      <span className="min-w-0 flex-1 truncate text-sm text-foreground/90 group-hover:text-foreground">
-        {issue.title}
-      </span>
-      {issue.effort ? (
-        <EffortIndicator effort={issue.effort} className="shrink-0" />
-      ) : null}
-      {due ? (
-        <span
-          className={cn(
-            "shrink-0 text-xs",
-            overdue ? "font-medium text-destructive" : "text-muted-foreground",
-          )}
-          title={overdue ? t("dueSoonOverdue") : undefined}
-        >
-          <RelativeDueLabel due={due} />
-        </span>
-      ) : null}
-    </Link>
+      icon={<StatusIndicator status={issue.status} className="size-4" />}
+      kind={tIssue("entity")}
+      lead={
+        project ? <HomeLead>{issueIdentifier(project.key, issue.number)}</HomeLead> : null
+      }
+      title={issue.title}
+      // L'effort est ce qui définit la fenêtre de proximité (lib/due-soon.ts) :
+      // il explique, sur la ligne même, pourquoi ce ticket-là est déjà là.
+      meta={issue.effort ? <EffortIndicator effort={issue.effort} /> : null}
+      project={project}
+      right={
+        due ? (
+          <span
+            className={cn(
+              "shrink-0 text-xs",
+              overdue ? "font-medium text-destructive" : "text-muted-foreground",
+            )}
+            title={overdue ? t("dueSoonOverdue") : undefined}
+          >
+            <RelativeDueLabel due={due} />
+          </span>
+        ) : null
+      }
+    />
   );
 }
 
@@ -117,44 +122,37 @@ function DueSoonRow({
  * `dueSoon` — parce que « jours restants » se compte dans le fuseau de
  * l'utilisateur ; voir lib/due-soon.ts.
  *
- * Rien à montrer → rien du tout, comme HomeTriageSection : un tableau de bord
- * ne garde pas de place pour un état vide.
+ * Rien à montrer → rien du tout : un tableau de bord ne garde pas de place pour
+ * un état vide.
  */
 export function HomeDueSoonSection() {
   const t = useTranslations("Home");
   const { dueSoon, loading } = useHomeSummaryQuery();
   const { projects } = useProjects();
 
-  const projectKeyById = useMemo(
-    () => new Map(projects.map((p) => [p.id, p.key])),
+  const projectById = useMemo(
+    () => new Map(projects.map((p) => [p.id, p])),
     [projects],
   );
 
   // Pas de squelette pendant le chargement : la section est le plus souvent
   // vide, et un bloc qui apparaît pour disparaître aussitôt secouerait la page à
-  // chaque visite. Les cartes du dessus, elles, portent déjà l'attente.
+  // chaque visite. La section du cycle, elle, porte déjà l'attente.
   if (loading || dueSoon.length === 0) return null;
 
   const rows = dueSoon.slice(0, ROWS_SHOWN);
   const overflow = dueSoon.length - rows.length;
 
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold tracking-tight">{t("dueSoonTitle")}</h2>
-      <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
-        {rows.map((issue) => (
-          <DueSoonRow
-            key={issue.id}
-            issue={issue}
-            projectKey={projectKeyById.get(issue.project_id) ?? ""}
-          />
-        ))}
-        {overflow > 0 && (
-          <p className="px-4 py-2 text-xs text-muted-foreground">
-            {t("dueSoonMore", { count: overflow })}
-          </p>
-        )}
-      </div>
-    </section>
+    <HomeSection title={t("dueSoonTitle")} count={dueSoon.length}>
+      {rows.map((issue) => (
+        <DueSoonRow
+          key={issue.id}
+          issue={issue}
+          project={projectById.get(issue.project_id)}
+        />
+      ))}
+      {overflow > 0 && <HomeMore>{t("dueSoonMore", { count: overflow })}</HomeMore>}
+    </HomeSection>
   );
 }

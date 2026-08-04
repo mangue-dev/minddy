@@ -14,8 +14,8 @@ import { pickGreeting } from "@/lib/home-greeting";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
-import { HomeCycleCard } from "@/components/home/home-cycle-card";
-import { HomeWaitingCard } from "@/components/home/home-waiting-card";
+import { HomeCycleSection } from "@/components/home/home-cycle-section";
+import { HomeWaitingSection } from "@/components/home/home-waiting-section";
 import { HomeDueSoonSection } from "@/components/home/home-due-soon-section";
 import { HomeScratchpadSection } from "@/components/home/home-scratchpad-section";
 import { HomeTriageSection } from "@/components/home/home-triage-section";
@@ -142,68 +142,57 @@ export default function HomePage() {
           default to true (0 project, 0 issue) and flash the onboarding on a
           long-standing account's home. */}
       {onboarding.loading ? (
-        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Skeleton className="h-[200px] rounded-xl" />
-          <Skeleton className="h-[200px] rounded-xl" />
+        <div className="mt-8 flex flex-col gap-2.5">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-48 rounded-xl" />
         </div>
       ) : onboarding.showCard ? (
         <div className="mt-6">
           <OnboardingCard onboarding={onboarding} />
         </div>
       ) : (
-        <>
-          {/* Échéances proches (MIN-96) — tout en haut du corps, juste sous le
-              composer : c'est du temps qui court, et c'est la seule chose de
-              cette page qui périme. Ne rend rien quand aucun ticket n'entre dans
-              la fenêtre de son effort — le cas courant, d'où l'absence de
-              squelette (le corps attend déjà /api/me/summary via useOnboarding,
-              donc rien n'apparaît après coup). */}
-          <div className="mt-6">
-            <HomeDueSoonSection />
-          </div>
-
-          {/* Focus: le cycle en cours + ce qui est arrêté en attendant une
-              décision de ma part. Stacked full-width until lg — two narrow
-              columns cram the cycle card's rings on tablet/mobile. Explicit
-              grid-cols give minmax(0,1fr) tracks so a card's content can't blow
-              the column past the viewport.
-
-              Sans projet, ou sans le moindre ticket, les deux cartes n'ont rien
-              à mesurer : la scène prend leur place et dit lequel des deux vides
-              on regarde, comme sur le board global. Le geste, lui, est déjà en
-              haut de la page — on ne le répète pas. */}
+        /**
+         * Le corps est UNE colonne de sections, jamais une grille : deux cartes
+         * côte à côte coupaient les titres de tickets au tiers et se
+         * ressemblaient trait pour trait alors qu'elles ne disaient pas la même
+         * chose. Toutes partagent la grammaire de components/home/home-list.tsx.
+         *
+         * L'ordre est celui de ce que chacune DEMANDE : ce qui est arrêté en
+         * attendant un humain, puis ce qui périme, puis ce qui attend une
+         * décision, puis le plan de la quinzaine, puis mes notes. Les quatre
+         * premières s'effacent quand elles sont vides (`gap` ignore les enfants
+         * nuls) — c'est donc un ordre de priorité, pas une maquette figée : sur
+         * un compte calme, « À trier » se retrouve tout en haut.
+         */
+        <div className="mt-8 flex flex-col gap-8">
+          {/* Sans projet, ou sans le moindre ticket, les files n'ont rien à
+              lister : la scène prend leur place et dit lequel des deux vides on
+              regarde, comme sur le board global. Le geste, lui, est déjà en haut
+              de la page — on ne le répète pas. Le carnet, lui, ne dépend
+              d'aucun ticket : il reste en dessous. */}
           {noProject || noIssue ? (
-            <div className="mt-6">
-              <EmptyScene
-                icon={noProject ? FolderPlus : LayoutGrid}
-                title={noProject ? t("noProject") : tBoard("emptyTitle")}
-              />
-            </div>
+            <EmptyScene
+              icon={noProject ? FolderPlus : LayoutGrid}
+              title={noProject ? t("noProject") : tBoard("emptyTitle")}
+            />
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <HomeCycleCard />
-              <HomeWaitingCard />
-            </div>
+            <>
+              <HomeWaitingSection />
+              <HomeDueSoonSection />
+              <HomeTriageSection />
+              <HomeCycleSection />
+            </>
           )}
 
           {/* Le carnet de tâches, en clair : personnel et cross-projet comme
               cette page. Carnet vide → rien du tout. */}
-          <div className="mt-6">
-            <HomeScratchpadSection />
-          </div>
-
-          {/* À trier (MIN-104) — tickets en triage et retours non tranchés, le
-              projet nommé sur chaque ligne. Remplace l'ancienne section Feedback,
-              qui ne disait qu'un compte par projet. Rien à trier → rien du tout. */}
-          <div className="mt-6">
-            <HomeTriageSection />
-          </div>
+          <HomeScratchpadSection />
 
           {/* Plus de grille de projets ici : la sidebar les liste tous, en
               permanence et sur toutes les pages, « Nouveau projet » compris. La
               même chose une deuxième fois, deux écrans plus bas, poussait le
               travail du jour hors de vue pour un lanceur qu'on n'utilisait pas. */}
-        </>
+        </div>
       )}
     </div>
   );

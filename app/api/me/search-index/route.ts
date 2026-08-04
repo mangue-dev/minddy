@@ -18,10 +18,26 @@ import type {
 const MAX_ISSUES = 4000;
 const MAX_OBJECTIVES = 1000;
 
-/** Only the columns a palette row displays, matches on, or lets ⌘; patch. */
+/**
+ * Only the columns a palette row displays, matches on, or lets ⌘; patch — plus
+ * `projects!inner(deleted_at)`, which isn't displayed at all: it's the trash
+ * filter. Trashing a project leaves its issues untouched (DELETE
+ * /api/projects/[id]) and `can_access_project` ignores `deleted_at`, so without
+ * the join the palette keeps offering tickets of a project the sidebar no
+ * longer lists. Same join as GET /api/me/summary and lib/server/cycles.ts. It
+ * is stripped from every row before the response — see `stripJoin`.
+ */
 const ISSUE_COLUMNS =
-  "id, project_id, number, title, status, priority, effort, assignee_id, objective_id, updated_at";
-const OBJECTIVE_COLUMNS = "id, project_id, name, status, color";
+  "id, project_id, number, title, status, priority, effort, assignee_id, objective_id, updated_at, projects!inner(deleted_at)";
+const OBJECTIVE_COLUMNS = "id, project_id, name, status, color, projects!inner(deleted_at)";
+
+/** La jointure de filtrage ne descend pas au client. */
+function stripJoin<T>(rows: ({ projects?: unknown } | null)[] | null): T[] {
+  return (rows ?? []).map((row) => {
+    const { projects: _projects, ...rest } = (row ?? {}) as { projects?: unknown };
+    return rest as T;
+  });
+}
 
 /**
  * GET /api/me/search-index — every ticket and objective of every project I can
@@ -47,11 +63,13 @@ export async function GET(request: NextRequest) {
     auth.supabase
       .from("issues")
       .select(ISSUE_COLUMNS)
+      .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_ISSUES),
     auth.supabase
       .from("objectives")
       .select(OBJECTIVE_COLUMNS)
+      .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_OBJECTIVES),
     auth.supabase.from("categories").select("id, project_id, name, color"),
@@ -65,8 +83,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  const issues = (issuesRes.data ?? []) as unknown as SearchIndexIssue[];
-  const objectives = (objectivesRes.data ?? []) as unknown as SearchIndexObjective[];
+  const issues = stripJoin<SearchIndexIssue>(issuesRes.data);
+  const objectives = stripJoin<SearchIndexObjective>(objectivesRes.data);
 
   const categories: Record<string, Category[]> = {};
   for (const c of (categoriesRes.data ?? []) as Category[]) {
