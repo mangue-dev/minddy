@@ -77,3 +77,14 @@ fr/light, fr/dark, en/light, en/dark
   (microVM, appels facturés). Voir `world.md`.
 - **Le FAB de Numo est masqué sur `/agents`** (`hiddenForRoute`), donc rien à
   neutraliser de ce côté.
+- **Ouvrir le run met sa date à jour.** La date affichée sur la carte de la
+  liste est celle de la dernière activité de la conversation, et la visite en
+  est une : au run du 2026-08-04, la PREMIÈRE variante est sortie avec « 26
+  juil. » et les trois suivantes avec « 4 août ». Une seule image sur quatre
+  disait autre chose que les autres. Le remède est de **rejouer le script une
+  seconde fois** : la date est alors stabilisée pour les quatre. À vérifier à
+  chaque rafraîchissement, c'est invisible sans comparer les variantes entre
+  elles.
+- **La barre latérale principale se réduit à un rail d'icônes** sur cet écran
+  depuis `fcb2a4d` : la liste des conversations occupe la colonne secondaire.
+  C'est le produit, pas un défaut de capture.

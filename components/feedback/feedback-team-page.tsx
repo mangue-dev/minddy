@@ -774,6 +774,17 @@ function FeedbackDetail({
     };
   }, [flushCategories]);
 
+  // Le fondu qui remplace la bordure sous la barre du haut : il ne paraît que
+  // du côté où il reste quelque chose à découvrir.
+  //
+  // Il est déclaré ICI, loin du JSX qui s'en sert, et pas juste au-dessus de
+  // lui : c'est un HOOK, et le squelette de chargement rend plus bas. Appelé
+  // après ce `return`, il n'existait pas au premier rendu (`post` encore nul)
+  // et apparaissait au second — « Rendered more hooks than during the previous
+  // render », et tout l'écran Feedback tombait sur sa frontière d'erreur dès
+  // qu'un projet avait des retours à afficher.
+  const detailFade = useScrollFade<HTMLDivElement>();
+
   if (isLoading || !post) {
     return (
       <div className="flex flex-col gap-4 p-6">
@@ -785,10 +796,6 @@ function FeedbackDetail({
 
   const rawDiffers =
     post.submitted_title !== post.title || post.submitted_body !== post.body;
-
-  // Le fondu qui remplace la bordure sous la barre du haut : il ne paraît que
-  // du côté où il reste quelque chose à découvrir.
-  const detailFade = useScrollFade<HTMLDivElement>();
 
   return (
     <div className="flex h-full min-h-0 flex-col">

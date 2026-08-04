@@ -14,16 +14,38 @@ import { toolCallLabel } from "../../lib/messages.mjs";
 const SLOT = "numoPanel";
 const OUT = "captures/shots/numo/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
-const VIEWPORT = { width: 1447, height: 1085 };
+
+/**
+ * 4/3, mais en 1200 × 900 et non dans la fenêtre commune de 1447 × 1085 —
+ * `carnet` déroge de la même façon, et pour une raison voisine.
+ *
+ * Le panneau compact a des métriques FIXES (450 × 600, ancré en bas à droite) :
+ * c'est donc la fenêtre qui décide de la part d'image qu'il occupe. À 1447 il
+ * pèse 31 % de la largeur et le board lui passe devant ; à 1200 il en pèse
+ * 37 % sur 67 % de la hauteur, et l'image dit ce qu'elle doit dire — un
+ * assistant posé SUR le tracker, les deux lisibles.
+ *
+ * **1200 est un plancher, pas un réglage.** `--breakpoint-desktop` vaut
+ * 1200 px : en dessous, le shell bascule en mise en page mobile — barre
+ * latérale escamotée, fil d'Ariane centré, barre d'onglets en bas, board en
+ * une colonne. Une prise en 1024 × 768 a sorti exactement ça, et l'image
+ * racontait une application de téléphone.
+ *
+ * La définition n'en souffre pas : la prise est en 2×, soit 2400 px, et
+ * `publishShot` sert 1600 px pour un emplacement affiché autour de 530 — trois
+ * fois la densité d'affichage, comme les autres.
+ */
+const VIEWPORT = { width: 1200, height: 900 };
 
 /** Titre de la conversation semée — une donnée, donc la même dans les 2 langues. */
 const CONVERSATION = "Sweep the unassigned backlog";
 
-/** « Agrandir » : le seul libellé de cette capture qui diffère d'une langue à l'autre. */
-const EXPAND = { fr: "Agrandir", en: "Expand" };
-
-/** Largeur du panneau étendu (56rem), telle que la pose `panel-geometry.ts`. */
-const EXPANDED_WIDTH = 896;
+/**
+ * Largeur du panneau COMPACT (450 px), telle que la pose `panel-geometry.ts`.
+ * Elle sert d'ancre d'attente : le morph compact ⇄ étendu est animé, et une
+ * prise partie pendant l'interpolation attrape le panneau à mi-course.
+ */
+const COMPACT_WIDTH = 450;
 
 /**
  * Le résumé de travail se désigne par sa DURÉE — la seule partie du libellé
@@ -93,27 +115,30 @@ async function capture({ locale, theme }) {
     const summary = page.locator('[role="log"]').first().getByRole("button", { name: DURATION });
     await summary.waitFor({ state: "visible", timeout: 10_000 });
 
-    // Panneau ÉTENDU. Ce n'est plus une contrainte de débordement — le fil
-    // replié tiendrait en taille normale — mais un choix de cadrage : étendu,
-    // Numo occupe le centre de l'image et le board passe derrière en décor. En
-    // taille normale les deux se disputent le regard, et le board gagne, parce
-    // qu'il est plus dense et plus coloré. La section parle de l'assistant.
+    // Panneau COMPACT — on ne l'étend plus, et le retour en arrière est motivé.
     //
-    // Le prix assumé : le fil replié est court, donc le bas du panneau reste
-    // vide. C'est du calme autour du propos, pas un manque.
-    await panel.getByRole("button", { name: EXPAND[locale], exact: true }).click();
+    // Le mode étendu était un choix de cadrage : il mettait Numo au centre et
+    // renvoyait le board au décor. Il ne le fait plus. `panel-geometry.ts` a
+    // rebranché sa taille sur les tokens de dialogue de mangue-ui, soit
+    // 90vw × 90vh : le panneau couvre maintenant l'écran entier, le board
+    // disparaît de l'image, et le fil replié — six messages, dont un tour de
+    // travail refermé — flotte dans les deux tiers de blanc du bas. Étendre est
+    // devenu le contraire de ce pour quoi on l'étendait.
+    //
+    // Compact, le panneau garde ses métriques fixes, et c'est la FENÊTRE qui
+    // règle sa présence : voir `VIEWPORT`.
     await page.waitForFunction(
       (width) => {
         const d = document.querySelector('[role="dialog"]');
         return !!d && Math.round(d.getBoundingClientRect().width) === width;
       },
-      EXPANDED_WIDTH,
+      COMPACT_WIDTH,
       { timeout: 10_000 },
     );
 
     // Radix garde une infobulle ouverte tant que son bouton a le focus : sans
-    // ça, une bulle noire (« Conversations », « Agrandir ») traverse l'image.
-    await page.mouse.move(120, 900);
+    // ça, une bulle noire (« Conversations ») traverse l'image.
+    await page.mouse.move(120, VIEWPORT.height - 40);
     await page.evaluate(() => document.activeElement?.blur?.());
     await page.waitForTimeout(400);
 

@@ -25,12 +25,9 @@ main. »*
 ## Où
 
 `/projects/<aurora>`, connecté en Camille Roy. Panneau ouvert par **G puis A**,
-conversation chargée depuis la liste, puis passé en mode **étendu**.
+conversation chargée depuis la liste, et laissé en **taille normale**.
 
-## On photographie le fil REPLIÉ, et le panneau en taille normale
-
-Deux décisions prises le 2026-07-26, dans cet ordre — la seconde découle de la
-première.
+## On photographie le fil REPLIÉ, et le panneau COMPACT
 
 **Replié.** Le tour de travail de Numo est rangé derrière un résumé de durée,
 comme dans le fil de l'agent de code. C'est l'état par défaut du produit, et
@@ -38,15 +35,19 @@ c'est celui qu'on montre : le résumé dit que Numo a travaillé, la réponse fi
 nomme les tickets qu'il a modifiés. Déplier étalait son raisonnement sur toute
 la hauteur du panneau pour démontrer ce que la phrase de conclusion dit déjà.
 
-**Panneau étendu.** Il l'était par contrainte — le fil déplié débordait de
-73 px — et il le reste par choix. Étendu, Numo occupe le centre de l'image et le
-board passe derrière en décor. En taille normale les deux se disputent le
-regard, et le board gagne : il est plus dense, plus coloré, plus grand. Or la
-section parle de l'assistant.
+**Compact — et c'est un retour en arrière, daté du 2026-08-04.** Le panneau
+était étendu depuis le 26 juillet, pour une raison qui a cessé d'être vraie :
+l'étendu mettait Numo au centre et renvoyait le board au décor.
+`panel-geometry.ts` a depuis rebranché sa taille sur les tokens de dialogue de
+mangue-ui — `--spacing-dialog-w/h`, soit **90vw × 90vh**, la taille du carnet et
+de la création de projet. Étendu, le panneau couvre désormais l'écran entier :
+le board disparaît de l'image, et le fil replié — six messages dont un tour de
+travail refermé — flotte dans les deux tiers de blanc du bas. La capture ne
+montrait plus un assistant dans une application, mais une page de chat.
 
-Le prix est un bas de panneau vide, le fil replié étant court. C'est du calme
-autour du propos, pas un manque — et l'essai en taille normale l'a confirmé :
-on y lisait le board avant de voir Numo.
+Compact, le panneau garde des métriques FIXES (450 × 600, ancré en bas à
+droite). Ce n'est donc plus lui qu'on règle, **c'est la fenêtre** : voir
+« Cadrage ».
 
 Le résumé se désigne par sa **durée** : la seule partie du libellé qui vienne
 des horodatages et non d'une traduction, donc la seule qui vaille dans les deux
@@ -83,19 +84,27 @@ C'est un des trois contextes que la landing revendique elle-même — *« le tic
 le board ou le cycle que vous avez sous les yeux »* — et le seul qu'on puisse
 photographier sans écrire en base.
 
-## Mode étendu, et pas le widget de coin
+## Cadrage — 1200 × 900, et pas la fenêtre commune
 
-En compact, le panneau fait 450 × 600 et le fil déborde de **73 px** : soit la
-dernière réponse est coupée en bas, soit, une fois défilé, l'instruction de
-Camille l'est en haut. Deux mauvaises images.
+Cadre de la landing : **4/3**. Fenêtre **1200 × 900**, au lieu des 1447 × 1085
+des autres emplacements 4/3. `carnet` déroge de la même façon, et pour une
+raison voisine : quand le sujet a des métriques fixes, c'est la fenêtre qui
+décide de la part d'image qu'il occupe.
 
-L'étendu (896 × 704, centré) est la « taille de modale de lecture » prévue par
-`panel-geometry.ts` : la conversation entière y tient. On perd le board net
-derrière — il passe sous le voile — mais on gagne un fil complet.
+- à 1447, le panneau pèse 31 % de la largeur : le board, plus dense et plus
+  coloré, passe devant. Or la section parle de l'assistant ;
+- à 1200, il en pèse 37 % sur 67 % de la hauteur. Le board reste lisible
+  derrière, sans prendre le regard.
 
-## Cadrage
+**1200 est un plancher, pas un réglage.** `--breakpoint-desktop` vaut 1200 px :
+en dessous, le shell bascule en mise en page mobile — barre latérale escamotée,
+fil d'Ariane centré, barre d'onglets en bas, board en une colonne. Une prise en
+1024 × 768 a sorti exactement ça, et l'image racontait une application de
+téléphone.
 
-1447 × 1085, la fenêtre commune des emplacements 4/3.
+La définition ne souffre pas de la fenêtre plus petite : la prise est en 2×
+(2400 px) et `publishShot` sert 1600 px pour un emplacement affiché autour de
+530 — trois fois la densité d'affichage, comme les autres.
 
 ## Déclinaisons
 

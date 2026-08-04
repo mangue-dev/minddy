@@ -21,6 +21,16 @@ export const AURORA_ID = "6cd36606-c297-4920-8ce3-31b5f3697be8";
  */
 export const RUN_ID = "demo-pr-aur-2";
 
+/**
+ * Identifiant de PR, lui aussi SYNTHÉTIQUE, et devenu la clé de tout le
+ * dispositif : depuis MIN-143 la page Pull Requests est indexée par la PR et
+ * non plus par le run (`/api/pull-requests/{prId}/…`), parce qu'elle montre
+ * aussi les PR humaines, qui n'ont aucun run. Les routes
+ * `agent-runs/{runId}/pr/*` existent encore mais ne sont plus que des façades,
+ * et cette page ne les appelle plus.
+ */
+export const PR_ID = "demo-pr-aur-2-row";
+
 export const PR_NUMBER = 128;
 export const BRANCH = "numo/aur-2-palette-shortcuts";
 const REPO = "aurora-labs/aurora";
@@ -216,6 +226,8 @@ Two-key sequences (\`g\` then \`n\`) reset after 900 ms. Tests cover the registr
 
 🤖 Généré par l'agent numo`;
 
+const HEAD_SHA = "6b1f4c9e2d0a7385c41ff20b9e3d5a6714c8be92";
+
 export const PR = {
   number: PR_NUMBER,
   url: PR_URL,
@@ -226,9 +238,58 @@ export const PR = {
   body: DESCRIPTION,
   head: BRANCH,
   base: "main",
+  headSha: HEAD_SHA,
+  commitCount: 2,
+  // `mergeable: true` + `clean` : les forges calculent la fusionnabilité en
+  // asynchrone, et `null` s'affiche « inconnu » (MIN-138). Une PR de vitrine
+  // n'a pas à porter cette réserve — elle est fusionnable, et le dit.
+  mergeable: true,
+  mergeableState: "clean",
   user: NUMO,
   createdAt: OPENED_AT,
 };
+
+/**
+ * Ce que CE compte peut faire sur ce dépôt (MIN-144). Sans lui, le panneau
+ * affiche le bandeau « connectez un compte git » à la place de sa barre
+ * d'actions : `capability` gouverne l'affordance entière.
+ */
+export const VIEWER = {
+  provider: "github",
+  configured: true,
+  connected: true,
+  login: CAMILLE.login,
+  capability: "write",
+  numoLogin: NUMO.login,
+};
+
+/** Les méthodes offertes par la forge — elles garnissent le menu de fusion. */
+export const MERGE_METHODS = ["squash", "merge", "rebase"];
+
+/**
+ * Les commits de la branche. Ils ne sont pas à l'image (l'onglet ouvert est
+ * « Fichiers »), mais l'onglet « Commits » porte leur compte : deux, comme
+ * `PR.commitCount`, et le second est le correctif demandé dans le fil.
+ */
+export const COMMITS = [
+  {
+    sha: "4c21ea08d7b3f95106ad8e2fb47c0d9351768abc",
+    message:
+      "Declare shortcuts on the action itself\n\nThe registry already owns every action, so the hint travels with it.",
+    author: NUMO,
+    authorName: "numo",
+    authorEmail: "numo@minddy.app",
+    authoredAt: "2026-07-14T16:38:00.000Z",
+  },
+  {
+    sha: HEAD_SHA,
+    message: "Ignore contenteditable in the global listener",
+    author: NUMO,
+    authorName: "numo",
+    authorEmail: "numo@minddy.app",
+    authoredAt: "2026-07-14T17:18:00.000Z",
+  },
+];
 
 /** Le fil : une relecture humaine, la réponse de l'agent. */
 export const COMMENTS = [
@@ -248,13 +309,23 @@ export const COMMENTS = [
   },
 ];
 
-/** L'item de la liste, tel que /api/pull-requests le renverrait. */
+/**
+ * L'item de la liste, tel que /api/pull-requests le renverrait. `prId` en est
+ * désormais la clé : c'est lui que la page sélectionne et lui qui adresse
+ * toutes les lectures du détail. `title`, `author` et `head_branch` sont
+ * arrivés avec les PR humaines — sans `author`, la liste ne saurait plus dire
+ * qu'une PR vient de Numo.
+ */
 export const LIST_ITEM = {
+  prId: PR_ID,
   runId: RUN_ID,
   pr_number: PR_NUMBER,
   pr_url: PR_URL,
   pr_state: "open",
   provider: "github",
+  title: PR.title,
+  author: NUMO,
+  head_branch: BRANCH,
   model: "anthropic/claude-sonnet-4.5",
   created_at: OPENED_AT,
   updated_at: "2026-07-14T17:19:00.000Z",
@@ -263,8 +334,37 @@ export const LIST_ITEM = {
     number: 2,
     title: "Add keyboard shortcuts to the command palette",
   },
-  project: { id: AURORA_ID, key: "AUR", name: "Aurora" },
+  project: { id: AURORA_ID, key: "AUR", name: "Aurora", icon_url: null },
   activeRunId: null,
   busyRunId: null,
   runIds: [RUN_ID],
+};
+
+/**
+ * L'enveloppe complète de `/api/pull-requests`. Les quatre champs qui
+ * accompagnent la liste ne sont pas décoratifs : la page rend son écran vide
+ * dès que `repoCount === 0` ou `anyPr === false`, AVANT même de regarder la
+ * liste. Le fixture qui ne servait que `pullRequests` obtenait donc « Liez un
+ * dépôt GitHub ou GitLab » — une page verte, et vide.
+ */
+export const LIST_RESPONSE = {
+  pullRequests: [LIST_ITEM],
+  hasMore: false,
+  truncated: false,
+  repoCount: 1,
+  anyPr: true,
+};
+
+/** L'enveloppe de `/api/pull-requests/{prId}` — le détail lu chez la forge. */
+export const DETAIL_RESPONSE = {
+  pr: PR,
+  files: FILES,
+  provider: "github",
+  // `checks: null` = AUCUN check connu, distinct d'un échec de lecture
+  // (`checksError`). Le dépôt de démo n'a pas de CI : la barre n'apparaît pas.
+  checks: null,
+  checksError: null,
+  reviews: null,
+  viewer: VIEWER,
+  mergeMethods: MERGE_METHODS,
 };

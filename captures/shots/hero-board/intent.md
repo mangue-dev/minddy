@@ -24,7 +24,11 @@ seconde : un tracker de tickets sobre, rempli d'un vrai travail d'équipe.
   qui prouve que la priorité se lit d'un coup d'œil.
 - Des efforts variés (xs → xl).
 - **Trois personnes assignées** avec leur pastille : Camille, Alice, Tom.
-- La barre latérale visible, avec les deux projets (Aurora, Beacon).
+- La barre latérale visible. Depuis `fcb2a4d` (`SecondarySidebar`), elle est
+  **cadrée sur le projet ouvert** — Tickets, Objectifs, Triage, Feedback,
+  Paramètres, avec un retour vers l'accueil — et non plus la liste des deux
+  projets. L'intention suit le produit : ce que le hero doit montrer, c'est la
+  navigation d'un projet, le nom du projet restant lisible dans le fil d'Ariane.
 - Aucune modale, aucun panneau latéral, aucun bandeau de cookies.
 
 ## Où
@@ -71,19 +75,22 @@ mieux ; sinon l'image est jugée sans ce critère.
   tranchée au tiers d'une carte. Ça ne se lit pas comme « il y en a plus à
   droite », ça se lit comme une image cassée. D'où la largeur calée sur la
   gouttière, et le contrôle automatique dans le script.
-- **Le nom de la vue est une DONNÉE, pas une traduction.** L'onglet « Toutes »
-  est une ligne de la table `views`, dont le nom est traduit **à la création**
-  (`ensureBaselineViews`, `tBoard("defaultViewName")`) puis figé. Le compte de
-  démo ayant vu son premier board en français, la variante anglaise affiche un
-  mot français. « Mes tickets » n'a pas ce défaut : l'UI le réétiquette d'après
-  son `kind`.
+- **Le nom de la vue n'est plus figé en base (corrigé).** L'onglet « Toutes »
+  était une ligne de `views` dont le nom, traduit à la création
+  (`ensureBaselineViews`), restait français sur la variante anglaise. L'UI
+  réétiquette désormais la vue par défaut d'après son `kind`, comme elle le
+  faisait déjà pour « Mes tickets » : la prise du 2026-08-04 affiche bien
+  « Toutes » en français et « All » en anglais. Rien à corriger ici.
 - **La barre d'onglets arrive APRÈS les tickets.** Elle vient d'une requête
   séparée : un run a sorti une image sans « Toutes » ni « Mes tickets », sans
   qu'aucune erreur ne le signale. Le script attend maintenant explicitement
   l'onglet de la vue par défaut. C'est le mode d'échec typique — vert, et faux.
-- **La pastille « 0 % » du header** est l'indicateur d'usage du plan
-  (`components/usage-indicator.tsx`), pas une jauge de projet. Le compte de
-  démo est sur un plan gratuit et n'a rien consommé — c'est normal.
+- **La pastille « 100 % » du header** est l'indicateur d'usage du plan
+  (`components/usage-indicator.tsx`), pas une jauge de projet, et elle compte le
+  budget **restant** (`remainingPercent`), pas le consommé. Le compte de démo
+  n'a rien dépensé, elle affiche donc son maximum — c'est le bon message sur une
+  capture de vitrine. Elle disait « 0 % » avant que l'indicateur ne bascule sur
+  le restant.
 - **Le bandeau cookies** est neutralisé en amont pour toutes les captures :
   `browser.mjs` pose `localStorage["cookie_consent"] = "declined"` avant
   chargement. Rien à faire ici.

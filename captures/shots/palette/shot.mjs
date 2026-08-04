@@ -5,13 +5,16 @@
  *
  * Ce que l'inspection a appris :
  *   - la palette s'ouvre bien avec `Meta+K` ;
- *   - la REQUÊTE TAPÉE change tout. « dark » ne remonte que 2 lignes, « issue »
- *     en français n'en remonte que 3 et aucune action. C'est « ticket » qui
- *     donne l'image voulue : 4 groupes (Créer, Aller à, Pages, Tickets), des
- *     actions ET des tickets ;
- *   - « ticket » est le mot français. En anglais, les libellés d'action disent
- *     « issue » : la requête suit donc la langue, exactement comme le
- *     vocabulaire de l'application (Ticket en FR, Issue en EN).
+ *   - la REQUÊTE TAPÉE change tout, et ce qu'elle remonte VIEILLIT. « ticket »
+ *     / « issue » donnait l'image voulue en juillet ; depuis, l'export CSV et
+ *     les entrées de réglages sont venus grossir les groupes d'actions, et ils
+ *     ont poussé le groupe « Tickets » sous la ligne de flottaison. La palette
+ *     ne remontait plus que de la navigation — l'exact contraire de l'`alt` de
+ *     l'emplacement, « une recherche qui remonte tickets ET actions » ;
+ *   - « board » remonte les deux, et tient dans la hauteur de la liste : une
+ *     page (le board public) et quatre tickets dont le titre porte le mot ;
+ *   - c'est en outre le MÊME mot dans les deux langues, là où « ticket » avait
+ *     besoin d'être traduit en « issue ». Une requête de moins à maintenir.
  *
  *   node captures/shots/palette/shot.mjs             # produit les PNG
  *   node captures/shots/palette/shot.mjs --publish   # + livre sur la landing
@@ -26,8 +29,20 @@ const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 /** Même fenêtre que heroBoard : les deux images doivent avoir la même échelle. */
 const VIEWPORT = { width: 1736, height: 1085 };
 
-/** Le mot que l'app elle-même emploie pour « issue » dans chaque langue. */
-const QUERY = { fr: "ticket", en: "issue" };
+/**
+ * La requête tapée. Le même mot dans les deux langues : il est anglais dans les
+ * titres de tickets du monde de démo, et il est aussi le nom du board public
+ * côté interface — c'est ce qui lui fait remonter une page ET des tickets.
+ */
+const QUERY = { fr: "board", en: "board" };
+
+/**
+ * Un résultat de ticket se reconnaît à son identifiant. Sans limite de mot en
+ * tête : le titre et l'identifiant sont deux nœuds voisins, donc le texte
+ * concaténé de la ligne dit « …from the boardAUR-5 » — il n'y a pas de
+ * frontière de mot entre « d » et « A », et un `\b` ne matcherait jamais.
+ */
+const ISSUE_ROW = /[A-Z]{2,4}-\d+/;
 
 const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = [
@@ -70,19 +85,53 @@ async function capture({ locale, theme }) {
     }
 
     // On attend que la liste se soit REMPLIE, pas un délai arbitraire : la
-    // recherche est asynchrone et la palette s'affiche vide en attendant.
+    // recherche est asynchrone et la palette s'affiche vide en attendant. Le
+    // dernier résultat attendu est un ticket, et c'est lui qui met le plus de
+    // temps à venir — les actions sont locales, la recherche de tickets non.
     await page
       .getByRole("option")
-      .nth(6)
+      .filter({ hasText: ISSUE_ROW })
+      .nth(3)
       .waitFor({ state: "visible", timeout: 10_000 });
 
-    const results = await page.getByRole("option").count();
-    if (results < 7) {
+    /**
+     * Ce que l'image doit porter, vérifié sur ce qui est RÉELLEMENT DANS LE
+     * CADRE — un résultat sous la ligne de flottaison de la liste ne se voit
+     * pas plus qu'un résultat absent.
+     *
+     * L'ancien contrôle comptait les résultats (« au moins 7 ») : il est resté
+     * vert pendant que le groupe « Tickets » sortait du cadre, poussé dehors
+     * par deux entrées d'action neuves. Compter ne dit rien de ce qu'on voit.
+     */
+    const check = await page.evaluate((pattern) => {
+      const list = document.querySelector('[role="listbox"]');
+      const bottom = list?.getBoundingClientRect().bottom ?? 0;
+      const rows = [...document.querySelectorAll('[role="option"]')].map((el) => ({
+        text: el.textContent || "",
+        visible: el.getBoundingClientRect().bottom <= bottom + 1,
+      }));
+      const re = new RegExp(pattern);
+      return {
+        issues: rows.filter((r) => r.visible && re.test(r.text)).length,
+        actions: rows.filter((r) => r.visible && !re.test(r.text)).length,
+        clipped: rows.filter((r) => !r.visible).map((r) => r.text.trim().slice(0, 40)),
+      };
+    }, ISSUE_ROW.source);
+
+    if (check.issues < 3 || check.actions < 1) {
       throw new Error(
-        `${locale}/${theme} — la palette ne remonte que ${results} résultats pour « ${QUERY[locale]} ». ` +
-          `L'image ne montrerait ni actions ni tickets.`,
+        `${locale}/${theme} — la palette montre ${check.actions} action(s) et ${check.issues} ` +
+          `ticket(s) dans le cadre pour « ${QUERY[locale]} ». L'emplacement promet les DEUX ` +
+          `(« une recherche qui remonte tickets et actions ») : change la requête.`,
       );
     }
+    if (check.clipped.length > 0) {
+      throw new Error(
+        `${locale}/${theme} — ${check.clipped.length} résultat(s) coupé(s) par le bas de la ` +
+          `liste : ${check.clipped.join(" · ")}. Une ligne tranchée se lit comme une image cassée.`,
+      );
+    }
+    const results = check.issues + check.actions;
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);

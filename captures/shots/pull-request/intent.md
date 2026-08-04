@@ -78,7 +78,30 @@ son composeur — donc la capture précédente.
 
 fr/light, fr/dark, en/light, en/dark
 
+## Ce que le rafraîchissement du 2026-08-04 a cassé, et pourquoi
+
+Trois changements de produit ont fait tomber le script d'un coup. Ils sont
+consignés ici parce qu'aucun ne se voyait à la lecture du fixture :
+
+1. **La PR a remplacé le run comme clé** (MIN-143). Les lectures du détail sont
+   passées de `/api/agent-runs/{runId}/pr*` à `/api/pull-requests/{prId}/*` —
+   la page montre aussi les PR humaines, qui n'ont aucun run. Le fixture
+   répondait donc à des routes que plus personne n'appelait.
+2. **La liste a une enveloppe.** `/api/pull-requests` rend
+   `{ pullRequests, hasMore, truncated, repoCount, anyPr }`, et la page rend son
+   écran vide dès que `repoCount === 0` — AVANT de regarder la liste. Servir
+   `{ pullRequests: [...] }` seul donnait « Liez un dépôt GitHub ou GitLab » :
+   une page verte et vide, exactement le mode d'échec que ce dossier combat.
+3. **Un onglet « Commits » s'est glissé au milieu.** L'onglet Fichiers est le
+   troisième, plus le deuxième.
+
 ## Pièges connus
+
+- **Les gestionnaires de `page.route` sont essayés dans l'ordre INVERSE
+  d'enregistrement.** Le filet de sécurité qui aborte tout `/api/pull-requests`
+  inconnu doit donc être posé **en premier** pour être consulté en dernier.
+  Posé en dernier — l'ordre qui se lit naturellement — il passe devant les
+  gestionnaires précis et aborte la liste elle-même.
 
 - **Ne jamais intercepter avec un glob trop large.** `**/api/agent-runs/*/pr`
   attraperait aussi `/pr/review-comments` selon l'ordre d'enregistrement. Les

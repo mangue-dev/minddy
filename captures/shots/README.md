@@ -4,22 +4,37 @@
 PNG), `history.jsonl` (un enregistrement par run). Le mode d'emploi est dans le
 skill `capture-shot` ; ce fichier ne tient que l'état.
 
-Cible : `CAPTURE_BASE_URL=https://www.minddy.app`.
+Cible : `CAPTURE_BASE_URL=https://preview.minddy.app`. Les dix captures du
+2026-08-04 en viennent, sauf `feedbackInbox` — voir sa ligne.
 
 ## Où en sont les onze emplacements
+
+Toutes rafraîchies le **2026-08-04** (commit `2545b33`), après 210 commits sans
+reprise.
 
 | Emplacement | Dossier | Cadre | Fenêtre | État |
 |---|---|---|---|---|
 | `heroBoard` | `hero-board/` | 16/10 | 1736 × 1085 | publié |
-| `featureCycle` | `cycle/` | 16/10 | 1736 × 1085 | publié |
+| `featureCycle` | `cycle/` | 16/10 | 1736 × 1085 | publié, composition faible (quinzaine décalée) |
 | `featurePalette` | `palette/` | 16/10 | 1736 × 1085 | publié |
 | `feedbackBoard` | `feedback-board/` | 16/10 | 1736 × 1085 | publié |
-| `feedbackInbox` | `feedback-inbox/` | 16/10 | 1736 × 1085 | publié |
-| `workflowIssue` | `issue-plan/` | 4/3 | 1447 × 1085 | publié |
-| `numoPanel` | `numo/` | 4/3 | 1447 × 1085 | publié |
+| `feedbackInbox` | `feedback-inbox/` | 16/10 | 1736 × 1085 | publié, pris en **local** |
+| `workflowIssue` | `issue-create/` | 4/3 | 1447 × 1085 | publié |
+| `numoPanel` | `numo/` | 4/3 | **1200 × 900** | publié |
 | `workflowPr` | `pull-request/` | 4/3 | 1447 × 1085 | publié |
 | `scratchpad` | `carnet/` | 4/3 | 1024 × 768 | publié |
 | `workflowAgent` | `agent/` | 4/3 | 1447 × 1085 | publié |
+
+Deux exceptions, chacune motivée dans l'`intent.md` de son dossier :
+
+- **`numoPanel` cadre en 1200 × 900.** Le panneau compact a des métriques fixes,
+  c'est donc la fenêtre qui règle sa présence. 1200 est un plancher :
+  `--breakpoint-desktop` vaut 1200 px, et en dessous le shell bascule en mise en
+  page mobile.
+- **`feedbackInbox` a été pris sur `http://localhost:3000`** (avec
+  `VERCEL_ENV=preview`, qui rend le logo bleu de preview) : la vue équipe du
+  Feedback tombait sur sa frontière d'erreur en preview, et le correctif
+  n'était pas encore déployé au moment de la prise.
 
 **Les dix emplacements du catalogue sont publiés.** Le onzième, `voiceDictate`,
 a été retiré : la dictée s'illustre par une figure

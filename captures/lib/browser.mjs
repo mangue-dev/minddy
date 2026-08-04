@@ -54,6 +54,18 @@ export async function openPage({
         localStorage.setItem("cookie_consent", "declined");
       } catch {}
 
+      // L'indicateur de développement de Next (la pastille « N » en bas à
+      // gauche, avec son compte d'anomalies) n'existe que sur `next dev` — donc
+      // jamais sur les cibles déployées, et systématiquement quand on
+      // photographie localhost. Il vit dans un `<nextjs-portal>` hors de l'arbre
+      // React, qu'aucun sélecteur applicatif n'atteint : on le masque par une
+      // règle globale, posée avant le premier paint.
+      document.addEventListener("DOMContentLoaded", () => {
+        const style = document.createElement("style");
+        style.textContent = "nextjs-portal { display: none !important; }";
+        document.head.appendChild(style);
+      });
+
       // Horloge figée : les dates relatives ("il y a 2 jours") deviennent
       // stables d'un run à l'autre.
       const fixed = new Date(frozenIso).getTime();

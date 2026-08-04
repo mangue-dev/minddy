@@ -52,3 +52,35 @@ fr/light, fr/dark, en/light, en/dark
   dans les deux langues. La phrase autour, non.
 - **Le FAB de Numo est visible en bas à droite** sur cette page, avec sa pastille
   de contexte. C'est le produit, on le garde.
+
+## La prise du 2026-08-04 a été faite en LOCAL, et voici pourquoi
+
+Cet écran ne se rendait plus sur preview : il tombait sur sa frontière d'erreur
+(« This page couldn't load »), avec un React #310 — *rendered more hooks than
+during the previous render*. La cause était dans `FeedbackDetail`
+(`components/feedback/feedback-team-page.tsx`) : `useScrollFade` y était appelé
+**après** le `return` du squelette de chargement. Au premier rendu `post` est
+nul, on repart tôt, le hook n'existe pas ; au second il apparaît, et l'ordre des
+hooks change. Toute vue Feedback d'un projet AYANT des retours tombait — Beacon,
+qui n'en a aucun, passait, et la prod, pas encore à jour, aussi. C'est ce qui
+rendait la panne discrète.
+
+Le hook est maintenant déclaré avec les autres, avant le `return`.
+
+La capture a été prise sur `http://localhost:3000` lancé avec
+**`VERCEL_ENV=preview`** — et non `NEXT_PUBLIC_VERCEL_ENV`, que `next.config.mjs`
+réécrit depuis `VERCEL_ENV`. C'est ce qui donne au logo sa teinte bleue de
+preview au lieu du rose de développement (`ENV_LOGO_TINT`, `lib/env.ts`).
+
+Deux précautions qui vont avec :
+
+- **les clés PostHog sont vidées au lancement** (`POSTHOG_API_KEY=`,
+  `NEXT_PUBLIC_POSTHOG_KEY=`). `VERCEL_ENV=preview` fait passer
+  `shouldSendServerAnalytics` à vrai : sans ça, les événements serveur d'un
+  `next dev` partiraient vers le projet PostHog de production ;
+- **l'indicateur de développement de Next est masqué** par `browser.mjs`
+  (`nextjs-portal { display: none }`). Il ne vit que sur `next dev`, donc il
+  n'apparaissait sur aucune capture jusqu'ici — et il s'est invité en bas à
+  gauche de la première prise locale.
+
+À rejouer sur preview une fois le correctif déployé.

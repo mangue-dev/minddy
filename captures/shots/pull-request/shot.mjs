@@ -10,7 +10,17 @@
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
-import { COMMENTS, FILES, LIST_ITEM, PR, PR_NUMBER, RUN_ID, TOTALS } from "./fixture.mjs";
+import {
+  COMMENTS,
+  COMMITS,
+  DETAIL_RESPONSE,
+  FILES,
+  LIST_RESPONSE,
+  PR_ID,
+  PR_NUMBER,
+  RUN_ID,
+  TOTALS,
+} from "./fixture.mjs";
 
 const SLOT = "workflowPr";
 const OUT = "captures/shots/pull-request/out";
@@ -28,12 +38,21 @@ const json = (route, body) =>
   route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
 
 /**
- * Les quatre lectures répondues par la capture. On les vise par le CHEMIN EXACT,
- * pas par un glob : `**\/api/agent-runs/*\/pr` attraperait aussi
- * `/pr/review-comments` selon l'ordre d'enregistrement.
+ * Les lectures répondues par la capture. Elles sont TOUTES indexées par la PR
+ * depuis MIN-143 (`/api/pull-requests/{prId}/…`) : la page montre aussi les PR
+ * humaines, qui n'ont aucun run, et les routes `agent-runs/{runId}/pr/*` ne
+ * sont plus que des façades qu'elle n'appelle pas.
+ *
+ * On vise par le CHEMIN EXACT, pas par un glob : `**\/pull-requests/*` ramasse
+ * aussi bien `/comments` que `/commits` selon l'ordre d'enregistrement.
+ *
+ * Le dernier filet attrape TOUT le reste de la famille et refuse de le servir :
+ * une route inconnue partirait sinon pour de vrai, avec ses vraies
+ * conséquences — un appel à GitHub au nom du compte de démo.
  */
 async function serveFixture(page) {
   const served = [];
+  const unexpected = [];
 
   const on = (test, handler) =>
     page.route(
@@ -44,29 +63,50 @@ async function serveFixture(page) {
       },
     );
 
-  await on((p) => p === "/api/pull-requests", (r) => json(r, { pullRequests: [LIST_ITEM] }));
-  await on(
-    (p) => new RegExp(`^/api/agent-runs/[^/]+/pr$`).test(p),
-    (r) => json(r, { pr: PR, files: FILES }),
-  );
-  await on(
-    (p) => new RegExp(`^/api/agent-runs/[^/]+/comments$`).test(p),
-    (r) => json(r, { comments: COMMENTS }),
-  );
-  // Neutralisée plutôt que garnie : en vrai elle appellerait la forge, et son
-  // contenu vide est ce qu'elle renverrait de toute façon.
-  await on(
-    (p) => new RegExp(`^/api/agent-runs/[^/]+/pr/review-comments$`).test(p),
-    (r) => json(r, { comments: [] }),
+  const under = (suffix) =>
+    new RegExp(`^/api/pull-requests/[^/]+${suffix}$`);
+
+  // Filet de sécurité, posé EN PREMIER et donc consulté EN DERNIER : Playwright
+  // essaie ses gestionnaires dans l'ordre INVERSE d'enregistrement, le plus
+  // récent d'abord. Posé en dernier, ce filet passait devant tous les autres et
+  // abortait la liste elle-même — la page rendait son écran vide, et le message
+  // d'erreur parlait d'un `#128` introuvable.
+  await page.route(
+    (url) => url.pathname.startsWith("/api/pull-requests"),
+    async (route) => {
+      unexpected.push(new URL(route.request().url()).pathname);
+      await route.abort();
+    },
   );
 
-  return served;
+  await on((p) => p === "/api/pull-requests", (r) => json(r, LIST_RESPONSE));
+  await on((p) => under("").test(p), (r) => json(r, DETAIL_RESPONSE));
+  await on(
+    (p) => under("/comments").test(p),
+    // Le fil est PLAT côté forge : `comments` est la conversation, `timeline`
+    // les événements (assignations, labels…) et `reactions` les emoji. Les deux
+    // derniers sont vides — le monde de démo n'a ni l'un ni l'autre.
+    (r) => json(r, { comments: COMMENTS, timeline: [], reactions: [] }),
+  );
+  await on((p) => under("/commits").test(p), (r) => json(r, { commits: COMMITS, truncated: false }));
+  await on(
+    (p) => under("/review-comments").test(p),
+    (r) => json(r, { comments: [], threads: [], reactions: [] }),
+  );
+  // La relecture par Numo (MIN-168) : aucune session sur cette PR, donc rien à
+  // annoncer dans le fil. Le hook cesse de poller dès que `working` est faux.
+  await on(
+    (p) => under("/ai-review").test(p),
+    (r) => json(r, { run: null, reviewedHeadSha: null, model: null }),
+  );
+
+  return { served, unexpected };
 }
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
-    const served = await serveFixture(page);
+    const { served, unexpected } = await serveFixture(page);
 
     await page.goto(`${CAPTURE.baseUrl}/pull-requests`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: `text=#${PR_NUMBER}` });
@@ -82,8 +122,11 @@ async function capture({ locale, theme }) {
     );
 
     // Onglet Fichiers : désigné par son rang, son libellé est traduit et porte
-    // le compteur de fichiers.
-    const filesTab = page.getByRole("tab").nth(1);
+    // le compteur de fichiers. C'est le TROISIÈME depuis qu'un onglet
+    // « Commits » s'est glissé entre Conversation et Fichiers — viser le
+    // deuxième ouvrait la liste des commits, et le contrôle du diff échouait
+    // sans dire pourquoi.
+    const filesTab = page.getByRole("tab").nth(2);
     await filesTab.click();
     if ((await filesTab.getAttribute("aria-selected")) !== "true") {
       throw new Error(`${locale}/${theme} — l'onglet Fichiers n'est pas sélectionné.`);
@@ -135,6 +178,13 @@ async function capture({ locale, theme }) {
           `se lit pas comme un diff. Un patch mal formé n'est pas découpé en hunks.`,
       );
     }
+    if (unexpected.length > 0) {
+      throw new Error(
+        `${locale}/${theme} — route(s) de PR non prévue(s) par le fixture : ` +
+          `${[...new Set(unexpected)].join(", ")}. Ajoute-les à serveFixture, sinon la ` +
+          `capture appelle la forge pour de vrai.`,
+      );
+    }
     if (served.length < 3) {
       throw new Error(
         `${locale}/${theme} — ${served.length} lecture(s) servie(s) au lieu de 3 : ` +
@@ -151,7 +201,7 @@ async function capture({ locale, theme }) {
 }
 
 console.log(
-  `PR #${PR_NUMBER} sur le run ${RUN_ID} · ${FILES.length} fichiers · ` +
+  `PR #${PR_NUMBER} (${PR_ID}, run ${RUN_ID}) · ${FILES.length} fichiers · ` +
     `+${TOTALS.additions} −${TOTALS.deletions} (mêmes totaux que la capture agent)\n`,
 );
 

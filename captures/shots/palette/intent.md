@@ -28,12 +28,32 @@ Cadre de la landing : **16/10**, même fenêtre que `heroBoard`
 
 fr/light, fr/dark, en/light, en/dark
 
-## Le texte tapé
+## Le texte tapé : `board`
 
 Une recherche qui doit remonter des tickets **et** des actions, dans les deux
 langues. Les titres de tickets étant en anglais, la requête est un mot anglais
 présent dans plusieurs titres — sinon la variante française remonterait une
 liste vide et l'image ne montrerait rien.
+
+`board` remonte le board public du projet (une entrée de navigation) et quatre
+tickets dont le titre porte le mot, en anglais « Keyboard shortcuts » en plus.
+C'est en outre le **même mot dans les deux langues**, là où la requête
+précédente devait être traduite.
+
+### Pourquoi ce n'est plus `ticket` / `issue`
+
+C'était la requête de juillet, et elle donnait quatre groupes. Elle a cessé de
+marcher sans que rien ne casse : l'export CSV et les entrées de réglages sont
+venus grossir les groupes d'actions, et **ils ont poussé le groupe « Tickets »
+sous la ligne de flottaison**. La palette ne remontait plus que de la
+navigation — « Nouveau ticket », « Tous les tickets », « Exporter les tickets
+en CSV », « Tickets — Préférences » — c'est-à-dire l'exact contraire de l'`alt`
+de l'emplacement : *« une recherche qui remonte tickets ET actions »*.
+
+Le contrôle du script ne l'a pas vu parce qu'il **comptait** les résultats (au
+moins 7) : ils étaient toujours huit. Il vérifie maintenant ce qui est
+réellement DANS LE CADRE — au moins trois tickets, au moins une action, et
+aucune ligne tranchée par le bas de la liste.
 
 ## Pièges connus
 
@@ -41,10 +61,13 @@ liste vide et l'image ne montrerait rien.
   un `keyboard.type` lancé aussitôt a produit « ssue » au lieu de « issue ».
   On tape désormais DANS le champ (`pressSequentially`) et on relit la valeur
   saisie avant de photographier.
-- **La requête décide de l'image.** « dark » ne remonte que 2 lignes, « issue »
-  en français que 3 et aucune action. Seul le mot que l'app emploie elle-même
-  pour « issue » dans la langue courante — `ticket` en FR, `issue` en EN —
-  ouvre les quatre groupes.
-- **La dernière ligne est coupée par le pied**, la liste dépassant la hauteur
-  maximale de la palette. C'est le comportement réel : ça signale qu'il y a
-  plus à faire défiler. Assumé, pas corrigé.
+- **La requête décide de l'image, et son résultat VIEILLIT.** Ce que la palette
+  remonte dépend du catalogue d'actions, qui grossit à chaque feature. Une
+  requête bien choisie aujourd'hui peut ne plus rien montrer dans trois mois,
+  sans qu'aucune erreur ne le dise. C'est ce qui est arrivé à `ticket`.
+- **Un identifiant de ticket ne se cherche pas avec `\b` en tête.** Le titre et
+  l'identifiant sont deux nœuds voisins : le texte de la ligne dit
+  « …from the boardAUR-5 », sans frontière de mot entre `d` et `A`.
+- **Compter des résultats ne dit rien de ce qu'on voit.** Un résultat sous la
+  ligne de flottaison compte comme les autres. Le contrôle mesure donc les
+  positions, pas les longueurs.
