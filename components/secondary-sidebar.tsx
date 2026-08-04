@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn, useIsMobileLayout } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
+import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { transitions } from "@/lib/motion";
 
 /** Largeur de la colonne (`w-80`), partagée par le volet et sa gouttière. */
@@ -40,21 +41,40 @@ const useIsoLayoutEffect =
  */
 export function SecondarySidebar({
   title,
-  count,
+  filter,
   actions,
   hiddenOnMobile,
   children,
 }: {
   /**
-   * Le titre de la colonne, aligné sur le header de l'application. Omis par les
-   * SQUELETTES de route, qui occupent la place de la barre le temps que l'écran
-   * arrive : sans eux la primaire se déplierait et la gouttière se refermerait
-   * à chaque navigation, pour tout rouvrir une demi-seconde plus tard.
+   * Le nom de la colonne. Il n'est plus ÉCRIT sur la ligne de titre — le fil
+   * d'Ariane le porte déjà, sur la même bande horizontale et à 340 px de là —
+   * mais il reste l'étiquette accessible du volet, et le repli quand la page
+   * n'offre pas de filtre. Omis par les SQUELETTES de route, qui occupent la
+   * place de la barre le temps que l'écran arrive : sans eux la primaire se
+   * déplierait et la gouttière se refermerait à chaque navigation, pour tout
+   * rouvrir une demi-seconde plus tard.
    */
   title?: string;
-  /** Compteur discret posé après le titre. */
-  count?: number;
-  /** Actions de la ligne de titre (filtre, bouton de création…), poussées à droite. */
+  /**
+   * Le filtre texte de la liste, qui occupe la ligne de titre.
+   *
+   * Passé en données plutôt qu'en `ReactNode` : les cinq écrans à barre
+   * secondaire doivent offrir le même geste, au même endroit, avec la même
+   * apparence — un `ReactNode` laisserait chacun réinventer sa version.
+   *
+   * Il n'y a PAS de compteur à côté : le nombre d'éléments est dans le
+   * placeholder (« Filtrer les 12 pull requests… »). Un chiffre posé seul entre
+   * le champ et les actions ne disait pas de quoi il comptait, et volait à un
+   * champ déjà à l'étroit les 20 px qui font la différence.
+   */
+  filter?: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
+    clearLabel: string;
+  };
+  /** Actions de la ligne de titre (filtres, bouton de création…), poussées à droite. */
   actions?: ReactNode;
   /**
    * Sous `md`, la liste et le détail se relaient en plein écran : passer ici
@@ -92,19 +112,22 @@ export function SecondarySidebar({
             ),
       )}
     >
+      {/* La ligne de titre COMMANDE la colonne, elle ne la nomme pas : le filtre
+          de la liste, ce qui la restreint, ce qu'on peut y créer. C'est la seule
+          bande épinglée du volet — tout ce qui pilote la liste doit être ici, et
+          non dans `children`, qui défile avec elle. */}
       <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
-        {title ? (
-          <h1 className="min-w-0 truncate font-display text-lg font-semibold tracking-tight">
+        {filter ? (
+          <SidebarFilterField {...filter} />
+        ) : title ? (
+          <h1 className="min-w-0 flex-1 truncate font-display text-lg font-semibold tracking-tight">
             {title}
           </h1>
-        ) : null}
-        {count != null ? (
-          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-            {count}
-          </span>
-        ) : null}
+        ) : (
+          <div className="flex-1" />
+        )}
         {actions ? (
-          <div className="ml-auto flex min-w-0 shrink items-center">{actions}</div>
+          <div className="flex shrink-0 items-center">{actions}</div>
         ) : null}
       </div>
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">

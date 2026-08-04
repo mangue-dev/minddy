@@ -5,15 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
   Skeleton,
   Spinner,
   cn,
 } from "mangue-ui";
-import { Check, ChevronDown, ChevronRight, GitPullRequest, Plus } from "lucide-react";
+import { ChevronRight, GitPullRequest, ListFilter, Plus } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
@@ -22,7 +21,10 @@ import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { ProjectOrb } from "@/components/project-orb";
+import { SearchMenu } from "@/components/search-menu";
+import { checkedProps } from "@/components/search-select";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -68,14 +70,136 @@ const STATE_FILTERS: ReadonlyArray<{
   { value: "all", label: "filterAll" },
 ];
 
-/** Le style commun des deux déclencheurs de filtre de la sidebar : un bouton
-    fantôme discret, la forme que prennent TOUS les filtres de l'app (barre du
-    board, en-tête de cycle) — pas un champ de formulaire. */
-const FILTER_TRIGGER = "px-2 font-normal text-muted-foreground hover:text-foreground";
+/**
+ * Le filtre de la colonne : UN déclencheur pour les deux dimensions.
+ *
+ * C'est un COMBOBOX, le même que les sélecteurs de champ d'un ticket (statut,
+ * priorité, assigné) — `SearchMenu`, donc cmdk, donc cherchable. Sur un dépôt à
+ * quinze contributeurs, une liste d'auteurs qu'on ne peut que parcourir des yeux
+ * n'est pas un filtre, c'est un annuaire.
+ *
+ * Le déclencheur ne porte plus ni libellé ni chevron, juste l'icône de filtre :
+ * la ligne fait 320 px, et le champ de saisie a besoin de tout ce qu'on peut lui
+ * laisser. Ce que le libellé disait — l'état courant — passe dans le tooltip, et
+ * une pastille signale de loin qu'un filtre est posé ; sans elle, une liste
+ * restreinte n'aurait plus rien pour le dire.
+ */
+function PrFilterMenu({
+  state,
+  author,
+  authors,
+  onStateChange,
+  onAuthorChange,
+}: {
+  state: PullRequestStateFilter;
+  author: string;
+  authors: { login: string; avatar_url: string | null }[];
+  onStateChange: (state: PullRequestStateFilter) => void;
+  onAuthorChange: (author: string) => void;
+}) {
+  const t = useTranslations("PullRequests");
+  const [open, setOpen] = useState(false);
+
+  const stateLabel = t(
+    STATE_FILTERS.find((s) => s.value === state)?.label ?? "filterOpen",
+  );
+  // « Ouvertes, tous auteurs » est le point de départ : rien à signaler. Tout le
+  // reste restreint la liste, et doit se voir sans ouvrir le menu.
+  const active = state !== "open" || author !== AUTHOR_ALL;
+
+  const pick = (run: () => void) => {
+    run();
+    setOpen(false);
+  };
+
+  return (
+    <SearchMenu
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      tooltip={t("filterTooltip", { state: stateLabel })}
+      trigger={
+        /* `-mr-2` compense le padding du bouton : l'icône s'aligne alors sur le
+           bord droit des lignes de la liste, pas 8 px en-deçà. */
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-mr-2 text-muted-foreground hover:text-foreground"
+          aria-label={t("filterTooltip", { state: stateLabel })}
+        >
+          <span className="relative flex items-center justify-center">
+            <ListFilter className="size-4" />
+            {active ? (
+              /* L'anneau à la couleur de la barre détache la pastille du trait
+                 de l'icône, qui passe juste dessous. */
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar"
+              />
+            ) : null}
+          </span>
+        </Button>
+      }
+    >
+      <CommandGroup heading={t("filterStateLabel")}>
+        {STATE_FILTERS.map((s) => (
+          <CommandItem
+            key={s.value}
+            value={`state-${s.value}`}
+            keywords={[t(s.label)]}
+            onSelect={() => pick(() => onStateChange(s.value))}
+            {...checkedProps(s.value === state)}
+          >
+            <span className="truncate">{t(s.label)}</span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+      {/* L'auteur ne se pose que là où Numo et les humains cohabitent : à un
+          seul auteur, le groupe n'aurait rien à trancher. */}
+      {authors.length > 1 ? (
+        <>
+          <CommandSeparator className="my-1" />
+          <CommandGroup heading={t("filterAuthorLabel")}>
+            <CommandItem
+              value="author-all"
+              keywords={[t("filterByAuthor")]}
+              onSelect={() => pick(() => onAuthorChange(AUTHOR_ALL))}
+              {...checkedProps(author === AUTHOR_ALL)}
+            >
+              <span className="truncate">{t("filterByAuthor")}</span>
+            </CommandItem>
+            <CommandItem
+              value="author-numo"
+              keywords={[t("filterNumoOnly"), "numo", "agent"]}
+              onSelect={() => pick(() => onAuthorChange(AUTHOR_NUMO))}
+              {...checkedProps(author === AUTHOR_NUMO)}
+            >
+              <span className="truncate">{t("filterNumoOnly")}</span>
+            </CommandItem>
+            {authors.map((a) => (
+              <CommandItem
+                key={a.login}
+                value={`author-${a.login}`}
+                keywords={[a.login]}
+                onSelect={() => pick(() => onAuthorChange(a.login))}
+                {...checkedProps(a.login === author)}
+              >
+                {/* `GitLogin` tronque déjà le nom sans écraser sa pastille
+                    « bot » — l'envelopper d'un `truncate` la couperait. */}
+                <GitLogin login={a.login} />
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </>
+      ) : null}
+    </SearchMenu>
+  );
+}
 
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
   const tProjects = useTranslations("Projects");
+  const tCommon = useTranslations("Common");
   const format = useFormatter();
   const { projects, openCreateProject } = useProjects();
 
@@ -90,6 +214,7 @@ export function PullRequestsPage() {
 
   const [filter, setFilter] = useState<PullRequestStateFilter>(deepLink ? "all" : "open");
   const [author, setAuthor] = useState<string>(AUTHOR_ALL);
+  const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
   const [mobileDetail, setMobileDetail] = useState(!!deepLink);
@@ -140,6 +265,32 @@ export function PullRequestsPage() {
     if (author === AUTHOR_NUMO) return pullRequests.filter((p) => !!p.runId);
     return pullRequests.filter((p) => p.author?.login === author);
   }, [pullRequests, author]);
+
+  /**
+   * Ce que la colonne AFFICHE. Distinct de `filtered`, dont la sélection est
+   * dérivée : le filtre texte ne doit pas la déplacer. Autrement chaque frappe
+   * ferait retomber le détail sur la première ligne restante — et repartir
+   * chercher son diff, une fois par lettre.
+   *
+   * Les champs cherchés sont ceux qu'on LIT sur une ligne, plus la branche :
+   * c'est souvent son nom qu'on a en tête pour une PR qu'on vient de pousser.
+   */
+  const visible = useMemo(() => {
+    if (!query.trim()) return filtered;
+    return filtered.filter((p) =>
+      matchesFilter(query, [
+        p.title,
+        p.head_branch,
+        p.author?.login,
+        `#${p.pr_number}`,
+        p.project?.name,
+        p.issue?.title,
+        p.project && p.issue
+          ? issueIdentifier(p.project.key, p.issue.number)
+          : null,
+      ]),
+    );
+  }, [filtered, query]);
 
   /**
    * La sélection est DÉRIVÉE, pas gardée par un effet.
@@ -215,91 +366,45 @@ export function PullRequestsPage() {
       {/* ── Gauche : liste des PR ───────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        count={filtered.length}
         hiddenOnMobile={mobileDetail}
+        filter={{
+          value: query,
+          onChange: setQuery,
+          placeholder: t("filterPlaceholder", { count: visible.length }),
+          clearLabel: tCommon("clearFilter"),
+        }}
         actions={
-          /* `-mr-2` compense le padding du bouton : son libellé s'aligne alors
-             sur le bord droit de la liste, pas 8 px en-deçà. */
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-mr-2")}>
-                {t(STATE_FILTERS.find((s) => s.value === filter)?.label ?? "filterOpen")}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {STATE_FILTERS.map((state) => (
-                <DropdownMenuItem
-                  key={state.value}
-                  onSelect={() => {
-                    setFilter(state.value);
-                    setLimit(PULL_REQUESTS_PAGE);
-                  }}
-                >
-                  {t(state.label)}
-                  {state.value === filter ? <Check className="ml-auto size-4" /> : null}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <PrFilterMenu
+            state={filter}
+            author={author}
+            authors={authors}
+            onStateChange={(next) => {
+              setFilter(next);
+              setLimit(PULL_REQUESTS_PAGE);
+            }}
+            onAuthorChange={setAuthor}
+          />
         }
       >
-        {/* Filtre d'auteur — la seconde question qu'on se pose devant une liste
-            où Numo et les humains cohabitent. Masqué tant qu'il n'y a qu'un seul
-            auteur : il n'aurait rien à trancher. */}
-        {authors.length > 1 ? (
-          <div className="flex px-4 pt-3 pb-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className={cn(FILTER_TRIGGER, "-ml-2 max-w-full")}>
-                  {author === AUTHOR_ALL ? (
-                    <span className="min-w-0 truncate">{t("filterByAuthor")}</span>
-                  ) : author === AUTHOR_NUMO ? (
-                    <span className="min-w-0 truncate">{t("filterNumoOnly")}</span>
-                  ) : (
-                    // `GitLogin` tronque déjà le nom sans écraser sa pastille
-                    // « bot » — l'envelopper d'un `truncate` la couperait.
-                    <GitLogin login={author} />
-                  )}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-w-72">
-                <DropdownMenuItem onSelect={() => setAuthor(AUTHOR_ALL)}>
-                  {t("filterByAuthor")}
-                  {author === AUTHOR_ALL ? <Check className="ml-auto size-4" /> : null}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setAuthor(AUTHOR_NUMO)}>
-                  {t("filterNumoOnly")}
-                  {author === AUTHOR_NUMO ? <Check className="ml-auto size-4" /> : null}
-                </DropdownMenuItem>
-                {authors.map((a) => (
-                  <DropdownMenuItem key={a.login} onSelect={() => setAuthor(a.login)}>
-                    <GitLogin login={a.login} />
-                    {a.login === author ? <Check className="ml-auto size-4" /> : null}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : null}
-
         {loading ? (
           <div className="flex flex-col gap-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="p-4">
             <EmptyState
               icon={<GitPullRequest className="size-6" />}
-              description={t("emptyState")}
+              /* « Rien ne correspond » et « aucune PR dans cet état » ne sont pas
+                 la même nouvelle : la première se répare en effaçant trois
+                 lettres, la seconde non. */
+              description={query.trim() ? tCommon("noFilterMatch") : t("emptyState")}
             />
           </div>
         ) : (
           <div className="flex flex-col px-2 pt-2 pb-4">
-            {filtered.map((pr) => {
+            {visible.map((pr) => {
               // L'identifiant de la PR d'abord — c'est CETTE ligne qu'on regarde ;
               // le ticket lié se lit à droite, derrière un chevron qui dit la
               // relation (même forme que le sous-ticket dans la carte d'issue).

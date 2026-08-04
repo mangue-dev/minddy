@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, cn } from "mangue-ui";
@@ -13,6 +13,7 @@ import { NoteCompose } from "@/components/agents/note-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { ProjectOrb } from "@/components/project-orb";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import { NumoIcon } from "@/components/numo-icon";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
@@ -107,6 +108,7 @@ function SessionAnchorBadge({ session }: { session: AgentSessionListItem }) {
 export function AgentsPage() {
   const t = useTranslations("Agents");
   const tProjects = useTranslations("Projects");
+  const tCommon = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
@@ -144,6 +146,7 @@ export function AgentsPage() {
   // (même clé → aucun remount, transition compose → live fluide) jusqu'à ce que la
   // liste des sessions rattrape cette run précise.
   const [launchedRunId, setLaunchedRunId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   // Clé de sélection du brouillon : l'issue visée (kind "issue") ou le marqueur
   // `note` (kind "note" — aucune run, donc aucune clé de session réelle).
@@ -299,7 +302,40 @@ export function AgentsPage() {
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
-  const listCount = sessions.length + (showDraftEntry ? 1 : 0);
+  /**
+   * Ce que la colonne AFFICHE. Le filtre texte ne touche PAS `sessions`, qui
+   * porte la sélection et l'effet de garde : sinon taper trois lettres ferait
+   * sauter la conversation ouverte, une fois par lettre.
+   *
+   * Une session se cherche par son ancrage (le ticket, la note) ou par son
+   * projet — c'est ce que la ligne affiche.
+   */
+  const visibleSessions = useMemo(() => {
+    if (!query.trim()) return sessions;
+    return sessions.filter((s) =>
+      matchesFilter(query, [
+        s.issue?.title,
+        s.noteTitle,
+        s.project?.name,
+        s.pullRequest?.title,
+        s.issue && s.project ? issueIdentifier(s.project.key, s.issue.number) : null,
+      ]),
+    );
+  }, [sessions, query]);
+
+  // Le brouillon suit la même règle que les vraies sessions : filtré, il ne peut
+  // pas rester seul en tête d'une liste qui ne lui correspond pas.
+  const draftVisible =
+    showDraftEntry &&
+    !!draft &&
+    matchesFilter(query, [
+      draft.kind === "issue" ? draft.issueTitle : draft.prompt,
+      draft.kind === "issue"
+        ? issueIdentifier(draft.projectKey, draft.issueNumber)
+        : null,
+    ]);
+
+  const listCount = visibleSessions.length + (draftVisible ? 1 : 0);
 
   /* Aucune session, jamais : les deux colonnes n'ont rien à montrer, et le seul
      geste possible devient l'écran. Sans projet, ce geste n'est pas « lancer
@@ -333,9 +369,14 @@ export function AgentsPage() {
       {/* ── Gauche : liste des sessions ─────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        count={listCount}
         hiddenOnMobile={mobileDetail}
-        actions={<LaunchAgentPicker sessions={sessions} />}
+        filter={{
+          value: query,
+          onChange: setQuery,
+          placeholder: t("filterPlaceholder", { count: listCount }),
+          clearLabel: tCommon("clearFilter"),
+        }}
+        actions={<LaunchAgentPicker sessions={sessions} iconOnly />}
       >
         {loading && !showDraftEntry ? (
           <div className="flex flex-col gap-2 p-4">
@@ -343,11 +384,18 @@ export function AgentsPage() {
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
+        ) : listCount === 0 ? (
+          // Il y a forcément des sessions ici (l'écran vide est traité plus haut,
+          // avant le rendu de la colonne) : la liste ne peut être vide que parce
+          // que le filtre l'a vidée.
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            {tCommon("noFilterMatch")}
+          </p>
         ) : (
           <div className="flex flex-col px-2 pt-2 pb-4">
             {/* Entrée synthétique du brouillon — un anneau discret la distingue des
                 vraies sessions ; elle disparaît si le 1er message n'est pas envoyé. */}
-            {showDraftEntry && draft ? (
+            {draftVisible && draft ? (
               <button
                 type="button"
                 onClick={() => {
@@ -385,7 +433,7 @@ export function AgentsPage() {
               </button>
             ) : null}
 
-            {sessions.map((s) => {
+            {visibleSessions.map((s) => {
               const key = sessionKey(s);
               const unread = isAgentSessionUnread(s, reads);
               // Question posée, réponse attendue → le non-lu passe au JAUNE.

@@ -11,15 +11,21 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "mangue-ui";
 import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { projectIdFromPath } from "@/lib/project-id-from-path";
 import {
   SETTINGS_SECTION_PARAM,
   settingsSectionAnchor,
+  settingsSectionHref,
+  useSettingsSections,
+  type SettingsSection,
   type SettingsSectionId,
 } from "@/lib/settings-sections";
 
@@ -41,6 +47,22 @@ type SettingsShellProps = {
   tabs: SettingsTab[];
   /** Rendered above the tab content (banners, warnings…). */
   topSlot?: ReactNode;
+  /**
+   * « Filtrer les 18 réglages… ». Une FONCTION, pas une chaîne : le namespace
+   * diffère (compte / projet) donc la traduction vient de la page, mais le
+   * nombre — celui des sections réellement cherchables ici, après les droits et
+   * les onglets masqués — n'est connu que du shell.
+   */
+  filterPlaceholder: (count: number) => string;
+  /**
+   * Qui regarde l'écran, pour les sections réservées : « Zone sensible » et
+   * « Quitter le projet » vivent dans le MÊME onglet et s'excluent l'une
+   * l'autre. Sans cette réponse, la recherche proposerait au non-propriétaire
+   * une carte qu'il n'aura jamais sous les yeux — et son ancre ne serait jamais
+   * trouvée, donc le déroulé attendrait cinq secondes dans le vide. Omis pour
+   * les réglages du compte, où aucune section n'est conditionnelle.
+   */
+  audience?: "owner" | "member";
 };
 
 /** La largeur de la colonne de cartes, la MÊME des deux côtés (MIN-167). Le
@@ -119,7 +141,14 @@ function useSectionFocus(
  * survivent à un rechargement ; choisir l'onglet par défaut retire le paramètre
  * pour garder l'URL propre.
  */
-export function SettingsShell({ title, defaultTab, tabs, topSlot }: SettingsShellProps) {
+export function SettingsShell({
+  title,
+  defaultTab,
+  tabs,
+  topSlot,
+  audience,
+  filterPlaceholder,
+}: SettingsShellProps) {
   return (
     // SettingsTabs reads `?tab=`; useSearchParams needs a Suspense boundary
     // so the route can still be statically prerendered.
@@ -129,6 +158,8 @@ export function SettingsShell({ title, defaultTab, tabs, topSlot }: SettingsShel
         defaultTab={defaultTab}
         tabs={tabs}
         topSlot={topSlot}
+        audience={audience}
+        filterPlaceholder={filterPlaceholder}
       />
     </Suspense>
   );
@@ -139,12 +170,10 @@ function SettingsTabs({
   defaultTab,
   tabs,
   topSlot,
-}: {
-  title: string;
-  defaultTab: string;
-  tabs: SettingsTab[];
-  topSlot?: ReactNode;
-}) {
+  audience,
+  filterPlaceholder,
+}: SettingsShellProps) {
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -228,6 +257,52 @@ function SettingsTabs({
 
   useSectionFocus(focus, !!reduceMotion);
 
+  // ── Recherche de sections ────────────────────────────────────────────────
+  // Le rail d'onglets répond à « où est-ce ? », or ce qu'on tape est le nom de
+  // la CARTE : « cadence », « zone sensible », « agir en votre nom » — aucun de
+  // ces mots n'est un onglet. La palette ⌘K sait déjà les trouver ; la colonne
+  // rejoue exactement le même chemin, avec le même catalogue et la même URL
+  // (bon onglet, ancre déroulée, carte surlignée) — cf. settingsSectionHref.
+  const [query, setQuery] = useState("");
+  const allSections = useSettingsSections();
+  const scope = pathname.startsWith("/projects/") ? "project" : "account";
+  const projectId = projectIdFromPath(pathname);
+  // Ce que cet écran-ci peut offrir : sa portée, les droits de qui regarde, et
+  // les onglets réellement montés. Un onglet masqué (droits, plan) n'a pas de
+  // cartes rendues — y envoyer quelqu'un le ferait atterrir sur l'onglet par
+  // défaut, sans rien, et le déroulé guetterait cinq secondes une ancre absente.
+  const searchable = useMemo(
+    () =>
+      allSections.filter(
+        (s) =>
+          s.scope === scope &&
+          (!s.audience || s.audience === audience) &&
+          validValues.has(s.tab),
+      ),
+    [allSections, scope, audience, validValues],
+  );
+  const matches = useMemo(() => {
+    if (!query.trim()) return [];
+    // Les mots-clés du catalogue portent les DEUX langues : « sécurité » se
+    // trouve depuis un écran anglais, et « security » depuis un français.
+    return searchable.filter((s) =>
+      matchesFilter(query, [s.title, s.tabLabel, ...s.keywords]),
+    );
+  }, [query, searchable]);
+
+  const openSection = useCallback(
+    (section: SettingsSection) => {
+      setMobileDetail(true);
+      setQuery("");
+      // `replace` et non `push` : on est déjà sur l'écran, seule la destination
+      // interne change — comme un changement d'onglet, qui n'empile pas non plus.
+      router.replace(settingsSectionHref(section, projectId ?? undefined), {
+        scroll: false,
+      });
+    },
+    [router, projectId],
+  );
+
   return (
     // La racine des Tabs est la RANGÉE de l'écran : le rail part dans la sidebar
     // secondaire (par portail, donc toujours sous ce `Tabs` côté React — le
@@ -239,8 +314,52 @@ function SettingsTabs({
       onValueChange={setActiveTab}
       className="flex h-full min-h-0 gap-0"
     >
-      <SecondarySidebar title={title} hiddenOnMobile={mobileDetail}>
-        {/* `variant="default"` : pastille pleine sur l'onglet actif. En `line`,
+      <SecondarySidebar
+        title={title}
+        hiddenOnMobile={mobileDetail}
+        filter={{
+          value: query,
+          onChange: setQuery,
+          placeholder: filterPlaceholder(searchable.length),
+          clearLabel: tCommon("clearFilter"),
+        }}
+      >
+        {/* Une recherche en cours REMPLACE le rail : ce sont deux réponses à la
+            même question — où aller — et les empiler ferait une colonne à deux
+            listes. Le rail revient dès que le champ est vidé. */}
+        {query.trim() ? (
+          matches.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+              {tCommon("noFilterMatch")}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1 px-2 pt-2 pb-4">
+              {matches.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <li key={section.id}>
+                    <button
+                      type="button"
+                      onClick={() => openSection(section)}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
+                    >
+                      <Icon className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {section.title}
+                      </span>
+                      {/* L'onglet qui la contient, en contexte dim — la même
+                          lecture que sur la ligne de palette. */}
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {section.tabLabel}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : (
+        /* `variant="default"` : pastille pleine sur l'onglet actif. En `line`,
             l'actif ne se distinguait que par un filet de 2 px sur son bord droit
             — invisible à côté d'une colonne de cartes. La gouttière de 8 px et
             les coins arrondis sont ceux des autres sidebars secondaires.
@@ -250,7 +369,7 @@ function SettingsTabs({
             sélecteur de DESCENDANCE. Or le portail sort cette liste du DOM du
             `<Tabs>` — le contexte React la suit, la variante CSS non, et les
             onglets repartaient en ligne. Même raison pour le `w-full
-            justify-start` posé sur chaque onglet plus bas. */}
+            justify-start` posé sur chaque onglet plus bas. */
         <TabsList className="h-auto w-full flex-col items-stretch gap-1 rounded-none bg-transparent p-0 px-2 pt-2 pb-4">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
@@ -304,6 +423,7 @@ function SettingsTabs({
             );
           })}
         </TabsList>
+        )}
       </SecondarySidebar>
 
       <div

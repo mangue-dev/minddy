@@ -135,6 +135,7 @@ export default function AccountSettingsPage() {
       title={t("title")}
       defaultTab={ACCOUNT_SETTINGS_DEFAULT_TAB}
       tabs={tabs}
+      filterPlaceholder={(count) => t("filterPlaceholder", { count })}
       topSlot={
         <SettingsAssistantPrompt
           projectId={null}

@@ -19,6 +19,7 @@ import {
 import { Check, ChevronLeft, CircleDotDashed, Copy, X } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import {
@@ -88,6 +89,23 @@ export default function TriagePage() {
   // On mobile the two panes stack: the list shows first, tapping a row slides
   // to the detail; md+ always shows both.
   const [mobileDetail, setMobileDetail] = useState(false);
+  const [query, setQuery] = useState("");
+
+  /**
+   * Ce que la colonne AFFICHE. Le filtre ne touche pas `triageIssues`, dont la
+   * sélection est dérivée : sinon taper ferait défiler le ticket ouvert à droite,
+   * une fois par lettre — et on filtre justement pour aller EN CHERCHER un.
+   */
+  const visibleIssues = useMemo(() => {
+    if (!query.trim()) return triageIssues;
+    return triageIssues.filter((i) =>
+      matchesFilter(query, [
+        i.title,
+        i.description,
+        project ? issueIdentifier(project.key, i.number) : null,
+      ])
+    );
+  }, [triageIssues, query, project]);
   // Le fondu qui remplace la bordure sous l'en-tête du détail : il ne paraît
   // que du côté où il reste quelque chose à découvrir.
   const detailFade = useScrollFade<HTMLDivElement>();
@@ -269,8 +287,13 @@ export default function TriagePage() {
       {/* ── Left: pending list ─────────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        count={triageIssues.length}
         hiddenOnMobile={mobileDetail}
+        filter={{
+          value: query,
+          onChange: setQuery,
+          placeholder: t("filterPlaceholder", { count: visibleIssues.length }),
+          clearLabel: tCommon("clearFilter"),
+        }}
       >
         {loading ? (
           <div className="flex flex-col gap-2 p-4">
@@ -278,9 +301,15 @@ export default function TriagePage() {
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
+        ) : visibleIssues.length === 0 ? (
+          // Un triage vide est traité plus haut, avant le rendu de la colonne :
+          // ici, c'est forcément le filtre qui l'a vidé.
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            {tCommon("noFilterMatch")}
+          </p>
         ) : (
           <div className="flex flex-col px-2 pt-2 pb-4">
-            {triageIssues.map((issue) => (
+            {visibleIssues.map((issue) => (
               <button
                 key={issue.id}
                 type="button"

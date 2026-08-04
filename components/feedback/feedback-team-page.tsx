@@ -27,9 +27,9 @@ import {
   Skeleton,
   Spinner,
   SplitButton,
-  Tabs,
-  TabsList,
-  TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -57,6 +57,7 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
@@ -208,6 +209,7 @@ function ReviewBadges({
 
 export function FeedbackTeamPage() {
   const t = useTranslations("FeedbackBoard");
+  const tCommon = useTranslations("Common");
   const format = useFormatter();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
@@ -229,6 +231,7 @@ export function FeedbackTeamPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileDetail, setMobileDetail] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   // Filtre « À revoir » (MIN-87) : ce que la revue automatique n'a pas tranché
   // (en attente, écarté, sensible) est noyé dans une liste triée par votes. Le
@@ -242,6 +245,30 @@ export function FeedbackTeamPage() {
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
   }, [toReviewCount, onlyToReview]);
+
+  /**
+   * Ce que la colonne AFFICHE. Un cran EN DESSOUS de `visiblePosts`, qui porte la
+   * sélection : le filtre texte ne doit pas la déplacer, sinon chaque frappe
+   * ferait changer le retour ouvert à droite — alors qu'on filtre justement pour
+   * aller en chercher un autre, et le choisir soi-même.
+   *
+   * Le texte SOUMIS est cherché autant que le texte canonique : c'est souvent
+   * avec les mots de l'auteur qu'on se souvient d'un retour, pas avec le titre
+   * réécrit par l'équipe.
+   */
+  const listedPosts = useMemo(() => {
+    if (!query.trim()) return visiblePosts;
+    return visiblePosts.filter((p) =>
+      matchesFilter(query, [
+        p.title,
+        p.body,
+        p.submitted_title,
+        p.submitted_body,
+        p.author?.name,
+        p.author?.pseudonym,
+      ])
+    );
+  }, [visiblePosts, query]);
 
   // Side panel d'issue : le ticket lié s'ouvre ICI, sans navigation — même
   // câblage que le board (issues + relations + collections du projet).
@@ -360,37 +387,60 @@ export function FeedbackTeamPage() {
       {/* ── Liste ────────────────────────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        count={visiblePosts.length > 0 ? visiblePosts.length : undefined}
         hiddenOnMobile={mobileDetail}
+        filter={{
+          value: query,
+          onChange: setQuery,
+          placeholder: t("filterPlaceholder", { count: listedPosts.length }),
+          clearLabel: tCommon("clearFilter"),
+        }}
         actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-mr-2"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="size-4" />
-            {t("newFeedback")}
-          </Button>
-        }
-      >
-        {toReviewCount > 0 && (
-          <Tabs
-            value={onlyToReview ? "review" : "all"}
-            onValueChange={(v) => setOnlyToReview(v === "review")}
-            className="shrink-0 px-4 pt-2 pb-1"
-          >
-            <TabsList variant="line" className="w-full justify-start p-0">
-              <TabsTrigger value="all">{t("filterAll")}</TabsTrigger>
-              <TabsTrigger value="review" className="gap-1.5">
+          <>
+            {/* « À revoir » (MIN-87) : un interrupteur, plus deux onglets. Il
+                était rendu DANS la liste, donc il défilait avec elle — trois
+                retours plus bas, le filtre actif n'était plus visible nulle
+                part. Sa forme change parce que sa place change : sur cette
+                ligne, deux onglets et un champ ne tiennent pas ensemble.
+                Enfoncé = seulement ce qui reste à trancher ; relâché = tout. */}
+            {toReviewCount > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={onlyToReview}
+                onClick={() => setOnlyToReview((v) => !v)}
+                className={cn(
+                  "gap-1.5 px-2 font-normal",
+                  onlyToReview
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
                 {t("filterToReview")}
                 <span className="text-xs tabular-nums text-muted-foreground">
                   {toReviewCount}
                 </span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
+              </Button>
+            ) : null}
+            {/* Icône seule : le libellé complet mangeait la moitié de la ligne.
+                Ce qu'il disait revient au survol — un vrai tooltip, celui de
+                l'app, et non l'infobulle du navigateur. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="-mr-2 text-muted-foreground hover:text-foreground"
+                  aria-label={t("newFeedback")}
+                  onClick={() => setCreateOpen(true)}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("newFeedback")}</TooltipContent>
+            </Tooltip>
+          </>
+        }
+      >
         <div className="min-h-0 flex-1">
           {isLoading ? (
             <div className="flex flex-col gap-2 p-4">
@@ -398,13 +448,20 @@ export function FeedbackTeamPage() {
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
             </div>
-          ) : visiblePosts.length === 0 ? (
+          ) : listedPosts.length === 0 ? (
             <div className="p-4">
-              <EmptyState
-                icon={<MessagesSquare className="size-6" />}
-                title={t("empty")}
-                description={t("emptyHint")}
-              />
+              {query.trim() ? (
+                <EmptyState
+                  icon={<MessagesSquare className="size-6" />}
+                  description={tCommon("noFilterMatch")}
+                />
+              ) : (
+                <EmptyState
+                  icon={<MessagesSquare className="size-6" />}
+                  title={t("empty")}
+                  description={t("emptyHint")}
+                />
+              )}
             </div>
           ) : (
             /* La MÊME ligne que le triage, les agents et les pull requests :
@@ -412,7 +469,7 @@ export function FeedbackTeamPage() {
                pleine largeur. Quatre listes qui se ressemblent doivent se
                ressembler jusque dans la forme de leur sélection. */
             <ul className="flex flex-col px-2 pt-2 pb-4">
-              {visiblePosts.map((post) => (
+              {listedPosts.map((post) => (
                 <li key={post.id}>
                   <button
                     type="button"

@@ -74,6 +74,10 @@ export const CHEATSHEET: CheatsheetSection[] = [
         altKeys: [["mod", "P"]],
       },
       { id: "gen.search", labelKey: "search", keys: [["F"]] },
+      // Le filtre de la colonne de gauche, sur les écrans qui en ont une
+      // (triage, retours, pull requests, sessions, réglages). Il RÉDUIT la liste
+      // affichée — la palette, elle, cherche partout et emmène ailleurs.
+      { id: "gen.filterList", labelKey: "filterList", keys: [["/"]] },
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
       { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
       { id: "gen.cheatsheet", labelKey: "cheatsheet", keys: [["?"]] },

@@ -106,8 +106,13 @@ export function PickerCreateRow({
 }
 
 /** cmdk forwards `data-checked` to the DOM; mangue-ui's CommandItem renders its
- *  trailing check from it. Spread (not a static prop) to stay type-safe. */
-const checkedProps = (checked: boolean) =>
+ *  trailing check from it. Spread (not a static prop) to stay type-safe.
+ *
+ *  Exporté pour les menus qui se construisent sur `SearchMenu` directement, sans
+ *  passer par les deux variantes ci-dessous — un menu à PLUSIEURS dimensions (le
+ *  filtre des pull requests : état + auteur) n'a pas une valeur mais deux, et
+ *  doit donc cocher ses lignes lui-même. */
+export const checkedProps = (checked: boolean) =>
   checked ? ({ "data-checked": "true" } as const) : {};
 
 type ShellProps = {

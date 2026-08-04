@@ -28,8 +28,20 @@ import type { GlobalBoardResponse, Issue } from "@/lib/types";
  * Le board agrégé (toutes les issues accessibles) n'est chargé qu'à l'OUVERTURE du
  * picker — cache partagé avec le board « Tous les tickets », pas de fetch au simple
  * affichage de /agents.
+ *
+ * Deux tailles pour un seul bouton. Dans la ligne de titre de la colonne, il est
+ * réduit à son icône : la place y sert au champ de filtre, et le libellé revient
+ * en tooltip (celui de `SearchMenu`, pas un `title` HTML — l'app n'a qu'une façon
+ * de dire ce que fait un bouton). Dans la scène vide, où il est le seul geste
+ * offert, il garde son libellé et son cadre.
  */
-export function LaunchAgentPicker({ sessions }: { sessions: AgentSessionListItem[] }) {
+export function LaunchAgentPicker({
+  sessions,
+  iconOnly,
+}: {
+  sessions: AgentSessionListItem[];
+  iconOnly?: boolean;
+}) {
   const t = useTranslations("Agents");
   const tAgent = useTranslations("Agent");
   const router = useRouter();
@@ -111,11 +123,25 @@ export function LaunchAgentPicker({ sessions }: { sessions: AgentSessionListItem
       align="end"
       searchPlaceholder={t("newSearchPlaceholder")}
       emptyText={isLoading ? t("newLoading") : t("newEmpty")}
+      tooltip={iconOnly ? t("newButton") : undefined}
       trigger={
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <Plus className="size-4" />
-          {t("newButton")}
-        </Button>
+        iconOnly ? (
+          /* `-mr-2` compense le padding du bouton : l'icône s'aligne alors sur le
+             bord droit des lignes de la liste, pas 8 px en-deçà. */
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="-mr-2 text-muted-foreground hover:text-foreground"
+            aria-label={t("newButton")}
+          >
+            <Plus className="size-4" />
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" className="gap-1.5">
+            <Plus className="size-4" />
+            {t("newButton")}
+          </Button>
+        )
       }
     />
   );

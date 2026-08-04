@@ -202,6 +202,10 @@ export default function ProjectSettingsPage() {
         title={t("title")}
         defaultTab={PROJECT_SETTINGS_DEFAULT_TAB}
         tabs={tabs}
+        filterPlaceholder={(count) => t("filterPlaceholder", { count })}
+        // « Zone sensible » et « Quitter le projet » partagent l'onglet Général
+        // et s'excluent : la recherche ne doit proposer que celle qui est rendue.
+        audience={isOwner ? "owner" : "member"}
         topSlot={
           <SettingsAssistantPrompt
             projectId={project.id}
