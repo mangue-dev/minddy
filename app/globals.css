@@ -359,16 +359,12 @@
    Sur macOS, où elle flottait au-dessus du contenu sans rien lui prendre, elle
    réserve désormais ses 10 px dès qu'il y a de quoi défiler. C'est le prix d'une
    barre qui nous appartient ; `no-scrollbar` (mangue-ui) reste là où on préfère
-   n'avoir rien du tout, comme les colonnes du board. */
-:root {
-  --scrollbar-thumb: oklch(0 0 0 / 18%);
-  --scrollbar-thumb-hover: oklch(0 0 0 / 30%);
-}
-.dark {
-  --scrollbar-thumb: oklch(1 0 0 / 16%);
-  --scrollbar-thumb-hover: oklch(1 0 0 / 28%);
-}
+   n'avoir rien du tout, comme les colonnes du board.
 
+   Le pouce (`--scrollbar-thumb`, `--scrollbar-thumb-hover`) et l'utilitaire
+   `scrollbar-quiet` viennent de mangue-ui depuis la 0.5.0. Ce qui reste ici est
+   la seule chose que la librairie laisse à l'app : la décision d'appliquer cette
+   barre à TOUTES les surfaces, via le sélecteur universel. */
 @layer base {
   /* Standard (Firefox, Chrome 121+, Safari 18.2+). */
   * {
@@ -394,28 +390,6 @@
     border-radius: 9999px;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background-color: var(--scrollbar-thumb-hover);
-  }
-}
-
-/**
- * Les colonnes de NAVIGATION (barre primaire, barre secondaire) : le pouce ne
- * paraît qu'au survol de la colonne. Une barre de navigation se lit d'un coup
- * d'œil ; un trait vertical posé en permanence le long de la liste y pèse plus
- * qu'il n'informe, alors qu'il redevient utile dès qu'on vient y défiler.
- */
-@utility scrollbar-quiet {
-  scrollbar-color: transparent transparent;
-  &::-webkit-scrollbar-thumb {
-    background-color: transparent;
-  }
-  &:hover {
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-  &:hover::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
-  }
-  &:hover::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-thumb-hover);
   }
 }
