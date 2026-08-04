@@ -21,13 +21,10 @@ import {
   useTheme,
   cn,
   Kbd,
-  KbdSequence,
   type NavItem,
   type NavSection,
 } from "mangue-ui";
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
   Sun,
   Moon,
   Monitor,
@@ -53,12 +50,7 @@ import { WhatsNewDialog } from "@/components/whats-new-dialog";
 import { hasRecentChangelog } from "@/lib/changelog";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { openFeedbackBoard } from "@/lib/open-feedback-board";
-import {
-  useChordPrefix,
-  useSidebarCollapse,
-  CHORD_PREFIX,
-} from "@/lib/keyboard/keyboard-context";
-import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
+import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
@@ -82,8 +74,11 @@ const COLLAPSED_WIDTH = 56;
  * la nav (`px-2.5`) et le retrait de la ligne (`pl-[9px]`). Les changer sans
  * refaire l'addition remet le décalage.
  *
- * L'avatar du compte fait 22 px et non 18 : son propre retrait vaut 7 px, pour
- * que son CENTRE tombe lui aussi sur 28.
+ * Ce qui compte est le CENTRE à 28, pas le bord à 19 : le bord ne suffit que
+ * pour les glyphes de 18 px. Deux exceptions, donc, l'une et l'autre calées sur
+ * le centre — l'avatar du compte (22 px, retrait de 7) et le logo (26 px de
+ * large, viewBox 104×96 à `h-6`), que l'on CENTRE dans la boîte de 36 px au lieu
+ * de l'aligner par la gauche : posé à 19, il débordait de 4 px à droite.
  */
 /** Gouttière de la nav, du pied et de la ligne de marque. Les deux états. */
 const GUTTER = "px-2.5";
@@ -91,6 +86,8 @@ const GUTTER = "px-2.5";
 const ROW_PL = "pl-[9px]";
 /** Idem pour l'avatar du compte, plus large de 4 px. */
 const AVATAR_PL = "pl-[7px]";
+/** La boîte d'une ligne repliée : 9 + 18 + 9. Centre à 28 de la barre. */
+const ROW_BOX = "w-9";
 /**
  * Les infobulles de la barre attendent avant de paraître. Sans ce délai elles
  * jaillissent sous le pointeur qui ne fait que traverser la barre pour en
@@ -127,13 +124,21 @@ const MotionLink = motion.create(Link);
  * (`ENV_LOGO_TINT`) — c'est le seul signal, et il suffit. Le nom de
  * l'environnement écrit à côté était un mot de plus à lire à chaque coup d'œil,
  * pour une information qu'on connaît déjà quand on est dessus.
+ *
+ * CENTRÉ dans la boîte d'une ligne, et non aligné par la gauche comme les
+ * icônes : il est plus large qu'elles (26 px contre 18), et c'est son centre qui
+ * doit tomber sur le leur. La boîte étant la même dans les deux états, il ne
+ * bouge pas d'un pixel quand la barre s'ouvre ou se referme.
  */
 function SidebarBrand() {
   return (
     <Link
       href="/home"
       aria-label="minddy"
-      className={cn("inline-flex items-center text-sidebar-foreground", ROW_PL)}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center text-sidebar-foreground",
+        ROW_BOX,
+      )}
     >
       <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
     </Link>
@@ -166,7 +171,7 @@ function SidebarRow({
     // icônes en tête de fichier) : l'icône ne bouge pas quand la barre s'anime.
     // Repliée, la ligne se referme à 36 px sur son icône — 9 + 18 + 9.
     ROW_PL,
-    collapsed ? "w-9 gap-0 pr-[9px]" : "pr-3",
+    collapsed ? cn(ROW_BOX, "gap-0 pr-[9px]") : "pr-3",
     active
       ? "bg-sidebar-accent text-sidebar-accent-foreground"
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
@@ -271,7 +276,10 @@ function SidebarNav({
 }) {
   return (
     <nav
-      className={cn("flex-1 overflow-x-hidden overflow-y-auto pt-3 pb-2", GUTTER)}
+      className={cn(
+        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-3 pb-2",
+        GUTTER,
+      )}
     >
       {sections.map((section, index) => (
         <div key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
@@ -364,7 +372,7 @@ function AccountButton({
             // L'avatar fait 22 px : son retrait propre le recentre sur la même
             // verticale que les icônes de 18 px (cf. la colonne des icônes).
             AVATAR_PL,
-            collapsed ? "w-9 pr-[7px]" : "w-full gap-3 pr-3 text-left",
+            collapsed ? cn(ROW_BOX, "pr-[7px]") : "w-full gap-3 pr-3 text-left",
           )}
         >
           <UserAvatar seed={seed} className="size-[22px]" />
@@ -462,7 +470,7 @@ function FooterRow({
         "flex h-9 items-center rounded-lg text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-foreground",
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         ROW_PL,
-        collapsed ? "w-9 pr-[9px]" : "w-full gap-3 pr-3 text-left",
+        collapsed ? cn(ROW_BOX, "pr-[9px]") : "w-full gap-3 pr-3 text-left",
       )}
     >
       <Icon className="size-[18px] shrink-0" />
@@ -534,8 +542,13 @@ const RAIL_CLOSE_DELAY_MS = 150;
  * primaire lui cède la place. Elle ne garde que ses 56 px d'icônes dans le flux
  * et se déplie AU-DESSUS de la secondaire au survol (ou au passage du focus
  * clavier), sans jamais rien décaler — le layout d'une page à deux barres est le
- * même, barre primaire ouverte ou non. Le repli manuel n'y a donc plus d'objet :
- * ni bouton, ni ⌘B (cf. le garde de keyboard-context).
+ * même, barre primaire ouverte ou non.
+ *
+ * C'est le SEUL repli. Il n'y a plus de bouton pour replier la barre à la main,
+ * ni de ⌘B : le rail existe là où une seconde barre a besoin de la place, et
+ * partout ailleurs la barre est simplement ouverte. Un repli manuel en plus de
+ * celui-ci, c'était deux barres repliées pour deux raisons différentes, dont une
+ * qu'il fallait connaître un raccourci pour défaire.
  */
 export function AppSidebar({
   sections,
@@ -546,8 +559,6 @@ export function AppSidebar({
   modeKey: string;
   overlay?: boolean;
 }) {
-  const t = useTranslations("Nav");
-  const { collapsed: collapsePref, setCollapsed } = useSidebarCollapse();
   const reduce = useReducedMotion();
   const dx = modeKey === "home" ? -16 : 16;
 
@@ -580,7 +591,7 @@ export function AppSidebar({
     closeTimer.current = setTimeout(() => setHovered(false), RAIL_CLOSE_DELAY_MS);
   };
 
-  const collapsed = overlay ? !(hovered || focusWithin || menuOpen) : collapsePref;
+  const collapsed = overlay && !(hovered || focusWithin || menuOpen);
 
   // Deux largeurs, et c'est tout le mécanisme : celle que la barre OCCUPE dans
   // le flux, et celle qu'elle MESURE. En mode rail la première reste au rail
@@ -592,7 +603,7 @@ export function AppSidebar({
   // une page à sidebar secondaire ne change aucune structure, seulement des
   // largeurs — 56 → 256 ici, 320 → 0 pour la gouttière d'à côté, sur la même
   // courbe. Tout ce qui est à droite glisse d'un bloc au lieu de sauter.
-  const flowWidth = overlay || collapsePref ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
+  const flowWidth = overlay ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
   const asideWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
   const shellTransition = reduce ? { duration: 0 } : transitions.shell;
 
@@ -661,11 +672,11 @@ export function AppSidebar({
           overlay && !collapsed && "shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]",
         )}
       >
-        {/* Brand + collapse toggle */}
-        {/* Toujours ancrée à GAUCHE, dans les deux états : centrer la marque
-            quand la barre est repliée la ferait glisser vers la droite pendant
-            que la barre rétrécit, puis revenir — un aller-retour visible à
-            chaque repli, alors que le logo n'a jamais changé de place.
+        {/* La marque. Ancrée à GAUCHE, et le MÊME élément que la barre soit au
+            rail ou dépliée : en changer au dépliage démonterait ce que la
+            tabulation vient de viser, et la première tabulation dans le rail
+            perdrait son focus. Le rail n'ayant que 56 px, `overflow-hidden` la
+            coupe — elle ne se recentre pas et ne bouge donc jamais.
             Même hauteur et même bordure basse que le header et que la ligne de
             titre de la sidebar secondaire : une seule ligne horizontale
             traverse l'application, d'un bord à l'autre. */}
@@ -675,63 +686,7 @@ export function AppSidebar({
             GUTTER,
           )}
         >
-          {overlay ? (
-            // Mode rail : rien à déplier à la main, le survol s'en charge — le
-            // logo redevient ce qu'il est ailleurs, le retour à l'accueil. Et il
-            // est LE MÊME élément replié ou non : en changer au dépliage
-            // démonterait ce que la tabulation vient de viser, et la première
-            // tabulation dans le rail perdrait son focus (elle ouvre la barre,
-            // qui remplace le bouton qu'on visait). Le nom de l'environnement à
-            // côté déborde des 56 px du rail, où `overflow-hidden` le coupe.
-            <SidebarBrand />
-          ) : collapsed ? (
-            // Collapsed: the logo sits where the reopen button would be and
-            // cross-fades to it on hover (mirrors AutoKap).
-            <button
-                type="button"
-                onClick={() => setCollapsed(false)}
-                aria-label={t("expandSidebar")}
-                title={t("expandSidebar")}
-                className="group relative flex h-8 w-full items-center"
-              >
-                <span
-                  className={cn(
-                    "pointer-events-none absolute inset-0 flex items-center text-sidebar-foreground transition-opacity duration-150 group-hover:opacity-0",
-                    ROW_PL,
-                  )}
-                >
-                  <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
-                </span>
-                <span
-                  className={cn(
-                    "pointer-events-none absolute inset-0 flex items-center text-sidebar-foreground/60 opacity-0 transition-opacity duration-150 group-hover:text-sidebar-foreground group-hover:opacity-100",
-                    ROW_PL,
-                  )}
-                >
-                  <PanelLeftOpen className="h-[18px] w-[18px]" />
-                </span>
-              </button>
-          ) : (
-            <>
-              <SidebarBrand />
-              <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setCollapsed(true)}
-                    aria-label={t("collapseSidebar")}
-                    className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  >
-                    <PanelLeftClose className="h-[18px] w-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-2">
-                  <span>{t("collapseSidebar")}</span>
-                  <KbdSequence keys={[["mod", "B"].map(resolveKeyToken)]} size="sm" />
-                </TooltipContent>
-              </Tooltip>
-            </>
-          )}
+          <SidebarBrand />
         </div>
 
         {/* Nav — animated swap between home and project modes */}

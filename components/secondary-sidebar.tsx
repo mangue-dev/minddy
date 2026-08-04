@@ -45,8 +45,13 @@ export function SecondarySidebar({
   hiddenOnMobile,
   children,
 }: {
-  /** Le titre de la colonne, aligné sur le header de l'application. */
-  title: string;
+  /**
+   * Le titre de la colonne, aligné sur le header de l'application. Omis par les
+   * SQUELETTES de route, qui occupent la place de la barre le temps que l'écran
+   * arrive : sans eux la primaire se déplierait et la gouttière se refermerait
+   * à chaque navigation, pour tout rouvrir une demi-seconde plus tard.
+   */
+  title?: string;
   /** Compteur discret posé après le titre. */
   count?: number;
   /** Actions de la ligne de titre (filtre, bouton de création…), poussées à droite. */
@@ -88,9 +93,11 @@ export function SecondarySidebar({
       )}
     >
       <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
-        <h1 className="min-w-0 truncate font-display text-lg font-semibold tracking-tight">
-          {title}
-        </h1>
+        {title ? (
+          <h1 className="min-w-0 truncate font-display text-lg font-semibold tracking-tight">
+            {title}
+          </h1>
+        ) : null}
         {count != null ? (
           <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
             {count}
@@ -100,7 +107,9 @@ export function SecondarySidebar({
           <div className="ml-auto flex min-w-0 shrink items-center">{actions}</div>
         ) : null}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+      <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {children}
+      </div>
     </aside>
   );
 
@@ -119,13 +128,20 @@ export function SecondarySidebar({
  * contenu suivent d'un bloc. Le volet intérieur garde sa largeur pendant tout le
  * trajet — c'est la gouttière qui le découvre ou le recouvre, il ne se comprime
  * jamais.
+ *
+ * Elle est peinte AUX COULEURS DE LA BARRE, et non laissée transparente : en
+ * quittant une page à sidebar secondaire, la page se démonte d'un coup et la
+ * gouttière se retrouve vide pendant les 320 ms de sa fermeture. Sans fond, on y
+ * voyait le `bg-background` du châssis — une bande claire ouverte entre la barre
+ * primaire et le header, tous deux en `bg-sidebar`. Avec, la colonne se referme
+ * comme un volet, sans trou.
  */
 export function SecondarySidebarSlot({ reserve }: { reserve: boolean }) {
   const { setSlot } = useSecondarySidebar();
   const reduce = useReducedMotion();
   return (
     <motion.div
-      className="h-full shrink-0 overflow-hidden"
+      className="relative h-full shrink-0 overflow-hidden bg-sidebar"
       // `initial` explicite : c'est cette valeur-là que framer écrit dans le
       // HTML du serveur, et c'est elle qui réserve la colonne au premier
       // affichage (cf. routeHasSecondaryNav).
@@ -133,7 +149,23 @@ export function SecondarySidebarSlot({ reserve }: { reserve: boolean }) {
       animate={{ width: reserve ? SECONDARY_WIDTH : 0 }}
       transition={reduce ? { duration: 0 } : transitions.shell}
     >
-      <div ref={setSlot} className="h-full" style={{ width: SECONDARY_WIDTH }} />
+      {/* Le trait qui court sous le header et sous la ligne de titre de la
+          barre, rejoué ici pour la même raison : vidée, la gouttière l'aurait
+          interrompu sur toute sa largeur le temps de se refermer.
+          Il passe DERRIÈRE le volet (`relative` sur celui-ci, qui le peint
+          par-dessus), et surtout pas au-dessus : `--border` vaut 8 % de blanc en
+          thème sombre, deux traits superposés en font un de 15 % — une ligne
+          plus claire sur la largeur exacte de la barre, au milieu d'une ligne
+          qui traverse tout l'écran. */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-[60px] border-b border-border"
+      />
+      <div
+        ref={setSlot}
+        className="relative h-full"
+        style={{ width: SECONDARY_WIDTH }}
+      />
     </motion.div>
   );
 }

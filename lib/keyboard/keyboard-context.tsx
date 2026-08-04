@@ -16,10 +16,9 @@
 // leaks to the per-card field shortcuts (S/P/E/A/L/D/O) — e.g. `G A` opens the
 // assistant instead of the assignee picker even while hovering an issue card.
 //
-// It also owns two singleton shortcuts, co-located here like AutoKap's keyboard
-// store: ⌘/Ctrl+B toggles the app sidebar (whose collapse state is lifted here
-// so a keystroke can flip it) — sauf sur une page à sidebar secondaire, où la
-// primaire est en rail et n'a plus de repli à basculer.
+// It also owns the `?` cheat sheet, co-located here like AutoKap's keyboard
+// store. La barre latérale, elle, n'a plus de repli manuel : le seul rail est
+// celui des pages à sidebar secondaire, et il se déplie au survol.
 
 import {
   createContext,
@@ -48,14 +47,6 @@ const CHORD_TIMEOUT_MS = 1500;
 
 const ChordContext = createContext<string | null>(null);
 
-interface SidebarCollapse {
-  collapsed: boolean;
-  setCollapsed: Dispatch<SetStateAction<boolean>>;
-  toggle: () => void;
-}
-
-const SidebarContext = createContext<SidebarCollapse | null>(null);
-
 interface Cheatsheet {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -70,15 +61,6 @@ const CheatsheetContext = createContext<Cheatsheet | null>(null);
  */
 export function useChordPrefix(): string | null {
   return useContext(ChordContext);
-}
-
-/** App-sidebar collapse state, shared so ⌘/Ctrl+B can toggle it globally. */
-export function useSidebarCollapse(): SidebarCollapse {
-  const ctx = useContext(SidebarContext);
-  if (!ctx) {
-    throw new Error("useSidebarCollapse must be used within a KeyboardProvider");
-  }
-  return ctx;
 }
 
 /** Open state of the keyboard-shortcuts cheat sheet (opened by `?` or palette). */
@@ -111,16 +93,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   const { present: secondaryPresent } = useSecondarySidebar();
   const tk = useTranslations("Keyboard");
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
-  const sidebarValue = useMemo<SidebarCollapse>(
-    () => ({
-      collapsed: sidebarCollapsed,
-      setCollapsed: setSidebarCollapsed,
-      toggle: () => setSidebarCollapsed((c) => !c),
-    }),
-    [sidebarCollapsed],
-  );
   const cheatsheetValue = useMemo<Cheatsheet>(
     () => ({ open: cheatsheetOpen, setOpen: setCheatsheetOpen }),
     [cheatsheetOpen],
@@ -219,26 +192,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      // ⌘/Ctrl+B toggles the app sidebar. Stand down while typing or in a
-      // dialog so rich editors keep ⌘B for bold.
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        !e.altKey &&
-        !e.shiftKey &&
-        eventKey(e) === "b"
-      ) {
-        if (isTypingTarget(e.target) || isDialogOpen()) return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        // Sur une page à sidebar secondaire, la primaire est en rail et se
-        // déplie au survol, par-dessus, sans rien décaler : il n'y a plus de
-        // repli à basculer. On consomme quand même la frappe — la laisser
-        // passer rendrait le gras de l'éditeur à un endroit inattendu.
-        if (secondaryPresentRef.current) return;
-        setSidebarCollapsed((c) => !c);
-        return;
-      }
-
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       // Second key of an armed chord: always consume it so it never reaches the
@@ -290,11 +243,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
 
   return (
     <ChordContext.Provider value={chordPrefix}>
-      <SidebarContext.Provider value={sidebarValue}>
-        <CheatsheetContext.Provider value={cheatsheetValue}>
-          {children}
-        </CheatsheetContext.Provider>
-      </SidebarContext.Provider>
+      <CheatsheetContext.Provider value={cheatsheetValue}>
+        {children}
+      </CheatsheetContext.Provider>
     </ChordContext.Provider>
   );
 }

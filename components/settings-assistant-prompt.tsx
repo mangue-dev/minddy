@@ -29,12 +29,14 @@ export function SettingsAssistantPrompt({
     [openAssistant, projectId],
   );
 
-  // Aucun décalage : les réglages sont désormais une colonne de CARTES, et le
-  // composeur doit s'aligner sur leur bord. L'ancien `-mx-3`, qui compensait
-  // l'inset de `ChatInput`, le faisait dépasser de la colonne (MIN-167).
+  // `px-0` : les réglages sont une colonne de CARTES, et le composeur doit
+  // s'aligner sur leur bord. Sa gouttière de 12 px le rentrait en deçà — on
+  // l'ANNULE, là où l'ancien `-mx-3` la compensait en le faisant dépasser de la
+  // colonne (MIN-167). Cette gouttière n'a de sens que dans le panneau de Numo,
+  // où rien d'autre n'écarte le composeur du bord.
   return (
     <section>
-      <ChatInput onSend={handleSend} placeholder={placeholder} />
+      <ChatInput onSend={handleSend} placeholder={placeholder} className="px-0" />
     </section>
   );
 }

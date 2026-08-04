@@ -91,5 +91,6 @@ export function SecondarySidebarProvider({ children }: { children: ReactNode }) 
 export function routeHasSecondaryNav(pathname: string): boolean {
   if (pathname.startsWith("/pull-requests")) return true;
   if (pathname.startsWith("/agents")) return true;
-  return /^\/projects\/[^/]+\/(triage|feedback)/.test(pathname);
+  if (pathname.startsWith("/settings")) return true;
+  return /^\/projects\/[^/]+\/(triage|feedback|settings)/.test(pathname);
 }

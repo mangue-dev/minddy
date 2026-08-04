@@ -48,6 +48,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import type { Issue, IssueUpdateInput } from "@/lib/types";
 
 /** Linear-style triage: pending issues on the left, full issue view on the
@@ -87,6 +88,9 @@ export default function TriagePage() {
   // On mobile the two panes stack: the list shows first, tapping a row slides
   // to the detail; md+ always shows both.
   const [mobileDetail, setMobileDetail] = useState(false);
+  // Le fondu qui remplace la bordure sous l'en-tête du détail : il ne paraît
+  // que du côté où il reste quelque chose à découvrir.
+  const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
 
   // Publish the selected triage issue to Numo so "accepte ce ticket" resolves.
@@ -324,7 +328,11 @@ export default function TriagePage() {
         {selected ? (
           <>
             {/* Header: back (mobile) · identifier · triage actions */}
-            <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3 md:px-6">
+            {/* En-tête SANS bordure : c'est le fondu du contenu qui dit qu'il
+                continue au-dessus, et une barre séparée le couperait de ce
+                qu'il coiffe (même parti que la pull request et la conversation
+                d'agent). */}
+            <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -370,7 +378,11 @@ export default function TriagePage() {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
+            <div
+              ref={detailFade.ref}
+              {...detailFade.scrollProps}
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+            >
               <div className="mx-auto flex max-w-3xl flex-col gap-6">
                 {/* Title + description */}
                 <div className="flex flex-col gap-2">

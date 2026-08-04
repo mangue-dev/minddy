@@ -12,9 +12,11 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import { Tabs, TabsContent, TabsList, TabsTrigger, cn } from "mangue-ui";
-import type { LucideIcon } from "lucide-react";
+import { Button, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "mangue-ui";
+import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   SETTINGS_SECTION_PARAM,
   settingsSectionAnchor,
@@ -35,18 +37,19 @@ export type SettingsTab = {
 
 type SettingsShellProps = {
   title: string;
-  description?: string;
   defaultTab: string;
   tabs: SettingsTab[];
-  /** Rendered between the header and the tab grid (banners, warnings…). */
+  /** Rendered above the tab content (banners, warnings…). */
   topSlot?: ReactNode;
 };
 
-/** La largeur de la colonne de réglages, la MÊME des deux côtés (MIN-167). Le
+/** La largeur de la colonne de cartes, la MÊME des deux côtés (MIN-167). Le
     compte tenait en 880 px et le projet en 1080 : deux écrans qui partagent un
     shell et n'ont pas la même largeur, c'est déjà « chaque onglet a un look
-    différent ». */
-export const SETTINGS_MAX_WIDTH = "max-w-[1040px]";
+    différent ». Depuis que le rail d'onglets est sorti dans la sidebar
+    secondaire, c'est `max-w-3xl` — la même colonne centrée que le détail d'un
+    triage, d'un retour ou d'une pull request. */
+const SETTINGS_MAX_WIDTH = "max-w-3xl";
 
 /** Le temps que dure l'anneau : celui de poser l'œil, pas plus. */
 const FOCUS_HIGHLIGHT_MS = 2000;
@@ -104,48 +107,43 @@ function useSectionFocus(
 }
 
 /**
- * The settings layout shared by the account and project settings pages: a
- * centered, max-width column with a page header, an optional top slot, then a
- * left vertical tab rail (sticky on desktop) beside a content pane. Mirrors
- * AutoKap's SettingsShell. The active tab is driven by the `?tab=` query param
- * so tabs are deep-linkable and survive reloads; selecting the default tab
- * drops the param to keep the URL clean.
+ * L'écran de réglages, partagé par le compte (/settings) et un projet
+ * (/projects/<id>/settings). Le rail d'onglets est une SIDEBAR SECONDAIRE : il
+ * quitte la colonne de contenu pour la colonne de navigation, pleine hauteur, à
+ * gauche du header — la même place et la même grammaire que la liste du triage,
+ * des retours, des pull requests et des sessions d'agent. Le titre de l'écran
+ * est la ligne de titre de cette barre ; il n'est donc plus écrit au-dessus des
+ * cartes, où il faisait doublon avec le fil d'Ariane.
+ *
+ * L'onglet actif est piloté par `?tab=` : les onglets sont partageables et
+ * survivent à un rechargement ; choisir l'onglet par défaut retire le paramètre
+ * pour garder l'URL propre.
  */
-export function SettingsShell({
-  title,
-  description,
-  defaultTab,
-  tabs,
-  topSlot,
-}: SettingsShellProps) {
+export function SettingsShell({ title, defaultTab, tabs, topSlot }: SettingsShellProps) {
   return (
-    <div className={`mx-auto w-full ${SETTINGS_MAX_WIDTH} space-y-8 p-4 md:p-8`}>
-      <header>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          {title}
-        </h1>
-        {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        )}
-      </header>
-
-      {topSlot}
-
-      {/* SettingsTabs reads `?tab=`; useSearchParams needs a Suspense boundary
-          so the route can still be statically prerendered. */}
-      <Suspense fallback={<div className="min-h-64" />}>
-        <SettingsTabs defaultTab={defaultTab} tabs={tabs} />
-      </Suspense>
-    </div>
+    // SettingsTabs reads `?tab=`; useSearchParams needs a Suspense boundary
+    // so the route can still be statically prerendered.
+    <Suspense fallback={<div className="min-h-64" />}>
+      <SettingsTabs
+        title={title}
+        defaultTab={defaultTab}
+        tabs={tabs}
+        topSlot={topSlot}
+      />
+    </Suspense>
   );
 }
 
 function SettingsTabs({
+  title,
   defaultTab,
   tabs,
+  topSlot,
 }: {
+  title: string;
   defaultTab: string;
   tabs: SettingsTab[];
+  topSlot?: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -168,8 +166,17 @@ function SettingsTabs({
     : (visibleTabs[0]?.value ?? defaultTab);
   const activeTab = tabParam && validValues.has(tabParam) ? tabParam : fallback;
 
+  // Sous `md`, le rail et le contenu se relaient en plein écran, comme partout
+  // ailleurs dans l'app. Une URL qui NOMME son onglet ouvre directement le
+  // contenu : on arrive de la palette ou d'un lien, pas du rail.
+  const [mobileDetail, setMobileDetail] = useState(!!tabParam);
+  const contentFade = useScrollFade<HTMLDivElement>();
+  const activeLabel =
+    visibleTabs.find((t) => t.value === activeTab)?.label ?? title;
+
   const setActiveTab = useCallback(
     (value: string) => {
+      setMobileDetail(true);
       // Deux écrans partagent ce shell : les réglages du compte (/settings) et
       // ceux d'un projet (/projects/<id>/settings). Le chemin les distingue.
       trackEvent("settings_tab_switched", {
@@ -222,17 +229,29 @@ function SettingsTabs({
   useSectionFocus(focus, !!reduceMotion);
 
   return (
+    // La racine des Tabs est la RANGÉE de l'écran : le rail part dans la sidebar
+    // secondaire (par portail, donc toujours sous ce `Tabs` côté React — le
+    // contexte Radix passe, les flèches du clavier aussi) et les cartes restent
+    // à droite.
     <Tabs
       orientation="vertical"
       value={activeTab}
       onValueChange={setActiveTab}
-      className="grid grid-cols-1 gap-6 md:grid-cols-[220px_1fr] md:items-start md:gap-8"
+      className="flex h-full min-h-0 gap-0"
     >
-      <aside className="md:sticky md:top-4 md:self-start">
+      <SecondarySidebar title={title} hiddenOnMobile={mobileDetail}>
         {/* `variant="default"` : pastille pleine sur l'onglet actif. En `line`,
             l'actif ne se distinguait que par un filet de 2 px sur son bord droit
-            — invisible à côté d'une colonne de cartes. */}
-        <TabsList className="h-auto w-full items-stretch gap-0.5">
+            — invisible à côté d'une colonne de cartes. La gouttière de 8 px et
+            les coins arrondis sont ceux des autres sidebars secondaires.
+
+            `flex-col` EN CLAIR, et pas via l'orientation des Tabs : mangue-ui
+            empile la liste avec `group-data-vertical/tabs:flex-col`, un
+            sélecteur de DESCENDANCE. Or le portail sort cette liste du DOM du
+            `<Tabs>` — le contexte React la suit, la variante CSS non, et les
+            onglets repartaient en ligne. Même raison pour le `w-full
+            justify-start` posé sur chaque onglet plus bas. */}
+        <TabsList className="h-auto w-full flex-col items-stretch gap-1 rounded-none bg-transparent p-0 px-2 pt-2 pb-4">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const active = tab.value === activeTab;
@@ -244,7 +263,7 @@ function SettingsTabs({
                    pas par `data-active:bg-*` : une classe ne peut pas glisser
                    d'un onglet à l'autre, un élément partagé si. */
                 className={cn(
-                  "w-full justify-start gap-2 px-2.5 py-2",
+                  "w-full justify-start gap-2 rounded-lg px-3 py-2.5",
                   "data-active:bg-transparent dark:data-active:bg-transparent",
                   "dark:data-active:border-transparent",
                   "group-data-[variant=default]/tabs-list:data-active:shadow-none",
@@ -257,7 +276,7 @@ function SettingsTabs({
                   <motion.span
                     layoutId={pillId}
                     aria-hidden
-                    className="absolute inset-0 rounded-md bg-background shadow-sm dark:border dark:border-input dark:bg-control"
+                    className="absolute inset-0 rounded-lg bg-muted"
                     transition={
                       reduceMotion
                         ? { duration: 0 }
@@ -285,21 +304,51 @@ function SettingsTabs({
             );
           })}
         </TabsList>
-      </aside>
+      </SecondarySidebar>
 
-      <div className="min-w-0">
-        {visibleTabs.map((tab) => (
-          <TabsContent
-            key={tab.value}
-            value={tab.value}
-            /* L'espacement vit désormais ENTRE les cartes : chaque groupe porte
-               son propre cadre, l'ancien `space-y-10` (qui séparait des blocs
-               sans bord) laisserait des trous. */
-            className="mt-0 flex flex-col gap-4"
+      <div
+        className={cn(
+          "min-h-0 min-w-0 flex-1 flex-col md:flex",
+          mobileDetail ? "flex" : "hidden",
+        )}
+      >
+        {/* En-tête du panneau, MOBILE seulement : le retour vers le rail et le
+            nom de l'onglet ouvert. Sur desktop le rail est à l'écran et le
+            surligne déjà — une barre de plus n'aurait rien à dire, et pousserait
+            les cartes vers le bas pour le répéter. */}
+        <div className="flex shrink-0 items-center gap-2 px-4 py-3 md:hidden">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={title}
+            onClick={() => setMobileDetail(false)}
           >
-            {tab.content}
-          </TabsContent>
-        ))}
+            <ChevronLeft />
+          </Button>
+          <span className="truncate text-sm font-medium">{activeLabel}</span>
+        </div>
+
+        <div
+          ref={contentFade.ref}
+          {...contentFade.scrollProps}
+          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 md:px-6 md:pt-6"
+        >
+          <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
+            {topSlot}
+            {visibleTabs.map((tab) => (
+              <TabsContent
+                key={tab.value}
+                value={tab.value}
+                /* L'espacement vit désormais ENTRE les cartes : chaque groupe porte
+                   son propre cadre, l'ancien `space-y-10` (qui séparait des blocs
+                   sans bord) laisserait des trous. */
+                className="mt-0 flex flex-col gap-4"
+              >
+                {tab.content}
+              </TabsContent>
+            ))}
+          </div>
+        </div>
       </div>
     </Tabs>
   );

@@ -57,6 +57,7 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -406,7 +407,11 @@ export function FeedbackTeamPage() {
               />
             </div>
           ) : (
-            <ul>
+            /* La MÊME ligne que le triage, les agents et les pull requests :
+               une pastille arrondie dans une gouttière de 8 px, et non un bandeau
+               pleine largeur. Quatre listes qui se ressemblent doivent se
+               ressembler jusque dans la forme de leur sélection. */
+            <ul className="flex flex-col px-2 pt-2 pb-4">
               {visiblePosts.map((post) => (
                 <li key={post.id}>
                   <button
@@ -416,8 +421,10 @@ export function FeedbackTeamPage() {
                       setMobileDetail(true);
                     }}
                     className={cn(
-                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
-                      selectedId === post.id && "bg-muted/70"
+                      "flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
+                      selectedId === post.id
+                        ? "bg-muted"
+                        : "hover:bg-muted/60 focus-visible:bg-muted/60"
                     )}
                   >
                     {/* Badge de voix du post. */}
@@ -722,12 +729,19 @@ function FeedbackDetail({
   const rawDiffers =
     post.submitted_title !== post.title || post.submitted_body !== post.body;
 
+  // Le fondu qui remplace la bordure sous la barre du haut : il ne paraît que
+  // du côté où il reste quelque chose à découvrir.
+  const detailFade = useScrollFade<HTMLDivElement>();
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Barre du haut, façon triage : retour (mobile) · identifiants (votes,
           source, date, privé) à gauche · options (statut, promotion/lien,
-          merge, suppression) à droite. */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3 md:px-6">
+          merge, suppression) à droite.
+          SANS bordure : c'est le fondu du contenu qui dit qu'il continue
+          au-dessus, et une barre séparée le couperait de ce qu'il coiffe (même
+          parti que la pull request et la conversation d'agent). */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -886,7 +900,11 @@ function FeedbackDetail({
       </div>
 
       {/* Corps défilant, centré comme le triage. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
+      <div
+        ref={detailFade.ref}
+        {...detailFade.scrollProps}
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+      >
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
         {post.suggested_merge_into_id && post.suggested_title && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, ConfirmDeleteDialog, Skeleton, toast } from "mangue-ui";
+import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
 import {
   GitBranch,
   Import as ImportIcon,
@@ -36,11 +36,8 @@ import {
   SETTINGS_SECTIONS,
 } from "@/lib/settings-sections";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import {
-  SettingsShell,
-  SETTINGS_MAX_WIDTH,
-  type SettingsTab,
-} from "@/components/settings-shell";
+import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
+import { SettingsPageSkeleton } from "@/components/route-skeletons";
 
 export default function ProjectSettingsPage() {
   const t = useTranslations("Settings");
@@ -65,12 +62,10 @@ export default function ProjectSettingsPage() {
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Le MÊME gabarit que `loading.tsx` : il monte une sidebar secondaire, donc la
+  // barre primaire reste au rail et rien ne se déplace quand l'écran arrive.
   if (projectsLoading && !project) {
-    return (
-      <div className={`mx-auto w-full ${SETTINGS_MAX_WIDTH} p-4 md:p-8`}>
-        <Skeleton className="h-8 w-64" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   if (!project) {

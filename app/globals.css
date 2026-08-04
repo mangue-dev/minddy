@@ -340,6 +340,86 @@
   --ticket-urgent: oklch(0.62 0.24 25);
 }
 
+/* ─── Barres de défilement ──────────────────────────────────────────────
+
+   Celle du navigateur ne paraît PLUS NULLE PART : partout un rail transparent
+   et un pouce fin, arrondi, qui se teinte au survol. Une seule règle, sur le
+   sélecteur universel, pour que rien n'y échappe — un écran qui garde la barre
+   grise du système au milieu d'une app qui n'en a plus se voit tout de suite.
+
+   Le pouce est peint en ALPHA, noir en clair et blanc en sombre : il se pose
+   aussi bien sur une carte que sur la barre latérale ou le fond du contenu,
+   sans avoir à décliner un ton par surface.
+
+   Une piste large de 10 px pour une cible de pointeur confortable, et un pouce
+   qui n'en occupe que 4 : la bordure transparente de 3 px l'amincit sans
+   rétrécir la zone qu'on peut attraper (`background-clip: content-box`).
+
+   À SAVOIR : styler une barre de défilement lui fait perdre son mode SUPERPOSÉ.
+   Sur macOS, où elle flottait au-dessus du contenu sans rien lui prendre, elle
+   réserve désormais ses 10 px dès qu'il y a de quoi défiler. C'est le prix d'une
+   barre qui nous appartient ; `no-scrollbar` (mangue-ui) reste là où on préfère
+   n'avoir rien du tout, comme les colonnes du board. */
+:root {
+  --scrollbar-thumb: oklch(0 0 0 / 18%);
+  --scrollbar-thumb-hover: oklch(0 0 0 / 30%);
+}
+.dark {
+  --scrollbar-thumb: oklch(1 0 0 / 16%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 28%);
+}
+
+@layer base {
+  /* Standard (Firefox, Chrome 121+, Safari 18.2+). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  /* WebKit/Blink, pour les versions qui ne lisent pas encore les deux ci-dessus.
+     Dans @layer base, donc n'importe quel utilitaire les couvre — c'est ce qui
+     laisse `no-scrollbar` et `scrollbar-quiet` reprendre la main. */
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+}
+
+/**
+ * Les colonnes de NAVIGATION (barre primaire, barre secondaire) : le pouce ne
+ * paraît qu'au survol de la colonne. Une barre de navigation se lit d'un coup
+ * d'œil ; un trait vertical posé en permanence le long de la liste y pèse plus
+ * qu'il n'informe, alors qu'il redevient utile dès qu'on vient y défiler.
+ */
+@utility scrollbar-quiet {
+  scrollbar-color: transparent transparent;
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent;
+  }
+  &:hover {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+  }
+  &:hover::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+}
+
 /* ─── Numo (assistant) ──────────────────────────────────────────────── */
 
 /* Numo compact ⇄ expanded morph. The panel keeps right/bottom anchoring

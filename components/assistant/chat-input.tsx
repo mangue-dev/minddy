@@ -94,6 +94,15 @@ interface ChatInputProps {
   noBorder?: boolean;
   placeholder?: string;
   /**
+   * Posé sur la boîte extérieure du composer. Elle porte une gouttière de 12 px
+   * (`px-3`) qui lui sert de marge de clic dans le panneau de Numo, où rien
+   * d'autre n'en donne. Dans une colonne qui a déjà la sienne — les réglages —
+   * cette gouttière rétrécit le composer par rapport aux cartes d'à côté : on
+   * l'annule avec `px-0` plutôt que de la compenser d'un `-mx-3`, qui le ferait
+   * déborder de la colonne (MIN-167).
+   */
+  className?: string;
+  /**
    * Hide the attach affordances (file button + drop overlay + paste-to-attach).
    * The home composer sets this: it hands the prompt off to the global panel via
    * `open({ prompt })`, which carries no files, so an attach button there would
@@ -168,6 +177,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       isStreaming,
       noBorder,
       placeholder,
+      className,
       hideAttach = false,
       contextSlot,
       mentionables,
@@ -692,7 +702,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     return (
       <div
-        className={cn("relative", noBorder ? "px-3 pb-3" : "px-3 py-3")}
+        className={cn(
+          "relative",
+          noBorder ? "px-3 pb-3" : "px-3 py-3",
+          className,
+        )}
         onMouseDown={handleContainerMouseDown}
       >
         {/* Chaque mention posée dans le texte reçoit SA pilule, portée dans son
