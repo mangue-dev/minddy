@@ -53,6 +53,11 @@ export async function fetchProjectGitLinkApi(
   return parseJson(await fetch(`/api/projects/${projectId}/git-link`));
 }
 
+/** Les projets qui ont un dépôt lié — ceux où l'agent peut travailler. */
+export async function fetchGitLinkedProjectsApi(): Promise<{ projectIds: string[] }> {
+  return parseJson(await fetch(`/api/projects/git-linked`));
+}
+
 export async function fetchGitCandidatesApi(
   projectId: string,
   connectionId: string,

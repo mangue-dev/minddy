@@ -23,6 +23,7 @@ import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
+import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -202,6 +203,7 @@ function ProjectGroup({
   open,
   showAll,
   collapsible,
+  canLaunch,
   selectedKey,
   reads,
   fmtDay,
@@ -220,6 +222,12 @@ function ProjectGroup({
    * absence ne décale rien.
    */
   collapsible: boolean;
+  /**
+   * Le projet a-t-il un DÉPÔT lié ? Sans lui, l'agent n'a rien à cloner : le
+   * « + » n'a pas lieu d'être. Les conversations passées, elles, restent (le
+   * dépôt a pu être délié après coup).
+   */
+  canLaunch: boolean;
   selectedKey: string | null;
   reads: Record<string, string>;
   fmtDay: (at: string) => string;
@@ -296,8 +304,9 @@ function ProjectGroup({
         ) : (
           <div className={headerClass}>{header}</div>
         )}
-        {/* Sans projet, rien à pré-choisir : le raccourci n'existe pas. */}
-        {group.project ? (
+        {/* Sans projet joint, rien à pré-choisir ; sans dépôt lié, rien à lancer :
+            dans les deux cas le raccourci n'existe pas. */}
+        {group.project && canLaunch ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -446,6 +455,9 @@ export function AgentsPage() {
   const router = useRouter();
   const { projects, openCreateProject } = useProjects();
   const { sessions, loading } = useAgentSessionsQuery();
+  // Les projets où l'agent peut travailler (dépôt lié) — ils seuls portent le
+  // « + » de leur en-tête. Même requête que le composer, donc un seul appel.
+  const { projectIds: gitLinked } = useGitLinkedProjectsQuery();
   const { reads, markRead } = useAgentReads();
   const isWide = useIsWideViewport();
 
@@ -774,12 +786,18 @@ export function AgentsPage() {
               </div>
             ))}
           </div>
+        ) : sessions.length === 0 ? (
+          /* La colonne n'a JAMAIS rien eu : personne n'a encore parlé à l'agent.
+             La scène des autres surfaces vides, en `compact` — une colonne de
+             320 px n'a pas la place d'une illustration de page. Aucun bouton : la
+             conversation vierge est déjà ouverte juste à côté, et c'est le premier
+             message envoyé qui remplira cette liste. */
+          <EmptyScene icon={Bot} title={t("emptyTitle")} size="compact" />
         ) : listCount === 0 ? (
-          // Deux vides bien distincts : la liste n'a JAMAIS rien eu (personne n'a
-          // encore parlé à l'agent — la conversation vierge est ouverte juste à
-          // côté), ou le filtre l'a vidée.
+          // Le filtre, lui, a simplement vidé la liste : une ligne discrète suffit,
+          // la colonne n'est pas vide, elle est restreinte.
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            {sessions.length === 0 ? t("emptyTitle") : tCommon("noFilterMatch")}
+            {tCommon("noFilterMatch")}
           </p>
         ) : (
           <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
@@ -793,6 +811,7 @@ export function AgentsPage() {
                 open={filtering || !collapsedGroups.has(g.key)}
                 showAll={filtering || expandedGroups.has(g.key)}
                 collapsible={!filtering}
+                canLaunch={!!g.project && gitLinked.has(g.project.id)}
                 selectedKey={selectedKey}
                 reads={reads}
                 fmtDay={fmtDay}

@@ -1699,7 +1699,8 @@
     "composeProjectPlaceholder": "Project",
     "composeProjectEmpty": "No project.",
     "composeProjectRequired": "Pick a project first. The agent clones its repository.",
-    "composeProjectTooltip": "Pick a project before launching"
+    "composeProjectTooltip": "Pick a project before launching",
+    "composeNoRepo": "None of your projects has a repository connected. The agent clones a repository to work in: link one in a project's settings."
   },
   "Projects": {
     "newProject": "New project",
@@ -2348,7 +2349,7 @@
   "Agents": {
     "title": "Numo agent",
     "filterPlaceholder": "Filter {count, plural, =0 {conversations} one {# conversation} other {# conversations}}…",
-    "emptyTitle": "No session yet",
+    "emptyTitle": "No conversation yet",
     "emptyNoProject": "No project, so no repository to launch the agent in",
     "noSelection": "Select a session.",
     "unread": "The agent finished — unread",
@@ -2360,7 +2361,6 @@
     "backToList": "Back to list",
     "openPullRequest": "View pull request",
     "prAvailable": "PR available",
-    "prMerged": "Pull request merged",
     "prMergedShort": "PR merged",
     "prClosed": "PR closed",
     "statusWorking": "Working",

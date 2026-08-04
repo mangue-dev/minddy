@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { ChevronLeft, GitPullRequest, MessageSquare } from "lucide-react";
+import { ChevronLeft, GitPullRequest } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
-import { PR_STATE_STYLES } from "@/components/pull-requests/pr-state-badge";
+import { ProjectOrb } from "@/components/project-orb";
+import { PR_STATE_STYLES, PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
@@ -83,21 +84,42 @@ export function AgentSessionDetail({
     </Button>
   );
 
+  /**
+   * L'orbe du projet ouvre l'en-tête des TROIS formes de session (ticket, sujet
+   * libre, relecture de PR). C'est la question qu'on se pose en arrivant sur une
+   * conversation — de quel dépôt parle-t-on ? —, et elle vaut pour les trois. Ce
+   * qu'elle remplace (l'icône du TYPE de session) se lit déjà dans la colonne, au
+   * survol de la ligne.
+   */
+  const projectOrb = (
+    <ProjectOrb
+      seed={project.id}
+      iconUrl={project.icon_url}
+      className="size-4 shrink-0"
+    />
+  );
+
+  const closedState =
+    item.pr_state === "merged" || item.pr_state === "closed" ? item.pr_state : null;
+
   const prActions =
     // En compose : pas de bouton PR (aucune run lancée ; la PR héritée n'existe
-    // qu'une fois le 1er message envoyé). Sinon, s'adapte à l'état de la PR :
-    // rien (pas de PR), bouton (disponible), ou lien texte (fusionnée).
+    // qu'une fois le 1er message envoyé). Sinon, deux cas selon ce que la PR
+    // attend encore :
+    //  • VIVANTE (ouverte, brouillon) → l'action, « voir la pull request » ;
+    //  • FINIE (fusionnée, fermée) → son ÉTAT, dans le badge de la page Pull
+    //    requests. Il n'y a plus rien à y faire, et un bouton d'action mentirait
+    //    sur ce qui reste possible. Le badge reste cliquable — la PR se consulte.
     //
-    // Les couleurs sont celles de GitHub — violet fusionnée, vert ouverte. Le
-    // lien « fusionnée » était VERT, la couleur d'« ouverte » : deux états
-    // contraires sous la même couleur.
-    compose || item.pr_number == null ? undefined : item.pr_state === "merged" ? (
+    // C'est le MÊME badge qu'ailleurs (`PrStateBadge`), aux couleurs de GitHub :
+    // violet fusionnée, rouge fermée. Cet en-tête peignait sa propre version.
+    compose || item.pr_number == null ? undefined : closedState ? (
       <button
         type="button"
         onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
-        className="text-sm font-medium text-violet-700 outline-none hover:underline dark:text-violet-400"
+        className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {t("prMerged")}
+        <PrStateBadge state={closedState} icon />
       </button>
     ) : (
       <Button
@@ -129,10 +151,7 @@ export function AgentSessionDetail({
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {backButton}
-              <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-                <GitPullRequest className="size-3.5" />
-                {t("prBadge")}
-              </span>
+              {projectOrb}
               <span className="truncate text-sm font-medium">
                 {reviewed.title?.trim() || `#${reviewed.number}`}
               </span>
@@ -165,7 +184,7 @@ export function AgentSessionDetail({
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {backButton}
-              <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+              {projectOrb}
               <span className="truncate text-sm font-medium">
                 {item.noteTitle || t("freeSessionTitle")}
               </span>
@@ -182,6 +201,7 @@ export function AgentSessionDetail({
   const headerTitle = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       {backButton}
+      {projectOrb}
       {/* Titre cliquable → ouvre la sidebar du ticket en inline sur la page. */}
       <button
         type="button"

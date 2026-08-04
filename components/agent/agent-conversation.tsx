@@ -10,7 +10,17 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { cn, Spinner, toast } from "mangue-ui";
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  cn,
+  Spinner,
+  toast,
+} from "mangue-ui";
+import { GitPullRequest } from "lucide-react";
+import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
@@ -48,7 +58,6 @@ import { BranchCombobox } from "./branch-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
-import { AgentChangesBar } from "./agent-changes-bar";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 
 /**
@@ -267,6 +276,21 @@ export function AgentConversation({
     liveRun?.id ?? null,
     working
   );
+
+  /**
+   * Ce que CETTE session a changé dans le dépôt, cumulé sur tous ses tours (union
+   * des events `files_changed`, compteurs réels de git). C'est l'information que
+   * portait la barre au-dessus du composer ; elle vit maintenant dans l'EN-TÊTE,
+   * réduite à ses deux nombres — la liste des fichiers, elle, reste à un clic
+   * (vue diff) et sous chaque réponse dans le fil.
+   *
+   * Aucune requête de plus : ce sont les events que le fil charge déjà.
+   */
+  const sessionFiles = useMemo(
+    () => cumulativeBranchFiles(liveEvents).files,
+    [liveEvents],
+  );
+  const sessionTotals = useMemo(() => changeTotals(sessionFiles), [sessionFiles]);
   const activeQuestion = useMemo((): {
     eventId: string;
     questions: AskUserQuestion[];
@@ -489,6 +513,55 @@ export function AgentConversation({
   const inheritedWork =
     latestWorkRun && latestWorkRun.pr_state !== "merged" ? latestWorkRun : null;
 
+  /**
+   * Actions de la session, à gauche de celles de l'hôte (le lien vers la pull
+   * request) : ce que la session a changé, puis — s'il n'y a pas encore de PR — de
+   * quoi la demander. Les deux vivaient dans une barre au-dessus du composer, qui
+   * grandissait à chaque fichier touché et poussait l'input sous les doigts.
+   *
+   * Le diff est le PREMIER de la grappe, et la grappe est collée à droite : ses
+   * nombres s'allongent donc vers la GAUCHE, sans jamais déplacer le bouton de PR.
+   */
+  const sessionActions =
+    liveRun && sessionFiles.length > 0 ? (
+      <>
+        {sessionTotals.additions > 0 || sessionTotals.deletions > 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={openDiffSheet}
+                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-mono text-xs tabular-nums outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+              >
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  +{sessionTotals.additions}
+                </span>
+                <span className="text-red-600 dark:text-red-400">
+                  −{sessionTotals.deletions}
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t("diffTitle")}</TooltipContent>
+          </Tooltip>
+        ) : null}
+        {/* Du travail poussé, aucune PR, et l'agent est au repos : c'est le moment
+            de la proposer. Pendant qu'il travaille, non — le tour en cours pousse
+            encore, et la demande partirait sur un état qui bouge. */}
+        {canCreatePr && !working ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={requestingPr}
+            onClick={() => void createPr()}
+          >
+            <GitPullRequest className="size-3.5" />
+            {t("createPullRequest")}
+          </Button>
+        ) : null}
+      </>
+    ) : null;
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* En-tête : bloc de gauche fourni par l'hôte (défaut : modèle de la session en
@@ -513,8 +586,11 @@ export function AgentConversation({
             </span>
           ))}
 
-        {headerActions ? (
-          <div className="ml-auto flex shrink-0 items-center gap-1">{headerActions}</div>
+        {sessionActions || headerActions ? (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {sessionActions}
+            {headerActions}
+          </div>
         ) : null}
       </div>
 
@@ -598,20 +674,12 @@ export function AgentConversation({
       {phase !== "loading" && (
         <div className="shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
-          {/* Fichiers changés : bloc LIVE du tour épinglé au-dessus du composer pendant
-              le travail, ou bouton « créer la PR » au repos. Passe SOUS la réponse (dans
-              le fil) une fois le tour fini — c'est l'event `files_changed` qui prend le
-              relais là-bas. */}
-          {liveRun ? (
-            <AgentChangesBar
-              runId={liveRun.id}
-              working={working}
-              canCreatePr={canCreatePr}
-              requestingPr={requestingPr}
-              onCreatePr={() => void createPr()}
-              onOpenFile={openDiff}
-            />
-          ) : null}
+          {/* Rien ne s'intercale plus entre le fil et le composer. La barre
+              « fichiers changés » vivait ici : elle grandissait d'une ligne à chaque
+              fichier touché et faisait descendre l'input pendant qu'on écrivait. Ce
+              qu'elle disait est passé dans l'EN-TÊTE (les deux nombres du diff, et
+              la demande de pull request), où rien ne bouge. Le détail par tour, lui,
+              est resté dans le fil, sous la réponse qui l'a produit. */}
           {/* Question active : la carte prend la PLACE du composer (pattern
               Claude Code/Codex). Le ChatInput reste MONTÉ, masqué en CSS — le
               brouillon de l'utilisateur survit et réapparaît après la réponse. */}

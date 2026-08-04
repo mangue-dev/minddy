@@ -17,6 +17,7 @@ import {
   unlinkGitRepoApi,
 } from "@/lib/git-integration-api";
 import {
+  GIT_LINKED_PROJECTS_KEY,
   projectGitLinkQueryKey,
   useProjectGitLinkQuery,
 } from "@/lib/use-project-git-link-query";
@@ -92,6 +93,10 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     void queryClient.invalidateQueries({
       queryKey: projectGitLinkQueryKey(projectId),
     });
+    // La liste des projets où l'agent peut travailler change avec ce lien : la
+    // page Agents n'offre que ceux-là, et sans cette invalidation le projet qu'on
+    // vient de lier n'y paraîtrait qu'après péremption du cache.
+    void queryClient.invalidateQueries({ queryKey: GIT_LINKED_PROJECTS_KEY });
   }, [queryClient, projectId]);
 
   // Charge les dépôts candidats quand une connexion est active.

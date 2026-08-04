@@ -1699,7 +1699,8 @@
     "composeProjectPlaceholder": "Projet",
     "composeProjectEmpty": "Aucun projet.",
     "composeProjectRequired": "Choisissez d'abord un projet : l'agent clone son dépôt.",
-    "composeProjectTooltip": "Choisissez un projet avant de lancer"
+    "composeProjectTooltip": "Choisissez un projet avant de lancer",
+    "composeNoRepo": "Aucun de vos projets n'a de dépôt connecté. L'agent clone un dépôt pour travailler : liez-en un dans les réglages d'un projet."
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -2348,7 +2349,7 @@
   "Agents": {
     "title": "Agent Numo",
     "filterPlaceholder": "Filtrer {count, plural, =0 {les conversations} one {la conversation} other {les # conversations}}…",
-    "emptyTitle": "Aucune session pour l'instant",
+    "emptyTitle": "Aucune conversation pour l'instant",
     "emptyNoProject": "Aucun projet, donc aucun dépôt où lancer l'agent",
     "noSelection": "Sélectionnez une session.",
     "unread": "L'agent a terminé — non lu",
@@ -2360,7 +2361,6 @@
     "backToList": "Retour à la liste",
     "openPullRequest": "Voir la pull request",
     "prAvailable": "PR disponible",
-    "prMerged": "Pull request fusionnée",
     "prMergedShort": "PR fusionnée",
     "prClosed": "PR fermée",
     "statusWorking": "En cours",

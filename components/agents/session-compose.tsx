@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -25,6 +25,7 @@ import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useProjects } from "@/lib/projects-context";
+import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAuth } from "@/lib/auth-context";
 import {
   defaultAgentProjectId,
@@ -160,21 +161,39 @@ export function SessionCompose({
     tNav("accountFallback"),
   );
 
+  /**
+   * Les projets où l'agent peut travailler : ceux qui ont un DÉPÔT lié. Les
+   * autres ne sont pas proposés — l'agent y échouerait à sa première seconde
+   * (`noRepo`), une fois la consigne écrite et envoyée. Mieux vaut ne pas les
+   * offrir que refuser après coup.
+   */
+  const { projectIds: gitLinked, loading: gitLinkedLoading } =
+    useGitLinkedProjectsQuery();
+  const launchable = useMemo(
+    () => projects.filter((p) => gitLinked.has(p.id)),
+    [projects, gitLinked],
+  );
+  /** Aucun dépôt nulle part : il n'y a aucune conversation à lancer d'ici. */
+  const noRepoAnywhere = !gitLinkedLoading && launchable.length === 0;
+
   // Le projet part PRÉ-CHOISI : celui que le brouillon désigne, sinon le dernier
   // où un agent a été lancé (à défaut, le projet touché le plus récemment). Il
   // reste librement modifiable — c'est un défaut, pas un verrou.
   const [projectId, setProjectId] = useState(initialProjectId ?? "");
-  // Résolu dans un effet, pas à l'initialisation : la liste des projets arrive
-  // par react-query et peut être encore vide au montage (le composer resterait
-  // alors sans projet pour toujours), et lire localStorage pendant le rendu
-  // ferait diverger une hydratation. Ne s'applique qu'à un composer SANS projet :
-  // il ne repasse jamais sur un choix, ni celui du brouillon ni celui de
-  // l'utilisateur.
+  // Résolu dans un effet, pas à l'initialisation : les projets et leurs liens
+  // arrivent par react-query et peuvent être encore vides au montage (le composer
+  // resterait alors sans projet pour toujours), et lire localStorage pendant le
+  // rendu ferait diverger une hydratation.
+  //
+  // L'effet repasse aussi sur un choix DÉJÀ fait s'il ne tient plus : un projet
+  // pré-choisi par un brouillon (ou par le « + » d'un projet dont le dépôt a été
+  // délié depuis) n'est plus dans la liste, et le sélecteur afficherait alors un
+  // vide en prétendant qu'un projet est choisi.
   useEffect(() => {
-    if (projectId || projects.length === 0) return;
-    const fallback = defaultAgentProjectId(projects, lastAgentProjectId());
-    if (fallback) setProjectId(fallback);
-  }, [projects, projectId]);
+    if (gitLinkedLoading || launchable.length === 0) return;
+    if (projectId && launchable.some((p) => p.id === projectId)) return;
+    setProjectId(defaultAgentProjectId(launchable, lastAgentProjectId()) ?? "");
+  }, [launchable, projectId, gitLinkedLoading]);
   const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
@@ -189,6 +208,7 @@ export function SessionCompose({
   // d'AgentConversation : les pré-checks serveur prennent quelques secondes).
   const [launchText, setLaunchText] = useState<string | null>(null);
   const modelRequired = provider === "generic" && !defaultModel && !model;
+  const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
 
   const launch = async (message: string) => {
     if (launching) return;
@@ -263,7 +283,18 @@ export function SessionCompose({
             <ChevronLeft />
           </Button>
         ) : null}
-        <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+        {/* L'orbe du projet choisi, comme dans l'en-tête d'une conversation
+            ouverte. Tant qu'aucun projet n'est choisi, une icône neutre tient sa
+            place — même taille, donc rien ne bouge quand il arrive. */}
+        {selectedProject ? (
+          <ProjectOrb
+            seed={selectedProject.id}
+            iconUrl={selectedProject.icon_url}
+            className="size-4 shrink-0"
+          />
+        ) : (
+          <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+        )}
         <span className="truncate text-sm font-medium">{tAgents("newButton")}</span>
       </div>
       <div className="min-h-0 flex-1">
@@ -282,25 +313,34 @@ export function SessionCompose({
              l'envoi (le modèle, le raisonnement et la branche, eux, le sont). */
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-lg font-medium">{t("composeGreeting", { name })}</p>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
-              {t.rich("composeWorkingIn", {
-                project: () => (
-                  <ProjectSelect
-                    projects={projects}
-                    value={projectId}
-                    onChange={(id) => {
-                      setProjectId(id);
-                      // La branche appartient au dépôt du projet : changer de
-                      // projet invalide le choix précédent.
-                      setBaseBranch("");
-                    }}
-                    placeholder={t("composeProjectPlaceholder")}
-                    emptyLabel={t("composeProjectEmpty")}
-                    disabled={launching}
-                  />
-                ),
-              })}
-            </div>
+            {noRepoAnywhere ? (
+              /* Aucun projet n'a de dépôt : il n'y a pas de choix à offrir, et
+                 l'agent n'a rien à cloner. On le dit ici plutôt que de laisser
+                 un sélecteur vide faire croire à un chargement. */
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {t("composeNoRepo")}
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
+                {t.rich("composeWorkingIn", {
+                  project: () => (
+                    <ProjectSelect
+                      projects={launchable}
+                      value={projectId}
+                      onChange={(id) => {
+                        setProjectId(id);
+                        // La branche appartient au dépôt du projet : changer de
+                        // projet invalide le choix précédent.
+                        setBaseBranch("");
+                      }}
+                      placeholder={t("composeProjectPlaceholder")}
+                      emptyLabel={t("composeProjectEmpty")}
+                      disabled={launching}
+                    />
+                  ),
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -312,10 +352,13 @@ export function SessionCompose({
             onSend={(message) => void launch(message)}
             disabled={launching}
             // Sans projet, rien à cloner : l'envoi est bloqué (le texte reste
-            // librement éditable) et le tooltip du bouton explique quoi choisir
-            // d'abord.
+            // librement éditable) et le tooltip du bouton dit ce qui manque —
+            // choisir un projet, ou en connecter un à un dépôt s'il n'y en a
+            // aucun où lancer l'agent.
             sendDisabled={!projectId}
-            sendDisabledTooltip={t("composeProjectTooltip")}
+            sendDisabledTooltip={
+              noRepoAnywhere ? t("composeNoRepo") : t("composeProjectTooltip")
+            }
             hideAttach
             initialValue={initialText}
             placeholder={t("composePlaceholderFree")}

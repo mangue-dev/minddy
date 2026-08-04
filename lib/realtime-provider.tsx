@@ -437,7 +437,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const read = () => setProjects(queryClient.getQueryData<Project[]>(["projects"]));
     read();
     return queryClient.getQueryCache().subscribe((event) => {
-      if (event.query.queryKey[0] === "projects") read();
+      // La clé EXACTE, pas son préfixe. C'est `["projects"]` qu'on relit, et une
+      // seconde clé commençant par « projects » (react-query en pose une au
+      // MONTAGE de son observateur, donc pendant le rendu d'un autre composant)
+      // faisait alors remonter un `setState` ici — React le refuse à voix haute :
+      // « Cannot update a component while rendering a different component ».
+      const key = event.query.queryKey;
+      if (key.length === 1 && key[0] === "projects") read();
     });
   }, [queryClient]);
 
