@@ -710,7 +710,7 @@ export function IssueSidePanel({
           {
             id: "open-pr",
             label: tAgent("viewPullRequest"),
-            keywords: ["pull request", "pr", "review", "github", "merge"],
+            keywords: ["pull request", "pr", "review", "github", "gitlab", "merge"],
             icon: <GitPullRequest className="size-4" />,
             onSelect: openPr,
           },

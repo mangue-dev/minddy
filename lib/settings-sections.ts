@@ -24,7 +24,6 @@ import {
   Trash2,
   TriangleAlert,
   User,
-  UserRoundCheck,
   Users,
   WandSparkles,
   Workflow,
@@ -95,7 +94,6 @@ export const SETTINGS_SECTIONS = {
   accountNotifications: "account-notifications",
   accountMcp: "account-mcp",
   accountConnectedApps: "account-connected-apps",
-  accountGitIdentity: "account-git-identity",
   accountGitConnections: "account-git-connections",
   accountAiProvider: "account-ai-provider",
   accountAgent: "account-agent",
@@ -353,17 +351,11 @@ export function useSettingsSections(): SettingsSection[] {
           "revoke", "déconnecter", "deconnecter", "disconnect",
         ],
       }),
-      account({
-        id: SETTINGS_SECTIONS.accountGitIdentity,
-        tab: "git",
-        icon: UserRoundCheck,
-        title: tAccount("gitIdentityTitle"),
-        keywords: [
-          "git", "github", "gitlab", "identité", "identite", "identity",
-          "en mon nom", "in my name", "autoriser", "authorize",
-          "pull request", "pr",
-        ],
-      }),
+      // Une seule carte depuis la fusion : la connexion au dépôt et
+      // l'autorisation d'agir en votre nom sont deux niveaux du MÊME compte, et
+      // deux cartes séparées obligeaient à les recoller de tête. Les mots-clés
+      // des deux y sont donc réunis — « agir en mon nom » doit toujours tomber
+      // sur cette carte-là.
       account({
         id: SETTINGS_SECTIONS.accountGitConnections,
         tab: "git",
@@ -373,6 +365,9 @@ export function useSettingsSections(): SettingsSection[] {
           "git", "github", "gitlab", "comptes", "accounts", "connexion",
           "connection", "dépôt", "depot", "repo", "repository",
           "déconnecter", "deconnecter", "disconnect",
+          "identité", "identite", "identity", "en mon nom", "in my name",
+          "autoriser", "authorize", "révoquer", "revoquer", "revoke",
+          "pull request", "pr",
         ],
       }),
       account({

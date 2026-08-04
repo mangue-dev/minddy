@@ -1,8 +1,22 @@
 "use client";
 
-import { ArrowRight, Github, Gitlab, Loader2, type LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Github,
+  Gitlab,
+  Loader2,
+  type LucideIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button, cn } from "mangue-ui";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  cn,
+} from "mangue-ui";
 import {
   ACTIVE_PROVIDERS,
   type RepoProviderIconName,
@@ -94,5 +108,80 @@ export function ProviderConnectButtons({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Le MÊME geste, replié en un seul bouton « Connecter ». Deux boutons de forge
+ * côte à côte tiennent dans une colonne de wizard ; en bout de titre d'une carte
+ * de réglages, ils pèsent plus lourd que la section. Le menu dit une fois qu'on
+ * connecte, et ne déplie les marques qu'au moment de choisir.
+ *
+ * Une seule forge déployée → pas de menu : un bouton qui n'ouvre qu'un choix
+ * fait payer un clic pour rien.
+ */
+export function ProviderConnectMenu({
+  onConnect,
+  connecting,
+  only,
+  disabled,
+  align = "end",
+}: Omit<ProviderConnectButtonsProps, "inline" | "className"> & {
+  align?: "start" | "end";
+}) {
+  const t = useTranslations("Settings");
+  const providers = only
+    ? ACTIVE_PROVIDERS.filter((p) => (only as string[]).includes(p.id))
+    : ACTIVE_PROVIDERS;
+
+  if (providers.length === 0) return null;
+
+  if (providers.length === 1) {
+    const provider = providers[0];
+    const Icon = ICONS[provider.iconName];
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled || connecting != null}
+        onClick={() => onConnect(provider.id)}
+      >
+        {connecting === provider.id ? <Loader2 className="animate-spin" /> : <Icon />}
+        {t("gitConnectWith", { provider: provider.displayName })}
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="group"
+          disabled={disabled || connecting != null}
+        >
+          {connecting && <Loader2 className="animate-spin" />}
+          {t("gitConnect")}
+          <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-52">
+        {providers.map((provider) => {
+          const Icon = ICONS[provider.iconName];
+          return (
+            <DropdownMenuItem
+              key={provider.id}
+              onSelect={() => onConnect(provider.id)}
+            >
+              <Icon />
+              {t("gitConnectWith", { provider: provider.displayName })}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -76,14 +76,20 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ connections, providers });
 }
 
+/** D'où part la connexion — c'est ce qui décide où le callback ramène. */
+const ORIGINS = new Set(["wizard", "settings"]);
+
 /**
- * POST /api/account/git-connections — { action:'start', provider }
+ * POST /api/account/git-connections — { action:'start', provider, origin? }
  *  → { mode:'reuse', connectionId } | { mode:'install'|'oauth', url }
  *
  * Connexion au niveau COMPTE : le `state` porte le projet sentinelle
- * `__account__` et `origin:'wizard'`, ce qui fait revenir les callbacks sur
- * `/home?setup=git` — le wizard de création s'y rouvre depuis son brouillon
- * (lib/project-draft.ts), puisqu'à ce stade il n'y a pas encore de projet.
+ * `__account__`, et son `origin` la destination du retour.
+ *  - `wizard`   → `/home?setup=git` : le wizard de création s'y rouvre depuis
+ *    son brouillon (lib/project-draft.ts), puisqu'à ce stade il n'y a pas
+ *    encore de projet.
+ *  - `settings` → `/settings?tab=git` : les paramètres du compte, d'où l'on
+ *    connecte un compte git sans passer par un projet.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -118,11 +124,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mode: "reuse", connectionId: existing.id });
   }
 
+  const rawOrigin = (body as { origin?: unknown }).origin;
+  const origin =
+    typeof rawOrigin === "string" && ORIGINS.has(rawOrigin) ? rawOrigin : "settings";
+
   const state = signGitLinkState({
     projectId: ACCOUNT_CONNECT_PROJECT,
     userId: auth.user.id,
     provider,
-    origin: "wizard",
+    origin,
   });
   if (provider === "github") {
     const url = `https://github.com/apps/${getGithubAppSlug()}/installations/new?state=${encodeURIComponent(state)}`;

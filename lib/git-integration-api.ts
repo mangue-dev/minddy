@@ -167,19 +167,24 @@ export async function fetchGitConnectionsApi(): Promise<GitConnectionsResponse> 
 }
 
 /**
- * Démarre une connexion git au niveau COMPTE — le wizard de création (MIN-62)
- * choisit un dépôt avant que le projet existe. `mode: "reuse"` = aucune sortie
- * de page ; les deux autres modes quittent l'app, l'appelant sauve son
- * brouillon avant de suivre `url`.
+ * Démarre une connexion git au niveau COMPTE — depuis les paramètres du compte,
+ * ou depuis le wizard de création (MIN-62), qui choisit un dépôt avant que le
+ * projet existe. `mode: "reuse"` = aucune sortie de page ; les deux autres modes
+ * quittent l'app, l'appelant sauve son brouillon avant de suivre `url`.
+ *
+ * `origin` dit d'où l'on part, et donc où le callback ramène — table close côté
+ * serveur. Les deux appelants le passent en clair : un défaut silencieux
+ * renverrait le wizard sur la mauvaise page sans que rien ne le signale.
  */
 export async function startAccountGitConnectApi(
   provider: RepoProviderId,
+  origin: "wizard" | "settings",
 ): Promise<StartConnectResponse> {
   return parseJson(
     await fetch("/api/account/git-connections", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "start", provider }),
+      body: JSON.stringify({ action: "start", provider, origin }),
     }),
   );
 }

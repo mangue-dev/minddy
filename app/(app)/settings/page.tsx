@@ -28,7 +28,6 @@ import { AccountNotificationsSection } from "@/components/settings/account-notif
 import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { AccountGitConnectionsSection } from "@/components/settings/account-git-connections-section";
-import { AccountGitIdentitySection } from "@/components/settings/account-git-identity-section";
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
 import { AccountDataSection } from "@/components/settings/account-data-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
@@ -103,16 +102,11 @@ export default function AccountSettingsPage() {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      // Deux objets distincts (MIN-144), donc deux sections : le compte sous
-      // lequel VOUS agissez sur une PR, et l'installation de l'App que les
-      // projets réutilisent pour lier un dépôt. L'identité d'abord — c'est celle
-      // qu'on vient chercher quand un bandeau de PR y renvoie.
-      content: (
-        <>
-          <AccountGitIdentitySection />
-          <AccountGitConnectionsSection />
-        </>
-      ),
+      // Une seule carte : l'installation de l'App que les projets réutilisent
+      // pour lier un dépôt, et le compte sous lequel VOUS agissez sur une PR
+      // (MIN-144), sont deux niveaux du même compte de forge. Séparés, ils
+      // s'obligeaient à se citer l'un l'autre pour être compris.
+      content: <AccountGitConnectionsSection />,
     },
     {
       value: "agent",

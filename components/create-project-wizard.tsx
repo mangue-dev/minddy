@@ -410,7 +410,7 @@ export function CreateProjectWizard({
     setConnecting(provider);
     track("git_connection_started", { provider });
     try {
-      const res = await startAccountGitConnectApi(provider);
+      const res = await startAccountGitConnectApi(provider, "wizard");
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
       } else {
