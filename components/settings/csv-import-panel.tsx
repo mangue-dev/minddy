@@ -146,7 +146,7 @@ export function CsvImportPanel({
       // colonne qu'on n'a pas su placer, une valeur qu'on n'a pas su traduire,
       // une personne qu'on n'a pas reconnue. Un export Linear propre d'un
       // projet dont on connaît déjà les gens n'en déclenche aucune.
-      if (!mappingHasGaps(stats, base)) return;
+      if (!mappingHasGaps(stats, base, source)) return;
 
       const request = ++planRequestRef.current;
       setAiPending(true);

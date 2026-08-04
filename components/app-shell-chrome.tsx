@@ -26,6 +26,7 @@ import {
   TriangleAlert,
   Focus,
   PanelsTopLeft,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -124,6 +125,13 @@ const ObjectiveSidePanel = dynamic(
   { ssr: false }
 );
 
+// Même parti pris pour l'export CSV : un dialogue qu'on ouvre depuis ⌘K quelques
+// fois dans la vie d'un compte n'a rien à faire dans le bundle de chaque page.
+const ExportIssuesDialog = dynamic(
+  () => import("@/components/export-issues-dialog").then((m) => m.ExportIssuesDialog),
+  { ssr: false }
+);
+
 /** Right-aligned project tag shown on palette rows (orb + name), à la AutoKap. */
 function projectChip(project: Project) {
   return (
@@ -196,6 +204,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
   const tSettings = useTranslations("Settings");
+  const tExport = useTranslations("Export");
   const tBilling = useTranslations("Billing");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
@@ -247,6 +256,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const openBranchCleanup = useCallback((target: BranchCleanupTarget) => {
     setBranchCleanup(target);
     setBranchCleanupOpen(true);
+  }, []);
+
+  // Export CSV : une seule ligne de palette, jamais par projet — c'est le
+  // dialogue qui demande la portée, parce qu'« un projet ou tous » est justement
+  // la question qu'on se pose en cliquant. Comme pour le ménage des branches, le
+  // montage SURVIT à la fermeture le temps de l'animation de sortie.
+  const [exportMounted, setExportMounted] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const openExport = useCallback(() => {
+    setExportMounted(true);
+    setExportOpen(true);
   }, []);
 
   const isInbox = pathname.startsWith("/inbox");
@@ -530,6 +550,29 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           onSelect: () => router.push("/settings"),
         },
         {
+          // Sortir ses tickets en CSV — le geste qu'on vient chercher dans ⌘K
+          // chez Linear, et qu'on cherchait donc ici. Le dialogue demande le
+          // projet et les statuts ; cette ligne ne présume de rien.
+          key: "export-issues",
+          label: tExport("title"),
+          icon: Download,
+          keywords: [
+            "export",
+            "exporter",
+            "csv",
+            "excel",
+            "tableur",
+            "spreadsheet",
+            "download",
+            "télécharger",
+            "telecharger",
+            "backup",
+            "sauvegarde",
+            "sortir",
+          ],
+          onSelect: openExport,
+        },
+        {
           key: "keyboard-shortcuts",
           label: tk("shortcutsTitle"),
           icon: Keyboard,
@@ -674,7 +717,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, zen, toggleZen, t, ti, tk, tScratch, tSettings, setCheatsheetOpen]);
+  }, [projects, projectById, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tScratch, tSettings, tExport, setCheatsheetOpen]);
 
   // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
   // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone
@@ -1147,6 +1190,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           provider={branchCleanup.provider}
           open={branchCleanupOpen}
           onOpenChange={setBranchCleanupOpen}
+        />
+      )}
+      {/* Export CSV ouvert depuis la palette — monté ici pour la même raison :
+          il part de n'importe quelle page, et emporte les tickets de n'importe
+          lequel de mes projets. Le projet de la page n'est qu'un défaut. */}
+      {exportMounted && (
+        <ExportIssuesDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          defaultProjectId={currentProjectId}
         />
       )}
       {/* Objective side panel opened from the command palette — overlays the

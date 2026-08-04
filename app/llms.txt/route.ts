@@ -3,6 +3,7 @@ import {
   WEBHOOK_SIGNATURE_HEADER,
   integrationWebhookDoc,
 } from "@/lib/feedback/integration-contract";
+import { EXPORT_HEADERS } from "@/lib/export/issues-csv";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
@@ -82,6 +83,19 @@ do not poll for that.
 - Signature: \`${WEBHOOK_SIGNATURE_HEADER}: sha256=<hex>\`. ${webhook.signature}
 
 Full payload, headers and delivery guarantees: ${SITE_URL}/llms-full.txt
+
+## Issue CSV export
+
+Users can export their issues as a CSV file (⌘K → “Export issues as CSV”, scoped
+to one project or all of them, filtered by status). If someone hands you one,
+these are its columns, in this order:
+
+${EXPORT_HEADERS.map((h) => `\`${h}\``).join(", ")}
+
+Statuses, priorities and efforts are written as the RAW values listed above, not
+as translated labels. minddy reads the file back, so an export is also how a
+backlog moves from one project to another. Column meanings and the exact CSV
+grammar: ${SITE_URL}/llms-full.txt
 
 ## More
 

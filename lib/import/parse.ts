@@ -65,6 +65,12 @@ export function detectSource(table: CsvTable): ImportSource | null {
   ) {
     return "jira";
   }
+  // Notre propre export (`lib/export/issues-csv.ts`). « Objective » n'est le
+  // nom d'aucune colonne des autres outils, et « Project » sans « Team » ni
+  // « Issue key » achève de trancher : c'est un fichier sorti de minddy.
+  if (hasHeader(table, "title") && hasHeader(table, "objective") && hasHeader(table, "project")) {
+    return "minddy";
+  }
   // Les marqueurs doivent être PROPRES à Linear. « Estimate » en faisait
   // partie et ne l'est pas du tout : n'importe quel CSV maison portant
   // « Title » et « Estimate » était lu comme un export Linear, dont la table

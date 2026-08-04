@@ -124,3 +124,19 @@ export function resolveKeyToken(token: string): string {
     /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "");
   return isMac ? "⌘" : "Ctrl";
 }
+
+/**
+ * Le même raccourci, mais tel qu'on l'ÉCRIT DANS UNE PHRASE — « ⌘K » sur un
+ * Mac, « Ctrl+K » ailleurs. `KbdSequence` rend des touches côte à côte ; une
+ * marche à suivre ou un toast, eux, ont besoin d'une chaîne, et le « + » que le
+ * monde Windows attend entre les deux ne se devine pas d'un tableau de tokens.
+ *
+ * À n'appeler que côté client (`navigator`) : au rendu serveur il n'y a pas de
+ * plateforme à lire, et la phrase dirait « Ctrl » à un utilisateur de Mac. Pour
+ * une phrase RENDUE (par opposition à un toast déclenché par un geste), passer
+ * par `useModShortcut`, qui gère l'hydratation.
+ */
+export function formatModShortcut(key: string): string {
+  const mod = resolveKeyToken("mod");
+  return mod === "⌘" ? `⌘${key}` : `${mod}+${key}`;
+}

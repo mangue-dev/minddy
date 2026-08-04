@@ -48,6 +48,7 @@ import {
 import { LINEAR_COLUMN_ALIASES } from "@/lib/import/linear";
 import { JIRA_COLUMN_ALIASES, jiraStoryPointsHeader } from "@/lib/import/jira";
 import { GENERIC_COLUMN_ALIASES } from "@/lib/import/generic";
+import { MINDDY_COLUMN_ALIASES } from "@/lib/import/minddy";
 
 /**
  * Assigne les colonnes à partir des noms d'en-tête. La première règle qui
@@ -143,7 +144,9 @@ export function buildMapping(
       ? LINEAR_COLUMN_ALIASES
       : source === "jira"
         ? JIRA_COLUMN_ALIASES
-        : GENERIC_COLUMN_ALIASES;
+        : source === "minddy"
+          ? MINDDY_COLUMN_ALIASES
+          : GENERIC_COLUMN_ALIASES;
 
   const columns = assignColumns(table, aliases);
 
@@ -215,13 +218,20 @@ export const hasTitleColumn = (mapping: ImportMapping): boolean =>
  * pas su placer, une valeur qu'on n'a pas su traduire, une personne qu'on n'a
  * pas reconnue. Sur un export Linear propre d'un projet dont on connaît déjà
  * les gens, la réponse est non, et l'appel n'a pas lieu.
+ *
+ * Un export minddy est le cas extrême : ses colonnes sont les nôtres, ses
+ * valeurs de statut, de priorité et d'effort sont nos propres énumérations, et
+ * les deux colonnes qu'il ne rend pas (`Project`, `Objective`) sont ignorées
+ * DÉLIBÉRÉMENT. Il ne reste qu'une inconnue, les gens — un export venu d'un
+ * autre espace de travail nomme des personnes que le projet d'arrivée n'a pas
+ * forcément. C'est la seule chose qu'on aille demander au modèle.
  */
-export function mappingHasGaps(stats: TableStats, mapping: ImportMapping): boolean {
+export function mappingHasGaps(
+  stats: TableStats,
+  mapping: ImportMapping,
+  source: ImportSource = "csv"
+): boolean {
   if (!hasTitleColumn(mapping)) return true;
-  // Une colonne toujours vide n'est pas un manque : il n'y a rien à en tirer.
-  if (mapping.columns.some((f, i) => f === "ignore" && (stats[i]?.filled ?? 0) > 0)) {
-    return true;
-  }
 
   const missing = (field: ImportField, dict: Record<string, unknown>) => {
     for (const token of valuesOfColumns(stats, columnsOf(mapping, field)).keys()) {
@@ -229,6 +239,14 @@ export function mappingHasGaps(stats: TableStats, mapping: ImportMapping): boole
     }
     return false;
   };
+
+  if (source === "minddy") return missing("assignee", mapping.assigneeValues);
+
+  // Une colonne toujours vide n'est pas un manque : il n'y a rien à en tirer.
+  if (mapping.columns.some((f, i) => f === "ignore" && (stats[i]?.filled ?? 0) > 0)) {
+    return true;
+  }
+
   return (
     missing("status", mapping.statusValues) ||
     missing("priority", mapping.priorityValues) ||

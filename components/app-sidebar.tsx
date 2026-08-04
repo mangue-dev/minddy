@@ -579,6 +579,28 @@ export function AppSidebar({
   const routeKey = usePathname();
   useEffect(() => setFocusWithin(false), [routeKey]);
 
+  // Même histoire pour le survol et le menu de compte, mais à la SORTIE du mode
+  // rail : leurs poseurs sont branchés sur `overlay`. Quitter une page à barre
+  // secondaire EN PASSANT PAR LA BARRE (on la survole, elle est dépliée, on
+  // clique « Accueil ») débranche donc `onPointerLeave` avec le pointeur encore
+  // dessus : personne ne le verra jamais sortir, et `hovered` reste vrai pour
+  // toujours. La page à barre secondaire suivante — atteinte par la palette,
+  // donc sans repasser sur la barre — s'ouvrait alors primaire DÉPLIÉE
+  // par-dessus la secondaire, pointeur à l'autre bout de l'écran, et plus rien
+  // ne pouvait la refermer.
+  //
+  // Hors mode rail ces deux états ne sont pas lus : les remettre à zéro ne
+  // change rien à ce qu'on voit, et garantit qu'on revient au rail propre.
+  useEffect(() => {
+    if (overlay) return;
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setHovered(false);
+    setMenuOpen(false);
+  }, [overlay]);
+
   const openRail = () => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);

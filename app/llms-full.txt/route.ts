@@ -1,6 +1,7 @@
 import { mcpToolCatalog } from "@/lib/server/mcp/catalog";
 import { MCP_SERVER_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
 import { integrationWebhookDoc } from "@/lib/feedback/integration-contract";
+import { issuesCsvDoc } from "@/lib/export/issues-csv";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
@@ -34,6 +35,8 @@ ${MCP_SERVER_INSTRUCTIONS}
 ${tools.map(renderTool).join("\n\n")}
 
 ${renderWebhook()}
+
+${renderIssuesCsv()}
 `;
 
   return new Response(body, {
@@ -71,6 +74,26 @@ function renderWebhook(): string {
     list(Object.entries(w.payload).map(([field, value]) => `- \`${field}\`: ${value}`)),
     "### Delivery",
     list(w.delivery.map((rule) => `- ${rule}`)),
+  ].join("\n\n");
+}
+
+/**
+ * L'export CSV des tickets — la seule donnée de minddy qui circule en FICHIER.
+ * Un agent à qui l'utilisateur tend « mon export » doit savoir ce qu'il tient
+ * sans le déduire des trois premières lignes : d'où la table complète, tirée du
+ * même module que l'écriture du fichier (`lib/export/issues-csv.ts`).
+ */
+function renderIssuesCsv(): string {
+  const doc = issuesCsvDoc();
+  return [
+    "## Issue CSV export",
+    doc.purpose,
+    doc.how,
+    "### Columns, in file order",
+    doc.columns.map((c) => `- \`${c.header}\`: ${c.meaning}`).join("\n"),
+    "### Rules",
+    doc.rules.map((rule) => `- ${rule}`).join("\n"),
+    doc.omits,
   ].join("\n\n");
 }
 

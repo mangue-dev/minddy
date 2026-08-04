@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
+import { formatModShortcut } from "@/lib/keyboard/shortcuts";
 
 /**
  * Mode zen (MIN-134) : le board seul, sans barre latérale, sans header, sans le
@@ -42,7 +43,9 @@ export function ZenModeProvider({ children }: { children: ReactNode }) {
   // pur — React le rejoue (StrictMode en dev, et rien ne garantit un seul appel
   // en général), et le toast partait alors en double.
   const toggle = useCallback(() => {
-    if (!zen) toast.success(t("zenModeOn"));
+    // Le raccourci se lit à la bascule, jamais au rendu : on est déjà dans le
+    // navigateur, donc `navigator` dit la vraie plateforme (⌘K ou Ctrl+K).
+    if (!zen) toast.success(t("zenModeOn", { shortcut: formatModShortcut("K") }));
     setZen((on) => !on);
   }, [zen, t]);
 

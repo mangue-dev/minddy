@@ -313,6 +313,16 @@ export interface AnalyticsEventProps {
   import_started: { source: string };
   import_completed: { source: string; issue_count: number };
   import_failed: { source: string; reason: string };
+  /** L'autre sens : l'export CSV depuis ⌘K. `scope` dit si le compte sort UN
+   *  projet ou tout, `status_count` combien de statuts sont restés cochés — les
+   *  deux réponses qu'on ne peut pas déduire du reste. Un `truncated: true`
+   *  répété dirait que le plafond de la route est trop bas. */
+  issues_exported: {
+    scope: "project" | "all";
+    status_count: number;
+    issue_count: number;
+    truncated: boolean;
+  };
   /** Amorce d'un projet par un brief (MIN-172, MIN-173). Seule l'ÉCRITURE se
    *  compte encore côté navigateur : la demande et la proposition sont passées
    *  dans la conversation avec Numo, où elles sont un appel d'outil comme un
@@ -603,6 +613,7 @@ const EVENT_NAMES = [
   "import_started",
   "import_completed",
   "import_failed",
+  "issues_exported",
   "brief_split_applied",
   // Billing
   "pricing_viewed",

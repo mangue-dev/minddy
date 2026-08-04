@@ -16,7 +16,15 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { FileUp, Github, Gitlab, Info, Layers, Sparkles } from "lucide-react";
+import {
+  FileUp,
+  Github,
+  Gitlab,
+  Info,
+  Layers,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import {
@@ -24,6 +32,7 @@ import {
   normalizeKey,
   suggestKeyFromName,
 } from "@/lib/project-key";
+import { suggestProjectName } from "@/lib/project-name";
 import {
   bindGitRepoApi,
   fetchAccountGitCandidatesApi,
@@ -156,6 +165,10 @@ export function CreateProjectWizard({
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [keyTouched, setKeyTouched] = useState(false);
+  // Le dernier nom PROPOSÉ. Ce qui distingue « le champ porte une proposition »
+  // de « le champ porte un nom choisi » : tant qu'il tient, on offre d'en tirer
+  // un autre ; dès que l'utilisateur écrit, le nom est le sien.
+  const [suggestedName, setSuggestedName] = useState("");
 
   // Étape « Icône » : rien n'est stocké tant que le projet n'existe pas — on
   // garde de quoi rejouer le choix à la création (favicon à ré-importer, ou
@@ -223,6 +236,7 @@ export function CreateProjectWizard({
     setName("");
     setKey("");
     setKeyTouched(false);
+    setSuggestedName("");
     setIcon({ kind: "none" });
     setConnecting(null);
     setActiveConnectionId(null);
@@ -331,6 +345,33 @@ export function CreateProjectWizard({
     setName(value);
     if (!keyTouched) setKey(suggestKeyFromName(value));
   };
+
+  /**
+   * Une proposition de nom, pour qui n'en a pas encore (MIN-170, mode « tout
+   * nouveau projet »). Elle remplit le champ comme une frappe : la clé suit,
+   * et tout reste modifiable — le projet n'est créé qu'à la dernière étape.
+   *
+   * On écarte ce qui ferait échouer la validation trois lignes plus bas (un nom
+   * ou une clé déjà pris chez soi) et le nom affiché à l'instant, sinon le
+   * bouton « en proposer un autre » peut ne rien changer.
+   */
+  const suggestName = () => {
+    const mine = projects.filter((p) => p.owner_id === user?.id);
+    const next = suggestProjectName(
+      (candidate) =>
+        candidate.toLowerCase() === name.trim().toLowerCase() ||
+        mine.some(
+          (p) =>
+            p.name.toLowerCase() === candidate.toLowerCase() ||
+            p.key === suggestKeyFromName(candidate),
+        ),
+    );
+    setSuggestedName(next);
+    handleNameChange(next);
+  };
+
+  /** Le champ porte encore la proposition — personne ne l'a réécrite depuis. */
+  const showsSuggestion = suggestedName !== "" && name === suggestedName;
 
   const submitProjectStep = () => {
     setError(null);
@@ -609,64 +650,105 @@ export function CreateProjectWizard({
 
     project: {
       id: "project",
-      title: t("newProject"),
+      title: t("wizardProjectTitle"),
       subtitle: t("dialogDescription", {
         entityPlural: tIssue("entityPlural").toLowerCase(),
       }),
       content: (
-        <div className="flex items-end gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <label htmlFor="project-name" className="text-sm font-medium">
-              {t("nameLabel")}
-            </label>
-            <Input
-              id="project-name"
-              autoFocus
-              required
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder={t("namePlaceholder")}
-            />
-          </div>
-          <div className="flex w-28 shrink-0 flex-col gap-1.5">
-            {/* La clé demande une explication, pas un hint permanent sous le
-                champ : elle tient dans un tooltip au survol du « i », et le
-                sous-titre de l'étape parle du projet. */}
-            <div className="flex items-center gap-1">
-              <label htmlFor="project-key" className="text-sm font-medium">
-                {t("keyLabel")}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-end gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <label htmlFor="project-name" className="text-sm font-medium">
+                {t("nameLabel")}
               </label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={t("keyTooltipLabel")}
-                    className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
-                  >
-                    <Info className="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-left">
-                  {t("keyTooltip", {
-                    entityPlural: tIssue("entityPlural").toLowerCase(),
-                    key: key || "MIND",
-                  })}
-                </TooltipContent>
-              </Tooltip>
+              <Input
+                id="project-name"
+                autoFocus
+                required
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder={t("namePlaceholder")}
+              />
             </div>
-            <Input
-              id="project-key"
-              required
-              value={key}
-              onChange={(e) => {
-                setKeyTouched(true);
-                setKey(normalizeKey(e.target.value));
-              }}
-              placeholder="MIND"
-              className="font-mono uppercase tracking-wide"
-              maxLength={5}
-            />
+            <div className="flex w-28 shrink-0 flex-col gap-1.5">
+              {/* La clé demande une explication, pas un hint permanent sous le
+                  champ : elle tient dans un tooltip au survol du « i », et le
+                  sous-titre de l'étape parle du projet. */}
+              <div className="flex items-center gap-1">
+                <label htmlFor="project-key" className="text-sm font-medium">
+                  {t("keyLabel")}
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={t("keyTooltipLabel")}
+                      className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+                    >
+                      <Info className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-left">
+                    {t("keyTooltip", {
+                      entityPlural: tIssue("entityPlural").toLowerCase(),
+                      key: key || "MIND",
+                    })}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Input
+                id="project-key"
+                required
+                value={key}
+                onChange={(e) => {
+                  setKeyTouched(true);
+                  setKey(normalizeKey(e.target.value));
+                }}
+                placeholder="MIND"
+                className="font-mono uppercase tracking-wide"
+                maxLength={5}
+              />
+            </div>
           </div>
+
+          {/* Un projet qui n'existe pas encore n'a pas forcément de nom, et le
+              wizard ne peut pas avancer sans. Plutôt que de bloquer sur un
+              champ vide : un nom de code, tiré au sort, qu'on rejoue autant de
+              fois qu'on veut — et qui se renomme comme n'importe quel autre.
+              Rien à proposer à qui reprend un projet existant : celui-là a déjà
+              son nom. */}
+          {origin === "new" &&
+            (showsSuggestion ? (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={suggestName}
+                      aria-label={t("wizardNameSuggestAnother")}
+                      className="flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                    >
+                      <RefreshCw className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("wizardNameSuggestAnother")}
+                  </TooltipContent>
+                </Tooltip>
+                <span>{t("wizardNameSuggestHint")}</span>
+              </div>
+            ) : name.trim() === "" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={suggestName}
+                className="h-auto self-start bg-transparent px-0 py-1 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+              >
+                <Sparkles className="size-3.5" />
+                {t("wizardNameSuggest")}
+              </Button>
+            ) : null)}
         </div>
       ),
     },

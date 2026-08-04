@@ -82,6 +82,8 @@ function prEventKey(
 const IMPORT_SOURCE_LABELS: Record<string, string> = {
   linear: "Linear",
   jira: "Jira",
+  // Un export minddy relu par minddy — le déménagement d'un projet à l'autre.
+  minddy: "minddy",
   csv: "CSV",
   // Backfill du dépôt lié à l'activation de la synchro d'issues (MIN-97).
   github: "GitHub",

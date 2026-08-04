@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, cn, toast } from "mangue-ui";
 import { Copy, ExternalLink } from "lucide-react";
 import { IMPORT_GUIDES, type ImportGuide } from "@/lib/import-guides";
+import { useModShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { BrandLogo } from "@/components/brand-logo";
 
 /**
@@ -33,6 +34,9 @@ export function ImportGuideBlock({
 }) {
   const t = useTranslations("Onboarding");
   const tc = useTranslations("Common");
+  // Linear et minddy ouvrent tous deux leur export au clavier : la phrase doit
+  // dire ⌘K à qui a un Mac et Ctrl+K à qui n'en a pas.
+  const shortcut = useModShortcut("K");
 
   const [guide, setGuide] = useState<ImportGuide>(IMPORT_GUIDES[0]);
 
@@ -81,10 +85,14 @@ export function ImportGuideBlock({
         })}
       </div>
 
+      {/* Les trois lignes reçoivent TOUTES `shortcut`, même celles qui ne s'en
+          servent pas : c'est la même clé assemblée à l'exécution, et next-intl
+          ignore une valeur de trop — alors qu'une valeur manquante afficherait
+          le chemin de la clé à l'écran. */}
       <ol className="ml-4 flex list-decimal flex-col gap-1 text-sm text-muted-foreground marker:text-muted-foreground/70">
-        <li>{t(`importGuide_${guide.id}_1`)}</li>
-        <li>{t(`importGuide_${guide.id}_2`)}</li>
-        <li>{t(`importGuide_${guide.id}_3`)}</li>
+        <li>{t(`importGuide_${guide.id}_1`, { shortcut })}</li>
+        <li>{t(`importGuide_${guide.id}_2`, { shortcut })}</li>
+        <li>{t(`importGuide_${guide.id}_3`, { shortcut })}</li>
       </ol>
 
       {guide.command && (
@@ -101,15 +109,19 @@ export function ImportGuideBlock({
         </div>
       )}
 
-      <a
-        href={guide.docUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-1 self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-      >
-        {t("importGuideDoc", { name: guide.label })}
-        <ExternalLink className="size-3" aria-hidden />
-      </a>
+      {/* minddy n'a pas de lien : sa marche à suivre se déroule dans l'app,
+          renvoyer « ailleurs » n'aurait rien de plus à montrer. */}
+      {guide.docUrl && (
+        <a
+          href={guide.docUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          {t("importGuideDoc", { name: guide.label })}
+          <ExternalLink className="size-3" aria-hidden />
+        </a>
+      )}
     </div>
   );
 }

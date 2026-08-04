@@ -196,6 +196,16 @@ export const mapStatusToken = (token: string): IssueStatusValue | null =>
   STATUS_ALIASES[token] ?? null;
 
 const PRIORITY_ALIASES: Record<string, IssuePriorityValue> = {
+  // « Pas de priorité » EST une priorité dans minddy (`none`), et les exports
+  // l'écrivent en toutes lettres : « No priority » chez Linear, « none » dans
+  // le nôtre. Sans ces alias, la valeur la plus fréquente d'une colonne de
+  // priorité passait pour intraduisible et déclenchait la passe du modèle.
+  none: "none",
+  aucune: "none",
+  aucun: "none",
+  "no priority": "none",
+  "sans priorite": "none",
+  "pas de priorite": "none",
   urgent: "urgent",
   urgente: "urgent",
   highest: "urgent",

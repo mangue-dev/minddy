@@ -8,11 +8,18 @@ import type {
   IssueStatusValue,
 } from "@/lib/issue-validation";
 
-/** D'où vient le lot importé : un CSV téléversé, le backfill d'un dépôt lié à
- *  l'activation de la synchro d'issues (MIN-97), ou la découpe d'un brief à
- *  l'amorce d'un projet (MIN-172) — cette valeur est celle que porte
- *  l'événement `imported` de la timeline. */
-export type ImportSource = "linear" | "jira" | "csv" | "github" | "gitlab" | "brief";
+/** D'où vient le lot importé : un CSV téléversé (dont un export minddy relu par
+ *  minddy), le backfill d'un dépôt lié à l'activation de la synchro d'issues
+ *  (MIN-97), ou la découpe d'un brief à l'amorce d'un projet (MIN-172) — cette
+ *  valeur est celle que porte l'événement `imported` de la timeline. */
+export type ImportSource =
+  | "linear"
+  | "jira"
+  | "minddy"
+  | "csv"
+  | "github"
+  | "gitlab"
+  | "brief";
 
 /**
  * Plafond par import — garde-fou contre un export raté qui inonderait un
