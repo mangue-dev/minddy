@@ -25,6 +25,7 @@ import {
   SettingsListRow,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { AutomationPresetPicker } from "@/components/automations/automation-preset-picker";
 import { ProjectOrb } from "@/components/project-orb";
@@ -400,7 +401,11 @@ export function AccountAutomationsSection() {
         description={t("projectsHint")}
       >
         {owned.length === 0 ? (
-          <SettingsEmpty>{t("projectsEmpty")}</SettingsEmpty>
+          <EmptyScene
+            size="compact"
+            icon={FolderKanban}
+            title={t("projectsEmpty")}
+          />
         ) : (
           owned.map((project) => (
             /* L'icône avant le nom : c'est à elle qu'on reconnaît un projet

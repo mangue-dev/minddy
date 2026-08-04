@@ -14,8 +14,8 @@ import {
   Skeleton,
   toast,
 } from "mangue-ui";
-import { CircleSlash, Repeat, User } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
+import { CircleSlash, Plus, Repeat, User } from "lucide-react";
+import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
@@ -26,6 +26,7 @@ import { fetchRecurrencesApi, updateIssueApi } from "@/lib/issues-api";
 import { RECURRENCE_CADENCES, type RecurrenceCadence } from "@/lib/recurrence";
 import { recurrenceLabel } from "@/lib/recurrence-label";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { useCreate } from "@/lib/create-context";
 import type { RecurringIssue } from "@/lib/types";
 
 /**
@@ -51,10 +52,12 @@ export function ProjectRecurrencesSection({
   description: string;
 }) {
   const t = useTranslations("Recurrence");
+  const tBoard = useTranslations("Board");
   const tField = useTranslations("Field");
   const format = useFormatter();
   const locale = useLocale();
   const { members } = useMembersQuery(projectId, true);
+  const { openCreateIssue } = useCreate();
 
   const [rows, setRows] = useState<RecurringIssue[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -114,11 +117,14 @@ export function ProjectRecurrencesSection({
           <Skeleton className="h-11 w-full" />
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState
-          icon={<Repeat className="size-6" />}
-          title={t("empty")}
-          description={t("emptyHint")}
-        />
+        /* Une récurrence ne se crée pas ici : elle naît d'un ticket auquel on
+           donne une cadence. Le geste offert est donc « nouveau ticket ». */
+        <EmptyScene size="compact" icon={Repeat} title={t("empty")}>
+          <Button type="button" size="sm" onClick={() => openCreateIssue()}>
+            <Plus />
+            {tBoard("newIssue")}
+          </Button>
+        </EmptyScene>
       ) : (
         rows.map((row) => {
           const ref = issueIdentifier(projectKey, row.number);

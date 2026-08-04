@@ -19,7 +19,7 @@ import {
 import { UserPlus, Users, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import {
   SettingsEmpty,
   SettingsListRow,
@@ -116,17 +116,11 @@ export function ProjectMembers({
             </p>
           </>
         ) : (
-          <EmptyState
-            className="px-6 py-8"
-            icon={<Users className="size-6" />}
-            title={tb("membersGateTitle")}
-            description={tb("membersGateDescription")}
-            action={
-              <Button asChild size="sm">
-                <Link href="/billing">{tb("membersGateCta")}</Link>
-              </Button>
-            }
-          />
+          <EmptyScene size="compact" icon={Users} title={tb("membersGateTitle")}>
+            <Button asChild size="sm">
+              <Link href="/billing">{tb("membersGateCta")}</Link>
+            </Button>
+          </EmptyScene>
         ))}
 
       <div className="flex flex-col gap-1">

@@ -13,6 +13,7 @@ import {
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -60,7 +61,11 @@ export function AccountConnectedAppsSection() {
         {loading ? (
           <SettingsEmpty>{tc("loading")}</SettingsEmpty>
         ) : grants.length === 0 ? (
-          <SettingsEmpty>{t("connectedAppsEmpty")}</SettingsEmpty>
+          <EmptyScene
+            size="compact"
+            icon={AppWindow}
+            title={t("connectedAppsEmpty")}
+          />
         ) : (
           grants.map((grant) => (
             <SettingsListRow

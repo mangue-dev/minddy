@@ -16,6 +16,7 @@ import {
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { GitConnection } from "@/lib/types";
 
@@ -58,7 +59,11 @@ export function AccountGitConnectionsSection() {
         {loading ? (
           <SettingsEmpty>{tc("loading")}</SettingsEmpty>
         ) : connections.length === 0 ? (
-          <SettingsEmpty>{t("gitConnectionsEmpty")}</SettingsEmpty>
+          <EmptyScene
+            size="compact"
+            icon={GitBranch}
+            title={t("gitConnectionsEmpty")}
+          />
         ) : (
           connections.map((c) => {
             const Icon = PROVIDER_ICON[c.provider];

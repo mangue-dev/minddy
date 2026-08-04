@@ -27,6 +27,7 @@ import {
   SettingsListRow,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { CandidateRepo } from "@/lib/types";
 
@@ -369,13 +370,13 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
 
   return group(
     "block",
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{t("gitEmptyOwner")}</p>
+    <EmptyScene size="compact" icon={GitBranch} title={t("gitEmptyOwner")}>
       <ProviderConnectButtons
+        inline
         onConnect={handleConnect}
         connecting={connecting}
         only={configuredIds}
       />
-    </div>,
+    </EmptyScene>,
   );
 }

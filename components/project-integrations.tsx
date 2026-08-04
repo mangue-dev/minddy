@@ -41,6 +41,7 @@ import {
   SettingsEmpty,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { EmptyScene } from "@/components/empty-scene";
 import type {
   Integration,
   IntegrationKind,
@@ -441,23 +442,32 @@ export function ProjectIntegrations({
 
   return (
     <div className="flex flex-col gap-4">
-      {isOwner ? (
+      {/* Le bouton vit au-dessus de la LISTE ; quand il n'y a rien à lister, il
+          descend dans la scène et n'est pas montré deux fois. */}
+      {isOwner && integrations.length > 0 ? (
         <div>
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {t("newIntegration")}
           </Button>
         </div>
-      ) : (
+      ) : !isOwner ? (
         <p className="text-xs text-muted-foreground">
           {t("integrationsOwnerOnlyHint")}
         </p>
-      )}
+      ) : null}
 
       {loading ? (
         <SettingsEmpty>{tc("loading")}</SettingsEmpty>
       ) : integrations.length === 0 ? (
-        <SettingsEmpty>{t("integrationsEmpty")}</SettingsEmpty>
+        <EmptyScene size="compact" icon={Plug} title={t("integrationsEmpty")}>
+          {isOwner && (
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus />
+              {t("newIntegration")}
+            </Button>
+          )}
+        </EmptyScene>
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {integrations.map((integration) => (

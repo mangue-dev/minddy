@@ -14,7 +14,8 @@ import {
   Button,
   cn,
 } from "mangue-ui";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { History, Loader2, Plus, Trash2 } from "lucide-react";
+import { EmptyScene } from "@/components/empty-scene";
 import { fetchConversations, deleteConversation } from "@/lib/assistant-api";
 import type { Conversation } from "@/lib/assistant-types";
 
@@ -136,10 +137,16 @@ export function ConversationList({
           </Button>
         )}
 
+        {/* Aucune conversation : la même scène que partout ailleurs, à la
+            taille du popover — le titre passe en encre, comme les autres états
+            vides, au lieu d'une ligne grise qu'on prend pour une note. */}
         {conversations.length === 0 && (
-          <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-            {t("noConversations")}
-          </p>
+          <EmptyScene
+            size="compact"
+            icon={History}
+            title={t("noConversations")}
+            className="px-0 py-4"
+          />
         )}
 
         {BUCKET_ORDER.map((bucket) => {
