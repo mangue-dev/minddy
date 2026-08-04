@@ -7,6 +7,9 @@ import {
   enableBoardForProject,
   getBoardForProject,
   rotateSsoSecret,
+  setBoardShowCategories,
+  setBoardShowViews,
+  setBoardVisibleViews,
 } from "@/lib/server/feedback/boards";
 import { getDomainForBoard } from "@/lib/server/custom-domains";
 
@@ -39,6 +42,8 @@ export interface FeedbackBoardConfig {
   sso_configured: boolean;
   show_categories: boolean;
   show_views: boolean;
+  /** Les vues partagées montrées en onglets quand `show_views` est vrai. */
+  visible_view_ids: string[];
 }
 
 const NO_BOARD: FeedbackBoardConfig = {
@@ -50,6 +55,7 @@ const NO_BOARD: FeedbackBoardConfig = {
   sso_configured: false,
   show_categories: false,
   show_views: false,
+  visible_view_ids: [],
 };
 
 export async function getFeedbackBoardConfig(
@@ -73,6 +79,7 @@ export async function getFeedbackBoardConfig(
     sso_configured: board.sso_secret !== null,
     show_categories: board.show_categories,
     show_views: board.show_views,
+    visible_view_ids: board.visible_view_ids ?? [],
   };
 }
 
@@ -94,10 +101,18 @@ export async function configureFeedbackBoard(input: {
   projectId: string;
   enabled?: boolean;
   generateSso?: boolean;
+  /** Options d'affichage de la page publique — mêmes bascules que le PATCH des
+   *  réglages, pour que Numo puisse RÉGLER ce que get_feedback_board lui LIT. */
+  showCategories?: boolean;
+  showViews?: boolean;
+  visibleViewIds?: string[];
   origin?: string;
 }): Promise<ConfigureBoardResult> {
-  const { projectId, enabled, generateSso } = input;
-  if (enabled === undefined && !generateSso) {
+  const { projectId, enabled, generateSso, showCategories, showViews, visibleViewIds } =
+    input;
+  const touchesDisplay =
+    showCategories !== undefined || showViews !== undefined || visibleViewIds !== undefined;
+  if (enabled === undefined && !generateSso && !touchesDisplay) {
     return { ok: false, errorKey: "noFieldsToUpdate" };
   }
 
@@ -107,6 +122,23 @@ export async function configureFeedbackBoard(input: {
   } else if (enabled === false) {
     const done = await disableBoardForProject(projectId);
     if (!done) return { ok: false, errorKey: "databaseError" };
+  }
+
+  // Les options d'affichage s'écrivent sur un board EXISTANT : sans board, il
+  // n'y a pas de page publique à régler.
+  if (touchesDisplay) {
+    if (!(await getBoardForProject(projectId))) {
+      return { ok: false, errorKey: "boardNotFound" };
+    }
+    if (showCategories !== undefined && !(await setBoardShowCategories(projectId, showCategories))) {
+      return { ok: false, errorKey: "databaseError" };
+    }
+    if (showViews !== undefined && !(await setBoardShowViews(projectId, showViews))) {
+      return { ok: false, errorKey: "databaseError" };
+    }
+    if (visibleViewIds !== undefined && !(await setBoardVisibleViews(projectId, visibleViewIds))) {
+      return { ok: false, errorKey: "databaseError" };
+    }
   }
 
   let ssoSecret: string | null = null;

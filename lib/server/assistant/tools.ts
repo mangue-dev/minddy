@@ -12,12 +12,20 @@ import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
+import { NOTIFICATION_CATEGORIES } from "@/lib/notification-prefs";
+import { AUTOMATION_PRESET_IDS } from "@/lib/automations";
+import { REASONING_LEVELS } from "@/lib/agent-reasoning";
+import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-validation";
+import { RELATION_TYPE_VALUES } from "@/lib/relation-validation";
+import { TRASH_TYPES } from "@/lib/server/trash";
+import { VIEW_SORTS } from "@/lib/server/views";
 import { locales } from "@/i18n/config";
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
 // Numo's tool surface over minddy: read + write issues (all fields, bulk),
-// comments, categories, kanban views, objectives, triage decisions. No
-// delete tools anywhere — cancellation goes through status changes.
+// comments, categories, kanban views, objectives, triage decisions, and the
+// trash (MIN-133) — deleting is a reversible move to the trash, never the
+// hard delete the nightly sweep does thirty days later.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AssistantToolDef = {
@@ -205,7 +213,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_issue",
       description:
-        "Get one issue in full: all fields, categories, comments (with author names), attachment metadata (file name/type/size, on the issue and per comment), sub-issues, and the duplicate target if any. Pass issue_id when known, or number (the N of KEY-N).",
+        "Get one issue in full: all fields, categories, comments (with author names), attachment metadata (file name/type/size, on the issue and per comment), sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), and the duplicate target if any. Pass issue_id when known, or number (the N of KEY-N).",
       parameters: {
         type: "object",
         properties: {
@@ -417,6 +425,37 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "link_issues",
+      description:
+        "Create or remove a relation between two issues (MIN-25) — the same links the user adds from an issue's Relations section. From `issue_id`'s point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes. Pass remove: true to delete the relation instead. Idempotent both ways. Read an issue's current relations with get_issue.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description: "The issue the relation is stated FROM (its perspective).",
+          },
+          relation: {
+            type: "string",
+            enum: [...RELATION_TYPE_VALUES],
+            description: "The relation, from issue_id's perspective.",
+          },
+          target_issue_id: {
+            type: "string",
+            description: "The other issue. Must be in the same project.",
+          },
+          remove: {
+            type: "boolean",
+            description: "Remove that relation instead of adding it (default false).",
+          },
+        },
+        required: ["issue_id", "relation", "target_issue_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "add_comment",
       description: "Add a comment (markdown) on an issue.",
       parameters: {
@@ -446,7 +485,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           sort: {
             type: "string",
-            enum: ["manual", "priority", "created", "updated", "due"],
+            enum: [...VIEW_SORTS],
             description: "Sort order (default manual).",
           },
           display: {
@@ -481,7 +520,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           sort: {
             type: "string",
-            enum: ["manual", "priority", "created", "updated", "due"],
+            enum: [...VIEW_SORTS],
           },
           display: {
             type: "object",
@@ -508,7 +547,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           description: { type: "string", description: "Markdown." },
           status: {
             type: "string",
-            enum: ["planned", "in_progress", "done", "canceled"],
+            enum: [...OBJECTIVE_STATUS_VALUES],
             description: "Default planned.",
           },
           lead_user_id: {
@@ -538,7 +577,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           description: { type: "string" },
           status: {
             type: "string",
-            enum: ["planned", "in_progress", "done", "canceled"],
+            enum: [...OBJECTIVE_STATUS_VALUES],
           },
           lead_user_id: { type: ["string", "null"] },
           target_date: { type: ["string", "null"] },
@@ -610,7 +649,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "configure_feedback_board",
       description:
-        "Publish or unpublish the project's public feedback board, and/or get its SSO secret. OWNER ONLY. enabled true creates the board if the project has none (collection through the API keeps working when it is off — only the public page 404s). generate_sso_secret true returns the HS256 secret used to pre-identify signed-in users on the board: it NEVER rotates an existing secret (that would break a live integration), it returns the current one or creates the first. The secret is a credential — surface it once, tell the user to put it in an env var (MINDDY_SSO_SECRET), never client-side.",
+        "Publish or unpublish the project's public feedback board, set its display options (categories shown on posts, shared views shown as tabs), and/or get its SSO secret. OWNER ONLY. Read the current values with get_feedback_board first. enabled true creates the board if the project has none (collection through the API keeps working when it is off — only the public page 404s). generate_sso_secret true returns the HS256 secret used to pre-identify signed-in users on the board: it NEVER rotates an existing secret (that would break a live integration), it returns the current one or creates the first. The secret is a credential — surface it once, tell the user to put it in an env var (MINDDY_SSO_SECRET), never client-side.",
       parameters: {
         type: "object",
         properties: {
@@ -622,6 +661,22 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "true returns the board's SSO secret (creating it if the board has none).",
+          },
+          show_categories: {
+            type: "boolean",
+            description:
+              "Show each post's categories on the public board. Needs an existing board.",
+          },
+          show_views: {
+            type: "boolean",
+            description:
+              "Show the project's shared views as tabs on the public site, next to the board.",
+          },
+          visible_view_ids: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Which shared views appear as tabs (view ids from list_views — a view must be shared to show up). REPLACES the whole list.",
           },
         },
       },
@@ -747,7 +802,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings: its name, its key (the KEY-N issue prefix, 2–5 uppercase letters) and/or its accent color. OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change.",
+        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, the automations switch (the agent loop), and the AI review of incoming feedback. OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan-gated: turning one ON can be refused for the owner's plan — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -760,6 +815,36 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           color: {
             type: ["string", "null"],
             description: "Accent color as a hex string like #7c5cff, or null to clear.",
+          },
+          auto_assign_enabled: {
+            type: "boolean",
+            description:
+              "Assign a newly created issue to whoever created it, for everyone on this project.",
+          },
+          smart_assign_enabled: {
+            type: "boolean",
+            description:
+              "Smart Assign: let the AI propose an assignee for a new issue from the per-member rules below. Plan-gated on activation.",
+          },
+          smart_assign_rules: {
+            type: "object",
+            description:
+              "Smart Assign rules, as a map user_id → one sentence describing what that person takes on (from list_members). REPLACES the whole map: resend the members you want to keep. An empty text drops a member's rule.",
+          },
+          automations_enabled: {
+            type: "boolean",
+            description:
+              "Arm the automation loop on THIS project: the account's automation preset then runs the code agent by itself on status changes. Plan-gated on activation. The preset itself is an ACCOUNT setting (update_account_settings, automation_preset) — you cannot write per-project rules.",
+          },
+          feedback_review_enabled: {
+            type: "boolean",
+            description:
+              "AI review of incoming feedback posts (categorization + moderation before they appear on the public board).",
+          },
+          feedback_review_skip_over_budget: {
+            type: "boolean",
+            description:
+              "Skip that AI review when the account is over its usage budget, instead of letting it consume.",
           },
         },
       },
@@ -821,7 +906,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_category",
       description:
-        "Rename and/or recolor an existing category (label). Get the id via list_categories. Only pass the fields to change. (Categories cannot be deleted.)",
+        "Rename and/or recolor an existing category (label). Get the id via list_categories. Only pass the fields to change. (You have no tool to delete a category — the user does that from the project's settings.)",
       parameters: {
         type: "object",
         properties: {
@@ -916,7 +1001,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, and the cycle preferences (enabled, duration, start day, intensity, auto-capture). Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model and reasoning level, and the automation preset. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -991,7 +1076,108 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Capture an uncycled assigned issue into the current cycle when it completes.",
           },
+          notif_assigned: {
+            type: "boolean",
+            description: "Inbox: notify when an issue is assigned to the user.",
+          },
+          notif_mention: {
+            type: "boolean",
+            description: "Inbox: notify when the user is mentioned.",
+          },
+          notif_comment: {
+            type: "boolean",
+            description: "Inbox: notify on comments on what the user follows.",
+          },
+          notif_agent: {
+            type: "boolean",
+            description: "Inbox: notify on code-agent activity (runs, pull requests).",
+          },
+          notif_feedback: {
+            type: "boolean",
+            description: "Inbox: notify on feedback-board activity.",
+          },
+          automation_preset: {
+            type: ["string", "null"],
+            enum: [...AUTOMATION_PRESET_IDS, null],
+            description:
+              "The automation loop applied to EVERY project this account owns (each project still has its own on/off switch — update_project, automations_enabled). null clears it: no loop at all, without touching each project.",
+          },
+          default_model: {
+            type: ["string", "null"],
+            description:
+              "The code agent's default model id for this account. Resolve the exact id with list_agent_models first — a model absent from the active provider, or above the plan's usage ceiling, is refused. null falls back to minddy's own default.",
+          },
+          default_reasoning_level: {
+            type: ["string", "null"],
+            enum: [...REASONING_LEVELS, null],
+            description:
+              "How much the code agent reasons before acting, by default. null falls back to minddy's default.",
+          },
         },
+      },
+    },
+  },
+  // ── Trash (MIN-133 — personal & cross-project, like the app's own) ────
+  {
+    type: "function",
+    function: {
+      name: "list_trash",
+      description:
+        "List what the user can still recover: the issues, objectives, feedback posts and projects deleted from their projects, newest first, with who deleted them and when. Deleted items stay here for a limited number of days (the result carries `retention_days`) and then go for good. Call it to answer 'what did I delete?' and to get the ids restore_from_trash takes.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: [...TRASH_TYPES],
+            description: "Only items of this kind. Omit for all.",
+          },
+          limit: { type: "number", description: "Max rows (default 50, max 200)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "move_to_trash",
+      description:
+        "Move an issue, objective, feedback post or project to the trash — the app's own delete. It is REVERSIBLE (restore_from_trash brings it back exactly as it was, comments, attachments, sub-issues and links included) but it takes the item out of every board and list, so confirm with ask_user first. Deleting is NOT the same as canceling: 'canceled' is a status that stays on the board and says the work was dropped, the trash says the item should not have existed. Do what the user actually asked for. A project can only be trashed by its owner; trashing one leaves its issues attached, so restoring it brings everything back. Nothing cascades and nothing is detached.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: [...TRASH_TYPES],
+            description: "What kind of item to trash.",
+          },
+          id: {
+            type: "string",
+            description:
+              "Id of the item (resolve it with list_issues / list_objectives / list_feedback / list_projects first).",
+          },
+        },
+        required: ["type", "id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "restore_from_trash",
+      description:
+        "Bring an item back from the trash, exactly as it was. Get the type and id from list_trash. Restoring an issue, objective or feedback whose PROJECT is itself in the trash fails — restore the project first.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: [...TRASH_TYPES],
+            description: "The item's kind, as given by list_trash.",
+          },
+          id: { type: "string", description: "The item's id, from list_trash." },
+        },
+        required: ["type", "id"],
       },
     },
   },
@@ -1350,6 +1536,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             description: "Optional exact model id to force (only when the user explicitly requests a specific model).",
           },
+          reasoning_level: {
+            type: "string",
+            enum: [...REASONING_LEVELS],
+            description:
+              "How much the agent reasons before acting, FOR THIS RUN ONLY. Pass it only when the user asks for it on this run ('réfléchis bien', 'vite fait') — otherwise omit it and their account default applies. To change that default, use update_account_settings (default_reasoning_level).",
+          },
         },
         // `mode` est REQUIS : sur un petit modèle, un champ optionnel n'est
         // simplement pas rempli — le choix du job serait alors toujours 'custom'
@@ -1363,7 +1555,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read the pull request the code agent opened for an issue: its title, description, state, branch, the per-file diffs (patches, capped), and the review comments anchored to specific lines of code (with their file:line anchor and the diff snippet they were written against). Use it to explain what a PR changes, review it, or answer questions about its content or the review feedback on it. Requires the issue to have an agent-opened PR.",
+        "Read the pull request attached to an issue: its title, description, state, branch, CI checks, the per-file diffs (patches, capped), and the review comments anchored to specific lines of code (with their file:line anchor and the diff snippet they were written against). Use it to explain what a PR changes, review it, or answer questions about its content or the review feedback on it. Works for ANY pull request of the linked repository attached to the issue — one the code agent opened, one a human opened that matched by convention, or one attached with link_pull_request. When the issue carries several, it reads the live one (draft or open), otherwise the most recently updated.",
       parameters: {
         type: "object",
         properties: {
@@ -1407,12 +1599,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
 
 // Tools that operate on the requesting user's own account, not on a project —
 // they must NOT receive a project_id (neither in global mode nor otherwise).
-// The cycle (MIN-32) and the task notebook are personal & cross-project, so
-// their tools live here too.
+// The cycle (MIN-32), the task notebook and the trash (MIN-133) are personal &
+// cross-project, so their tools live here too — the trash spans every project
+// the user can reach, and lib/server/trash.ts does its own access control.
 export const ACCOUNT_TOOLS = new Set([
   "get_account_settings",
   "update_account_settings",
   "list_agent_models",
+  "list_trash",
+  "move_to_trash",
+  "restore_from_trash",
   "get_cycle",
   "fill_cycle",
   "add_issues_to_cycle",

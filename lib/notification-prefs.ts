@@ -13,13 +13,17 @@ export const NOTIF_COMMENT_META_KEY = "notif_comment";
 export const NOTIF_AGENT_META_KEY = "notif_agent";
 export const NOTIF_FEEDBACK_META_KEY = "notif_feedback";
 
-/** One toggle per trigger family — finer grain would just be noise to manage. */
-export type NotificationCategory =
-  | "assigned"
-  | "mention"
-  | "comment"
-  | "agent"
-  | "feedback";
+/** One toggle per trigger family — finer grain would just be noise to manage.
+ *  Order = the settings UI's, and the one Numo's tool schema advertises. */
+export const NOTIFICATION_CATEGORIES = [
+  "assigned",
+  "mention",
+  "comment",
+  "agent",
+  "feedback",
+] as const;
+
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
 export interface NotificationPrefs {
   assigned: boolean;

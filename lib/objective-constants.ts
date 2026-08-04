@@ -1,7 +1,12 @@
 import { CircleDashed, CircleDot, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
 
-// Objective status is FIXED (plan.md §6).
-export type ObjectiveStatus = "planned" | "in_progress" | "done" | "canceled";
+// Objective status is FIXED (plan.md §6). The value list itself lives in
+// lib/objective-validation.ts, which imports nothing — server code (route
+// handlers, Numo's tool schemas) reads it there rather than dragging lucide in.
+export { OBJECTIVE_STATUS_VALUES, isObjectiveStatus } from "./objective-validation";
+export type { ObjectiveStatus } from "./objective-validation";
+
+import type { ObjectiveStatus } from "./objective-validation";
 
 // Labels are i18n'd — resolve via useTranslations("ObjectiveStatus")(value).
 export interface ObjectiveStatusMeta {
@@ -22,5 +27,3 @@ export const OBJECTIVE_STATUS_MAP: Record<ObjectiveStatus, ObjectiveStatusMeta> 
     ObjectiveStatus,
     ObjectiveStatusMeta
   >;
-
-export const OBJECTIVE_STATUS_VALUES = OBJECTIVE_STATUSES.map((s) => s.value);

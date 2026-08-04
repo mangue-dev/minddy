@@ -48,7 +48,9 @@ export type ViewResult =
       rawMessage?: string;
     };
 
-const VIEW_SORTS: readonly ViewSort[] = ["manual", "priority", "created", "updated", "due"];
+/** Exporté : Numo annonce exactement ces tris dans ses schémas d'outils
+    (lib/server/assistant/tools.ts), plutôt que d'en tenir une deuxième copie. */
+export const VIEW_SORTS: readonly ViewSort[] = ["manual", "priority", "created", "updated", "due"];
 
 // Bornes MIN-118 : le nom d'une vue reste court (tronqué au-delà), un filtre ne
 // référence jamais plus d'ids que ça, et un id (uuid ou sentinelle "@me") non plus.

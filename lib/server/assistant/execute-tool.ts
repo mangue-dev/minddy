@@ -6,6 +6,12 @@ import { createIssueForProject } from "@/lib/server/create-issue";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import { addCommentToIssue } from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
+import {
+  addIssueRelation,
+  findIssueRelation,
+  removeIssueRelation,
+} from "@/lib/server/issue-relations";
+import { RELATION_TYPE_VALUES, isRelationType } from "@/lib/relation-validation";
 import { createView, updateView } from "@/lib/server/views";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import { createCategory, updateCategory } from "@/lib/server/categories";
@@ -70,6 +76,14 @@ import {
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
+import {
+  isTrashType,
+  listTrash,
+  restoreItem,
+  softDeleteItem,
+  TRASH_RETENTION_DAYS,
+  TRASH_TYPES,
+} from "@/lib/server/trash";
 import { getProjectFeedbackPost } from "@/lib/server/feedback/team-guard";
 import { listTeamFeedback, getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -90,6 +104,7 @@ import {
   type LaunchMessageIssue,
 } from "@/lib/server/agent/launch-message";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
 import {
@@ -97,6 +112,7 @@ import {
   resolveProjectPullRequest,
   type PrLinkRefusal,
 } from "@/lib/server/agent/pr-link";
+import { findPullRequestForIssue } from "@/lib/server/agent/pull-requests";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import {
   runWebSearchTool,
@@ -235,6 +251,10 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
     "This project has no feedback board yet — pass enabled: true to create it.",
   webhookInvalidUrl: "The webhook URL is invalid (must be http/https).",
   webhookInvalidConfig: "The webhook events or scope are invalid.",
+  smartAssignNotAllowed:
+    "Smart Assign is not included in the owner's plan, so it cannot be turned on. Relay that as-is.",
+  automationsNotAllowed:
+    "Automations are not included in the owner's plan, so the loop cannot be armed on this project. Relay that as-is.",
   databaseError: "A database error occurred.",
 };
 
@@ -521,6 +541,15 @@ export async function executeTool(
       return r.ok
         ? { result: { settings: r.settings }, success: true }
         : toolError(r.error);
+    }
+
+    // ── Corbeille (MIN-133 — personnelle et inter-projets) ──────────────
+    if (
+      toolName === "list_trash" ||
+      toolName === "move_to_trash" ||
+      toolName === "restore_from_trash"
+    ) {
+      return executeTrashTool(toolName, args, ctx);
     }
 
     // ── Agent model catalog (per-account: resolved by the active provider) ──
@@ -863,6 +892,56 @@ export async function executeTool(
         return { result: { category_ids: result.categoryIds }, success: true };
       }
 
+      // Relations entre tickets (MIN-25) — même cœur que les routes HTTP et le
+      // tool MCP. Les DEUX bouts sont vérifiés dans le projet de la
+      // conversation : le cœur contrôle l'accès au projet, pas le fait que la
+      // cible en soit (une relation inter-projets n'existe pas).
+      case "link_issues": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const targetId =
+          typeof args.target_issue_id === "string" ? args.target_issue_id : "";
+        const relation = isRelationType(args.relation) ? args.relation : null;
+        if (!relation) {
+          return toolError(
+            `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`
+          );
+        }
+        if (issueId === targetId) {
+          return toolError("An issue cannot be related to itself.");
+        }
+        for (const id of [issueId, targetId]) {
+          const scoped = await assertIssueInProject(ctx.supabase, id, projectId);
+          if (!scoped.ok) return toolError(scoped.error);
+        }
+
+        if (args.remove === true) {
+          const existing = await findIssueRelation(projectId, issueId, relation, targetId);
+          // Idempotent, comme le tool MCP : retirer ce qui n'est pas là n'est
+          // pas une erreur, c'est déjà l'état demandé.
+          if (!existing) {
+            return { result: { removed: false, relation }, success: true };
+          }
+          const removed = await removeIssueRelation({
+            relationId: existing.id,
+            actorId: ctx.userId,
+            viaAssistant: true,
+          });
+          if (!removed.ok) return libError(removed);
+          return { result: { removed: true, relation }, success: true };
+        }
+
+        const added = await addIssueRelation({
+          projectId,
+          actorId: ctx.userId,
+          sourceId: issueId,
+          targetId,
+          type: relation,
+          viaAssistant: true,
+        });
+        if (!added.ok) return libError(added);
+        return { result: { added: true, relation }, success: true };
+      }
+
       case "add_comment": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
@@ -925,6 +1004,10 @@ export async function executeTool(
           prompt: message,
           model,
           forced: !!model,
+          // Omis = le défaut du compte s'applique (resolveReasoningLevel).
+          ...(isReasoningLevel(args.reasoning_level)
+            ? { reasoningLevel: args.reasoning_level }
+            : {}),
           // Cadrer ne fait pas démarrer le ticket ; implémenter et vérifier, si.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
@@ -936,6 +1019,7 @@ export async function executeTool(
             run_id: result.run.id,
             status: result.run.status,
             model: result.run.model,
+            reasoning_level: result.run.reasoning_level,
           },
           success: true,
         };
@@ -946,18 +1030,34 @@ export async function executeTool(
         const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
         if (!scoped.ok) return toolError(scoped.error);
 
-        // Canonical run for the issue's PR (earliest run that opened it).
-        const { data: run } = await ctx.supabase
-          .from("agent_runs")
-          .select("pr_number, pr_url, pr_state, branch_name, base_branch")
-          .eq("issue_id", issueId)
-          .not("pr_number", "is", null)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        const prNumber = (run as { pr_number?: number } | null)?.pr_number;
-        if (!run || prNumber == null) {
-          return toolError("This issue has no pull request opened by the code agent yet.");
+        // La PR du ticket vient de `pull_requests`, source de vérité depuis
+        // MIN-143 : une PR humaine, ou rattachée par convention (identifiant
+        // dans la branche, « Fixes KEY-42 »), ou rattachée après coup par
+        // link_pull_request, n'a AUCUN run — la chercher dans `agent_runs`
+        // faisait échouer l'outil sur une PR que l'utilisateur avait sous les
+        // yeux. Le repli sur le run couvre les lignes d'avant la table.
+        const linkedPr = await findPullRequestForIssue(issueId);
+        let prNumber = linkedPr?.number ?? null;
+        if (prNumber == null) {
+          // Repli aligné sur findPullRequestForIssue : la PR VIVANTE d'abord,
+          // sinon la plus récente. Un ticket d'avant la table peut porter
+          // plusieurs runs à PR (reprises successives) — prendre la plus
+          // ancienne ferait lire une PR fermée depuis des semaines pendant
+          // qu'une autre est ouverte.
+          const { data: runs } = await ctx.supabase
+            .from("agent_runs")
+            .select("pr_number, pr_state")
+            .eq("issue_id", issueId)
+            .not("pr_number", "is", null)
+            .order("created_at", { ascending: false });
+          const rows = (runs ?? []) as { pr_number: number; pr_state: string | null }[];
+          const live = rows.find(
+            (r) => r.pr_state === "draft" || r.pr_state === "open"
+          );
+          prNumber = (live ?? rows[0])?.pr_number ?? null;
+        }
+        if (prNumber == null) {
+          return toolError("This issue has no pull request attached yet.");
         }
 
         const target = await resolveRepoCloneTarget(projectId);
@@ -1228,6 +1328,12 @@ export async function executeTool(
           projectId,
           enabled: typeof args.enabled === "boolean" ? args.enabled : undefined,
           generateSso: args.generate_sso_secret === true,
+          showCategories:
+            typeof args.show_categories === "boolean" ? args.show_categories : undefined,
+          showViews: typeof args.show_views === "boolean" ? args.show_views : undefined,
+          visibleViewIds: Array.isArray(args.visible_view_ids)
+            ? args.visible_view_ids.filter((v): v is string => typeof v === "string")
+            : undefined,
           origin: SITE_URL,
         });
         if (!result.ok) return settingsError(result.errorKey);
@@ -1428,6 +1534,13 @@ export async function executeTool(
               name: result.project.name,
               key: result.project.key,
               color: result.project.color,
+              auto_assign_enabled: result.project.auto_assign_enabled,
+              smart_assign_enabled: result.project.smart_assign_enabled,
+              smart_assign_rules: result.project.smart_assign_rules,
+              automations_enabled: result.project.automations_enabled,
+              feedback_review_enabled: result.project.feedback_review_enabled,
+              feedback_review_skip_over_budget:
+                result.project.feedback_review_skip_over_budget,
             },
           },
           success: true,
@@ -1605,6 +1718,80 @@ function parseIssueIds(args: Record<string, unknown>): string[] | null {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 50) return null;
   const ids = raw.filter((v): v is string => typeof v === "string" && v.length > 0);
   return ids.length === raw.length ? ids : null;
+}
+
+// ── Corbeille (MIN-133) ────────────────────────────────────────────────
+// Les trois outils délèguent à lib/server/trash.ts, qui porte SES contrôles
+// d'accès (client service, RLS contournée) : un membre du projet supprime et
+// restaure son contenu, un projet ne répond qu'à son propriétaire. Rien à
+// vérifier ici, donc — comme les routes de /api/me/trash.
+//
+// La purge définitive n'est délibérément PAS exposée : elle ne se rattrape pas,
+// et le balayage nocturne la fait de toute façon au bout des 30 jours. Ce que
+// Numo peut faire reste réversible.
+
+/** Message lisible pour Numo — les cœurs rendent des clés i18n, pas des phrases. */
+const TRASH_ERROR_MESSAGES: Record<string, string> = {
+  issueNotFound: "Issue not found, or not in a project you can access.",
+  objectiveNotFound: "Objective not found, or not in a project you can access.",
+  feedbackNotFound: "Feedback post not found, or not in a project you can access.",
+  projectNotFound: "Project not found, or not accessible.",
+  ownerOnly: "Only the project owner can trash or restore a project.",
+  projectKeyAlreadyUsed:
+    "Its key is now used by another project — restoring it would collide. Rename that other project's key first.",
+  databaseError: "A database error occurred.",
+};
+
+async function executeTrashTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext
+): Promise<ToolExecution> {
+  if (toolName === "list_trash") {
+    const items = await listTrash(ctx.userId, ctx.supabase);
+    const type = typeof args.type === "string" && isTrashType(args.type) ? args.type : null;
+    const limit =
+      typeof args.limit === "number" ? Math.min(Math.max(1, args.limit), 200) : 50;
+    const rows = items
+      .filter((i) => !type || i.type === type)
+      .slice(0, limit)
+      .map((i) => ({
+        type: i.type,
+        id: i.id,
+        title: i.title,
+        identifier: i.identifier,
+        project_name: i.project_name,
+        deleted_at: i.deleted_at,
+        deleted_by: i.deleted_by?.full_name ?? null,
+      }));
+    return {
+      result: { items: rows, retention_days: TRASH_RETENTION_DAYS },
+      success: true,
+    };
+  }
+
+  const type = typeof args.type === "string" && isTrashType(args.type) ? args.type : null;
+  const id = typeof args.id === "string" ? args.id.trim() : "";
+  if (!type || !id) {
+    return toolError(
+      `Pass both type (${TRASH_TYPES.join(", ")}) and the item's id.`
+    );
+  }
+
+  const result =
+    toolName === "move_to_trash"
+      ? await softDeleteItem(type, id, ctx.userId)
+      : await restoreItem(type, id, ctx.userId);
+  if (!result.ok) {
+    return toolError(TRASH_ERROR_MESSAGES[result.errorKey] ?? result.errorKey);
+  }
+  return {
+    result:
+      toolName === "move_to_trash"
+        ? { trashed: true, type, id, retention_days: TRASH_RETENTION_DAYS }
+        : { restored: true, type, id },
+    success: true,
+  };
 }
 
 async function executeCycleTool(

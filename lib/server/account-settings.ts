@@ -32,6 +32,16 @@ import {
   resolveAutomationPreset,
   type AutomationPresetId,
 } from "@/lib/automations";
+import {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_CATEGORY_META_KEYS,
+  resolveNotificationPrefs,
+  type NotificationPrefs,
+} from "@/lib/notification-prefs";
+import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
+import { userHasByokKey } from "@/lib/server/agent/model";
+import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { emailLocalPart } from "@/lib/display-name";
 
 /**
@@ -57,16 +67,70 @@ export interface AccountSettings {
   /** Préréglage d'automatisation (MIN-147) : la boucle Numo appliquée à TOUS les
    *  projets dont ce compte est propriétaire. `null` = aucun. */
   automation_preset: AutomationPresetId | null;
+  /** Inbox (MIN-82) — une bascule par famille de déclencheur. */
+  notifications: NotificationPrefs;
+  /** Préférences de l'agent de code (MIN-46 / MIN-122). Seul réglage de compte
+   *  qui ne vit PAS dans `user_metadata` mais dans `user_agent_preferences` —
+   *  d'où sa lecture à part. `null` = suit le défaut de l'app. */
+  agent: AgentPrefs;
 }
+
+export interface AgentPrefs {
+  default_model: string | null;
+  default_reasoning_level: ReasoningLevel | null;
+}
+
+/** Même garde-fou que le PUT de /api/account/agent-preferences : `provider/model`
+    (OpenRouter) comme les ids natifs sans slash. Pas d'allowlist. */
+const MODEL_ID_RE = /^[\w./:@-]{1,200}$/;
 
 function metaString(meta: Record<string, unknown>, key: string): string {
   const v = meta[key];
   return typeof v === "string" ? v.trim() : "";
 }
 
+/**
+ * Les préférences agent du compte, lues dans `user_agent_preferences`.
+ *
+ * ABSENCE DE LIGNE ET PANNE DE LECTURE NE SONT PAS LA MÊME CHOSE. Un compte qui
+ * n'a jamais touché à ces réglages n'a pas de ligne — c'est le cas courant, et
+ * il vaut « aucune préférence ». Une erreur de base, elle, remonte : la rendre
+ * comme « aucune préférence » ferait dire à Numo « vous n'avez pas de modèle par
+ * défaut » à quelqu'un qui en a un, et fabriquer un état valide mais faux est
+ * pire que d'échouer.
+ */
+async function readAgentPrefs(
+  userId: string
+): Promise<{ ok: true; prefs: AgentPrefs } | { ok: false; error: string }> {
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("user_agent_preferences")
+    .select("default_model, default_reasoning_level")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) {
+    console.error("[account-settings] agent prefs read failed:", error.message);
+    return { ok: false, error: error.message };
+  }
+  const row = data as {
+    default_model: string | null;
+    default_reasoning_level: string | null;
+  } | null;
+  return {
+    ok: true,
+    prefs: {
+      default_model: row?.default_model ?? null,
+      default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
+        ? row.default_reasoning_level
+        : null,
+    },
+  };
+}
+
 function toSettings(
   meta: Record<string, unknown>,
-  email: string | null
+  email: string | null,
+  agent: AgentPrefs
 ): AccountSettings {
   const rawLocale = meta.locale;
   const locale: Locale = locales.includes(rawLocale as Locale)
@@ -87,6 +151,8 @@ function toSettings(
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
     cycles: resolveCyclePrefs(meta),
     automation_preset: resolveAutomationPreset(meta),
+    notifications: resolveNotificationPrefs(meta),
+    agent,
   };
 }
 
@@ -98,12 +164,19 @@ export async function getAccountSettings({
   { ok: true; settings: AccountSettings } | { ok: false; error: string }
 > {
   const service = getServiceClient();
-  const { data, error } = await service.auth.admin.getUserById(userId);
+  const [{ data, error }, agent] = await Promise.all([
+    service.auth.admin.getUserById(userId),
+    readAgentPrefs(userId),
+  ]);
   if (error || !data.user) {
     return { ok: false, error: error?.message ?? "Account not found." };
   }
+  if (!agent.ok) return { ok: false, error: agent.error };
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
-  return { ok: true, settings: toSettings(meta, data.user.email ?? null) };
+  return {
+    ok: true,
+    settings: toSettings(meta, data.user.email ?? null, agent.prefs),
+  };
 }
 
 export async function updateAccountSettings({
@@ -176,6 +249,17 @@ export async function updateAccountSettings({
     }
   }
 
+  // Inbox (MIN-82) — une bascule par famille, clés d'entrée = clés de meta.
+  for (const category of NOTIFICATION_CATEGORIES) {
+    const key = NOTIFICATION_CATEGORY_META_KEYS[category];
+    if (key in input) {
+      if (typeof input[key] !== "boolean") {
+        return { ok: false, error: `${key} must be a boolean.` };
+      }
+      next[key] = input[key];
+    }
+  }
+
   // Cycles (MIN-32) — same flat input keys as the meta keys.
   for (const key of [
     CYCLES_ENABLED_META_KEY,
@@ -216,6 +300,51 @@ export async function updateAccountSettings({
     next[CYCLE_UPCOMING_COUNT_META_KEY] = n;
   }
 
+  // Préférences agent (MIN-46 / MIN-122) : seul bloc qui ne vit pas dans
+  // `user_metadata`. Validé et écrit exactement comme le PUT de
+  // /api/account/agent-preferences, plafond de plan compris — refuser ici ce
+  // qui serait refusé au lancement évite d'enregistrer une préférence qui
+  // bloquerait ensuite tous les runs du compte.
+  const agentPatch: Record<string, unknown> = {};
+  if ("default_model" in input) {
+    const model = input.default_model ?? null;
+    if (model !== null && (typeof model !== "string" || !MODEL_ID_RE.test(model.trim()))) {
+      return { ok: false, error: "default_model is not a valid model id." };
+    }
+    agentPatch.default_model = model === null ? null : (model as string).trim();
+    if (agentPatch.default_model) {
+      try {
+        await ensureModelInPlan({
+          userId,
+          model: agentPatch.default_model as string,
+          mode: (await userHasByokKey(userId)) ? "byok" : "platform",
+        });
+      } catch (err) {
+        if (isPlanLimitError(err)) {
+          // Les paramètres portent le modèle, son multiplicateur et le plafond :
+          // les relayer permet à Numo de proposer autre chose, là où un
+          // « modèle refusé » sec obligerait l'utilisateur à deviner.
+          const p = err.params ?? {};
+          return {
+            ok: false,
+            error:
+              p.model !== undefined
+                ? `The model ${p.model} costs ×${p.multiplier} the usage of minddy's default model, above the ×${p.limit} ceiling of the ${p.plan} plan. Pick a cheaper model (list_agent_models) or the user can upgrade their plan.`
+                : "That model is above the usage ceiling of this account's plan.",
+          };
+        }
+        throw err;
+      }
+    }
+  }
+  if ("default_reasoning_level" in input) {
+    const level = input.default_reasoning_level ?? null;
+    if (level !== null && !isReasoningLevel(level)) {
+      return { ok: false, error: "default_reasoning_level must be off, low, medium or high." };
+    }
+    agentPatch.default_reasoning_level = level;
+  }
+
   // Nothing recognised to change.
   const CHANGEABLE = [
     "display_name",
@@ -224,6 +353,10 @@ export async function updateAccountSettings({
     "auto_assign_created",
     "auto_assign_on_start",
     "prompt_copy_auto_start",
+    // Sans lui, un appel ne portant QUE le préréglage sortait ici en « rien à
+    // changer » — alors que le bloc qui l'écrit venait juste de le poser.
+    AUTOMATION_PRESET_META_KEY,
+    ...NOTIFICATION_CATEGORIES.map((c) => NOTIFICATION_CATEGORY_META_KEYS[c]),
     CYCLES_ENABLED_META_KEY,
     CYCLE_DURATION_WEEKS_META_KEY,
     CYCLE_START_DOW_META_KEY,
@@ -232,16 +365,35 @@ export async function updateAccountSettings({
     CYCLE_AUTO_CAPTURE_STARTED_META_KEY,
     CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
   ];
-  if (!CHANGEABLE.some((k) => k in input)) {
+  const metaChanged = CHANGEABLE.some((k) => k in input);
+  if (!metaChanged && Object.keys(agentPatch).length === 0) {
     return { ok: false, error: "No account settings to update." };
   }
 
-  const { data: updated, error: writeErr } =
-    await service.auth.admin.updateUserById(userId, { user_metadata: next });
-  if (writeErr || !updated.user) {
-    console.error("[account-settings] update failed:", writeErr?.message);
-    return { ok: false, error: writeErr?.message ?? "Update failed." };
+  if (Object.keys(agentPatch).length > 0) {
+    const { error: agentErr } = await service
+      .from("user_agent_preferences")
+      .upsert(
+        { user_id: userId, updated_at: new Date().toISOString(), ...agentPatch },
+        { onConflict: "user_id" }
+      );
+    if (agentErr) {
+      console.error("[account-settings] agent prefs update failed:", agentErr.message);
+      return { ok: false, error: agentErr.message };
+    }
   }
-  const updatedMeta = (updated.user.user_metadata ?? {}) as Record<string, unknown>;
-  return { ok: true, settings: toSettings(updatedMeta, updated.user.email ?? null) };
+
+  if (metaChanged) {
+    const { error: writeErr } = await service.auth.admin.updateUserById(userId, {
+      user_metadata: next,
+    });
+    if (writeErr) {
+      console.error("[account-settings] update failed:", writeErr.message);
+      return { ok: false, error: writeErr.message };
+    }
+  }
+
+  // Un SEUL chemin pour construire l'état rendu, quel que soit ce qui a bougé —
+  // et il propage une panne de lecture au lieu d'inventer des valeurs.
+  return getAccountSettings({ userId });
 }

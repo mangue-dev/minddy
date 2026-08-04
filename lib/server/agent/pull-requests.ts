@@ -332,6 +332,31 @@ export async function hasLivePullRequest(issueId: string): Promise<boolean> {
   return (data ?? []).length > 0;
 }
 
+/**
+ * LA pull request d'un ticket, au sens de « celle dont on parle ».
+ *
+ * Un ticket peut en porter plusieurs au fil des runs (cf. `hasLivePullRequest`),
+ * mais une seule est vivante à la fois : c'est elle qu'on veut, et à défaut la
+ * plus récemment touchée chez la forge. L'ordre est le même que celui de la page
+ * Pull Requests, pour que « cette PR » désigne la même chose des deux côtés.
+ *
+ * Aucun filtre sur l'origine : une PR humaine, une PR rattachée par convention
+ * et une PR ouverte par l'agent sont la même entité depuis MIN-143. L'appelant
+ * a déjà vérifié son accès au ticket.
+ */
+export async function findPullRequestForIssue(
+  issueId: string,
+): Promise<PullRequestRow | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("pull_requests")
+    .select(PR_COLUMNS)
+    .eq("issue_id", issueId)
+    .order("updated_at", { ascending: false });
+  const rows = (data ?? []) as unknown as PullRequestRow[];
+  return rows.find((r) => r.state === "draft" || r.state === "open") ?? rows[0] ?? null;
+}
+
 // ── Rattachement au ticket ───────────────────────────────────────────────────
 
 export interface RepoProject {

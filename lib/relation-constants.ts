@@ -1,5 +1,6 @@
 import { Ban, OctagonX, Link2, type LucideIcon } from "lucide-react";
 import type { IssueRelation, IssueRelationType, ResolvedRelation } from "./types";
+import { RELATION_TYPE_VALUES } from "./relation-validation";
 import { isClosedStatus, type IssueStatus } from "./issue-constants";
 
 // Issue relations (MIN-25). Two edges are stored — `blocks` (directed) and
@@ -36,12 +37,10 @@ export const RELATION_PRIORITY: IssueRelationType[] = [
   "related",
 ];
 
-/** The three relation types a user can pick when adding, in menu order. */
-export const RELATION_TYPES: IssueRelationType[] = [
-  "blocks",
-  "blocked_by",
-  "related",
-];
+/** The three relation types a user can pick when adding, in menu order.
+    Same list as RELATION_TYPE_VALUES (lib/relation-validation.ts), typed mutable
+    for the menus that map over it. */
+export const RELATION_TYPES: IssueRelationType[] = [...RELATION_TYPE_VALUES];
 
 /**
  * Resolve every relation touching `issueId` from that issue's perspective:
@@ -130,5 +129,4 @@ export function normalizeRelation(
   return { source_id: sourceId, target_id: targetId, type: "blocks" };
 }
 
-export const isRelationType = (v: unknown): v is IssueRelationType =>
-  v === "blocks" || v === "blocked_by" || v === "related";
+export { isRelationType, RELATION_TYPE_VALUES } from "./relation-validation";

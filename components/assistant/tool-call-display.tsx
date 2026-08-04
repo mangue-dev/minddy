@@ -18,17 +18,21 @@ import {
   FileX,
   Filter,
   FolderTree,
+  GitPullRequest,
   Globe,
   IterationCw,
   LayoutGrid,
+  Link2,
   List,
   ListChecks,
   MailX,
   MessageCircleQuestion,
   MessageSquare,
+  MessagesSquare,
   Notebook,
   NotebookPen,
   Plug,
+  RotateCcw,
   Search,
   Settings2,
   SlidersHorizontal,
@@ -37,6 +41,7 @@ import {
   Tags,
   Target,
   Terminal,
+  Trash2,
   User,
   UserCog,
   UserMinus,
@@ -429,6 +434,149 @@ const TOOL_META: Record<string, ToolMeta> = {
       if (args.enabled === true) return t("feedbackBoardPublished");
       if (args.enabled === false) return t("feedbackBoardUnpublished");
       return t("feedbackBoardConfigured");
+    },
+  },
+  list_integrations: {
+    icon: Plug,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingIntegrations");
+      return t("foundIntegrations", {
+        count: resultCount(result, "integrations"),
+      });
+    },
+  },
+  link_issues: {
+    icon: Link2,
+    getLabel: (args, _result, success, status, t) => {
+      const removing = args.remove === true;
+      if (status === "running")
+        return removing ? t("unlinkingIssues") : t("linkingIssues");
+      if (!success) return removing ? t("unlinkIssuesFailed") : t("linkIssuesFailed");
+      return removing ? t("issuesUnlinked") : t("issuesLinked");
+    },
+  },
+  // ── Feedback ─────────────────────────────────────────────────────────
+  list_feedback: {
+    icon: MessagesSquare,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingFeedback");
+      return t("foundFeedback", { count: resultCount(result, "feedback") });
+    },
+  },
+  get_feedback: {
+    icon: MessagesSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingFeedbackPost");
+      return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
+    },
+  },
+  promote_feedback_to_issue: {
+    icon: FilePlus2,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("promotingFeedback");
+      if (!success) return t("promoteFeedbackFailed");
+      const issue = result?.issue as Record<string, unknown> | undefined;
+      const identifier =
+        typeof issue?.identifier === "string" ? issue.identifier : null;
+      return identifier
+        ? t("feedbackPromotedWithId", { identifier })
+        : t("feedbackPromoted");
+    },
+  },
+  link_feedback_to_issue: {
+    icon: Link2,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("linkingFeedback");
+      return success ? t("feedbackLinked") : t("linkFeedbackFailed");
+    },
+  },
+  unlink_feedback: {
+    icon: Link2,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("unlinkingFeedback");
+      return success ? t("feedbackUnlinked") : t("unlinkFeedbackFailed");
+    },
+  },
+  respond_to_feedback: {
+    icon: MessagesSquare,
+    getLabel: (args, _result, success, status, t) => {
+      // La réponse publique VIDÉE n'est pas une réponse publiée : c'est son
+      // retrait, et c'est ce que l'utilisateur doit lire dans le fil.
+      const clearing = typeof args.response === "string" && !args.response.trim();
+      if (status === "running")
+        return clearing ? t("clearingFeedbackResponse") : t("respondingToFeedback");
+      if (!success) return t("respondToFeedbackFailed");
+      return clearing ? t("feedbackResponseCleared") : t("feedbackResponded");
+    },
+  },
+  // ── Agent de code & pull requests ────────────────────────────────────
+  list_agent_models: {
+    icon: Bot,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingAgentModels");
+      return t("foundAgentModels", { count: resultCount(result, "models") });
+    },
+  },
+  launch_code_agent: {
+    icon: Sparkles,
+    getLabel: (args, result, success, status, t) => {
+      if (status === "running") return t("launchingCodeAgent");
+      if (!success) return t("launchCodeAgentFailed");
+      // Une run déjà en cours reçoit le message en PILOTAGE : le dire, sinon
+      // « agent lancé » sur une run qui tournait déjà induit en erreur.
+      if (result?.continued === true) return t("codeAgentSteered");
+      const mode = typeof args.mode === "string" ? args.mode : "";
+      if (mode === "plan") return t("codeAgentLaunchedPlan");
+      if (mode === "implement") return t("codeAgentLaunchedImplement");
+      if (mode === "verify") return t("codeAgentLaunchedVerify");
+      return t("codeAgentLaunched");
+    },
+  },
+  read_pull_request: {
+    icon: GitPullRequest,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingPullRequest");
+      if (!success) return t("pullRequestNotFound");
+      const number = typeof result?.number === "number" ? result.number : null;
+      return number != null
+        ? t("pullRequestLoadedWithNumber", { number })
+        : t("pullRequestLoaded");
+    },
+  },
+  link_pull_request: {
+    icon: GitPullRequest,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("linkingPullRequest");
+      return success ? t("pullRequestLinked") : t("linkPullRequestFailed");
+    },
+  },
+  // ── Corbeille (MIN-133) ──────────────────────────────────────────────
+  list_trash: {
+    icon: Trash2,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingTrash");
+      return t("foundTrashItems", { count: resultCount(result, "items") });
+    },
+  },
+  move_to_trash: {
+    icon: Trash2,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("movingToTrash");
+      return success ? t("movedToTrash") : t("moveToTrashFailed");
+    },
+  },
+  restore_from_trash: {
+    icon: RotateCcw,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("restoringFromTrash");
+      return success ? t("restoredFromTrash") : t("restoreFromTrashFailed");
+    },
+  },
+  list_global_filter_options: {
+    icon: SlidersHorizontal,
+    getLabel: (_args, _result, _success, status, t) => {
+      if (status === "running") return t("loadingFilterOptions");
+      return t("filterOptionsLoaded");
     },
   },
   get_account_settings: {
