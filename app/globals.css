@@ -327,6 +327,16 @@
   --sidebar-accent: oklch(0.255 0.005 264); /* item actif / survolé de la sidebar */
   --secondary: oklch(0.268 0.005 264);
   --accent: oklch(0.276 0.005 264);
+
+  /* --control manquait à cette liste : tant qu'il ne portait que les champs de
+     formulaire, sa bordure marquée (--input) suffisait à les détacher malgré un
+     0.215 confondu avec la carte. Depuis mangue-ui 0.5.0 il porte aussi les
+     pastilles neutres (Badge secondary, StatusChip, ModelBadge, CategoryPill),
+     qui n'ont qu'un liseré — un aplat à la couleur exacte du fond les faisait
+     disparaître. Mêmes écarts à la carte que la lib (+0.045 et +0.075), teinte
+     alignée sur 264 comme les tokens ci-dessus. */
+  --control: oklch(0.259 0.005 264);
+  --control-hover: oklch(0.289 0.005 264);
 }
 
 /* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
