@@ -4,15 +4,17 @@ import { useSyncExternalStore } from "react";
 
 /**
  * Brouillon « optimiste » de lancement d'agent, posé par un bouton « Lancer un
- * agent » (panneau d'issue, carte — ou le CARNET, MIN-84, ou le bouton
- * « Nouveau » de la page Agents) puis lu par la page Agents. Il porte juste de
- * quoi dessiner une ENTRÉE synthétique dans la liste et amorcer la conversation
- * en compose. Purement UI : si l'utilisateur n'envoie jamais le 1er message,
- * l'entrée est effacée sans qu'aucune run n'ait existé.
+ * agent » (panneau d'issue, carte — ou le CARNET, MIN-84, ou un wizard
+ * d'intégration) puis lu par la page Agents. Il porte juste de quoi OUVRIR le
+ * bon volet et amorcer la conversation en compose. Purement UI : si
+ * l'utilisateur n'envoie jamais le 1er message, il est effacé sans qu'aucune run
+ * n'ait existé — et sans qu'aucune entrée n'ait jamais paru dans la liste, qui
+ * ne montre que les conversations réelles.
  *
  * Deux formes : `issue` (ancré à un ticket, `?compose=<issueId>`) et `free`
  * (conversation SANS ticket — le projet se choisit dans le composer ou arrive
- * pré-choisi, `?compose=new`).
+ * pré-choisi, `?compose=new`). La conversation vierge de la page Agents, elle,
+ * ne pose AUCUN brouillon : c'est sa vue par défaut, il n'y a rien à pré-écrire.
  *
  * Store module-level (pas de contexte) : il n'a qu'un producteur à la fois et
  * un seul consommateur (la page), et doit survivre à la navigation `router.push`
@@ -55,17 +57,15 @@ export interface AgentFreeComposeDraft {
   kind: "free";
   /**
    * Texte PRÉ-ÉCRIT du composer, éditable avant envoi : une note du carnet
-   * (MIN-84), un prompt d'intégration — ou la chaîne VIDE quand la conversation
-   * part de zéro (bouton « Nouveau » de la page Agents), où c'est l'utilisateur
-   * qui dit sur quoi lancer l'agent.
+   * (MIN-84), un prompt d'intégration. Une conversation qui part de zéro ne pose
+   * pas de brouillon du tout — c'est la vue par défaut de la page Agents.
    */
   prompt: string;
   /**
    * Projet PRÉ-CHOISI dans le composer, quand le producteur du brouillon sait
    * déjà quel dépôt est visé — le prompt d'intégration feedback part des
-   * réglages d'UN projet. Absent (carnet, bouton « Nouveau ») : le composer
-   * laisse choisir. Reste librement modifiable : c'est un pré-remplissage, pas
-   * un verrou.
+   * réglages d'UN projet. Absent (le carnet) : le composer laisse choisir. Reste
+   * librement modifiable : c'est un pré-remplissage, pas un verrou.
    */
   projectId?: string;
 }

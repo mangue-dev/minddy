@@ -1,22 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  commandFilter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   toast,
 } from "mangue-ui";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronLeft, ChevronsUpDown } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
@@ -39,20 +35,21 @@ import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Project } from "@/lib/types";
 
-const MAX_RESULTS = 50;
-
 /**
- * Picker du PROJET de la conversation — le pendant du BranchCombobox, même chip
- * compact du composer. Obligatoire : sans ticket, seul le projet dit quel dépôt
- * cloner. Pas de filtre « a un dépôt lié » côté client : le serveur refuse
- * proprement (`noRepo`) et le toast l'explique.
+ * Sélecteur du PROJET de la conversation. Obligatoire : sans ticket, seul le
+ * projet dit quel dépôt cloner. Pas de filtre « a un dépôt lié » côté client :
+ * le serveur refuse proprement (`noRepo`) et le toast l'explique.
+ *
+ * Un SELECT, pas un combobox : le même menu déroulant que le sélecteur de projet
+ * du fil d'Ariane (orbe + nom, `ChevronsUpDown`), et pour la même raison — on
+ * choisit parmi ses projets, une liste qu'on connaît et qu'on parcourt du
+ * regard. Un champ de recherche par-dessus ne servait qu'à retarder le clic.
  */
-function ProjectCombobox({
+function ProjectSelect({
   projects,
   value,
   onChange,
   placeholder,
-  searchPlaceholder,
   emptyLabel,
   disabled,
 }: {
@@ -60,86 +57,47 @@ function ProjectCombobox({
   value: string;
   onChange: (id: string) => void;
   placeholder: string;
-  searchPlaceholder: string;
   emptyLabel: string;
   disabled?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const selected = projects.find((p) => p.id === value) ?? null;
 
-  const results = useMemo(() => {
-    const q = query.trim();
-    if (!q) return projects.slice(0, MAX_RESULTS);
-    return projects
-      .map((p) => ({ p, score: commandFilter(`${p.name} ${p.key}`, q) }))
-      .filter((r) => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_RESULTS)
-      .map((r) => r.p);
-  }, [projects, query]);
-
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setQuery("");
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
           type="button"
-          variant="ghost"
-          role="combobox"
-          aria-expanded={open}
           disabled={disabled}
-          className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+          className="flex h-8 shrink items-center gap-2 rounded-lg border border-border px-2 text-sm font-medium transition-colors hover:bg-accent/50 disabled:opacity-50"
         >
           {selected ? (
             <ProjectOrb
               seed={selected.id}
               iconUrl={selected.icon_url}
-              className="size-3.5 shrink-0"
+              className="size-[18px] shrink-0"
             />
           ) : null}
-          <span className="max-w-[9rem] truncate">{selected?.name ?? placeholder}</span>
-          <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput value={query} onValueChange={setQuery} placeholder={searchPlaceholder} />
-          <CommandList className="mt-1.5 px-1">
-            {results.map((p) => (
-              <CommandItem
-                key={p.id}
-                value={p.id}
-                onSelect={() => {
-                  onChange(p.id);
-                  setQuery("");
-                  setOpen(false);
-                }}
-              >
-                <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-3.5 shrink-0" />
-                <span className="flex-1 truncate">{p.name}</span>
-                <span className="shrink-0 font-mono text-xs text-muted-foreground/70">
-                  {p.key}
-                </span>
-                <Check
-                  className={cn("size-4 shrink-0", p.id === value ? "opacity-100" : "opacity-0")}
-                />
-              </CommandItem>
-            ))}
-            {results.length === 0 ? (
-              <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                {emptyLabel}
-              </div>
-            ) : null}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          <span className="max-w-[10rem] truncate">{selected?.name ?? placeholder}</span>
+          <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        {projects.map((p) => (
+          <DropdownMenuItem key={p.id} onSelect={() => onChange(p.id)}>
+            <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4 shrink-0" />
+            <span className="flex-1 truncate">{p.name}</span>
+            <Check
+              className={cn("size-4 shrink-0", p.id === value ? "opacity-100" : "opacity-0")}
+            />
+          </DropdownMenuItem>
+        ))}
+        {projects.length === 0 ? (
+          <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+            {emptyLabel}
+          </div>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -147,17 +105,19 @@ function ProjectCombobox({
  * Composer de LANCEMENT d'une conversation d'agent — la phase d'avant toute
  * run, pendant de celle d'AgentConversation pour un ticket.
  *
- * Le sujet est LIBRE : ce qu'on écrit ici part comme instruction, et la seule
- * chose obligatoire est le PROJET, dont l'agent clone le dépôt. Le texte peut
- * arriver pré-écrit (une note du carnet — MIN-84 —, un prompt d'intégration)
- * ou vide (entrée « Sujet libre » du bouton « Nouveau »), et reste éditable
- * dans les deux cas. Modèle, niveau de raisonnement et branche de base sont
- * facultatifs — ils partent sur les défauts perso, comme depuis un ticket.
+ * C'est la VUE PAR DÉFAUT de la page Agents : y arriver, c'est ouvrir une
+ * conversation vierge. Le sujet est LIBRE — ce qu'on écrit ici part comme
+ * instruction, et la seule chose obligatoire est le PROJET, dont l'agent clone
+ * le dépôt. Le texte peut arriver pré-écrit (une note du carnet — MIN-84 —, un
+ * prompt d'intégration) ou vide (arrivée sur la page, bouton « Nouveau »), et
+ * reste éditable dans les deux cas. Modèle, niveau de raisonnement et branche de
+ * base sont facultatifs — ils partent sur les défauts perso, comme depuis un
+ * ticket.
  *
- * Une conversation ANCRÉE à un ticket ne passe pas par ici : elle se choisit
- * dans le menu du bouton « Nouveau » (ou depuis le ticket lui-même) et ouvre le
- * composer d'AgentConversation, qui sait ce qu'un ticket demande de plus —
- * branche héritée, statut à faire avancer.
+ * Une conversation ANCRÉE à un ticket ne passe pas par ici : elle se lance
+ * DEPUIS LE TICKET (carte ou panneau) — la page Agents n'offre aucun sélecteur
+ * de ticket — et ouvre le composer d'AgentConversation, qui sait ce qu'un ticket
+ * demande de plus : branche héritée, statut à faire avancer.
  *
  * Envoyer POSTe /api/agent-runs ; la run rendue est remontée à la page
  * (`onLaunched`), qui bascule sur sa session réelle.
@@ -166,6 +126,7 @@ export function SessionCompose({
   initialText,
   initialProjectId,
   onLaunched,
+  onBack,
 }: {
   /** Texte pré-écrit dans le composer (librement éditable), vide par défaut. */
   initialText?: string;
@@ -176,8 +137,16 @@ export function SessionCompose({
   initialProjectId?: string;
   /** Une run vient d'être lancée — la page bascule sur sa session. */
   onLaunched: (run: AgentRunSummary) => void;
+  /**
+   * Retour à la liste sous `md`, où liste et détail se relaient en plein écran.
+   * Même bouton que l'en-tête d'une conversation (`AgentSessionDetail`) : sans
+   * lui, la conversation vierge — la vue par DÉFAUT de la page — serait un
+   * cul-de-sac sur mobile.
+   */
+  onBack?: () => void;
 }) {
   const t = useTranslations("Agent");
+  const tAgents = useTranslations("Agents");
   const tNav = useTranslations("Nav");
   const agentErrorMessage = useAgentErrorMessage();
   const queryClient = useQueryClient();
@@ -261,6 +230,20 @@ export function SessionCompose({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      {/* Sous `md` seulement : la colonne des conversations est cachée derrière
+          ce volet, il faut un chemin de retour. Au-dessus, les deux cohabitent. */}
+      {onBack ? (
+        <div className="flex shrink-0 items-center px-2 pt-2 md:hidden">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={tAgents("backToList")}
+            onClick={onBack}
+          >
+            <ChevronLeft />
+          </Button>
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1">
         {launchText ? (
           <AgentEventFeed
@@ -280,7 +263,7 @@ export function SessionCompose({
             <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
               {t.rich("composeWorkingIn", {
                 project: () => (
-                  <ProjectCombobox
+                  <ProjectSelect
                     projects={projects}
                     value={projectId}
                     onChange={(id) => {
@@ -290,8 +273,7 @@ export function SessionCompose({
                       setBaseBranch("");
                     }}
                     placeholder={t("composeProjectPlaceholder")}
-                    searchPlaceholder={t("composeProjectSearchPlaceholder")}
-                    emptyLabel={t("composeProjectSearchEmpty")}
+                    emptyLabel={t("composeProjectEmpty")}
                     disabled={launching}
                   />
                 ),

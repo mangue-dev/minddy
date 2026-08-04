@@ -276,8 +276,8 @@ export async function fetchIssueRepoBranchesApi(
  * libre comme instruction. Chaque lancement est une conversation autonome.
  *
  * Dit « carnet » (notebook) partout côté serveur : le carnet en fut le premier
- * point d'entrée (MIN-84). Ils viennent aujourd'hui d'un peu partout — le
- * bouton « Nouveau » de la page Agents, les wizards d'intégration — et le sujet
+ * point d'entrée (MIN-84). Ils viennent aujourd'hui d'un peu partout — la
+ * conversation vierge de la page Agents, les wizards d'intégration — et le sujet
  * est libre : seul le projet est obligatoire.
  */
 export async function launchNotebookAgentApi(body: {
