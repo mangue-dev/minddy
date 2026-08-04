@@ -200,7 +200,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
-    const { error } = await getSupabase().auth.signOut();
+    // `scope: "local"` — SANS lui, supabase-js part en portée GLOBALE et révoque
+    // les jetons de TOUS les appareils du compte. Se déconnecter de son poste de
+    // dev fermait donc aussi la prod, le téléphone et la preview. Fermer une
+    // session ferme UNE session ; couper les autres est un geste distinct, et il
+    // a déjà son appel (`signOutOtherSessions`, à l'activation de la 2FA).
+    const { error } = await getSupabase().auth.signOut({ scope: "local" });
     if (error) throw error;
     // Le cache React Query est persisté sur disque (MIN-89) : sans purge, le
     // compte suivant sur cette machine réhydraterait les données de celui-ci
