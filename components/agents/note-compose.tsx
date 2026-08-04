@@ -144,10 +144,16 @@ function ProjectCombobox({
  */
 export function NoteCompose({
   initialText,
+  initialProjectId,
   onLaunched,
 }: {
   /** La note du carnet, pré-écrite dans le composer (librement éditable). */
   initialText: string;
+  /**
+   * Projet pré-choisi quand le brouillon en désigne un (prompt d'intégration
+   * feedback, lancé depuis les réglages d'un projet) — le picker reste ouvert.
+   */
+  initialProjectId?: string;
   /** Une run carnet vient d'être lancée — la page bascule sur sa session. */
   onLaunched: (run: AgentRunSummary) => void;
 }) {
@@ -156,7 +162,9 @@ export function NoteCompose({
   const queryClient = useQueryClient();
   const { projects } = useProjects();
 
-  const [projectId, setProjectId] = useState(projects.length === 1 ? projects[0].id : "");
+  const [projectId, setProjectId] = useState(
+    initialProjectId ?? (projects.length === 1 ? projects[0].id : ""),
+  );
   const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");

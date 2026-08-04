@@ -507,6 +507,7 @@ export function AgentsPage() {
             // note lancée depuis le carnet doit remonter un composer neuf.
             key={draft.prompt}
             initialText={draft.prompt}
+            initialProjectId={draft.projectId}
             onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
           />
         ) : activeItem ? (

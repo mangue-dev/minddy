@@ -1,12 +1,20 @@
 import "server-only";
 
+import { SSO_ENV_VAR } from "@/lib/feedback/sso-env";
+
 /**
  * Prompt d'intégration tout-en-un (MIN-37) : un texte prêt à coller dans un
- * agent de code (Claude Code, Cursor…) qui décrit QUOI brancher dans l'app du
- * client, OÙ (instruction libre de l'utilisateur) et COMMENT — secrets inclus
- * (URL du board, secret SSO ou clé API), donc généré owner-only et jamais
- * stocké. Deux modes : lien vers le board public (± pré-auth SSO) ou
+ * agent de code (Claude Code, Cursor…) — ou à confier à Numo — qui décrit QUOI
+ * brancher dans l'app du client, OÙ (instruction libre de l'utilisateur) et
+ * COMMENT. Deux modes : lien vers le board public (± pré-auth SSO) ou
  * intégration API serveur-à-serveur.
+ *
+ * Le secret SSO n'y figure PAS : le prompt nomme la variable d'environnement
+ * (`MINDDY_SSO_SECRET`) et l'utilisateur la renseigne lui-même, de sorte qu'un
+ * prompt destiné au board public soit un texte sans credential — c'est ce qui
+ * permet de le confier à un agent sans le manipuler comme un secret. Le mode
+ * API, lui, porte encore la clé en clair (elle n'est relisible nulle part
+ * ailleurs) : il reste owner-only et jamais stocké.
  */
 
 export type IntegrationPromptMode = "board" | "api";
@@ -20,7 +28,8 @@ export interface IntegrationPromptInput {
   origin: string;
   /** Mode board. */
   boardUrl?: string;
-  ssoSecret?: string | null;
+  /** Pré-identification SSO demandée — le SECRET, lui, n'entre pas ici. */
+  sso?: boolean;
   /** Mode api. */
   apiKey?: string;
 }
@@ -40,7 +49,7 @@ export function buildIntegrationPrompt(input: IntegrationPromptInput): string {
 // ── Board public ──────────────────────────────────────────────────────────────
 
 function boardPromptFr(input: IntegrationPromptInput, placement: string): string {
-  const sso = !!input.ssoSecret;
+  const sso = !!input.sso;
   return `# Intégrer le feedback minddy dans cette application
 
 Objectif : ajouter un point d'entrée « Feedback » qui envoie nos utilisateurs vers le board de feedback minddy du projet « ${input.projectName} » — une page publique où ils postent, votent et précisent les besoins (les doublons sont fusionnés automatiquement).
@@ -55,17 +64,14 @@ ${
 
 1. Ajoute le bouton/lien « Feedback » à l'endroit décrit ci-dessus.
 2. Ne mets PAS l'URL du board en dur côté client : crée un petit endpoint serveur (ex. \`GET /feedback\`) vers lequel pointe le bouton. Cet endpoint pré-identifie l'utilisateur connecté puis redirige vers le board — l'utilisateur arrive identifié, sans étape de vérification.
-3. Dans cet endpoint, signe un JWT **HS256** avec le secret ci-dessous et redirige (302) vers :
+3. Dans cet endpoint, signe un JWT **HS256** avec le secret de signature et redirige (302) vers :
    \`${input.boardUrl}?sso=<jwt>\`
    Claims du JWT :
    - \`sub\` (requis) : l'identifiant stable de l'utilisateur chez nous
    - \`email\` (recommandé) : son email
    - \`name\` (optionnel) : son nom affiché
    - \`exp\` (requis) : maintenant + 10 minutes maximum — le JWT ne sert qu'à la redirection
-4. Stocke le secret dans une variable d'environnement (ex. \`MINDDY_SSO_SECRET\`) — jamais côté client, jamais commité :
-   \`\`\`
-   ${input.ssoSecret}
-   \`\`\`
+4. Le secret de signature n'est PAS dans ce prompt : il vit dans la variable d'environnement \`${SSO_ENV_VAR}\`, que je renseigne moi-même. Lis-la côté serveur (\`process.env.${SSO_ENV_VAR}\` ou l'équivalent du langage), ne l'écris jamais en dur, ne l'expose jamais au client, et si elle est absente, renonce à la pré-identification (redirection simple vers le board, étape 5) plutôt que de signer avec une valeur inventée.
 5. Utilisateur non connecté : redirige simplement vers \`${input.boardUrl}\` (sans paramètre \`sso\`) — il pourra se vérifier par email sur place.
 
 ## Vérification
@@ -88,7 +94,7 @@ ${
 }
 
 function boardPromptEn(input: IntegrationPromptInput, placement: string): string {
-  const sso = !!input.ssoSecret;
+  const sso = !!input.sso;
   return `# Integrate minddy feedback into this application
 
 Goal: add a "Feedback" entry point that sends our users to the minddy feedback board of the "${input.projectName}" project — a public page where they post, vote and refine needs (duplicates are merged automatically).
@@ -103,17 +109,14 @@ ${
 
 1. Add the "Feedback" button/link where described above.
 2. Do NOT hardcode the board URL client-side: create a small server endpoint (e.g. \`GET /feedback\`) the button points to. It pre-identifies the signed-in user then redirects to the board — the user lands identified, no verification step.
-3. In that endpoint, sign an **HS256** JWT with the secret below and redirect (302) to:
+3. In that endpoint, sign an **HS256** JWT with the signing secret and redirect (302) to:
    \`${input.boardUrl}?sso=<jwt>\`
    JWT claims:
    - \`sub\` (required): the user's stable id on our side
    - \`email\` (recommended): their email
    - \`name\` (optional): their display name
    - \`exp\` (required): now + 10 minutes max — the JWT only serves the redirect
-4. Store the secret in an environment variable (e.g. \`MINDDY_SSO_SECRET\`) — never client-side, never committed:
-   \`\`\`
-   ${input.ssoSecret}
-   \`\`\`
+4. The signing secret is NOT in this prompt: it lives in the \`${SSO_ENV_VAR}\` environment variable, which I set myself. Read it server-side (\`process.env.${SSO_ENV_VAR}\` or your language's equivalent), never hardcode it, never expose it to the client, and if it is missing, skip pre-identification (plain redirect to the board, step 5) rather than signing with a made-up value.
 5. Signed-out user: just redirect to \`${input.boardUrl}\` (no \`sso\` parameter) — they can verify by email on the board.
 
 ## Verification

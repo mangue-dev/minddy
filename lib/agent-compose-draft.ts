@@ -12,7 +12,7 @@ import { useSyncExternalStore } from "react";
  *
  * Deux formes : `issue` (l'historique — ancré à un ticket, `?compose=<issueId>`)
  * et `note` (run carnet — la note est le prompt, le projet se choisit dans le
- * composer, `?compose=note`).
+ * composer ou arrive pré-choisi, `?compose=note`).
  *
  * Store module-level (pas de contexte) : il n'a qu'un producteur à la fois et
  * un seul consommateur (la page), et doit survivre à la navigation `router.push`
@@ -55,6 +55,13 @@ export interface AgentNoteComposeDraft {
   kind: "note";
   /** La note (markdown brut du carnet) — l'instruction du run, éditable avant envoi. */
   prompt: string;
+  /**
+   * Projet PRÉ-CHOISI dans le composer, quand le producteur du brouillon sait
+   * déjà quel dépôt est visé — le prompt d'intégration feedback part des
+   * réglages d'UN projet. Absent (carnet) : le composer laisse choisir.
+   * Reste librement modifiable : c'est un pré-remplissage, pas un verrou.
+   */
+  projectId?: string;
 }
 
 export type AgentComposeDraft = AgentIssueComposeDraft | AgentNoteComposeDraft;

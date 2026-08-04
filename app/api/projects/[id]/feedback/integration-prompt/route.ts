@@ -18,11 +18,16 @@ const PLACEMENT_MAX = 500;
 
 /**
  * POST { mode: 'board'|'api', sso?, placement? } — génère le prompt
- * d'intégration tout-en-un (MIN-37). Owner-only : le prompt embarque des
- * secrets, et la génération provisionne ce qui manque — active le board
- * (mode board), génère le secret SSO s'il n'existe pas encore (sans jamais
- * rotater un secret existant), crée une clé d'intégration feedback neuve
- * (mode api — la seule façon d'avoir la clé en clair).
+ * d'intégration tout-en-un (MIN-37). Owner-only : la génération provisionne ce
+ * qui manque — active le board (mode board), génère le secret SSO s'il n'existe
+ * pas encore (sans jamais rotater un secret existant), crée une clé
+ * d'intégration feedback neuve (mode api — la seule façon d'avoir la clé en
+ * clair).
+ *
+ * Le secret SSO revient À PART du prompt (`sso_secret`), parce qu'il n'y est
+ * plus : le prompt nomme la variable d'environnement, l'interface montre la
+ * ligne à coller dans le `.env`. Un prompt de board public est ainsi un texte
+ * sans credential — celui qu'on peut confier à Numo d'un clic.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -76,9 +81,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       placement,
       origin,
       boardUrl: `${origin}/f/${board.token}`,
-      ssoSecret,
+      sso: !!ssoSecret,
     });
-    return NextResponse.json({ prompt, board_enabled: true });
+    return NextResponse.json({ prompt, board_enabled: true, sso_secret: ssoSecret });
   }
 
   // mode === "api" : une clé neuve à chaque génération (le clair n'est jamais

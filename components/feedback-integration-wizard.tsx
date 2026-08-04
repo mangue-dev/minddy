@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,14 +18,28 @@ import {
   toast,
 } from "mangue-ui";
 import { ArrowLeft, Check, Copy, Globe, Plug } from "lucide-react";
+import { NumoIcon } from "@/components/numo-icon";
 import { integrationsQueryKey } from "@/lib/use-integrations-query";
+import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
+import { NOTE_COMPOSE_PARAM, setAgentComposeDraft } from "@/lib/agent-compose-draft";
+import { ssoEnvLine } from "@/lib/feedback/sso-env";
 
 /**
  * « Intégrer dans mon app » (MIN-37) : wizard 2-3 étapes qui génère un prompt
- * tout-en-un à coller dans un agent de code (Claude Code, Cursor…). Le prompt
- * embarque instructions + secrets (URL du board, secret SSO ou clé API neuve)
- * — pas de MCP, prêt à l'emploi. Étapes : type (board/API) → SSO (board
- * uniquement, fortement recommandé) → instruction libre de placement.
+ * tout-en-un décrivant quoi brancher, où et comment. Étapes : type (board/API)
+ * → SSO (board uniquement, fortement recommandé) → instruction libre de
+ * placement.
+ *
+ * Le prompt fini a DEUX destinations, et c'est le mode qui décide laquelle est
+ * ouverte :
+ *  • le presse-papier, pour l'agent de code de l'utilisateur (Claude Code,
+ *    Cursor…) — toujours, les deux modes ;
+ *  • NUMO, en un clic (MIN-37) : le prompt part comme note de run carnet sur le
+ *    projet, et l'agent de minddy ouvre la pull request lui-même. Réservé au
+ *    mode BOARD : ce prompt-là ne porte plus aucun credential (le secret SSO
+ *    vit désormais dans une variable d'environnement que l'utilisateur
+ *    renseigne). Le mode API, lui, embarque une clé en clair — on ne l'envoie
+ *    pas dans une conversation d'agent, il reste copie-manuelle.
  */
 
 type Mode = "board" | "api";
@@ -81,6 +96,7 @@ function OptionCard({
 
 export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("board");
@@ -90,7 +106,13 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
   const [generating, setGenerating] = useState(false);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [keyCreated, setKeyCreated] = useState(false);
+  const [ssoSecret, setSsoSecret] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [envCopied, setEnvCopied] = useState(false);
+
+  // Numo ne peut travailler que sur un dépôt : sans lien git, l'option ne se
+  // montre pas — un bouton qui n'aurait rien à cloner ne vaut pas un refus.
+  const { link } = useProjectGitLinkQuery(projectId);
 
   const steps: StepId[] = mode === "board" ? ["type", "sso", "placement"] : ["type", "placement"];
   const step = steps[Math.min(stepIndex, steps.length - 1)];
@@ -103,7 +125,9 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
     setStepIndex(0);
     setPrompt(null);
     setKeyCreated(false);
+    setSsoSecret(null);
     setCopied(false);
+    setEnvCopied(false);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -140,6 +164,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
       const data = (await response.json().catch(() => null)) as {
         prompt?: string;
         key_created?: boolean;
+        sso_secret?: string | null;
         error?: string;
       } | null;
       if (!response.ok || !data?.prompt) {
@@ -147,6 +172,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
       }
       setPrompt(data.prompt);
       setKeyCreated(data.key_created === true);
+      setSsoSecret(data.sso_secret ?? null);
       // Le board/la clé ont pu être provisionnés : rafraîchir les vues settings.
       void queryClient.invalidateQueries({ queryKey: ["feedback-settings", projectId] });
       void queryClient.invalidateQueries({ queryKey: integrationsQueryKey(projectId) });
@@ -157,6 +183,23 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
       setGenerating(false);
     }
   };
+
+  /**
+   * Confier le prompt à Numo : même chemin que « lancer un agent » depuis le
+   * carnet (brouillon de run carnet + composer de la page Agents), avec le
+   * projet déjà choisi. On passe par le composer plutôt que de lancer d'ici :
+   * l'utilisateur relit la consigne, choisit son modèle et sa branche de base
+   * — un run d'agent sur son dépôt ne part pas d'un clic sans revue.
+   */
+  const handOffToNumo = () => {
+    if (!prompt) return;
+    setAgentComposeDraft({ kind: "note", prompt, projectId });
+    handleOpenChange(false);
+    router.push(`/agents?compose=${NOTE_COMPOSE_PARAM}`);
+  };
+
+  const envLine = ssoSecret ? ssoEnvLine(ssoSecret) : null;
+  const canHandOffToNumo = mode === "board" && !!link;
 
   return (
     <>
@@ -181,17 +224,80 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
                   <Check className="size-4 text-emerald-500" />
                   {t("feedbackWizardDoneTitle")}
                 </DialogTitle>
-                <DialogDescription>{t("feedbackWizardCopied")}</DialogDescription>
+                <DialogDescription>
+                  {canHandOffToNumo
+                    ? t("feedbackWizardDoneDesc")
+                    : t("feedbackWizardCopied")}
+                </DialogDescription>
               </DialogHeader>
               <textarea
                 readOnly
                 value={prompt}
-                className="h-48 w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs outline-none"
+                className="h-40 w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs outline-none"
               />
-              <p className="text-xs text-muted-foreground">
-                {t("feedbackWizardSecretsWarning")}
-                {keyCreated && <> {t("feedbackWizardDoneKeyNote")}</>}
-              </p>
+
+              {/* Le prompt de board ne porte plus de secret : le voici, à part,
+                  sous la seule forme qui serve — la ligne du fichier .env. */}
+              {envLine && (
+                <div className="flex flex-col gap-2 rounded-lg border border-brand/25 bg-brand/5 p-3">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm font-medium">{t("feedbackWizardEnvTitle")}</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {t("feedbackWizardEnvDesc")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs whitespace-nowrap">
+                      {envLine}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("feedbackWizardEnvCopy")}
+                      onClick={() => {
+                        void navigator.clipboard.writeText(envLine);
+                        setEnvCopied(true);
+                        setTimeout(() => setEnvCopied(false), 2000);
+                      }}
+                    >
+                      {envCopied ? (
+                        <Check className="size-4 text-emerald-500" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* L'autre destination du prompt : l'agent de minddy, sur le dépôt
+                  déjà lié au projet. Board seulement (cf. en-tête du fichier). */}
+              {canHandOffToNumo && (
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <p className="text-sm font-medium">{t("feedbackWizardNumoTitle")}</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {t("feedbackWizardNumoDesc")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={handOffToNumo}
+                  >
+                    <NumoIcon className="size-4" />
+                    {t("feedbackWizardNumoButton")}
+                  </Button>
+                </div>
+              )}
+
+              {(mode === "api" || keyCreated) && (
+                <p className="text-xs text-muted-foreground">
+                  {t("feedbackWizardSecretsWarning")}
+                  {keyCreated && <> {t("feedbackWizardDoneKeyNote")}</>}
+                </p>
+              )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => void copyToClipboard(prompt)}>
                   {copied ? <Check className="text-emerald-500" /> : <Copy />}
@@ -290,7 +396,7 @@ export function FeedbackIntegrationWizard({ projectId }: { projectId: string }) 
                 )}
                 <Button type="submit" disabled={generating}>
                   {generating && <Spinner />}
-                  {isLast ? t("feedbackWizardCopy") : t("feedbackWizardNext")}
+                  {isLast ? t("feedbackWizardGenerate") : t("feedbackWizardNext")}
                 </Button>
               </DialogFooter>
             </form>

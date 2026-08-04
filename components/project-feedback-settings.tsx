@@ -34,6 +34,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
+import { ssoEnvLine } from "@/lib/feedback/sso-env";
 import { useProjects } from "@/lib/projects-context";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
@@ -594,7 +595,13 @@ function AccentColorSetting({
 }
 
 /** Bloc SSO (owner). Non configuré → bouton d'activation + « Recommandé ».
- *  Configuré → secret copiable, détails techniques repliés, régénérer/désactiver. */
+ *  Configuré → secret copiable, détails techniques repliés, régénérer/désactiver.
+ *
+ *  Le secret s'affiche et se copie sous forme de LIGNE D'ENVIRONNEMENT
+ *  (`MINDDY_SSO_SECRET=…`), pas de clé nue : c'est la seule chose qu'on en fasse,
+ *  et le prompt d'intégration ne transporte plus le secret — il nomme cette
+ *  variable et compte sur elle. Coller la clé seule dans un `.env` ne marcherait
+ *  pas ; ce qui est montré est donc exactement ce qui est attendu là-bas. */
 function SsoSetup({
   board,
   busy,
@@ -613,7 +620,9 @@ function SsoSetup({
   const [reveal, setReveal] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
 
-  if (!board.sso_secret) {
+  const envLine = board.sso_secret ? ssoEnvLine(board.sso_secret) : null;
+
+  if (!envLine) {
     return (
       <div className="flex items-center gap-2">
         <Button
@@ -641,7 +650,7 @@ function SsoSetup({
         <Input
           readOnly
           type={reveal ? "text" : "password"}
-          value={board.sso_secret}
+          value={envLine}
           className="font-mono text-xs"
         />
         <Button
@@ -652,7 +661,7 @@ function SsoSetup({
         >
           {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </Button>
-        <CopyButton value={board.sso_secret} />
+        <CopyButton value={envLine} />
       </div>
 
       <Collapsible>
