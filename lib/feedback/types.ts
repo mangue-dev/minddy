@@ -4,12 +4,18 @@
  * anonymisées : jamais d'email ni de vrai nom côté board.
  */
 
+/**
+ * Les états d'un retour. `spam` en fait partie comme les autres — c'est une
+ * décision sur le retour, pas un axe parallèle, et l'équipe la pose là où elle
+ * pose toutes les autres. Il n'apparaît JAMAIS sur le board public.
+ */
 export const FEEDBACK_POST_STATUSES = [
   "open",
   "planned",
   "in_progress",
   "shipped",
   "declined",
+  "spam",
 ] as const;
 export type FeedbackPostStatus = (typeof FEEDBACK_POST_STATUSES)[number];
 
@@ -21,13 +27,27 @@ export function isFeedbackPostStatus(value: unknown): value is FeedbackPostStatu
 }
 
 /**
- * Statuts « terminés » : un besoin livré (shipped) ou refusé (declined) est
- * résolu et n'a plus à occuper le haut des listes. On les range en bas, board
- * public comme onglet équipe.
+ * Ce que le board public sait nommer. Le spam n'y est ni listé ni filtrable :
+ * proposer le filtre reviendrait à annoncer aux visiteurs qu'il existe une
+ * catégorie de retours cachés, et le filtre ne rendrait jamais rien.
+ */
+export const FEEDBACK_PUBLIC_STATUSES: readonly FeedbackPostStatus[] =
+  FEEDBACK_POST_STATUSES.filter((status) => status !== "spam");
+
+/** Un retour hors du board public — aujourd'hui le seul cas est le spam. */
+export function isHiddenFeedbackStatus(status: FeedbackPostStatus): boolean {
+  return status === "spam";
+}
+
+/**
+ * Statuts « terminés » : un besoin livré (shipped), refusé (declined) ou écarté
+ * (spam) est résolu et n'a plus à occuper le haut des listes. On les range en
+ * bas, board public comme onglet équipe.
  */
 export const FEEDBACK_RESOLVED_STATUSES: readonly FeedbackPostStatus[] = [
   "shipped",
   "declined",
+  "spam",
 ];
 
 export function isResolvedFeedbackStatus(status: FeedbackPostStatus): boolean {
@@ -61,9 +81,14 @@ export const FEEDBACK_BODY_MAX = 10_000;
  * État de PUBLICATION d'un post (MIN-54), distinct du choix de visibilité
  * `is_public` de l'auteur. `pending` = en attente de la revue IA (catégorisation
  * + modération), invisible du board même si public ; `published` = vérifié, listé
- * si public ; `rejected` = junk/spam écarté par l'IA (l'équipe peut outrepasser).
+ * si public.
+ *
+ * Il portait un troisième état, `rejected`, pour le junk détecté par la revue.
+ * C'était une deuxième façon d'exclure un retour, à côté de son statut, et
+ * l'équipe devait la chercher ailleurs que là où elle lisait tout le reste :
+ * c'est devenu le statut `spam`. Ne reste ici que la file d'attente.
  */
-export const FEEDBACK_REVIEW_STATES = ["pending", "published", "rejected"] as const;
+export const FEEDBACK_REVIEW_STATES = ["pending", "published"] as const;
 export type FeedbackReviewState = (typeof FEEDBACK_REVIEW_STATES)[number];
 
 export function isFeedbackReviewState(value: unknown): value is FeedbackReviewState {

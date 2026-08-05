@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTranslations, useFormatter } from "next-intl";
+import { useNow, useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
+  Badge,
   Button,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
   ConfirmDeleteDialog,
   Dialog,
   DialogContent,
@@ -19,14 +23,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Skeleton,
   Spinner,
   SplitButton,
+  Switch,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -34,14 +34,16 @@ import {
   toast,
 } from "mangue-ui";
 import {
-  ArrowUpRight,
   Ban,
+  Check,
   ChevronLeft,
   ChevronUp,
   Clock,
+  Copy,
   GitMerge,
   Globe,
   Link2,
+  ListFilter,
   Lock,
   MessagesSquare,
   MoreHorizontal,
@@ -52,17 +54,22 @@ import {
   Trash2,
   TriangleAlert,
   Undo2,
+  X,
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
+import { SearchMenu } from "@/components/search-menu";
+import { SearchSelect, checkedProps } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
+import { CategoryValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
+import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
+import { UserAvatar } from "@/components/user-avatar";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -72,7 +79,15 @@ import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
 import { useAuth } from "@/lib/auth-context";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import type { EventContext } from "@/lib/describe-event";
-import type { AttachmentInput, Category, Issue, IssueRelationType, Member } from "@/lib/types";
+import type {
+  AttachmentInput,
+  Category,
+  Issue,
+  IssueRelationType,
+  Member,
+  Objective,
+  Project,
+} from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -84,22 +99,35 @@ import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   FEEDBACK_POST_STATUSES,
+  isResolvedFeedbackStatus,
   type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type {
   TeamFeedbackDetail,
   TeamFeedbackListItem,
 } from "@/lib/server/feedback/team-queries";
+import type { TeamFeedbackUserOption } from "@/app/api/projects/[id]/feedback/users/route";
 import { trackEvent } from "@/lib/analytics";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 
 /**
- * Onglet équipe du feedback (MIN-37) — deux panneaux façon triage : liste triée
- * par votes (vraies identités, indicateur de suggestion IA), détail avec
+ * Onglet équipe des retours (MIN-37) — deux panneaux façon triage : liste
+ * filtrable (vraies identités, indicateur de suggestion IA), détail avec
  * édition de la couche canonique (le brut reste visible), merge 1-clic + undo,
  * file de suggestions, réponse d'équipe, promotion en issue et saisie interne
  * au nom d'un utilisateur.
+ *
+ * Deux règles gouvernent ce que l'écran montre :
+ *
+ * - **Tout ce qui se décide sur un retour se lit au même endroit** — la table
+ *   clé/valeur, comme sur un ticket : statut, type, visibilité, auteur,
+ *   catégories. Le haut de page ne garde que ce qu'on FAIT (promouvoir,
+ *   refuser), pas ce que le retour EST.
+ * - **Sans board public, la moitié de ces commandes n'a plus d'objet** : pas de
+ *   voix à compter, pas de public/privé à trancher. Elles disparaissent au lieu
+ *   de proposer des gestes qui ne mènent nulle part (`boardEnabled`).
  */
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -114,8 +142,199 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-/** Résumé compact des catégories d'un post dans la liste — même rendu que le
-    trigger du sélecteur : pastille + 1er nom + « +N » pour le reste (MIN-52). */
+/** Chrome d'un badge qui OUVRE quelque chose (statut, visibilité) : le badge
+    porte déjà sa forme, le déclencheur ne fait qu'annoncer qu'on peut cliquer. */
+const BADGE_TRIGGER =
+  "rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80";
+
+/** Le badge tel qu'il tient dans une LIGNE de la colonne — même gabarit que sur
+    la liste des pull requests, d'où ces trois valeurs. L'icône descend à 12 px
+    avec lui : à sa taille de détail elle remplissait toute la hauteur du badge. */
+const LIST_BADGE = "h-5 px-2 text-[10px] [&>svg]:size-3";
+
+// ── Filtres de la colonne ────────────────────────────────────────────────────
+
+/**
+ * L'état filtré. `unresolved` n'est pas un statut : c'est « tout ce qui n'est
+ * pas tranché » — le point de départ, et le pendant exact du filtre « ouvertes »
+ * des pull requests, qui exclut lui aussi fusionnées et fermées.
+ */
+type FeedbackStateFilter = "unresolved" | FeedbackPostStatus | "all";
+
+/** L'ordre de la colonne. `top` (les plus soutenus d'abord) est celui du
+    serveur et du board public ; les deux autres sont chronologiques. */
+type FeedbackSort = "top" | "recent" | "oldest";
+
+const SORTS: ReadonlyArray<{
+  value: FeedbackSort;
+  label: MessageKey<"FeedbackBoard">;
+}> = [
+  { value: "top", label: "sortTop" },
+  { value: "recent", label: "sortRecent" },
+  { value: "oldest", label: "sortOldest" },
+];
+
+function matchesStateFilter(post: TeamFeedbackListItem, filter: FeedbackStateFilter) {
+  if (filter === "all") return true;
+  if (filter === "unresolved") return !isResolvedFeedbackStatus(post.status);
+  return post.status === filter;
+}
+
+/**
+ * Le filtre de la colonne : UN déclencheur pour trois dimensions — l'état, le
+ * tri, et ce qui reste à trancher. Le même combobox que les pull requests, pour
+ * la même raison : sur la ligne de titre il ne reste la place que d'une icône,
+ * et ce que le libellé disait passe dans le tooltip. Une pastille signale de
+ * loin qu'un filtre est posé — sans elle, une liste restreinte n'aurait plus
+ * rien pour le dire.
+ */
+function FeedbackFilterMenu({
+  state,
+  sort,
+  onlyToReview,
+  toReviewCount,
+  onStateChange,
+  onSortChange,
+  onToReviewChange,
+}: {
+  state: FeedbackStateFilter;
+  sort: FeedbackSort;
+  onlyToReview: boolean;
+  toReviewCount: number;
+  onStateChange: (state: FeedbackStateFilter) => void;
+  onSortChange: (sort: FeedbackSort) => void;
+  onToReviewChange: (only: boolean) => void;
+}) {
+  const t = useTranslations("FeedbackBoard");
+  const tStatus = useTranslations("PublicFeedback");
+  const [open, setOpen] = useState(false);
+
+  const stateLabel =
+    state === "unresolved"
+      ? t("filterUnresolved")
+      : state === "all"
+        ? t("filterAll")
+        : tStatus(`status.${state}`);
+  // « Ouverts, par popularité, tout » est le point de départ : rien à signaler.
+  const active = state !== "unresolved" || sort !== "top" || onlyToReview;
+  const tooltip = t("filterTooltip", { state: stateLabel });
+
+  const pick = (run: () => void) => {
+    run();
+    setOpen(false);
+  };
+
+  return (
+    <SearchMenu
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      tooltip={tooltip}
+      trigger={
+        /* `-mr-2` compense le padding du bouton : l'icône s'aligne alors sur le
+           bord droit des lignes de la liste, pas 8 px en-deçà. */
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-mr-2 text-muted-foreground hover:text-foreground"
+          aria-label={tooltip}
+        >
+          <span className="relative flex items-center justify-center">
+            <ListFilter className="size-4" />
+            {active ? (
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar"
+              />
+            ) : null}
+          </span>
+        </Button>
+      }
+    >
+      <CommandGroup heading={t("filterStateLabel")}>
+        <CommandItem
+          value="state-unresolved"
+          keywords={[t("filterUnresolved")]}
+          onSelect={() => pick(() => onStateChange("unresolved"))}
+          {...checkedProps(state === "unresolved")}
+        >
+          <span className="truncate">{t("filterUnresolved")}</span>
+        </CommandItem>
+        {FEEDBACK_POST_STATUSES.map((value) => (
+          <CommandItem
+            key={value}
+            value={`state-${value}`}
+            keywords={[tStatus(`status.${value}`)]}
+            onSelect={() => pick(() => onStateChange(value))}
+            {...checkedProps(state === value)}
+          >
+            {value === "spam" ? (
+              <Ban className="size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <StatusIndicator
+                status={FEEDBACK_TO_ISSUE_STATUS[value]}
+                className="size-4 shrink-0"
+              />
+            )}
+            <span className="truncate">{tStatus(`status.${value}`)}</span>
+          </CommandItem>
+        ))}
+        <CommandItem
+          value="state-all"
+          keywords={[t("filterAll")]}
+          onSelect={() => pick(() => onStateChange("all"))}
+          {...checkedProps(state === "all")}
+        >
+          <span className="truncate">{t("filterAll")}</span>
+        </CommandItem>
+      </CommandGroup>
+
+      <CommandSeparator className="my-1" />
+      <CommandGroup heading={t("filterSortLabel")}>
+        {SORTS.map((option) => (
+          <CommandItem
+            key={option.value}
+            value={`sort-${option.value}`}
+            keywords={[t(option.label)]}
+            onSelect={() => pick(() => onSortChange(option.value))}
+            {...checkedProps(sort === option.value)}
+          >
+            <span className="truncate">{t(option.label)}</span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+
+      {/* « À revoir » (MIN-87) : ce que la revue automatique n'a pas tranché est
+          noyé dans une liste triée par votes. L'entrée n'apparaît que s'il y a
+          matière — pas de ligne morte. */}
+      {toReviewCount > 0 ? (
+        <>
+          <CommandSeparator className="my-1" />
+          <CommandGroup>
+            <CommandItem
+              value="to-review"
+              keywords={[t("filterToReview")]}
+              onSelect={() => pick(() => onToReviewChange(!onlyToReview))}
+              {...checkedProps(onlyToReview)}
+            >
+              <span className="truncate">{t("filterToReview")}</span>
+              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                {toReviewCount}
+              </span>
+            </CommandItem>
+          </CommandGroup>
+        </>
+      ) : null}
+    </SearchMenu>
+  );
+}
+
+// ── Briques partagées liste / détail ─────────────────────────────────────────
+
+/** Résumé compact des catégories d'un retour dans la colonne — pastille + 1er
+    nom + « +N » pour le reste (MIN-52). Du TEXTE, et non des badges : à côté du
+    statut et de l'auteur, trois pastilles de plus faisaient une ligne de
+    confettis où l'on ne lisait plus rien. */
 function CategorySummary({
   categoryIds,
   categoryMap,
@@ -141,6 +360,52 @@ function CategorySummary({
   );
 }
 
+/** Compteur de voix d'un retour. Absent quand le board public est éteint : sans
+    lui, personne ne peut voter, et un « 0 » permanent serait un reproche. */
+function VoteCount({ count, className }: { count: number; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground",
+        className
+      )}
+    >
+      <ChevronUp className="size-3" />
+      {count}
+    </span>
+  );
+}
+
+/**
+ * Public ou privé, dit par sa couleur autant que par son mot : bleu pour ce qui
+ * est exposé, orangé pour ce qui reste à l'équipe. Ce sont les deux moitiés
+ * d'une même question, donc les deux se montrent — un badge présent d'un côté
+ * et absent de l'autre se lit comme un oubli, pas comme un état.
+ */
+function VisibilityBadge({
+  isPublic,
+  className,
+}: {
+  isPublic: boolean;
+  className?: string;
+}) {
+  const t = useTranslations("FeedbackBoard");
+  return (
+    <Badge
+      variant="secondary"
+      icon={isPublic ? <Globe /> : <Lock />}
+      className={cn(
+        isPublic
+          ? "border-sky-700/30 bg-sky-500/10 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-400"
+          : "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+        className
+      )}
+    >
+      {isPublic ? t("public") : t("private")}
+    </Badge>
+  );
+}
+
 /**
  * Un retour qui réclame une décision humaine (MIN-87) : pas encore publié, ou
  * publié mais signalé sensible. C'est la matière du filtre « À revoir » — sans
@@ -158,60 +423,230 @@ function reviewGaveUp(post: {
   return post.analysis_failures >= 3 && post.classified_at === null;
 }
 
-/** Badges d'état de revue IA (MIN-54) : en attente de publication, rejeté (junk),
-    et alerte contenu sensible (le motif est en tooltip). Partagé liste + détail. */
+/**
+ * Badges d'état de revue IA (MIN-54) : en attente de publication, et alerte
+ * contenu sensible (le motif est en tooltip). Partagé liste + détail.
+ *
+ * Le rejet n'y est plus : il est devenu le statut `spam`, et se lit donc avec
+ * les autres statuts, là où l'équipe lit toutes ses décisions.
+ */
 function ReviewBadges({
   reviewState,
   sensitivity,
   moderationReason,
   reviewFailed,
+  className,
 }: {
   reviewState: FeedbackReviewState;
   sensitivity: string | null;
   moderationReason: string | null;
   reviewFailed?: boolean;
+  /** Gabarit du badge — resserré dans la colonne, pleine taille au détail. */
+  className?: string;
 }) {
   const t = useTranslations("FeedbackBoard");
   return (
     <>
       {reviewState === "pending" && (
-        <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-          <Clock className="size-2.5" />
+        <Badge variant="secondary" icon={<Clock />} className={className}>
           {t("reviewPending")}
-        </span>
+        </Badge>
       )}
       {reviewFailed && (
-        <span
+        <Badge
+          variant="secondary"
+          icon={<TriangleAlert />}
           title={t("reviewFailedHint")}
-          className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+          className={cn("text-muted-foreground", className)}
         >
-          <TriangleAlert className="size-2.5" />
           {t("reviewFailed")}
-        </span>
-      )}
-      {reviewState === "rejected" && (
-        <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-1.5 py-0.5 text-[10px] text-destructive">
-          <Ban className="size-2.5" />
-          {t("reviewRejected")}
-        </span>
+        </Badge>
       )}
       {sensitivity && (
-        <span
+        <Badge
+          variant="secondary"
+          icon={<ShieldAlert />}
           title={moderationReason ?? undefined}
-          className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-500"
+          className={cn(
+            "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+            className
+          )}
         >
-          <ShieldAlert className="size-2.5" />
           {t("sensitive")}
-        </span>
+        </Badge>
       )}
     </>
   );
 }
 
+/**
+ * L'auteur d'un retour, tel qu'on le nomme partout : son nom si on le connaît,
+ * sinon son email — jamais les deux collés, qui donnaient une ligne à rallonge
+ * dont on ne lisait ni l'un ni l'autre. L'email reste à un survol, et se copie :
+ * c'est le canal de recontact, la seule chose qu'on vient chercher ici.
+ */
+function AuthorValue({
+  name,
+  email,
+  pseudonym,
+}: {
+  name: string | null;
+  email: string | null;
+  pseudonym: string | null;
+}) {
+  const t = useTranslations("FeedbackBoard");
+  const [copied, setCopied] = useState(false);
+  const label = name?.trim() || email?.trim() || pseudonym || "";
+  // La graine de l'avatar est l'EMAIL quand il existe : deux homonymes n'ont
+  // pas le même visage, et le même utilisateur garde le sien même renommé.
+  const seed = email?.trim() || pseudonym || label;
+
+  const copy = () => {
+    if (!email) return;
+    void navigator.clipboard
+      .writeText(email)
+      .then(() => {
+        // La coche dans l'infobulle et le toast disent la même chose deux fois,
+        // et c'est voulu : l'infobulle disparaît dès qu'on écarte la souris —
+        // souvent le geste même qui suit la copie — et emporterait sa preuve.
+        setCopied(true);
+        toast.success(t("emailCopied"));
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => toast.error(t("errorGeneric")));
+  };
+
+  const identity = (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <UserAvatar seed={seed} className="size-5" />
+      <span className="min-w-0 truncate text-sm">{label}</span>
+    </span>
+  );
+
+  // Sans email il n'y a rien à révéler au survol : le nom se suffit.
+  if (!email) return identity;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={copied ? t("emailCopied") : t("copyEmail")}
+          className="-mr-1.5 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+        >
+          {identity}
+        </button>
+      </TooltipTrigger>
+      {/* L'email, et le geste en icône — « Copier l'email » écrit en toutes
+          lettres à côté de l'adresse doublait la largeur de l'infobulle pour
+          répéter ce qu'une paire de feuillets dit déjà. La coche qui remplace
+          l'icône est l'accusé de réception ; le mot reste, mais en
+          `aria-label`, pour qui ne voit pas l'icône. */}
+      <TooltipContent className="flex items-center gap-2">
+        {email}
+        {copied ? (
+          <Check className="size-3.5 shrink-0" />
+        ) : (
+          <Copy className="size-3.5 shrink-0 text-muted-foreground" />
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ── Ligne de la colonne ──────────────────────────────────────────────────────
+
+/**
+ * Un retour dans la liste — le gabarit des pull requests, garni de ce qu'un
+ * retour a de propre : à la place de l'identifiant, le nombre de voix (c'est ce
+ * qui trie la liste et ce qu'on vient y comparer) ; à droite, l'état et la date
+ * en « il y a… », parce qu'un retour se juge à sa fraîcheur plus qu'à son jour.
+ */
+function FeedbackRow({
+  post,
+  selected,
+  boardEnabled,
+  dateLabel,
+  categoryMap,
+  onSelect,
+}: {
+  post: TeamFeedbackListItem;
+  selected: boolean;
+  boardEnabled: boolean;
+  dateLabel: string;
+  categoryMap: Map<string, Category>;
+  onSelect: () => void;
+}) {
+  const authorLabel = post.author?.name?.trim() || post.author?.email?.trim() || null;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
+      className={cn(
+        "flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
+        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        {/* UNE case en tête de ligne, et les deux choses qui peuvent l'occuper
+            ne coexistent jamais : le soutien d'un retour public, ou le fait
+            qu'il soit privé. Un retour privé n'a pas de voix à montrer —
+            personne ne peut lui en donner — et c'est ce qu'il faut lire à sa
+            place. Sans board publié, ni l'un ni l'autre n'a de sens. */}
+        {boardEnabled ? (
+          post.is_public ? (
+            <VoteCount count={post.vote_count} />
+          ) : (
+            <VisibilityBadge isPublic={false} className={LIST_BADGE} />
+          )
+        ) : null}
+        {post.issue_id ? (
+          <Link2 className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+        ) : null}
+        {post.suggested_merge_into_id ? (
+          <Sparkles className="size-3 shrink-0 text-brand" aria-hidden />
+        ) : null}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          <FeedbackStatusBadge status={post.status} className={LIST_BADGE} />
+          <span className="text-xs text-muted-foreground">{dateLabel}</span>
+        </span>
+      </div>
+
+      <span className="line-clamp-2 text-sm font-medium leading-snug">{post.title}</span>
+
+      <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        {authorLabel ? (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <UserAvatar
+              seed={post.author?.email || post.author?.pseudonym || authorLabel}
+              className="size-3.5"
+            />
+            <span className="max-w-[9rem] truncate">{authorLabel}</span>
+          </span>
+        ) : null}
+        <ReviewBadges
+          reviewState={post.review_state}
+          sensitivity={post.sensitivity}
+          moderationReason={post.moderation_reason}
+          reviewFailed={reviewGaveUp(post)}
+          className={LIST_BADGE}
+        />
+        <CategorySummary categoryIds={post.category_ids} categoryMap={categoryMap} />
+      </span>
+    </button>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 export function FeedbackTeamPage() {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
+  const now = useNow();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const searchParams = useSearchParams();
@@ -225,27 +660,57 @@ export function FeedbackTeamPage() {
   const { data: listData, isPending } = useQuery({
     queryKey: ["feedback", projectId],
     queryFn: () =>
-      api<{ posts: TeamFeedbackListItem[] }>(`/api/projects/${projectId}/feedback`),
+      api<{ posts: TeamFeedbackListItem[]; board_enabled: boolean }>(
+        `/api/projects/${projectId}/feedback`
+      ),
   });
   const posts = useMemo(() => listData?.posts ?? [], [listData]);
+  const boardEnabled = listData?.board_enabled ?? false;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileDetail, setMobileDetail] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Filtre « À revoir » (MIN-87) : ce que la revue automatique n'a pas tranché
-  // (en attente, écarté, sensible) est noyé dans une liste triée par votes. Le
-  // filtre n'apparaît que s'il y a matière — pas de bouton mort.
+  // On arrive sur cette page pour trancher ce qui n'est pas tranché : la
+  // colonne s'ouvre donc sur les retours ouverts, et non sur les centaines
+  // d'archivés qui les enterraient.
+  const [state, setState] = useState<FeedbackStateFilter>("unresolved");
+  const [sort, setSort] = useState<FeedbackSort>("top");
   const [onlyToReview, setOnlyToReview] = useState(false);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
-  const visiblePosts = useMemo(
-    () => (onlyToReview ? posts.filter(needsHumanReview) : posts),
-    [posts, onlyToReview]
-  );
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
   }, [toReviewCount, onlyToReview]);
+
+  const visiblePosts = useMemo(() => {
+    const kept = posts.filter(
+      (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p))
+    );
+    /**
+     * Le tri choisi est le tri obtenu — RIEN ne passe devant.
+     *
+     * La liste arrivait déjà ordonnée par le serveur : voix décroissantes, puis
+     * date, et surtout les retours résolus repoussés en bas. Cette dernière
+     * règle datait d'avant le sélecteur de tri, où elle rendait service. Depuis
+     * qu'on peut demander « les plus populaires », elle ment : le retour le plus
+     * soutenu du projet, s'il est livré, se retrouve au fond de la liste, et
+     * c'est le plus RÉCENT qui s'affiche en tête. Un ordre qu'on a demandé
+     * explicitement ne se laisse pas corriger par une heuristique.
+     */
+    const sorted = [...kept];
+    if (sort === "top") {
+      sorted.sort(
+        (a, b) =>
+          b.vote_count - a.vote_count ||
+          Date.parse(b.created_at) - Date.parse(a.created_at)
+      );
+    } else {
+      sorted.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+      if (sort === "recent") sorted.reverse();
+    }
+    return sorted;
+  }, [posts, state, onlyToReview, sort]);
 
   /**
    * Ce que la colonne AFFICHE. Un cran EN DESSOUS de `visiblePosts`, qui porte la
@@ -266,6 +731,7 @@ export function FeedbackTeamPage() {
         p.submitted_title,
         p.submitted_body,
         p.author?.name,
+        p.author?.email,
         p.author?.pseudonym,
       ])
     );
@@ -284,7 +750,7 @@ export function FeedbackTeamPage() {
     [categories]
   );
 
-  // Publie le feedback sélectionné à Numo (MIN-52) : il résout « ce feedback »,
+  // Publie le retour sélectionné à Numo (MIN-52) : il résout « ce feedback »,
   // « promeus-le », « réponds-lui » sur ce post sans le chercher — comme le
   // panneau d'issue publie l'issue ouverte.
   const selectedPost = posts.find((p) => p.id === selectedId) ?? null;
@@ -325,8 +791,13 @@ export function FeedbackTeamPage() {
   // Deep link from an Inbox notification: ?post=<id> selects that feedback and
   // opens the detail on mobile, then strips the param so a background list
   // refetch can't snap the selection back (same idiom as the objectives ?open).
+  //
+  // Le filtre repasse à « tous » : le retour visé peut être livré, décliné ou
+  // écarté, et le lien doit l'ouvrir quel que soit son état.
   useEffect(() => {
     if (postParam) {
+      setState("all");
+      setOnlyToReview(false);
       setSelectedId(postParam);
       setMobileDetail(true);
       router.replace(pathname);
@@ -342,11 +813,28 @@ export function FeedbackTeamPage() {
     void queryClient.invalidateQueries({ queryKey: ["feedback-count", projectId] });
   };
 
+  const createDialog = (
+    <InternalFeedbackDialog
+      projectId={projectId}
+      boardEnabled={boardEnabled}
+      open={createOpen}
+      onOpenChange={setCreateOpen}
+      onCreated={(postId) => {
+        refresh();
+        // Un retour tout juste saisi est ouvert : il tombe dans le filtre par
+        // défaut. Mais si la colonne est ailleurs, l'ouvrir sans l'y ramener
+        // sélectionnerait un post que la liste ne montre pas.
+        setState("all");
+        setSelectedId(postId);
+      }}
+    />
+  );
+
   // Rien du tout (pas « rien dans ce filtre ») : les deux colonnes n'ont plus
   // rien à montrer, et l'écran doit dire d'où viennent les retours plutôt que
   // d'afficher une liste vide à côté d'un « sélectionnez un retour ». Les deux
-  // gestes restent à portée : en saisir un à la main, et aller ouvrir le board
-  // public — c'est lui qui remplit la page ensuite.
+  // gestes restent à portée : en saisir un à la main, et aller régler la
+  // collecte — c'est elle qui remplit la page ensuite.
   if (!isPending && posts.length === 0) {
     return (
       <>
@@ -370,15 +858,7 @@ export function FeedbackTeamPage() {
         </div>
 
         {/* Le dialog reste monté : c'est lui que « Nouveau retour » ouvre. */}
-        <InternalFeedbackDialog
-          projectId={projectId}
-          open={createOpen}
-          onOpenChange={setCreateOpen}
-          onCreated={(postId) => {
-            refresh();
-            setSelectedId(postId);
-          }}
-        />
+        {createDialog}
       </>
     );
   }
@@ -397,31 +877,15 @@ export function FeedbackTeamPage() {
         }}
         actions={
           <>
-            {/* « À revoir » (MIN-87) : un interrupteur, plus deux onglets. Il
-                était rendu DANS la liste, donc il défilait avec elle — trois
-                retours plus bas, le filtre actif n'était plus visible nulle
-                part. Sa forme change parce que sa place change : sur cette
-                ligne, deux onglets et un champ ne tiennent pas ensemble.
-                Enfoncé = seulement ce qui reste à trancher ; relâché = tout. */}
-            {toReviewCount > 0 ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-pressed={onlyToReview}
-                onClick={() => setOnlyToReview((v) => !v)}
-                className={cn(
-                  "gap-1.5 px-2 font-normal",
-                  onlyToReview
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {t("filterToReview")}
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {toReviewCount}
-                </span>
-              </Button>
-            ) : null}
+            <FeedbackFilterMenu
+              state={state}
+              sort={sort}
+              onlyToReview={onlyToReview}
+              toReviewCount={toReviewCount}
+              onStateChange={setState}
+              onSortChange={setSort}
+              onToReviewChange={setOnlyToReview}
+            />
             {/* Icône seule : le libellé complet mangeait la moitié de la ligne.
                 Ce qu'il disait revient au survol — un vrai tooltip, celui de
                 l'app, et non l'infobulle du navigateur. */}
@@ -445,25 +909,56 @@ export function FeedbackTeamPage() {
         <div className="min-h-0 flex-1">
           {isPending ? (
             <div className="flex flex-col gap-2 p-4">
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : listedPosts.length === 0 ? (
-            <div className="p-4">
-              {query.trim() ? (
-                <EmptyState
-                  icon={<MessagesSquare className="size-6" />}
-                  description={tCommon("noFilterMatch")}
-                />
-              ) : (
-                <EmptyState
-                  icon={<MessagesSquare className="size-6" />}
-                  title={t("empty")}
-                  description={t("emptyHint")}
-                />
+            /* Des retours existent forcément ici — la surface entièrement vide
+               est traitée plus haut. La liste ne peut donc être vide que parce
+               qu'un filtre l'a vidée, et la même scène que les autres états
+               vides le dit, à la taille de la colonne.
+               « Rien ne correspond » et « aucun retour ouvert » ne sont pas la
+               même nouvelle : la première se répare en effaçant trois lettres,
+               la seconde demande de rouvrir le filtre — d'où le bouton, qui n'a
+               rien à offrir tant que c'est la saisie qui restreint. */
+            <EmptyScene
+              size="compact"
+              icon={MessagesSquare}
+              /* La colonne vide NOMME ce qu'on cherchait. « Aucun retour dans
+                 ce filtre » renvoyait rouvrir le menu pour se rappeler lequel
+                 était posé — alors que la réponse tient dans la phrase.
+                 L'ordre compte : une saisie qui ne matche rien se répare en
+                 effaçant trois lettres, et c'est cette nouvelle-là qui prime
+                 sur l'état, quel qu'il soit. */
+              title={
+                query.trim()
+                  ? tCommon("noFilterMatch")
+                  : onlyToReview
+                    ? t("emptyToReview")
+                    : state === "unresolved"
+                      ? t("emptyUnresolved")
+                      : state === "all"
+                        ? t("emptyFiltered")
+                        : // Clé assemblée à l'exécution : elle échappe au typage
+                          // des clés, d'où le cast (cf. CLAUDE.md).
+                          t(`emptyStatus.${state}` as MessageKey<"FeedbackBoard">)
+              }
+              className="py-10"
+            >
+              {query.trim() ? null : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setState("all");
+                    setOnlyToReview(false);
+                  }}
+                >
+                  {t("emptyShowAll")}
+                </Button>
               )}
-            </div>
+            </EmptyScene>
           ) : (
             /* La MÊME ligne que le triage, les agents et les pull requests :
                une pastille arrondie dans une gouttière de 8 px, et non un bandeau
@@ -472,55 +967,17 @@ export function FeedbackTeamPage() {
             <ul className="flex flex-col px-2 pt-2 pb-4">
               {listedPosts.map((post) => (
                 <li key={post.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
+                  <FeedbackRow
+                    post={post}
+                    selected={selectedId === post.id}
+                    boardEnabled={boardEnabled}
+                    dateLabel={format.relativeTime(new Date(post.created_at), now)}
+                    categoryMap={categoryMap}
+                    onSelect={() => {
                       setSelectedId(post.id);
                       setMobileDetail(true);
                     }}
-                    className={cn(
-                      "flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-                      selectedId === post.id
-                        ? "bg-muted"
-                        : "hover:bg-muted/60 focus-visible:bg-muted/60"
-                    )}
-                  >
-                    {/* Badge de voix du post. */}
-                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-                      <ChevronUp className="size-3" />
-                      {post.vote_count}
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="line-clamp-2 text-sm font-medium leading-snug">
-                        {post.title}
-                      </span>
-                      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                        <FeedbackStatusBadge status={post.status} />
-                        {!post.is_public && (
-                          <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                            <Lock className="size-2.5" />
-                            {t("private")}
-                          </span>
-                        )}
-                        <ReviewBadges
-                          reviewState={post.review_state}
-                          sensitivity={post.sensitivity}
-                          moderationReason={post.moderation_reason}
-                          reviewFailed={reviewGaveUp(post)}
-                        />
-                        {post.suggested_merge_into_id && (
-                          <Sparkles className="size-3 text-brand" />
-                        )}
-                        <span>
-                          {format.dateTime(new Date(post.created_at), { dateStyle: "short" })}
-                        </span>
-                        <CategorySummary
-                          categoryIds={post.category_ids}
-                          categoryMap={categoryMap}
-                        />
-                      </span>
-                    </span>
-                  </button>
+                  />
                 </li>
               ))}
             </ul>
@@ -534,12 +991,15 @@ export function FeedbackTeamPage() {
           <FeedbackDetail
             key={selectedId}
             projectId={projectId}
+            project={project ?? null}
             projectName={project?.name ?? ""}
             projectKey={project?.key ?? ""}
             postId={selectedId}
+            boardEnabled={boardEnabled}
             allPosts={posts}
             members={members}
             categories={categories}
+            objectives={objectives}
             issues={issues}
             onBack={() => setMobileDetail(false)}
             onChanged={refresh}
@@ -552,15 +1012,7 @@ export function FeedbackTeamPage() {
         )}
       </div>
 
-      <InternalFeedbackDialog
-        projectId={projectId}
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={(postId) => {
-          refresh();
-          setSelectedId(postId);
-        }}
-      />
+      {createDialog}
 
       <IssueSidePanel
         issue={openIssue}
@@ -594,26 +1046,35 @@ export function FeedbackTeamPage() {
 
 function FeedbackDetail({
   projectId,
+  project,
   projectName,
   projectKey,
   postId,
+  boardEnabled,
   allPosts,
   members,
   categories,
+  objectives,
   issues,
   onBack,
   onChanged,
   onOpenIssue,
 }: {
   projectId: string;
+  /** Le projet lui-même — le formulaire de promotion en a besoin. */
+  project: Project | null;
   projectName: string;
   projectKey: string;
   postId: string;
+  /** Board public publié : sans lui, ni voix ni choix public/privé. */
+  boardEnabled: boolean;
   allPosts: TeamFeedbackListItem[];
   /** Project members + issues — resolve actor names and issue refs in the feed. */
   members: Member[];
   /** Catégories du projet (celles des issues) — réutilisées ici (MIN-52). */
   categories: Category[];
+  /** Objectifs du projet — le sélecteur du formulaire de promotion. */
+  objectives: Objective[];
   issues: Issue[];
   onBack: () => void;
   onChanged: () => void;
@@ -671,6 +1132,7 @@ function FeedbackDetail({
   const [respondEditing, setRespondEditing] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [promoteOpen, setPromoteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
@@ -747,11 +1209,12 @@ function FeedbackDetail({
         ["feedback-detail", projectId, postId],
         (old) => (old ? { post: { ...old.post, category_ids: ids } } : old)
       );
-      queryClient.setQueryData<{ posts: TeamFeedbackListItem[] }>(
+      queryClient.setQueryData<{ posts: TeamFeedbackListItem[]; board_enabled: boolean }>(
         ["feedback", projectId],
         (old) =>
           old
             ? {
+                ...old,
                 posts: old.posts.map((p) =>
                   p.id === postId ? { ...p, category_ids: ids } : p
                 ),
@@ -793,7 +1256,7 @@ function FeedbackDetail({
   // lui : c'est un HOOK, et le squelette de chargement rend plus bas. Appelé
   // après ce `return`, il n'existait pas au premier rendu (`post` encore nul)
   // et apparaissait au second — « Rendered more hooks than during the previous
-  // render », et tout l'écran Feedback tombait sur sa frontière d'erreur dès
+  // render », et tout l'écran Retours tombait sur sa frontière d'erreur dès
   // qu'un projet avait des retours à afficher.
   const detailFade = useScrollFade<HTMLDivElement>();
 
@@ -809,11 +1272,30 @@ function FeedbackDetail({
   const rawDiffers =
     post.submitted_title !== post.title || post.submitted_body !== post.body;
 
+  /**
+   * Le statut d'un retour lié à un ticket n'est plus le sien : `status-sync` le
+   * recopie depuis l'issue à chaque changement. Le laisser modifiable ici
+   * offrirait un geste que la prochaine transition du ticket écraserait — d'où
+   * la lecture seule, sur le statut comme sur les raccourcis qui le posent.
+   */
+  const statusLocked = !!post.issue;
+
+  /**
+   * On a répondu non. Il n'y a plus de ticket à faire naître d'un retour
+   * refusé ou écarté — proposer encore « Promouvoir » rouvrirait, d'un clic
+   * sans confirmation, une décision qu'on vient de prendre.
+   *
+   * Le geste n'est pas perdu pour autant : il revient dès que le statut
+   * repasse ouvert, et ce statut est juste en dessous, dans la fiche.
+   */
+  const settledAsNo = post.status === "declined" || post.status === "spam";
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Barre du haut, façon triage : retour (mobile) · identifiants (votes,
-          source, date, privé) à gauche · options (statut, promotion/lien,
-          merge, suppression) à droite.
+      {/* Barre du haut, façon triage : retour (mobile) · identifiants (voix,
+          source, date) à gauche · ce qu'on FAIT du retour à droite. Ce qu'il
+          EST — statut, visibilité, type, auteur — se lit plus bas, dans la
+          table clé/valeur, avec le reste de ses propriétés.
           SANS bordure : c'est le fondu du contenu qui dit qu'il continue
           au-dessus, et une barre séparée le couperait de ce qu'il coiffe (même
           parti que la pull request et la conversation d'agent). */}
@@ -827,22 +1309,10 @@ function FeedbackDetail({
         >
           <ChevronLeft />
         </Button>
+        {/* Ce qui reste ici : les alertes de revue, seules choses qui demandent
+            une réaction. Les voix, la date et la provenance sont descendues
+            dans la table clé/valeur, avec le reste de ce que le retour EST. */}
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          {/* Badge de voix du post. */}
-          <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums">
-            <ChevronUp className="size-3" />
-            {post.vote_count}
-          </span>
-          <span className="hidden sm:inline">
-            {t(`source.${post.source}`)} ·{" "}
-            {format.dateTime(new Date(post.created_at), { dateStyle: "medium" })}
-          </span>
-          {!post.is_public && (
-            <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-              <Lock className="size-2.5" />
-              {t("private")}
-            </span>
-          )}
           <ReviewBadges
             reviewState={post.review_state}
             sensitivity={post.sensitivity}
@@ -851,50 +1321,15 @@ function FeedbackDetail({
           />
         </span>
         <div className="ml-auto flex items-center gap-1.5">
-          {/* Statut public : un select tant que le post est autonome — dès
-              qu'un ticket est lié, le statut suit l'issue (status-sync) et
-              devient lecture seule. */}
-          {post.issue ? (
-            <FeedbackStatusBadge status={post.status} />
-          ) : (
-            <Select
-              value={post.status}
-              onValueChange={(value) => {
-                if (value !== post.status) patch.mutate({ status: value });
-              }}
-            >
-              <SelectTrigger size="sm" className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FEEDBACK_POST_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    <StatusIndicator
-                      status={FEEDBACK_TO_ISSUE_STATUS[status]}
-                      className="size-3.5"
-                    />
-                    {tStatus(`status.${status}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {post.issue ? (
-            // Ouvre le side panel ici même — pas de détour par la vue tickets.
-            <button
-              type="button"
-              onClick={() => onOpenIssue(post.issue!.id)}
-              className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t("linkedIssue")} · {issueIdentifier(projectKey, post.issue.number)}
-              <ArrowUpRight className="size-3" />
-            </button>
-          ) : (
+          {/* Le ticket lié n'est plus ANNONCÉ ici : il a sa rangée dans la
+              fiche, avec son statut, son titre et son détachement. Ne reste que
+              le geste qui n'existe qu'avant lui — en fabriquer un. */}
+          {post.issue || settledAsNo ? null : (
             <SplitButton
               variant="outline"
               size="sm"
               disabled={action.isPending}
-              onClick={() => action.mutate({ path: `${postId}/promote` })}
+              onClick={() => setPromoteOpen(true)}
               menuLabel={t("linkToIssue")}
               menu={
                 <DropdownMenuItem onSelect={() => setLinkOpen(true)}>
@@ -906,6 +1341,29 @@ function FeedbackDetail({
               {t("promote")}
             </SplitButton>
           )}
+          {/* Les deux issues d'un retour encore ouvert : on le prend, ou on le
+              refuse. Le troisième cas — ce n'était pas un retour — vit sous le
+              chevron : c'est un jugement sur l'expéditeur, pas sur la demande,
+              et il n'a pas à être à un clic de distance. */}
+          {post.status === "open" && !statusLocked ? (
+            <SplitButton
+              // Destructif : refuser, c'est répondre non à quelqu'un. Le bouton
+              // doit le dire avant le clic, pas après.
+              variant="destructive"
+              size="sm"
+              disabled={patch.isPending}
+              onClick={() => patch.mutate({ status: "declined" })}
+              menuLabel={t("markSpam")}
+              menu={
+                <DropdownMenuItem onSelect={() => patch.mutate({ status: "spam" })}>
+                  <Ban className="size-4" />
+                  {t("markSpam")}
+                </DropdownMenuItem>
+              }
+            >
+              {t("decline")}
+            </SplitButton>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon-sm" aria-label="…">
@@ -913,25 +1371,9 @@ function FeedbackDetail({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {/* Visibilité : bascule public/privé du post sur le board.
-                  L'intitulé annonce l'action à venir (pas l'état actuel). */}
-              <DropdownMenuItem
-                onSelect={() => patch.mutate({ is_public: !post.is_public })}
-              >
-                {post.is_public ? (
-                  <>
-                    <Lock className="size-4" />
-                    {t("makePrivate")}
-                  </>
-                ) : (
-                  <>
-                    <Globe className="size-4" />
-                    {t("makePublic")}
-                  </>
-                )}
-              </DropdownMenuItem>
-              {/* Revue IA (MIN-54) : l'équipe peut outrepasser — publier un post en
-                  attente/rejeté, ou rejeter un post publié. */}
+              {/* Revue IA (MIN-54) : l'équipe peut publier un retour que la
+                  revue n'a pas encore laissé passer. L'écarter, lui, est
+                  devenu un statut — il se pose dans la table clé/valeur. */}
               {post.review_state !== "published" && (
                 <DropdownMenuItem
                   onSelect={() => patch.mutate({ review_state: "published" })}
@@ -940,32 +1382,12 @@ function FeedbackDetail({
                   {t("publishReview")}
                 </DropdownMenuItem>
               )}
-              {post.review_state !== "rejected" && (
-                <DropdownMenuItem
-                  onSelect={() => patch.mutate({ review_state: "rejected" })}
-                >
-                  <Ban className="size-4" />
-                  {t("rejectReview")}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
                 <GitMerge className="size-4" />
                 {t("mergeInto")}
               </DropdownMenuItem>
-              {post.issue && (
-                <DropdownMenuItem
-                  onSelect={() =>
-                    void api(`/api/projects/${projectId}/feedback/${postId}/link`, {
-                      method: "DELETE",
-                    })
-                      .then(refreshDetail)
-                      .catch((e: Error) => toast.error(e.message || t("errorGeneric")))
-                  }
-                >
-                  <Link2 className="size-4" />
-                  {t("unlinkIssue")}
-                </DropdownMenuItem>
-              )}
+              {/* Délier a suivi le ticket dans la fiche : il se fait sur la
+                  ligne du ticket lui-même, là où on le voit. */}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <Trash2 className="size-4" />
                 {t("deletePost")}
@@ -1046,17 +1468,196 @@ function FeedbackDetail({
           />
         </div>
 
-        {/* Catégories — rangée clé/valeur, mêmes contrôles que le panneau
-            d'issue (MIN-52). Visibles ici pour l'équipe ; leur affichage public
-            est un réglage opt-in du board. */}
-        <PropertyRow label={tField("categories")}>
-          <CategoryValue
-            categories={categories}
-            projectId={projectId}
-            value={post.category_ids}
-            onChange={handleCategoriesChange}
-          />
-        </PropertyRow>
+        {/* Tout ce que le retour EST, sur des rangées clé/valeur — mêmes
+            contrôles que le panneau d'issue. C'est ici, et nulle part ailleurs,
+            qu'on lit son statut, sa nature, sa visibilité, son auteur. */}
+        <div className="flex flex-col">
+          {/* En tête de fiche : le soutien. C'est le chiffre qu'on vient
+              comparer, et celui qui décide de l'ordre de la colonne. Il ne se
+              compte que là où on peut en donner — board publié ET retour
+              public ; sur un retour privé ce serait un nombre qui ne bougera
+              jamais. */}
+          {boardEnabled && post.is_public ? (
+            <PropertyRow label={t("votes")}>
+              <VoteCount count={post.vote_count} />
+            </PropertyRow>
+          ) : null}
+
+          <PropertyRow label={tField("status")}>
+            {statusLocked ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <FeedbackStatusBadge status={post.status} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t("statusLockedHint")}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <SearchSelect
+                value={post.status}
+                onChange={(value) => {
+                  if (value && value !== post.status) patch.mutate({ status: value });
+                }}
+                options={FEEDBACK_POST_STATUSES.map((status) => ({
+                  value: status,
+                  label: tStatus(`status.${status}`),
+                  icon:
+                    status === "spam" ? (
+                      <Ban className="size-4 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <StatusIndicator
+                        status={FEEDBACK_TO_ISSUE_STATUS[status]}
+                        className="size-4 shrink-0"
+                      />
+                    ),
+                }))}
+                align="end"
+                tooltip={tField("status")}
+                trigger={
+                  <button type="button" className={BADGE_TRIGGER}>
+                    <FeedbackStatusBadge status={post.status} />
+                  </button>
+                }
+              />
+            )}
+          </PropertyRow>
+
+          {/* Le ticket lié, sur le modèle des relations d'un ticket : la ligne
+              existe TOUJOURS, même vide. C'est elle qui apprend qu'un retour
+              peut porter un ticket — cachée tant qu'il n'y en a pas, elle ne
+              l'apprenait qu'à ceux qui le savaient déjà. Vide, son déclencheur
+              ouvre la recherche ; garni, le ticket se lit en dessous, pleine
+              largeur, parce qu'un titre ne tient pas dans la moitié droite
+              d'une rangée clé/valeur. */}
+          <PropertyRow label={t("linkedIssue")}>
+            {post.issue ? null : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t("linkToIssue")}
+                    className={cn(TRIGGER, "text-muted-foreground")}
+                    onClick={() => setLinkOpen(true)}
+                  >
+                    <Link2 className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t("linkToIssue")}</TooltipContent>
+              </Tooltip>
+            )}
+          </PropertyRow>
+          {post.issue ? (
+            <div className="group/linked mb-2 flex items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-muted/60">
+              <button
+                type="button"
+                onClick={() => onOpenIssue(post.issue!.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              >
+                <StatusIndicator
+                  status={post.issue.status as Issue["status"]}
+                  className="size-4 shrink-0"
+                />
+                <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                  {issueIdentifier(projectKey, post.issue.number)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {issues.find((i) => i.id === post.issue!.id)?.title ??
+                    issueIdentifier(projectKey, post.issue.number)}
+                </span>
+              </button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("unlinkIssue")}
+                className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/linked:opacity-100 focus-visible:opacity-100"
+                onClick={() =>
+                  void api(`/api/projects/${projectId}/feedback/${postId}/link`, {
+                    method: "DELETE",
+                  })
+                    .then(refreshDetail)
+                    .catch((e: Error) => toast.error(e.message || t("errorGeneric")))
+                }
+              >
+                <X />
+              </Button>
+            </div>
+          ) : null}
+
+          {/* Interne / externe : de qui vient ce retour. Ce n'est pas modifiable
+              — c'est un fait sur sa provenance, pas une décision — donc le
+              survol explique au lieu d'ouvrir. Il dit aussi PAR OÙ il est
+              arrivé (board, API), ce que la barre du haut portait avant : la
+              distinction reste utile, mais pas au point d'occuper une ligne. */}
+          <PropertyRow label={t("feedbackType")}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} className="rounded-md px-1.5 py-1 text-sm outline-none">
+                  {post.source === "internal" ? t("typeInternal") : t("typeExternal")}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t(`typeHint.${post.source}`)}</TooltipContent>
+            </Tooltip>
+          </PropertyRow>
+
+          {/* Public ou privé — la question ne se pose que s'il existe un board
+              où publier. */}
+          {boardEnabled ? (
+            <PropertyRow label={t("visibility")}>
+              <SearchSelect
+                value={post.is_public ? "public" : "private"}
+                onChange={(value) => {
+                  const next = value === "public";
+                  if (next !== post.is_public) patch.mutate({ is_public: next });
+                }}
+                options={[
+                  {
+                    value: "public",
+                    label: t("public"),
+                    icon: <Globe className="size-4 shrink-0" />,
+                  },
+                  {
+                    value: "private",
+                    label: t("private"),
+                    icon: <Lock className="size-4 shrink-0" />,
+                  },
+                ]}
+                align="end"
+                tooltip={post.is_public ? t("publicHint") : t("privateHint")}
+                trigger={
+                  <button type="button" className={BADGE_TRIGGER}>
+                    <VisibilityBadge isPublic={post.is_public} />
+                  </button>
+                }
+              />
+            </PropertyRow>
+          ) : null}
+
+          {post.author && (post.author.name || post.author.email) && (
+            <PropertyRow label={t("author")}>
+              <AuthorValue
+                name={post.author.name}
+                email={post.author.email}
+                pseudonym={post.author.pseudonym}
+              />
+            </PropertyRow>
+          )}
+
+          <PropertyRow label={tField("categories")}>
+            <CategoryValue
+              categories={categories}
+              projectId={projectId}
+              value={post.category_ids}
+              onChange={handleCategoriesChange}
+            />
+          </PropertyRow>
+
+          <PropertyRow label={t("createdAt")}>
+            <span className="text-sm">
+              {format.dateTime(new Date(post.created_at), { dateStyle: "medium" })}
+            </span>
+          </PropertyRow>
+        </div>
 
         {rawDiffers && (
           <details className="rounded-md border border-border/60 px-3 py-2">
@@ -1072,15 +1673,6 @@ function FeedbackDetail({
               )}
             </div>
           </details>
-        )}
-
-        {post.author && (post.author.name || post.author.email) && (
-          <p className="text-xs text-muted-foreground">
-            {t("author")} :{" "}
-            <span className="font-medium">
-              {[post.author.name, post.author.email].filter(Boolean).join(" · ")}
-            </span>
-          </p>
         )}
 
         {post.merged_from.length > 0 && (
@@ -1160,7 +1752,11 @@ function FeedbackDetail({
                   if (!respondDisabled) publishResponse();
                 }}
                 placeholder={t("respondPlaceholder", { project: projectName })}
-                className="min-h-16 w-full resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+                // `bg-card`, comme le composeur de commentaire juste dessous :
+                // en transparent, le champ n'était plus une surface d'écriture
+                // posée sur la page mais un trou dedans, et les deux zones de
+                // saisie de l'écran ne se ressemblaient pas.
+                className="min-h-16 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
                 maxLength={5000}
               />
               <div className="flex items-center justify-end gap-2">
@@ -1220,7 +1816,13 @@ function FeedbackDetail({
       <MergeDialog
         open={mergeOpen}
         onOpenChange={setMergeOpen}
-        candidates={allPosts.filter((p) => p.id !== postId && !p.issue_id)}
+        boardEnabled={boardEnabled}
+        // Ni ce retour-ci, ni un retour déjà porté par un ticket, ni un spam :
+        // absorber un vrai retour dans un post écarté l'enterrerait derrière un
+        // tombstone que le board ne montre plus (même garde que la revue IA).
+        candidates={allPosts.filter(
+          (p) => p.id !== postId && !p.issue_id && p.status !== "spam"
+        )}
         onMerge={(canonicalId) => {
           setMergeOpen(false);
           action.mutate({ path: `${postId}/merge`, body: { canonical_id: canonicalId } });
@@ -1235,6 +1837,42 @@ function FeedbackDetail({
           setLinkOpen(false);
           action.mutate({ path: `${postId}/link`, body: { issue_id: issueId } });
         }}
+      />
+      {/* Promouvoir, c'est ouvrir le formulaire de création de ticket déjà
+          rempli par le retour — pas fabriquer un ticket dans le dos de qui
+          clique. Le retour donne ce qu'il sait (titre, texte, catégories) ;
+          l'effort, la priorité, l'assigné et l'échéance sont des jugements
+          d'équipe, et se posent ici plutôt qu'en rouvrant le ticket juste
+          après. C'est le MÊME formulaire que partout ailleurs : ses raccourcis
+          de champ, sa dictée et ses brouillons viennent avec.
+          `projects` ne porte que le projet courant : un retour appartient à
+          son projet, « créer dans un autre projet » n'aurait pas de sens et
+          laisserait le lien derrière lui. */}
+      <CreateIssueDialog
+        open={promoteOpen}
+        onOpenChange={setPromoteOpen}
+        projectId={projectId}
+        projects={project ? [project] : []}
+        members={members}
+        categories={categories}
+        objectives={objectives}
+        initialTitle={post.title}
+        initialDescription={post.body}
+        initialCategoryIds={post.category_ids}
+        analyticsSource="feedback"
+        onCreate={async (input) => {
+          await api(`/api/projects/${projectId}/feedback/${postId}/promote`, {
+            method: "POST",
+            body: JSON.stringify(input),
+          });
+          trackEvent("feedback_action", { action: "promote" });
+          setPromoteOpen(false);
+          refreshDetail();
+        }}
+        // Inatteignable (aucun autre projet dans la liste), mais la prop est
+        // requise : la faire échouer bruyamment vaut mieux qu'un ticket créé
+        // ailleurs et détaché de son retour.
+        onCreateInProject={() => Promise.reject(new Error(t("errorGeneric")))}
       />
       <ConfirmDeleteDialog
         open={deleteOpen}
@@ -1255,62 +1893,106 @@ function FeedbackDetail({
 
 // ── Dialogs ──────────────────────────────────────────────────────────────────
 
+/**
+ * Fusionner ce retour DANS un autre.
+ *
+ * Deux temps, et c'est délibéré : on choisit le retour parent, puis on confirme
+ * en le lisant. Une fusion déplace des voix et fait rediriger une URL publique ;
+ * elle se défait, mais après coup, et un clic dans une liste de titres proches
+ * n'est pas un endroit où se tromper en silence.
+ */
 function MergeDialog({
   open,
   onOpenChange,
+  boardEnabled,
   candidates,
   onMerge,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  boardEnabled: boolean;
   candidates: TeamFeedbackListItem[];
   onMerge: (canonicalId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
+  const tCommon = useTranslations("Common");
   const [search, setSearch] = useState("");
+  const [confirming, setConfirming] = useState<TeamFeedbackListItem | null>(null);
   const filtered = candidates.filter((p) =>
     p.title.toLowerCase().includes(search.trim().toLowerCase())
   );
 
+  const close = (next: boolean) => {
+    if (!next) {
+      setSearch("");
+      setConfirming(null);
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setSearch("");
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <GitMerge className="size-4 text-brand" />
-            {t("mergeDialogTitle")}
-          </DialogTitle>
-          <DialogDescription>{t("mergeDialogDesc")}</DialogDescription>
-        </DialogHeader>
-        <Input
-          autoFocus
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("mergeSearchPlaceholder")}
-        />
-        <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-          {filtered.map((post) => (
-            <button
-              key={post.id}
-              type="button"
-              onClick={() => onMerge(post.id)}
-              className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+    <>
+      <Dialog open={open} onOpenChange={close}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitMerge className="size-4 text-brand" />
+              {t("mergeDialogTitle")}
+            </DialogTitle>
+            <DialogDescription>{t("mergeDialogDesc")}</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("mergeSearchPlaceholder")}
+          />
+          <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+            {filtered.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => setConfirming(post)}
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+              >
+                <span className="min-w-0 truncate">{post.title}</span>
+                {boardEnabled ? (
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    ▲ {post.vote_count}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!confirming} onOpenChange={(next) => !next && setConfirming(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("mergeConfirmTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("mergeConfirmDesc", { title: confirming?.title ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirming(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              onClick={() => {
+                const target = confirming;
+                setConfirming(null);
+                if (target) onMerge(target.id);
+              }}
             >
-              <span className="min-w-0 truncate">{post.title}</span>
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                ▲ {post.vote_count}
-              </span>
-            </button>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
+              <GitMerge className="size-4" />
+              {t("merge")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1387,43 +2069,266 @@ function LinkIssueDialog({
   );
 }
 
+// ── Saisie interne ───────────────────────────────────────────────────────────
+
+/** L'auteur choisi dans le composeur : quelqu'un qu'on connaît déjà, ou un
+    email frais. Les deux se résolvent en la même identité côté serveur. */
+interface ComposerAuthor {
+  email: string;
+  name: string | null;
+}
+
+/**
+ * Au nom de qui l'équipe saisit ce retour.
+ *
+ * Retaper l'email de tête créait une SECONDE identité à la moindre faute — avec
+ * son pseudonyme, sa voix et son historique séparés. Le champ propose donc ceux
+ * qui ont déjà écrit ou voté, et n'accepte une saisie libre qu'après avoir
+ * montré qu'aucun d'eux ne correspond.
+ */
+function AuthorPicker({
+  projectId,
+  value,
+  onChange,
+  onCreateRequested,
+}: {
+  projectId: string;
+  value: ComposerAuthor | null;
+  onChange: (author: ComposerAuthor | null) => void;
+  /** Bascule le champ en saisie d'une personne neuve, avec ce qui a été tapé. */
+  onCreateRequested: (typed: string) => void;
+}) {
+  const t = useTranslations("FeedbackBoard");
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data } = useQuery({
+    queryKey: ["feedback-users", projectId, search.trim()],
+    queryFn: () =>
+      api<{ users: TeamFeedbackUserOption[] }>(
+        `/api/projects/${projectId}/feedback/users?q=${encodeURIComponent(search.trim())}`
+      ),
+    enabled: open,
+  });
+  const users = data?.users ?? [];
+  const typed = search.trim();
+
+  const pick = (author: ComposerAuthor) => {
+    onChange(author);
+    setSearch("");
+    setOpen(false);
+  };
+
+  return (
+    <SearchMenu
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setSearch("");
+        setOpen(next);
+      }}
+      align="start"
+      searchValue={search}
+      onSearchValueChange={setSearch}
+      searchPlaceholder={t("authorSearchPlaceholder")}
+      // « Aucun résultat » n'a jamais le dernier mot ici : la ligne de création
+      // juste dessous EST la réponse quand rien ne correspond.
+      hideEmpty
+      contentClassName="w-80"
+      trigger={
+        <button
+          type="button"
+          className="flex min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:border-ring"
+        >
+          {value ? (
+            <>
+              <UserAvatar seed={value.email} className="size-5" />
+              <span className="min-w-0 truncate">{value.name?.trim() || value.email}</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">{t("authorPlaceholder")}</span>
+          )}
+        </button>
+      }
+    >
+      <CommandGroup>
+        {users.map((u) => (
+          <CommandItem
+            key={u.id}
+            value={u.id}
+            keywords={[u.email ?? "", u.name ?? "", u.pseudonym]}
+            onSelect={() =>
+              u.email ? pick({ email: u.email, name: u.name }) : undefined
+            }
+            disabled={!u.email}
+          >
+            <UserAvatar seed={u.email || u.pseudonym} className="size-5 shrink-0" />
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">{u.name?.trim() || u.email || u.pseudonym}</span>
+              {u.name?.trim() && u.email ? (
+                <span className="truncate text-xs text-muted-foreground">{u.email}</span>
+              ) : null}
+            </span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+      {/* Créer quelqu'un est TOUJOURS à portée, pas seulement quand la
+          recherche échoue : le plus souvent, saisir un retour reçu par mail,
+          c'est saisir une personne qu'on n'a jamais vue. `forceMount` la garde
+          affichée quand cmdk ne trouve rien — c'est-à-dire précisément là où
+          elle sert. */}
+      <CommandSeparator alwaysRender className="my-1" />
+      <CommandGroup forceMount>
+        <CommandItem
+          forceMount
+          value="__new__"
+          keywords={[t("authorCreate")]}
+          onSelect={() => {
+            setOpen(false);
+            setSearch("");
+            onCreateRequested(typed);
+          }}
+        >
+          <Plus className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">
+            {typed ? t("authorNew", { name: typed }) : t("authorCreate")}
+          </span>
+        </CommandItem>
+      </CommandGroup>
+    </SearchMenu>
+  );
+}
+
+/**
+ * La personne neuve : email et nom, les deux champs que la saisie interne a
+ * toujours eus. Ils reviennent parce que le sélecteur seul les avait perdus —
+ * on ne pouvait plus que retrouver quelqu'un, jamais l'inscrire, alors que
+ * saisir un retour reçu par mail commence presque toujours par là.
+ *
+ * Rendus SUR PLACE, dans le composeur, plutôt que dans un second dialog :
+ * empiler deux modales pour deux champs coûte plus cher en attention que ce
+ * qu'elles demandent.
+ */
+function NewAuthorFields({
+  email,
+  name,
+  onEmailChange,
+  onNameChange,
+  onCancel,
+}: {
+  email: string;
+  name: string;
+  onEmailChange: (value: string) => void;
+  onNameChange: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("FeedbackBoard");
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <Input
+        autoFocus
+        type="email"
+        value={email}
+        onChange={(e) => onEmailChange(e.target.value)}
+        placeholder={t("authorEmail")}
+        className="h-8 min-w-0 flex-1"
+      />
+      <Input
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        placeholder={t("authorName")}
+        className="h-8 min-w-0 flex-1"
+      />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("authorBack")}
+            onClick={onCancel}
+          >
+            <Undo2 className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t("authorBack")}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+/**
+ * Saisir un retour reçu ailleurs — un email, un appel, une conversation.
+ *
+ * Même surface d'écriture que le composeur du board public : le titre et le
+ * corps sont des champs libres, sans chrome, parce que ce qu'on écrit ici finit
+ * exactement au même endroit. Ce qui s'y ajoute est ce que le visiteur n'a pas
+ * à choisir : AU NOM DE QUI on écrit.
+ */
 function InternalFeedbackDialog({
   projectId,
+  boardEnabled,
   open,
   onOpenChange,
   onCreated,
 }: {
   projectId: string;
+  boardEnabled: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (postId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [author, setAuthor] = useState<ComposerAuthor | null>(null);
+  // Personne neuve en cours de saisie. `null` = on est sur le sélecteur.
+  const [draftAuthor, setDraftAuthor] = useState<{ email: string; name: string } | null>(
+    null
+  );
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
   const [busy, setBusy] = useState(false);
+  // Le MarkdownEditor ne committe qu'au blur — la ref porte toujours la
+  // dernière valeur commitée, et submit() force le blur avant de lire.
+  const bodyRef = useRef("");
+  const [editorKey, setEditorKey] = useState(0);
 
   const reset = () => {
-    setEmail("");
-    setName("");
+    setAuthor(null);
+    setDraftAuthor(null);
     setTitle("");
-    setBody("");
+    setIsPublic(true);
+    bodyRef.current = "";
+    setEditorKey((k) => k + 1);
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /**
+   * Qui signe ce retour, quel que soit le mode : la personne choisie dans la
+   * liste, ou celle qu'on est en train d'inscrire. Un email est le minimum —
+   * c'est lui qui résout l'identité côté serveur (`upsertFeedbackUser`), et
+   * c'est par lui qu'on recontactera.
+   */
+  const resolvedAuthor: ComposerAuthor | null = draftAuthor
+    ? draftAuthor.email.trim().includes("@")
+      ? { email: draftAuthor.email.trim(), name: draftAuthor.name.trim() || null }
+      : null
+    : author;
+
+  const canSubmit = !busy && !!title.trim() && !!resolvedAuthor;
+
+  const submit = async () => {
+    const signer = resolvedAuthor;
+    if (busy || !title.trim() || !signer) return;
     setBusy(true);
     try {
+      (document.activeElement as HTMLElement | null)?.blur();
+      await new Promise((resolve) => setTimeout(resolve, 0));
       const created = await api<{ post: { id: string } }>(
         `/api/projects/${projectId}/feedback`,
         {
           method: "POST",
           body: JSON.stringify({
             title: title.trim(),
-            body: body.trim(),
-            user: { email: email.trim(), name: name.trim() || undefined },
+            body: bodyRef.current.trim(),
+            is_public: boardEnabled ? isPublic : false,
+            user: { email: signer.email, name: signer.name ?? undefined },
           }),
         }
       );
@@ -1445,45 +2350,99 @@ function InternalFeedbackDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} className="flex flex-col gap-4">
-          <DialogHeader>
-            <DialogTitle>{t("internalDialogTitle")}</DialogTitle>
-            <DialogDescription>{t("internalDialogDesc")}</DialogDescription>
-          </DialogHeader>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t("userEmail")}
-            required
-          />
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("userName")}
-          />
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t("postTitlePlaceholder")}
-            maxLength={200}
-            required
-          />
-          <AutoTextarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={t("postBodyPlaceholder")}
-            maxLength={10000}
-            className="min-h-16 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
-          />
-          <DialogFooter>
-            <Button type="submit" disabled={busy || !title.trim() || !email.includes("@")}>
+      {/* ⌘/Ctrl+Entrée envoie depuis N'IMPORTE QUEL champ du modal — le titre
+          comme le corps. Le raccourci est posé ici plutôt que sur chaque champ
+          parce que le corps est un éditeur riche : la touche y remonte par
+          bouillonnement. `defaultPrevented` laisse la priorité à l'éditeur
+          quand il s'en sert lui-même (sortir d'un bloc de code). */}
+      <DialogContent
+        className="top-24 translate-y-0 gap-0 sm:max-w-xl"
+        onKeyDown={(e) => {
+          if (e.defaultPrevented || !isSendShortcut(e)) return;
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <DialogTitle className="sr-only">{t("internalDialogTitle")}</DialogTitle>
+        <AutoTextarea
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            void submit();
+          }}
+          placeholder={t("postTitlePlaceholder")}
+          maxLength={200}
+          className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+        />
+        <MarkdownEditor
+          key={editorKey}
+          value=""
+          onCommit={(markdown) => {
+            bodyRef.current = markdown;
+          }}
+          placeholder={t("postBodyPlaceholder")}
+          className="mt-3 min-h-24"
+        />
+
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <span className="shrink-0 text-sm font-medium">{t("authorLabel")}</span>
+          {draftAuthor ? (
+            <NewAuthorFields
+              email={draftAuthor.email}
+              name={draftAuthor.name}
+              onEmailChange={(email) => setDraftAuthor((d) => ({ ...d!, email }))}
+              onNameChange={(name) => setDraftAuthor((d) => ({ ...d!, name }))}
+              onCancel={() => setDraftAuthor(null)}
+            />
+          ) : (
+            <AuthorPicker
+              projectId={projectId}
+              value={author}
+              onChange={setAuthor}
+              // Ce qui a été tapé n'est pas perdu au passage : un email part
+              // dans le champ email, tout le reste dans le champ nom.
+              onCreateRequested={(typed) => {
+                setAuthor(null);
+                setDraftAuthor(
+                  typed.includes("@")
+                    ? { email: typed, name: "" }
+                    : { email: "", name: typed }
+                );
+              }}
+            />
+          )}
+        </div>
+
+        {boardEnabled ? (
+          <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
+            <label
+              htmlFor="internal-feedback-public"
+              className="flex min-w-0 cursor-pointer flex-col"
+            >
+              <span className="text-sm font-medium">{t("public")}</span>
+              <span className="text-xs text-muted-foreground">
+                {isPublic ? t("publicHint") : t("privateHint")}
+              </span>
+            </label>
+            <Switch
+              id="internal-feedback-public"
+              checked={isPublic}
+              onCheckedChange={setIsPublic}
+            />
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex items-center justify-end gap-4 border-t pt-3">
+          <SendShortcutTooltip label={t("create")}>
+            <Button disabled={!canSubmit} onClick={() => void submit()}>
               {busy && <Spinner />}
               {t("create")}
             </Button>
-          </DialogFooter>
-        </form>
+          </SendShortcutTooltip>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { listTeamFeedback } from "@/lib/server/feedback/team-queries";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
+import { getBoardForProject } from "@/lib/server/feedback/boards";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -13,15 +14,23 @@ type RouteContext = { params: Promise<{ id: string }> };
 const EMAIL_MAX = 254;
 const NAME_MAX = 200;
 
-/** GET — liste équipe (vraies identités) ; POST — saisie interne d'un feedback
+/** GET — liste équipe (vraies identités) ; POST — saisie interne d'un retour
     au nom d'un utilisateur final (canal 'internal', jamais anonyme). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const guard = await requireProjectMember(request, id);
   if (!guard.ok) return guard.response;
 
-  const posts = await listTeamFeedback(id);
-  return NextResponse.json({ posts });
+  // `board_enabled` voyage AVEC la liste, et non dans un appel à part : sans
+  // board public, la moitié de ce que la vue affiche n'a pas de sens (les voix
+  // que personne ne peut donner, le choix public/privé qui ne mène nulle part).
+  // Les deux doivent donc arriver ensemble, sinon l'écran se peint une fois
+  // avec ces commandes puis les retire.
+  const [posts, board] = await Promise.all([
+    listTeamFeedback(id),
+    getBoardForProject(id),
+  ]);
+  return NextResponse.json({ posts, board_enabled: board?.enabled ?? false });
 }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
@@ -68,6 +77,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     source: "internal",
     authorId: feedbackUser.id,
     createdByMember: guard.userId,
+    // Même choix que le composeur du board public : publier ou garder pour
+    // l'équipe. Omis (agents, appels historiques) → public, comme avant.
+    isPublic: typeof body.is_public === "boolean" ? body.is_public : undefined,
   });
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });

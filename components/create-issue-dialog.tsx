@@ -91,6 +91,9 @@ export function CreateIssueDialog({
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
+  initialTitle,
+  initialDescription,
+  initialCategoryIds,
   analyticsSource = "dialog",
 }: {
   open: boolean;
@@ -114,6 +117,19 @@ export function CreateIssueDialog({
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
+  /**
+   * Contenu de départ — le formulaire s'ouvre déjà écrit. C'est la promotion
+   * d'un retour en ticket : tout ce que le retour sait dire (son titre, son
+   * texte, ses catégories) est posé, et l'humain complète le reste plutôt que
+   * de recopier ce qu'il a sous les yeux.
+   *
+   * À la différence des trois presets ci-dessus, il n'est appliqué qu'UNE fois
+   * par ouverture : réappliqué à chaque rendu, il écraserait la frappe en
+   * cours.
+   */
+  initialTitle?: string;
+  initialDescription?: string;
+  initialCategoryIds?: string[];
   /** Surface d'où vient la création — analytics uniquement (MIN-78). */
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
@@ -191,6 +207,27 @@ export function CreateIssueDialog({
       assignee_id: initialAssigneeId ?? defaultAssigneeId,
     }));
   }, [open, initialStatus, initialObjectiveId, initialAssigneeId, defaultAssigneeId]);
+
+  // Le contenu de départ, posé UNE fois par ouverture. Le drapeau est un ref et
+  // non une dépendance d'effet : `initialCategoryIds` est un tableau, donc une
+  // identité neuve à chaque rendu du parent, et sans ce garde-fou chaque rendu
+  // réécrirait le titre par-dessus ce qu'on est en train de taper.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      seededRef.current = false;
+      return;
+    }
+    if (seededRef.current) return;
+    seededRef.current = true;
+    if (initialTitle) setTitle(initialTitle);
+    if (initialDescription) {
+      setDescription(initialDescription);
+      editorNonEmptyRef.current = true;
+      setEditorKey((k) => k + 1); // remount the editor with the seeded content
+    }
+    if (initialCategoryIds?.length) setCategoryIds(initialCategoryIds);
+  }, [open, initialTitle, initialDescription, initialCategoryIds]);
 
   // Ouverture du dialog (MIN-78) : le dénominateur du taux d'abandon — combien
   // de dialogs ouverts finissent en ticket réellement créé. `useTrackView`

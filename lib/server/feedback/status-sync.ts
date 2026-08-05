@@ -4,31 +4,63 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { getServiceClient } from "@/lib/supabase-service";
 import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
+import type { IssueStatus } from "@/lib/issue-constants";
 
 /**
  * Reflet du statut d'une issue liée sur son post de feedback (MIN-37).
- * Mapping : done→shipped, in_progress/in_review→in_progress,
- * canceled→declined ; toute autre transition d'issue (triage/backlog/todo/
- * duplicate) est un no-op — le post garde sa valeur, posée manuellement par
- * l'équipe. Branché dans updateIssueFields — le chokepoint de tous les
- * chemins de mutation — et exécuté via after(), jamais sur le chemin de la
- * réponse.
+ *
+ * La table est TOTALE sur les statuts d'issue, et c'est tout l'enjeu : lier un
+ * ticket à un retour, c'est déclarer que l'un dit l'autre. Une table partielle
+ * en faisait des DÉCLENCHEURS — seuls done, in_progress, in_review et canceled
+ * écrivaient, les autres transitions ne faisaient rien. Un ticket passé « en
+ * cours » puis ramené au backlog laissait donc son retour « En cours » : le
+ * board public annonçait un travail commencé que plus personne ne faisait, et
+ * rien dans l'écran ne permettait de le corriger, le statut d'un retour lié
+ * étant en lecture seule. Un lien qui ne tient que dans un sens n'est pas un
+ * lien.
+ *
+ * Deux lectures méritent d'être dites :
+ *
+ * - **backlog → `open`**, et non « prévu ». Un ticket au backlog n'est pas
+ *   planifié, il est reçu ; c'est `todo` qui est une promesse. Promouvoir un
+ *   retour ne le fait donc plus passer « Prévu » d'office — il le devient quand
+ *   son ticket est vraiment pris.
+ * - **duplicate → `open`**. L'issue est un doublon, mais le besoin, lui, est
+ *   toujours vivant et suivi ailleurs. « Décliné » dirait au public qu'on a
+ *   dit non, ce qui est faux.
+ *
+ * Branché dans updateIssueFields — le chokepoint de tous les chemins de
+ * mutation — et exécuté via after(), jamais sur le chemin de la réponse.
  */
-
-const ISSUE_TO_FEEDBACK_STATUS: Record<string, FeedbackPostStatus> = {
-  done: "shipped",
+export const ISSUE_TO_FEEDBACK_STATUS: Record<IssueStatus, FeedbackPostStatus> = {
+  triage: "open",
+  backlog: "open",
+  todo: "planned",
   in_progress: "in_progress",
   in_review: "in_progress",
+  done: "shipped",
   canceled: "declined",
+  duplicate: "open",
 };
+
+/** Le statut public que porte un retour lié à une issue dans cet état. */
+export function feedbackStatusForIssue(
+  issueStatus: unknown
+): FeedbackPostStatus | null {
+  return typeof issueStatus === "string" &&
+    Object.hasOwn(ISSUE_TO_FEEDBACK_STATUS, issueStatus)
+    ? ISSUE_TO_FEEDBACK_STATUS[issueStatus as IssueStatus]
+    : null;
+}
 
 export function scheduleFeedbackStatusSync(
   issueId: string,
   issueStatus: unknown,
   actorId: string | null = null
 ): void {
-  const mapped =
-    typeof issueStatus === "string" ? ISSUE_TO_FEEDBACK_STATUS[issueStatus] : undefined;
+  // `null` seulement pour une valeur qui n'est pas un statut connu — pas pour
+  // un statut qu'on aurait choisi d'ignorer : il n'y en a plus.
+  const mapped = feedbackStatusForIssue(issueStatus);
   if (!mapped) return;
   afterOrNow(() =>
     syncFeedbackStatusForIssue(issueId, mapped, actorId).catch((e) =>

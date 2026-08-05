@@ -24,7 +24,7 @@ import { EmptyState } from "@/components/empty-state";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import {
-  FEEDBACK_POST_STATUSES,
+  FEEDBACK_PUBLIC_STATUSES,
   type FeedbackPostStatus,
   type PublicCategory,
   type PublicIdentity,
@@ -218,7 +218,7 @@ function FilterBar({
     // en dropdown partout.
     <div className="flex flex-col gap-2 border-b border-border/60 pb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <div className="flex min-w-0 items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {FEEDBACK_POST_STATUSES.map((value) => {
+        {FEEDBACK_PUBLIC_STATUSES.map((value) => {
           const active = status === value;
           return (
             <Link

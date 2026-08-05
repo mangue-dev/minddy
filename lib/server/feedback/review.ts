@@ -23,6 +23,7 @@ import {
   FEEDBACK_SENSITIVITY_KINDS,
   normalizeSensitivityKind,
   type FeedbackPostSource,
+  type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
 
@@ -79,6 +80,7 @@ export interface ReviewReport {
   posts_suggested: number;
   posts_categorized: number;
   posts_forced_private: number;
+  /** Junk classé `spam` par la modération. */
   posts_rejected: number;
   /** Publiés sans revue : projet qui l'a désarmée, ou bascule budget épuisé. */
   posts_published_unreviewed: number;
@@ -334,10 +336,10 @@ async function fetchRejectedPairIds(itemId: string): Promise<Set<string>> {
 }
 
 /**
- * Écarte les candidats de fusion rejetés (junk) : absorber un vrai retour dans
- * un post écarté par la modération l'enterrerait derrière un tombstone invisible.
+ * Écarte les candidats de fusion classés spam : absorber un vrai retour dans un
+ * post écarté par la modération l'enterrerait derrière un tombstone invisible.
  */
-async function dropRejectedCandidates(candidates: MatchedPost[]): Promise<MatchedPost[]> {
+async function dropSpamCandidates(candidates: MatchedPost[]): Promise<MatchedPost[]> {
   if (candidates.length === 0) return candidates;
   const service = getServiceClient();
   const { data } = await service
@@ -345,9 +347,9 @@ async function dropRejectedCandidates(candidates: MatchedPost[]): Promise<Matche
     .select("id")
     .is("deleted_at", null)
     .in("id", candidates.map((c) => c.id))
-    .eq("review_state", "rejected");
-  const rejected = new Set((data ?? []).map((r) => r.id as string));
-  return rejected.size === 0 ? candidates : candidates.filter((c) => !rejected.has(c.id));
+    .eq("status", "spam");
+  const spam = new Set((data ?? []).map((r) => r.id as string));
+  return spam.size === 0 ? candidates : candidates.filter((c) => !spam.has(c.id));
 }
 
 interface ProjectCategory {
@@ -398,7 +400,7 @@ async function reviewOne(
       exclude: post.id,
       limit: KNN_CANDIDATES,
     });
-    candidates = await dropRejectedCandidates(
+    candidates = await dropSpamCandidates(
       matched.filter(
         (c) => c.similarity >= MIN_CANDIDATE_SIMILARITY && !rejectedPairs.has(c.id)
       )
@@ -417,7 +419,7 @@ async function reviewOne(
   // Garde de course : l'équipe a pu merger/publier/rejeter le post pendant l'appel.
   const { data: fresh } = await service
     .from("feedback_posts")
-    .select("id, merged_into_id, is_public, review_state, analyzed_at, classified_at")
+    .select("id, merged_into_id, is_public, status, review_state, analyzed_at, classified_at")
     .is("deleted_at", null)
     .eq("id", post.id)
     .maybeSingle();
@@ -425,6 +427,7 @@ async function reviewOne(
   if (fresh.analyzed_at !== null && fresh.classified_at !== null) return true;
 
   const currentReviewState = fresh.review_state as FeedbackReviewState;
+  const currentStatus = fresh.status as FeedbackPostStatus;
   const currentIsPublic = fresh.is_public as boolean;
 
   const decision = decideFeedbackReview({
@@ -433,6 +436,7 @@ async function reviewOne(
       source: post.source,
       isPublic: currentIsPublic,
       reviewState: currentReviewState,
+      status: currentStatus,
     },
     autoThreshold: settings.autoThreshold,
     suggestFloor: settings.suggestFloor,
@@ -457,6 +461,7 @@ async function reviewOne(
     sensitivity: decision.sensitivity,
     moderation_reason: decision.moderationReason,
   };
+  if (decision.markSpam) updates.status = "spam";
   // On ne touche à la suggestion que si l'on a bien cherché des doublons — sinon
   // on effacerait celle qu'une passe précédente avait posée (post déjà analysé
   // mais pas encore classé, cas des lignes d'avant MIN-87).
@@ -507,25 +512,24 @@ async function reviewOne(
   }
 
   // Fil d'activité : on ne raconte que les actions notables de modération —
-  // passage forcé en privé et rejet junk, attribués à Numo (via_assistant). La
-  // publication « normale » d'un post vérifié reste silencieuse (pas de bruit).
+  // passage forcé en privé et classement en spam, attribués à Numo
+  // (via_assistant). La publication « normale » d'un post vérifié reste
+  // silencieuse (pas de bruit).
   const eventUpdates: Record<string, unknown> = {};
   if (decision.forcePrivate) eventUpdates.is_public = false;
-  if (decision.reviewState === "rejected" && currentReviewState !== "rejected") {
-    eventUpdates.review_state = "rejected";
-  }
+  if (decision.markSpam && currentStatus !== "spam") eventUpdates.status = "spam";
   if (Object.keys(eventUpdates).length > 0) {
     await emitFeedbackFieldChanges(service, {
       postId: post.id,
       actorId: null,
-      before: { is_public: currentIsPublic, review_state: currentReviewState },
+      before: { is_public: currentIsPublic, status: currentStatus },
       updates: eventUpdates,
       viaAssistant: true,
     });
   }
 
   if (decision.forcePrivate) report.posts_forced_private += 1;
-  if (decision.reviewState === "rejected") report.posts_rejected += 1;
+  if (decision.markSpam) report.posts_rejected += 1;
   report.posts_reviewed += 1;
   return true;
 }

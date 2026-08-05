@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ChevronUp } from "lucide-react";
-import { cn } from "mangue-ui";
+import { Ban, ChevronUp } from "lucide-react";
+import { Badge, cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import type { IssueStatus } from "@/lib/issue-constants";
@@ -23,6 +23,10 @@ export const FEEDBACK_TO_ISSUE_STATUS: Record<FeedbackPostStatus, IssueStatus> =
   in_progress: "in_progress",
   shipped: "done",
   declined: "canceled",
+  // Le spam n'a pas d'équivalent chez les tickets : il emprunte l'icône du
+  // ticket annulé pour les endroits qui n'affichent QUE l'indicateur (le
+  // sélecteur de statut), mais le badge, lui, se peint avec son propre signe.
+  spam: "canceled",
 };
 
 /** Teintes du badge par statut — appariées à la couleur des icônes d'issue
@@ -38,38 +42,70 @@ const STATUS_BADGE_CLASSES: Record<FeedbackPostStatus, string | null> = {
     "border-green-700/30 bg-green-500/10 text-green-700 dark:border-green-400/30 dark:bg-green-400/10 dark:text-green-400",
   declined:
     "border-red-700/30 bg-red-500/10 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-400",
+  // Le spam ne se peint pas : il s'éteint. Une couleur d'alerte lui donnerait
+  // le poids d'une décision à relire, alors qu'il est justement ce qu'on a
+  // fini de regarder.
+  spam: "border-border bg-muted text-muted-foreground",
 };
 
-export function FeedbackStatusBadge({ status }: { status: FeedbackPostStatus }) {
+/**
+ * Le badge de statut d'un retour, partagé par le board public et la vue équipe.
+ *
+ * Il emprunte la FORME des badges du reste de l'app (`Badge` de mangue-ui, la
+ * même hauteur que sur les pull requests et les sessions d'agent) plutôt que la
+ * micro-pastille qu'il portait : quatre listes qui se ressemblent doivent se
+ * ressembler, et un badge de 11 px au milieu de badges de 12 se lit comme un
+ * badge de seconde classe.
+ */
+export function FeedbackStatusBadge({
+  status,
+  className,
+}: {
+  status: FeedbackPostStatus;
+  className?: string;
+}) {
   const t = useTranslations("PublicFeedback");
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-        STATUS_BADGE_CLASSES[status] ?? "text-muted-foreground"
-      )}
+    <Badge
+      variant="secondary"
+      icon={
+        status === "spam" ? (
+          <Ban />
+        ) : (
+          <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[status]} />
+        )
+      }
+      className={cn(STATUS_BADGE_CLASSES[status] ?? "text-muted-foreground", className)}
     >
-      <StatusIndicator
-        status={FEEDBACK_TO_ISSUE_STATUS[status]}
-        className="size-3.5"
-      />
       {t(`status.${status}`)}
-    </span>
+    </Badge>
   );
 }
 
-/** Pastille de catégorie du board public (MIN-52) — point coloré + nom, ton
-    neutre pour rester discret sous le titre du post. */
-export function CategoryTag({ category }: { category: PublicCategory }) {
+/** Pastille de catégorie (MIN-52) — point coloré + nom, ton neutre pour rester
+    discret sous le titre du post. Même gabarit que le badge de statut à côté
+    duquel elle se lit toujours. */
+export function CategoryTag({
+  category,
+  className,
+}: {
+  category: PublicCategory;
+  className?: string;
+}) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">
-      <span
-        className="size-2 rounded-full"
-        style={{ backgroundColor: category.color }}
-        aria-hidden
-      />
+    <Badge
+      variant="secondary"
+      icon={
+        <span
+          className="size-2 rounded-full"
+          style={{ backgroundColor: category.color }}
+          aria-hidden
+        />
+      }
+      className={cn("font-normal text-muted-foreground", className)}
+    >
       {category.name}
-    </span>
+    </Badge>
   );
 }
 

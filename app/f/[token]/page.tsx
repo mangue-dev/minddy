@@ -24,7 +24,11 @@ import {
   listPublicPosts,
   type PublicSort,
 } from "@/lib/server/feedback/queries";
-import { isFeedbackPostStatus, type PublicCategory } from "@/lib/feedback/types";
+import {
+  FEEDBACK_PUBLIC_STATUSES,
+  isFeedbackPostStatus,
+  type PublicCategory,
+} from "@/lib/feedback/types";
 import { FeedbackBoardClient } from "./feedback-board-client";
 import { HeaderIdentity } from "./header-identity";
 
@@ -106,7 +110,13 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     }),
   ]);
   const sort: PublicSort = search.sort === "recent" ? "recent" : "top";
-  const status = isFeedbackPostStatus(search.status) ? search.status : null;
+  // Seuls les statuts que le board sait nommer : `?status=spam` n'est pas un
+  // filtre, c'est une question à laquelle la page n'a rien à répondre.
+  const status =
+    isFeedbackPostStatus(search.status) &&
+    FEEDBACK_PUBLIC_STATUSES.includes(search.status)
+      ? search.status
+      : null;
   const showCategories = ctx.board.show_categories;
   const activeCategory =
     showCategories && typeof search.category === "string" ? search.category : null;

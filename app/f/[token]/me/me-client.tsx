@@ -77,7 +77,17 @@ export function MyFeedbackClient({
                       {entry.post.title}
                     </p>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                      <FeedbackStatusBadge status={entry.post.status} />
+                      {/* Un retour écarté par la modération ne dit pas « spam »
+                          à celui qui l'a écrit — c'est le mot de l'équipe, pas
+                          une réponse à un visiteur. Il lit « non publié ». */}
+                      {entry.post.status === "spam" ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
+                          <Ban className="size-2.5" />
+                          {t("rejected")}
+                        </span>
+                      ) : (
+                        <FeedbackStatusBadge status={entry.post.status} />
+                      )}
                       {!entry.post.isPublic && (
                         <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
                           <Lock className="size-2.5" />
@@ -85,20 +95,13 @@ export function MyFeedbackClient({
                         </span>
                       )}
                       {/* Revue avant publication (MIN-54) : l'auteur voit son
-                          retour en attente / écarté tant qu'il n'est pas publié. */}
+                          retour en attente tant qu'il n'est pas publié. */}
                       {entry.relation === "authored" &&
                         entry.post.isPublic &&
                         entry.post.reviewState === "pending" && (
                           <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
                             <Clock className="size-2.5" />
                             {t("pendingReview")}
-                          </span>
-                        )}
-                      {entry.relation === "authored" &&
-                        entry.post.reviewState === "rejected" && (
-                          <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                            <Ban className="size-2.5" />
-                            {t("rejected")}
                           </span>
                         )}
                       <span>

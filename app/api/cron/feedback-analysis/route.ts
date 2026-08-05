@@ -61,7 +61,7 @@ async function purgeJunk(): Promise<number> {
     .from("feedback_posts")
     .select("id")
     .is("deleted_at", null)
-    .eq("review_state", "rejected")
+    .eq("status", "spam")
     .is("issue_id", null)
     .is("merged_into_id", null)
     .lte("vote_count", 1)
@@ -74,7 +74,7 @@ async function purgeJunk(): Promise<number> {
   const ids = (candidates ?? []).map((p) => p.id as string);
   if (ids.length === 0) return 0;
 
-  // Un post rejeté peut avoir absorbé des doublons (fusions d'avant la
+  // Un post en spam peut avoir absorbé des doublons (fusions d'avant la
   // modération). Le supprimer remettrait ses tombstones à `merged_into_id`
   // null — ils ressusciteraient en posts autonomes sur le board. On le garde.
   const { data: absorbers } = await service

@@ -331,6 +331,8 @@ export function describeFeedbackEvent(
         return e.to_value === "private"
           ? t("feedbackMadePrivate")
           : t("feedbackMadePublic");
+      // `rejected` a été replié dans le statut `spam` : les lignes d'avant la
+      // bascule le portent encore, et doivent continuer à se lire.
       case "review_state":
         return e.to_value === "rejected"
           ? t("feedbackRejected")

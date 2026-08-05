@@ -113,7 +113,16 @@ export interface AnalyticsEventProps {
 
   // ── Tickets : création ──
   issue_created: {
-    source: "dialog" | "palette" | "kanban" | "numo" | "board" | "objective" | "sub_issue";
+    source:
+      | "dialog"
+      | "palette"
+      | "kanban"
+      | "numo"
+      | "board"
+      | "objective"
+      | "sub_issue"
+      /** Promotion d'un retour : le formulaire s'ouvre déjà rempli par lui. */
+      | "feedback";
     has_description: boolean;
     has_categories: boolean;
     has_assignee: boolean;

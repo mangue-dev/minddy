@@ -91,9 +91,10 @@ export function buildFeedbackFieldChangeEvents(
       to_value: updates.is_public ? "public" : "private",
     });
   }
-  // État de publication (MIN-54) : publié / rejeté (junk). Émis par la revue IA
-  // (via_assistant) comme par un override équipe. `pending` ne produit pas de
-  // phrase — c'est l'état d'attente initial, sans action à raconter.
+  // État de publication (MIN-54) : publication d'un retour retenu, émise par un
+  // override équipe. `pending` ne produit pas de phrase — c'est l'état
+  // d'attente initial, sans action à raconter. Le junk, lui, ne passe plus par
+  // ici : il est devenu le statut `spam`, journalisé par le bloc `status`.
   if (
     "review_state" in updates &&
     (updates.review_state ?? null) !== (before.review_state ?? null) &&

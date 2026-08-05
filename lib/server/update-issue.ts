@@ -537,8 +537,9 @@ export async function updateIssueFields({
     }
   }
 
-  // Feedback (MIN-37): le statut public d'un post lié suit l'issue
-  // (done→shipped, in_progress→in_progress ; toute autre transition = no-op).
+  // Feedback (MIN-37) : le statut public d'un post lié suit l'issue, à CHAQUE
+  // transition — la table de correspondance est totale, il n'y a plus de
+  // transition qui ne dise rien (cf. status-sync).
   if ("status" in updates && updates.status !== before.status) {
     scheduleFeedbackStatusSync(issueId, updates.status, actorId);
     // Automatisations (MIN-147) : le changement de statut est l'un des deux

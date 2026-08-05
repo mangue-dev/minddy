@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
+  isHiddenFeedbackStatus,
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
   type PublicCategory,
@@ -106,6 +107,7 @@ export async function listPublicCategories(projectId: string): Promise<PublicCat
     .eq("project_id", projectId)
     .eq("is_public", true)
     .eq("review_state", "published")
+    .neq("status", "spam")
     .is("merged_into_id", null);
   const postIds = (posts ?? []).map((p) => p.id as string);
   if (postIds.length === 0) return [];
@@ -158,8 +160,10 @@ export async function listPublicPosts(params: {
     .is("merged_into_id", null)
     // Les retours privés remontent à l'équipe mais ne sont jamais listés ici.
     .eq("is_public", true)
-    // Revue avant publication (MIN-54) : un post en attente/rejeté n'apparaît pas.
+    // Revue avant publication (MIN-54) : un post en attente n'apparaît pas.
     .eq("review_state", "published")
+    // Le spam n'a jamais de page publique — c'est ce que le statut décide.
+    .neq("status", "spam")
     .limit(PUBLIC_LIST_LIMIT);
   if (params.status) query = query.eq("status", params.status);
   if (params.categoryId) {
@@ -217,10 +221,12 @@ export async function getPublicPostDetail(params: {
     .maybeSingle();
   if (!data) return null;
   const row = data as unknown as PostWithAuthor;
-  // Visible publiquement uniquement si public ET publié (MIN-54/MIN-37). Un post
-  // privé, en attente de revue ou rejeté n'est ouvrable que par son auteur ; les
-  // autres → 404. Tout reste visible côté équipe via l'onglet feedback du projet.
-  const publiclyVisible = row.is_public && row.review_state === "published";
+  // Visible publiquement uniquement si public, publié ET pas en spam
+  // (MIN-54/MIN-37). Un post privé, en attente de revue ou écarté n'est ouvrable
+  // que par son auteur ; les autres → 404. Tout reste visible côté équipe via
+  // l'onglet des retours du projet.
+  const publiclyVisible =
+    row.is_public && row.review_state === "published" && !isHiddenFeedbackStatus(row.status);
   if (!publiclyVisible && row.author_id !== params.viewerId) return null;
   if (row.merged_into_id !== null) {
     // Tombstone : le canonique porte tout, l'appelant redirige.
@@ -271,13 +277,14 @@ export const getPublicPostMeta = cache(
     const service = getServiceClient();
     const { data } = await service
       .from("feedback_posts")
-      .select("title, body, is_public, review_state, merged_into_id")
+      .select("title, body, is_public, status, review_state, merged_into_id")
       .is("deleted_at", null)
       .eq("id", postId)
       .eq("project_id", projectId)
       .maybeSingle();
     if (!data) return null;
     if (!data.is_public || data.review_state !== "published") return null;
+    if (isHiddenFeedbackStatus(data.status as FeedbackPostStatus)) return null;
     // Un doublon fusionné redirige en 308 vers son canonique : c'est ce
     // dernier qui nomme la page.
     if (data.merged_into_id !== null) return null;

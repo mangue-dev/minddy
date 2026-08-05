@@ -1,5 +1,6 @@
 import type {
   FeedbackPostSource,
+  FeedbackPostStatus,
   FeedbackReviewState,
   FeedbackSensitivityKind,
 } from "@/lib/feedback/types";
@@ -11,7 +12,7 @@ import type {
  * Une seule passe décide de tout, et l'ORDRE compte (c'est le défaut que MIN-87
  * corrige : avant, le dédoublonnage tournait avant la modération) :
  *
- *   1. modérer — un junk est rejeté et ne va nulle part ailleurs. Il ne peut
+ *   1. modérer — un junk part en `spam` et ne va nulle part ailleurs. Il ne peut
  *      donc plus être fusionné dans un vrai post, où sa voix gonflait le
  *      compteur du canonique et où il échappait ensuite à toute modération ;
  *   2. protéger — un contenu sensible (sécurité, données perso, légal) passe en
@@ -24,7 +25,8 @@ import type {
  *      plancher.
  *
  * L'IA ne rétrograde jamais une décision humaine : elle ne fait passer un post
- * de `pending` à `published`/`rejected`, jamais l'inverse.
+ * de `pending` à `published`, jamais l'inverse, et ne classe en `spam` qu'un
+ * post qu'aucune main n'a encore tranché.
  */
 
 /**
@@ -74,10 +76,19 @@ export interface FeedbackReviewSubject {
   source: FeedbackPostSource;
   isPublic: boolean;
   reviewState: FeedbackReviewState;
+  /**
+   * Statut courant. Il entre dans la décision parce que `spam` en fait
+   * désormais partie : un retour déjà écarté — par l'équipe, ou par une passe
+   * précédente — ne doit plus être fusionné dans un vrai, où sa voix gonflerait
+   * le compteur du canonique.
+   */
+  status: FeedbackPostStatus;
 }
 
 export interface FeedbackReviewDecision {
   reviewState: FeedbackReviewState;
+  /** true → poser le statut `spam` (junk détecté, retour hors du board). */
+  markSpam: boolean;
   /** true → forcer `is_public` à false (anti-fuite du board public). */
   forcePrivate: boolean;
   sensitivity: FeedbackSensitivityKind | null;
@@ -115,6 +126,7 @@ export function decideFeedbackReview(params: {
 
   const decision: FeedbackReviewDecision = {
     reviewState: post.reviewState,
+    markSpam: rejectAsJunk,
     forcePrivate,
     sensitivity,
     // On ne conserve un motif que quand il explique une action de modération —
@@ -126,9 +138,15 @@ export function decideFeedbackReview(params: {
     suggestConfidence: null,
   };
 
-  if (rejectAsJunk) {
-    // Un junk s'arrête ici : ni catégories, ni fusion, ni suggestion.
-    decision.reviewState = "rejected";
+  // Un junk s'arrête ici : ni catégories, ni fusion, ni suggestion. Un retour
+  // DÉJÀ classé spam s'arrête au même endroit, et pour la même raison — il n'a
+  // rien à faire dans un vrai retour.
+  //
+  // Sa revue est bel et bien passée, elle : il sort donc de la file d'attente
+  // comme les autres, sinon « À revoir » le signalerait indéfiniment comme
+  // n'ayant pas été tranché — alors qu'il vient de l'être.
+  if (rejectAsJunk || post.status === "spam") {
+    if (post.reviewState === "pending") decision.reviewState = "published";
     return decision;
   }
 

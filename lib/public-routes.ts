@@ -70,7 +70,7 @@ export const PUBLIC_ROUTES = [
     en: "/pricing",
     fr: "/fr/tarifs",
     namespace: "Pricing",
-    lastModified: "2026-08-02",
+    lastModified: "2026-08-05",
     priority: 0.8,
   },
   {
@@ -101,7 +101,7 @@ export const PUBLIC_ROUTES = [
     en: "/alternatives/linear",
     fr: "/fr/alternatives/linear",
     namespace: "AlternativeLinear",
-    lastModified: "2026-07-27",
+    lastModified: "2026-08-05",
     priority: 0.7,
   },
   {
@@ -133,7 +133,7 @@ export const PUBLIC_ROUTES = [
     en: "/terms",
     fr: "/fr/cgu",
     namespace: "Terms",
-    lastModified: "2026-07-23",
+    lastModified: "2026-08-05",
     priority: 0.3,
   },
   {
@@ -141,7 +141,7 @@ export const PUBLIC_ROUTES = [
     en: "/privacy",
     fr: "/fr/confidentialite",
     namespace: "Privacy",
-    lastModified: "2026-07-30",
+    lastModified: "2026-08-05",
     priority: 0.3,
   },
   {

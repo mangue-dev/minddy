@@ -23,7 +23,13 @@ function verdict(over: Partial<FeedbackReviewVerdict> = {}): FeedbackReviewVerdi
 }
 
 function subject(over: Partial<FeedbackReviewSubject> = {}): FeedbackReviewSubject {
-  return { source: "board", isPublic: true, reviewState: "pending", ...over };
+  return {
+    source: "board",
+    isPublic: true,
+    reviewState: "pending",
+    status: "open",
+    ...over,
+  };
 }
 
 function decide(v: FeedbackReviewVerdict, p: FeedbackReviewSubject) {
@@ -79,18 +85,29 @@ describe("decideFeedbackReview — publication", () => {
   it("ne rétrograde pas un post déjà publié par l'équipe", () => {
     const d = decide(verdict({ isJunk: true }), subject({ reviewState: "published" }));
     expect(d.reviewState).toBe("published");
+    expect(d.markSpam).toBe(false);
   });
 
-  it("ne ressuscite pas un post rejeté par l'équipe", () => {
-    const d = decide(verdict(), subject({ reviewState: "rejected" }));
-    expect(d.reviewState).toBe("rejected");
+  it("ne ressuscite pas un post que l'équipe a écarté", () => {
+    const d = decide(
+      verdict({ duplicateOf: "canonical", confidence: 0.99, categoryIds: ["cat-1"] }),
+      subject({ status: "spam" })
+    );
+    // Il sort de la file d'attente — sa revue est passée — mais n'est ni
+    // catégorisé, ni fusionné dans un vrai retour.
+    expect(d.reviewState).toBe("published");
+    expect(d.mergeTargetId).toBeNull();
+    expect(d.suggestTargetId).toBeNull();
+    expect(d.categoryIds).toEqual([]);
   });
 });
 
 describe("decideFeedbackReview — junk", () => {
-  it("rejette un junk en attente", () => {
+  it("classe en spam un junk en attente", () => {
     const d = decide(verdict({ isJunk: true, reason: "spam publicitaire" }), subject());
-    expect(d.reviewState).toBe("rejected");
+    expect(d.markSpam).toBe(true);
+    // Sa revue a bien eu lieu : il quitte la file d'attente au passage.
+    expect(d.reviewState).toBe("published");
     expect(d.moderationReason).toBe("spam publicitaire");
   });
 
