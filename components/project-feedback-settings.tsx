@@ -40,6 +40,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { defaultLocale } from "@/i18n/config";
+import { getAppEnv } from "@/lib/env";
 import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
 import {
   FEEDBACK_LANGUAGES,
@@ -229,6 +230,22 @@ export function ProjectFeedbackSettings({
     : board
       ? `${origin}/f/${board.token}`
       : null;
+  /**
+   * Le même board, servi par l'environnement qu'on regarde.
+   *
+   * Un domaine personnalisé est un enregistrement DNS : il pointe sur la
+   * production, et ignore qu'il existe un localhost et une préversion. Depuis
+   * l'un des deux, le lien ci-dessus emmène donc voir le board de PROD — jamais
+   * celui qu'on est en train de modifier.
+   *
+   * La ligne n'existe qu'ici, hors production : en prod les deux URLs mèneraient
+   * au même endroit, et une deuxième adresse à côté de la bonne ne ferait
+   * qu'encombrer l'écran de quiconque n'a rien à déboguer.
+   */
+  const envUrl =
+    verifiedDomain && board && getAppEnv() !== "production"
+      ? `${origin}/f/${board.token}`
+      : null;
   const boardOn = board?.enabled ?? false;
 
   return (
@@ -268,6 +285,15 @@ export function ProjectFeedbackSettings({
                 <div className="flex flex-col gap-1.5">
                   <p className="text-sm font-medium">{t("feedbackUrl")}</p>
                   <PublicUrlLink url={publicUrl} />
+                </div>
+              )}
+              {envUrl && (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-sm font-medium">{t("feedbackUrlThisEnv")}</p>
+                  <PublicUrlLink url={envUrl} />
+                  <p className="text-xs text-muted-foreground">
+                    {t("feedbackUrlThisEnvHint")}
+                  </p>
                 </div>
               )}
               <CustomDomainSection

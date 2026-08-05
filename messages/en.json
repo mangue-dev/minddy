@@ -2120,7 +2120,9 @@
     "feedbackNoTranslateDesc": "The ones your team reads unaided. Feedback written in any of them is left as is.",
     "feedbackNoTranslateNone": "None",
     "feedbackNoTranslateCount": "{count} languages",
-    "feedbackNoTranslateSearch": "Search a language…"
+    "feedbackNoTranslateSearch": "Search a language…",
+    "feedbackUrlThisEnv": "On this environment",
+    "feedbackUrlThisEnvHint": "The custom domain always points at production. This link opens the same board, served by the environment you are looking at."
   },
   "Seed": {
     "emptyBoardCta": "Chat with Numo",

@@ -2120,7 +2120,9 @@
     "feedbackNoTranslateDesc": "Celles que l'équipe lit sans aide. Un retour écrit dans l'une d'elles reste tel quel.",
     "feedbackNoTranslateNone": "Aucune",
     "feedbackNoTranslateCount": "{count} langues",
-    "feedbackNoTranslateSearch": "Chercher une langue…"
+    "feedbackNoTranslateSearch": "Chercher une langue…",
+    "feedbackUrlThisEnv": "Sur cet environnement",
+    "feedbackUrlThisEnvHint": "Le domaine personnalisé pointe toujours sur la production. Ce lien ouvre le même board, servi par l'environnement que vous regardez."
   },
   "Seed": {
     "emptyBoardCta": "Discuter avec Numo",

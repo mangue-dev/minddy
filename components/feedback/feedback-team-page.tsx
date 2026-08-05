@@ -371,15 +371,30 @@ function CategorySummary({
 
 /** Compteur de voix d'un retour. Absent quand le board public est éteint : sans
     lui, personne ne peut voter, et un « 0 » permanent serait un reproche. */
-function VoteCount({ count, className }: { count: number; className?: string }) {
+function VoteCount({
+  count,
+  size = "sm",
+  className,
+}: {
+  count: number;
+  /**
+   * `sm` pour la tête de ligne de la colonne, au gabarit des badges de liste.
+   * `md` dans la fiche, où il ouvre la table clé/valeur : il y voisinait des
+   * badges de 28 px avec ses 20, et le chiffre le plus important du retour
+   * était le plus petit de l'écran.
+   */
+  size?: "sm" | "md";
+  className?: string;
+}) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground",
+        "inline-flex shrink-0 items-center rounded-md border font-semibold tabular-nums text-muted-foreground",
+        size === "md" ? "h-7 gap-1.5 px-3 text-xs" : "gap-1 px-1.5 py-0.5 text-xs",
         className
       )}
     >
-      <ChevronUp className="size-3" />
+      <ChevronUp className={size === "md" ? "size-3.5" : "size-3"} />
       {count}
     </span>
   );
@@ -1588,7 +1603,7 @@ function FeedbackDetail({
               jamais. */}
           {boardEnabled && post.is_public ? (
             <PropertyRow label={t("votes")}>
-              <VoteCount count={post.vote_count} />
+              <VoteCount count={post.vote_count} size="md" />
             </PropertyRow>
           ) : null}
 
