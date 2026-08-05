@@ -152,11 +152,27 @@ export function commentAnchor(
 
   const line = Math.max(range.start, range.end);
   const startLine = Math.min(range.start, range.end);
-  // Les deux BOUTS suffisent : une plage dont les extrémités sont dans le diff
-  // peut enjamber un écart masqué, et GitHub l'accepte — c'est le même
-  // commentaire, sur la même paire de lignes.
+  // On ne contrôle que les deux BOUTS. Une plage peut donc enjamber un écart
+  // masqué (deux hunks distincts) — ce cas-là n'a PAS été éprouvé contre l'API :
+  // si la forge le refuse, elle répond 422 et l'UI le dit déjà (`lineNotInDiff`),
+  // texte gardé. Vérifier les lignes intermédiaires demanderait de les énumérer
+  // pour un cas qu'on ne sait pas encore fautif.
   if (!isLineInDiff(hunks, endSide, line) || !isLineInDiff(hunks, startSide, startLine)) {
     return single();
   }
   return { side: endSide, line, startLine, startSide };
+}
+
+/**
+ * Première ligne commune à tous les fils ancrés sur une même ligne, ou `null`.
+ *
+ * Sert l'intitulé d'une annotation, qui est UNIQUE là où les fils peuvent être
+ * plusieurs : si deux d'entre eux couvrent des plages différentes, aucune phrase
+ * ne les dit tous les deux, et on retombe alors sur la ligne d'ancrage — le seul
+ * énoncé qui reste vrai dans tous les cas.
+ */
+export function sharedStartLine(threads: PrReviewThread[]): number | null {
+  const first = threads[0]?.root.start_line ?? null;
+  if (first == null) return null;
+  return threads.every((thread) => thread.root.start_line === first) ? first : null;
 }

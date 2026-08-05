@@ -1128,6 +1128,10 @@ function toReviewComment(
     line,
     original_line: original.line,
     side,
+    // GitLab ancre une note sur UNE ligne (`old_line`/`new_line`) : pas de plage
+    // à relire, et l'UI n'en propose pas non plus de ce côté (MIN-181).
+    start_line: null,
+    start_side: null,
     in_reply_to_id: rootId,
     // Aucune review à laquelle rattacher ce commentaire : GitLab n'a pas d'objet
     // review, ses notes de diff se rendent seules dans le fil (MIN-159).

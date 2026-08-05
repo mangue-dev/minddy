@@ -19,6 +19,8 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
     line: 150,
     original_line: 150,
     side: "RIGHT",
+    start_line: null,
+    start_side: null,
     in_reply_to_id: null,
     review_id: null,
     diff_hunk: "@@ -147,7 +147,7 @@",

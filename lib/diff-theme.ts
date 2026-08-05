@@ -77,7 +77,36 @@ export const DIFF_LINE_DIFF_TYPE: LineDiffTypes = "word-alt";
  * l'affordance, il ne garantit pas la règle — un glissement de sélection peut
  * finir sur une ligne dépliée sans jamais y avoir survolé la gouttière.
  */
+/**
+ * Attribut posé par `pr-diff` sur les lignes couvertes par une remarque
+ * MULTI-LIGNES. Il vit ici avec la règle CSS qui le peint : les deux moitiés
+ * n'ont de sens qu'ensemble.
+ */
+export const DIFF_RANGE_ATTRIBUTE = "data-pr-comment-range";
+
 export const DIFF_UNSAFE_CSS = `
 [data-line-type="context-expanded"] [data-gutter-utility-slot] { display: none; }
 [data-deletions] [data-line-type="context"] [data-gutter-utility-slot] { display: none; }
+
+/* Les lignes qu'une remarque multi-lignes couvre.
+   On ne pose PAS un fond : on remonte la variable dont la lib dérive le fond de
+   chaque ligne. Elle mélange par-dessus \`--diffs-computed-diff-line-bg\`, donc le
+   vert d'un ajout et le rouge d'un retrait restent lisibles sous la teinte —
+   là où un \`background-color\` les aurait effacés. Même chaîne, mêmes
+   proportions que la sélection de la lib, en un ton plus discret : une plage
+   commentée est un état durable, pas un geste en cours. */
+[${DIFF_RANGE_ATTRIBUTE}] {
+  --diffs-computed-selected-line-bg: light-dark(
+    color-mix(in lab, var(--diffs-computed-diff-line-bg) 90%, var(--diffs-selection-base)),
+    color-mix(in lab, var(--diffs-computed-diff-line-bg) 85%, var(--diffs-selection-base)));
+}
+/* La gouttière porte le trait vertical qui donne à la plage ses deux bouts —
+   c'est lui, plus que la teinte, qui se voit sans qu'on ait à lire. */
+[data-column-number][${DIFF_RANGE_ATTRIBUTE}] {
+  --diffs-computed-selected-line-bg: light-dark(
+    color-mix(in lab, var(--diffs-computed-diff-line-bg) 82%, var(--diffs-selection-base)),
+    color-mix(in lab, var(--diffs-computed-diff-line-bg) 74%, var(--diffs-selection-base)));
+  box-shadow: inset 2px 0 0 var(--diffs-selection-base);
+  color: var(--diffs-selection-number-fg);
+}
 `;

@@ -1170,6 +1170,9 @@ export async function executeTool(
               line: thread.root.line,
               original_line: thread.root.original_line,
               side: thread.root.side,
+              // Première ligne d'une remarque multi-lignes (`line` = la
+              // dernière) — sans elle, la plage visée se réduit à un point.
+              start_line: thread.root.start_line,
               outdated: thread.root.line == null,
               // Fil marqué résolu = point réglé (`false` couvre aussi l'inconnu).
               resolved: !!thread.resolution?.resolved,

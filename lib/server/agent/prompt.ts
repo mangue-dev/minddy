@@ -471,6 +471,9 @@ export interface InheritedPrLineThread {
   path: string;
   /** Ligne visée, ou null si GitHub ne sait plus la rattacher (fil périmé). */
   line: number | null;
+  /** Première ligne d'une remarque MULTI-LIGNES — `line` en est alors la
+      dernière. `null` sur une remarque d'une seule ligne (MIN-181). */
+  startLine: number | null;
   side: "LEFT" | "RIGHT";
   /** Le code commenté, tel qu'il était au moment du commentaire. */
   diffHunk: string;
@@ -488,6 +491,7 @@ export interface PrReviewCommentLike extends ReviewCommentLike {
   body: string;
   path: string;
   line: number | null;
+  start_line: number | null;
   side: "LEFT" | "RIGHT";
   diff_hunk: string;
   user: { login: string } | null;
@@ -507,6 +511,9 @@ export function toPrLineThreads(
   return groupReviewThreads(comments, states).map((thread) => ({
     path: thread.root.path,
     line: thread.root.line,
+    // Première ligne d'une remarque multi-lignes (`line` = la dernière), pour
+    // que Numo relise la plage visée et pas son seul dernier point (MIN-181).
+    startLine: thread.root.start_line,
     side: thread.root.side,
     diffHunk: thread.root.diff_hunk,
     resolved: thread.resolution?.resolved,

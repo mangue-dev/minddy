@@ -206,6 +206,13 @@ export interface PullRequestReviewComment {
   /** Ligne au commit d'origine — le repli d'affichage quand `line` est null. */
   original_line: number | null;
   side: "LEFT" | "RIGHT";
+  /** Première ligne d'une remarque MULTI-LIGNES (MIN-181) — `line` en est alors
+      la DERNIÈRE. `null` sur une remarque d'une seule ligne, et toujours `null`
+      côté GitLab, où une note s'ancre sur une ligne. Sans ces deux champs, une
+      remarque posée sur les lignes 6 à 15 se relit comme une remarque sur la
+      15 : l'ancre est juste, la plage a disparu. */
+  start_line: number | null;
+  start_side: "LEFT" | "RIGHT" | null;
   /** Racine du fil (GitHub normalise : répondre à une réponse pointe la racine). */
   in_reply_to_id: number | null;
   /** Review qui porte ce commentaire (MIN-159) — la clé qui le range sous elle
@@ -1381,6 +1388,8 @@ interface RawReviewComment extends RawComment {
   line?: number | null;
   original_line?: number | null;
   side?: string | null;
+  start_line?: number | null;
+  start_side?: string | null;
   in_reply_to_id?: number | null;
   diff_hunk?: string;
   pull_request_review_id?: number | null;
@@ -1394,6 +1403,12 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
     line: c.line ?? null,
     original_line: c.original_line ?? null,
     side: c.side === "LEFT" ? "LEFT" : "RIGHT",
+    // Remarque multi-lignes : `line` en est la DERNIÈRE ligne, `start_line` la
+    // première. Sans relire ces deux-là, un commentaire posé sur les lignes 6 à
+    // 15 revient de la forge comme un commentaire sur la 15 — il l'est, au sens
+    // de l'ancre, mais l'écran ne dirait plus rien de la plage.
+    start_line: c.start_line ?? null,
+    start_side: c.start_side === "LEFT" ? "LEFT" : c.start_side === "RIGHT" ? "RIGHT" : null,
     in_reply_to_id: c.in_reply_to_id ?? null,
     review_id: c.pull_request_review_id ?? null,
     diff_hunk: c.diff_hunk ?? "",

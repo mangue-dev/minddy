@@ -755,6 +755,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
               line: thread.root.line,
               original_line: thread.root.original_line,
               side: thread.root.side,
+              // Remarque MULTI-LIGNES : `line` en est la dernière ligne, celle-ci
+              // la première. Sans elle, « ces dix lignes sont fausses » se lit
+              // comme un point sur la seule dernière (MIN-181).
+              start_line: thread.root.start_line,
               outdated: thread.root.line == null,
               // `true` = le fil a été marqué résolu : le point est réglé.
               // `false` inclut « état inconnu » — la forge ne l'a pas dit.

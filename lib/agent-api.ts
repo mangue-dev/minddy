@@ -963,6 +963,11 @@ export interface PullRequestReviewComment {
   line: number | null;
   original_line: number | null;
   side: "LEFT" | "RIGHT";
+  /** Première ligne d'une remarque MULTI-LIGNES (MIN-181) — `line` en est alors
+      la dernière. `null` pour une remarque sur une seule ligne, et toujours
+      `null` côté GitLab, où une note s'ancre sur une ligne. */
+  start_line: number | null;
+  start_side: "LEFT" | "RIGHT" | null;
   /** Racine du fil, ou null si ce commentaire EST la racine. */
   in_reply_to_id: number | null;
   /** Review qui porte ce commentaire (MIN-159) — le fil de conversation range

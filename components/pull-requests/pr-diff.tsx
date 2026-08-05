@@ -26,7 +26,12 @@ import {
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
 import { noPatchKind } from "@/lib/diff-binary";
-import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-theme";
+import {
+  DIFF_LINE_DIFF_TYPE,
+  DIFF_RANGE_ATTRIBUTE,
+  DIFF_THEMES,
+  DIFF_UNSAFE_CSS,
+} from "@/lib/diff-theme";
 import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
 import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
 import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
@@ -35,9 +40,11 @@ import {
   anchorKey,
   commentAnchor,
   lineKind,
+  sharedStartLine,
   threadAnchor,
   toGithubSide,
   type CommentAnchor,
+  type DiffSide,
   type PrReviewThread,
 } from "@/lib/pr-diff-anchors";
 import {
@@ -195,6 +202,73 @@ function setLabel(node: Element, label: string) {
   if (node.getAttribute("aria-label") !== label) node.setAttribute("aria-label", label);
 }
 
+/** Plage couverte par une remarque, dans le vocabulaire de la lib. */
+interface CommentRange {
+  side: DiffSide;
+  start: number;
+  end: number;
+}
+
+/**
+ * Peint les lignes que couvre chaque remarque multi-lignes.
+ *
+ * Pourquoi en DOM, et pas par `selectedLines` : cette prop-là ne tient qu'UNE
+ * plage par fichier et sert le geste en cours (la sélection à la souris), alors
+ * qu'un fichier peut porter plusieurs remarques de plage à la fois. La lib
+ * n'offre rien d'autre — ses « décorations » ne sont pas pilotables de
+ * l'extérieur. On pose donc notre propre attribut, et son style vit avec lui
+ * dans `lib/diff-theme`.
+ *
+ * La lecture des lignes suit exactement la règle de la lib : `data-line` porte
+ * le numéro DU CÔTÉ de la ligne (celui que dirait un clic dessus), et
+ * `data-alt-line` celui d'en face. En côte-à-côte, chaque colonne ne parle que
+ * de son côté. En unifié, une ligne de CONTEXTE est la seule à représenter les
+ * deux : c'est le seul endroit où l'on va lire l'autre numéro.
+ */
+function markCommentRanges(root: ShadowRoot, ranges: CommentRange[]) {
+  for (const marked of root.querySelectorAll(`[${DIFF_RANGE_ATTRIBUTE}]`)) {
+    marked.removeAttribute(DIFF_RANGE_ATTRIBUTE);
+  }
+  if (ranges.length === 0) return;
+
+  for (const column of root.querySelectorAll("[data-code]")) {
+    const unified = column.hasAttribute("data-unified");
+    const columnSide: DiffSide = column.hasAttribute("data-deletions") ? "deletions" : "additions";
+    for (const row of column.querySelectorAll("[data-line]")) {
+      const type = row.getAttribute("data-line-type");
+      const changed = type === "change-addition" || type === "change-deletion";
+      const rowSide: DiffSide = changed
+        ? type === "change-deletion"
+          ? "deletions"
+          : "additions"
+        : columnSide;
+
+      const covered = ranges.some((range) => {
+        const raw =
+          rowSide === range.side
+            ? row.getAttribute("data-line")
+            : unified && !changed
+              ? row.getAttribute("data-alt-line")
+              : null;
+        if (raw == null) return false;
+        const line = Number(raw);
+        return line >= range.start && line <= range.end;
+      });
+      if (!covered) continue;
+
+      row.setAttribute(DIFF_RANGE_ATTRIBUTE, "");
+      // Le numéro de ligne partage l'index de sa ligne, et lui seul porte le
+      // trait vertical qui donne à la plage ses deux bouts.
+      const index = row.getAttribute("data-line-index");
+      if (index) {
+        column
+          .querySelector(`[data-column-number][data-line-index="${index}"]`)
+          ?.setAttribute(DIFF_RANGE_ATTRIBUTE, "");
+      }
+    }
+  }
+}
+
 /**
  * Met en français (ou en anglais) les barres de dépliage, dont la lib écrit les
  * libellés en dur (« 12 unmodified lines », « Expand all ») et dont les flèches
@@ -342,6 +416,24 @@ function PrDiffFile({
     for (const anchor of Object.values(openAnchors)) ensure(anchor.side, anchor.line);
     return [...byKey.values()];
   }, [threads, openAnchors]);
+
+  /**
+   * Les plages à peindre : une par remarque multi-lignes. Sans elles, un
+   * commentaire posé sur dix lignes se lit comme un commentaire sur la dernière
+   * — l'intitulé le dit, mais il faut le lire pour s'en apercevoir.
+   */
+  const commentRanges = useMemo(() => {
+    const ranges: CommentRange[] = [];
+    for (const thread of threads) {
+      const anchor = threadAnchor(thread);
+      const start = thread.root.start_line;
+      // `line` est la DERNIÈRE ligne de la plage : une « plage » qui ne
+      // remonterait pas au-dessus n'en est pas une.
+      if (!anchor || start == null || start >= anchor.line) continue;
+      ranges.push({ side: anchor.side, start, end: anchor.line });
+    }
+    return ranges;
+  }, [threads]);
 
   /** Fils qui ne s'ancrent nulle part dans le diff rendu — repliés en bas. */
   const staleThreads = useMemo(() => {
@@ -491,7 +583,12 @@ function PrDiffFile({
         <LineWidget
           anchor={{
             line,
-            startLine: anchor?.startLine,
+            // La plage d'une remarque multi-lignes : celle qu'on est en train
+            // d'écrire, sinon celle des fils déjà là. Les fils ne la donnent que
+            // s'ils s'accordent tous dessus — deux plages différentes sous le
+            // même numéro ne se résument pas en un seul intitulé, et on retombe
+            // alors sur la ligne d'ancrage, qui elle est toujours vraie.
+            startLine: anchor ? anchor.startLine : (sharedStartLine(list) ?? undefined),
             kind: lineKind(fileDiff?.hunks ?? [], annotation.side, line) ?? "context",
           }}
         >
@@ -571,6 +668,7 @@ function PrDiffFile({
       const root = node.shadowRoot;
       if (!root) return;
       localizeDiffChrome(root, t);
+      markCommentRanges(root, commentRanges);
       const placed = new Set<string>();
       for (const annotation of lineAnnotations) {
         const slot = getLineAnnotationName(annotation);
@@ -578,7 +676,7 @@ function PrDiffFile({
       }
       setPlacedKeys((prev) => (sameKeys(prev, placed) ? prev : placed));
     },
-    [lineAnnotations, t],
+    [lineAnnotations, commentRanges, t],
   );
 
   const options = useMemo(

@@ -146,6 +146,7 @@ describe("buildInheritedPrMessage", () => {
     const thread = {
       path: "lib/search.ts",
       line: 42,
+      startLine: null,
       side: "RIGHT" as const,
       diffHunk: "@@ -40,3 +40,3 @@\n const q = input.trim();\n-return search(q);\n+return search(q, opts);",
       comments: [{ author: "alice", body: "Et le cas nul ?" }],
@@ -259,6 +260,7 @@ describe("buildInheritedPrMessage", () => {
       line: 42,
       original_line: 42,
       side: "RIGHT" as const,
+      start_line: null,
       in_reply_to_id: null,
       diff_hunk: "@@ -40,3 +40,3 @@\n-return search(q);\n+return search(q, opts);",
       user: { login: "alice", avatar_url: null },
@@ -1105,6 +1107,7 @@ describe("buildPrReviewContextMessage", () => {
             body: "Et le cas nul ?",
             path: "lib/search.ts",
             line: 12,
+            start_line: null,
             side: "RIGHT",
             in_reply_to_id: null,
             diff_hunk: "@@ -1 +1 @@\n+const x = 1;",

@@ -7,6 +7,7 @@ import {
   commentAnchor,
   isLineInDiff,
   lineKind,
+  sharedStartLine,
   threadAnchor,
   toDiffSide,
   toGithubSide,
@@ -42,6 +43,8 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
     line: 150,
     original_line: 150,
     side: "RIGHT",
+    start_line: null,
+    start_side: null,
     in_reply_to_id: null,
     review_id: null,
     diff_hunk: "@@ -147,7 +147,7 @@",
@@ -180,5 +183,26 @@ describe("commentAnchor", () => {
       line: 152,
     });
     expect(commentAnchor(HUNKS, range({ start: 148, end: 160 }), { multiLine: true })).toBeNull();
+  });
+});
+
+describe("sharedStartLine", () => {
+  const thread = (id: number, start: number | null) =>
+    groupReviewThreads([comment({ id, line: 15, start_line: start })])[0];
+
+  it("rend la plage quand le seul fil en porte une", () => {
+    expect(sharedStartLine([thread(1, 6)])).toBe(6);
+  });
+
+  it("ne rend rien pour une remarque d'une seule ligne", () => {
+    expect(sharedStartLine([thread(1, null)])).toBeNull();
+    expect(sharedStartLine([])).toBeNull();
+  });
+
+  it("se tait quand deux fils de la même ligne couvrent des plages différentes", () => {
+    // Un seul intitulé ne peut pas dire deux plages : on retombe alors sur la
+    // ligne d'ancrage, qui reste vraie pour les deux.
+    expect(sharedStartLine([thread(1, 6), thread(2, 9)])).toBeNull();
+    expect(sharedStartLine([thread(1, 6), thread(2, null)])).toBeNull();
   });
 });
