@@ -12,7 +12,9 @@ export function PendingInvitationsBanner() {
   if (invitations.length === 0) return null;
 
   return (
-    <div className="mb-6 flex flex-col gap-2">
+    // Pas de marge propre : la bannière est posée SOUS le composer de l'accueil,
+    // dans une colonne qui tient elle-même les écarts.
+    <div className="flex flex-col gap-2">
       {invitations.map((inv) => {
         const inviter = inv.inviter_name || inv.inviter_email || t("someone");
         const busy = busyId === inv.id;

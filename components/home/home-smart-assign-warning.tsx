@@ -9,8 +9,8 @@ import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 
 /** Même courbe que l'onboarding et l'assistant de création : une seule entrée,
-    courte, quand le résumé arrive — pour que la bannière se pose au lieu
-    d'apparaître d'un coup au-dessus du salut. */
+    courte, quand le résumé arrive — pour que l'avis se pose sous le composer au
+    lieu d'y apparaître d'un coup. */
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
 /**
@@ -42,7 +42,7 @@ export function HomeSmartAssignWarning() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={MOTION}
-      className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-card px-4 py-3.5 dark:border-amber-500/25"
+      className="flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-card px-4 py-3.5 dark:border-amber-500/25"
     >
       <div className="flex flex-col gap-0.5">
         {/* Le triangle est DANS la ligne de titre, pas dans une colonne à lui :

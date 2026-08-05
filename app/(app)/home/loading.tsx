@@ -1,28 +1,28 @@
 import { Skeleton } from "mangue-ui";
 
-// Squelette de la home. Calqué sur app/(app)/home/page.tsx : salutation +
-// bouton, composer Numo, puis UNE section de liste — mêmes largeurs et mêmes
-// gouttières, pour que le passage au vrai contenu ne déplace rien.
+// Squelette de la home. Calqué sur app/(app)/home/page.tsx : le bloc d'accueil,
+// centré sur la hauteur de la FENÊTRE (d'où la gouttière basse à la hauteur du
+// header) — salutation centrée, composer en dessous, dans la même colonne
+// étroite. Mêmes rangées `1fr / auto / 1fr` : le composer tombe exactement là où
+// le vrai se posera.
 //
-// Une seule section, et pas la pile entière : sur cette page, toutes les files
-// s'effacent quand elles sont vides, et c'est le cas le plus fréquent. Un
-// squelette qui promet quatre blocs pour n'en tenir qu'un secoue la page plus
-// qu'il ne l'annonce.
+// Rien sous la ligne de flottaison : sur cette page, toutes les files s'effacent
+// quand elles sont vides, et c'est le cas le plus fréquent. Un squelette qui
+// promet des blocs pour n'en tenir aucun secoue la page plus qu'il ne l'annonce.
 export default function HomeLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-9 w-32" />
+    <section className="grid min-h-full grid-rows-[1fr_auto_1fr] px-6 desktop:pb-[60px]">
+      <div className="mx-auto flex w-full max-w-xl items-end pb-5 pt-10">
+        <Skeleton className="mx-auto h-8 w-64" />
       </div>
 
-      {/* Composer « Demander à Numo ». */}
-      <Skeleton className="h-24 rounded-xl" />
-
-      <div className="mt-8 flex flex-col gap-2.5">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-48 rounded-xl" />
+      {/* Composer « Demander à Numo » — la surface, plus la gouttière verticale
+          que le composer se donne (`py-3`). */}
+      <div className="mx-auto w-full max-w-xl py-3">
+        <Skeleton className="h-24 rounded-2xl" />
       </div>
-    </div>
+
+      <div className="pb-10" />
+    </section>
   );
 }

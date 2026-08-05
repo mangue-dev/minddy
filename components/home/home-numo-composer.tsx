@@ -11,20 +11,21 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
  * scope), which opens and auto-sends. Attachments are hidden (`open({prompt})`
  * carries no files — they belong inside the panel).
  *
- * The `-mx-3` cancels {@link ChatInput}'s own `px-3` gutter so the composer
- * surface aligns flush with the dashboard's content column.
+ * `px-0` annule la gouttière que {@link ChatInput} se donne pour le panneau de
+ * Numo : la colonne de l'accueil a déjà la sienne, et la surface doit tomber
+ * exactement sur la largeur du bloc — pas 12 px de chaque côté en moins, ni
+ * (avec un `-mx-3`) 12 px de plus que les bannières posées juste en dessous.
  */
 export function HomeNumoComposer() {
   const t = useTranslations("Home");
   const { open } = useAssistantPanel();
 
   return (
-    <div className="-mx-3">
-      <ChatInput
-        hideAttach
-        placeholder={t("numoPlaceholder")}
-        onSend={(message) => open({ projectId: null, prompt: message })}
-      />
-    </div>
+    <ChatInput
+      hideAttach
+      className="px-0"
+      placeholder={t("numoPlaceholder")}
+      onSend={(message) => open({ projectId: null, prompt: message })}
+    />
   );
 }
